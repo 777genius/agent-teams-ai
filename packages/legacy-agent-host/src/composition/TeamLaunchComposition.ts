@@ -1,5 +1,6 @@
 import { nativeAdditionDefinition } from '../team-launch/nativeLaunchAddition.js';
 import { applyUnconfiguredMemberSelections } from '../team-launch/applyUnconfiguredMemberSelections.js';
+import { liveRosterOriginalDefinition, validateLiveRosterLaunch } from '../team-launch/liveRosterMembership.js';
 import type { ActionLaunchRecord } from '../team-launch/memberActions.js';
 import { lstatSync } from 'node:fs';
 import { join } from 'node:path';
@@ -98,8 +99,19 @@ export function createCapturedTeamLaunch(options: {
       },
       original
     );
+  let selectedDefinition = preparedDefinition;
+  if (original?.liveMembership?.length) {
+    validateLiveRosterLaunch(original);
+    const before = liveRosterOriginalDefinition(original);
+    const predecessor = { ...original, definition: before, fingerprint: runtimeDigest(before) };
+    if (original.nativeAdditions?.length) nativeAdditionDefinition(preparedDefinition, predecessor);
+    else if (runtimeDigest(before) !== runtimeDigest(preparedDefinition))
+      throw new TeamLaunchError('hold', 'live-roster-original-base');
+    selectedDefinition = structuredClone(original.definition);
+  } else if (original?.nativeAdditions?.length)
+    selectedDefinition = nativeAdditionDefinition(preparedDefinition, original);
   return new TeamLaunchOwner({
-    definition: original?.nativeAdditions?.length ? nativeAdditionDefinition(preparedDefinition, original) : preparedDefinition,
+    definition: selectedDefinition,
     store: boundedStore,
     hostIncarnation: options.hostIncarnation,
     authorized: (action, callback) =>

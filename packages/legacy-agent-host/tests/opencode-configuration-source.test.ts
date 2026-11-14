@@ -16,6 +16,9 @@ import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/O
 import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
 import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/OpenCodeV2SessionCredential.js';
 import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
+import { AcceptedOpenCodeV2FileKey, DeferredOpenCodeV2FileKey, createOpenCodeV2FileMaterialization,
+  openCodeV2NativeFileWitnessSchema, openCodeV2SelectedSourceReference, selectedFilePaths,
+} from '../dist/adapters/providers/OpenCodeV2SelectedFileKey.js';
 import type { OpenCodeManagementProfile } from '../dist/management/profile.js';
 import {
   mapOpenCodeV2SelectedModel,
@@ -46,7 +49,7 @@ function fixture(t: { after(cleanup: () => void): void }) {
   return { root, home, project, xdg, input, write };
 }
 
-test('captured OpenCode config keeps donor precedence and stores only original source identities', (t) => {
+test('captured OpenCode config keeps donor precedence and stores only original source identities', async (t) => {
   const f = fixture(t);
   f.write(join(f.home, '.config/opencode/opencode.json'), {
     model: 'TEST-local/TEST-model',
@@ -82,6 +85,11 @@ test('captured OpenCode config keeps donor precedence and stores only original s
     },
   });
   assert.equal(captured.reference.files.length, 7);
+  assert.equal(captured.selectedKeyOrigin('TEST-local')?.kind, 'file');
+  const keyOrigin = captured.selectedKeyOrigin('TEST-local');
+  assert.ok(keyOrigin?.kind === 'file');
+  assert.equal(keyOrigin.path, join(f.home, '.config/opencode/opencode.json'),
+    'later model-only documents retain the actual original key leaf');
   assert.ok(!JSON.stringify(captured.reference).includes('TEST-private-key'));
   assert.equal(
     captureOpenCodeConfigurationSource(f.input, captured.reference).digest,
@@ -114,11 +122,24 @@ test('captured OpenCode config keeps donor precedence and stores only original s
   };
   const writeKey = (key: string) => f.write(auth, { 'TEST-local': { type: 'api', key } });
   writeKey('TEST-conflicting-key');
-  assert.throws(() => captureOpenCodeV2Configuration(profile, selection, () => current),
-    { reason: 'configuration-invalid' });
+  const originalAuth = readFileSync(auth);
+  const explicit = captureOpenCodeV2Configuration(profile, selection, () => current);
+  assert.equal(explicit.key?.readKey(), 'TEST-private-key', 'original explicit config wins same-account plain auth');
+  assert.deepEqual(readFileSync(auth), originalAuth, 'selecting a config key cannot rewrite auth');
+  assert.notEqual(explicit.key?.digest, new OpenCodeV2CredentialScope(profile, selection.providerId, () => current).capture().digest);
   writeKey('TEST-private-key');
   const configuration = captureOpenCodeV2Configuration(profile, selection, () => current);
-  const session = captureOpenCodeV2SessionCredential(profile, selection.providerId, configuration.isCurrent);
+  assert.equal(configuration.key?.digest, new OpenCodeV2CredentialScope(profile, selection.providerId, () => current).capture().digest,
+    'matching literal key retains the historical auth-only digest');
+  const configuredKey = configuration.key;
+  assert.ok(configuredKey);
+  assert.throws(() => captureOpenCodeV2SessionCredential(profile, selection.providerId,
+    configuration.isCurrent, { ...configuredKey }), { code: 'held' }, 'a structurally equal view has no provenance');
+  assert.throws(() => captureOpenCodeV2SessionCredential(profile, selection.providerId,
+    () => configuration.isCurrent(), configuredKey), { code: 'held' }, 'another configuration owner cannot borrow it');
+  assert.throws(() => captureOpenCodeV2SessionCredential({ ...profile, accountBinding: 'TEST-foreign' }, selection.providerId,
+    configuration.isCurrent, configuredKey), { code: 'held' });
+  const session = captureOpenCodeV2SessionCredential(profile, selection.providerId, configuration.isCurrent, configuredKey);
   assert.equal(session.isCurrent(), true);
   writeKey('TEST-replaced-key');
   assert.equal(configuration.isCurrent(), false, 'explicit config key keeps its original auth witness');
@@ -128,7 +149,7 @@ test('captured OpenCode config keeps donor precedence and stores only original s
 
   const running = captureOpenCodeV2Configuration(profile, selection, () => current);
   running.bindRunningSession();
-  const runningSession = captureOpenCodeV2SessionCredential(profile, selection.providerId, running.isCurrent);
+  const runningSession = captureOpenCodeV2SessionCredential(profile, selection.providerId, running.isCurrent, running.key);
   f.write(join(f.project, 'opencode.jsonc'), {
     provider: { 'TEST-local': { models: { 'TEST-model': { name: 'next-capture' } } } },
   });
@@ -141,6 +162,197 @@ test('captured OpenCode config keeps donor precedence and stores only original s
   assert.equal(runningSession.isCurrent(), false);
   assert.equal(captured.isCurrent(), false);
   assert.throws(captured.read, { reason: 'configuration-changed' });
+
+  const origins = fixture(t), originGlobal = join(origins.home, '.config/opencode/opencode.json');
+  origins.write(originGlobal, { provider: { 'TEST-local': { options: { apiKey: 'TEST-same' } } } });
+  origins.write(origins.input.environment.OPENCODE_CONFIG, { provider: { 'TEST-local': { options: null } } });
+  const originProject = join(origins.project, 'opencode.jsonc');
+  origins.write(originProject, { provider: { 'TEST-local': { options: { baseURL: 'http://127.0.0.1/v1' } } } });
+  assert.equal(captureOpenCodeConfigurationSource(origins.input).selectedKeyOrigin('TEST-local'), undefined,
+    'replacing an ancestor cannot retain a historical key origin');
+  origins.write(originProject, { provider: { 'TEST-local': { options: { apiKey: 'TEST-same' } } } });
+  const replacedOrigin = captureOpenCodeConfigurationSource(origins.input).selectedKeyOrigin('TEST-local');
+  assert.ok(replacedOrigin?.kind === 'file'); assert.equal(replacedOrigin.path, originProject,
+    'an equal later key value still belongs to its own actual source leaf');
+
+  for (const mode of ['absolute', 'legacy', 'env', 'wrong-provider', 'wrong-config', 'missing',
+    'empty', 'oversize', 'utf8', 'hardlink', 'inline', 'manual', 'relative',
+    ...(process.platform === 'win32' ? [] : ['symlink'])]) {
+    const v = fixture(t), leaf = join(v.project, 'opencode.jsonc'), dataRoot = join(v.root, 'data');
+    mkdirSync(dataRoot, { mode: 0o700 });
+    const owned = join(v.home, '.config/opencode/agent-teams-credentials');
+    mkdirSync(owned, { recursive: true, mode: 0o700 });
+    const scopePath = mode === 'wrong-config' ? join(v.project, 'other.json') : leaf;
+    const provider = mode === 'wrong-provider' ? 'TEST-other' : selection.providerId;
+    const filename = provider + '-' + createHash('sha256').update(scopePath).digest('hex').slice(0, 16) +
+      (mode === 'absolute' ? '-12345678-1234-4123-8123-123456789abc' : '') + '.key';
+    const file = join(owned, filename), keyValue = 'TEST-managed-original';
+    if (mode !== 'missing') writeFileSync(file,
+      mode === 'empty' ? ' \n' : mode === 'oversize' ? Buffer.alloc(65537, 65)
+        : mode === 'utf8' ? Buffer.from([0xff]) : '  ' + keyValue + '\n', { mode: 0o600 });
+    if (mode === 'hardlink') linkSync(file, file + '.linked');
+    if (mode === 'symlink') {
+      const target = join(v.root, 'target.key'); writeFileSync(target, keyValue, { mode: 0o600 });
+      rmSync(file); symlinkSync(target, file);
+    }
+    const reference = mode === 'legacy' ? '{file:~/.config/opencode/agent-teams-credentials/' + filename + '}'
+      : mode === 'manual' ? '{file:/TEST-never-read-this-key}'
+        : mode === 'relative' ? '{file:' + filename + '}' : '{file:' + file + '}';
+    const declaration = { provider: { [selection.providerId]: { npm: '@ai-sdk/openai-compatible',
+      options: { baseURL: 'http://127.0.0.1:12345/v1', apiKey: mode === 'env' ? '{env:TEST_KEY}' : reference } } } };
+    const environment = { ...v.input.environment, XDG_DATA_HOME: dataRoot, TEST_KEY: keyValue,
+      ...(mode === 'manual' || mode === 'relative' ? { USERPROFILE: v.home } : {}),
+      ...(mode === 'inline' ? { OPENCODE_CONFIG_CONTENT: JSON.stringify(declaration) } : {}) };
+    if (mode !== 'inline') v.write(leaf, declaration);
+    const keyProfile = { ...profile, ...v.input, environment, embedded: { ...profile.embedded! } };
+    keyProfile.embedded.configurationSource = captureOpenCodeConfigurationSource(keyProfile).reference;
+    const authPath = join(dataRoot, 'opencode/auth.json');
+    v.write(authPath, { 'TEST-foreign': { type: 'api', key: 'TEST-unselected' },
+      ...(mode === 'legacy' || mode === 'env' ? { [selection.providerId]: {
+        type: 'api', key: mode === 'env' ? keyValue : 'TEST-different-primary' } } : {}) });
+    const authBytes = readFileSync(authPath);
+    if (mode === 'manual' || mode === 'relative') {
+      const deferred = captureOpenCodeV2Configuration(keyProfile, selection, () => true);
+      assert.ok(deferred.selectedFile, 'the original manual leaf is deferred without reading its missing file');
+      assert.equal(deferred.key, undefined); assert.equal(deferred.selectedFile.isCurrent(), true);
+      assert.equal(Object.hasOwn(deferred.selectedFile, 'readKey'), false);
+      assert.deepEqual(readFileSync(authPath), authBytes);
+      continue;
+    }
+    const accepted = mode === 'absolute' || mode === 'legacy' || mode === 'env';
+    if (!accepted) {
+      assert.throws(() => captureOpenCodeV2Configuration(keyProfile, selection, () => true), { code: 'held' }, mode);
+      assert.deepEqual(readFileSync(authPath), authBytes);
+      continue;
+    }
+    const actual = captureOpenCodeV2Configuration(keyProfile, selection, () => true);
+    assert.equal(actual.key?.readKey(), keyValue, mode);
+    assert.equal(captureOpenCodeV2Configuration(keyProfile, selection, () => true).key?.digest, actual.key?.digest,
+      'cold recapture of the unchanged source/key has the same private witness');
+    if (mode === 'env') assert.equal(actual.key?.digest,
+      new OpenCodeV2CredentialScope(keyProfile, selection.providerId, () => true).capture().digest,
+      'matching resolved environment key preserves the historical digest');
+    assert.equal(JSON.stringify(actual).includes(keyValue), false);
+    if (mode === 'absolute') {
+      let inputs = 0, closes = 0;
+      const probe = createOpenCodeLocalModelReadiness(keyProfile, { commandId: 'TEST-managed-readiness',
+        profileId: keyProfile.profileId, configRevision: keyProfile.configRevision, ...selection }, () => true, {
+        ordinary: observe => ({ timeoutMs: 1000, run: async () => {
+          observe({ npm: '@ai-sdk/openai-compatible', options: { baseURL: 'http://127.0.0.1:12345/v1' },
+            credentialScopeDigest: actual.key!.digest }); inputs++; return true;
+        }, close: async () => { closes++; return true; } }),
+        coordination: () => { throw Error('TEST managed key cannot enter authless coordination'); },
+        fetchImpl: async () => { throw Error('TEST managed key cannot fetch local metadata'); },
+      });
+      const cutoff = Date.now() + 900;
+      try {
+        assert.equal(await probe.run(t.signal, cutoff), true);
+        assert.equal(probe.readiness?.()?.coordination, 'not-applicable'); assert.equal(inputs, 1);
+      } finally { assert.equal(await probe.close(cutoff), true); assert.equal(closes, 1); }
+    }
+    actual.bindRunningSession();
+    v.write(leaf, { model: 'TEST-local/TEST-next' });
+    assert.equal(actual.isCurrent(), true, 'bound original key remains with config A');
+    if (mode !== 'env') {
+      writeFileSync(file, keyValue + '-changed', { mode: 0o600 });
+      assert.equal(actual.isCurrent(), false, 'binding never discards the original file witness');
+    }
+    assert.deepEqual(readFileSync(authPath), authBytes);
+  }
+
+  // This is the private file witness with an explicitly synthetic issuer/materializer call.
+  // The existing native cases separately qualify ConfigVariable and the real HTTP owner.
+  for (const mode of ['absolute', 'home', 'relative', 'composite', 'inline', 'environment', 'hardlink',
+    ...(process.platform === 'win32' ? [] : ['symlink'])]) {
+    const v = fixture(t), leaf = join(v.project, 'opencode.jsonc'), dataRoot = join(v.root, 'data');
+    mkdirSync(dataRoot, { mode: 0o700 });
+    const first = join(v.root, 'absolute.key'), second = join(v.home, 'home.key'), third = join(v.project, 'relative.key');
+    writeFileSync(first, ' TEST-\n', { mode: 0o600 });
+    writeFileSync(second, ' original-\n', { mode: 0o600 });
+    writeFileSync(third, ' manual\n', { mode: 0o600 });
+    let selectedPath = first;
+    if (mode === 'hardlink') { selectedPath = join(v.root, 'linked.key'); linkSync(first, selectedPath); }
+    if (mode === 'symlink') { selectedPath = join(v.root, 'symbolic.key'); symlinkSync(first, selectedPath); }
+    const raw = mode === 'home' ? '{file:~/home.key}' : mode === 'relative' ? '{file:relative.key}'
+      : mode === 'composite' ? '{file:' + first + '}{file:~/home.key}{file:relative.key}'
+        : mode === 'environment' ? '{file:{env:TEST_DIRECTORY}/relative.key}' : '{file:' + selectedPath + '}';
+    const declaration = { provider: { [selection.providerId]: { npm: '@ai-sdk/openai-compatible',
+      options: { baseURL: 'http://127.0.0.1:12345/v1', apiKey: raw } } } };
+    const environment = { ...v.input.environment, USERPROFILE: v.home, XDG_DATA_HOME: dataRoot,
+      TEST_DIRECTORY: v.project, ...(mode === 'inline' ? { OPENCODE_CONFIG_CONTENT: JSON.stringify(declaration) } : {}) };
+    if (mode !== 'inline') v.write(leaf, declaration);
+    const manualProfile = { ...profile, ...v.input, environment, embedded: { ...profile.embedded! } };
+    manualProfile.embedded.configurationSource = captureOpenCodeConfigurationSource(manualProfile).reference;
+    let ownerCurrent = true;
+    const original = captureOpenCodeV2Configuration(manualProfile, selection, () => ownerCurrent), deferred = original.selectedFile;
+    assert.ok(deferred); assert.equal(original.key, undefined);
+    assert.equal(DeferredOpenCodeV2FileKey.is({ ...deferred }), false);
+    const translatedSettings = original.configuration?.settings;
+    assert.ok(translatedSettings && typeof translatedSettings === 'object' && !Array.isArray(translatedSettings));
+    assert.equal(Object.hasOwn(translatedSettings, 'apiKey'), false);
+    assert.throws(() => captureOpenCodeV2SessionCredential(manualProfile, selection.providerId,
+      () => original.isCurrent(), undefined, deferred), { code: 'held' });
+    assert.throws(() => captureOpenCodeV2SessionCredential({ ...manualProfile, accountBinding: 'TEST-foreign' },
+      selection.providerId, original.isCurrent, undefined, deferred), { code: 'held' });
+    const materializer = createOpenCodeV2FileMaterialization(deferred.descriptor, () => assert.equal(ownerCurrent, true));
+    const paths = selectedFilePaths(deferred.descriptor);
+    const value = paths.map(path => materializer.readFileString(path).trim()).join('');
+    assert.equal(materializer.materializedKey(value), value);
+    const issuer = { nonce: 'd'.repeat(64), pid: process.pid, integrationId: selection.providerId,
+      reference: openCodeV2SelectedSourceReference(deferred.descriptor, 'd'.repeat(64), selection.providerId, 'fresh') };
+    const encoded = materializer.issue(value, issuer), accepted = AcceptedOpenCodeV2FileKey.accept(deferred, encoded, issuer, () => true);
+    assert.equal(openCodeV2NativeFileWitnessSchema.safeParse(encoded).success, true);
+    assert.equal(AcceptedOpenCodeV2FileKey.matches({ ...accepted }, deferred), false);
+    assert.equal(AcceptedOpenCodeV2FileKey.matches(accepted, deferred), true);
+    assert.equal(JSON.stringify(JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'))).includes(JSON.stringify(value)), false);
+    assert.equal(accepted.filesCurrent(), true);
+    assert.throws(() => AcceptedOpenCodeV2FileKey.accept(deferred, encoded, { ...issuer, nonce: 'e'.repeat(64) }, () => true));
+    assert.throws(() => AcceptedOpenCodeV2FileKey.accept(deferred, encoded, issuer, () => false));
+    let retainedChecks = 0;
+    assert.equal(AcceptedOpenCodeV2FileKey.retained(deferred, encoded, () => { retainedChecks++; }).scopeDigest, accepted.scopeDigest);
+    assert.equal(retainedChecks, 2);
+    assert.throws(() => AcceptedOpenCodeV2FileKey.retained(deferred, encoded, () => { throw Error('TEST unreleased original probe'); }));
+    const cold = captureOpenCodeV2Configuration(manualProfile, selection, () => true);
+    assert.ok(cold.selectedFile); assert.equal(cold.selectedFile.descriptor.digest, deferred.descriptor.digest);
+    assert.equal(AcceptedOpenCodeV2FileKey.retained(cold.selectedFile, encoded, () => {}).scopeDigest, accepted.scopeDigest);
+    for (const invalid of ['', encoded + '=', 'a'.repeat(65537), Buffer.from(JSON.stringify({ ...JSON.parse(
+      Buffer.from(encoded, 'base64url').toString('utf8')), extra: true })).toString('base64url')])
+      assert.equal(openCodeV2NativeFileWitnessSchema.safeParse(invalid).success, false);
+    ownerCurrent = false;
+    assert.equal(deferred.isCurrent(), false);
+    assert.equal(accepted.filesCurrent(), true, 'post-close file hashing is independent of a revoked native owner');
+    ownerCurrent = true;
+    writeFileSync(mode === 'home' ? second : mode === 'relative' || mode === 'environment' ? third : first,
+      'TEST-changed-private-key', { mode: 0o600 });
+    assert.equal(accepted.filesCurrent(), false, 'same spelling cannot borrow changed file bytes or identity');
+    assert.throws(() => AcceptedOpenCodeV2FileKey.retained(deferred, encoded, () => {}));
+  }
+  for (const mode of ['missing', 'empty', 'oversize', 'utf8', 'directory', 'env-file', 'malformed']) {
+    const v = fixture(t), leaf = join(v.project, 'opencode.jsonc'), dataRoot = join(v.root, 'data'), file = join(v.root, 'manual.key');
+    mkdirSync(dataRoot, { mode: 0o700 });
+    if (mode === 'directory') mkdirSync(file);
+    else if (mode !== 'missing') writeFileSync(file, mode === 'empty' ? ' \n' : mode === 'oversize'
+      ? Buffer.alloc(65537, 65) : mode === 'utf8' ? Buffer.from([0xff]) : 'TEST-original', { mode: 0o600 });
+    const raw = mode === 'env-file' ? '{env:TEST_KEY}' : '{file:' + file + (mode === 'malformed' ? '' : '}');
+    v.write(leaf, { provider: { [selection.providerId]: { options: { apiKey: raw } } } });
+    const manualProfile = { ...profile, ...v.input,
+      environment: { ...v.input.environment, USERPROFILE: v.home, XDG_DATA_HOME: dataRoot, TEST_KEY: '{file:' + file + '}' },
+      embedded: { ...profile.embedded! } };
+    manualProfile.embedded.configurationSource = captureOpenCodeConfigurationSource(manualProfile).reference;
+    if (mode === 'env-file' || mode === 'malformed') {
+      assert.throws(() => captureOpenCodeV2Configuration(manualProfile, selection, () => true)); continue;
+    }
+    const deferred = captureOpenCodeV2Configuration(manualProfile, selection, () => true).selectedFile;
+    assert.ok(deferred, 'file contents are not read by parent capture');
+    const materializer = createOpenCodeV2FileMaterialization(deferred.descriptor, () => {});
+    if (mode === 'empty') {
+      const value = materializer.readFileString(selectedFilePaths(deferred.descriptor)[0]!).trim();
+      assert.throws(() => materializer.materializedKey(value));
+    } else {
+      assert.throws(() => materializer.readFileString(selectedFilePaths(deferred.descriptor)[0]!));
+      assert.throws(() => materializer.materializedKey('TEST-fallback'), 'a caught native read error cannot turn into key success');
+    }
+  }
 });
 
 test('new or replaced config invalidates its original reference; malformed JSONC is never an empty success', (t) => {
@@ -228,6 +440,10 @@ test('selected V2 declaration preserves alias, limits, variant body and captured
     },
   });
   assert.ok(!JSON.stringify(selected.configuration).includes('TEST-private-key'));
+  assert.throws(() => selectOpenCodeV2ProviderConfiguration({ provider: { 'TEST-provider': {
+    options: { apiKey: '{env:TEST_KEY}' },
+  } } }, { providerId: 'TEST-provider', modelId: 'TEST-model' }, { TEST_KEY: '{file:/TEST-never-read}' }),
+  { reason: 'configuration-invalid' }, 'an environment value cannot manufacture a file grant');
   assert.deepEqual(
     mapOpenCodeV2SelectedModel('TEST-model', { variants: { high: { reasoningEffort: 'high' } } }),
     { 'TEST-model': { variants: [{ id: 'high', settings: { reasoningEffort: 'high' } }] } }
@@ -349,6 +565,56 @@ test('original Main source, exact approval and whole-command commitment survive 
     ...expected, anchorCommandId: historical.commandId, original: probes.readPreparation(historical.commandId),
   }), { code: 'held' });
   assert.deepEqual(store.read(historical.commandId), old);
+  const compiledTargets = [
+    { workspace: f.project, providerId },
+    { workspace: second, providerId: otherPolicies[0]!.providerId },
+  ];
+  const projectOnly = structuredClone(origin);
+  for (const workspace of projectOnly.workspaces)
+    workspace.global = { notConsulted: 'project-precedence' };
+  const originalRecord = store.read(input.commandId);
+  for (const candidate of [projectOnly, { ...origin, approval: { notConsulted: 'no-private-target' as const } }]) {
+    assert.throws(() => captureReadinessPreparation({ origin: candidate, remainingMs: 90000 },
+      { ...expected, targets: compiledTargets, original }), { code: 'held' },
+    'an existing commitment cannot acquire either unconsulted arm');
+    assert.deepEqual(store.read(input.commandId), originalRecord);
+  }
+  const newSelection = { ...selection, preparationId: 'TEST-new-preparation' };
+  projectOnly.commandId = newSelection.preparationId;
+  projectOnly.selectionDigest = managementDigest(newSelection);
+  const fresh = { ...expected, selection: newSelection, commandId: projectOnly.commandId,
+    anchorCommandId: 'TEST-new-first-probe', original: { present: false } };
+  assert.throws(() => captureReadinessPreparation({ origin: projectOnly, remainingMs: 90000 }, fresh), { code: 'held' });
+  assert.throws(() => captureReadinessPreparation({ origin: projectOnly, remainingMs: 90000 },
+    { ...fresh, targets: compiledTargets.slice(0, 1) }), { code: 'held' }, 'a group cannot hide another workspace');
+  assert.throws(() => captureReadinessPreparation({ origin: projectOnly, remainingMs: 90000 },
+    { ...fresh, targets: [...compiledTargets, { workspace: second, providerId: 'missing-provider' }] }),
+  { code: 'held' }, 'every compiled provider must be covered before an unconsulted arm is accepted');
+  const projectOnlyPrepared = captureReadinessPreparation({ origin: projectOnly, remainingMs: 90000 },
+    { ...fresh, targets: compiledTargets });
+  assert.equal(projectOnlyPrepared.anchor.originDigest, managementDigest(projectOnly));
+  assert.deepEqual(store.read(input.commandId), originalRecord, 'source validation does not rewrite or admit a probe');
+
+  const dependency = fixture(t), dependencyConfig = join(dependency.project, 'opencode.json');
+  const publicPolicy = { providerId, baseUrl: 'https://api.example.test/v1', preset: 'custom' as const, hasConfiguredApiKey: false };
+  dependency.write(dependencyConfig, { provider: { [providerId]: { npm: '@ai-sdk/openai-compatible',
+    options: { baseURL: publicPolicy.baseUrl } } } });
+  const unusedGlobal = join(dependency.home, '.config', 'opencode', 'opencode.json');
+  mkdirSync(dirname(unusedGlobal), { recursive: true });
+  writeFileSync(unusedGlobal, Buffer.alloc(1024 * 1024 + 1));
+  writeFileSync(join(dependency.root, 'unused-approvals.json'), Buffer.alloc(131073));
+  const dependencyOrigin: LocalModelReadinessOrigin = { ...projectOnly,
+    workspaces: [{ path: dependency.project, project: scope(dependency.project, false, [publicPolicy]),
+      global: { notConsulted: 'project-precedence' } }], approval: { notConsulted: 'no-private-target' },
+  };
+  const independent = captureOpenCodeReadinessOrigin(dependencyOrigin, { cwd: dependency.project }, providerId, () => true);
+  assert.equal(independent.policy?.baseUrl, publicPolicy.baseUrl);
+  assert.equal(independent.privateNetworkApproved, false, 'unconsulted approval is never approval');
+  const uncovered = structuredClone(dependencyOrigin);
+  uncovered.workspaces[0]!.project.providers = [];
+  assert.throws(() => captureOpenCodeReadinessOrigin(uncovered, { cwd: dependency.project }, providerId, () => true), { code: 'held' });
+  dependency.write(dependencyConfig, { provider: {} });
+  assert.equal(independent.isCurrent(), false, 'the consulted project identity remains mandatory');
   const profile: OpenCodeManagementProfile = { ...f.input, provider: 'opencode', profileId: 'TEST-profile',
     accountBinding: 'TEST-account', configRevision: 'TEST-revision', executable: { path: process.execPath, sha256: 'a'.repeat(64) },
     endpoint: 'http://127.0.0.1:12345', timeoutMs: 1000 };
@@ -358,11 +624,14 @@ test('original Main source, exact approval and whole-command commitment survive 
     ...scope, selectedPath: null, invalid: true as const, selectorFailure: 'config-conflict' as const, providers: [],
   });
   const globalRefusal = structuredClone(subset);
-  globalRefusal.workspaces[0]!.global = refuse(globalRefusal.workspaces[0]!.global);
+  const originalGlobal = globalRefusal.workspaces[0]!.global;
+  assert.ok('sources' in originalGlobal);
+  globalRefusal.workspaces[0]!.global = refuse(originalGlobal);
   assert.equal(captureOpenCodeReadinessOrigin(globalRefusal, profile, providerId, () => true).invalid,
     false, 'a clean project provider keeps original precedence over a global selector refusal');
   const unavailable = structuredClone(globalRefusal);
   unavailable.workspaces[0]!.project = refuse(unavailable.workspaces[0]!.project);
+  assert.ok('approved' in unavailable.approval);
   unavailable.approval.approved = [];
   const unknown = captureOpenCodeReadinessOrigin(unavailable, profile, providerId, () => true);
   assert.equal(unknown.invalid, true);
@@ -372,6 +641,9 @@ test('original Main source, exact approval and whole-command commitment survive 
     ordinaryAdmissions++;
     return { timeoutMs: 1000, run: async () => { ordinaryRuns++; return true; }, close: async () => true };
   }, coordination: () => { throw new Error('refused selector cannot authorize a challenge'); } };
+  assert.throws(() => createOpenCodeLocalModelReadiness(profile, probeInput, () => true, unused,
+    { ...subset, approval: { notConsulted: 'no-private-target' } }), { code: 'held' },
+  'an unconsulted approval cannot authorize the source-declared native private URL');
   assert.throws(() => createOpenCodeLocalModelReadiness(profile, probeInput, () => true, unused, unavailable),
     { code: 'held' }, 'an unknown ID cannot hide the captured native private URL');
   assert.throws(() => createOpenCodeLocalModelReadiness(profile, { ...probeInput, providerId: 'ollama' },

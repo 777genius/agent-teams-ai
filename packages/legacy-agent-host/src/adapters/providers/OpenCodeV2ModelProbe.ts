@@ -13,6 +13,7 @@ import { ManagementCommandError } from '../../management/commandRecords.js';
 import { managementDigest } from '../../management/identity.js';
 import { openCodeManagementProfileSchema } from '../../management/profile.js';
 import { createOpenCodeV2EmbeddedServer } from './OpenCodeV2EmbeddedServer.js';
+import type { AcceptedOpenCodeV2FileKey } from './OpenCodeV2SelectedFileKey.js';
 import { openCodeV2NoToolConfig, openCodeV2CoordinationConfig } from './OpenCodeV2EmbeddedConfig.js';
 import { OpenCodeCoordinationEndpoint, coordinationServer, closeCoordinationByDeadline } from './OpenCodeCoordinationEndpoint.js';
 import { captureCoordinationConfiguration, runNativeCoordination, readNativeCoordination } from './OpenCodeCoordinationProbe.js';
@@ -41,7 +42,7 @@ export function createOpenCodeV2ModelProbe(
   input: ModelProbeInput,
   isCurrent: () => boolean,
   options: { processCustody?: RegisteredProcessRootSource; coordination?: true;
-    readiness?: { observeProvider?(provider: unknown): void; expectedProvider?: Record<string, unknown> } } = {}
+    readiness?: { observeProvider?(provider: unknown, fileProof?: AcceptedOpenCodeV2FileKey): void; expectedProvider?: Record<string, unknown> } } = {}
 ): NativeModelProbe & { wasRejected(): boolean; coordinationObservation(): NativeCoordinationObservation | undefined } {
   const profile = selectOpenCodeV2ManagementModel(openCodeManagementProfileSchema.parse(raw), input);
   if (
@@ -79,6 +80,7 @@ export function createOpenCodeV2ModelProbe(
   const namespaceRoots = new Map<string, { dev: bigint; ino: bigint }>();
   const abort = new AbortController();
   let closed = false;
+  let released = false;
   let starting: Promise<void> | undefined;
   let running: Promise<boolean> | undefined;
   let closing: Promise<boolean> | undefined;
@@ -133,7 +135,7 @@ export function createOpenCodeV2ModelProbe(
   let config: Record<string, unknown> = noTool.config;
   let selection: OpenCodeV2OwnedSessionSelection = noTool.selection;
   const credential = captureOpenCodeV2SessionCredential(profile, input.providerId,
-    configuration.isCurrent);
+    configuration.isCurrent, configuration.key, configuration.selectedFile);
   const current = coordinationSource
     ? () => credential.isCurrent() && coordinationSource.isCurrent() : credential.isCurrent;
   let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
@@ -239,6 +241,7 @@ export function createOpenCodeV2ModelProbe(
       startupTimeoutMs: Math.min(profile.timeoutMs, purposeBound ? deadline - Date.now() : timeoutMs),
       canAllocate: current,
       ...(options.processCustody ? { processCustody: options.processCustody } : {}),
+      ...(configuration.selectedFile ? { selectedFile: { source: configuration.selectedFile, mode: 'fresh' as const } } : {}),
       config,
     });
     coordinationSource?.beforeAllocation();
@@ -247,13 +250,14 @@ export function createOpenCodeV2ModelProbe(
     await withClient(signal, async (client, wire) => {
       const identity = await client.identity();
       if (identity.pid !== ready!.pid || identity.version !== '2.1.4') return unavailable();
-      nativeCredential = await credential.prepare(wire, client);
+      nativeCredential = await credential.prepare(wire, client, undefined,
+        integrationId => server!.selectedFileKey(ready!, integrationId));
       await attestOpenCodeV2ModelSelection(client, selection.model,
         { signal, deadline, isCurrent: current });
       options.readiness?.observeProvider?.({
         ...observedProvider,
         ...(nativeCredential ? { credentialScopeDigest: nativeCredential.scopeDigest } : {}),
-      });
+      }, credential.fileProof());
       assertCurrent(signal);
       await client.createSession({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) });
     });
@@ -367,6 +371,12 @@ export function createOpenCodeV2ModelProbe(
     timeoutMs,
     wasRejected: () => rejected,
     coordinationObservation: () => coordinationResult === undefined ? undefined : { ...coordinationResult },
+    nativeFileKeyWitness: () => {
+      if (!released) return undefined;
+      const proof = credential.fileProof();
+      if (configuration.selectedFile && !proof) return unavailable();
+      return proof;
+    },
     run: (signal, originalDeadline) => (running ??= run(signal, originalDeadline)),
     close: originalDeadline => {
       closed = true;
@@ -424,7 +434,8 @@ export function createOpenCodeV2ModelProbe(
           return false;
         }
       })();
-      closing = purposeBound ? closeCoordinationByDeadline(work, originalDeadline ?? deadline) : work;
+      closing = (purposeBound ? closeCoordinationByDeadline(work, originalDeadline ?? deadline) : work)
+        .then(clean => { released = clean; return clean; });
       return closing;
     },
   };

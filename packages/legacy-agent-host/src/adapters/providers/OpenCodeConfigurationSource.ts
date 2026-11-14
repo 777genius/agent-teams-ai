@@ -24,6 +24,8 @@ interface Input {
   readonly environment: Readonly<Record<string, string>>;
 }
 type Config = Record<string, unknown>;
+type KeySource = { kind: 'file'; path: string; digest: string } | { kind: 'inline'; digest: string };
+export type OpenCodeConfigurationKeyOrigin = Readonly<KeySource & { value: unknown }>;
 const maximum = 1024 * 1024;
 const record = (value: unknown): value is Config =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -249,17 +251,47 @@ export function captureOpenCodeConfigurationSource(
     }
   };
   let config: Config = {};
+  const documents: { value: Config; origin: KeySource }[] = [];
+  const apply = (value: Config, origin: KeySource) => {
+    documents.push({ value, origin });
+    config = merge(config, value);
+  };
   for (let index = 0; index <= original.files.length; index++) {
     if (index === selected.projectStart && selected.inline !== undefined)
-      config = merge(config, parse(selected.inline));
+      apply(parse(selected.inline), { kind: 'inline', digest: hash(selected.inline) });
     const file = original.files[index];
-    if (file?.bytes !== undefined) config = merge(config, parse(file.bytes));
+    if (file?.bytes !== undefined)
+      apply(parse(file.bytes), { kind: 'file', path: file.path, digest: file.digest });
   }
   if (!isCurrent()) changed();
   return Object.freeze({
     reference: structuredClone(original.reference),
     digest: fingerprint,
     isCurrent,
+    /** Pure joins to the already captured documents; callers retain the original freshness checks. */
+    matchesConfiguration: (value: unknown) => managementDigest(value) === managementDigest(config),
+    selectedKeyOrigin: (providerId: string): OpenCodeConfigurationKeyOrigin | undefined => {
+      if (!ownerCurrent()) changed();
+      let origin: OpenCodeConfigurationKeyOrigin | undefined;
+      const parts = ['provider', providerId, 'options', 'apiKey'];
+      for (const document of documents) {
+        let value: unknown = document.value;
+        for (let index = 0; index < parts.length; index++) {
+          if (!record(value)) { origin = undefined; break; }
+          const part = parts[index]!;
+          if (!Object.hasOwn(value, part)) break;
+          value = value[part];
+          if (index === parts.length - 1)
+            origin = { ...document.origin, value: structuredClone(value) };
+        }
+      }
+      const provider = record(config.provider) ? config.provider[providerId] : undefined;
+      const options = record(provider) && record(provider.options) ? provider.options : undefined;
+      if (origin && (!options || !Object.hasOwn(options, 'apiKey') ||
+          managementDigest(origin.value) !== managementDigest(options.apiKey))) changed();
+      if (!ownerCurrent()) changed();
+      return origin;
+    },
     read: () => {
       if (!isCurrent()) changed();
       return structuredClone(config);

@@ -130,3 +130,9 @@ export const createTeamLaunchSubmitResultSchema: z.ZodType<CreateTeamLaunchSubmi
         value.launch.members.some(member => member.attempt.claimed)))
       context.addIssue({ code: 'custom', message: 'Partial creation requires a published Team and an unadmitted capture' });
   });
+
+/** Private original Create prefix: a published Team/capture, with no Runtime admission. */
+export const createTeamLaunchCaptureResultSchema = createTeamLaunchSubmitResultSchema
+  .refine(value => value.partialCreated === true, 'Capture requires an unadmitted partial creation')
+  .transform(value => ({ ...value, partialCreated: true as const }));
+export type CreateTeamLaunchCaptureResult = z.infer<typeof createTeamLaunchCaptureResultSchema>;

@@ -159,6 +159,11 @@ export function captureSavedTeamModelProbe(
   };
   return {
     profile: teamModelProbeProfile(effective.provider === 'claude' ? selected : effective),
+    provenance: { teamBindingDigest: runtimeDigest(team.definition.binding),
+      selectionDigest: runtimeDigest(input), sourceRevision: input.launchId, rosterRevision: input.rosterRevision,
+      destinationKeys: [runtimeDigest(input.draft?.target ?? { launchId: input.launchId, memberId: input.memberId })] },
+    readinessCapture: undefined,
+    assertReadinessCapture: undefined,
     context,
     model: effective.model,
     providerId:

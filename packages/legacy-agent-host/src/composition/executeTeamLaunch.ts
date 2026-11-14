@@ -12,8 +12,7 @@ const id = z.string().min(1).max(256);
 const scope = z.object({ launchId: id, rosterRevision: id }).strict();
 const json = (value: unknown): JsonValue => JSON.parse(JSON.stringify(value)) as JsonValue;
 
-/** Composition maps app configuration; the existing launch owner publishes it before opening. */
-export function executeTeamLaunch(options: {
+interface TeamLaunchExecution {
   launch: TeamLaunchOwner;
   entries: MemberEntry[];
   operation: 'start' | 'read' | 'retry' | 'configuration.read';
@@ -21,16 +20,24 @@ export function executeTeamLaunch(options: {
   commandId: string;
   payload: unknown;
   beforeOpen?(): void;
-}): JsonValue {
+  beforeStart?(): Promise<void>;
+}
+/** Composition maps app configuration; the existing launch owner publishes it before opening. */
+export function executeTeamLaunch(options: TeamLaunchExecution & { beforeStart: () => Promise<void> }): Promise<JsonValue>;
+export function executeTeamLaunch(options: TeamLaunchExecution & { beforeStart?: undefined }): JsonValue;
+export function executeTeamLaunch(options: TeamLaunchExecution): JsonValue | Promise<JsonValue>;
+export function executeTeamLaunch(options: TeamLaunchExecution): JsonValue | Promise<JsonValue> {
   const { launch, entries, operation, commandId } = options;
   if (operation === 'read' || operation === 'configuration.read') {
     z.object({}).strict().parse(options.payload);
     const summary = launch.read(); // Current Team read authority precedes any selected choices.
     if (operation === 'read') return json(summary);
+    const selectable = new Set(launch.readModelProbeSelection('read').memberIds);
     return json({
       launch: summary,
-      members: summary.members.map(({ memberId }) => {
-        const entry = entries.find((candidate) => candidate.profile.memberId === memberId);
+      members: summary.members.map(({ memberId, binding }) => {
+        const entry = entries.find((candidate) => candidate.profile.memberId === memberId &&
+          runtimeDigest(candidate.binding) === runtimeDigest(binding));
         const configured = entry?.team.definition.members.find(
           (member) => member.memberId === memberId
         );
@@ -38,7 +45,7 @@ export function executeTeamLaunch(options: {
           entry?.team.definition.savedSettings === undefined || !configured
             ? undefined
             : configured?.role === 'lead' || configured?.settings?.cwd === undefined;
-        const selected = entry
+        const selected = entry && selectable.has(memberId)
           ? selectedLaunchConfiguration(entry.profile, workspaceInherited)
           : null;
         const member = options.members.find((member) => member.memberId === memberId);
@@ -106,7 +113,8 @@ export function executeTeamLaunch(options: {
       }
   } else if (input.rosterRevision !== current.rosterRevision)
     throw new TeamLaunchError('conflict', 'launch-scope');
-  return json(launch.start(commandId, fingerprint, options.beforeOpen, input.initialPrompt));
+  const start = () => json(launch.start(commandId, fingerprint, options.beforeOpen, input.initialPrompt));
+  return options.beforeStart ? options.beforeStart().then(start) : start();
 }
 
 export function selectedLaunchConfiguration(

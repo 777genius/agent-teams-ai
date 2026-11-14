@@ -5,13 +5,14 @@ import { join } from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
+import { supportsScopedDefaultModelInheritance } from '../../../src/features/runtime-provider-management/core/domain/providerManagementView';
 import { createCapturedRuntimeProviderManagementClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient';
 import { captureManagedProviderRuntimePreferences } from '../../../src/features/runtime-provider-management/main/application/captureManagedProviderRuntimePreferences';
 
 import type { CapturedProviderManagement } from '../../../src/features/agent-backend/main';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
-async function fixture(configuredAuthless = false) {
+async function fixture(configuredAuthless = false, summaryModels = false) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-captured-defaults-')));
   const projectRoot = join(root, 'project'),
     globalRoot = join(root, 'global');
@@ -75,7 +76,7 @@ async function fixture(configuredAuthless = false) {
               defaultModelId: null,
               modelCount: 1,
               authMethods: ['api'],
-              models: payload.providerId
+              models: payload.providerId || summaryModels
                 ? [
                     {
                       modelId: 'TEST-model',
@@ -140,7 +141,17 @@ it('saves only after an actual probe and uses the same captured owner for prefer
 });
 
 it('global default explicitly selects the global binding and project clear reveals inherited global value', async () => {
-  const f = await fixture();
+  const f = await fixture(false, true);
+  const initial = await f.port.loadView(input);
+  expect(supportsScopedDefaultModelInheritance(initial.view ?? null)).toBe(true);
+  expect(initial.view?.configuredModels).toMatchObject([{
+    modelId: input.modelId,
+    default: false,
+    availability: 'untested',
+    proofState: 'needs_probe',
+    requiresExecutionProof: true,
+  }]);
+  expect(f.calls).toEqual(['catalog']);
   expect(
     (await f.port.setDefaultModel({ ...input, scope: 'all_projects', probe: false })).view
       ?.allProjectsDefaultModel
@@ -152,6 +163,11 @@ it('global default explicitly selects the global binding and project clear revea
     defaultModel: input.modelId,
     defaultModelSource: 'all_projects',
   });
+  const absent = await fixture();
+  delete absent.target.preferences;
+  const unavailable = await absent.port.loadView(input);
+  expect(supportsScopedDefaultModelInheritance(unavailable.view ?? null)).toBe(false);
+  expect(unavailable.view).not.toHaveProperty('configuredModels');
 });
 
 it('probe failure, missing model, corrupt preferences and a stale context never publish a new default', async () => {

@@ -5,7 +5,7 @@ import { isTeamTaskActivelyWorked } from '@shared/utils/teamTaskState';
 
 import { readHostScheduleState } from './readHostScheduleState';
 
-import type { BackendLaunchConfigurationView, BackendLaunchSnapshot } from '../../../contracts/launch';
+import type { BackendLaunchConfigurationView, BackendLaunchModelPreparation, BackendLaunchSnapshot } from '../../../contracts/launch';
 import type { BackendOperationPayloads, BackendOperationRequest,
   BackendRuntimeSnapshot, BackendTaskRecipient } from '../../../contracts/operations';
 import type { BackendRosterConfiguration } from '../../../contracts/roster';
@@ -226,7 +226,34 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
     const expected = await this.recipient(name, recipient), state = await this.runtime(expected.memberId, expected.generation);
     if (!safeUnopened(state))
       throw new Error('Scheduled member cannot be attached without a manual restart');
-    await this.call('runtime.open', { memberId: expected.memberId, expectedGeneration: expected.generation }, this.id(`attach:${expected.memberId}`));
+    const opened = await this.options.target.invoke({ operation: 'runtime.open', commandId: this.id(`attach:${expected.memberId}`),
+      payload: { memberId: expected.memberId, expectedGeneration: expected.generation } },
+      { launchId: expected.runId, memberId: expected.memberId, expectedGeneration: expected.generation });
+    if (!opened.ok) throw new Error(`Scheduled runtime.open ${opened.outcome} (${opened.code})`);
+  }
+
+  private async prepareLaunchModels(roster: BackendRosterConfiguration): Promise<BackendLaunchModelPreparation | undefined> {
+    if (roster.members.every(row => ['anthropic', 'codex'].includes(
+      row.settings.providerId ?? roster.savedSettings?.providerId ?? ''))) return undefined;
+    const configuration = await this.call('team.launch.model.configuration.read', {});
+    if (!configuration || !('source' in configuration) || !('members' in configuration) ||
+      configuration.members.some(row => !row.selected)) throw new Error('Scheduled model selection is unavailable');
+    const targets = configuration.members.filter(row => row.selected!.provider === 'opencode');
+    if (!targets.length) return undefined;
+    const lead = configuration.members.find(row => row.role === 'lead')?.selected;
+    if (!lead) throw new Error('Scheduled lead selection is unavailable');
+    const checks = targets.map(row => ({ providerId: 'opencode' as const, model: row.selected!.model,
+      ...(row.selected!.effort === undefined ? {} : { effort: row.selected!.effort }),
+      targets: [row.role === 'lead' ? { kind: 'lead' as const } : { kind: 'member' as const, name: row.label }] }));
+    const preparationId = this.id('models');
+    const result = await this.options.target.prepareModels({ preparationId, cwd: lead.workspace,
+      modelChecks: checks, selectedModelChecks: checks });
+    this.assertTeam(this.options.selection);
+    const original = result.capturedTeamReadiness;
+    if (!result.ready || !original?.selections?.length || original.preparationId !== preparationId ||
+      original.launchId !== configuration.source.sourceId || original.rosterRevision !== configuration.source.rosterRevision)
+      throw new Error('Scheduled model check awaits confirmation');
+    return { preparationId, selections: original.selections };
   }
 
   async launchTeam(request: TeamLaunchRequest): Promise<TeamLaunchResponse> {
@@ -236,16 +263,19 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
     if (await this.isTeamLaunching(request.teamName)) return { runId: existing!.launchId, launchStatus: 'already_launching' };
     if (await this.isTeamBusy(request.teamName)) throw new Error('Scheduled team launch is held');
     const roster = await this.roster();
+    const modelPreparation = await this.prepareLaunchModels(roster);
     const replaced = await this.call('team.roster.replace', { expectedRevision: roster.revision,
       members: roster.members.filter(row => row.role !== 'lead').map(row => ({ ...row.settings, name: row.name })) }, this.id('roster'));
     if (!replaced || !('revision' in replaced) || !('commandId' in replaced) || replaced.commandId !== this.id('roster'))
       throw new Error('Scheduled roster admission awaits confirmation');
     this.rosterRevision = replaced.revision;
-    const captured = await this.call('team.launch.capture', { rosterCommandId: this.id('roster') }, this.id('capture'));
+    const captured = await this.call('team.launch.capture', { rosterCommandId: this.id('roster'),
+      ...(modelPreparation ? { modelPreparation } : {}) }, this.id('capture'));
     if (!captured || !('launch' in captured) || !('members' in captured)) throw new Error('Scheduled launch capture awaits confirmation');
     const view: BackendLaunchConfigurationView = captured;
     const value = await this.call('team.launch.start', { launchId: view.launch.launchId,
       rosterRevision: view.launch.rosterRevision,
+      ...(modelPreparation ? { modelPreparation } : {}),
       initialPrompt: request.bootstrapOnly ? null : request.prompt?.trim() || null }, this.id('launch'));
     if (!value || !('retryCapability' in value)) throw new Error('Scheduled launch awaits confirmation');
     return { runId: value.launchId, launchStatus: 'started' };

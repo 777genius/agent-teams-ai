@@ -66,6 +66,13 @@ export async function prepareDesktopProofMode(
     'explicit known proof mode'
   );
   const mixedMode = mode === 'native-mixed-create-launch-ui';
+  const membershipFlag = process.env.LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI;
+  assert.ok(membershipFlag === undefined || membershipFlag === '1');
+  if (membershipFlag === '1') {
+    assert.equal(mixedMode, true);
+    assert.equal(process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH, undefined);
+    assert.equal(process.env.LEGACY_DESKTOP_READBACK_ROOT, undefined);
+  }
   const scheduleUiMode = process.env.LEGACY_DESKTOP_SCHEDULE_UI === '1';
   if (scheduleUiMode) assert.equal(mode, 'native-launch-ui', 'schedule proof extends the existing Launch mode');
   const commandsUiMode = process.env.LEGACY_DESKTOP_COMMANDS_UI === '1';
@@ -209,8 +216,10 @@ export async function prepareDesktopProofMode(
     'the V2 conversation variant proves the original PNG Composer only');
   if (resumeProvider === 'opencode') assert.ok(resumeMode && openCodeLifecycleMode);
   if (openCodeLifecycleMode && resumeMode) assert.equal(resumeProvider, 'opencode');
-  const mixedModels = mixedMode ? await startDesktopMixedModels(fixtureRoot,
-    openCodeGeneration === 'v2' ? { nativeGeneration: 'v2' } : {}) : undefined;
+  const mixedModels = mixedMode ? await startDesktopMixedModels(fixtureRoot, {
+    ...(openCodeGeneration === 'v2' ? { nativeGeneration: 'v2' as const } : {}),
+    ...(membershipFlag === '1' ? { liveMembership: true as const } : {}),
+  }) : undefined;
   const nativeMemberCreation =
     createLaunchMode && process.env.LEGACY_DESKTOP_NATIVE_MEMBER_CREATE === '1'
       ? {

@@ -216,12 +216,29 @@ function environmentValues(value: unknown, environment: Readonly<Record<string, 
   return value;
 }
 
+/** A private pure selection. File ownership and bytes belong to the original Host capture. */
+export function selectOpenCodeV2ConfigurationKey(
+  raw: unknown, environment: Readonly<Record<string, string>>
+): { apiKey?: string; apiKeyFile?: string } {
+  if (raw === undefined) return {};
+  if (typeof raw === 'string' && raw.includes('{file:')) {
+    if (Buffer.byteLength(raw) > 64 * 1024 || /[\x00-\x1f\x7f]/u.test(raw) ||
+        [...raw.matchAll(/\{file:/gu)].length > 32) invalid();
+    return { apiKeyFile: raw };
+  }
+  const value = environmentValues(raw, environment);
+  if (typeof value !== 'string' || !value || value.includes('{file:') ||
+      value.length > 64 * 1024 || [...value].some(character =>
+        character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) invalid();
+  return { apiKey: value };
+}
+
 /** Private output: the caller binds any explicit key through the existing P02 owner, never a receipt. */
 export function selectOpenCodeV2ProviderConfiguration(
   config: RecordValue,
   selection: { providerId: string; modelId: string },
   environment: Readonly<Record<string, string>>
-): { configuration?: Record<string, Json>; apiKey?: string } {
+): { configuration?: Record<string, Json>; apiKey?: string; apiKeyFile?: string } {
   if (!id.safeParse(selection.providerId).success || !id.safeParse(selection.modelId).success)
     invalid();
   if (config.provider === undefined) return {};
@@ -230,11 +247,15 @@ export function selectOpenCodeV2ProviderConfiguration(
   if (raw === undefined) return {};
   if (!record(raw)) invalid();
   if (raw.models !== undefined && !record(raw.models)) invalid();
+  if (raw.options !== undefined && !record(raw.options)) invalid();
+  const rawOptions = record(raw.options) ? raw.options : {};
+  const selectedKey = selectOpenCodeV2ConfigurationKey(rawOptions.apiKey, environment);
+  const { apiKey: _rawKey, ...remainingOptions } = rawOptions;
   const selectedModel = record(raw.models) ? raw.models[selection.modelId] : undefined;
   const provider = environmentValues(
     {
       ...(raw.npm === undefined ? {} : { npm: raw.npm }),
-      ...(raw.options === undefined ? {} : { options: raw.options }),
+      ...(raw.options === undefined ? {} : { options: remainingOptions }),
       ...(selectedModel === undefined ? {} : { models: { [selection.modelId]: selectedModel } }),
     },
     environment
@@ -244,16 +265,6 @@ export function selectOpenCodeV2ProviderConfiguration(
   if (!record(options) || Object.keys(options).some((key) => !['baseURL', 'apiKey'].includes(key)))
     invalid();
   if (options.baseURL !== undefined && typeof options.baseURL !== 'string') invalid();
-  if (
-    options.apiKey !== undefined &&
-    (typeof options.apiKey !== 'string' ||
-      !options.apiKey ||
-      options.apiKey.length > 64 * 1024 ||
-      [...options.apiKey].some(
-        (character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127
-      ))
-  )
-    invalid();
   if (provider.models !== undefined && !record(provider.models)) invalid();
   const declared = record(provider.models) ? provider.models[selection.modelId] : undefined;
   const configuration: Record<string, Json> = {
@@ -266,6 +277,6 @@ export function selectOpenCodeV2ProviderConfiguration(
   if (Buffer.byteLength(JSON.stringify(configuration)) > 256 * 1024) invalid();
   return {
     ...(Object.keys(configuration).length ? { configuration } : {}),
-    ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey as string }),
+    ...selectedKey,
   };
 }

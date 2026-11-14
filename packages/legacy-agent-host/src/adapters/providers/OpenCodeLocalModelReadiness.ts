@@ -1,6 +1,8 @@
 import { captureOpenCodeReadinessOrigin } from './OpenCodeReadinessOrigin.js';
 import { captureOpenCodeConfigurationSource } from './OpenCodeConfigurationSource.js';
 import { OpenCodeV2CredentialScope } from './OpenCodeV2CredentialScope.js';
+import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
+import { AcceptedOpenCodeV2FileKey } from './OpenCodeV2SelectedFileKey.js';
 import { closeCoordinationByDeadline } from './OpenCodeCoordinationEndpoint.js';
 import { ManagementCommandError, nativeLocalReadinessEvidenceSchema } from '../../management/commandRecords.js';
 import { managementDigest } from '../../management/identity.js';
@@ -80,12 +82,12 @@ export function createOpenCodeLocalModelReadiness(
   input: ModelProbeInput,
   ownerCurrent: () => boolean,
   adapters: {
-    ordinary(observeProvider: (provider: unknown) => boolean, isCurrent: () => boolean): NativeModelProbe;
+    ordinary(observeProvider: (provider: unknown, fileProof?: AcceptedOpenCodeV2FileKey) => boolean, isCurrent: () => boolean): NativeModelProbe;
     coordination(provider: Row, key: string | undefined, isCurrent: () => boolean): NativeReadinessCoordination | undefined;
     fetchImpl?: typeof fetch;
   },
   origin?: LocalModelReadinessOrigin
-): NativeModelProbe {
+): NativeModelProbe & { nativeFileKeyWitness(): AcceptedOpenCodeV2FileKey | undefined } {
   const source = captureOpenCodeConfigurationSource(profile,
     profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent);
   const policyOrigin = origin ? captureOpenCodeReadinessOrigin(origin, profile, input.providerId, ownerCurrent) : undefined;
@@ -117,8 +119,8 @@ export function createOpenCodeLocalModelReadiness(
   };
   // Original native configuration is already captured; a selector refusal is never private approval.
   requirePrivateApproval(resolveString(options.baseURL));
-  // The original V1 native owner resolves a file token; this reader never opens the referenced secret.
-  const configuredKey = policyOrigin && profile.nativeGeneration !== 'v2' &&
+  // V1 keeps native substitution. A V2 token is qualified by the exact native source capture below.
+  const configuredKey = (policyOrigin || profile.nativeGeneration === 'v2') &&
     typeof options.apiKey === 'string' && options.apiKey.includes('{file:')
     ? options.apiKey : resolveString(options.apiKey);
   const hasConfiguredKey = policyOrigin?.policy?.hasConfiguredApiKey ??
@@ -132,15 +134,20 @@ export function createOpenCodeLocalModelReadiness(
   if (selectedUrl && network(selectedUrl.hostname).privateNetwork && !policyOrigin?.privateNetworkApproved) held();
   const localCandidate = Boolean(selectedUrl && network(selectedUrl.hostname).loopback &&
     !hasConfiguredKey);
-  const key = localCandidate || profile.nativeGeneration === 'v2'
-    ? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture() : undefined;
+  const nativeConfiguration = profile.nativeGeneration === 'v2' && profile.embedded?.configurationSource
+    ? captureOpenCodeV2Configuration(profile, { providerId: input.providerId, modelId: selectedModel },
+      ownerCurrent, 'model', { source, config: raw }) : undefined;
+  const selectedFile = nativeConfiguration?.selectedFile;
+  const key = !selectedFile && (localCandidate || profile.nativeGeneration === 'v2')
+    ? nativeConfiguration?.key ?? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture()
+    : undefined;
   const baseline = profile.nativeGeneration === 'v2' && profile.nativeModel?.providerId === input.providerId
     ? profile.embedded?.providerConfiguration : undefined;
   const baselineSettings = object(baseline?.settings) ? baseline.settings : undefined;
   const baselineKey = typeof baselineSettings?.apiKey === 'string' && baselineSettings.apiKey
     ? baselineSettings.apiKey : undefined;
   // V2 uses the captured credential; V1 observes the native SDK's resolved key below.
-  let applicable = localCandidate && (profile.nativeGeneration !== 'v2' || key?.present !== true);
+  let applicable = localCandidate && !selectedFile && (profile.nativeGeneration !== 'v2' || key?.present !== true);
   const presetId = policyOrigin?.policy?.preset;
   let preset: Metadata['provider'] = !applicable ? 'custom'
     : (presetId ?? input.providerId) === 'ollama' ? 'ollama'
@@ -151,10 +158,13 @@ export function createOpenCodeLocalModelReadiness(
     contextSource: 'unknown' };
   const reasons = new Set<Reason>();
   let effective: Row | undefined, effectiveDigest: string | undefined;
+  let fileProof: AcceptedOpenCodeV2FileKey | undefined;
   let closed = false;
+  let released = false;
   const current = () => !closed && ownerCurrent() && source.isCurrent() &&
-    (policyOrigin?.isCurrent() ?? true) && (key?.isCurrent() ?? true);
-  const observeProvider = (value: unknown) => {
+    (policyOrigin?.isCurrent() ?? true) && (key?.isCurrent() ?? true) &&
+    (selectedFile?.isCurrent() ?? true) && (fileProof?.filesCurrent() ?? true);
+  const observeProvider = (value: unknown, nativeFileProof?: AcceptedOpenCodeV2FileKey) => {
     if (!current()) held();
     if (!object(value) || Buffer.byteLength(JSON.stringify(value)) > 256 * 1024) return held();
     const next = structuredClone(value), nextOptions = object(next.options) ? next.options : {};
@@ -173,13 +183,19 @@ export function createOpenCodeLocalModelReadiness(
       nextOptions.apiKey === baselineKey;
     if (v2) {
       const observed = Object.hasOwn(next, 'credentialScopeDigest');
-      if (key?.present) {
+      if (selectedFile) {
+        if (!AcceptedOpenCodeV2FileKey.matches(nativeFileProof, selectedFile) ||
+            !nativeFileProof.filesCurrent() || !observed || next.credentialScopeDigest !== nativeFileProof.scopeDigest ||
+            fileProof !== undefined && fileProof.scopeDigest !== nativeFileProof.scopeDigest) return held();
+        fileProof = nativeFileProof;
+      } else if (nativeFileProof !== undefined) return held();
+      else if (key?.present) {
         if (!observed || typeof next.credentialScopeDigest !== 'string' ||
             !/^[a-f0-9]{64}$/.test(next.credentialScopeDigest) || next.credentialScopeDigest !== key.digest) held();
       } else if (observed || typeof nextOptions.apiKey === 'string' && nextOptions.apiKey && !baselineKeyMatched) held();
     }
     if (policyOrigin?.policy?.hasConfiguredApiKey && (v2
-      ? !(key?.present || baselineKeyMatched)
+      ? !(fileProof || key?.present || baselineKeyMatched)
       : typeof nextOptions.apiKey !== 'string' || !nextOptions.apiKey)) held();
     if (!current()) held();
     const digest = managementDigest(next);
@@ -325,7 +341,7 @@ export function createOpenCodeLocalModelReadiness(
         baseUrl: selectedUrl?.toString() ?? null, effort: input.effort ?? null, limits: input.limits ?? null }),
       configurationDigest: managementDigest({ source: source.digest, effective: effectiveDigest ?? null,
         ...(policyOrigin ? { origin: policyOrigin.digest } : {}) }),
-      accountDigest: managementDigest({ binding: profile.accountBinding, key: key?.digest ?? null,
+      accountDigest: managementDigest({ binding: profile.accountBinding, key: fileProof?.scopeDigest ?? key?.digest ?? null,
         configuredKey: typeof configuredKey === 'string' ? configuredKey : null }), metadata,
     });
     return !block;
@@ -368,6 +384,7 @@ export function createOpenCodeLocalModelReadiness(
     timeoutMs,
     run: (signal, originalDeadline) => running ??= run(signal, originalDeadline),
     readiness: () => evidence === undefined ? undefined : structuredClone(evidence),
+    nativeFileKeyWitness: () => released && ordinaryClean && evidence?.decision === 'allow' ? fileProof : undefined,
     close: originalDeadline => {
       closed = true; abort.abort();
       const work = async () => {
@@ -378,7 +395,8 @@ export function createOpenCodeLocalModelReadiness(
         ]);
         return clean.every(Boolean);
       };
-      return closing ??= closeCoordinationByDeadline(work(), originalDeadline ?? deadline);
+      return closing ??= closeCoordinationByDeadline(work(), originalDeadline ?? deadline)
+        .then(clean => { released = clean; return clean; });
     },
   };
 }
