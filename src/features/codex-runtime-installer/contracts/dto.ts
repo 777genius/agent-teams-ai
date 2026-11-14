@@ -1,4 +1,4 @@
-export type CodexRuntimeSource = 'app-managed' | 'path' | 'missing';
+export type CodexRuntimeSource = 'app-managed' | 'path' | 'missing' | 'captured-host' | 'override';
 
 export type CodexRuntimeInstallerState =
   | 'idle'
@@ -23,6 +23,7 @@ export interface CodexRuntimeStatus {
   latestVersion: string | null;
   updateAvailable: boolean;
   source: CodexRuntimeSource;
+  sourceRevision?: string;
   state: CodexRuntimeInstallerState;
   progress?: CodexRuntimeInstallProgress;
   error?: string;
