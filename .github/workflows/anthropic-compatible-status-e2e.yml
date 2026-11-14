@@ -19,6 +19,10 @@ on:
       - src/main/services/runtime/providerRuntimeEnv.ts
       - src/main/utils/shellEnv.ts
       - src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts
+      - src/main/services/team/provisioning/TeamProvisioningRunProgress.ts
+      - src/main/utils/windowsProcessTree.ts
+      - test/main/utils/windowsProcessTree.test.ts
+      - src/main/services/team/provisioning/__tests__/TeamProvisioningRunProgress.test.ts
       - src/renderer/store/slices/cliInstallerSlice.ts
       - src/renderer/store/index.ts
       - src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx
