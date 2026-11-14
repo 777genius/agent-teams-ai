@@ -115,7 +115,8 @@ export class CapturedHostClient {
 
   constructor(
     profile: SelectedHostProfile,
-    private readonly onNativePromptSuggestion?: (value: unknown) => void
+    private readonly onNativePromptSuggestion?: (value: unknown) => void,
+    private readonly capturedNativeNextPromptEnabled = false
   ) {
     this.profile = captureHostProfile(profile);
   }
@@ -134,7 +135,12 @@ export class CapturedHostClient {
       if (this.sealed) throw new HostClientError('shutting-down', 'not-dispatched');
       const child = spawnWithLinuxChildLaunch(this.profile.nodeExecutable, [this.profile.hostEntry], {
         cwd: this.profile.cwd,
-        env: { ...this.profile.env },
+        env: {
+          ...this.profile.env,
+          // Only trusted Main captures this setting. It overrides any legacy
+          // profile flag at process startup, never while a session is active.
+          AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED: this.capturedNativeNextPromptEnabled ? '1' : '0',
+        },
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
       });
