@@ -105,7 +105,6 @@ import {
   createTeamRuntimeRecoveryFeature,
   type TeamRuntimeRecoveryFeatureFacade,
 } from '@features/team-runtime-recovery/main';
-import { NATIVE_NEXT_PROMPT_UPDATED } from '@features/native-prompt-suggestions/contracts/channel';
 import {
   TOKEN_USAGE_SNAPSHOT_CHANGED,
   TOKEN_USAGE_BUDGET_STATUS_CHANGED,
@@ -1748,9 +1747,9 @@ async function initializeServices(): Promise<void> {
   initializeAgentBackendConnection(contextRegistry, {
     getMainWindow: () => mainWindow,
     rendererIndexPath: resolveRendererIndexPath(__dirname),
-    publishHttpNativePromptSuggestion: candidate => {
-      httpServer?.broadcast(NATIVE_NEXT_PROMPT_UPDATED, candidate);
-    },
+    // Fail closed for browser SSE: /api/events broadcasts to every connected
+    // client without per-owner authorization. Never publish private human-DM
+    // follow-ups there until a scoped authenticated SSE transport exists.
   });
   // An inherited endpoint belongs to a previous process, not this Host's server.
   await startupStage(clearTeamControlApiState);
