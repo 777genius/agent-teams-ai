@@ -3,7 +3,6 @@ import { test } from 'node:test';
 import { createCapturedPromptSuggestionBinding } from '../dist/composition/createCapturedPromptSuggestionBinding.js';
 
 import type { CapturedPromptSuggestion, CapturedPromptSuggestionNotice } from '../src/composition/createCapturedPromptSuggestionBinding.ts';
-import type { MemberEntry } from '../src/composition/MemberEntry.ts';
 import type { RuntimeOwner } from '../src/runtime/RuntimeOwner.ts';
 
 const binding = Object.freeze({
@@ -42,7 +41,7 @@ function harness(provider: 'claude' | 'codex' = 'claude') {
       definition: { members: [{ memberId: binding.memberId, name: 'alice', role: 'member' }] },
       owner: { isOriginalHumanDirectDelivery: () => human },
     },
-  } as unknown as MemberEntry;
+  } as unknown as Parameters<typeof createCapturedPromptSuggestionBinding>[0]['entry'];
   const source = createCapturedPromptSuggestionBinding({
     entry,
     isCurrent: () => active,
