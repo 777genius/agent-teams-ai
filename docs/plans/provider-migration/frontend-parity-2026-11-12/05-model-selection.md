@@ -1179,3 +1179,24 @@ The flat variants keep their existing progression. The worktree variant joins th
 ### Review 3 — source review and the original existing case
 
 Root publishes this exact appendix before implementation. An independent peer checks the exact test delta, both member-ID/deadline joins, one-timer cleanup, source inverse and preservation of the original diagnostic and assertions. Root alone runs the affected existing case in its owned slot and records which compiled source was exercised. A diagnostic using an older successful build remains diagnostic until ordinary current-head types/build/checks pass. This correction grants no production or native qualification, and does not increase any model counter, runtime budget or cleanup allowance. Root alone commits and immediately pushes; main remains unmerged.
+
+
+## P05 §17.1 — Reuse the hook's existing scope discriminator within the original size ratchet
+
+This narrowly amends §17's two-file source scope before implementation. The first selector candidate `e49ec00b5a95e97e1728714bd84709d24b0cf730` duplicated the hook's positive predicate and reached 3782 lines, exceeding the unchanged 3779-line baseline in `scripts/ci/source-file-size-baseline.json` `fbdcb4bdd5bef2ed13c34821c451d0c965e3b8e0`. It remains unaccepted source. Neither that baseline nor formatting is changed to accommodate it.
+
+Add only the existing `src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts`, common preimage `fca15f048890ec180c188fea3f6ff1305a23d857`, to §17's writable paths. The hook already computes `scopesAnthropic` from the requested provider and the original global `effectiveDefaultModel !== undefined`; this value already decides whether it reads the project scope and, together with its original path/prefetch guards, issues the project refresh. Expose that exact existing boolean as descriptive reader metadata, without recomputation, changing its effect or adding a request, owner, cache, memo or launch authority. The proposed complete hook delta is:
+
+```diff
+-): ReturnType<typeof useEffectiveCliProviderStatus> {
++): ReturnType<typeof useEffectiveCliProviderStatus> & { scopesAnthropic: boolean } {
+@@
+-  return snapshot;
++  return { ...snapshot, scopesAnthropic };
+```
+
+In `TeamModelSelector.tsx` start again from the original `51d0421e7b01acb87390d2e6ed4b685c22776c45`, destructure this one boolean, and add `(scopesAnthropic && openCodeCatalogScopeKey) ||` to the existing automatic-hydration refusal condition. Both values enter that effect's ordinary dependencies. The selector already normalizes `openCodeCatalogScopeKey` and invokes this hook with prefetch true. Thus the combined predicate remains exactly positive Anthropic support plus a nonempty current project; null still means supported-but-unresolved, and an absent field or absent project preserves the global path. Four natural additions take the selector from 3775 to 3779 lines; do not retain the duplicated five-line predicate, compress layout or extract an unrelated body. The hook remains 42 lines. All other §17 behavior and the reviewed test candidate `5ac83064c6818eaac898c3884fa2579affdc0b55` remain unchanged.
+
+The underlying `useEffectiveCliProviderStatus.ts` `4a4c5150cc13bc59a914d34f29033890a2541697` already returns a fresh plain snapshot object each render. Its five original fields, including the memoized provider/status references, are copied unchanged. Existing direct consumers `EffortLevelSelector.tsx` `5489d28e2f8f91e1484ebf962787d35a212bec98`, `AnthropicFastModeSelector.tsx` `ffa82c4813b25a4abfe637d4dee069c4934f6f9f`, `useRuntimeDefaultModelLabel.ts` `108430c00e02ece664f39cb1a09dc66af51be42f` and `useProjectScopedRuntimeProviderStatuses.ts` `86ef08f91debd3b23c296a3dc9dd743592f45a06` destructure existing fields; their memo dependencies retain the same field identities. These five referenced paths are read-only. No stable whole-snapshot identity is removed or newly promised.
+
+Root publishes this amendment after independent plan review, then reviews the exact three-file source, forward/inverse composition and unchanged source-size ratchet. Preserve all 93 existing case declarations and the corrected scoped-B-ready A/B/B regression from §17. The existing component and ordinary CI gates, original native GET8 limit and honest pending native qualification remain mandatory. §18 and every unrelated plan byte remain unchanged. No local execution is claimed while the executor is unavailable; root alone publishes and immediately pushes, with main unmerged.
