@@ -187,6 +187,17 @@ test('mixed Host boots V2 Session SPI profile without invoking V1 management reg
   assert.equal(attempt.deadlineMs - attempt.startedAtMs, 1000, 'the sole clock is the original business claim');
   assert.equal((await initial.rpc('runtime.open', target, command) as { ok: boolean }).ok, true);
   assert.equal(initial.opens(), 1, 'same original Open does not allocate twice');
+  const firstMessage = await initial.rpc('team.execute', {
+    operation: 'message.send', payload: { to: 'bob', text: 'TEST initial native input' },
+  }, { commandId: 'TEST-initial-message' }) as { ok: boolean; value: CommandReceipt };
+  assert.equal(firstMessage.ok, true); assert.equal(firstMessage.value.phase, 'completed');
+  await eventually(() => initial.session().submits.length === 1,
+    'the original OpenCode input must dispatch under the Runtime fence');
+  assert.equal(initial.session().submits[0]!.inputId, firstMessage.value.effects.deliveryId);
+  assert.equal(initial.session().submits[0]!.content, 'TEST initial native input');
+  initial.session().finish(0);
+  await eventually(() => new FileRuntimeStore(initial.root).fenced(initial.contexts[0]!.endpoint.binding,
+    tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'the original OpenCode input must settle');
   initial.session().checkpoint = () => ({ ok: true, value: { text: 'TEST original controlled checkpoint' } });
   const checkpoint = await initial.rpc('runtime.checkpoint', { ...target, checkpointId: 'TEST-initial-checkpoint' }) as {
     ok: boolean; value: { status: string; reference: string } };
