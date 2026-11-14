@@ -34,8 +34,8 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: agent-teams-ai/old-provider-implementations
-          ref: 74991c21a64f44a268bdb1d769b4a580b33a4853
-          path: .provider-native-74991c21
+          ref: 18a1c276474388a38e2bb00e5a11958c936566e0
+          path: .provider-native-18a1c276
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -46,18 +46,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git -C .provider-native-74991c21 rev-parse HEAD)" = 74991c21a64f44a268bdb1d769b4a580b33a4853
+          test "$(git -C .provider-native-18a1c276 rev-parse HEAD)" = 18a1c276474388a38e2bb00e5a11958c936566e0
           (
-            cd .provider-native-74991c21
+            cd .provider-native-18a1c276
             corepack enable
             test "$(corepack pnpm --version)" = 11.18.0
             corepack pnpm install --frozen-lockfile --ignore-scripts
             AGENT_TEAMS_PROVIDER_PACK_TEST_RETAIN_DIR="$PWD/.checked" corepack pnpm check
           )
-          root=.provider-native-74991c21/.checked
+          root=.provider-native-18a1c276/.checked
           test -f "$root/agent-teams-provider-implementations-0.0.0.tgz"
           test -f "$root/agent-teams-provider-session-contracts-0.0.0.tgz"
-          echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $root/agent-teams-provider-implementations-0.0.0.tgz" | sha256sum --check
+          echo "26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c  $root/agent-teams-provider-implementations-0.0.0.tgz" | sha256sum --check
           echo "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db  $root/agent-teams-provider-session-contracts-0.0.0.tgz" | sha256sum --check
           tar -tzf "$root/agent-teams-provider-implementations-0.0.0.tgz" | grep -Fx 'package/dist/prompt-suggestions.js' >/dev/null
           mkdir -p validated-provider-archive
@@ -66,7 +66,7 @@ jobs:
       - name: Transfer only the SHA-verified archive to a separate write job
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: native-prompt-suggestions-source-74991c21
+          name: native-prompt-suggestions-source-18a1c276
           retention-days: 1
           if-no-files-found: error
           path: validated-provider-archive/agent-teams-provider-implementations-0.0.0.tgz
@@ -91,7 +91,7 @@ jobs:
       - name: Download the read-only job's exact verified artifact
         uses: actions/download-artifact@v8
         with:
-          name: native-prompt-suggestions-source-74991c21
+          name: native-prompt-suggestions-source-18a1c276
           path: .native-provider-archive
       - name: Select exact consumer Node and frozen pnpm toolchain
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -105,35 +105,35 @@ jobs:
           set -euo pipefail
           archive=.native-provider-archive/agent-teams-provider-implementations-0.0.0.tgz
           test -f "$archive"
-          echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $archive" | sha256sum --check
+          echo "26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c  $archive" | sha256sum --check
           tar -tzf "$archive" | grep -Fx 'package/dist/prompt-suggestions.js' >/dev/null
-          dest=vendor/provider-migration/native-prompt-suggestions-74991c21
+          dest=vendor/provider-migration/native-prompt-suggestions-18a1c276
           mkdir -p "$dest"
           cp "$archive" "$dest/"
           node <<'JS'
           const fs = require('node:fs');
           const { createHash } = require('node:crypto');
-          const path = 'vendor/provider-migration/native-prompt-suggestions-74991c21';
+          const path = 'vendor/provider-migration/native-prompt-suggestions-18a1c276';
           const file = 'agent-teams-provider-implementations-0.0.0.tgz';
           const bytes = fs.readFileSync(path + '/' + file);
           const digest = createHash('sha256').update(bytes).digest('hex');
-          if (digest !== 'c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a')
+          if (digest !== '26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c')
             throw new Error('Provider archive mutated after verification');
           const receipt = {
             schemaVersion: 1,
             sourceRepository: 'agent-teams-ai/old-provider-implementations',
-            sourceCommit: '74991c21a64f44a268bdb1d769b4a580b33a4853',
+            sourceCommit: '18a1c276474388a38e2bb00e5a11958c936566e0',
             qualification: 'source-and-packed-consumer-only',
             nativeHostQualified: false,
             packagedElectronQualified: false,
             fullChecks: [
-              { node: '24.21.0', pnpm: '11.18.0', command: 'pnpm check', result: 'PASS', runId: 43607379609 },
-              { node: '26.11.1', pnpm: '11.18.0', command: 'pnpm check', result: 'PASS', runId: 43607379609 },
+              { node: '24.21.0', pnpm: '11.18.0', command: 'pnpm check', result: 'PASS', runId: 43640593139 },
+              { node: '26.11.1', pnpm: '11.18.0', command: 'pnpm check', result: 'PASS', runId: 43640593139 },
             ],
             checkedArtifact: {
-              id: 14118487243,
-              name: 'opencode-v2-spi-consumer-checked-74991c21a64f44a268bdb1d769b4a580b33a4853',
-              url: 'https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43607379609/artifacts/14118487243',
+              id: 14130999557,
+              name: 'opencode-v2-spi-consumer-checked-18a1c276474388a38e2bb00e5a11958c936566e0',
+              url: 'https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43640593139/artifacts/14130999557',
             },
             packages: {
               'provider-implementations': {
@@ -159,8 +159,8 @@ jobs:
           const file = 'packages/legacy-agent-host/package.json';
           const value = JSON.parse(fs.readFileSync(file, 'utf8'));
           const key = '@agent-teams/provider-implementations';
-          const expected = 'file:../../vendor/provider-migration/opencode-selected-file-key-421fee9/agent-teams-provider-implementations-0.0.0.tgz';
-          const selected = 'file:../../vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz';
+          const expected = 'file:../../vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz';
+          const selected = 'file:../../vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz';
           if (value.dependencies?.[key] !== expected && value.dependencies?.[key] !== selected)
             throw new Error('Existing provider archive selection has changed. Refusing an automatic overwrite.');
           value.dependencies[key] = selected;
@@ -183,8 +183,8 @@ jobs:
           git add -- \
             packages/legacy-agent-host/package.json \
             pnpm-lock.yaml \
-            vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json \
-            vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
+            vendor/provider-migration/native-prompt-suggestions-18a1c276/source-receipt.json \
+            vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz
           git diff --cached --check
           if git diff --cached --quiet; then
             echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -221,14 +221,14 @@ jobs:
           set -euo pipefail
           test -n '${{ needs.stage-exact-archive.outputs.pinned_sha }}'
           test "$(git rev-parse HEAD)" = '${{ needs.stage-exact-archive.outputs.pinned_sha }}'
-          archive=vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
+          archive=vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz
           test -f "$archive"
-          echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $archive" | sha256sum --check
-          test -f vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json
+          echo "26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c  $archive" | sha256sum --check
+          test -f vendor/provider-migration/native-prompt-suggestions-18a1c276/source-receipt.json
           node <<'JS'
           const fs = require('node:fs');
           const pkg = JSON.parse(fs.readFileSync('packages/legacy-agent-host/package.json','utf8'));
-          const selected = 'file:../../vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz';
+          const selected = 'file:../../vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz';
           if(pkg.dependencies?.['@agent-teams/provider-implementations'] !== selected) throw Error('Provider source pin missing');
           JS
       - name: Install frozen published workspace and compile original Host
@@ -289,9 +289,9 @@ jobs:
           set -euo pipefail
           test "$(uname -m)" = arm64
           test "$(git rev-parse HEAD)" = '${{ needs.stage-exact-archive.outputs.pinned_sha }}'
-          archive=vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
-          echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $archive" | shasum -a 256 -c -
-          test -f vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json
+          archive=vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz
+          echo "26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c  $archive" | shasum -a 256 -c -
+          test -f vendor/provider-migration/native-prompt-suggestions-18a1c276/source-receipt.json
       - name: Reuse exact pinned macOS standalone Node archive
         uses: actions/cache@v5
         with:
@@ -434,9 +434,9 @@ jobs:
           set -euo pipefail
           test "$(uname -m)" = arm64
           test "$(git rev-parse HEAD)" = '${{ needs.stage-exact-archive.outputs.pinned_sha }}'
-          archive=vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
-          echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $archive" | shasum -a 256 -c -
-          test -f vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json
+          archive=vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz
+          echo "26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c  $archive" | shasum -a 256 -c -
+          test -f vendor/provider-migration/native-prompt-suggestions-18a1c276/source-receipt.json
       - name: Cache exact pinned standalone Node before building Host
         uses: actions/cache@v5
         with:
@@ -509,8 +509,8 @@ jobs:
           printf 'LEGACY_CODEX_CANDIDATE_INPUTS=%s\n' "$candidate/input-pins.json" >> "$GITHUB_ENV"
       - name: Real native Codex 0.1690 completed-turn prompt sampling and original Team effects
         env:
-          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
-          LEGACY_NATIVE_PROVIDER_SHA256: c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a
+          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz
+          LEGACY_NATIVE_PROVIDER_SHA256: 26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c
         shell: bash
         run: |
           set -euo pipefail
@@ -536,7 +536,7 @@ jobs:
           assert.equal(proof.status, 'PASS');
           assert.equal(proof.nativeVersion, 'codex-cli 0.169.0');
           assert.equal(proof.artifacts.provider.sha256,
-            'c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a');
+            '26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c');
           assert.equal(proof.nativePromptSuggestions.enabled, true);
           assert.equal(proof.nativePromptSuggestions.offers.length, 1);
           assert.equal(proof.nativePromptSuggestions.auxiliaryModelRequests.length, 1);
