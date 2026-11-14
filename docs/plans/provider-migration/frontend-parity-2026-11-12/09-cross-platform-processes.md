@@ -3144,6 +3144,150 @@ The Taskboard catch saves and emits its one closed observation. Each producer re
 No new test suite, helper framework, job, matrix row, native invocation, input, permission, timer, polling loop, read retry or budget increase is introduced. No baseline raise or code compression is authorized; the three existing script files remain below800 physical lines. Independent review checks exact original-failure identity, read bounds/no-follow containment, closed output and all unchanged actions. Existing script types/lint/source cap and the next normal coherent-head original CI gates supply execution evidence. This plan and source-only review do not close any of the three acceptance failures.
 
 
+**Concurrent audit provenance (2026-11-13):** The appendices below retain the independently published additions from `f0d275e6ee8ed5072ec393a9c714f4b8f519e8c8` and base `e29dbde300ea73ec4e46e5f57f9e007ca5473552`. Their original section numbers, titles, source references and qualification limits are preserved; repeated numbers refer to the distinct titled audits, not to a replacement or a combined acceptance result.
+
+## 61. macOS Intel process gate: choose the pinned Node before pnpm bootstrap
+
+### Original evidence and narrow correction — 2026-11-13
+
+Original b464 process-fixture run43487488619, macOS Intel job132099682434,
+failed before install/tests with ERR_PNPM_PNPM_ENGINE_IDENTITY_UNVERIFIABLE:
+the bootstrap lock lacked @pnpm/exe.darwin-x64. This is not a Host test result.
+The same run's macOS ARM64 job132099682494 passed its process contracts and
+original POSIX lifecycle fixtures.
+
+Official pnpm/action-setup v6.1.0 src/install-pnpm/run.ts,
+blob22835e71b6f171949a9887cdc6e1e8ca7c4569b3, selects standalone bootstrap
+when PATH Node is older than22.13, before self-update to the repository's
+pinned pnpm11.22.0. Our previous workflow configured Node24.21.0 only after
+that decision. Selecting the intended Node first removes that unintended
+dependency on the runner's default Node.
+
+Add an initial actions/setup-node@v7.0.0 with exact24.21.0 and
+package-manager-cache:false before the existing pnpm/action-setup@v6.1.0.
+Retain the later setup-node step with cache:pnpm, so cache lookup still sees
+the installed selected package manager. Keep project pnpm pin, frozen install,
+integrity checks, all matrix rows and actual native fixtures unchanged.
+
+Root checked the official action source; an independent session reviewer
+approved this exact order and explicit early cache disable. The executor is
+unavailable, so this publication has source review only; the next unchanged
+macOS Intel process gate must supply the actual execution result.
+
+## 62. Actual Electron listener inheritance: original Node launch boundary
+
+### Evidence, scope and independent plan review — 2026-11-13
+
+Original b464 UI run43487488970/job132099684829 observed two original holders of
+the same CDP listening socket: Electron Main4074 and its MCP-bundle Node builder4180,
+fd52/inode22232, with closeOnExec false. Original6fbc run43494936007/job132125618409
+reproduced the same builder role at fd54/inode22907. Both failed the existing
+single-owner guard before UI controls; neither produced successful UI evidence.
+No second holder is exempted and no original admission assertion is relaxed.
+
+The previously recorded exact Electron44.10.1/Node24.22.1/libuv sources explain
+why Linux spawn with three stdio entries does not close unrelated inherited
+descriptors. The correction acts before selected Node initialization: a tiny
+prebuilt static Linux C stage closes descriptors3..UINT_MAX, then execve uses
+the exact selected absolute Node and original argv. It creates no child/thread,
+does not adopt a PID, and preserves cwd/env/0–2 and the original ChildProcess,
+PID/birth/PGID. The original profile/recipe digests and process owners do not
+gain persisted metadata.
+
+close_range uses flags0; ENOSYS alone selects the bounded single-thread
+/proc/self/fd enumeration fallback. Enumeration errors and unexpected close
+errors refuse. The directory FD is excluded only during enumeration and is
+closed before exec; Linux close(EINTR) is never retried. Any failure emits one
+fixed stderr line and exits125 before target Node. No shell, JS preload,
+arbitrary PID signaling or silent direct-spawn fallback is added.
+
+### Artifact, development and packaging boundary
+
+The existing supported Linux runtime tuple is x64; development's platform
+selector and existing release assets do not admit Linux ARM64. Build only for
+that actual tuple, outside Electron, with a pinned original compiler and
+reviewed C source. Static ELF validation forbids both PT_INTERP and PT_DYNAMIC,
+avoiding a new dynamic glibc minimum. The immutable manifest records exact
+source/compiler/binary digests. The source association is embedded in the
+Main selector; bounded no-follow reads verify canonical regular files and
+named/open-FD identity before/after each read. Main captures the original
+directory/manifest/image once, revalidates at each use, and refuses replacements.
+
+The dev launcher, ordinary prebuild and actual Linux packaging entry stage the
+artifact before Electron. Main never compiles or repairs it. Linux-only
+extraResources copies the two named files; afterPack compares the actual copied
+manifest/image with the original selected build artifact. Official v26
+LinuxConfiguration documents platform-specific extraResources:
+https://www.electron.build/v26/docs/api/app-builder-lib.interface.linuxconfiguration/
+
+Only WorkspaceMcpBundle's existing direct Node/three-pipe build and the captured
+Host's Node version probe/start use the recipe. The helper imports Electron only
+inside the Linux browser-process branch, preserving Node/standalone and other
+OS paths. Host's sealed/quiescing check remains immediately after the new await
+and before spawn. Arbitrary CLI, extra-FD IPC and bare-PATH launches are not
+silently rewritten. Existing build-input/output fingerprints, exact Node SHA,
+Host handshake and provider custody remain independent.
+
+### Critical native qualification and exact remaining UI gate
+
+The finite C fixture creates real listening sockets at52 and4096 with a hole,
+then execs the production stage. It also uses original per-process seccomp
+filters to exercise ENOSYS and EPERM, without changing production source.
+Original selected Node reports its PID/argv/cwd/env and descriptors; the test
+requires original stdin/EOF/stdout/stderr, same PID/PGID, target refusal on
+unexpected close failure, Stop/physical absence and a surviving original sibling.
+Manifest/image replacement must be refused. Bounded readiness/close observations
+and registered original-handle cleanup prevent a failed assertion from leaking
+a fixture process.
+
+Independent provider review read all six initial implementation/fixture files;
+root incorporated accumulated-output readiness and bounded original-handle
+cleanup. Exact current C source SHA256:
+4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3.
+After the executor recovered, the finite native suite passed6/6 with zero skips
+under Node24.21.0 and separately under Electron44.10.1's actual Node mode.
+Logs: TEST-linux-node-exec-first.log and TEST-linux-node-exec-electron.log.
+These are constituent proofs, not final-HEAD or visible Desktop acceptance.
+
+The unchanged five-OS process lane must retain native fixture logs and run the
+Linux stage under both Node parents. The Desktop lane stages and captures the
+manifest/image before launch and checks them again after all original journeys.
+Its source closure includes the native/build/selector sources. Original strict
+CDP ownership, finite-vendor exclusion, full visible controls, rendered PNG
+inspection, final source freeze and original cleanup remain required. No actual
+Desktop PASS, release/default enablement or real Codex/Claude qualification is
+claimed by this source slice.
+
+## 63. macOS Intel package-manager bootstrap: original failure and bundled Corepack
+
+Original6fbc process job132125644028 selected Node24.21.0 before pnpm/action-setup,
+but still failed before workspace install. The actual action used standalone:false;
+its bootstrap pnpm11.25 switched to11.22 and rejected the missing optional
+@pnpm/exe.darwin-x64 lock identity. The §61 order-only change therefore did not
+qualify macOS Intel. Original log: TEST-ci-6fbc-darwin-bootstrap.log.
+
+Use Corepack0.36.0 bundled by the exact Node24.21.0 distribution (official
+nodejs/node v24.21.0 deps/corepack/package.json, Git blob
+170b48449fc71c2d68c0b3576289a5623ec1b6ea). Assert that version, enable its shims,
+install the exact pnpm11.22.0, and assert the resulting version before the existing
+cache-enabled setup-node step. Keep the early package-manager-cache:false,
+frozen project lock, integrity policy and all five original process matrix rows.
+No pnpm bootstrap11.25 or native optional-engine self-switch participates.
+
+Independent session review approved this narrow replacement. The unchanged
+actual macOS Intel lane must confirm execution; source review is not a pass.
+The safe process lane also executes the two existing Claude finite-peer Host
+suites and Linux descriptor tests under pinned Node and Electron Node, preserving
+original process receipts and actual copied-stage packaging checks.
+
+The separately reviewed actual afterPack test passed63/63 with zero skips under
+Node24.21.0 and pnpm11.22.0. The real Linux x64 case built the production static
+stage, checked the copied artifact, rejected missing or changed bytes and a
+valid-but-different manifest, and retained unchanged original source artifacts.
+Log: TEST-linux-node-exec-afterpack.log. Synthetic Linux pruning cases still
+exercise the original pruning/native validators; full other-OS/error hook checks
+remain. This does not substitute for the original Desktop UI journey.
+
 ## 61. Genuine old Claude Host checkpoint: original-executable proof and ordinary current Main Resume
 
 ### Review 1 — demonstrated defect and exact acceptance scope
@@ -3472,6 +3616,159 @@ After plan publication, prepare only these two source candidates, obtain indepen
 Run the existing credential-scope test file, Host build/test types, relevant fast lint and source-size/diff guards when the authorized setup slot and complete ordinary installation are available. If execution is unavailable, keep the candidate explicitly source-only and let ordinary candidate CI perform required checks; do not use partial node_modules or substitute declarations. Preserve prior install137 outcomes and original native failure.
 
 The next already-required existing opencode-v2-model-probe.native.ts gate must complete its original catalog/model/default/variant assertions, repeated metadata reads, model request accounting and physical cleanup with unchanged budgets and inputs. No new native experiment, job, matrix, cap increase or timeout is authorized here. Only that observed result can qualify the native catalog path; source review alone cannot identify the original held branch or mark frontend/Team readiness complete.
+
+## 66. Darwin 24H232: the POSIX suspended-image candidate remains unqualified
+
+At exact `6fbc3a4d752dc9c12f5269ecb7d830c03d3c78d5`, [run43494935668/job132125676456](https://github.com/777genius/agent-teams-ai/actions/runs/43494935668/job/132125676456) passed the existing Darwin original-owner custody scenario, captured Desktop descriptor check, and actual embedded OpenCode2.1.4 tools/MCP/approval/cold-resume journey. The later, separate TEST POSIX feasibility scenario failed at `registered-process-executable.native.ts:483`. Artifact14072139328 (`opencode-v2-embedded-native-darwin-arm64`, ZIP SHA256 `ed91290d687614a51b7c30da50c3e20beeb1125ded2ad989856280f292440bce`) retains both successful native receipts and `opencode-v2-posix-exec.json`; no result is relabelled.
+
+The POSIX receipt binds Darwin arm64 build24H232, Node24.21.0 and TEST actor source SHA256 `b6ecbe29bfbaa4542534244bb002de1828394cfcea676f27b44044745471fcdc` (C source blob `882c986d13920db54720b4672dd6cfc55e361aaf`). Original-path baseline ran A with its sibling asset and library. Rename and in-place replacement before the suspended-image check were refused before constructors. In both ad-hoc TEST after-check and writer-open cases, the retained original child was stopped before user instructions, audit/image identity and SHA matched A, and the subsequent write/ftruncate/fsync sequence returned0. After resume, markers were `LIB\nBIN:A\nMAIN:A\n`, exit0; original cleanup was confirmed. Script-negative ran B through the validated interpreter and remains an explicit counterexample. Overall POSIX status stays INCOMPLETE and all native/product/installed/custom/script qualification fields remain false.
+
+The established defect in this candidate is lack of continued byte stability between its last successful observation and resume. The recorded dynamic signing flags were `0x22000001`; a successful dynamic identity check is not write exclusion. Apple's [SecCodeCheckValidity documentation](https://developer.apple.com/documentation/security/seccodecheckvalidity(_:_:_:)) describes validation of dynamic identity and its host. [TN3126](https://developer.apple.com/documentation/technotes/tn3126-inside-code-signing-hashes) describes per-page validation on faults, and [Updating Mac Software](https://developer.apple.com/documentation/security/updating-mac-software) documents that same-inode writes do not flush the signature cache. These sources explain why instantaneous identity cannot establish a continuing exclusion guarantee; they do not prove the exact VM/cache mechanism behind this particular A execution. The existing receipt does not contain a post-mutation file hash or a second dynamic-status observation. Root read these three original Apple documents; pr_chain independently reviewed the original JSON and C source.
+
+No timeout, oracle, signing flags, entitlements, admission or executable-format policy changes are justified. Do not accept A's constructors after successful mutation, insert another last-moment hash as a purported atomic fix, or substitute a copied executable. Keep the current strict failure and unresolved qualification described in the earlier POSIX sections. Before any production integration, a new reviewed native candidate must demonstrate continuous exclusion of both preopened and later same-inode writers from its final image check through resume, while preserving original path/resources, custody, supported wrappers and script semantics. No such Darwin primitive has been established within the existing ordinary-user constraints. This evidence is not a universal impossibility proof. The existing product-journey PASS remains separate from this failed broader feasibility claim.
+
+## 67. Keep each original provider authority check inside one original Team lock
+
+### Observed cost and approved scope
+
+Original6fbc native CPU evidence on Windows and macOS attributes substantial synchronous time to the Team namespace-fence family. That category includes both recursive namespace validation and the controller lock protocol; it does not identify their individual costs. A successful current-authority path previously entered four separate outer Team fences. The Linux CI native journey also passed with measurable time in that same family. These observations do not explain the local credentials late-cleanup failure: that fixture has `teams: []` and does not use Team authority.
+
+The reviewed change shares only the original synchronous Team lock. Reject a changed Team object first; then validate the original writer lease before publishing any lock in its namespace. Enter the captured Team owner's existing read-authority callback, execute every original roster/dispatch/admission/control check, and return before any await. Existing nested namespace/record checks and the repeated writer check remain. The production factory explicitly receives the original writer check. Direct legacy compositions without that capability retain their old independent-fence path. There is no permission/state/namespace cache, executable hash cache, new authority store, timeout increase, or new Runtime lookup inside the currentness guard.
+
+### Constituent evidence and merged qualification
+
+On isolated6fbc plus the exact reviewed four files, TS7.0.2 Host build and focused test types passed. Six existing suites passed40/40 with zero skips: original authority, namespace/record fencing, writer recovery, controlled member actions and original Host close. The new real-filesystem regression observes one original lock publication per successful check, a fresh check after await, persisted grant revocation, replaced-root refusal before lock writes, and changed-Team refusal before callbacks. The original logs/receipt are `TEST-authority-isolated-{build,critical-tests,types-colocated}.log` and `TEST-authority-isolated-receipt.json`. The initial out-of-package types configuration failed Node type lookup; the colocated configuration extending the original test project passed. No source change was needed for that setup correction.
+
+The new e29 base also changes Team runtime-selection/checkpoint readers. Its merge retains the new `createClaudeCheckpointSource` factory wiring while adding only the reviewed writer option and pass-through. Therefore the constituent40-pass result is not substituted for merged-head qualification: rerun the existing authority/namespace and runtime-team restore suites against the merged Host. Native wall-time improvement, latest-head Desktop controls and platform cleanup remain separate acceptance gates.
+
+## 68. Retain original credential diagnostics across all four Host lifetimes
+
+The exact6fbc Linux CI credential journey passed all business assertions and four original Host exits with cleanup:true. A local exact6fbc run passed the wrong-key/correction/saved-key assertions and retained the later held intent, but its third original Host exited1 during EOF cleanup. Both original receipts used one shared257-row capture, which filled in epoch2 and omitted the late failure. No specific read-cut or disposal cause can be inferred from those missing rows; preserve the successful CI and incomplete local outcomes separately.
+
+Each of the same four literal original start calls now retains its own unchanged bounded diagnostic collector and immutable epoch callback. The existing receipt field flattens those four original collections after cleanup. With the merged base helper, each collector remains bounded by257 sanitized rows and64KiB; the complete four-Host trace remains bounded. Partial stderr from one closed Host cannot join the next Host's capture. No native requests, deadline, process lifetime, assertions, cleanup behavior, provider implementation or diagnostic getter is changed. Independent source review and pinned Node syntax check passed; the next actual native credential run must supply the missing third-epoch evidence.
+
+
+## 69. Exact e7 Windows current-authority cost and a closed Team read
+
+The original Windows x64 OpenCode 2.1.4 gate at `e7c6f4b1ec758541738724425d2556a1558c8397` reached native/MCP readiness after 62.668 s and completed four local-model requests without model failures, but the original input remained consumed and no terminal outcome appeared within the unchanged acceptance budget. The run ended after 154.082 s with INCOMPLETE, Host exit 0 and cleanup true. The original receipt SHA256 is `b00e1adc46210046144c5d7ba3a2b3428467cd07338da4628a3939d415723f68`; [run43507522897/job132168944602](https://github.com/777genius/agent-teams-ai/actions/runs/43507522897/job/132168944602) retains artifact14077234986 (ZIP SHA256 `70b473f117f18fd299cb8f53e1e73ae8cbda5d2e0a12b5cee9147062a0c6967a`). Its bounded CPU projection covers 148.640110 s: writer-exclusive 92.054815 s, namespace-fence 78.149172 s, credential-exclusive 16.227999 s and custody 10.075344 s. These columns overlap; the namespace family includes descendant lock and validation operations. Raw CPU data was discarded after the bounded projection. These are not independent filesystem benchmarks or proof of a unique cause.
+
+The Windows ARM64 result is separate. Its original trace records an after-log read-cut deadline after 30.124 s, followed by original child stdin end and child exit 0; the later Host exited 1 and cleanup is false. Its original receipt SHA256 is `35efff2b46dccd717e76e609955eaf2dc37b8aa1ecb905301769980f005e77da`. The cause of the later Host cleanup uncertainty is not established by the x64 projection or by the earlier child exit.
+
+Exact source review finds that the stable native-roster currentness path now publishes one original Team lock, but still performs six full namespace validations and seven state reads. In the fixture with both inline key and the same auth.json, one bound session-credential current check can invoke that Team path four times (eight before binding because of configuration-source brackets); one existing read-only GET invokes six current callbacks. Those conditional source counts describe amplification, not measured runtime savings. The callbacks straddle actual provider admission, password/configuration/key reads and transport awaits and must remain in place.
+
+The approved next change is a closed, synchronous TeamOwner provider-authority read taking the captured roster expectation, principal and Runtime binding. Under the original fence it reads one fresh full state, including registration validation, bounded roster recovery and delivery projection, and applies the existing full-roster/native-successor, grant, dispatch, admission, lifecycle, workAllowed and control predicates. Small private state-based counterparts may be extracted inside the existing TeamRosterTransitions and TeamDeliveryAuthority; existing public operations retain their fences. The captured Team/entry/profile/request/principal checks, original writer/root refusal, sealed/deadline guards and original launch-binding workAllowed reads remain. Writer/root refusal must precede lock publication. The factory and capture-authority composition receive only this private aggregate hook.
+
+Common principal/member/lifecycle/workAllowed/control authority must pass before any explicit native-roster-not-applicable result. Only that validated not-applicable result may use the existing legacy fallback. Malformed state or roster, revoked grants, changed namespace, wrong binding and denied authority propagate as refusals; no catch may convert them to fallback authorization. The successful closed operation ends with the original nested fenced no-op to retain the final namespace validation after possible roster recovery. TeamOwnerStore and its generic nested-fence behavior remain unchanged. No Runtime lookup, native I/O, await, returned state/capability, cross-call cache or authority result surviving an await is introduced.
+
+The intended stable fast path is one lock, three namespace validations and one state read; recovery and valid legacy fallback may require more. Independent root and pr_chain plan reviews completed before implementation; the exact extraction still requires independent source review. Critical regressions must count actual filesystem reads and cover freshness on the next call, revoked principal/member grants, pending lifecycle, workAllowed=false, additive native roster successor, unsupported legacy fallback, malformed history, root replacement before writes and mutation inside nested namespace checks. All OpenCode configuration/key/password/transport/custody cuts and the original 120 s/90 s readiness/terminal budgets remain unchanged. Only a successful original Windows native gate can qualify the benefit and cleanup; controlled counts alone cannot.
+
+## 70. Attribute the additional Electron CDP holder before another launch change
+
+The exact e7 original Electron UI run passed Team and Taskboard. Its management journey failed before Teams navigation at desktop-create-config-ui-smoke.ts:210: the strict original census observed Main9641 and transient10492 holding fd60 on the debugging listener. The supplemental observation could no longer read10492; its birth, parent, executable and role remain unknown. The management peer launch10480 is a different PID. Original [run43507523266/job132168946539](https://github.com/777genius/agent-teams-ai/actions/runs/43507523266/job/132168946539) artifact14077469681 has ZIP SHA256 `da7be47126cada8e0e81efe2c8e98381c1550fd9ccd976af3888531bad4e3cd6`. This is not evidence that the earlier MCP builder caused this new refusal, and later runtime/Review UI steps were skipped.
+
+Before changing a launch boundary, add bounded passive TEST diagnostics to the original Electron Main. Subscribe to the public Node child_process diagnostics channel and observe the original ChildProcess spawn/exit and errorMonitor events; never replace spawn, add an ordinary error handler, change stdio/env/argv or make a second launch. The constructor channel precedes pid assignment, so capture the populated PID on the original spawn event. Official Electron44.10.1 pins Node24.22.1, whose source also shows that spawnSync/execFileSync do not publish this channel. Record the original result.pid/status of the existing unixProcessTable synchronous ps call separately; that is an unsealed short-lived child candidate, not an attribution of10492.
+
+The diagnostic mode must require an explicit dev-only TEST fixture flag and Electron Main/Linux, emit bounded allowlisted facts to the already captured stderr log, and never expose environment values, arbitrary arguments, command output or user paths. Observation failure must not change the original operation or cleanup. It may record PID, parent, bounded birth information, timing and exact allowlisted command category; these are correlation only, never admission or signal authority. Include an activation/limit marker so absence of a record is not mistaken for exhaustive coverage. Keep the original single-owner CDP assertion, process-group selection and census failure unchanged. Synchronous calls outside the named site and Chromium-native children remain outside this observer's coverage.
+
+The narrow candidate must receive independent review and meaningful checks of no-throw/bounded diagnostics and unchanged child-process error semantics. It then runs only in the already allowed original dev:mcp finite-peer workflow, without increasing timeouts or retrying failed business actions. Preserve the original failed receipt. Source-based candidate lists do not authorize a generic process-launch rewrite or a claimed functional PASS.
+
+The diagnostic implementation budget is approximately 170 lines in one focused Main helper, 10 lines of wiring and fixture/source-census changes, and 140 lines of critical tests. Complexity 3/10, confidence in preserving behavior 8/10 after the stated tests, and confidence in the current FD cause 3/10 until a matching original observation exists. The initial source was prepared while the local executor was unavailable; ordinary candidate CI must run the actual workflow checks. This diagnostic is separate from the frozen 59-file Phase2 candidate, which is not published merely by this change.
+
+
+## 71. Run independent finite Desktop journeys on isolated runners
+
+The monolithic finite UI job currently stops after the first failed journey. Its exact e7 management failure left capturedHostObserved=false and capturedHostAbsent=null, despite an empty final original group census and the finite peer being absent. That null is not proof of Host absence and cannot authorize continuing another app journey on the same runner. Preserve the original failed receipt and the original cleanup/admission checks.
+
+Use seven fixed, isolated workflow lanes: team, taskboard, management, codex, claude, opencode and review. Each receives the unchanged frozen install, build, package-manager capture and TEST-only admission. Team, Taskboard, management and each provider lane execute only their original respective mode. Review and its SHA-bound cold readback stay together, with readback requiring the original Review step to succeed and provide its original receipt. No runner continues a new business scenario after unknown cleanup. A four-lane alternative (three providers plus the old basic chain) still hides Review after management failure, so it does not close this observed evidence gap.
+
+The matrix uses fail-fast:false to retain each independent failure and result. Every original scenario still fails its own step on the original error. No continue-on-error, relaxed assertion, retry, increased budget or additional vendor command is permitted. The final verifier is read-only and runs after a failed scenario only when the original pinned input capture succeeded; an incomplete/missing receipt must fail. It uses a closed exhaustive lane-to-mode map and all original source, screenshot, source-freeze, sentinel, provider effect and physical-cleanup predicates. There is no unknown-lane default or dynamic mode discovery.
+
+Retain the existing public check name Offline Host Desktop (Linux x64) on a small aggregate job which runs with always() under the original pull-request/dispatch admission and accepts only a successful matrix result. Failure, cancellation and skipping do not become success. Each lane preserves its original evidence with an always-retained artifact suffixed by source head and lane; its JSON summary is explicitly lane-scoped. This changes feedback isolation, not the acceptance standard or the required product scope.
+
+Provider and pr_chain independently reviewed these conditions before implementation. The source scope is one existing workflow (approximately 60-100 changed lines, no production code); complexity 3/10, confidence in failure isolation 9/10, confidence in current UI business completion 3/10 until original receipts and screenshots are inspected. The exact workflow diff must receive a second source review before branch publication. The plan was reviewed while local execution was unavailable; structural/source review must not be called an actual workflow PASS.
+
+After executor recovery, the original Node24.21.0 ran the five observer regressions: 5 PASS, zero failure/cancellation/skip, 0.859 s. The tests exercised an actual finite Node child and an actual unhandled missing-child error, plus inert defaults, observer failures/privacy and bounded coverage. Log SHA256 `d3a82362a7c15f3f40014ef92640c37808d82d7f1cf235eeb0048bf1a2b273eb`. Independent review required the explicit `type in process` runtime narrow for the Node-only script type project; it does not broaden Electron admission. The seven-lane workflow passed restored local YAML, Bash and inline-JavaScript structural checks and two independent exact-source reviews; actual workflow qualification remains pending.
+
+
+## 72. Consume the checked provider connection-notification revision
+
+Provider PR #8 advanced from the selected 68dca527 source to `976905403b40078c3c2cfae3c442d5ec91056fc2`. Its production change decodes Codex configWarning and remoteControl/status/changed as private synchronous connection observations, separately from Session events. Malformed known notices still close the original RPC and leave pending work unknown; the following test correction expects codex.probe.unknown without adding a launch, turn or disposal. Independent source review checked the original Codex0.169 schema and found no authority expansion. This is not permission to run actual Codex or Claude.
+
+The exact [source/packed CI43510761520](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43510761520) passed 525 source tests plus both packed consumers on Node24.21.0 and26.11.1, with no test skip. Node24 artifact14078576670 is 185401 bytes, ZIP SHA256 `f6c7f2a5d609e9ddf651b4cccffd83c7027e3d37c4560613e3d6a8537aaf90d9`; the original provider tarball is178265 bytes, SHA256 `73dbbfba5e8fed6719ccdeaae499a47284b72ac831c33a2c7206fbf2799f77b8`. Root independently downloaded, hashed and read the complete archive before the outage and reverified it after recovery. Tar census changes exactly four compiled files: app-server.js, app-server.d.ts and the new connection-notifications.js/.d.ts. Claude/OpenCode package files and the contracts archive remain byte-identical.
+
+The bounded frontend change adds a new immutable vendor directory with the original checked tarball/receipt and provenance, updates only its selected package/lockfile path and integrity, and updates the existing current-provider digest assertions in CI and the two native test source files. Historical archives and receipts remain intact. No provider dist is edited, no workflow admission/timeout/assertion is removed and no actual paid provider gate is executed. Existing Codex finite-peer Host tests must exercise the selected checked package, and ordinary frozen-install CI must confirm the dependency graph.
+
+The separate [OpenCode CI43510761545](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43510761545) completed all53 jobs successfully, including target SPI2.1.4 on five operating systems. Its two expected-negative HOLD cases and matrix-inapplicable skipped steps do not qualify unsupported variants. SPI receipts still say qualified:false; packed receipts still say nativeHostQualified:false and packagedElectronQualified:false. These outcomes are not transferred to frontend Host/Main/Desktop after the pin update.
+
+Estimated scope: 40-80 text lines plus the178265-byte checked archive; complexity2/10, confidence in the pinned byte provenance10/10 and compatibility9/10 before affected Host checks. Root and provider independently reviewed the exact source/package delta before this pin implementation; a second exact frontend diff review and affected checks remain required before branch publication.
+
+### §72 verification and composition
+
+The exact frontend pin diff received independent review: reversing only the declared pin/digest substitutions restores all five original existing source/lock/workflow files. The complete original178265-byte archive was privately extracted for local validation; all241 package files were recorded, with no dist patch. The first local build refused a copied task-state symlink before compilation; that failed receipt is retained. Replacing only the private worktree task-state link with its own directory allowed the unchanged Host/ledger build to pass and all43 original Codex finite-peer Host tests to pass with zero skips (log SHA256 `a51481df3a400ca15e14963b0c6a23c3d5168490f04c1ce51c5a7826a35bbbf6`). No actual Codex or Claude command ran. Ordinary frozen-lockfile CI remains required.
+
+The separately planned §69 cut received independent exact-source review. Its own pinned TS7 ledger/Host build and complete Host test types passed; the actual-filesystem authority/fence group passed12/12 and the original authority/runtime regression group75/75, all without skips. The same fixture measured the original1lock/6namespace-walks/7state-reads and closed1/3/1, including fresh subsequent calls and the retained final namespace check. Source-size guard and targeted fast lint passed. Combining these exact8 reviewed files with the selected976 archive passed Host/ledger build and the original member-authority/runtime-team group38/38 (log SHA256 `b773de9ae6078c43efadbcd00f1508d32add4120f819574429307ff24f88bcec`). These controlled counts and local tests do not qualify Windows native elapsed time or cleanup.
+
+## 73. Original lazy-start test barrier: observed correction and evidence
+
+The original999 Darwin x64 Main fixture failed its one-second process-start observation before the static Host module import completed. On exact28bc the unchanged test later passed; preserve both original outcomes. This is a readiness-observation race, not evidence of a persistent production dispatch defect.
+
+The one existing TEST fixture now writes its process-start marker and waits at the original release barrier before dynamically importing the same Host module. It writes a separate host-created marker only after the real createHostServer call returns. The original changed-context case requires that exact buildId after its original forbidden/not-dispatched reply, alongside its original absence-of-effects assertions. An import failure cannot satisfy the test. No production code, observation/startup/request/cleanup timeout, retry or dispatch assertion changed.
+
+The plan and first review preceded the edit in review messages; no earlier published Markdown plan existed for this one-file correction. The exact three-hunk source then received a second independent review. The original13-case Vitest suite passed with zero skips, against exact28bc compiled Host/ledger; whole-run34.739s, corrected-case552ms. Source SHA256 `1ac3815d2d499f567325df21ace3b3c7a942eaacc5210c042000dc8c075634ca`. This records the actual review order rather than claiming a prior plan publication or a new native qualification.
+
+## 74. Identify the original Windows launcher fixture failure
+
+Exact28bc Windows ARM64 process job132204573769 passed the preceding controlled Host/protocol/Main groups and original Windows Node/Electron gates, then failed nativeLauncherScenario.ts:45 with exit1 where0 was expected. Original artifact14081479320 retains INCOMPLETE and cleanup:true; its provider rows are empty. The current helper appends completed wrapper names only after all five cases return and does not retain the child's stderr, so neither the failed mode nor its native error is established. UTF8 batch paths containing Cyrillic are one source-based candidate, not an observed cause or authorization for a production launcher change.
+
+Before any launcher change, add only bounded TEST observations to the existing nativeLauncherScenario.ts. Each of its five existing closed mode names may report an original start and close with the exact exitCode and at most4096 bytes from that child's existing stderr pipe. Replace the known sandbox, pinned Node, broker and actor paths with fixed TEST labels before reporting; never include environment, argv, stdin, stdout, credential data or a new process census. Record truncation explicitly. Keep the original child, arguments, wrappers, code-page behavior, launch/close order, timeout, expected exit, JSON/argv/stdin assertions and both confirmStopped calls unchanged. Observations must survive a later case failure in the existing captured job log, without authorizing or continuing a failed case.
+
+Scope is one existing TEST helper, roughly20-40 lines; complexity2/10, confidence in diagnostic isolation8/10 and confidence in the failure cause2/10 before an original matching error. Root and pr_chain reviewed the observed evidence and boundary before this written plan and implementation. Independent exact-source review and the existing focused script type gate precede publication. The next unchanged Windows job must provide the actual result; a Linux syntax/source check is not Windows execution. Do not increase budgets, retry the wrapper, skip a mode, force UTF8, replace production custody, or mark the original failure PASS.
+
+### Existing P08 A/B fixture review: hold before publication
+
+The prepared TEST-only Windows source-publication candidate received independent source review and passed pinned TS7.0.2 retained-host types with original28bc/D68 declarations. Its two focused modules use original Main grants, version publication and Job/HANDLE ownership for finite Codex, Claude SDK and OpenCode V1 peers. The source freeze SHA256 `a80682f05852cf32a6baeaf0deb4366ed4a1fbc5ef1d2b08729a23646d8792f6` is retained locally; those five source/workflow changes are deliberately excluded from this publication.
+
+A final harness review found that batching all three new journeys under the existing wrapper/service invocation would share the original controller120s and finite sentinel60s budgets. There is no actual Windows timing evidence for that composition. It must not be accepted by increasing those timers or weakening sentinel absence. A bounded follow-up plan will preserve the original wrapper/service invocation and evaluate separate fixed-provider controller invocations with their original budgets and separate receipts. The reviewed source/type checks do not turn this held harness composition into an executed or accepted Windows journey.
+
+## 75. Preserve original Windows harness budgets with one source journey per controller
+
+This refinement resolves the concrete pre-publication hold above. Root, provider and the fixture owner reviewed the original gateController120s budget, finite sentinel60s lifetime and five-path candidate before thawing it. The original wrapper/service invocation, its argument vector, mode order, receipt kind and predicates remain unchanged. The held all-three-under-one-invocation composition is not published.
+
+Permit exactly one optional argv selector `--test-source-provider` with the closed values codex, claude or opencode, before the controller's original appended sandbox pair. Accept either the exact legacy argument shape or that one explicit source shape; reject unknown values, duplicate/extra/missing arguments before launching the fixture sentinel or provider. Do not select a mode from environment, receipt content or discovered filenames. The source branch runs exactly one coherent A/B journey and cannot also run the legacy wrapper/service branch.
+
+Add three explicit Windows workflow steps, one per fixed provider. Each calls the existing controller with the same captured Node/brokers/actor and receives its own controller-created sandbox/Job, original finite sentinel, log and receipt. Retain every original120s outer,60s sentinel and inner scenario budget. Require the sentinel to remain alive at the business boundary and require the same original suspended-root HANDLE, Stop/drain/release and physical absence proofs. Do not continue a later business step after an earlier step's unconfirmed cleanup.
+
+Codex keeps A0.162/B0.169 version admission, original A alive through B publication, B management/probe/standalone and cold read/replay without new native effects. V1 keeps both qualified1.19.4 recipes with different immutable wrapper bytes, explicit optional models, the original retained catalog Job through probe retirement, Team A/B and cold read/replay; it claims no standalone or native Resume. Claude keeps both synthetic2.1.34 version admissions, Team A/B, management/probe, the existing finite standalone durations and actual SDK checkpoint A/Host restart/restore A while current remains B, without replaying old input.
+
+Use a distinct fixed `TEST_WINDOWS_EMULATED_SOURCE_PARITY` receipt kind for these invocations. The existing final read-only verifier must require the original service proof plus an exhaustive literal map of all three source filenames/providers, matching source/platform/provider and one full scenario each. Require each original controller's rootExit0, drained state and activeProcesses0 from its corresponding log. Missing, skipped, partial or failed receipts cannot yield PASS; no success-file discovery or unconditional success summary is added.
+
+Scope remains the same five TEST/workflow/type-project paths. The two existing prepared modules stay unchanged; only gate selection/receipt wiring and the workflow composition are refined. Estimated gate225lines and workflow395lines; complexity3/10, confidence in preservation of original controller authority9/10, native timing unqualified until the original Windows runs. No production, peer, C++, timer, process-custody or safety-guard edit is authorized. Exact diff review, focused script types and original workflow/shell/verifier syntax precede publication; source checks cannot replace Windows execution.
+
+### Combined pre-publication verification
+
+The selected976 provider, reviewed closed Team authority, lazy-start fixture and launcher observation passed the original retained-host script type project with pinned TS7.0.2, canonical source-size guard4939files/800lines, targeted fast lint and diff check. Log SHA256 `bab6a4a540b3900cbb1645af3323f19cab263af2ff0f19af23a8e53460639854`. The new A/B workflow refinement is not part of these bytes. The complete frontend project remains unqualified locally: the same eight-project compiler sequence with supported singleThreaded was killed by SIGKILL after168.239s on its first project (last observedRSS2351420KiB, high-water2395024KiB), before any diagnostic or subsequent project. The earlier canonical exit137 and this failure remain recorded; no additional identical local full run is planned. Required CI must provide its actual complete result.
+
+## 76. Keep the original Windows cmd fixture path in its native Unicode directory
+
+The exactd894 launcher observation identifies the same concrete failure on Windows x64 job132220523770 and ARM64 job132220523690. The original npm-node and generated-bun modes exit0. The following opaque-cmd mode exits1 with MODULE_NOT_FOUND for `<TEST_SANDBOX>\TEST launchers ╨»\TEST argv.mjs`. The fixture wrote a literal UTF8 Я into its batch body; cmd evaluated a different, mojibake script path. Positional/native modes and all three A/B source scenarios were not reached. Both outer controllers report drained/rootExit1/activeProcesses0; this confirms cleanup, not business success. Original artifacts14084767327 and14083674992 have ZIP SHA256 `7e5e6a4079b66f09c8b45b2a72bbc9561d1768c40d822f51a63ebe5af5bc7b89` and `bc3b540dfe63d9637dc04ce984d50ebee726f1491793b98e2f14cdfad46e0315` respectively.
+
+Make one TEST-only string-token correction in nativeLauncherScenario.ts: in the existing shared opaque-cmd/positional-bat branch, replace the literal quoted `${script}` token with quoted `%~dp0TEST argv.mjs`. The original quoted Node executable stays unchanged. Cmd obtains the script's actual Unicode-containing directory from its own wrapper location; the batch body no longer encodes that directory as UTF8 bytes. Preserve the Unicode wrapper/cwd, adversarial argv, empty argument, trailing slash, stdin/output/exit predicates, diagnostics, deadlines and both original confirmStopped calls. Do not change code page, production launcher/parser, PATH, child executable, wrapper mode order or the acceptance oracle.
+
+Independent source inspection of the existing shared resolver confirms this branch matches none of its npm/Bun/native direct patterns and remains the original cmd fallback, including the existing positional policy. Root and pr_chain reviewed the concrete observation and this bounded correction before implementation. Require a second exact-source review, Node parse/diff check and a focused check against the existing resolver classification. The actual next Windows jobs must still pass all five original wrapper modes and all three separate source journeys; neither source review nor cleanup alone is a Windows parity PASS. Scope is one existing TEST line; complexity1/10, confidence in the observed path-encoding cause9/10, with complete native acceptance still pending.
+
+### §76 exact verification
+
+The completed candidate received independent provider review. Reversing the single script token restores the published d894 source byte for byte. Frozen source SHA256 is `b03a739e4c8a921c3de6a6cc42cfacf299b48875665105e1f4e753e44a856a4b`; full-content freeze SHA256 is `17decbe3292bc87a3fc24da1b1fa215c9edab9d6d378cc9783b4c5d3a45d53e4`. Pinned Node24 syntax and diff checks passed. The original resolver, with a temporary controlled platform projection restored after the check, still classifies opaque-cmd as reparsed fallback and positional-bat as positional fallback; neither becomes a direct launcher. This source check executes no Windows child and does not qualify the next native jobs.
+
+
+---
+
+## Incoming base history preserved at 0543d437
+
+The following append-only entries are retained verbatim from base
+`0543d437695318f0157e6d600d76abdce5c51e8e`. Their original section numbers
+refer to that branch history; they do not renumber or replace the completion
+branch entries above. Current integration is governed by plan 12.
 
 ## 66. Isolate inherited Linux descriptors in an explicit captured child launch chain
 

@@ -208,21 +208,31 @@ export function initializeLinuxChildLaunch(
   }
 }
 
-/** Each original allocation checks the retained files; it never recaptures a replacement. */
-export function selectedLinuxChildExecutable(): string | null {
+function retainedSelection(): Selection | null {
   if (initializationFailure) throw initializationFailure;
   if (selected === undefined) {
     if (reference(startup)) throw linuxChildLaunchFailure('selection');
     return null;
   }
-  if (selected === null) return null;
+  return selected;
+}
+
+/** Route an already-owned allocation without re-reading its files or environment. */
+export function hasSelectedLinuxChildLaunch(): boolean {
+  return retainedSelection() !== null;
+}
+
+/** Each original allocation checks the retained files; it never recaptures a replacement. */
+export function selectedLinuxChildExecutable(): string | null {
+  const captured = retainedSelection();
+  if (captured === null) return null;
   try {
-    const current = inspect(selected.reference);
-    if (!same(selected.manifestIdentity, current.manifestIdentity) ||
-        !same(selected.binaryIdentity, current.binaryIdentity) ||
-        !same(selected.directoryIdentity, current.directoryIdentity))
+    const current = inspect(captured.reference);
+    if (!same(captured.manifestIdentity, current.manifestIdentity) ||
+        !same(captured.binaryIdentity, current.binaryIdentity) ||
+        !same(captured.directoryIdentity, current.directoryIdentity))
       throw linuxChildLaunchFailure('selection');
-    return selected.binary;
+    return captured.binary;
   } catch (error) {
     throw isLinuxChildLaunchFailure(error) ? error : linuxChildLaunchFailure('selection');
   }

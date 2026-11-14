@@ -12,6 +12,7 @@ import type { CodexMetadataSnapshot } from '../management/contracts.js';
 import type { ManagementTarget } from '../management/commandRecords.js';
 import type { ModelProbeInput, NativeModelProbe } from '../management/ModelProbeOwner.js';
 import type { OAuthNativeConversation } from '../management/OAuthOperationOwner.js';
+import type { CapturedNativeProcessFactory } from '../adapters/providers/capturedNativeProcessFactory.js';
 
 /** Selected finite Codex account operations, separate from OAuth and conversation owners. */
 export class CodexManagementCoordinator {
@@ -24,7 +25,8 @@ export class CodexManagementCoordinator {
 
   constructor(
     profiles: CodexManagementProfile[],
-    private readonly assertWriter: () => void
+    private readonly assertWriter: () => void,
+    private readonly createProcess?: CapturedNativeProcessFactory
   ) {
     this.profiles = new Map(
       structuredClone(profiles).map((profile) => [profile.profileId, profile])
@@ -56,7 +58,8 @@ export class CodexManagementCoordinator {
         } catch {
           return false;
         }
-      }
+      },
+      this.createProcess
     );
     this.live.add(conversation);
     const close = async () => {
@@ -86,7 +89,8 @@ export class CodexManagementCoordinator {
     if (!previous) this.profiles.set(profile.profileId, structuredClone(profile));
   }
 
-  prepareProbe(input: ModelProbeInput, isCurrent: () => boolean): NativeModelProbe {
+  prepareProbe(input: ModelProbeInput, isCurrent: () => boolean,
+    createProcess = this.createProcess): NativeModelProbe {
     const profile = this.select(input.profileId, input.configRevision);
     if (
       input.providerId !== 'codex' ||
@@ -112,7 +116,8 @@ export class CodexManagementCoordinator {
             host = captured;
             return captured.probe(input.modelId, combined, isCurrent);
           },
-          target
+          target,
+          createProcess
         );
         return pending;
       },
@@ -203,14 +208,15 @@ export class CodexManagementCoordinator {
   private async enqueue<T>(
     profile: CodexManagementProfile,
     action: (host: CodexManagementHost) => Promise<T>,
-    expected = this.target(profile.profileId, profile.configRevision)
+    expected = this.target(profile.profileId, profile.configRevision),
+    createProcess = this.createProcess
   ): Promise<T> {
     const key = expected.resourceId;
     const count = this.queued.get(key) ?? 0;
     if (count >= 8 || this.held.has(key)) throw new ManagementCommandError('held');
     this.queued.set(key, count + 1);
     const previous = this.running.get(key) ?? Promise.resolve();
-    const pending = previous.catch(() => {}).then(() => this.runOnce(profile, expected, action));
+    const pending = previous.catch(() => {}).then(() => this.runOnce(profile, expected, action, createProcess));
     this.running.set(key, pending);
     try {
       return await pending;
@@ -225,7 +231,8 @@ export class CodexManagementCoordinator {
   private async runOnce<T>(
     profile: CodexManagementProfile,
     expected: ManagementTarget,
-    action: (host: CodexManagementHost) => Promise<T>
+    action: (host: CodexManagementHost) => Promise<T>,
+    createProcess: CapturedNativeProcessFactory | undefined
   ): Promise<T> {
     const assertBound = () => {
       assertManagementTarget(expected, this.target(profile.profileId, profile.configRevision));
@@ -239,7 +246,7 @@ export class CodexManagementCoordinator {
       } catch {
         return false;
       }
-    });
+    }, createProcess);
     this.live.add(host);
     try {
       const result = await action(host);

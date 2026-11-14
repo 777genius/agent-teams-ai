@@ -11,6 +11,8 @@ import { WindowsCapturedProcess } from './WindowsCapturedProcess.js';
 
 import type { NativeProcessProfile } from '../../composition/nativeProcessProfile.js';
 import type { ObservableNativeProcess } from '../../owned-process/processFacade.js';
+import type { OwnedLaunchPort } from '../../owned-process/contract.js';
+import type { WindowsRegisteredProcessPort, WindowsServiceIntent } from '../../owned-process/retainedServiceContracts.js';
 
 /** Process custody needs native selection only, independent of a Team member/session. */
 export type CapturedProcessProfile = NativeProcessProfile & {
@@ -23,6 +25,7 @@ const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 20));
 export interface CapturedProcessPort {
   launch(request: CapturedProcessLaunch): ObservableNativeProcess;
   captureRegisteredProcess?(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture;
+  prepareRegisteredWindowsProcess?(pid: number, registrar: RegistrarBinding): WindowsServiceIntent;
   seal(): void;
   isRunning(): boolean;
   confirmStopped(): Promise<boolean>;
@@ -71,7 +74,8 @@ export class CapturedProcess implements CapturedProcessPort {
     private readonly canAllocate: () => boolean = () => true,
     private readonly processCustody?: RegisteredProcessRootSource,
     private readonly canCaptureRegisteredProcess: () => boolean = canAllocate,
-    private readonly processTreeSource?: CapturedProcessTreeSource
+    private readonly processTreeSource?: CapturedProcessTreeSource,
+    retainedWindowsPort?: OwnedLaunchPort & { readonly registeredProcesses?: WindowsRegisteredProcessPort }
   ) {
     this.profile = { provider: profile.provider, cwd: profile.cwd,
       environment: { ...profile.environment }, executable: { ...profile.executable },
@@ -81,7 +85,7 @@ export class CapturedProcess implements CapturedProcessPort {
     this.windows = process.platform === 'win32' && !processTreeSource
       ? new WindowsCapturedProcess(this.profile, () => !this.sealed && this.canAllocate(), () => {
           this.verifyExecutable(); this.verifyDirectories();
-        })
+        }, retainedWindowsPort)
       : undefined;
   }
 
@@ -164,6 +168,11 @@ export class CapturedProcess implements CapturedProcessPort {
     const tree = this.nativeTrees.get(child);
     if (!tree) throw new Error('Native executable observation unavailable');
     return tree.readExecutable();
+  }
+
+  prepareRegisteredWindowsProcess(pid: number, registrar: RegistrarBinding): WindowsServiceIntent {
+    if (this.sealed || !this.canCaptureRegisteredProcess() || !this.windows) throw new Error('process:hold');
+    return this.windows.prepareRegisteredProcess(pid, registrar);
   }
 
   captureRegisteredProcess(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture {
@@ -260,7 +269,7 @@ export class CapturedProcess implements CapturedProcessPort {
   }
   private verifyExecutable(): void {
     const { path, sha256 } = this.profile.executable;
-    const before = lstatSync(path);
+    const before = lstatSync(path, { bigint: true });
     if (
       !before.isFile() ||
       before.isSymbolicLink() ||
@@ -268,12 +277,13 @@ export class CapturedProcess implements CapturedProcessPort {
       createHash('sha256').update(readFileSync(path)).digest('hex') !== sha256
     )
       throw new Error('Native executable unavailable');
-    const after = lstatSync(path);
+    const after = lstatSync(path, { bigint: true });
     if (
       before.dev !== after.dev ||
       before.ino !== after.ino ||
       before.size !== after.size ||
-      before.mtimeMs !== after.mtimeMs
+      before.mtimeNs !== after.mtimeNs ||
+      before.ctimeNs !== after.ctimeNs
     )
       throw new Error('Native executable changed');
   }

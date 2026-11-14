@@ -109,6 +109,10 @@ const server = createServer((request, response) => {
           'TEST-model': {
             name: 'TEST model',
             limit: configuredLimit(id) ?? { context: 4096, output: 1024 },
+            variants: {
+              low: { reasoningEffort: 'low', privateSetting: 'TEST-private-variant-setting' },
+              high: { reasoningEffort: 'high' },
+            },
           },
           ...(id === 'TEST-api' ? { 'TEST-blocked': { name: 'TEST blocked model' } } : {}),
         },

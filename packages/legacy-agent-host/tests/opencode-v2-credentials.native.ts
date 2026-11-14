@@ -10,6 +10,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 
 import { fileHash, startHost, tick } from './fixtures/native-host.ts';
+import { createPassiveNativeDiagnosticCapture } from './fixtures/native-opencode-team/passive-diagnostics.ts';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 import { applyOpenCodeRuntimeSource } from '../dist/composition/applyOpenCodeRuntimeSource.js';
 import { selectOpenCodeV2ManagementModel } from '../dist/composition/openCodeV2ModelSelection.js';
@@ -91,6 +92,9 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
   const steps: string[] = [], failures: string[] = [];
   const requests: { authorizationMatched: boolean; tools: number; promptMatched: boolean; outcome: string }[] = [];
   const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
+  // Four original Host lifetimes; each unchanged collector retains at most 257 sanitized rows.
+  const passive: ReturnType<typeof createPassiveNativeDiagnosticCapture>[] = [];
+  let hostEpoch = 0;
   const nativePids = new Set<number>();
   let host: ReturnType<typeof startHost> | undefined, originalFailure: unknown;
   let failedHost: ReturnType<ReturnType<typeof startHost>['facts']> | undefined;
@@ -441,9 +445,15 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     const start = async () => {
       await assertNativeV1Build(repo, sourceHead, build);
       assert.ok(!host && epochs.length < 4, 'TEST original Host epochs only');
-      const original: HostEpoch = { id: epochs.length + 1, pid: 0, line: '', discarded: false };
+      const original: HostEpoch = { id: ++hostEpoch, pid: 0, line: '', discarded: false };
+      const diagnostics = createPassiveNativeDiagnosticCapture();
+      passive.push(diagnostics);
       host = startHost({ node, entry, root, profile: profilePath, profileHash,
-        onDiagnostic: chunk => diagnostic(original, chunk) });
+        testImports: [new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url).href],
+        onDiagnostic: (chunk: Buffer) => {
+          diagnostics.accept(chunk, original.id);
+          diagnostic(original, chunk);
+        } });
       original.pid = host.facts().pid ?? 0;
       epoch = original; epochs.push(original);
       assert.ok(original.pid > 1, 'TEST original Host PID');
@@ -492,6 +502,8 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     assert.equal(rejectedCatalog.configured, true);
     assert.equal(rejectedCatalog.connected, false);
     await observeNative([a1]);
+    const originalCatalogPids = await children();
+    assert.equal(originalCatalogPids.length, 1, 'the rejected source retains one original catalog owner');
     const grant: RuntimeSourceGrant = { targetId: 'c'.repeat(64), ownerId: profile.owner.ownerId,
       ownerRevision: profile.owner.revision, contextId: 'TEST-context', projectPath: join(root, 'workspace'),
       runtimeId: 'opencode', ...target, teamScopes: [] };
@@ -513,7 +525,10 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     const b1 = expectCatalog(target);
     assert.equal(selected(await directory()).connected, false, 'a source revision cannot inherit old model verification');
     assert.equal(requests.length, 1, 'source publication and passive read do not verify a model');
+    // Distinct retained source profiles own distinct passive catalogs until the original Host closes.
     const retainedCatalogs = [a1, b1], originalChildren = await observeNative(retainedCatalogs);
+    assert.ok(originalChildren.some(child => child.pid === originalCatalogPids[0]!),
+      'new source cannot retarget the old catalog owner');
     const originalMetadata = retainedCatalogs.map(item => item.ready!);
     assert.throws(() => assertNativeSet(originalChildren,
       [{ ...originalMetadata[0]!, profileHash: '0'.repeat(64) }, originalMetadata[1]!], retainedCatalogs));
@@ -641,8 +656,12 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     passed = true;
   } catch (error) { originalFailure = error; }
   finally {
-    if (host) try { await host.close(); hosts.push(host.facts()); } catch (error) {
-      cleanupErrors.push(error); failedHost = host.facts();
+    if (host) try { await host.close(); }
+    catch (error) { cleanupErrors.push(error); failedHost = host.facts(); }
+    finally {
+      // Keep the original failure evidence even when its cleanup cannot qualify.
+      hosts.push(host.facts());
+      host = undefined;
     }
     model.closeAllConnections();
     await new Promise<void>(done => model.close(() => done()));
@@ -659,7 +678,9 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
       await writeFile(receiptPath, JSON.stringify({ kind: 'TEST_NATIVE_V2_CREDENTIAL', sourceHead,
         status: passed && cleanup && !originalFailure ? 'PASS' : 'INCOMPLETE', cleanup, version: '2.1.4',
         digests, steps, requests, nativeCredentialCount, nativeProcessCount: nativePids.size,
-        hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({ exitCode, signalCode, stdoutValid })),
+        hosts: hosts.map(({ exitCode, signalCode, stdoutValid, diagnosticBytes }) =>
+          ({ exitCode, signalCode, stdoutValid, diagnosticBytes })),
+        passiveNativeDiagnostics: passive.flatMap(diagnostics => diagnostics.entries),
         ...(failedHost ? { closeFailure: { epoch: epoch?.id ?? null, pid: failedHost.pid ?? null,
           exitCode: failedHost.exitCode, signalCode: failedHost.signalCode,
           stdoutValid: failedHost.stdoutValid, diagnosticBytes: failedHost.diagnosticBytes }, timeoutJournal } : {}),

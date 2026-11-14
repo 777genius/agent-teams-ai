@@ -31,6 +31,7 @@ import type {
   RuntimeActivitySnapshot,
 } from '../runtime/activityContracts.js';
 import type { JsonValue } from '../contracts.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
 /** Existing captured member controls; the coordinator retains registry and lifecycle ownership. */
 export async function executeCapturedRuntimeControl(
@@ -41,6 +42,7 @@ export async function executeCapturedRuntimeControl(
     launches: ReadonlyMap<string, TeamLaunchOwner>;
     retainedLaunches: ReadonlyMap<string, { team: HostedTeam; launch: TeamLaunchOwner }>;
     modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget' | 'admitTeamProbeProfile'>;
+    captureProcessOrigin?(entry: MemberEntry): RuntimeSourceProcessOrigin | undefined;
     runtime: RuntimeOwner;
     interactionControls: HostInteractionControls;
     principalId: string;
@@ -228,6 +230,7 @@ export async function executeCapturedRuntimeControl(
             throw new RuntimeOwnerError('hold');
           preparation = captureActionModelReadiness({ management: options.modelReadiness, launch,
             targets: [{ entry, profile: entry.profile, binding: entry.binding }], commandId,
+            ...(options.captureProcessOrigin ? { captureProcessOrigin: options.captureProcessOrigin } : {}),
             payload: raw, actorDigest, readiness, assertCurrent: assertAuthority });
         }
       }

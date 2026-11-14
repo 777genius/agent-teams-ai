@@ -1,0 +1,56 @@
+
+ RUN  v3.2.6 /workspace/scratch/391e21b06e24/reconcile-base0543
+
+ ✓ test/renderer/store/teamSlice.test.ts (249 tests) 769ms
+ ✓ test/features/agent-backend/hostTeamsRead.test.ts (46 tests) 250ms
+ ✓ test/renderer/store/teamSliceContextRace.test.ts (32 tests) 1584ms
+   ✓ team slice context races > reruns a pending global task refresh for the current context instead of applying stale tasks  1506ms
+ ✓ test/features/agent-backend/hostProvisioningProgress.test.ts (15 tests) 138ms
+ ❯ test/features/agent-backend/hostTeamChanges.test.ts (7 tests | 1 failed) 37ms
+   ✓ ordinary Host snapshot invalidation > shares one loop, retains original handles and isolates an unavailable owner 11ms
+   ✓ ordinary Host snapshot invalidation > drops late results after context change/unsubscribe and never overlaps a pending read 1ms
+   ✓ ordinary Host snapshot invalidation > starts a fresh cursor after shell context switches and preserves legacy subscription receiver 4ms
+   ✓ ordinary Host snapshot invalidation > rehydrates a later subscriber even when another subscriber already consumed the current cursor 1ms
+   ✓ ordinary Host snapshot invalidation > deduplicates replayed source events while a new subscriber still gets its own initial read 2ms
+   × ordinary Host snapshot invalidation > invalidates only the captured inbox for text changes without advancing the product feed 15ms
+     → expected { …(5) } to deeply equal { …(3) }
+   ✓ ordinary Host snapshot invalidation > uses the existing control lane and projects no private fields 1ms
+ ✓ test/features/agent-backend/teamProductReadOrder.test.ts (5 tests) 13ms
+ ✓ test/renderer/store/teamMessagesCache.test.ts (4 tests) 6ms
+ ✓ test/features/agent-backend/hostMessagesPageTransport.test.ts (7 tests) 243ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/features/agent-backend/hostTeamChanges.test.ts > ordinary Host snapshot invalidation > invalidates only the captured inbox for text changes without advancing the product feed
+AssertionError: expected { …(5) } to deeply equal { …(3) }
+
+- Expected
++ Received
+
+  {
++   "conversation": {
++     "gaps": [],
++     "revision": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
++   },
+    "cursor": "11111111-1111-4111-8111-111111111111",
++   "events": [],
+    "sequence": 0,
+    "streamId": "11111111-1111-4111-8111-111111111111",
+  }
+
+ ❯ test/features/agent-backend/hostTeamChanges.test.ts:193:39
+    191|       type: 'inbox', teamName: hostTeamSelectionKey('A'), detail: 'hos…
+    192|     }]);
+    193|     expect(f.readOrder.position('A')).toEqual({ streamId: a, sequence:…
+       |                                       ^
+    194|     expect(request).toHaveBeenCalledTimes(6);
+    195|     expect(vi.mocked(f.backend.invoke).mock.calls.every(([input]) =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 7 passed (8)
+      Tests  1 failed | 364 passed (365)
+   Start at  02:44:39
+   Duration  13.41s (transform 3.21s, setup 381ms, collect 6.26s, tests 3.04s, environment 1.90s, prepare 598ms)
+

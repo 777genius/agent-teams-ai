@@ -5,6 +5,7 @@ import { createTeamProcessMethods } from '../process/createTeamProcessMethods.js
 import type { TeamHostProfile } from './TeamHost.js';
 import type { HostedTeam } from './MemberEntry.js';
 import type { RegisteredProcessNative } from '../process/registeredProcessContracts.js';
+import type { WindowsRegisteredProcessPort } from '../owned-process/retainedServiceContracts.js';
 const bindingSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -22,7 +23,8 @@ export function createTeamProcessComposition(options: {
   profile: Pick<TeamHostProfile, 'owner' | 'principalId'>;
   teams: ReadonlyMap<string, HostedTeam>;
   assertCurrent(): void;
-  native?: Pick<RegisteredProcessNative, 'observe' | 'signal'>;
+  native?: Pick<RegisteredProcessNative, 'observe' | 'signal' | 'acknowledgeAbsence'>;
+  windows?: WindowsRegisteredProcessPort;
 }) {
   return {
     methods: createTeamProcessMethods({
@@ -42,6 +44,13 @@ export function createTeamProcessComposition(options: {
           throw new TeamOwnerError('forbidden');
         const commands = selected.owner.processCommands(options.profile.principalId, {
           assertCurrent: options.assertCurrent,
+          assertAsyncCurrent: options.assertCurrent,
+          ...(options.windows ? { windows: {
+            prepareControl: (capture, operation) => options.windows!.prepareControl(capture, operation),
+            run: (intent, deadline) => options.windows!.run(intent, deadline),
+            lookup: (intent, deadline) => options.windows!.lookup(intent, deadline),
+            query: (capture, deadline) => options.windows!.query(capture, deadline),
+          } } : {}),
           ...(options.native
             ? {
                 native: {
@@ -57,6 +66,10 @@ export function createTeamProcessComposition(options: {
                   signal(capture) {
                     options.assertCurrent();
                     return options.native!.signal(capture);
+                  },
+                  acknowledgeAbsence(capture) {
+                    options.assertCurrent();
+                    options.native!.acknowledgeAbsence?.(capture);
                   },
                 },
               }

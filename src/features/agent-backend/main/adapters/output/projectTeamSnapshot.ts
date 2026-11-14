@@ -206,6 +206,7 @@ export function projectTeamMessage(value: unknown): BackendTeamSnapshot['message
     ...strings(source, [
       'to',
       'messageId',
+      'leadSessionId',
       'summary',
       'color',
       'relayOfMessageId',

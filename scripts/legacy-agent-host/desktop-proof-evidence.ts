@@ -1,6 +1,10 @@
+import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
 import { readDesktopNativeProviderArtifact } from './desktop-native-stop-fixture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
+import { verifyDesktopNativeFreeze } from './desktop-source-freeze.ts';
+import { verifyLinuxChildExecInput } from '../../src/main/utils/linuxChildLaunchSelection.ts';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
@@ -9,6 +13,70 @@ import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fix
 import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import type { startOpenCodeV2ReviewModel } from './desktop-opencode-v2-review-model.ts';
 import type { startDesktopCapturedMcpModel } from './desktop-opencode-v2-mcp-fixture.ts';
+
+/** Preserve both original input checks after app cleanup and before writing its receipt. */
+export async function verifyDesktopProofInputsAfterCleanup(
+  before: Parameters<typeof verifyDesktopNativeFreeze>[0],
+  fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>,
+  evidence: Record<string, unknown>
+): Promise<void> {
+  await verifyDesktopNativeFreeze(before, evidence);
+  if (fixture.linuxChildExec) {
+    try {
+      assert.deepEqual(verifyLinuxChildExecInput(fixture.linuxChildExec), fixture.linuxChildExec);
+      evidence.linuxChildExecInputVerifiedAfterCleanup = true;
+    } catch {
+      evidence.linuxChildExecInputVerifiedAfterCleanup = false;
+      evidence.status = 'INCOMPLETE';
+    }
+  }
+}
+
+/** Preserve exact source and scope facts in the existing evidence owner. */
+export function captureDesktopProofScope(evidence: Record<string, unknown>, options: {
+  repo: string; mode: string; emulatedOnly: boolean; emulatedManagementMode: boolean; emulatedRuntimeMode: boolean;
+}): void {
+  const { repo, mode, emulatedOnly, emulatedManagementMode, emulatedRuntimeMode } = options;
+  if (mode === 'codex-login-ui' || emulatedOnly) evidence.source = {
+    head: execFileSync('/usr/bin/git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
+    dirty: execFileSync('/usr/bin/git', ['status', '--porcelain', '--untracked-files=no'], { cwd: repo, encoding: 'utf8' }).trim().length > 0,
+  };
+  if (emulatedOnly) {
+    evidence.emulation = { only: true, runtimeConfigured: emulatedRuntimeMode, managementConfigured: emulatedManagementMode || emulatedRuntimeMode };
+    evidence.scope = 'Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted';
+    evidence.excluded = [...(emulatedRuntimeMode ? [] : ['provider sessions']), 'vendor authentication', 'native model execution', 'full Stage1/release/default activation'];
+  }
+  if (mode === 'codex-login-ui') {
+    evidence.scope = 'Existing Electron Codex Settings controls through preload/Main/Host/D and pinned native app-server: fresh browser/device login start, private link/code, copy and cancel. No authenticated account completion.';
+    evidence.excluded = ['authenticated vendor login completion', 'vendor inference', 'personal browser navigation', 'other OS tuples', 'Desktop team launch', 'full Stage1/release/default activation'];
+  }
+}
+
+/** Final assertions run only after the original receipt has been written and reported. */
+export function assertDesktopProofCompleted(evidence: Record<string, unknown>, options: {
+  packed: boolean;
+  emulatedOnly: boolean;
+  controlledProcessMode: boolean;
+  mode: string;
+  scheduleUiMode: boolean;
+  capturedMcpUiMode: boolean;
+  cleanupFailure: unknown;
+  remaining: readonly unknown[] | null;
+}): void {
+  const { packed, emulatedOnly, controlledProcessMode, mode, scheduleUiMode, capturedMcpUiMode,
+    cleanupFailure, remaining } = options;
+  if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
+  if (emulatedOnly) assert.equal(evidence.status, 'PASS', 'provider-emulation UI proof incomplete; original receipt retained');
+  if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
+  if (mode === 'codex-login-ui') assert.equal(evidence.status, 'PASS', 'Codex login UI proof incomplete; inspect its retained finite receipt');
+  if (scheduleUiMode) assert.equal(evidence.status, 'PASS', 'original schedule UI proof incomplete; inspect its retained receipt');
+  if (capturedMcpUiMode) assert.equal(evidence.status, 'PASS', 'original MCP UI proof incomplete; inspect its retained receipt');
+  assert.ok(
+    !cleanupFailure && remaining !== null && remaining.length === 0,
+    'captured group cleanup unconfirmed; receipt retains debt and no further signal is authorized'
+  );
+}
+
 export async function desktopProofEvidence(options: {
   mode: string;
   fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
@@ -239,5 +307,147 @@ export async function desktopProofEvidence(options: {
     },
     packageManager: fixture.packageManager,
     operations: [] as unknown[],
+  };
+}
+
+/** Retained observations only; this projection neither advances nor diagnoses the original flow. */
+export function projectDesktopMixedSettingsFailure(value: unknown) {
+  try {
+    const missing = Symbol('missing'), invalid = Symbol('invalid');
+    const record = (row: unknown): row is Record<string, unknown> =>
+      row !== null && typeof row === 'object' && !Array.isArray(row);
+    const own = (row: unknown, key: string): unknown => {
+      if (row === null || typeof row !== 'object') return missing;
+      const field = Object.getOwnPropertyDescriptor(row, key);
+      return field ? ('value' in field ? field.value : invalid) : missing;
+    };
+    const present = (row: unknown) => row === missing || row === undefined ? false : record(row) ? true : null;
+    const boolean = (field: unknown) => typeof field === 'boolean' ? field : null;
+    const integer = (field: unknown, max: number) =>
+      typeof field === 'number' && Number.isSafeInteger(field) && field >= 0 && field <= max ? field : null;
+    const choice = (field: unknown, allowed: readonly string[]) =>
+      typeof field === 'string' && allowed.includes(field) ? field : null;
+    const length = (rows: unknown, max: number) => Array.isArray(rows) ? integer(own(rows, 'length'), max) : null;
+    const status = (row: unknown) => choice(own(row, 'status'), ['PASS', 'INCOMPLETE', 'UNKNOWN']);
+    const stages: Record<string, string> = {
+      'original menu for Settings': 'settings-menu',
+      'original Settings': 'settings-open',
+      'original Providers page': 'settings-providers',
+      'original OpenCode Manage': 'settings-manage',
+      'original Models tab': 'settings-models',
+      'original project context': 'settings-project-context',
+      'select original TEST project': 'settings-project-select',
+      'Change: Default model': 'settings-global-change',
+      'Use another model: This project: workspace': 'settings-project-change',
+      'original configured provider': 'settings-provider',
+      'expand original configured provider': 'settings-provider-expand',
+      'select and verify original global default': 'settings-global-select',
+      'select and verify original project default': 'settings-project-model-select',
+      'Test the original project model once': 'settings-project-test',
+      'clear original project override once': 'settings-project-clear',
+      'close original Settings': 'settings-close',
+      'close original member JSON': 'member-json-close',
+      'expand original Carol model': 'member-model-expand',
+      'temporarily select A through the existing model control': 'member-model-select',
+      'original context limit': 'member-context-limit',
+      'original output limit': 'member-output-limit',
+      'Apply and verify original limits once': 'member-limits-apply',
+      'restore original inherited Default before saving': 'member-default-restore',
+      'collapse original Carol model': 'member-model-collapse',
+      'Create the original saved3-member roster once': 'create-save',
+      'open existing EditTeamDialog': 'edit-open',
+      'save original Edit intent once': 'edit-save',
+      'reopen existing EditTeamDialog after reload': 'edit-reopen',
+      'open original mixed Launch dialog': 'launch-open',
+      'reopen original mixed Launch before Submit': 'launch-reopen',
+      'submit original mixed Launch once with successful captured readiness': 'launch-submit',
+      'original whole Team Stop once': 'team-stop',
+    };
+    const mixed = own(value, 'mixedCreateLaunchProof'), settings = own(value, 'providerSettings');
+    const cold = own(value, 'coldSettingsBoundary'), steps = own(mixed, 'steps');
+    const total = length(steps, 0xffffffff), count = total !== null && total <= 1024 ? total : null;
+    const last: { stage: string; action: string | null; attempted: boolean | null }[] | null = count === null ? null : [];
+    if (last && count !== null) for (let index = Math.max(0, count - 8); index < count; index++) {
+      const row = own(steps, String(index)), label = own(row, 'label');
+      const stage = typeof label === 'string' ? own(stages, label) : missing;
+      last.push({
+        stage: typeof stage === 'string' ? stage : 'other',
+        action: choice(own(row, 'action'), ['mouseMoved', 'mouseClick', 'mouseWheel']),
+        attempted: own(row, 'state') === 'attempted' ? true : null,
+      });
+    }
+    const settingsSteps = () => {
+      const rows = own(settings, 'steps'), size = length(rows, 4), seen = new Set<string>();
+      if (size === null) return null;
+      const result: { step: string; phase: 'completed'; resourceHeld: boolean }[] = [];
+      for (let index = 0; index < size; index++) {
+        const row = own(rows, String(index));
+        const step = choice(own(row, 'step'), ['global-default', 'project-default', 'project-test', 'local-limits']);
+        const held = boolean(own(row, 'resourceHeld'));
+        if (!record(row) || step === null || seen.has(step) || own(row, 'phase') !== 'completed' || held === null) return null;
+        seen.add(step);
+        result.push({ step, phase: 'completed', resourceHeld: held });
+      }
+      return result;
+    };
+    const cleanup = (row: unknown) => {
+      if (!record(row)) return null;
+      const failure = own(row, 'cleanupFailure');
+      return {
+        remaining: length(own(row, 'remaining'), 256),
+        appExitCode: integer(own(row, 'appExitCode'), 255),
+        appSignalCode: choice(own(row, 'appSignalCode'), [
+          'SIGABRT', 'SIGALRM', 'SIGBUS', 'SIGCHLD', 'SIGCONT', 'SIGFPE', 'SIGHUP', 'SIGILL', 'SIGINT',
+          'SIGIO', 'SIGKILL', 'SIGPIPE', 'SIGPROF', 'SIGQUIT', 'SIGSEGV', 'SIGSTOP', 'SIGSYS', 'SIGTERM',
+          'SIGTRAP', 'SIGTSTP', 'SIGTTIN', 'SIGTTOU', 'SIGURG', 'SIGUSR1', 'SIGUSR2', 'SIGVTALRM',
+          'SIGWINCH', 'SIGXCPU', 'SIGXFSZ',
+        ]),
+        capturedHostAbsent: boolean(own(row, 'capturedHostAbsent')),
+        writerLockReleased: boolean(own(row, 'writerLockReleased')),
+        failureRecorded: typeof failure === 'string' ? true : failure === missing || failure === undefined ? false : null,
+      };
+    };
+    const result = {
+      schemaVersion: 1, status: 'available',
+      mixedRecorded: present(mixed), settingsRecorded: present(settings), coldRecorded: present(cold),
+      generation: choice(own(mixed, 'openCodeGeneration'), ['v1', 'v2']),
+      proofStatus: status(mixed), settingsStatus: status(settings), coldStatus: status(cold),
+      uiSteps: { count, overflow: total === null ? null : total > 1024, last },
+      settingsSteps: settingsSteps(),
+      milestones: {
+        projectOverrideRecorded: present(own(settings, 'projectOverride')),
+        clearedProjectRecorded: present(own(settings, 'clearedProject')),
+        defaultBeforeSaveRecorded: present(own(settings, 'defaultBeforeSave')),
+        createdRecorded: present(own(mixed, 'created')),
+        nativeCaptureRecorded: present(own(settings, 'nativeCapture')),
+      },
+      originalSettingsOwnersReleased: boolean(own(settings, 'originalSettingsOwnersReleased')),
+      sameSettingsAfterCold: boolean(own(settings, 'sameSettingsAfterCold')),
+      successorOwnersReleased: boolean(own(settings, 'successorOwnersReleased')),
+      quitAttempted: boolean(own(own(cold, 'firstQuit'), 'attempted')),
+      secondEpochRecorded: present(own(cold, 'secondEpoch')),
+      cleanup: {
+        first: cleanup(own(cold, 'firstCleanup')),
+        second: cleanup(own(cold, 'secondCleanup')),
+        final: cleanup(own(value, 'cleanup')),
+      },
+    };
+    return Buffer.byteLength(JSON.stringify(result), 'utf8') <= 4096
+      ? result : { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
+  } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' }; }
+}
+
+/** Only the original receipt summary; no observation, retry or cleanup is performed here. */
+export function projectDesktopProofReceiptSummary(evidence: Record<string, unknown>, options: {
+  receiptPath: string; mode: string; mixedMode: boolean;
+}): Record<string, unknown> {
+  const { receiptPath, mode, mixedMode } = options;
+  return { status: evidence.status, receipt: receiptPath,
+    ...(evidence.status !== 'PASS' && evidence.failureSource
+      ? { failureSource: evidence.failureSource } : {}),
+    ...(['codex-login-ui', 'emulated-codex-login-ui'].includes(mode) && evidence.status !== 'PASS'
+      ? { loginFailure: projectDesktopCodexLoginFailure(evidence) } : {}),
+    ...(mixedMode && evidence.status !== 'PASS'
+      ? { mixedSettingsFailure: projectDesktopMixedSettingsFailure(evidence) } : {}),
   };
 }

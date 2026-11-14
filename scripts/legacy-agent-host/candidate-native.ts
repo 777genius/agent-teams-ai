@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { access, chmod, copyFile, lstat, mkdir, readFile, realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, join } from 'node:path';
-import { readPackagedProcessArtifact } from '../../packages/legacy-agent-host/dist/process/readPackagedProcessArtifact.js';
+import { readPackagedLinuxProcessArtifact, readPackagedProcessArtifact } from '../../packages/legacy-agent-host/dist/process/readPackagedProcessArtifact.js';
 import { candidateDigest } from './candidate-closure.ts';
 
 export interface CandidateNativeCapture {
@@ -92,7 +92,8 @@ export async function stageCandidateNativeArtifacts(
     return { path, sha256: value.sha256, protocolRevision: value.protocolRevision };
   };
   // The Host's existing selector owns the supported ABI/platform/OS-build policy.
-  const bridge = readPackagedProcessArtifact(input.processCustody);
+  const readBridge = platform === 'linux-x64' ? readPackagedLinuxProcessArtifact : readPackagedProcessArtifact;
+  const bridge = readBridge(input.processCustody);
   if ((await candidateDigest(bridge.path)) !== bridge.sha256)
     throw new Error('Candidate M19 library mismatch');
   const directory = 'process-custody';
@@ -103,7 +104,7 @@ export async function stageCandidateNativeArtifacts(
       join(resourceRoot, directory, name),
       constants.COPYFILE_EXCL
     );
-  const copied = readPackagedProcessArtifact({
+  const copied = readBridge({
     directory: join(resourceRoot, directory),
     manifestSha256: input.processCustody.manifestSha256,
   });

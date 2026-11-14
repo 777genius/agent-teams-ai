@@ -14,6 +14,8 @@ import { admitTeamNamespace } from '../adapters/team/admitTeamNamespace.js';
 import { createRuntimeHostMethods } from './createRuntimeHostMethods.js';
 import { createHostCrossTeamComposition } from './createHostCrossTeamComposition.js';
 import { createProcessCustody, processCustodyProfileSchema } from './processCustody.js';
+import { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
+import { HOST_CUSTODY_LAUNCH_MS } from '../owned-process/hostCustody.js';
 import { createTeamProcessComposition } from './createTeamProcessComposition.js';
 import { createTeamReviewComposition } from './TeamReviewComposition.js';
 import { createStoppedImportComposition } from './createStoppedImportComposition.js';
@@ -98,10 +100,12 @@ export function createTeamHost(
   let emitOAuthProgress: ((snapshot: ProviderOAuthSnapshot) => void) | undefined;
   try {
     const processCustody = createProcessCustody(profile.processCustody);
+    const retainedWindowsLaunch = profile.processCustody && 'kind' in profile.processCustody
+      ? new HostWindowsLaunch(() => server.nativeCustody) : undefined;
     const providerManagement = createHostProviderManagementComposition(profile, () => {
       if (sealed) throw new ManagementCommandError('held');
       lease.assertCurrent();
-    }, snapshot => emitOAuthProgress?.(snapshot), processCustody, () => lease.assertCurrent());
+    }, snapshot => emitOAuthProgress?.(snapshot), processCustody, () => lease.assertCurrent(), retainedWindowsLaunch);
     management = providerManagement.management;
     const sources = providerManagement.sources;
     const teams = new Map<string, HostedTeam>();
@@ -112,6 +116,7 @@ export function createTeamHost(
     if (profile.runtime) scheduledRuns = createHostScheduledRunComposition({ profile, teams,
       assertWriter: () => lease.assertCurrent(), ...(sources ? { sources } : {}),
       ...(processCustody ? { processCustody } : {}),
+      ...(retainedWindowsLaunch ? { retainedWindowsLaunch } : {}),
       ...(composition?.createScheduledProvider ? { createProvider: composition.createScheduledProvider } : {}) });
     const crossTeam = createHostCrossTeamComposition({
       profile,
@@ -131,6 +136,7 @@ export function createTeamHost(
       teams,
       assertCurrent,
       ...(processCustody ? { native: processCustody } : {}),
+      ...(retainedWindowsLaunch ? { windows: retainedWindowsLaunch.registeredProcesses } : {}),
     });
     const lifecycle = createHostTeamLifecycleComposition({
       profile,
@@ -141,6 +147,7 @@ export function createTeamHost(
       runtime: () => runtime,
       importer: () => imports,
       ...(processCustody ? { processCustody } : {}),
+      ...(retainedWindowsLaunch ? { windows: retainedWindowsLaunch.registeredProcesses } : {}),
     });
     const workSync = createHostWorkSyncComposition({
       teamsBasePath: join(profile.owner.storageRoot, 'teams'),
@@ -199,7 +206,7 @@ export function createTeamHost(
       teams.set(definition.binding.teamId, {
         definition,
         owner: team,
-        connection: team.connect(profile.principalId),
+        connection: team.connect(profile.principalId, (capture, mode) => runtime?.readConversation(capture, mode)),
         operatorPrincipalId: profile.principalId,
       });
     };
@@ -274,6 +281,7 @@ export function createTeamHost(
             }
           : {}),
         ...(processCustody ? { processCustody } : {}),
+        ...(retainedWindowsLaunch ? { retainedWindowsLaunch } : {}),
         groups: (entry, capture, current) => groups.member(entry, capture, current),
         crossTeam: (team, principal, binding, current) =>
           crossTeam.memberPort(team, principal, binding, current),
@@ -651,8 +659,9 @@ export function createTeamHost(
       },
     });
 
-    const server = createHostServer({
+    const server: HostServer = createHostServer({
       ...streams,
+      ...(retainedWindowsLaunch ? { nativeCustody: { timeoutMs: HOST_CUSTODY_LAUNCH_MS } } : {}),
       // Runtime/provider drain and final backup must finish before the original lease is released.
       limits: { disposeTimeoutMs: TEAM_HOST_DISPOSE_TIMEOUT_MS, ...streams.limits },
       ...(profile.reviewTransport ? { reviewTransport: profile.reviewTransport } : {}),

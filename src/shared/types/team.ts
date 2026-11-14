@@ -14,6 +14,7 @@ import type { GroupChatEnvelope } from '@features/team-group-chats/contracts';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 
 export type * from './teamBoardTask';
+export type { MessagesPage } from './teamMessages';
 export type {
   FileLineStats,
   LeadActivitySnapshot,
@@ -539,19 +540,6 @@ export interface InboxMessage extends GroupChatEnvelope {
   slashCommand?: SlashCommandMeta;
   /** Structured command-output metadata for session-derived result rows. */
   commandOutput?: CommandOutputMeta;
-}
-
-/** Cursor-based paginated messages response. */
-export interface MessagesPage {
-  messages: InboxMessage[];
-  /** Opaque cursor string for fetching older messages. Null when no more pages. */
-  nextCursor: string | null;
-  hasMore: boolean;
-  /**
-   * Content-stable revision of the full normalized feed that produced this page.
-   * Changes only when the semantic message feed changes.
-   */
-  feedRevision: string;
 }
 
 export type AgentActionMode = 'do' | 'ask' | 'delegate';

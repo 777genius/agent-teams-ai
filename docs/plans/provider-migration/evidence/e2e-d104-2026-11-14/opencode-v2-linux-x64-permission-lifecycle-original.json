@@ -1,0 +1,93 @@
+{
+  "kind": "TEST_NATIVE_V2_PERMISSION_LIFECYCLE",
+  "sourceHead": "d10409d1887d6a81955adcfad5c10d4a7596d0dc",
+  "platform": "linux-x64",
+  "version": "2.1.4",
+  "status": "PASS",
+  "digests": {
+    "node": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "bun": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+    "manifest": "840d7cc145155e0ad97a407af87eb347da1a9cbf034d19c632897e1a5efbff9b",
+    "source": "5a3554e5fcf13fcfd2eb6e90afacce1e385832dd919a6256194256e90afdc8df",
+    "dist": "0e5c5f7a07a2620e9e42938c396a1759f02682b255fc604b6a01c2cd3d0e61cd",
+    "provider": "73dbbfba5e8fed6719ccdeaae499a47284b72ac831c33a2c7206fbf2799f77b8"
+  },
+  "cleanup": true,
+  "steps": [
+    "three_original_native_members_attest_empty_saved_grants_and_builtin_plugins",
+    "external_directory_deny_prevents_native_read_and_content_disclosure",
+    "external_directory_ask_once_discloses_only_after_original_grant",
+    "once_is_not_always_second_prompt_reject_and_stale_reply_have_no_effect",
+    "revoked_member_cannot_grant_pending_native_permission_or_replay_it",
+    "active_Stop_terminates_native_foreground_effect_preserves_unknown_and_sibling",
+    "pinned_native_database_has_zero_saved_always_permissions_after_once_reject",
+    "cold_Host_preserves_original_unknown_receipts_and_restores_only_idle_sibling_without_replay"
+  ],
+  "modelRequests": [
+    {
+      "turn": "DENY",
+      "step": 0,
+      "tool": "read",
+      "externalContent": false
+    },
+    {
+      "turn": "DENY",
+      "step": 1,
+      "tool": null,
+      "externalContent": false
+    },
+    {
+      "turn": "ONCE",
+      "step": 0,
+      "tool": "read",
+      "externalContent": false
+    },
+    {
+      "turn": "ONCE",
+      "step": 1,
+      "tool": null,
+      "externalContent": true
+    },
+    {
+      "turn": "REJECT",
+      "step": 0,
+      "tool": "read",
+      "externalContent": false
+    },
+    {
+      "turn": "REVOKE",
+      "step": 0,
+      "tool": "read",
+      "externalContent": false
+    },
+    {
+      "turn": "ACTIVE",
+      "step": 0,
+      "tool": "shell",
+      "externalContent": false
+    },
+    {
+      "turn": "SIBLING",
+      "step": 0,
+      "tool": null,
+      "externalContent": false
+    }
+  ],
+  "modelFailures": [],
+  "originalNativeProcessCount": 4,
+  "hosts": [
+    {
+      "exitCode": 0,
+      "signalCode": null,
+      "stdoutValid": true
+    },
+    {
+      "exitCode": 0,
+      "signalCode": null,
+      "stdoutValid": true
+    }
+  ],
+  "vendorAuthQualified": false,
+  "desktopQualified": false,
+  "releaseQualified": false
+}

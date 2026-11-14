@@ -186,6 +186,18 @@ function leased(t: TestContext, provider: 'claude' | 'codex' = 'claude') {
   };
 }
 
+test('Codex source publication refuses an unqualified version before admission without changing its original selection', async t => {
+  const f = leased(t, 'codex');
+  const original = f.index.current({ grant: f.grant });
+  for (const version of ['0.170.0', ...(process.platform === 'darwin' && process.arch === 'arm64' ? [] : ['0.169.0'])]) {
+    await assert.rejects(f.index.publish({ grant: f.grant, commandId: 'TEST-codex-future-' + version,
+      expectedRevision: original.revision,
+      nativeSelection: { sourceKind: 'app-managed', nativeCli: { executable: f.replacement, version } },
+    }, () => assert.fail('unqualified version cannot be admitted')), { reason: 'unqualified-version' });
+    assert.deepEqual(f.index.current({ grant: f.grant }), original);
+  }
+});
+
 test('publication pins new captures while seed and retained captures replay unchanged after a cold restart', async (t) => {
   const f = leased(t), firstScope = f.grant.teamScopes[0]!;
   const otherScope = { ...firstScope, teamId: 'TEST-second-team' };

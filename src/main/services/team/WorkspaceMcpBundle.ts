@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { execCli } from '@main/utils/childProcess';
+import { resolveElectronNodeLaunch } from '@main/utils/electronNodeLaunch';
 
 interface BundleReceipt {
   inputs: string;
@@ -98,20 +99,17 @@ async function buildCurrentBundle(
   const outputDirectory = path.join(outputRoot, 'dev', `${process.pid}-${randomUUID()}`);
   const entry = path.join(outputDirectory, 'index.js');
   try {
-    await execCli(
-      node,
-      [
-        await fs.realpath(path.join(server, 'node_modules', 'tsup', 'dist', 'cli-default.js')),
-        '--out-dir',
-        outputDirectory,
-      ],
-      {
-        cwd: server,
-        timeout: BUILD_TIMEOUT_MS,
-        stdoutMaxBuffer: 128 * 1024,
-        stderrMaxBuffer: 128 * 1024,
-      }
-    );
+    const launch = await resolveElectronNodeLaunch(node, [
+      await fs.realpath(path.join(server, 'node_modules', 'tsup', 'dist', 'cli-default.js')),
+      '--out-dir',
+      outputDirectory,
+    ], 'generic');
+    await execCli(launch.command, launch.args, {
+      cwd: server,
+      timeout: BUILD_TIMEOUT_MS,
+      stdoutMaxBuffer: 128 * 1024,
+      stderrMaxBuffer: 128 * 1024,
+    });
     if ((await fingerprintInputs(root)) !== inputs) {
       throw new Error(
         'MCP_BUNDLE_INPUTS_CHANGED: MCP sources changed during the build; retry launch.'

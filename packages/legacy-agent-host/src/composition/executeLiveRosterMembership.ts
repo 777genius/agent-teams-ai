@@ -11,6 +11,7 @@ import { assertCapturedRosterCurrent } from './teamRoster.js';
 import { createMemberEntry } from './createMemberEntry.js';
 import { runtimeCaptureSourceSchema } from './runtimeCaptureSource.js';
 import { teamModelProbeProfile } from './teamLaunchModelProbe.js';
+import { captureLiveRosterProcessOrigin } from './captureRuntimeProcessOrigin.js';
 import { closeRuntimeMember } from './transitionRuntimeMember.js';
 import { attachMemberModelReadiness, prepareTeamModelReadiness } from './prepareTeamModelReadiness.js';
 import { envelopeSchema } from './teamHostEnvelope.js';
@@ -306,10 +307,13 @@ async function prepareModel(options: LiveRosterExecutionOptions, flight: Flight,
   const cutoff = Math.min(flight.cutoff, prepared.anchor.expiresAt);
   const current = () => { try { assertFlight(options, flight, true); return Date.now() < cutoff; }
     catch { return false; } };
+  const processOrigin = captureLiveRosterProcessOrigin(options.profile, flight.team,
+    captured.capture, captured.profile, options.sources);
   // Publish the exact group identity in this first flight before its original ModelProbeOwner call.
   flight.probe = { commandId, context };
   flight.reference = await prepareTeamModelReadiness({ management, profile: captured.profile,
     commandId, context, cutoff,
+    ...(processOrigin ? { processOrigin } : {}),
     scope: { schemaVersion: 1, kind: 'team', teamBindingDigest: runtimeDigest(flight.team.definition.binding),
       actionDigest: runtimeDigest({ commandId: flight.input.commandId, context }),
       selectionDigest: runtimeDigest({ payload: flight.input.payload, capture: captured.view }),

@@ -1,0 +1,37 @@
+
+ RUN  v3.2.6 /workspace/scratch/391e21b06e24/reconcile-base0543
+
+ ❯ test/features/agent-backend/hostMessagesPageTransport.test.ts (8 tests | 1 failed) 299ms
+   ✓ captured Host message pages never require the oversized complete snapshot > projects ordinary lead replies and history gaps under the captured owner/read scope 11ms
+   ✓ captured Host message pages never require the oversized complete snapshot > refuses malformed conversation metadata on either original read operation 3ms
+   ✓ captured Host message pages never require the oversized complete snapshot > refuses changed metadata between original signed message fragments 81ms
+   ✓ captured Host message pages never require the oversized complete snapshot > refuses changed session between original signed message fragments 71ms
+   × captured Host message pages never require the oversized complete snapshot > reassembles a valid 420 KiB lead reply and session identity across original signed Owner pages 76ms
+     → Mismatched Host message fragment
+   ✓ captured Host message pages never require the oversized complete snapshot > refuses stale Owner continuations after original message text changes 53ms
+   ✓ captured Host message pages never require the oversized complete snapshot > rejects extra authority, oversized limit and cursor bypass before Host dispatch 1ms
+   ✓ captured Host message pages never require the oversized complete snapshot > rejects oversized Owner responses without leaking private values 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/features/agent-backend/hostMessagesPageTransport.test.ts > captured Host message pages never require the oversized complete snapshot > reassembles a valid 420 KiB lead reply and session identity across original signed Owner pages
+Error: Mismatched Host message fragment
+ ❯ src/features/agent-backend/renderer/readHostMessagesPage.ts:27:15
+     25|           part.timestamp !== original.timestamp || part.read !== origi…
+     26|           part.source !== original.source || part.leadSessionId !== or…
+     27|         throw new Error('Mismatched Host message fragment');
+       |               ^
+     28|       text += part.text;
+     29|     }
+ ❯ assemble src/features/agent-backend/renderer/readHostMessagesPage.ts:17:57
+ ❯ readHostMessagesPage src/features/agent-backend/renderer/readHostMessagesPage.ts:110:46
+ ❯ test/features/agent-backend/hostMessagesPageTransport.test.ts:173:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  03:18:46
+   Duration  3.88s (transform 1.25s, setup 563ms, collect 2.35s, tests 299ms, environment 0ms, prepare 411ms)
+

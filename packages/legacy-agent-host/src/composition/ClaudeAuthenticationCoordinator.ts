@@ -8,6 +8,7 @@ import { managementDigest } from '../management/identity.js';
 import type { ManagementTarget } from '../management/commandRecords.js';
 import type { OAuthNativeConversation } from '../management/OAuthOperationOwner.js';
 import type { ClaudeManagementProfile } from '../management/profile.js';
+import type { CapturedNativeProcessFactory } from '../adapters/providers/capturedNativeProcessFactory.js';
 
 const identity = z
   .object({ profileId: z.string().min(1).max(256), configRevision: z.string().min(1).max(256) })
@@ -31,7 +32,8 @@ export class ClaudeAuthenticationCoordinator {
   constructor(
     profiles: ClaudeManagementProfile[],
     private readonly selectTarget: (profileId: string, configRevision: string) => ManagementTarget,
-    private readonly assertWriter: () => void
+    private readonly assertWriter: () => void,
+    private readonly createProcess?: CapturedNativeProcessFactory
   ) {
     this.profiles = new Map(
       structuredClone(profiles).map((profile) => [profile.profileId, profile])
@@ -81,7 +83,7 @@ export class ClaudeAuthenticationCoordinator {
       } catch {
         return false;
       }
-    });
+    }, this.createProcess);
     this.active.set(conversation, key);
     return conversation;
   }

@@ -13,6 +13,7 @@ import { acquireProfileWriterLease } from '../../packages/legacy-agent-host/dist
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import type { Service } from './desktop-native-process-model.ts';
+import type { CandidateRuntimePaths } from './candidate-runtime-paths.ts';
 
 export const PROCESS_ARTIFACT = {
   directory: '/Volumes/Transcend/dev/TEST-m19-cold-reboot-prep-xqpztswh/native-artifact',
@@ -65,14 +66,30 @@ export async function prepareProcessFixture(
   repo: string,
   options: {
     pnpmEntry: string;
-    nativeClaude: { path: string; sha256: string; modelUrl: string };
     processArtifact?: { directory: string; manifestSha256: string };
+  } & ({
+    nativeClaude: { path: string; sha256: string; modelUrl: string };
+    candidateRuntime?: CandidateRuntimePaths;
     controlledServicesOnly?: true;
-  }
+    providerMode?: never;
+  } | {
+    providerMode: 'none';
+    controlledServicesOnly: true;
+    nativeClaude?: never;
+    candidateRuntime?: never;
+  })
 ) {
+  if (options.providerMode !== undefined) {
+    assert.equal(options.providerMode, 'none'); assert.equal(options.controlledServicesOnly, true);
+    assert.equal(options.nativeClaude, undefined); assert.equal(options.candidateRuntime, undefined);
+    assert.equal(process.env.LEGACY_DESKTOP_EMULATED_ONLY, '1');
+    assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
+    assert.ok(options.processArtifact, 'no-provider fixture requires its captured native artifact');
+  } else assert.ok(options.nativeClaude, 'legacy process fixture retains its original Claude input');
   const processArtifact = options.processArtifact ?? PROCESS_ARTIFACT;
   if (options.processArtifact) {
-    assert.match(processArtifact.directory, /^\/private\/tmp\/TEST-[^/]+\//);
+    assert.match(processArtifact.directory, process.platform === 'linux'
+      ? /^\/(?:[^/]+\/)*TEST-[^/]+\/[^\0\r\n]*$/ : /^\/private\/tmp\/TEST-[^/]+\//);
     assert.equal(await realpath(processArtifact.directory), processArtifact.directory);
   }
   assert.equal(
@@ -90,8 +107,13 @@ export async function prepareProcessFixture(
     // Narrow the fresh fixture before its first owner seed, never erase retained Runtime history.
     await assert.rejects(lstat(join(profile.owner.storageRoot, 'teams', team.binding.teamName, '.host-owner')),
       { code: 'ENOENT' });
-    delete profile.runtime;
-    for (const member of team.members) delete member.delivery;
+    if (options.providerMode === 'none') {
+      assert.equal(profile.runtime, undefined); assert.equal(profile.management, undefined);
+      assert.ok(team.members.every(member => member.delivery === undefined));
+    } else {
+      delete profile.runtime;
+      for (const member of team.members) delete member.delivery;
+    }
   }
   for (const grant of team.grants)
     if (!grant.permissions.includes('process.write')) grant.permissions.push('process.write');

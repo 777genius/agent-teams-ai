@@ -1327,13 +1327,18 @@ describe('MemberWorkSync use cases', () => {
     });
     const nudgeText = outbox.ensures[0]?.payload.text ?? '';
     expect(nudgeText).toContain(
-      'member_work_sync_status with teamName "team-a" and memberName "bob"'
+      'Required sync action: call member_work_sync_status using only the arguments declared in its schema, then call member_work_sync_report with the returned agendaFingerprint and reportToken.'
     );
-    expect(nudgeText).toContain('member_work_sync_report with the same teamName/memberName');
-    expect(nudgeText).toContain('mcp__agent-teams__member_work_sync_status');
+    expect(nudgeText).toContain(
+      'For each tool, include teamName "team-a" and memberName "bob" only when that field is declared in its schema; otherwise omit it.'
+    );
+    expect(nudgeText).toContain(
+      'Use the exact tool names and argument schemas exposed by this session, preserving any server prefix and including commandId when required.'
+    );
+    expect(nudgeText).not.toMatch(/mcp__(?:agent-teams|team)__/);
     expect(nudgeText).toContain('taskIds: "task-1"');
     expect(nudgeText).toContain(
-      'Do not use provider names, runtime names, or team names as memberName'
+      'When the tool schema declares memberName, do not use provider names, runtime names, or team names; use exactly "bob".'
     );
   });
 

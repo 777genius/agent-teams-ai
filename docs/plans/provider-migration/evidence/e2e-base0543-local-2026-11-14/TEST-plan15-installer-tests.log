@@ -1,0 +1,15 @@
+✔ original frozen install retains its lockfile and selects only the explicit serial lifecycle option (354.370568ms)
+✔ unknown or duplicate frozen-install options refuse before any TEST installer is allocated (120.071705ms)
+✔ long unfinished engine warning does not turn a transient 503 into a terminal failure (1.384324ms)
+✔ next fatal engine line is not masked by a prior long warning (0.250737ms)
+✔ 404 marker fragmented across chunks within one stream is terminal (0.206702ms)
+✔ separate output streams cannot fabricate a 404 marker (0.210597ms)
+✔ whole-output classifier distinguishes long warning from fatal engine (0.294874ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 583.541109

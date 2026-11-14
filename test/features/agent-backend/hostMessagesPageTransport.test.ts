@@ -10,6 +10,7 @@ import type { BackendOwnerRouter } from '../../../src/features/agent-backend/mai
 import type { BackendTeamSnapshot } from '../../../src/features/agent-backend/contracts/teamSnapshot';
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
 import type { TeamsAPI } from '../../../src/shared/types/api';
+import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
 const handle = { handleId: 'TEST-original-page-owner' };
 const key = hostTeamSelectionKey(handle.handleId);
@@ -23,7 +24,7 @@ const request = {
 };
 
 describe('captured Host message pages never require the oversized complete snapshot', () => {
-  it('projects only product messages and preserves the captured owner/read scope', async () => {
+  it('projects ordinary lead replies and history gaps under the captured owner/read scope', async () => {
     const router = {
       request: vi.fn<BackendOwnerRouter['request']>(async (_handle, command) => {
         expect(command.method).toBe('team.messages.page');
@@ -36,11 +37,14 @@ describe('captured Host message pages never require the oversized complete snaps
             revision: hash,
             hasMore: true,
             nextCursor: cursor,
+            conversation: { revision: 'c'.repeat(64), gaps: ['legacy-history'] },
             messages: [{
               from: 'lead',
-              text: 'TEST older retained message',
+              text: 'TEST boot ready',
               timestamp: '2026-11-09T01:00:00.000Z',
-              read: false,
+              read: true,
+              source: 'lead_session',
+              leadSessionId: 'host-lead-' + 'd'.repeat(64),
               messageId: 'TEST-message',
               privateAccount: 'PRIVATE-secret',
             }],
@@ -65,7 +69,11 @@ describe('captured Host message pages never require the oversized complete snaps
       feedRevision: hash,
       nextCursor: cursor,
       hasMore: true,
-      messages: [{ text: 'TEST older retained message', messageId: 'TEST-message' }],
+      historyWarning: 'Some agent replies are incomplete or unavailable. Showing the retained messages.',
+      messages: [{
+        text: 'TEST boot ready', messageId: 'TEST-message', source: 'lead_session',
+        leadSessionId: 'host-lead-' + 'd'.repeat(64),
+      }],
     });
     expect(JSON.stringify(page)).not.toMatch(/PRIVATE/);
     expect(backend.invoke).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
@@ -74,13 +82,77 @@ describe('captured Host message pages never require the oversized complete snaps
     expect(legacy.getMessagesPage).not.toHaveBeenCalled();
   });
 
-  it('reassembles a valid 420 KiB Unicode message across original signed Owner pages', async () => {
+  it('refuses malformed conversation metadata on either original read operation', async () => {
+    const metadata: JsonValue[] = [
+      null, { revision: 'invalid', gaps: [] }, { revision: hash, gaps: ['unknown'] },
+      { revision: hash, gaps: ['retention', 'retention'] },
+      { revision: hash, gaps: Array<JsonValue>(1) },
+      { revision: hash, gaps: [], privateRoot: 'PRIVATE' },
+    ];
+    for (const conversation of metadata) {
+      const router = {
+        request: vi.fn<BackendOwnerRouter['request']>(async (_handle, command): Promise<JsonValue> => ({
+          ok: true,
+          value: command.method === 'team.messages.page' ? {
+            teamName: 'TEST-team', revision: hash, hasMore: false, nextCursor: null,
+            messages: [], conversation,
+          } : {
+            streamId: '11111111-1111-4111-8111-111111111111', sequence: 0,
+            cursor: '22222222-2222-4222-8222-222222222222', events: [], conversation,
+          },
+        })),
+        lookup: vi.fn<BackendOwnerRouter['lookup']>(),
+      };
+      const facade = new BackendOperationsFacade(router);
+      for (const operation of ['team.messages.page', 'team.changes.read'] as const) {
+        await expect(facade.invoke({ ...request, operation, payload: {} })).resolves.toMatchObject({
+          ok: false, code: 'hold', outcome: 'unknown',
+        });
+      }
+    }
+  });
+
+  it.each(['metadata', 'session'] as const)('refuses changed %s between original signed message fragments', async (changed) => {
+    const snapshot = {
+      teamName: 'TEST-original-name',
+      messages: [{
+        from: 'alice', text: '漢'.repeat(140_000), timestamp: '2026-11-09T01:00:00.000Z',
+        read: true, messageId: 'TEST-large-accepted', source: 'lead_session',
+        leadSessionId: 'host-lead-' + 'd'.repeat(64),
+      }],
+    } as unknown as BackendTeamSnapshot;
+    let reads = 0;
+    const backend: AgentBackendApi = {
+      getConnections: vi.fn(async () => ({
+        state: 'ready' as const, bindings: [{ handle, label: 'TEST original', members: [] }],
+      })),
+      invoke: vi.fn<AgentBackendApi['invoke']>(async (input) => {
+        const page = mockOwnerMessagesPage(snapshot, input.payload as { cursor?: string; limit?: number });
+        if (!page.ok) return page;
+        reads++;
+        const drift = reads > 1;
+        return { ok: true, value: { ...page.value,
+          conversation: { revision: (changed === 'metadata' && drift ? 'b' : 'a').repeat(64), gaps: [] },
+          messages: page.value.messages.map((message) => changed === 'session' && drift
+            ? { ...message, leadSessionId: 'host-lead-' + 'e'.repeat(64) } : message),
+        } };
+      }),
+    };
+    const teams = createHostTeamsApi({ getMessagesPage: vi.fn() } as unknown as TeamsAPI, backend);
+    await expect(teams.getMessagesPage(key, { limit: 1 })).rejects.toThrow(
+      changed === 'metadata' ? 'history changed' : 'Mismatched Host message fragment'
+    );
+    expect(reads).toBeGreaterThan(1);
+  });
+
+  it('reassembles a valid 420 KiB lead reply and session identity across original signed Owner pages', async () => {
     const fullText = '漢'.repeat(140_000);
+    const leadSessionId = 'host-lead-' + 'd'.repeat(64);
     const snapshot = {
       teamName: 'TEST-original-name',
       messages: [{
         from: 'alice', text: fullText, timestamp: '2026-11-09T01:00:00.000Z',
-        read: false, messageId: 'TEST-large-accepted',
+        read: false, messageId: 'TEST-large-accepted', source: 'lead_session', leadSessionId,
         privateSession: 'PRIVATE-cannot-publish',
       }],
     } as unknown as BackendTeamSnapshot;
@@ -102,8 +174,10 @@ describe('captured Host message pages never require the oversized complete snaps
     const result = await teams.getMessagesPage(key, { limit: 1 });
     expect(reads).toBeGreaterThan(1);
     expect(result.messages).toHaveLength(1);
-    expect(result.messages[0]?.text).toBe(fullText);
-    expect(result.messages[0]?.messageId).toBe('TEST-large-accepted');
+    expect(result.messages[0]).toEqual({
+      from: 'alice', text: fullText, timestamp: '2026-11-09T01:00:00.000Z',
+      read: false, messageId: 'TEST-large-accepted', source: 'lead_session', leadSessionId,
+    });
     expect(result.nextCursor).toBeNull();
     expect(result.hasMore).toBe(false);
     expect(JSON.stringify(result)).not.toMatch(/PRIVATE|messageParts|messageTotal/);

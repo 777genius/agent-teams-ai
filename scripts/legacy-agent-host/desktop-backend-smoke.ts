@@ -1,16 +1,21 @@
-import { verifyLinuxChildExecInput } from '../../src/main/utils/linuxChildLaunchSelection.ts';
 import { runDesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
+import { prepareDesktopEmulatedManagementFixture, verifyDesktopEmulatedManagementFixture, observeDesktopEmulatedManagementCleanup } from './desktop-emulated-management-fixture.ts';
+import { runDesktopEmulatedManagementUi } from './desktop-emulated-management-ui.ts';
+import { prepareDesktopEmulatedRuntimeFixture, verifyDesktopEmulatedRuntimeFixture, observeDesktopEmulatedRuntimeChildren, observeDesktopEmulatedRuntimeCleanup } from './desktop-emulated-runtime-fixture.ts';
+import { runDesktopEmulatedRuntimeUi } from './desktop-emulated-runtime-ui.ts';
+import { restartDesktopEmulatedRuntimeApp } from './desktop-emulated-lifecycle-boundary.ts';
+import { verifyDesktopEmulatedLifecycleQuit } from './desktop-emulated-lifecycle-ui.ts';
 import { runDesktopScheduleUiProof } from './desktop-schedule-ui-proof.ts';
 import type { DesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
 import { verifyNativeProcessReadbackSource } from './desktop-native-process-readback.ts';
-import { connectCapturedDesktopApp, restartCapturedDesktopApp, observePackedAppRelaunch, verifyCapturedDesktopBinding, cleanupCapturedDesktopApp } from './desktop-captured-app.ts';
+import { connectCapturedDesktopApp, captureDesktopRendererFailure, restartCapturedDesktopApp, observePackedAppRelaunch, verifyCapturedDesktopBinding, cleanupCapturedDesktopApp } from './desktop-captured-app.ts';
 import type { DesktopCdpPort as CdpPort, DesktopCdpLibrary as CdpLibrary } from './desktop-captured-app.ts';
 import { observeDesktopStartup, requestObservedDesktopClose } from './startup-passive-observer.ts';
 import { runDesktopNativeExtensionsUiSmoke } from './desktop-native-extensions-ui-smoke.ts';
 import { isSkillsMetadataRefusal } from './desktop-skills-fixture.ts';
 import { readCapturedCandidateElectron } from './candidate-electron.ts';
 import { bounded } from './desktop-proof-bounds.ts';
-import { runDesktopCodexAccountProof } from './desktop-codex-account-proof.ts';
+import { runDesktopCodexAccountProof, readDesktopCodexInitialAccount } from './desktop-codex-account-proof.ts';
 import { runDesktopActivityUiSmoke, finalizeDesktopActivityReadback } from './desktop-activity-ui-smoke.ts';
 import { processFixtureBashCommand } from './desktop-native-process-fixture.ts';
 import { qualifyPreparedProcessRegistration } from './desktop-native-process-host.ts';
@@ -22,14 +27,14 @@ import { prepareDesktopMixedNativeFixture, reserveMixedOpenCodeEndpoint } from '
 import { runDesktopMixedCreateLaunchUiSmoke } from './desktop-mixed-create-launch-ui-smoke.ts';
 import { runDesktopLiveMembershipUiSmoke } from './desktop-live-membership-ui-smoke.ts';
 import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
-import { desktopProofEvidence } from './desktop-proof-evidence.ts';
+import { desktopProofEvidence, captureDesktopProofScope, projectDesktopProofReceiptSummary, verifyDesktopProofInputsAfterCleanup, assertDesktopProofCompleted } from './desktop-proof-evidence.ts';
 import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
 import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-readback-fixture.ts';
 import { assertCapturedDesktopMetadataAbsent, observeDesktopMetadataClose, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
 import { readDesktopMetadataLineageFailure } from './desktop-opencode-metadata-lineage.ts';
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
-import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
+import { captureDesktopCodexNativeInputs, captureDesktopCodexAccountInput, captureDesktopSourceHashes, verifyDesktopPackedFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
 import { runDesktopF08ReadTimingProof, runDesktopHostRoutingProof } from './desktop-host-routing-proof.ts';
 import { startDesktopCodexQuestionModel } from './desktop-codex-question-model.ts';
 import { prepareDesktopCodexQuestionFixture, prepareDesktopCodexQuestionLaunch, waitDesktopCodexQuestionRenderer } from './desktop-codex-question-fixture.ts';
@@ -60,18 +65,19 @@ import { dirname, join, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import {
   attachRendererDiagnostics,
-  readRendererFailureSnapshot,
   runDesktopTeamUiSmoke,
 } from './desktop-team-ui-smoke.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import {
+  assertDesktopProofEnvironment,
+  assertNoNativeHostChildren,
   assertOwnedCdpListener,
   command,
   groupMembers,
   portOccupied,
   processTable,
   projectDesktopHarnessFailure,
-  projectDesktopMixedSettingsFailure,
+  readOwnedCdpListenerFailure,
   selectedCdpPort,
 } from './desktop-backend-observations.ts';
 import type { ProcessIdentity } from './desktop-backend-observations.ts';
@@ -95,28 +101,22 @@ const object = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 const tick = () => new Promise<void>((done) => setTimeout(done, 100));
-function assertNoNativeHostChildren(group: number, fixture: {node: string; hostEntry: string}, phase: 'before-first-team-read' | 'after-team-read'): void {
-  assertOwnedCdpListener(group);
-  const table=processTable(),hosts=table.filter(row=>row.pgid===group&&command(row.pid)===`${fixture.node} ${fixture.hostEntry}`);
-  if (phase === 'before-first-team-read') assert.ok(hosts.length === 0 || hosts.length === 1, 'Host may remain lazy only before the first canonical Team read');
-  else assert.equal(hosts.length,1,'one original captured Host after canonical Team read');
-  for (const host of hosts) assert.equal(table.filter(row=>row.ppid===host.pid).length,0,'readback never allocates a native child');
-}
 async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
-  assert.equal(
-    process.env.LEGACY_DESKTOP_BACKEND_GO,
-    '1',
-    'root must authorize actual pnpm dev:mcp launch'
-  );
-  assert.equal(process.platform, 'darwin', 'this captured process evidence uses macOS ps/lsof');
+  const repo = resolve(import.meta.dirname, '../..');
+  const packedRelaunchMode = process.env.LEGACY_DESKTOP_PROOF_MODE === 'packed-app-relaunch-ui';
+  const mode = packedRelaunchMode ? 'native-launch-ui' : process.env.LEGACY_DESKTOP_PROOF_MODE ?? 'bridge-diagnostics';
+  const codexAccountMode = ['codex-account-read', 'codex-account-auth', 'codex-login-ui'].includes(mode);
+  assertDesktopProofEnvironment(mode === 'process-cold-ui' || codexAccountMode);
+  const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1';
+  const emulatedManagementMode = ['emulated-management-ui', 'emulated-codex-login-ui'].includes(mode);
+  const emulatedRuntimeProvider = ['emulated-codex-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui'].includes(mode) ? 'codex' : ['emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui'].includes(mode) ? 'claude' : mode === 'emulated-opencode-runtime-ui' ? 'opencode' : undefined;
+  const emulatedRuntimeMode = emulatedRuntimeProvider !== undefined;
+  if (emulatedManagementMode || emulatedRuntimeMode) assert.equal(emulatedOnly, true, 'TEST providers require provider-emulation admission');
   assert.equal(
     await portOccupied(),
     false,
     'Selected CDP port is occupied; refuse without attaching to or stopping another app'
   );
-  const repo = resolve(import.meta.dirname, '../..');
-  const packedRelaunchMode = process.env.LEGACY_DESKTOP_PROOF_MODE === 'packed-app-relaunch-ui';
-  const mode = packedRelaunchMode ? 'native-launch-ui' : process.env.LEGACY_DESKTOP_PROOF_MODE ?? 'bridge-diagnostics';
   const quitScenario = process.env.LEGACY_DESKTOP_QUIT_SCENARIO;
   assert.ok(quitScenario === undefined || (mode === 'native-quit-ui' && quitScenario === 'pending-open'), 'explicit TEST Quit scenario');
   const startupDiagnosticMode = mode === 'startup-diagnostic-ui';
@@ -127,26 +127,29 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const packedCapturePath = process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH;
   const packed = packedCapturePath ? await readCapturedCandidateElectron({ path: packedCapturePath, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! }) : undefined;
   const permittedSentinelObservation = (row: Record<string, unknown>) => (mode === 'skills-ui' && isSkillsMetadataRefusal(row)) || (!packed ? row.allowed === true : row.executable === 'shell-env' ? row.allowed === true : row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version');
-  if (packed) assert.equal(mode, 'native-launch-ui', 'one bounded packed workflow reuses the original native Launch proof');
+  if (packed) assert.ok(mode === 'native-launch-ui' || (process.platform === 'linux' && process.arch === 'x64' && mode === 'process-cold-ui'), 'bounded packed Launch or Linux cold process proof');
   if (packedRelaunchMode) assert.ok(packed, 'automatic app relaunch is an explicit captured packed scope');
   if (scheduleUiMode) assert.ok(mode === 'native-launch-ui' && !packed, 'original source schedule controls');
   if (donorSavedOnly) assert.ok(mode === 'stopped-import-ui' && !packed && !process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH, 'one actual donor saved-only scope');
   if (process.env.LEGACY_DESKTOP_OPENCODE_MCP_UI === '1') assert.ok(!packed && !packedRelaunchMode, 'captured MCP uses the existing source Launch scope');
   const { mixedMode, extensionsUiMode, capturedMcpUiMode, capturedMcpModel: selectedCapturedMcpModel, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
-    await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
+    await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode || emulatedManagementMode || emulatedRuntimeMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
   conversationModel = model; mixedModels = selectedMixedModels;
   codexResumeModel = selectedCodexResumeModel;
   openCodeLifecycleModel = selectedOpenCodeModel; openCodeReviewModel = selectedOpenCodeReviewModel;
   capturedMcpModel = selectedCapturedMcpModel;
-  const nativeInputs = mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
+  const nativeInputs = codexAccountMode ? await captureDesktopCodexAccountInput(process.env.LEGACY_DESKTOP_CODEX_PATH!)
+    : mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
-  const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = questionUiMode ? await prepareDesktopBackendFixture(repo, {
+  const emulatedManagementFixture = emulatedManagementMode ? await prepareDesktopEmulatedManagementFixture(repo, pnpm, mode === 'emulated-codex-login-ui' ? 'codex-login' : undefined) : undefined;
+  const emulatedRuntimeFixture = emulatedRuntimeProvider ? await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, emulatedRuntimeProvider, mode === 'emulated-claude-lifecycle-ui' ? 'lifecycle' : mode === 'emulated-selection-ui' ? 'selection' : mode === 'emulated-installer-ui' ? 'installer' : undefined) : undefined;
+  const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = emulatedRuntimeFixture ?? emulatedManagementFixture ?? (questionUiMode ? await prepareDesktopBackendFixture(repo, {
     seedUiTask: true, pnpmEntry: pnpm, nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },
   }) : await prepareDesktopProofFixture(repo, mode, pnpm, {
     processUiMode, controlledProcessMode, processReadbackMode, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewReadbackMode, reviewUiMode, legacyImportMode, uiMode,
     launchDialogMode, createConfigMode, nativeStopMode, approvalUiMode, codexResumeMode, openCodeLifecycleMode, ...(capturedMcpModel ? { capturedMcpNonce: capturedMcpModel.nonce } : {}), ...(packed ? { candidateRuntime: packed.runtime } : {}), modelUrl: capturedMcpModel?.url ?? openCodeReviewModel?.url ?? openCodeLifecycleModel?.url ?? codexResumeModel?.url ?? conversationModel?.url ?? mixedModels?.claude.url,
-  });
+  }));
   controlledProcess = baseFixture.controlledProcess;
   const processReadbackSource = processReadbackMode ? await verifyNativeProcessReadbackSource(baseFixture.root, object(JSON.parse(await readFile(join(baseFixture.root, 'desktop-backend-receipt.json'), 'utf8')))) : undefined;
   if (mixedModels) await mixedModels.retainEvidenceAt(baseFixture.root);
@@ -164,6 +167,15 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     openCodeEndpoint: await reserveMixedOpenCodeEndpoint(),
     openCodeManagementEndpoint: await reserveMixedOpenCodeEndpoint(),
   }) : baseFixture;
+  if (emulatedRuntimeFixture) await verifyDesktopEmulatedRuntimeFixture(emulatedRuntimeFixture);
+  else if (emulatedOnly) {
+    const profile = object(JSON.parse(await readFile(fixture.profilePath, 'utf8')));
+    const descriptor = object(JSON.parse(await readFile(fixture.descriptorPath, 'utf8')));
+    assert.equal(profile.runtime, undefined, 'offline UI cannot configure provider sessions');
+    if (emulatedManagementFixture) await verifyDesktopEmulatedManagementFixture(emulatedManagementFixture);
+    else { assert.equal(profile.management, undefined, 'offline UI cannot configure provider management');
+      assert.equal(descriptor.management, undefined, 'offline Desktop cannot select provider management'); }
+  }
   const oversizedCommentSeed = mode === 'task-board-cross-team-ui'
     ? await prepareDesktopOversizedCommentUiFixture(fixture.root, fixture.uiSeed!)
     : undefined;
@@ -171,7 +183,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const activitySource = baseFixture.activitySource;
   const checkpointUpgrade = baseFixture.claudeCheckpointUpgrade;
   const require = createRequire(import.meta.url);
-  if (!packed && (questionUiMode || processUiMode || nativeReviewMode || nativeStopMode || readbackMode || launchDialogMode || createConfigMode || legacyImportMode))
+  if (!packed && (codexAccountMode || questionUiMode || processUiMode || nativeReviewMode || nativeStopMode || readbackMode || launchDialogMode || createConfigMode || legacyImportMode))
     await verifyDesktopNativeStopArtifact(repo);
   const cdpLibrary = require('../e2e/comment-notification/cdp.mjs') as CdpLibrary;
   assert.equal(typeof cdpLibrary.CdpClient.connect, 'function');
@@ -195,7 +207,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const electronPackage = require.resolve('electron/package.json');
     const electronRoot = resolve(electronPackage, '..');
     const electronRelative = (await readFile(join(electronRoot, 'path.txt'), 'utf8')).trim();
-    assert.equal(electronRelative, 'Electron.app/Contents/MacOS/Electron');
+    assert.equal(electronRelative, process.platform === 'linux' ? 'electron' : 'Electron.app/Contents/MacOS/Electron');
     electron = await realpath(join(electronRoot, 'dist', electronRelative));
   }
   assert.ok((await stat(electron)).isFile());
@@ -217,6 +229,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   if (checkpointUpgrade) evidence.claudeCheckpointUpgrade = checkpointUpgrade.proof;
   if (capturedMcpUiMode) evidence.scope = 'Original Launch member MCP policies, selected external server and app-only isolation, actual native permission and tool effect, all-member Stop and saved UI readback; finite localhost inference only';
   if (scheduleUiMode) evidence.scope = 'Original Schedule controls, actual finite Claude and task-first native Bash/MCP, Stop, history and reload; localhost inference only';
+  captureDesktopProofScope(evidence, { repo, mode, emulatedOnly, emulatedManagementMode, emulatedRuntimeMode });
   if (donorSavedOnly) evidence.scope = 'Exact donor UI saves genuine settings/roster, ordinary Quit and absence, then current original import/dialog/reload; zero native business input';
   if (quitScenario === 'pending-open') {
     evidence.scope = 'Actual native provider open pending, zero inputs, guarded existing Quit API and physical cleanup; explicit TEST setup';
@@ -266,9 +279,12 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     join(fixture.root, artifacts.appLog),
     { mode: 0o600 }
   );
+  const mcpBuilderEntry = !packed && process.platform === 'linux'
+    ? await realpath(join(repo, 'mcp-server/node_modules/tsup/dist/cli-default.js')).catch(() => undefined)
+    : undefined;
   // Invoke the pinned pnpm JS entry through selected Node: no /usr/bin/env
   // shebang exec transition can invalidate the captured leader identity.
-  const invocation = packed ? [packed.executable, `--remote-debugging-port=${selectedCdpPort}`] : [fixture.node, pnpm, 'dev:mcp', '--remoteDebuggingPort', String(selectedCdpPort)];
+  const invocation = packed ? [packed.executable, `--remote-debugging-port=${selectedCdpPort}`, ...(process.platform === 'linux' ? ['--no-sandbox'] : [])] : [fixture.node, pnpm, 'dev:mcp', '--remoteDebuggingPort', String(selectedCdpPort), ...(process.platform === 'linux' ? ['--noSandbox'] : [])];
   let app = spawn(invocation[0]!, invocation.slice(1), {
     cwd: packed ? fixture.root : repo,
     env: packed ? { ...fixture.appEnvironment, NODE_ENV: 'production', PATH: join(fixture.root, 'bin') + ':/usr/bin:/bin' } : fixture.appEnvironment,
@@ -288,6 +304,23 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   let hostPid: number | undefined;
   let quitRequested = false;
   let finishMixedSettings: (() => Promise<void>) | undefined;
+  const spawnNextDesktopEpoch = (nextFixture: typeof fixture) => {
+    if (nextFixture !== fixture) {
+      assert.ok(checkpointUpgrade && fixture === checkpointUpgrade.original &&
+        nextFixture === checkpointUpgrade.successor);
+      fixture = nextFixture;
+    }
+    app = spawn(invocation[0]!, invocation.slice(1), { cwd: repo, env: fixture.appEnvironment,
+      stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+    appEpochHandles.push(app); group = app.pid ?? 0; spawnError = false; appIdentity = '';
+    hostPid = undefined; quitRequested = false;
+    app.once('error', () => { spawnError = true; });
+    app.stdout.pipe(log, { end: false }); app.stderr.pipe(log, { end: false });
+    assert.ok(group > 0);
+    appIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='],
+      { encoding: 'utf8', timeout: 3000 }).trim();
+    return { app, group, identity: appIdentity, invocation, spawnError: () => spawnError };
+  };
   const restartSameProfile = async (selection: Pick<Parameters<typeof restartCapturedDesktopApp>[0],
     'model' | 'provider' | 'boundary' | 'createdHandleId' | 'afterOriginalSettingsQuit' | 'afterOriginalMembershipQuit'> & { codexSourceSelectionRestart?: typeof restartCapturedDesktopApp }) => {
     assert.ok(cdp && !packed && selection.model);
@@ -296,24 +329,15 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       ...(checkpointUpgrade ? { checkpointUpgrade } : {}),
       markQuitRequested: () => { quitRequested = true; },
       adoptRenderer: (next, nextHostPid) => { cdp = next; if (nextHostPid !== undefined) hostPid = nextHostPid; },
-      spawnNext: (nextFixture) => {
-        if (nextFixture !== fixture) {
-          assert.ok(checkpointUpgrade && fixture === checkpointUpgrade.original &&
-            nextFixture === checkpointUpgrade.successor);
-          fixture = nextFixture;
-        }
-        app = spawn(invocation[0]!, invocation.slice(1), { cwd: repo, env: fixture.appEnvironment,
-          stdio: ['ignore', 'pipe', 'pipe'], detached: true });
-        appEpochHandles.push(app); group = app.pid ?? 0; spawnError = false; appIdentity = '';
-        hostPid = undefined; quitRequested = false;
-        app.once('error', () => { spawnError = true; });
-        app.stdout.pipe(log, { end: false }); app.stderr.pipe(log, { end: false });
-        assert.ok(group > 0);
-        appIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='],
-          { encoding: 'utf8', timeout: 3000 }).trim();
-        return { app, group, identity: appIdentity, invocation, spawnError: () => spawnError };
-      },
+      spawnNext: spawnNextDesktopEpoch,
     });
+  };
+  const restartEmulatedSameProfile = async () => {
+    assert.ok(cdp && !packed && emulatedRuntimeFixture);
+    return restartDesktopEmulatedRuntimeApp({ app, cdp, group, fixture: emulatedRuntimeFixture, repo, mode, evidence, cdpLibrary,
+      markQuitRequested: () => { quitRequested = true; },
+      adoptRenderer: (next, nextHostPid) => { cdp = next; if (nextHostPid !== undefined) hostPid = nextHostPid; },
+      spawnNext: spawnNextDesktopEpoch });
   };
   try {
     assert.ok(group > 0, 'captured invocation has a process identity');
@@ -329,6 +353,11 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     };
     const { cdp: connected, target, startupStarted, startupBudgetMs } = await connectCapturedDesktopApp({ app, group, spawnError: () => spawnError, packed, cdpLibrary, evidence });
     cdp = connected;
+    if (emulatedOnly) {
+      if (emulatedRuntimeFixture) await observeDesktopEmulatedRuntimeChildren(group, emulatedRuntimeFixture, 'before-first-team-read');
+      else assertNoNativeHostChildren(group, fixture, 'before-first-team-read', emulatedManagementFixture?.emulatedManagement);
+      object(evidence.emulation).noNativeHostChildrenBeforeUi = true;
+    }
     if (startupDiagnosticMode) {
       await observeDesktopStartup(cdp, { root: fixture.root, url: String(target.url), remainingStartupMs: startupBudgetMs - (performance.now() - startupStarted), assertOwnedRenderer: () => assertOwnedCdpListener(group), evidence });
       await requestObservedDesktopClose(cdp, { assertOwnedRenderer: () => assertOwnedCdpListener(group),
@@ -351,36 +380,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       ? await captureDesktopOpenCodeV2ColdMetadata(cdp, { root: fixture.root, node: fixture.node, hostEntry: fixture.hostEntry,
         group, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) }) : undefined;
     if (coldMetadata) hostPid = coldMetadata.hostPid;
-    if (['codex-account-read', 'codex-account-auth'].includes(mode)) {
-      const readyUntil = Date.now() + 60000;
-      let initial: Record<string, unknown> | undefined;
-      while (Date.now() < readyUntil) {
-        assertOwnedCdpListener(group);
-        try {
-          initial = object(
-            await bounded(
-              cdp.evaluate('window.electronAPI.getCodexAccountSnapshot()'),
-              20000,
-              'read account IPC readiness'
-            )
-          );
-          break;
-        } catch (error) {
-          if (
-            !(error instanceof Error) ||
-            !/No handler registered for ['"]codexAccount:getSnapshot/.test(error.message)
-          )
-            throw error;
-          // The missing handler proves this read was not dispatched. No mutation is retried.
-          await tick();
-        }
-      }
-      assert.ok(initial, 'Codex account handler becomes ready before any auth mutation');
-      evidence.codexInitialAccount = {
-        managedAccount: initial.managedAccount,
-        appServerState: initial.appServerState,
-      };
-    }
+    if (codexAccountMode) await readDesktopCodexInitialAccount(cdp, { evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     let nativeChildren: ProcessIdentity[] = [];
     if (conversationMode) await runDesktopHostRoutingProof(cdp, fixture, evidence);
     if (questionUiMode) {
@@ -401,7 +401,12 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       nativeChildren = setup.nativeChildren;
       hostPid = setup.hostPid;
     }
-    if (questionUiMode) {
+    if (emulatedRuntimeFixture) {
+      await runDesktopEmulatedRuntimeUi(cdp, { fixture: emulatedRuntimeFixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group),
+        ...(mode === 'emulated-claude-lifecycle-ui' ? { restartSameProfile: restartEmulatedSameProfile } : {}) });
+    } else if (emulatedManagementFixture) {
+      await runDesktopEmulatedManagementUi(cdp, { fixture: emulatedManagementFixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+    } else if (questionUiMode) {
       assert.ok(fixture.uiSeed && questionModel);
       await runDesktopCodexQuestionUiSmoke(cdp, { root: fixture.root, seed: fixture.uiSeed, evidence, model: questionModel,
         assertOwnedRenderer: () => assertOwnedCdpListener(group), assertNativeAbsent: () => {
@@ -544,7 +549,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
             }
           : {}),
       });
-    } else if (['codex-account-read', 'codex-account-auth'].includes(mode)) {
+    } else if (codexAccountMode) {
       await runDesktopCodexAccountProof(cdp, {mode, fixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group)});
     } else {
       await runDesktopBackendBridgeProof(cdp, {
@@ -557,6 +562,11 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       });
     }
     const children = groupMembers(group);
+    if (emulatedOnly) {
+      if (emulatedRuntimeFixture) await observeDesktopEmulatedRuntimeChildren(group, emulatedRuntimeFixture, 'after-team-read');
+      else assertNoNativeHostChildren(group, fixture, 'after-team-read', emulatedManagementFixture?.emulatedManagement);
+      object(evidence.emulation).noNativeHostChildren = true;
+    }
     const hosts = children.filter(
       (row) => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`
     );
@@ -601,51 +611,28 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     assertCapturedDesktopMetadataAbsent(evidence);
     await verifyDesktopNativeQuitAfterShutdown(mode, fixture.root, evidence, nativeChildren, openCodeLifecycleModel ?? conversationModel, group);
     if (activitySource) await finalizeDesktopActivityReadback(evidence, activitySource, () => assert.equal(processTable().some(row => row.pid === hostPid), false));
+    if (mode === 'emulated-claude-lifecycle-ui') await verifyDesktopEmulatedLifecycleQuit(emulatedRuntimeFixture!, evidence);
     if (finishMixedSettings) await finishMixedSettings();
     if (checkpointUpgrade) await checkpointUpgrade.finish();
     evidence.status = 'PASS';
   } catch (error) {
     evidence.failureSource = projectDesktopHarnessFailure(error, repo, desktopProofSources);
+    const listenerFailure = readOwnedCdpListenerFailure(error, {
+      node: fixture.node, hostEntry: fixture.hostEntry, ...(mcpBuilderEntry ? { mcpBuilderEntry } : {}),
+    });
+    if (listenerFailure) {
+      evidence.cdpListenerFailure = listenerFailure;
+      try {
+        const line = 'TEST_CDP_LISTENER_FAILURE ' + JSON.stringify(listenerFailure);
+        console.log(Buffer.byteLength(line, 'utf8') <= 32 * 1024 ? line :
+          'TEST_CDP_LISTENER_FAILURE {"scope":"original-linux-lsof-test-cdp","unavailable":"over-limit"}');
+      } catch { /* Diagnostic failure never replaces the original listener assertion. */ }
+    }
     evidence.failure =
       error instanceof Error ? error.message.slice(0, 4000) : 'unclassified harness failure';
     const metadataFailure = readDesktopMetadataLineageFailure(error);
     if (metadataFailure) evidence.metadataObservationFailure = metadataFailure;
-    if (uiMode && cdp) {
-      try {
-        assertOwnedCdpListener(group);
-        try {
-          evidence.rendererFailureSnapshot = await bounded(
-            readRendererFailureSnapshot(cdp),
-            4000,
-            'read renderer startup snapshot'
-          );
-        } catch {
-          evidence.rendererFailureSnapshot = { unavailable: true };
-        }
-        const screenshot = object(
-          await bounded(
-            cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }),
-            5000,
-            'failure screenshot'
-          )
-        );
-        assert.equal(typeof screenshot.data, 'string');
-        const screenshotPath = join(
-          fixture.root,
-          artifacts.failureScreenshot
-        );
-        await writeFile(screenshotPath, Buffer.from(String(screenshot.data), 'base64'), {
-          mode: 0o600,
-        });
-        evidence.failureScreenshot = {
-          path: screenshotPath,
-          sha256: await fileDigest(screenshotPath),
-        };
-      } catch (captureError) {
-        evidence.failureScreenshotUnavailable =
-          captureError instanceof Error ? captureError.message.slice(0, 1000) : 'unavailable';
-      }
-    }
+    if (uiMode && cdp) await captureDesktopRendererFailure(cdp, { group, root: fixture.root, screenshotName: artifacts.failureScreenshot, evidence });
     if ((nativeStopMode || questionUiMode) && evidence.nativeSetup) {
       try {
         evidence.nativeBeforeFailureQuit = captureDesktopNativeStopPresence(evidence.nativeSetup);
@@ -674,7 +661,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const { remaining, cleanupFailure, capturedHostAbsent, hostPid: cleanedHostPid } =
       await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity, hostPid, packedRelaunchMode });
     hostPid = cleanedHostPid;
-    const coldBoundary = evidence.coldResumeBoundary ?? evidence.coldExtensionBoundary ?? evidence.coldSettingsBoundary ?? evidence.coldMembershipBoundary;
+    const coldBoundary = evidence.coldResumeBoundary ?? evidence.coldExtensionBoundary ?? evidence.coldSettingsBoundary ?? evidence.coldMembershipBoundary ?? evidence.emulatedColdResumeBoundary;
     if (coldBoundary && object(coldBoundary).secondEpoch) object(coldBoundary).secondCleanup = {
       processGroup: group, remaining, appExitCode: app.exitCode, appSignalCode: app.signalCode, capturedHostAbsent,
       ...(cleanupFailure ? { cleanupFailure } : {}),
@@ -699,6 +686,16 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
           : 'not exposed by main-owned transport; no separate Host exit code recorded',
     };
     if (cleanupFailure || remaining === null || remaining.length) evidence.status = 'INCOMPLETE';
+    if (emulatedManagementFixture) {
+      try { const cleanup = await observeDesktopEmulatedManagementCleanup(emulatedManagementFixture);
+        evidence.emulatedManagementCleanup = cleanup; if (!cleanup.absent) evidence.status = 'INCOMPLETE';
+      } catch { evidence.emulatedManagementCleanup = { absent: false, observationFailed: true }; evidence.status = 'INCOMPLETE'; }
+    }
+    if (emulatedRuntimeFixture) {
+      try { const cleanup = await observeDesktopEmulatedRuntimeCleanup(emulatedRuntimeFixture);
+        evidence.emulatedRuntimeCleanup = cleanup; if (!cleanup.absent) evidence.status = 'INCOMPLETE';
+      } catch { evidence.emulatedRuntimeCleanup = { absent: false, observationFailed: true }; evidence.status = 'INCOMPLETE'; }
+    }
     try {
       const census = (await readFile(fixture.sentinelLog, 'utf8').catch(error => { if (packed && error?.code === 'ENOENT') return ''; throw error; }))
         .trim()
@@ -707,13 +704,14 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         .map((line) => object(JSON.parse(line) as unknown));
       const preQuitCount =
         typeof evidence.preQuitSentinelCount === 'number' ? evidence.preQuitSentinelCount : null;
-      if (packed && census.some(row => !permittedSentinelObservation(row))) evidence.status = 'INCOMPLETE';
+      if ((packed || emulatedOnly) && census.some(row => !permittedSentinelObservation(row))) evidence.status = 'INCOMPLETE';
       evidence.finalSentinelCensus = {
         invocations: census,
         preQuitCount,
         postQuitOrCleanupInvocations: preQuitCount === null ? null : census.slice(preQuitCount),
         refusedInvocations: census.filter((row) => row.allowed !== true),
         qualification: packed ? 'All legacy executable calls refuse, including version discovery. Only nonessential version attempts and the isolated shell-environment fixture are admitted observations; any agent/control fallback before or after Quit makes this packed proof incomplete.' :
+          emulatedOnly ? 'Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete.' :
           'Sentinels refuse nonversion commands without launching providers. Post-Quit/cleanup refusals are retained legacy maintenance gaps; they do not prove native execution or full fork-free/P5 qualification.',
       };
     } catch (error) {
@@ -736,16 +734,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         evidence.status = 'INCOMPLETE';
       }
     );
-    if (packed) {
-      try {
-        const after = await readCapturedCandidateElectron({ path: packedCapturePath!, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! });
-        assert.deepEqual(after, packed, 'actual candidate resources remain exact after UI/Stop/Quit cleanup');
-        evidence.packedCandidateVerifiedAfterCleanup = true;
-      } catch (error) {
-        evidence.packedCandidateVerificationFailure = error instanceof Error ? error.message.slice(0, 1000) : 'candidate changed';
-        evidence.status = 'INCOMPLETE';
-      }
-    }
+    if (packed) await verifyDesktopPackedFreeze(
+      { path: packedCapturePath!, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! }, packed, evidence);
     if (controlledProcess) {
       try {
         await controlledProcess.cleanup();
@@ -755,26 +745,11 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         evidence.status = 'INCOMPLETE';
       }
     }
-    await verifyDesktopNativeFreeze(nativeInputs, evidence);
-    if (fixture.linuxChildExec) {
-      try { assert.deepEqual(verifyLinuxChildExecInput(fixture.linuxChildExec), fixture.linuxChildExec); evidence.linuxChildExecInputVerifiedAfterCleanup = true; }
-      catch { evidence.linuxChildExecInputVerifiedAfterCleanup = false; evidence.status = 'INCOMPLETE'; }
-    }
+    await verifyDesktopProofInputsAfterCleanup(nativeInputs, fixture, evidence);
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
-    console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath,
-      ...(evidence.status !== 'PASS' && evidence.failureSource
-        ? { failureSource: evidence.failureSource } : {}),
-      ...(mixedMode && evidence.status !== 'PASS'
-        ? { mixedSettingsFailure: projectDesktopMixedSettingsFailure(evidence) } : {}),
-    }));
-    if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
-    if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
-    if (scheduleUiMode) assert.equal(evidence.status, 'PASS', 'original schedule UI proof incomplete; inspect its retained receipt');
-    if (capturedMcpUiMode) assert.equal(evidence.status, 'PASS', 'original MCP UI proof incomplete; inspect its retained receipt');
-    assert.ok(
-      !cleanupFailure && remaining !== null && remaining.length === 0,
-      'captured group cleanup unconfirmed; receipt retains debt and no further signal is authorized'
-    );
+    console.log(JSON.stringify(projectDesktopProofReceiptSummary(evidence, { receiptPath, mode, mixedMode })));
+    assertDesktopProofCompleted(evidence, { packed: Boolean(packed), emulatedOnly, controlledProcessMode,
+      mode, scheduleUiMode, capturedMcpUiMode, cleanupFailure, remaining });
   }
   if (mode === 'task-board-cross-team-ui') {
     assert.equal(evidence.status, 'PASS', 'original Taskboard proof and cleanup must finish before owner continuation');

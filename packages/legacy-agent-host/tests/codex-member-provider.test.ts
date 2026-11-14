@@ -38,6 +38,8 @@ class ControlledChild extends ChildProcess {
   mcpConfiguration: Record<string, unknown> | undefined;
   unexpectedMcp = false;
   failInitialize = false;
+  protocolRevision: CodexMemberProfile['protocolRevision'] = '0.162.0';
+  holdTurn = false;
   turns = 0;
   constructor() {
     super();
@@ -64,6 +66,7 @@ class ControlledChild extends ChildProcess {
               config: {
                 features: { apps: false },
                 mcp_servers: this.mcpConfiguration,
+                ...(this.protocolRevision === '0.169.0' ? { client_search_provider: null } : {}),
               },
             };
           if (frame.method === 'thread/start') result = { thread: { id: 'TEST-thread' } };
@@ -86,6 +89,7 @@ class ControlledChild extends ChildProcess {
                   tools: Object.fromEntries(
                     this.required.map((name) => [name, { name, inputSchema: {} }])
                   ),
+                  ...(this.protocolRevision === '0.169.0' ? { toolListMeta: { 'TEST/new-native-metadata': true } } : {}),
                 },
               ],
               nextCursor: null,
@@ -118,13 +122,14 @@ class ControlledChild extends ChildProcess {
           if (frame.method === 'turn/start') {
             const turnId = `TEST-turn-${++this.turns}`;
             result = { turn: { id: turnId } };
-            setImmediate(() => {
+            if (!this.holdTurn) setImmediate(() => {
               const item = {
                 id: `TEST-tool-${this.turns}`,
                 type: 'commandExecution',
                 command: 'TEST-only command',
                 cwd: '/TEST-workspace',
                 status: 'inProgress',
+                ...(this.protocolRevision === '0.169.0' ? { startedAtMs: 1_700_000_000_000, completedAtMs: null } : {}),
               };
               this.notify('item/started', {
                 threadId: 'TEST-thread',
@@ -134,16 +139,19 @@ class ControlledChild extends ChildProcess {
               this.notify('item/completed', {
                 threadId: 'TEST-thread',
                 turnId,
+                ...(this.protocolRevision === '0.169.0' ? { contentTokenCount: 0 } : {}),
                 item: {
                   ...item,
                   status: 'failed',
                   exitCode: 7,
                   aggregatedOutput: 'TEST partial effect',
+                  ...(this.protocolRevision === '0.169.0' ? { completedAtMs: 1_700_000_000_001 } : {}),
                 },
               });
               this.notify('item/completed', {
                 threadId: 'TEST-thread',
                 turnId,
+                ...(this.protocolRevision === '0.169.0' ? { contentTokenCount: 4 } : {}),
                 item: {
                   id: `TEST-message-${this.turns}`,
                   type: 'agentMessage',
@@ -155,6 +163,11 @@ class ControlledChild extends ChildProcess {
                 turn: { id: turnId, status: 'completed' },
               });
             });
+          }
+          if (frame.method === 'turn/interrupt') {
+            assert.equal(params.threadId, 'TEST-thread');
+            assert.equal(params.turnId, `TEST-turn-${this.turns}`);
+            setImmediate(() => this.notify('turn/completed', { threadId: params.threadId, turn: { id: params.turnId, status: 'interrupted' } }));
           }
           this.stdout.write(`${JSON.stringify({ id: frame.id, result })}\n`);
           done();
@@ -173,6 +186,7 @@ class ControlledChild extends ChildProcess {
 function fixture(
   options: {
     extraArgs?: string[];
+    protocolRevision?: CodexMemberProfile['protocolRevision'];
     onCreateProcess?(): void;
     capturedMcpServers?: CodexMemberProfile['capturedMcpServers'];
     capturedMcpCatalog?: CodexConfiguredMcpCatalog;
@@ -199,7 +213,7 @@ function fixture(
     sessionId: 'TEST-session',
     generation: options.generation ?? 1,
     configRevision: 'TEST-config',
-    protocolRevision: '0.162.0',
+    protocolRevision: options.protocolRevision ?? '0.162.0',
     cwd: '/TEST-workspace',
     model: 'TEST-model',
     accountBinding: 'TEST-account',
@@ -233,6 +247,7 @@ function fixture(
   const launches: CapturedProcessLaunch[] = [];
   let captured: CodexMemberProfile | undefined;
   const child = new ControlledChild();
+  child.protocolRevision = profile.protocolRevision;
   child.turns = options.previousTurns ?? 0;
   child.failInitialize = !!options.failInitialize;
   const context: MemberProviderContext = {
@@ -413,11 +428,15 @@ test('Codex profile enforces native 1 MiB ceiling before allocation and preserve
   );
 });
 
-test(
-  'real public Codex D uses selected config, same-thread tools and two attributed sequential inputs',
+for (const protocolRevision of ['0.162.0', '0.169.0'] as const) test(
+  `Codex ${protocolRevision} enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt`,
   { timeout: 5000 },
   async () => {
-    const f = fixture();
+    if (protocolRevision === '0.169.0' && !(process.platform === 'darwin' && process.arch === 'arm64')) {
+      assert.throws(() => fixture({ protocolRevision }), { reason: 'unqualified-version' });
+      return;
+    }
+    const f = fixture({ protocolRevision });
     const { driver, capabilities } = await f.provider.factory.open(f.context.request);
     const events: Event[] = [];
     const observing = (async () => {
@@ -427,6 +446,7 @@ test(
       assert.deepEqual(capabilities, ['text', 'tools']);
       assert.ok((await driver.checkReadiness()).ok);
       assert.equal(f.provider.isReady(), true);
+      assert.equal(record(record(f.child.frames.find(frame => frame.method === 'initialize')!.params).capabilities).requiredHumanApproval, undefined);
       assert.equal(f.launches.length, 1);
       const launch = f.launches[0]!;
       assert.equal(launch.command, f.profile.executable.path);
@@ -508,6 +528,14 @@ test(
         );
       }
       assert.equal(f.child.turns, 2);
+      f.child.holdTurn = true;
+      assert.ok((await driver.submit({ inputId: 'TEST-stopped', operationRef: 'TEST-stopped-op', content: 'TEST stop this turn' })).ok);
+      assert.equal((await driver.interrupt('TEST-stopped-op')).ok, true);
+      for (let count = 0; count < 100 && !events.some(event => event.kind === 'result' && event.inputId === 'TEST-stopped'); count++) await tick();
+      const stopped = events.find(event => event.kind === 'result' && event.inputId === 'TEST-stopped');
+      assert.ok(stopped?.kind === 'result');
+      assert.equal(stopped.outcome, 'cancelled');
+      assert.deepEqual(f.child.frames.filter(frame => frame.method === 'turn/interrupt').map(frame => frame.params), [{ threadId: 'TEST-thread', turnId: 'TEST-turn-3' }]);
       f.revoke();
       assert.equal(f.provider.isReady(), false);
       assert.equal((await driver.checkReadiness()).ok, false);
@@ -727,11 +755,15 @@ const policyCatalog: CodexConfiguredMcpCatalog = {
     },
   ],
 };
-for (const mode of ['appOnly', 'inherited'] as const)
+for (const protocolRevision of ['0.162.0', '0.169.0'] as const) for (const mode of ['appOnly', 'inherited'] as const)
   test(
-    `managed Codex ${mode} cold restore keeps its original thread across Host endpoint rotation`,
+    `managed Codex ${protocolRevision} ${mode} enforces tuple eligibility and retained-thread restore across Host endpoint rotation`,
     { timeout: 5000 },
     async () => {
+      if (protocolRevision === '0.169.0' && !(process.platform === 'darwin' && process.arch === 'arm64')) {
+        assert.throws(() => fixture({ protocolRevision }), { reason: 'unqualified-version' });
+        return;
+      }
       const catalog: CodexConfiguredMcpCatalog = {
         ...policyCatalog,
         servers: [
@@ -746,6 +778,7 @@ for (const mode of ['appOnly', 'inherited'] as const)
       const selected: NonNullable<CodexMemberProfile['capturedMcpServers']> =
         mode === 'appOnly' ? {} : { Docs: { type: 'http', url: 'https://example.invalid/Docs' } };
       const options = {
+        protocolRevision,
         capturedMcpServers: selected,
         capturedMcpCatalog: catalog,
         readCatalog: async () => catalog,
@@ -856,6 +889,17 @@ for (const mode of ['appOnly', 'inherited'] as const)
         );
         assert.equal(foreign.running(), false);
         assert.ok(foreign.cleanupCalls() > 0);
+      }
+      if (protocolRevision === '0.162.0' && mode === 'appOnly') {
+        if (!(process.platform === 'darwin' && process.arch === 'arm64')) {
+          assert.throws(() => fixture({ ...options, protocolRevision: '0.169.0', generation: 2, checkpointData: checkpoint }),
+            { reason: 'unqualified-version' });
+          return;
+        }
+        const relabeled = fixture({ ...options, protocolRevision: '0.169.0', generation: 2, checkpointData: checkpoint });
+        await assert.rejects(relabeled.provider.factory.open(relabeled.context.request), /Codex member unavailable/u);
+        assert.equal(relabeled.child.frames.some(frame => frame.method === 'thread/resume' || frame.method === 'thread/start'), false);
+        assert.equal(relabeled.running(), false);
       }
     }
   );

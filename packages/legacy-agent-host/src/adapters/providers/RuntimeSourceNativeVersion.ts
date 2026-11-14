@@ -1,5 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import { CapturedProcess } from './CapturedProcess.js';
+import { runtimeSourceVersionProfile } from './runtimeSourceVersionProfile.js';
 import { RuntimeSourceAdmissionError } from '../../composition/runtimeSourceQualification.js';
 import type { CapturedProcessPort, CapturedProcessProfile } from './CapturedProcess.js';
 import type { RuntimeSourceCandidate } from '../../composition/runtimeSourceContracts.js';
@@ -9,32 +10,6 @@ import type {
   RuntimeSourceNativeIdentity,
 } from '../../management/runtimeSourceVerification.js';
 import type { RegisteredProcessRootSource } from '../../process/registeredProcessContracts.js';
-
-const environmentNames = new Set([
-  'HOME',
-  'PATH',
-  'TMP',
-  'TEMP',
-  'TMPDIR',
-  'SYSTEMROOT',
-  'WINDIR',
-  'LOCALAPPDATA',
-  'APPDATA',
-  'LANG',
-  'LC_ALL',
-  'CLAUDE_CONFIG_DIR',
-  'CODEX_HOME',
-  'XDG_CONFIG_HOME',
-  'XDG_DATA_HOME',
-  'XDG_CACHE_HOME',
-]);
-
-/** Version reads receive no credentials, provider config, loader flags or ambient process.env. */
-function versionEnvironment(seed: Readonly<Record<string, string>>): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(seed).filter(([key]) => environmentNames.has(key.toUpperCase()))
-  );
-}
 
 export function parseRuntimeSourceNativeVersion(
   provider: ProviderManagementProfile['provider'],
@@ -97,13 +72,7 @@ export class RuntimeSourceNativeVersion implements RuntimeSourceNativeCheck {
     const remaining = this.deadline - performance.now();
     if (remaining <= 0) throw new RuntimeSourceAdmissionError('native-outcome-unknown');
     const process = this.createProcess(
-      {
-        provider: this.seed.provider,
-        cwd: this.seed.cwd,
-        executable,
-        environment: versionEnvironment(this.seed.environment),
-        ...(this.seed.windowsBroker ? { windowsBroker: { ...this.seed.windowsBroker } } : {}),
-      },
+      runtimeSourceVersionProfile(this.seed, executable),
       () => !this.abort.signal.aborted && this.isCurrent(),
       this.processCustody
     );

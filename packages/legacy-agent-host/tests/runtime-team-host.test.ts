@@ -38,6 +38,167 @@ import type {
 import type { TestContext } from 'node:test';
 
 const tick = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+test('ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn', async t => {
+  const f = await fixture(t, { changeProfile(value) { value.teams[0]!.members[0]!.role = 'lead'; } });
+  assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
+  const command = { operation: 'message.send', payload: { to: 'alice', text: 'TEST original conversation input' } };
+  const original = await f.rpc('team.execute', command, { commandId: 'TEST-original-conversation' });
+  assert.equal((original as { ok: boolean }).ok, true);
+  await eventually(() => f.session().submits.length === 1, 'original input reaches the controlled native boundary');
+  const input = f.session().submits[0]!;
+  const product = await f.rpc('team.changes.read', {}) as { value: { cursor: string; sequence: number } };
+  const source = { sessionRef: f.session().sessionRef, inputId: input.inputId, operationRef: input.operationRef };
+  f.session().emit({ ...source, kind: 'text', messageRef: 'TEST-original-reply', block: 0,
+    phase: 'snapshot', text: 'TEST boot' });
+  await eventually(() => new FileRuntimeStore(f.root).readActivity(f.runtimeBinding)?.events.some(
+    row => row.data.kind === 'text' && row.data.text === 'TEST boot') === true, 'original text is durably observed');
+  type MessagePage = { ok: boolean; value: { messages: { text: string; source?: string;
+    messageId?: string; timestamp: string; leadSessionId?: string }[];
+    conversation?: { revision: string; gaps: string[] } } };
+  const partial = await f.rpc('team.messages.page', {}) as MessagePage;
+  assert.equal(partial.ok, true);
+  const reply = partial.value.messages.find(row => row.source === 'lead_session');
+  assert.ok(reply, 'ordinary paired Runtime text must reach the original conversation page');
+  assert.equal(reply.text, 'TEST boot');
+  assert.match(reply.leadSessionId!, /^host-lead-[a-f0-9]{64}$/u);
+  f.session().emit({ ...source, kind: 'text', messageRef: 'TEST-original-reply', block: 0,
+    phase: 'complete', text: 'TEST boot ready' });
+  await eventually(() => new FileRuntimeStore(f.root).readActivity(f.runtimeBinding)?.events.some(
+    row => row.data.kind === 'text' && row.data.text === 'TEST boot ready') === true, 'complete original text is observed');
+  const completed = await f.rpc('team.messages.page', {}) as MessagePage;
+  const rows = completed.value.messages.filter(row => row.source === 'lead_session');
+  assert.equal(rows.length, 1);
+  assert.deepEqual(rows[0], { ...reply, text: 'TEST boot ready' });
+  assert.notEqual(completed.value.conversation?.revision, partial.value.conversation?.revision);
+  const changed = await f.rpc('team.changes.read', { cursor: product.value.cursor }) as {
+    value: { sequence: number; events: unknown[]; conversation: { revision: string } } };
+  assert.equal(changed.value.sequence, product.value.sequence);
+  assert.deepEqual(changed.value.events, [], 'derived replies are not product writes');
+  assert.equal(changed.value.conversation.revision, completed.value.conversation?.revision);
+  const snapshot = await f.rpc('team.snapshot', {}) as { value: { messages: { source?: string }[] } };
+  assert.equal(snapshot.value.messages.some(row => row.source === 'lead_session'), false);
+  for (const secret of [f.root, f.session().sessionRef, 'PRIVATE-config-session', input.operationRef])
+    assert.equal(JSON.stringify(completed).includes(secret), false);
+  assert.equal(f.session().submits.length, 1);
+  f.session().finish(0);
+  await eventually(() => new FileRuntimeStore(f.root).fenced(f.runtimeBinding,
+    tx => tx.get()?.inputs[0]?.terminal === 'succeeded'), 'original native terminal remains authoritative');
+  const path = join(f.root, 'runtime-events', runtimeDigest(f.runtimeBinding) + '.conversation.json');
+  const bytes = readFileSync(path), opens = f.opens();
+  await f.restart();
+  const cold = await f.rpc('team.messages.page', {}) as MessagePage;
+  assert.equal(cold.ok, true);
+  assert.deepEqual(cold.value.messages.filter(row => row.source === 'lead_session'), rows);
+  assert.deepEqual(cold.value.conversation, completed.value.conversation);
+  assert.deepEqual(await f.rpc('team.execute', command, { commandId: 'TEST-original-conversation' }), original);
+  assert.deepEqual(readFileSync(path), bytes, 'cold page and original-ID replay perform no derived writes');
+  assert.equal(f.opens(), opens); assert.equal(f.session().submits.length, 1, 'cold reads never replay native input');
+  const member = { backendId: f.runtimeBinding.backendId, teamId: f.runtimeBinding.teamId,
+    memberId: f.runtimeBinding.memberId };
+  const originals = [join(f.root, 'runtime-sessions', runtimeDigest(member), runtimeDigest(f.runtimeBinding) + '.json'),
+    join(f.root, 'runtime-events', runtimeDigest(f.runtimeBinding) + '.json'), path]
+    .map(file => ({ file, bytes: readFileSync(file) }));
+  try {
+    for (const original of originals) rmSync(original.file);
+    for (const operation of ['team.messages.page', 'team.changes.read'])
+      assert.deepEqual(await f.rpc(operation, {}), { ok: false, code: 'hold', outcome: 'unknown' },
+        'original proven-ready launch cannot reinterpret deleted authority as a never-opened empty conversation');
+  } finally { for (const original of originals) writeFileSync(original.file, original.bytes); }
+  assert.equal(f.opens(), opens);
+});
+
+test('never-opened lead and an original no-allocation Skip retain an empty conversation without creating Runtime state', async t => {
+  const f = await fixture(t, { changeProfile(value) { value.teams[0]!.members[0]!.role = 'lead'; } });
+  const empty = async () => {
+    const page = await f.rpc('team.messages.page', {}) as {
+      ok: boolean; value: { messages: unknown[]; conversation: { gaps: string[] } };
+    };
+    assert.equal(page.ok, true, JSON.stringify(page));
+    assert.deepEqual(page.value.messages, []); assert.deepEqual(page.value.conversation.gaps, []);
+    assert.equal(new FileRuntimeStore(f.root).fenced(f.runtimeBinding, tx => tx.get()), undefined);
+    assert.equal(f.opens(), 0);
+  };
+  await empty();
+  const launch = await f.rpc('team.launch.read', {}) as { value: { launchId: string; rosterRevision: string } };
+  const skip = { launchId: launch.value.launchId, rosterRevision: launch.value.rosterRevision,
+    memberId: 'alice-id', expectedGeneration: f.runtimeBinding.generation, action: 'skip' };
+  for (const operation of ['prepare', 'execute']) {
+    const selected = await f.rpc('team.member.action.' + operation, skip,
+      { commandId: 'TEST-unallocated-conversation-skip' }) as { ok: boolean };
+    assert.equal(selected.ok, true, JSON.stringify(selected));
+  }
+  await empty();
+});
+
+test('ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads', async t => {
+  const f = await fixture(t, { changeProfile(value) { value.teams[0]!.members[0]!.role = 'lead'; } });
+  assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
+  await f.rpc('team.execute', { operation: 'message.send', payload: { to: 'alice', text: 'TEST long original input' } });
+  await eventually(() => f.session().submits.length === 1, 'the original controlled input is consumed');
+  const input = f.session().submits[0]!, store = new FileRuntimeStore(f.root);
+  const source = { sessionRef: f.session().sessionRef, inputId: input.inputId, operationRef: input.operationRef };
+  const emit = async (text: string, phase: 'snapshot' | 'complete') => {
+    const before = store.fenced(f.runtimeBinding, tx => tx.get()!.activitySequence!);
+    f.session().emit({ ...source, kind: 'text', messageRef: 'TEST-long-original-reply', block: 0, text, phase });
+    await eventually(() => store.readActivity(f.runtimeBinding)?.events.some(row =>
+      row.sequence > before && row.inputId === input.inputId && row.data.kind === 'gap' && row.data.reason === 'oversized') === true,
+    'original diagnostic ring retains its unchanged oversized event');
+  };
+  type Reply = { messageId: string; text: string; timestamp: string; source?: string; leadSessionId?: string };
+  type Page = { revision: string; messages: Reply[]; nextCursor: string | null;
+    conversation: { revision: string; gaps: string[] };
+    messageParts?: { index: number; part: number; total: number }[] };
+  const read = async () => {
+    let cursor: string | undefined, first: Reply | undefined, revision: string | undefined, total = 1, pages = 0;
+    const parts = new Map<number, string>(), visited = new Set<string>();
+    do {
+      const result = await f.rpc('team.messages.page', { limit: 1, ...(cursor ? { cursor } : {}) }) as { ok: boolean; value: Page };
+      assert.equal(result.ok, true, JSON.stringify(result));
+      const page = result.value; pages++;
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 384 * 1024);
+      assert.deepEqual(page.conversation.gaps, [], 'activity-only size gaps cannot taint fully retained conversation');
+      if (revision) assert.equal(page.revision, revision); else revision = page.revision;
+      for (const [index, row] of page.messages.entries()) {
+        if (row.source !== 'lead_session') continue;
+        if (!first) first = row;
+        assert.equal(row.messageId, first.messageId); assert.equal(row.timestamp, first.timestamp);
+        assert.equal(row.source, first.source); assert.equal(row.leadSessionId, first.leadSessionId);
+        const part = page.messageParts?.[index]; total = part?.total ?? 1;
+        assert.equal(parts.has(part?.part ?? 0), false);
+        parts.set(part?.part ?? 0, row.text);
+      }
+      cursor = page.nextCursor ?? undefined;
+      if (cursor) { assert.equal(visited.has(cursor), false); visited.add(cursor); }
+      assert.ok(pages < 128, 'original finite continuation budget');
+    } while (cursor);
+    assert.ok(first, 'ordinary long paired text must reach the original signed page');
+    assert.equal(parts.size, total);
+    return { ...first, text: [...parts].sort(([a], [b]) => a - b).map(([, text]) => text).join(''), pages };
+  };
+  const partialText = '漢"\\\n'.repeat(5 * 1024);
+  assert.equal(Buffer.byteLength(partialText), 30 * 1024);
+  await emit(partialText, 'snapshot');
+  const partial = await read(); assert.equal(partial.text, partialText);
+  await emit(partialText + ' complete', 'complete');
+  const complete = await read();
+  assert.equal(complete.text, partialText + ' complete');
+  assert.equal(complete.messageId, partial.messageId); assert.equal(complete.timestamp, partial.timestamp);
+  const largeText = '漢"\\\n'.repeat(50 * 1024);
+  assert.equal(Buffer.byteLength(largeText), 300 * 1024);
+  await emit(largeText, 'complete');
+  const large = await read();
+  assert.equal(large.text, largeText); assert.ok(large.pages > 1);
+  assert.equal(large.messageId, partial.messageId); assert.equal(large.timestamp, partial.timestamp);
+  assert.ok(Buffer.byteLength(JSON.stringify(store.readActivity(f.runtimeBinding), null, 2)) <= 1024 * 1024);
+  f.session().finish(0);
+  await eventually(() => store.fenced(f.runtimeBinding, tx => tx.get()?.inputs[0]?.terminal === 'succeeded'), 'original terminal settled');
+  const path = join(f.root, 'runtime-events', runtimeDigest(f.runtimeBinding) + '.conversation.json');
+  const bytes = readFileSync(path), opens = f.opens();
+  await f.restart();
+  assert.deepEqual(await read(), large);
+  assert.deepEqual(readFileSync(path), bytes);
+  assert.equal(f.opens(), opens); assert.equal(f.session().submits.length, 1);
+});
 test('task recovery never returns a prior receipt for a changed command with unavailable attachments', async t => {
   const f = await fixture(t);
   const original = { operation: 'task.create', payload: { subject: 'TEST exact retained command' } };
@@ -2065,6 +2226,8 @@ test(
     const source = { sessionRef: f.session().sessionRef,
       inputId: original.inputId, operationRef: original.operationRef };
     f.session().emit({ ...source, kind: 'usage', inputTokens: 11, outputTokens: 5 });
+    f.session().emit({ ...source, kind: 'text', messageRef: 'TEST-original-message', block: 0,
+      text: 'TEST original ordinary reply', phase: 'complete' });
     f.session().emit({ ...source, kind: 'usage', inputTokens: 17, outputTokens: 9 });
     f.session().finish(0);
     await eventually(() => new FileRuntimeStore(f.root).fenced(f.runtimeBinding,
@@ -2084,6 +2247,13 @@ test(
     assert.deepEqual(await f.rpc('team.execute', reportedCommand, { commandId: 'TEST-cost-reported' }), reported);
     assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-cost-reported' }), reported);
     assert.equal(readFileSync(inboxPath, 'utf8'), bytes, 'original lookup and replay cannot publish again');
+    const conversation = await f.rpc('team.messages.page', {}) as {
+      ok: boolean; value: { messages: { messageId?: string }[] };
+    };
+    assert.equal(conversation.ok, true);
+    for (const reply of replies())
+      assert.equal(conversation.value.messages.filter(row => row.messageId === reply.messageId).length, 1,
+        'original Host-local command output appears exactly once on the composed conversation page');
     const ownerStore = new TeamOwnerStore(f.root, 'test-runtime-host');
     const outbox = ownerStore.fenced(() => ownerStore.list<{ commandId: string }>('outbox'));
     assert.equal(outbox.length, 1, 'only the ordinary message has a Runtime delivery');
@@ -2121,6 +2291,9 @@ test(
     const continued = f.session().submits[0]!;
     f.session().emit({ kind: 'usage', sessionRef: f.session().sessionRef,
       inputId: continued.inputId, operationRef: continued.operationRef, inputTokens: 7, outputTokens: 3 });
+    f.session().emit({ kind: 'text', sessionRef: f.session().sessionRef, inputId: continued.inputId,
+      operationRef: continued.operationRef, messageRef: 'TEST-resumed-message', block: 0,
+      text: 'TEST resumed ordinary reply', phase: 'complete' });
     f.session().finish(0);
     await eventually(() => new FileRuntimeStore(f.root).fenced(
       { ...f.runtimeBinding, generation: resumed.value.generation },
@@ -2133,6 +2306,25 @@ test(
     assert.deepEqual(replies().slice(0, 2), JSON.parse(bytes), 'old cost outputs keep their captured units');
     assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-cost-reported' }), reported);
     assert.equal(f.session().submits.length, 1, '/cost adds no resumed native input');
+    const resumedPage = await f.rpc('team.messages.page', {}) as {
+      ok: boolean; value: { messages: { text: string; source?: string; leadSessionId?: string }[] };
+    };
+    assert.equal(resumedPage.ok, true, JSON.stringify(resumedPage));
+    const ordinary = resumedPage.value.messages.filter(row => row.source === 'lead_session');
+    assert.deepEqual(ordinary.map(row => row.text), ['TEST original ordinary reply', 'TEST resumed ordinary reply']);
+    assert.equal(new Set(ordinary.map(row => row.leadSessionId)).size, 1, 'qualified Resume retains its original opaque session group');
+    const member = { backendId: f.runtimeBinding.backendId, teamId: f.runtimeBinding.teamId,
+      memberId: f.runtimeBinding.memberId };
+    const retainedFiles = [join(f.root, 'runtime-sessions', runtimeDigest(member), runtimeDigest(f.runtimeBinding) + '.json'),
+      join(f.root, 'runtime-events', runtimeDigest(f.runtimeBinding) + '.json'),
+      join(f.root, 'runtime-events', runtimeDigest(f.runtimeBinding) + '.conversation.json')]
+      .map(file => ({ file, bytes: readFileSync(file) }));
+    try {
+      for (const original of retainedFiles) rmSync(original.file);
+      for (const operation of ['team.messages.page', 'team.changes.read'])
+        assert.deepEqual(await f.rpc(operation, {}), { ok: false, code: 'hold', outcome: 'unknown' },
+          'validated restore source must retain original authority even when every observation file was removed');
+    } finally { for (const original of retainedFiles) writeFileSync(original.file, original.bytes); }
     await f.rpc('runtime.stop', { memberId: 'alice-id', expectedGeneration: resumed.value.generation });
     await f.restart();
     const launch = await f.rpc('team.launch.read', {}) as { value: { launchId: string; rosterRevision: string } };
@@ -2834,6 +3026,32 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
     const selected = await f.rpc('team.member.action.' + operation, skip,
       { commandId: 'TEST-source-skip' }) as { ok: boolean };
     assert.equal(selected.ok, true, JSON.stringify(selected));
+  }
+  const skipLaunchPath = join(f.root, 'teams/test-runtime-host/.host-owner/launches',
+    runtimeDigest('TEST-run') + '.json');
+  const selectedSkipBytes = readFileSync(skipLaunchPath, 'utf8');
+  for (const fault of ['missing-action', 'unselected-action', 'invalid-transform']) {
+    const altered = JSON.parse(selectedSkipBytes) as TeamLaunchRecord;
+    const action = altered.memberActions!.find(item => item.input.commandId === 'TEST-source-skip')!;
+    if (fault === 'missing-action') delete altered.memberActions;
+    else if (fault === 'unselected-action') action.phase = 'prepared';
+    else {
+      action.source.skipped = true;
+      action.fingerprint = runtimeDigest({
+        input: action.input, actor: action.actor, noAllocation: action.noAllocation,
+        sourceAttemptId: action.sourceAttemptId, source: action.source, selected: action.selected,
+      });
+    }
+    try {
+      writeFileSync(skipLaunchPath, JSON.stringify(altered));
+      const denied = await f.rpc('team.launch.read', {}) as { ok: boolean; code?: string };
+      assert.equal(denied.ok, false, fault);
+      assert.equal(denied.code, 'hold', fault);
+    } finally {
+      writeFileSync(skipLaunchPath, selectedSkipBytes);
+    }
+    assert.equal(readFileSync(skipLaunchPath, 'utf8'), selectedSkipBytes);
+    assert.equal(f.opens(), 1, 'invalid Skip history cannot allocate a replacement provider');
   }
   assert.equal(f.opens(), 1, 'Skip retains the original binding without another provider');
   const skippedLaunchPath = join(f.root, 'teams/test-runtime-host/.host-owner/launches',

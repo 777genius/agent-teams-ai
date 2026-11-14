@@ -10,6 +10,7 @@ import { runtimeDigest } from '../runtime/identity.js';
 export { runtimeSourceRefusalSchema };
 export type { RuntimeSourceRefusal } from '../management/runtimeSourceVerification.js';
 import type { RuntimeMemberProfile } from './runtimeProfile.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
 const id = z
   .string()
@@ -166,6 +167,9 @@ export const runtimeSourceLookupSchema = z
 
 /** Selection is captured before asynchronous launch preparation; replay resolves only this reference. */
 export interface RuntimeRecipeSources {
+  /** Optional private process witness; no returned recipe or persisted capture contains it. */
+  processOrigin?(reference: RuntimeSourceReference, scope: RuntimeSourceTeamScope,
+    projectPath: string, recipe: RuntimeMemberProfile): RuntimeSourceProcessOrigin | undefined;
   /** Restore may establish original-reference eligibility before resolving any current template. */
   assertReferenceAvailable?(reference: RuntimeSourceReference, scope: RuntimeSourceTeamScope, projectPath: string): void;
   currentForRecipe(

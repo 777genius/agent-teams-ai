@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -25,6 +25,7 @@ import { readinessOriginDigest } from '../../../src/features/agent-backend/main/
 import { JsonLocalProviderPrivateNetworkApprovalStore } from '../../../src/features/runtime-provider-management/main';
 import { setAppDataBasePath } from '../../../src/main/utils/pathDecoder';
 import { clearShellEnvCache } from '../../../src/main/utils/shellEnv';
+import { addLogSink } from '../../../src/shared/utils/logger';
 
 import type {
   BackendConnectionSnapshot,
@@ -77,7 +78,7 @@ async function selected(value: unknown): Promise<DesktopBackendDescriptorSelecti
   await writeFile(path, bytes, { mode: 0o600 });
   return { path, sha256: createHash('sha256').update(bytes).digest('hex') };
 }
-async function fixture(blockStartup = false): Promise<{
+async function fixture(startup: { block?: boolean; markerDelayMs?: number; closeBeforeMarker?: boolean } = {}): Promise<{
   descriptor: DesktopBackendDescriptor;
   bindingDirectory: string;
 }> {
@@ -85,12 +86,14 @@ async function fixture(blockStartup = false): Promise<{
   for (const ownerId of ['A', 'B']) {
     const storageRoot = await root();
     const hostEntry = join(storageRoot, 'host.mts');
-    const source = `import { createHostServer } from ${JSON.stringify(serverUrl)};
-      import { writeFileSync, appendFileSync, existsSync } from 'node:fs';
+    const source = `import { writeFileSync, appendFileSync, existsSync } from 'node:fs';
+      if (${startup.markerDelayMs ?? 0}) await new Promise(resolve=>setTimeout(resolve,${startup.markerDelayMs ?? 0}));
+      if (${startup.closeBeforeMarker ?? false}) process.exit(0);
       writeFileSync(${JSON.stringify(join(storageRoot, 'started'))}, 'started');
-      if (${blockStartup}) await new Promise(resolve=>{
+      if (${startup.block ?? false}) await new Promise(resolve=>{
         const timer=setInterval(()=>{if(existsSync(${JSON.stringify(join(storageRoot, 'release-startup'))})){clearInterval(timer);resolve();}},10);
       });
+      const { createHostServer } = await import(${JSON.stringify(serverUrl)});
       const historicalLaunch = {launchId:'historical-launch',rosterRevision:'roster-1',
         status:'pending',ready:0,expected:1,retryCapability:'same-binding-no-allocation-only',
         admission:{commandId:'historical-start',sourceRosterRevision:'roster-1'},
@@ -158,6 +161,7 @@ async function fixture(blockStartup = false): Promise<{
           appendFileSync(${JSON.stringify(join(storageRoot, 'management-effects'))},JSON.stringify({profileId:request.profileId,configRevision:request.configRevision})+${JSON.stringify('\n')});
           return {ok:true,value:{profileId:request.profileId,configRevision:request.configRevision,providers:[]}};
         }} }});
+      writeFileSync(${JSON.stringify(join(storageRoot, 'host-created'))}, server.handshake.buildId);
       void server.closed.then(()=>process.exit(0));`;
     await writeFile(hostEntry, source);
     owners.push({
@@ -217,6 +221,30 @@ function request(handleId: string, commandId: string): BackendOperationRequest {
     operation: 'task.create',
     payload: { subject: 'Task' },
   };
+}
+
+async function waitForStartupMarker(storageRoot: string, pending: Promise<unknown>, deadline: number): Promise<void> {
+  let finished = false;
+  const terminal = pending.then(
+    () => { throw new Error('TEST Host operation completed before its startup marker'); },
+    () => { throw new Error('TEST Host operation rejected before its startup marker'); }
+  );
+  const marker = async () => {
+    while (!finished) {
+      const remaining = deadline - performance.now();
+      if (remaining <= 0) throw new Error('TEST original Host startup deadline expired');
+      try {
+        await access(join(storageRoot, 'started'));
+        if (performance.now() >= deadline) throw new Error('TEST original Host startup deadline expired');
+        return;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, Math.min(25, remaining)));
+    }
+  };
+  try { await Promise.race([terminal, marker()]); }
+  finally { finished = true; }
 }
 
 it('leaves unconfigured mode empty and initializes configured handles without starting either host', async () => {
@@ -672,6 +700,41 @@ it('captures only the explicit supported review transport profile from a private
   });
 });
 
+it('keeps Windows descriptor digest and schema checks without treating synthetic POSIX mode bits as authority', async () => {
+  const setup = await fixture();
+  const selection = await selected(setup.descriptor);
+  await chmod(selection.path, 0o666);
+  expect((await stat(selection.path)).mode & 0o077).not.toBe(0);
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  try {
+    Object.defineProperty(process, 'platform', { ...platform, value: 'win32' });
+    await expect(loadDesktopBackendDescriptor(selection)).resolves.toEqual(setup.descriptor);
+    await expect(
+      loadDesktopBackendDescriptor({ ...selection, sha256: '0'.repeat(64) })
+    ).rejects.toMatchObject({ code: 'hold' });
+    const malformed = await selected({ ...setup.descriptor, schemaVersion: 2 });
+    await expect(loadDesktopBackendDescriptor(malformed)).rejects.toMatchObject({ code: 'hold' });
+  } finally {
+    Object.defineProperty(process, 'platform', platform);
+  }
+  for (const owner of setup.descriptor.owners)
+    await expect(access(join(owner.storageRoot, 'started'))).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+it('continues to hold non-private POSIX descriptor files', async () => {
+  const setup = await fixture();
+  const selection = await selected(setup.descriptor);
+  await chmod(selection.path, 0o644);
+  expect((await stat(selection.path)).mode & 0o077).not.toBe(0);
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  try {
+    Object.defineProperty(process, 'platform', { ...platform, value: 'linux' });
+    await expect(loadDesktopBackendDescriptor(selection)).rejects.toMatchObject({ code: 'hold' });
+  } finally {
+    Object.defineProperty(process, 'platform', platform);
+  }
+});
+
 it('rejects digest mismatch, symlink/noncanonical path and oversized private descriptor safely', async () => {
   const setup = await fixture();
   const selection = await selected(setup.descriptor);
@@ -810,25 +873,95 @@ it('HTTP discovery uses the same captured context and rejects client context ove
 });
 
 it('rechecks captured context after lazy host startup before dispatching a finite command', async () => {
-  const setup = await fixture(true);
+  const setup = await fixture({ block: true, markerDelayMs: 1100 });
   const desktop = feature({
     descriptor: await selected(setup.descriptor),
     bindingDirectory: setup.bindingDirectory,
   });
   await desktop.initialize();
-  let current = true;
-  const pending = desktop.facade.invoke(request('opaque-A', 'stale-during-start'), {
-    isCurrent: () => current,
+  const originalDiagnostics = process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS;
+  const observations: { phase: string; kind: string; elapsedMs: number }[] = [];
+  const phases = ['profile-validation-start', 'profile-validation-complete', 'child-captured',
+    'ready', 'request-timeout', 'request-admitted', 'response-accepted',
+    'owner-start', 'owner-started', 'read-start', 'read-complete'];
+  const kinds = ['handshake', 'rpc', 'registry-list', 'retirement-read'];
+  let dropped = 0;
+  let pendingObservation: {
+    state: 'pending' | 'resolved-success' | 'resolved-failure' | 'resolved-unprojected' | 'rejected';
+    code?: string; outcome?: string;
+  } = { state: 'pending' };
+  const removeSink = addLogSink(entry => {
+    if (entry.level !== 'diagnostic' || entry.namespace !== 'TEST:HostStartup' ||
+        entry.args[0] !== 'Host startup observation') return;
+    const value = entry.args[1];
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+    const row = value as Record<string, unknown>;
+    if (typeof row.phase !== 'string' || !phases.includes(row.phase) ||
+        typeof row.kind !== 'string' || !kinds.includes(row.kind) ||
+        typeof row.elapsedMs !== 'number' || !Number.isSafeInteger(row.elapsedMs) ||
+        row.elapsedMs < 0) return;
+    if (observations.length < 16)
+      observations.push({ phase: row.phase, kind: row.kind, elapsedMs: row.elapsedMs });
+    else dropped++;
   });
-  await vi.waitFor(async () => {
-    await access(join(setup.descriptor.owners[0].storageRoot, 'started'));
-  });
-  current = false;
-  await writeFile(join(setup.descriptor.owners[0].storageRoot, 'release-startup'), 'release');
-  expect(await pending).toEqual({ ok: false, code: 'forbidden', outcome: 'not-dispatched' });
-  await expect(
-    access(join(setup.descriptor.owners[0].storageRoot, 'effects'))
-  ).rejects.toMatchObject({ code: 'ENOENT' });
+  try {
+    process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = '1';
+    let current = true;
+    // One original budget from the selected fixture, including validation and child startup.
+    const startedAt = performance.now();
+    const startupDeadline = startedAt + setup.descriptor.owners[0]!.profile.startupTimeoutMs;
+    const pending = desktop.facade.invoke(request('opaque-A', 'stale-during-start'), {
+      isCurrent: () => current,
+    });
+    void pending.then(result => {
+      try {
+        pendingObservation = result.ok ? { state: 'resolved-success' } : {
+          state: 'resolved-failure',
+          code: ['invalid', 'conflict', 'forbidden', 'hold', 'busy', 'unavailable', 'shutting-down']
+            .includes(result.code) ? result.code : 'unrecognized',
+          outcome: ['not-dispatched', 'rejected', 'unknown'].includes(result.outcome)
+            ? result.outcome : 'unrecognized',
+        };
+      } catch {
+        pendingObservation = { state: 'resolved-unprojected' };
+      }
+    }, () => { pendingObservation = { state: 'rejected' }; });
+    await waitForStartupMarker(setup.descriptor.owners[0]!.storageRoot, pending, startupDeadline);
+    expect(performance.now() - startedAt).toBeGreaterThan(1000);
+    current = false;
+    await writeFile(join(setup.descriptor.owners[0].storageRoot, 'release-startup'), 'release');
+    expect(await pending).toEqual({ ok: false, code: 'forbidden', outcome: 'not-dispatched' });
+    expect(
+      await readFile(join(setup.descriptor.owners[0].storageRoot, 'host-created'), 'utf8')
+    ).toBe('TEST-desktop-v1');
+    await expect(
+      access(join(setup.descriptor.owners[0].storageRoot, 'effects'))
+    ).rejects.toMatchObject({ code: 'ENOENT' });
+  } finally {
+    removeSink();
+    if (originalDiagnostics === undefined) delete process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS;
+    else process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = originalDiagnostics;
+    try {
+      process.stdout.write(JSON.stringify({ kind: 'TEST_LAZY_HOST_STARTUP_OBSERVATION',
+        point: 'case-finally', observations, dropped, pending: pendingObservation }) + '\n');
+    } catch {
+      // A passive observation cannot replace the original test result.
+    }
+  }
+});
+
+it('rejects a lazy startup marker when the original selected Host closes first', async () => {
+  const setup = await fixture({ closeBeforeMarker: true });
+  const desktop = feature({ descriptor: await selected(setup.descriptor), bindingDirectory: setup.bindingDirectory });
+  await desktop.initialize();
+  const owner = setup.descriptor.owners[0]!;
+  const deadline = performance.now() + owner.profile.startupTimeoutMs;
+  const pending = desktop.facade.invoke(request('opaque-A', 'closed-before-start'), { isCurrent: () => true });
+  await expect(waitForStartupMarker(owner.storageRoot, pending, deadline))
+    .rejects.toThrow('TEST Host operation completed before its startup marker');
+  expect(await pending).toMatchObject({ ok: false });
+  for (const file of ['started', 'host-created', 'effects'])
+    await expect(access(join(owner.storageRoot, file))).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
 it('native health starts only the granted default owner and reports actual handshake without provider or Team work', async () => {

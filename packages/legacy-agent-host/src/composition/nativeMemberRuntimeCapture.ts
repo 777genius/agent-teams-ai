@@ -1,3 +1,4 @@
+import { capturedRuntimeMcpReferencesSchema } from './capturedRuntimeMcpReferences.js';
 import { z } from 'zod';
 import { isAbsolute } from 'node:path';
 import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
@@ -12,7 +13,6 @@ import { compileRuntimeMemberProfile, runtimeCaptureSourceSchema } from './runti
 import {
   loadCapturedRuntimeMcpRecipe,
   validateCapturedRuntimeMcpRecipe,
-  capturedRuntimeMcpReferencesSchema,
 } from './capturedRuntimeMcpRecipes.js';
 import type { HostedTeam } from './MemberEntry.js';
 import type { TeamHostProfile } from './TeamHost.js';

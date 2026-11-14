@@ -14,6 +14,7 @@ import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { NativeLaunchRetryAuthority } from '../team-launch/launchRetry.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 const id = z
   .string()
   .min(1)
@@ -46,6 +47,7 @@ export async function executeNativeMemberAction(
     runtime: RuntimeOwner;
     source: ReturnType<typeof captureNativeInputAuthority>;
     modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget' | 'admitTeamProbeProfile'>;
+    captureProcessOrigin?(entry: MemberEntry): RuntimeSourceProcessOrigin | undefined;
     assertCurrent(): void;
     isSealed(): boolean;
   },
@@ -173,6 +175,7 @@ export async function executeNativeMemberAction(
           launch,
           runtime,
           ...(options.modelReadiness ? { modelReadiness: options.modelReadiness } : {}),
+          ...(options.captureProcessOrigin ? { captureProcessOrigin: options.captureProcessOrigin } : {}),
           principalId: source.team.principalId,
           admission,
           assertWriter: options.assertCurrent,

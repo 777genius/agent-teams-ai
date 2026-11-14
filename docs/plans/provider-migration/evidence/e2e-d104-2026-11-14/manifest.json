@@ -1,0 +1,185 @@
+{
+  "head": "d10409d1887d6a81955adcfad5c10d4a7596d0dc",
+  "filesAreUnmodifiedOriginals": true,
+  "qualification": "Historical exact-source observations; none qualifies the incoming0543 merged candidate. See plans11 through15 for open repairs. Taskboard and Team original UI receipts are PASS; Claude, Review and OpenCode original UI receipts remain INCOMPLETE. A receipt does not qualify an unfinished job; Darwin business PASS does not override the later POSIX job failure.",
+  "files": [
+    {
+      "path": "claude-ui-original.json",
+      "jobId": 132236556375,
+      "bytes": 749857,
+      "sha256": "96a692caddc7dd59237f7e31a79793c0d19e56b038e7635c645fb9b2c15084c1",
+      "originalStatus": "INCOMPLETE",
+      "originalMode": "emulated-claude-runtime-ui"
+    },
+    {
+      "path": "claude-ui-original-failure.png",
+      "jobId": 132236556375,
+      "bytes": 97671,
+      "sha256": "8fbeba8d8b44aa44ff88c2c0b1bfc7016394685fb3a32dcf6eac3ef73b941111"
+    },
+    {
+      "path": "review-ui-original.json",
+      "jobId": 132236556666,
+      "bytes": 712434,
+      "sha256": "270b90e14cddd553bf1992d360d3146438417c63f3a5cc4b327b125cf320156d",
+      "originalStatus": "INCOMPLETE",
+      "originalMode": "review-ui"
+    },
+    {
+      "path": "review-ui-original-failure.png",
+      "jobId": 132236556666,
+      "bytes": 60934,
+      "sha256": "9fbe7795daf76d8c1b84be49bc4002e6b9ed3368ccd27e339300e060ff8bef1a"
+    },
+    {
+      "path": "opencode-v2-win32-x64-original.json",
+      "jobId": 132235535491,
+      "bytes": 93558,
+      "sha256": "963c979c391dc47d4e7d1b48dbe2b3e994be0af28d518400b0612ca8a0da9b55",
+      "originalStatus": "PASS",
+      "originalMode": null
+    },
+    {
+      "path": "opencode-v2-win32-x64-auto-original.json",
+      "jobId": 132235535491,
+      "bytes": 90845,
+      "sha256": "4667a755128752fedc3a5d99478e4f9f10b16ba702194e6a610ffc50ca04cee8",
+      "originalStatus": "PASS",
+      "originalMode": null
+    },
+    {
+      "path": "opencode-v2-win32-arm64-original.json",
+      "jobId": 132235535366,
+      "bytes": 76424,
+      "sha256": "e3149da9adddef8bb3a2f99c125e45332c2eb7b3df5082edbfce08f34e295f42",
+      "originalStatus": "INCOMPLETE",
+      "originalMode": null
+    },
+    {
+      "path": "opencode-v2-darwin-x64-original.json",
+      "jobId": 132235535420,
+      "bytes": 93586,
+      "sha256": "8348c1d083e889e00135d26eb5457c0e2788bd4391a8d68425c45b6cc272bac4",
+      "originalStatus": "PASS",
+      "originalMode": null
+    },
+    {
+      "path": "opencode-v2-darwin-x64-posix-original.json",
+      "jobId": 132235535420,
+      "bytes": 14234,
+      "sha256": "ccd0d201439181b54a36063200dcbf60f331b02944e384ca5ceddb64b9d1f16e",
+      "originalStatus": "INCOMPLETE",
+      "originalMode": null
+    },
+    {
+      "path": "taskboard-ui-original.json",
+      "jobId": 132236556786,
+      "bytes": 981941,
+      "sha256": "d727840f47d940f6485e6dcecff8028b6558172d2a69e9bc95208f8d2650a1a4",
+      "originalStatus": "PASS",
+      "originalMode": "task-board-ui"
+    },
+    {
+      "path": "team-ui-original.json",
+      "jobId": 132236556988,
+      "bytes": 653580,
+      "sha256": "636d80f36565bf336480e0d7a72ec1a98839a3338b9356cc241662a69af1c8ad",
+      "originalStatus": "PASS",
+      "originalMode": "team-ui"
+    },
+    {
+      "path": "opencode-ui-original.json",
+      "jobId": 132236556805,
+      "bytes": 712012,
+      "sha256": "14aece534b5ccbc5855e59debc2d183811900785a5a4c7e1cc4932e71daea87d",
+      "originalStatus": "INCOMPLETE",
+      "originalMode": "emulated-opencode-runtime-ui"
+    },
+    {
+      "path": "process-linux-x64-scope-original.json",
+      "jobId": 132235384146,
+      "bytes": 2120,
+      "sha256": "ce1db3888c6c8adcfdabe8e665015ce4c1df457bc3a0e2f553be1e155a85f767",
+      "qualification": "Only the exact original scope fields; no vendor or Desktop expansion"
+    },
+    {
+      "path": "process-darwin-arm64-scope-original.json",
+      "jobId": 132235384402,
+      "bytes": 495,
+      "sha256": "af9e2a03ddc9be6d4976b224a4aa2e6e4e454ecee52785e7d20bc10f33ebe7a2",
+      "qualification": "Only the exact original scope fields; no vendor or Desktop expansion"
+    },
+    {
+      "path": "opencode-v2-darwin-arm64-darwin-custody-original.json",
+      "jobId": 132235535417,
+      "bytes": 1442,
+      "sha256": "e5978782d8335f8597fba4ae538398fb5a18d6a5b2203cf13bca82d6fd55cb40",
+      "originalStatus": "PASS",
+      "originalMode": "TEST_DARWIN_CUSTODY_PRODUCT_PATH"
+    },
+    {
+      "path": "opencode-v2-darwin-arm64-embedded-host-original.json",
+      "jobId": 132235535417,
+      "bytes": 93521,
+      "sha256": "0c11513ee7540b398fec888cb76d08fe319856198d5b7e0b3fdf52bf8f11638c",
+      "originalStatus": "PASS",
+      "originalMode": "TEST_NATIVE_V2_EMBEDDED_HOST"
+    },
+    {
+      "path": "opencode-v2-darwin-arm64-posix-exec-original.json",
+      "jobId": 132235535417,
+      "bytes": 14276,
+      "sha256": "3f1a7d7786f6b6a80f7c3bdf2e9f0bbe73e15b8df575ec134bc1cb9ca16a506c",
+      "originalStatus": "INCOMPLETE",
+      "originalMode": "TEST_POSIX_PRE_USER_EXEC_IMAGE"
+    },
+    {
+      "path": "opencode-v2-linux-x64-captured-mcp-original.json",
+      "jobId": 132235535641,
+      "bytes": 1981,
+      "sha256": "eea77971d8c69dffe221609e6a07a841a4d69146bd9b08b12267196d8d64e7e2",
+      "originalStatus": "PASS",
+      "originalMode": "TEST_NATIVE_V2_CAPTURED_MCP"
+    },
+    {
+      "path": "opencode-v2-linux-x64-credentials-original.json",
+      "jobId": 132235535641,
+      "bytes": 203985,
+      "sha256": "33e61a3a5f5e4be2be603de8e65c706a117d78d4b21f5a895f03859163597167",
+      "originalStatus": "PASS",
+      "originalMode": "TEST_NATIVE_V2_CREDENTIAL"
+    },
+    {
+      "path": "opencode-v2-linux-x64-embedded-host-original.json",
+      "jobId": 132235535641,
+      "bytes": 93433,
+      "sha256": "414b222eead56e9a3190cb0e562b593e02549660537d2d321015321449c0393e",
+      "originalStatus": "PASS",
+      "originalMode": "TEST_NATIVE_V2_EMBEDDED_HOST"
+    },
+    {
+      "path": "opencode-v2-linux-x64-model-probe-original.json",
+      "jobId": 132235535641,
+      "bytes": 88829,
+      "sha256": "8bfeb55fc7f75e72b7e112ec28fcc728272e980d8d019898a4ad86db254538e8",
+      "originalStatus": "PASS",
+      "originalMode": "TEST_NATIVE_V2_MODEL_PROBE"
+    },
+    {
+      "path": "opencode-v2-linux-x64-permission-lifecycle-original.json",
+      "jobId": 132235535641,
+      "bytes": 2577,
+      "sha256": "e2fb0c2bb7fd906eff0c8a8d6972ab17d4c260e9968f12993aadeaaf4fb8dfe0",
+      "originalStatus": "PASS",
+      "originalMode": "TEST_NATIVE_V2_PERMISSION_LIFECYCLE"
+    },
+    {
+      "path": "opencode-v2-linux-x64-posix-exec-original.json",
+      "jobId": 132235535641,
+      "bytes": 11119,
+      "sha256": "d5c5dff39b23c74a5a36f6ca2c4f7eb0b11d1dca5fd1f91f0f45a0f883d1b308",
+      "originalStatus": "PASS_NATIVE_FIXTURE_ONLY",
+      "originalMode": "TEST_POSIX_PRE_USER_EXEC_IMAGE"
+    }
+  ]
+}

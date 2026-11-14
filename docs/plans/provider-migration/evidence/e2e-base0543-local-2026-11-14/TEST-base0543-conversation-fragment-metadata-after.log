@@ -1,0 +1,10 @@
+
+ RUN  v3.2.6 /workspace/scratch/391e21b06e24/reconcile-base0543
+
+ ✓ test/features/agent-backend/hostMessagesPageTransport.test.ts (8 tests) 543ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  03:26:03
+   Duration  3.76s (transform 1.13s, setup 484ms, collect 2.03s, tests 543ms, environment 0ms, prepare 99ms)
+

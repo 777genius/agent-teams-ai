@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
+import { setTimeout as delay } from 'node:timers/promises';
 import type { ServerResponse } from 'node:http';
 import {
   CONTEXT_MARKER,
@@ -14,6 +15,8 @@ type Model = Awaited<ReturnType<typeof startNativeTeamModel>>;
 export const PROCESS_BOOTSTRAP = 'TEST_NATIVE_PROCESS_BOOTSTRAP';
 export const PROCESS_REGISTER_ID = 'TEST-native-process-register-original';
 export const PROCESS_LABEL = 'TEST native-owned primary service';
+export const PROCESS_NEIGHBOR_REGISTER_ID = 'TEST-native-process-register-neighbor';
+export const PROCESS_NEIGHBOR_LABEL = 'TEST native-owned neighbor service';
 interface NotificationAck {
   role: string;
   taskId: string;
@@ -31,10 +34,27 @@ export interface Service {
   port: number;
   url: string;
 }
+/** Native background acceptance precedes service readiness. Read only; never repeat Bash. */
+export async function waitForNativeProcessServices(
+  read: () => Promise<{ primary: Service; neighbor: Service }>,
+  timeoutMs = 10_000
+) {
+  assert.ok(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 10_000);
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try { return await read(); }
+    catch (error) {
+      if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ENOENT') throw error;
+      assert.ok(Date.now() < deadline, 'original native services did not publish before the deadline');
+      await delay(Math.min(50, Math.max(1, deadline - Date.now())));
+    }
+  }
+}
 export function qualifyNativeServiceCompletion(
   role: 'primary' | 'neighbor',
   service: Service,
-  lifecycle: Record<string, unknown>[]
+  lifecycle: Record<string, unknown>[],
+  mode?: 'windows-natural-services'
 ) {
   assert.equal(service.role, role);
   assert.ok(Number.isSafeInteger(service.pid) && service.pid > 1);
@@ -48,9 +68,10 @@ export function qualifyNativeServiceCompletion(
   );
   assert.equal(lifecycle[0]!.ttlMs, 300_000);
   const exitReason = lifecycle[1]!.reason;
-  assert.ok(exitReason === 'SIGTERM' || exitReason === 'natural-ttl');
+  if (mode === 'windows-natural-services' && role === 'primary') assert.equal(exitReason, 'natural-request');
+  else assert.ok(exitReason === 'SIGTERM' || exitReason === 'natural-ttl');
   assert.equal(lifecycle[2]!.reason, exitReason);
-  // Both pinned service handlers finish normally with process.exitCode=0.
+  // Each accepted normal completion path finishes with process.exitCode=0.
   return {
     status: 'completed',
     ending: 'completed (exit code 0)',
@@ -62,9 +83,11 @@ function emit(
   response: ServerResponse,
   sequence: number,
   block: Record<string, unknown>,
-  model: string
+  model: string,
+  secondTool?: Record<string, unknown>
 ) {
   const tool = block.type === 'tool_use';
+  assert.ok(!secondTool || (tool && secondTool.type === 'tool_use'));
   response.writeHead(200, { 'content-type': 'text/event-stream' });
   const event = (type: string, value: Record<string, unknown>) =>
     response.write(`event: ${type}\ndata: ${JSON.stringify({ type, ...value })}\n\n`);
@@ -80,17 +103,19 @@ function emit(
       usage: { input_tokens: 30, output_tokens: 0 },
     },
   });
-  event('content_block_start', {
-    index: 0,
-    content_block: tool ? { ...block, input: {} } : { type: 'text', text: '' },
-  });
-  event('content_block_delta', {
-    index: 0,
-    delta: tool
-      ? { type: 'input_json_delta', partial_json: JSON.stringify(block.input) }
-      : { type: 'text_delta', text: block.text },
-  });
-  event('content_block_stop', { index: 0 });
+  for (const [index, current] of (secondTool ? [block, secondTool] : [block]).entries()) {
+    event('content_block_start', {
+      index,
+      content_block: tool ? { ...current, input: {} } : { type: 'text', text: '' },
+    });
+    event('content_block_delta', {
+      index,
+      delta: tool
+        ? { type: 'input_json_delta', partial_json: JSON.stringify(current.input) }
+        : { type: 'text_delta', text: current.text },
+    });
+    event('content_block_stop', { index });
+  }
   event('message_delta', {
     delta: { stop_reason: tool ? 'tool_use' : 'end_turn', stop_sequence: null },
     usage: { output_tokens: 20 },
@@ -103,6 +128,9 @@ export async function startProcessModel(options: {
   bashCommand(): string;
   services(): Promise<{ primary: Service; neighbor: Service }>;
   serviceLifecycle(role: 'primary' | 'neighbor'): Promise<Record<string, unknown>[]>;
+  /** Explicit schema2 TEST mode; default POSIX receipts keep their original assertions. */
+  windowsNaturalServices?: { originalWholeCleanup(): Promise<void> };
+  windowsScopedServices?: { originalScopedStop(role: 'primary' | 'neighbor'): Promise<void> };
 }): Promise<
   Model & {
     rawTurns: Record<string, unknown>[];
@@ -115,6 +143,7 @@ export async function startProcessModel(options: {
     }[];
   }
 > {
+  assert.ok(!options.windowsNaturalServices || !options.windowsScopedServices);
   const observations: Model['observations'] = [],
     failures: string[] = [];
   const rawTurns: Record<string, unknown>[] = [];
@@ -273,11 +302,35 @@ export async function startProcessModel(options: {
           originalServices,
           'original service identities were captured before registration'
         );
-        const completion = qualifyNativeServiceCompletion(
-          task.role,
-          originalServices[task.role],
-          await options.serviceLifecycle(task.role)
-        );
+        const lifecycle = await options.serviceLifecycle(task.role);
+        let completion: ReturnType<typeof qualifyNativeServiceCompletion>;
+        if (options.windowsScopedServices || (options.windowsNaturalServices && task.role === 'neighbor')) {
+          if (options.windowsScopedServices) await options.windowsScopedServices.originalScopedStop(task.role);
+          else await options.windowsNaturalServices!.originalWholeCleanup();
+          const service = originalServices[task.role];
+          assert.ok(lifecycle.length >= 1 && lifecycle.length <= 3);
+          assert.deepEqual(lifecycle.map(event => event.event), ['listening', 'closing', 'closed'].slice(0, lifecycle.length));
+          assert.ok(lifecycle.every(event => event.role === task.role && event.pid === service.pid));
+          assert.equal(lifecycle[0]!.ttlMs, 300_000);
+          if (lifecycle.length > 1) assert.equal(lifecycle[1]!.reason, 'SIGTERM');
+          if (lifecycle.length > 2) assert.equal(lifecycle[2]!.reason, 'SIGTERM');
+          // A closed SDK status is joined to the original scoped Stop or whole-Job proof.
+          // It never substitutes for the separate retained HANDLE observations.
+          const notification = /<status>(completed|failed|stopped)<\/status>\n<summary>Background command "Run one finite foreground TEST HTTP server as a native background task" ([^<\r\n]{1,96})<\/summary>/.exec(String(block.text));
+          assert.ok(notification);
+          const status = notification[1]!, ending = notification[2]!;
+          if (status === 'completed') assert.equal(ending, 'completed (exit code 0)');
+          else if (status === 'stopped') assert.equal(ending, 'was stopped');
+          else {
+            const exit = /^failed with exit code ([1-9][0-9]{0,9})$/.exec(ending);
+            assert.ok(exit && Number(exit[1]) <= 0xffffffff);
+          }
+          completion = { status, ending, servicePid: service.pid,
+            exitReason: options.windowsScopedServices ? 'original-service-scope' : 'original-whole-job' };
+        } else {
+          completion = qualifyNativeServiceCompletion(task.role, originalServices[task.role], lifecycle,
+            options.windowsNaturalServices ? 'windows-natural-services' : undefined);
+        }
         const { status, ending } = completion;
         const expected = `${wrapper.prefix}<task-notification>\n<task-id>${task.taskId}</task-id>\n<tool-use-id>${task.toolUseId}</tool-use-id>\n<output-file>${task.outputFile}</output-file>\n<status>${status}</status>\n<summary>Background command "Run one finite foreground TEST HTTP server as a native background task" ${ending}</summary>\n</task-notification>${wrapper.suffix}`;
         assert.equal(
@@ -336,6 +389,7 @@ export async function startProcessModel(options: {
         });
       }
       let action: { name: string; input: Record<string, unknown> } | undefined;
+      let secondTool: Record<string, unknown> | undefined;
       if (step < 2) {
         if (step === 0) assert.equal(results.length, 0);
         else assert.equal(last?.tool_use_id, 'TEST_process_tool_0');
@@ -350,7 +404,7 @@ export async function startProcessModel(options: {
         };
       } else if (step === 2) {
         assert.equal(last?.tool_use_id, 'TEST_process_tool_1');
-        const { primary, neighbor } = await options.services();
+        const { primary, neighbor } = await waitForNativeProcessServices(options.services);
         assert.notEqual(primary.pid, neighbor.pid);
         assert.equal(originalServices, undefined);
         originalServices = structuredClone({ primary, neighbor });
@@ -365,17 +419,40 @@ export async function startProcessModel(options: {
             command: 'TEST finite original native-owned service',
           },
         };
+        if (options.windowsScopedServices) secondTool = {
+          type: 'tool_use', id: 'TEST_process_tool_2_neighbor', name: registerTool,
+          input: { commandId: PROCESS_NEIGHBOR_REGISTER_ID, pid: neighbor.pid,
+            label: PROCESS_NEIGHBOR_LABEL, port: neighbor.port, url: neighbor.url,
+            command: 'TEST finite original native-owned neighbor service' },
+        };
+      } else if (options.windowsScopedServices) {
+        assert.ok(originalServices);
+        assert.deepEqual(results.map(result => result.tool_use_id).sort(),
+          ['TEST_process_tool_0', 'TEST_process_tool_1', 'TEST_process_tool_2', 'TEST_process_tool_2_neighbor']);
+        const refs = new Set<string>();
+        for (const role of ['primary', 'neighbor'] as const) {
+          const id = role === 'primary' ? 'TEST_process_tool_2' : 'TEST_process_tool_2_neighbor';
+          const result = results.find(value => value.tool_use_id === id)!;
+          assert.notEqual(result.is_error, true);
+          const receipt = nativeToolReceipt(result.content), view = record(receipt.result);
+          assert.equal(receipt.commandId, role === 'primary' ? PROCESS_REGISTER_ID : PROCESS_NEIGHBOR_REGISTER_ID);
+          assert.equal(receipt.operation, 'register'); assert.equal(receipt.phase, 'completed');
+          assert.equal(view.pid, originalServices[role].pid);
+          assert.equal(view.observation, 'unknown'); assert.equal(view.canTerminate, false);
+          assert.match(String(view.processRef), /^p1:/); refs.add(String(view.processRef));
+        }
+        assert.equal(refs.size, 2, 'Both actual MCP registrations have distinct original process references');
       } else {
         assert.equal(last?.tool_use_id, 'TEST_process_tool_2');
         const receipt = nativeToolReceipt(last?.content);
         assert.equal(receipt.commandId, PROCESS_REGISTER_ID);
         assert.equal(receipt.phase, 'completed');
         const result = record(receipt.result);
-        assert.equal(result.observation, 'same-live');
+        assert.equal(result.observation, options.windowsNaturalServices ? 'unknown' : 'same-live');
         assert.equal(
           result.canTerminate,
-          true,
-          'actual provider root permission/session qualification, no PID fallback'
+          !options.windowsNaturalServices,
+          'Windows initial receipt is conservative; the gate separately requires fresh native public list'
         );
         assert.match(String(result.processRef), /^p1:/);
       }
@@ -399,8 +476,11 @@ export async function startProcessModel(options: {
         step + 1,
         action
           ? { type: 'tool_use', id: `TEST_process_tool_${step}`, ...action }
-          : { type: 'text', text: 'TEST_NATIVE_REGISTERED_FOR_ORIGINAL_HUMAN_STOP' },
-        model
+          : { type: 'text', text: options.windowsNaturalServices
+              ? 'TEST_NATIVE_REGISTERED_FOR_NATURAL_COMPLETION'
+              : 'TEST_NATIVE_REGISTERED_FOR_ORIGINAL_HUMAN_STOP' },
+        model,
+        secondTool
       );
     })().catch((error) => {
       failures.push(error instanceof Error ? error.message : 'oracle rejected');

@@ -67,8 +67,21 @@ export class TeamRosterTransitions {
   capturedMemberCurrent(principalId: string, expectedRevision: string, expected: Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings' | 'delivery'>, savedSettings?: OwnerState['savedSettings']): boolean {
     return this.options.store.fenced(() => {
       this.options.authorize(principalId, 'read');
-      const state = this.options.state(); this.validate(state);
-      return nativeRosterSuccessor(state, expectedRevision, expected, savedSettings);
+      return this.capturedMemberCurrentInState(this.options.state(), expectedRevision, expected, savedSettings);
+    });
+  }
+
+  /** Private TeamOwner composition: never accepts a state from an external command. */
+  capturedMemberCurrentInState(state: OwnerState, expectedRevision: string, expected: Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings' | 'delivery'> | undefined, savedSettings?: OwnerState['savedSettings']): boolean {
+    this.validate(state);
+    return !!expected && nativeRosterSuccessor(state, expectedRevision, expected, savedSettings);
+  }
+
+  matchesCaptured(members: readonly Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings'>[], savedSettings?: OwnerState['savedSettings']): boolean {
+    return this.options.store.fenced(() => {
+      const state = this.options.state();
+      return teamRosterRevision(state.members, state.rosterVersion, state.savedSettings) ===
+        teamRosterRevision(members, 0, savedSettings);
     });
   }
 

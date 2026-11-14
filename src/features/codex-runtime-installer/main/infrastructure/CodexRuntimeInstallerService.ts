@@ -757,6 +757,7 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
       await atomicWriteAsync(getCurrentManifestPath(), `${JSON.stringify(manifest, null, 2)}\n`, {
         durability: 'strict',
         syncDirectory: true,
+        ...(captured ? { beforeCommit: async () => captured.assertCurrent() } : {}),
       });
 
       if (captured) {

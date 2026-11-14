@@ -16,7 +16,7 @@ import { createDesktopHostSchedules } from '@main/composition/createDesktopHostS
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { SchedulerService } from '@main/services/schedule/SchedulerService';
 import { SelectedScheduleDispatcher } from '@main/services/schedule/SelectedScheduleDispatcher';
-import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { getSchedulesBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import type { TeamHostProfile } from '@agent-teams/legacy-agent-host/team-host';
@@ -165,6 +165,17 @@ it('carries a lost task-create acknowledgement through cold context renewal unti
   const rebound = await f.scheduler.updateSchedule(schedule.id, { label: 'TEST renewed context' }, await f.capture());
   expect(rebound.hostTarget).toEqual({ ...schedule.hostTarget, contextId: 'TEST-A2' });
   f.switchForeground('TEST-B');
+  const historyPath = join(getSchedulesBasePath(), 'runs', `${schedule.id}.json`);
+  const originalHistory = await readFile(historyPath, 'utf8');
+  const damagedHistory = originalHistory.slice(0, -1);
+  await writeFile(historyPath, damagedHistory);
+  // An unreadable pending receipt is not an empty history: admission must stop
+  // before overwriting it or creating another task after the lost response.
+  await expect(f.scheduler.triggerNow(schedule.id)).rejects.toBeInstanceOf(SyntaxError);
+  expect(await readFile(historyPath, 'utf8')).toBe(damagedHistory);
+  expect(await f.snapshot()).toMatchObject({ ok: true, value: { tasks: [expect.any(Object)] } });
+  expect(await f.snapshot('TEST-handle-1')).toMatchObject({ ok: true, value: { tasks: [] } });
+  await writeFile(historyPath, originalHistory);
   await f.scheduler.triggerNow(schedule.id);
   const recovered = await f.waitRun(schedule.id, row => row.id !== first.id && row.status === 'skipped');
   expect(recovered.linkedTaskId).toBeTruthy();
@@ -195,6 +206,44 @@ it('carries a lost task-create acknowledgement through cold context renewal unti
   if (!completed.ok || !completed.value || !('tasks' in completed.value)) throw new Error('TEST task read unavailable');
   expect(completed.value.tasks).toHaveLength(2);
   expect(await f.snapshot('TEST-handle-1')).toMatchObject({ ok: true, value: { tasks: [] } });
+}, 20000);
+
+it('keeps a damaged schedule closed while another captured team recovers and runs its real cron', async () => {
+  const f = await fixture();
+  const damaged = await f.scheduler.createSchedule(f.input(), await f.capture());
+  await f.scheduler.triggerNow(damaged.id);
+  const original = await f.waitRun(damaged.id, row => row.status === 'skipped' && Boolean(row.linkedTaskId));
+  const neighborTeam = hostTeamSelectionKey('TEST-handle-1');
+  f.switchForeground('TEST-B');
+  const neighbor = await f.scheduler.createSchedule({ ...f.input(), teamName: neighborTeam },
+    await f.host.capture({} as IpcMainInvokeEvent, neighborTeam));
+  await f.scheduler.stop();
+  const retainedSchedule = { ...(await f.scheduler.getSchedule(damaged.id))!, cronExpression: '*/1 * * * * *' };
+  await f.repository.saveSchedule(retainedSchedule);
+  await f.repository.saveSchedule({ ...neighbor, cronExpression: '*/1 * * * * *' });
+  const interrupted: ScheduleRun = { id: 'TEST-neighbor-interrupted', scheduleId: neighbor.id,
+    teamName: neighbor.teamName, hostTarget: neighbor.hostTarget, status: 'running',
+    scheduledFor: new Date().toISOString(), retryCount: 0 };
+  await f.repository.saveRun(interrupted);
+  const historyPath = join(getSchedulesBasePath(), 'runs', `${damaged.id}.json`);
+  const damagedBytes = (await readFile(historyPath, 'utf8')).slice(0, -1);
+  await writeFile(historyPath, damagedBytes);
+
+  await f.restart();
+  expect(console.warn).toHaveBeenCalledExactlyOnceWith('[Service:SchedulerRecovery]',
+    expect.stringContaining(`Failed to recover schedule ${damaged.id}:`));
+  vi.mocked(console.warn).mockClear();
+  const neighborRun = await f.waitRun(neighbor.id, row => row.status === 'skipped' && Boolean(row.linkedTaskId));
+  await f.scheduler.pauseSchedule(neighbor.id);
+  expect((await f.repository.listRuns(neighbor.id)).find(row => row.id === interrupted.id))
+    .toMatchObject({ ...interrupted, status: 'failed_interrupted', error: 'Interrupted by app restart' });
+  expect(await f.snapshot('TEST-handle-1')).toMatchObject({ ok: true, value: {
+    tasks: [{ id: neighborRun.linkedTaskId, status: 'pending', owner: 'team-lead' }] } });
+  await expect(f.scheduler.triggerNow(damaged.id)).rejects.toBeInstanceOf(SyntaxError);
+  expect(await readFile(historyPath, 'utf8')).toBe(damagedBytes);
+  expect(await f.scheduler.getSchedule(damaged.id)).toEqual(retainedSchedule);
+  expect(await f.snapshot()).toMatchObject({ ok: true, value: {
+    tasks: [{ id: original.linkedTaskId, status: 'pending', owner: 'team-lead' }] } });
 }, 20000);
 
 it('runs the actual cron against the captured team and keeps an unavailable launch quiet and recoverable', async () => {

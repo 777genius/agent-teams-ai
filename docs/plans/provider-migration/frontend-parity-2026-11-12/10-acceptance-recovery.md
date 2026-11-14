@@ -1399,6 +1399,66 @@ These annotations do not emit runtime code, suppress an error, weaken an asserti
 
 Root and an independent peer check the two exact annotations and branch-specific preimages before source publication. The existing scripts typecheck and original affected CI lanes must pass on the new coherent head. The executor is currently unavailable; source review is not a compiler/native PASS. Publish the reviewed correction normally without cancelling or rerunning the still-active native matrix.
 
+
+**Concurrent audit provenance (2026-11-13):** The appendices below retain the independently published additions from `f0d275e6ee8ed5072ec393a9c714f4b8f519e8c8` and base `e29dbde300ea73ec4e46e5f57f9e007ca5473552`. Their original section numbers, titles, source references and qualification limits are preserved; repeated numbers refer to the distinct titled audits, not to a replacement or a combined acceptance result.
+
+## 30. Work-sync nudge: actual session tool names and argument schemas
+
+### Round 1 — existing contracts and the disproved alias suspicion
+
+At d714028e7202a0aea911c99745b5214c14a2aa65, Host src/mcp/tools.ts registers
+task_complete through its existing fixed-action loop. The actual pinned
+Claude SDK / Node TEST peer also observed that tool in listTools. The alias
+exists and remains unchanged. The separate TEST task-list failure was a
+fixture reading description from the compact inventory, not a missing tool.
+
+The shared policy's domain and task-repair templates hardcode the legacy
+mcp__agent-teams__ prefix; Host exposes the existing team server. The domain
+templates also demand teamName/memberName arguments. Legacy
+mcp-server/src/tools/workSyncTools.ts requires teamName and accepts memberName.
+Host src/mcp/workSyncTools.ts instead declares strict actor-bound schemas:
+status accepts commandId and optional forceNudge; report accepts commandId,
+state, original fingerprint/token and bounded report fields. Neither accepts
+a public actor or Team selector. Sending the legacy selector fields is rejected
+by the actual Host boundary.
+
+### Round 2 — six wording substitutions in the existing owner
+
+Change only the existing MemberWorkSyncNudge.ts and
+MemberWorkSyncNudgeOutboxPlanner.ts under
+packages/legacy-agent-host/src/work-sync/policy/core, plus their existing
+domain/invariant cases. Frontend already re-exports this policy.
+
+Three prefix sentences now require the exact exposed tool names and argument
+schemas, preserve any server prefix, and include commandId when required.
+The agenda retains its ban on filesystem/resource discovery before the first
+direct tool attempt. Two status/report instructions retain the original order
+and returned agendaFingerprint/reportToken, while making each legacy selector
+conditional on that field being declared in the individual tool's schema.
+The memberName warning has the same condition. This preserves exact original
+team/member values for legacy schemas without admitting them to Host schemas.
+
+Keep comment → task_complete → status → report order, task IDs, authority,
+payload hashing, admission tickets, intent identity, recovery leases and
+scheduler behavior. New rendered text uses the existing payload-hash/refresh
+path; no retained durable row is edited. No schema relaxation, provider branch,
+new helper or alias change is introduced.
+
+### Round 3 — independent review and verification boundary
+
+Independent pr_chain review found no blocker and tightened the selector wording
+so independently optional fields are included only when each is declared.
+Existing domain cases now reject either hardcoded prefix and assert conditional
+legacy values; the existing planner invariant checks the recovery payload along
+with its original no-repeat/identity assertions.
+
+The executor became unavailable after a separately observed kernel OOM before
+these source edits could be applied or tested locally. The patch is reconstructed
+against the exact GitHub d714 blobs with unique replacement checks. Targeted
+domain/invariant suites, lint/types and current CI remain required; source
+review is not an execution PASS. Finite emulation does not establish that an
+arbitrary model obeyed the prose or qualify a real vendor CLI.
+
 ## 30. Existing offline-runtime tests must assert their intentional warnings
 
 ### Review 1 — actual root-shard failure and unchanged product behavior
@@ -1459,6 +1519,16 @@ Add the explicit Row[] annotation to exactly the reported replies declaration in
 ### Review 3 — existing gates
 
 Root publishes this plan before the source. Independent source review verifies that the only emitted-code-neutral delta is the two Row[] annotations. The unchanged pinned script type project and existing packaged/ordinary Desktop CI lanes remain required; source review does not qualify their execution. No workflow, runner, retry or budget change belongs to this correction.
+
+
+---
+
+## Incoming base history preserved at 0543d437
+
+The following append-only entries are retained verbatim from base
+`0543d437695318f0157e6d600d76abdce5c51e8e`. Their original section numbers
+refer to that branch history; they do not renumber or replace the completion
+branch entries above. Current integration is governed by plan 12.
 
 ## §33 — read the original public Windows runtime archive through its release URL
 

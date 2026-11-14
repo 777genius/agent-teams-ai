@@ -109,7 +109,7 @@ function createTarball(entries: { name: string; data: string }[]): Buffer {
   );
 }
 
-function createRuntimePackage(marker: 'A' | 'B') {
+function createRuntimePackage(marker: 'A' | 'B' | 'C') {
   const selected = getCodexRuntimePlatformCandidates()[0];
   const suffix = process.platform === 'win32' ? '.exe' : '';
   const files = [
@@ -367,8 +367,130 @@ describe('CodexRuntimeInstallerService resolver', () => {
       expect(sources.publish).toHaveBeenCalledTimes(1);
       expect(thirdFetch).toHaveBeenCalledTimes(3);
       expect(execCliMock).toHaveBeenCalledTimes(3);
+
+      const acceptedPath = resolveAppManagedCodexRuntimeBinaryPath();
+      if (!acceptedPath) throw new Error('TEST accepted package has no binary path');
+      const acceptedSnapshot = await snapshotRuntimePackage(acceptedPath, secondPackage.files);
+      const acceptedSource = await sources.current();
+      const progressBeforeFailure = progress.length;
+      const thirdPackage = createRuntimePackage('C');
+      const fourthFetch = stubPackageDownload(
+        new Response(new Uint8Array(thirdPackage.tarball)),
+        thirdPackage.tarball
+      );
+      vi.mocked(sources.publish).mockRejectedValueOnce(
+        new Error('TEST original publication unknown')
+      );
+      await expect(installer.install(capture())).rejects.toThrow(
+        'Codex selection could not be confirmed. The previous runtime is retained.'
+      );
+      expect(await sources.current()).toEqual(acceptedSource);
+      expect(progress.at(-1)).toMatchObject({
+        state: 'failed',
+        progress: { phase: 'failed' },
+        sourceRevision: final.sourceRevision,
+      });
+      expect(
+        progress
+          .slice(progressBeforeFailure)
+          .some((value) => value.state === 'ready' || value.progress?.phase === 'ready')
+      ).toBe(false);
+      const unacceptedPath = resolveAppManagedCodexRuntimeBinaryPath();
+      if (!unacceptedPath) throw new Error('TEST installed but unaccepted package was lost');
+      expect(unacceptedPath).not.toBe(acceptedPath);
+      expect(
+        (await snapshotRuntimePackage(unacceptedPath, thirdPackage.files)).files.map(
+          ({ bytes }) => bytes
+        )
+      ).toEqual(thirdPackage.files.map(({ data }) => data));
+      expect(await snapshotRuntimePackage(acceptedPath, secondPackage.files)).toEqual(
+        acceptedSnapshot
+      );
+      expect(await snapshotRuntimePackage(repaired.binaryPath, secondPackage.files)).toEqual(
+        secondSnapshot
+      );
+      expect(await snapshotRuntimePackage(status.binaryPath, firstPackage.files)).toEqual(
+        firstSnapshot
+      );
+      expect(sources.publish).toHaveBeenCalledTimes(2);
+      expect(fourthFetch).toHaveBeenCalledTimes(3);
+      expect(execCliMock).toHaveBeenCalledTimes(4);
     }
   );
+
+  it('retains a superseding manifest written while the captured publication is staging', async () => {
+    const firstPackage = createRuntimePackage('A');
+    stubPackageDownload(new Response(new Uint8Array(firstPackage.tarball)), firstPackage.tarball);
+    const native = new CodexRuntimeInstallerService();
+    const first = await native.install();
+    expect(first.state).toBe('ready');
+    if (!first.binaryPath) throw new Error('TEST original package has no binary path');
+    const original = await snapshotRuntimePackage(first.binaryPath, firstPackage.files);
+    const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'codex');
+    const manifestPath = path.join(runtimeRoot, 'current.json');
+    const superseding = `${JSON.stringify(
+      {
+        ...JSON.parse(await fs.readFile(manifestPath, 'utf8')),
+        installedAt: 'TEST superseding manifest',
+      },
+      null,
+      2
+    )}\n`;
+    let manifest = captureAppManagedCodexRuntime();
+    const acceptAcquired = vi.fn((value: typeof manifest) => {
+      manifest = value;
+    });
+    const onProgress = vi.fn<(status: CodexRuntimeStatus) => void>();
+    const secondPackage = createRuntimePackage('B');
+    const fetch = stubPackageDownload(
+      new Response(new Uint8Array(secondPackage.tarball)),
+      secondPackage.tarball
+    );
+    const originalWrite = fs.writeFile;
+    let replaced = false;
+    // Finish the real temporary write, then let another authority replace the
+    // current pointer before the installer can publish its staged manifest.
+    const write = vi.spyOn(fs, 'writeFile').mockImplementation(async (...args) => {
+      await originalWrite(...args);
+      if (
+        !replaced &&
+        typeof args[0] === 'string' &&
+        path.dirname(args[0]) === runtimeRoot &&
+        path.basename(args[0]).startsWith('.tmp.')
+      ) {
+        replaced = true;
+        await originalWrite(manifestPath, superseding);
+      }
+    });
+    try {
+      await expect(
+        native.installCaptured({
+          assertCurrent: () => manifest.assertCurrent(),
+          acceptAcquired,
+          onProgress,
+        })
+      ).rejects.toThrow(
+        'The original Codex executable or installation changed during verification.'
+      );
+    } finally {
+      write.mockRestore();
+    }
+    expect(replaced).toBe(true);
+    expect(await fs.readFile(manifestPath, 'utf8')).toBe(superseding);
+    expect(resolveAppManagedCodexRuntimeBinaryPath()).toBe(first.binaryPath);
+    expect(await snapshotRuntimePackage(first.binaryPath, firstPackage.files)).toEqual(original);
+    expect(acceptAcquired).not.toHaveBeenCalled();
+    expect(
+      onProgress.mock.calls.some(
+        ([status]) => status.state === 'ready' || status.progress?.phase === 'ready'
+      )
+    ).toBe(false);
+    expect(
+      (await fs.readdir(runtimeRoot)).filter((name) => /^(installing-|\.tmp\.)/.test(name))
+    ).toEqual([]);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
 
   it.each(['verification', 'manifest-before-commit', 'manifest-after-commit'] as const)(
     'retains the original full package after %s failure without rolling back publication',

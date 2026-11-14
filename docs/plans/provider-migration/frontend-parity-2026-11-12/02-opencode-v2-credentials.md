@@ -531,6 +531,100 @@ Native journey включает обычную публикацию runtime sour
 fast lint и source cap — PASS; совместная root-проверка credentials + async source selection: 37/37 PASS.
 Это source/controlled proof; новый actual native Host/Desktop результат должен дать штатный CI.
 
+## 2026-11-13: native directory with an implicit same-ID integration
+
+The allowed native 2.1.4 credential scenario on source `96bb78f` failed before
+any credential/model effect: the configured `TEST-local` provider was present,
+but Host returned `authMethods: []`. A separate read-only query through its
+original owned OpenCode metadata process confirmed that `/api/provider` omits
+`integrationID` for this configured provider while `/api/integration` declares
+the exact same `TEST-local` ID with a plain `key` method. The diagnostic closed
+the original owner and confirmed the original PID absent.
+
+Bounded correction, for independent review before implementation: preserve an
+explicit native integration ID; only when that field is absent, resolve the
+provider's exact ID against the same owned directory's integrations. Apply the
+same selection to passive directory projection, explicit key operations and
+captured session credentials. An explicit missing/different link must not fall
+back to another integration. No heuristic name matching, fabricated auth method,
+new credential store, or automatic key retry is introduced. The existing native
+plain-key check, original intent, account binding, byte limits and cleanup remain
+authoritative. Expected production delta: three selection expressions, under 20
+lines across two existing adapters.
+
+Acceptance uses the original failing native credential scenario: rejected key,
+explicit correction, source revision, lost ACK, cold lookup, later saved-key
+probe, retained unknown intent and preserved foreign auth. Its result is separate
+from emulator and Desktop evidence. The native model-probe scenario also needs
+its strict expected catalog to include the exact safe variant IDs added by P05;
+the observed low/medium/high and high sets must be compared exactly.
+
+The same-ID correction passed the 13 focused credential/configuration/recovery
+checks and the native journey now reaches the original HTTP 401 rejection.
+At the next source-publication observation, the test must retain exactly two
+metadata owners: original profile A and new profile B. The existing coordinator
+explicitly keeps its V2 hosts by immutable profile ID; publishing B does not
+replace A. Record A's original PID before publication, require it still present
+among the two afterwards, and retain both original-image and final PID-absence
+checks. Independent provider review confirmed this census correction; it is not
+a production cleanup change or permission to accept an arbitrary process count.
+
+Native model-probe evidence on `26043bb687700046d4cad189707ce0d09c9d8b83`
+completed the two selected-model requests and original cancellation without a
+replay, then failed while observing the refused variant. This remains
+INCOMPLETE. Preserve the original Host exit code, signal and diagnostic byte
+count in its receipt even when cleanup throws, so a subsequent exact-source
+run can diagnose that failure. No timeout, production behavior or success
+assertion is relaxed.
+
+On exact source `b4641f456271b6c9d254bbdebc9bbc9143c0b469`, the native model
+probe completed all seven required steps, including both selected models,
+unknown-variant refusal, cancellation, passive catalog and cold no-replay.
+Both original Hosts exited zero and cleanup was confirmed. The credential
+journey remains INCOMPLETE: the original native database contains the expected
+401, `session.execution.failed` and failed idle message, but the Host retained
+`probe-intent` with unknown cleanup. Its original Host exited 1 without a signal;
+the kernel OOM counter did not increase during that run.
+
+For the next diagnosis, reuse the existing passive diagnostic import and
+allowlisted receipt projection from the model-probe fixture in the credential
+fixture. Preserve each original Host's exit/signal/diagnostic-byte facts even
+when close throws. This adds no native request, owner, retry, deadline or new
+diagnostic framework. Provider-owner independent review approved the bounded
+reuse and original-handle cleanup. A verified copy of the same engine may use
+the original temporary-memory location to distinguish filesystem contention;
+the manifest and installed provider digests remain mandatory. Native rejection,
+exact request counts and physical cleanup assertions remain unchanged.
+
+## 2026-11-13: exact-source native credential acceptance on `e7c6f4b1`
+
+The original credential scenario passed on clean source
+`e7c6f4b1ec758541738724425d2556a1558c8397` with freshly rebuilt Host/ledger,
+Node 24.21.0, the original OpenCode 2.1.4 engine, pinned Bun 1.3.11 and checked
+provider archive `68dca527`. The original installed-file census verified local
+provider/contracts copies against the selected archives before execution.
+No real Codex or Claude Code process was executed.
+
+The [complete receipt](../evidence/frontend-parity-e7c6-v2-credentials.json)
+has SHA-256 `1f178e850809da0c8d9fab1d29280478bbc6c80eaecb9fb5b6a3c7f2681f5ffe`.
+It records all seven original journey steps: passive directory, rejected key,
+source revision, explicit corrected key with lost acknowledgement, cold saved-key
+Check, retained unknown intent without replay, and isolated native databases
+with foreign auth preserved. Exactly four localhost model requests occurred;
+the final request intentionally timed out and remained unknown. Three native
+credential rows were retained. All four original Hosts exited zero, every
+observed native process was absent, and cleanup succeeded. The run took
+174.55 seconds; kernel OOM count remained 83 → 83.
+
+The existing bounded diagnostic collector is now owned by each original Host
+lifetime instead of sharing one early-exhausted buffer across four Hosts.
+Epochs retained 194/122/256/25 rows; epoch 3 reached its unchanged trace limit.
+Those bounded diagnostics do not replace the original owner exit, no-replay,
+database or cleanup assertions. Earlier failed receipts remain failed; this
+successful exact-source repeat does not prove the cause of the older local
+cleanup failure. No deadline, retry, effect count or oracle was relaxed.
+The result qualifies this native localhost credential journey, not vendor
+authentication, Desktop interaction, other OS tuples or release readiness.
 ### R8 — V2 readiness must join the original native credential instead of requiring a copied key
 
 #### Exact current regression and scope
@@ -874,4 +968,3 @@ ModelProbeOwner's NativeModelProbe interface, commandRecords' optional private c
 ### Existing tests and qualification
 
 Extend the already scoped existing model-probe and saved-team-model-probe cases to distinguish completed local readiness, exact scoped native ordinary, unscoped Settings ordinary, absent/foreign/structurally copied proof, unknown release and late result. Assert public omission, exact unchanged initial request/fingerprint/scope/cutoff, conditional preparationDigest commitment, after-close file drift, and actual future native scope mismatch before business allocation. Retain the complete frozen B2 duplicate/replay-cutoff and cleanup assertions. Existing configuration/credential cases retain R8/§3d/R9 branches. No new test suite, timer, HTTP request, inference or native lane is introduced by this composition amendment. Genuine native cases and their original request arithmetic remain those of R10.9. Source review and synthetic tests cannot qualify the actual engine or packaged application.
-

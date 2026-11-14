@@ -2,6 +2,7 @@
 import { spawn } from 'node:child_process';
 import { verifyMacSigningPreflight } from './mac-signing-preflight.mts';
 import { stageManagedGit } from '../stage-managed-git.mjs';
+import { stageLinuxNodeExec } from '../build/buildLinuxNodeExec.mjs';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -85,6 +86,8 @@ async function runRendererBundleGuard() {
 }
 
 async function runElectronBuilder(args) {
+  if (resolveManagedGitTarget(args, process.platform, process.arch) === 'linux-x64')
+    stageLinuxNodeExec();
   const cliPath = require.resolve('electron-builder/cli.js');
   await runWithPackagingRetry(() => runElectronBuilderOnce(cliPath, args));
 }

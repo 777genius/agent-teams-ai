@@ -3,7 +3,12 @@ import { test } from 'node:test';
 import { EventEmitter } from 'node:events';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
 import childProcess from 'node:child_process';
+import fs from 'node:fs';
+import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
 import {
+  assertDesktopProofEnvironment,
+  assertNoNativeHostChildren,
+  assertOwnedCdpListener,
   groupMembers,
   isCapturedOriginalNodeZombie,
   processTable,
@@ -11,8 +16,256 @@ import {
   observeExitedAppGroup,
   observeOriginalAppReap,
   readRendererBackendConnections,
+  readOwnedCdpListenerFailure,
   settledGroupMembers,
 } from './desktop-backend-observations.ts';
+
+test('offline Desktop admission refuses inherited native selections before preparing a fixture', (t) => {
+  const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith('LEGACY_DESKTOP_')));
+  const controlledKeys = ['LEGACY_PROCESS_COLD_UI_GO', 'LEGACY_M19_PROVIDER_UI_GO', 'LEGACY_M19_ORIGINAL_HOST_CRASH_GO'];
+  const controlledOriginal = Object.fromEntries(controlledKeys.filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]]));
+  for (const key of Object.keys(original)) delete process.env[key];
+  for (const key of controlledKeys) delete process.env[key];
+  t.after(() => {
+    for (const key of Object.keys(process.env)) if (key.startsWith('LEGACY_DESKTOP_')) delete process.env[key];
+    for (const key of controlledKeys) delete process.env[key];
+    Object.assign(process.env, original);
+    Object.assign(process.env, controlledOriginal);
+  });
+  Object.assign(process.env, { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+    LEGACY_DESKTOP_TEST_DISPLAY: ':97', LEGACY_DESKTOP_TEST_XAUTHORITY: '/TEST/Xauthority' });
+  for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui', 'emulated-codex-login-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-opencode-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui', 'review-ui', 'review-readback-ui']) {
+    process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
+    if (process.platform === 'darwin' || process.platform === 'linux' && process.arch === 'x64')
+      assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
+    else assert.throws(() => assertDesktopProofEnvironment(false), /Linux Desktop portability/);
+  }
+  for (const mode of ['native-launch-ui', 'codex-login-ui', 'process-cold-ui', 'bridge-diagnostics', 'native-review-ui', 'native-review-readback-ui', 'native-readback-ui']) {
+    process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
+    assert.throws(() => assertDesktopProofEnvironment(true), /only the original offline/);
+  }
+  process.env.LEGACY_DESKTOP_PROOF_MODE = 'team-ui';
+  for (const key of ['LEGACY_DESKTOP_CLAUDE_PATH', 'LEGACY_DESKTOP_CODEX_PATH',
+    'LEGACY_DESKTOP_OPENCODE_PATH', 'LEGACY_DESKTOP_OPENCODE_GENERATION',
+    'LEGACY_DESKTOP_DIAGNOSTIC_HOST_ENTRY', 'LEGACY_DESKTOP_SCHEDULE_UI',
+    'LEGACY_DESKTOP_READBACK_ROOT', 'LEGACY_DESKTOP_READBACK_RECEIPT_SHA256']) {
+    process.env[key] = 'TEST-refused';
+    assert.throws(() => assertDesktopProofEnvironment(true), new RegExp(`provider-emulation refuses ${key}`));
+    delete process.env[key];
+  }
+  process.env.LEGACY_DESKTOP_PROOF_MODE = 'process-cold-ui';
+  process.env.LEGACY_PROCESS_COLD_UI_GO = '1';
+  process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH = '/TEST-process-inputs/capture.json';
+  process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 = 'a'.repeat(64);
+  if (process.platform === 'linux' && process.arch === 'x64') {
+    assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
+    process.env.LEGACY_M19_PROVIDER_UI_GO = '1';
+    assert.throws(() => assertDesktopProofEnvironment(false));
+    delete process.env.LEGACY_M19_PROVIDER_UI_GO;
+    process.env.LEGACY_DESKTOP_CLAUDE_PATH = '/TEST-no-vendor';
+    assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_CLAUDE_PATH/);
+    delete process.env.LEGACY_DESKTOP_CLAUDE_PATH;
+  } else assert.throws(() => assertDesktopProofEnvironment(false));
+  process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 = 'invalid';
+  assert.throws(() => assertDesktopProofEnvironment(false), /only the original offline/);
+  process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 = 'a'.repeat(64);
+  process.env.LEGACY_DESKTOP_PROOF_MODE = 'team-ui';
+  assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_PROCESS_CAPTURE_PATH/);
+  delete process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH;
+  delete process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256;
+  delete process.env.LEGACY_PROCESS_COLD_UI_GO;
+  process.env.LEGACY_DESKTOP_PROOF_MODE = 'review-readback-ui';
+  process.env.LEGACY_DESKTOP_READBACK_ROOT = '/TEST/TEST-desktop-backend-abc123';
+  process.env.LEGACY_DESKTOP_READBACK_RECEIPT_SHA256 = 'a'.repeat(64);
+  if (process.platform === 'darwin' || process.platform === 'linux' && process.arch === 'x64')
+    assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
+  process.env.LEGACY_DESKTOP_READBACK_ATTEMPT_ID = 'abc123';
+  assert.throws(() => assertDesktopProofEnvironment(true), /provider-emulation refuses LEGACY_DESKTOP_READBACK_ATTEMPT_ID/);
+  delete process.env.LEGACY_DESKTOP_READBACK_ATTEMPT_ID;
+  process.env.LEGACY_DESKTOP_PROOF_MODE = 'review-ui';
+  assert.throws(() => assertDesktopProofEnvironment(true), /provider-emulation refuses LEGACY_DESKTOP_READBACK_ROOT/);
+  process.env.LEGACY_DESKTOP_EMULATED_ONLY = 'false';
+  assert.throws(() => assertDesktopProofEnvironment(true), /explicit provider-emulation admission/);
+});
+
+test('TEST management admission retains only the exact direct detached Host peer without signaling', (t) => {
+  const fixture = { node: '/TEST/node', hostEntry: '/TEST/host.js' };
+  const peer = { command: '/TEST/node /TEST/peer.ts serve --hostname 127.0.0.1 --port 12345', observedPeerPids: [] as number[] };
+  let peerCommand = peer.command, peerGroup = 4200;
+  t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[]) => {
+    if (file === (process.platform === 'linux' ? '/usr/bin/lsof' : '/usr/sbin/lsof')) return process.platform === 'linux'
+      ? 'p4100\nf61\ntIPv4\nD0xabcd\ni12345\nPTCP\nTST=LISTEN\nn127.0.0.1:9222\n' : '4100\n';
+    assert.equal(file, '/bin/ps');
+    if (args[0] === '-ax') return `4100 4000 4100\n4101 4100 4100\n4200 4101 ${peerGroup}\n`;
+    assert.equal(args[0], '-p');
+    return args[1] === '4101' ? `${fixture.node} ${fixture.hostEntry}` : args[1] === '4200' ? peerCommand : '/TEST/electron';
+  });
+  t.mock.method(process, 'kill', () => assert.fail('observation never signals or adopts a PID'));
+  syncBuiltinESMExports();
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  assert.doesNotThrow(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer));
+  assert.deepEqual(peer.observedPeerPids, [4200]);
+  assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read'), /never allocates/);
+  peerGroup = 4100;
+  assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer), /own POSIX process group/);
+  peerGroup = 4200; peerCommand += ' --unselected';
+  assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer), /pinned direct Node/);
+  assert.deepEqual(peer.observedPeerPids, [4200]);
+});
+
+test('Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder', { skip: process.platform !== 'linux' }, (t) => {
+  const fields = (fd: number) => `f${fd}\ntIPv4\nD0xabcd\ni12345\nPTCP\nTST=LISTEN\nnPRIVATE_PATH_MUST_NOT_LEAK\n`;
+  let output = 'p4100\n' + Array.from({ length: 17 }, (_, index) => fields(index + 1)).join('') + 'p4101\n' + fields(40);
+  let reads = 0;
+  let change: 'none' | 'replaced' | 'vanished' = 'none';
+  const statReads = new Map<number, number>(), opened = new Map<number, string>();
+  const procReads: string[] = [];
+  let nextFd = 9000;
+  let comparison: 'off' | 'exact' | 'other-argv' | 'builder' | 'other-builder' |
+    'builder-duplicate-output' | 'builder-empty-output' | 'builder-no-expectation' |
+    'missing-flags' | 'duplicate-flags' | 'reused-birth' | 'changed-socket' = 'off';
+  let comparing = false;
+  const links = new Map<number, number>();
+  const fixture = { node: '/PRIVATE_FIXED/node', hostEntry: '/PRIVATE_FIXED/cli.js',
+    mcpBuilderEntry: '/PRIVATE_FIXED/tsup-cli-default.js' };
+  t.mock.method(fs, 'openSync', (path: string) => {
+    assert.match(path, /^\/proc\/(4100|4101)\/(stat|cmdline|fdinfo\/61)$/u);
+    const fd = nextFd++; opened.set(fd, path); return fd;
+  });
+  t.mock.method(fs, 'readSync', (fd: number, buffer: Buffer, offset: number, length: number, position: number) => {
+    const path = opened.get(fd)!; procReads.push(path);
+    assert.equal(position, 0); assert.equal(length, 4097, '4KiB plus one oversize sentinel byte');
+    const pid = Number(path.split('/')[2]);
+    let value: string;
+    if (path.endsWith('/stat')) {
+      const count = (statReads.get(pid) ?? 0) + 1; statReads.set(pid, count);
+      if (pid === 4101 && count === 3 && change === 'vanished') throw new Error('PRIVATE_VANISHED');
+      const stat = Array<string>(20).fill('0');
+      stat[0] = 'S'; stat[1] = String(pid === 4100 ? 4000 : 4100); stat[2] = '4100';
+      stat[19] = pid === 4101 && ((count === 3 && change === 'replaced') ||
+        (comparing && comparison === 'reused-birth' && count >= 5)) ? '200' : '100';
+      value = `${pid} (PRIVATE_COMM_MUST_NOT_LEAK) ${stat.join(' ')}\n`;
+    } else if (path.includes('/fdinfo/')) {
+      value = comparison === 'missing-flags' ? 'pos:\t0\n' :
+        comparison === 'duplicate-flags' ? 'flags:\t02002\nflags:\t02002002\n' :
+        `flags:\t${pid === 4100 ? '02002002' : '02002'}\n`;
+    } else if (comparison !== 'off' && pid === 4101) {
+      if (comparison.includes('builder')) {
+        const entry = comparison === 'other-builder' ? '/PRIVATE_OTHER/cli-default.js' : fixture.mcpBuilderEntry;
+        const output = comparison === 'builder-empty-output' ? '' :
+          comparison === 'builder-duplicate-output' ? '--out-dir' : '/PRIVATE_OUTPUT';
+        value = fixture.node + '\0' + entry + '\0--out-dir\0' + output + '\0';
+      } else value = fixture.node + '\0' + fixture.hostEntry + '\0' +
+        (comparison === 'other-argv' ? '--PRIVATE_EXTRA\0' : '');
+    } else value = '/PRIVATE_EXECUTABLE/electron\0' +
+      (pid === 4101 ? '--type=zygote\0' : '') + '--PRIVATE_ARGUMENT_MUST_NOT_LEAK\0';
+    return Buffer.from(value).copy(buffer, offset, 0, length);
+  });
+  t.mock.method(fs, 'closeSync', (fd: number) => { assert.ok(opened.delete(fd)); });
+  t.mock.method(fs, 'readlinkSync', (path: string) => {
+    assert.match(path, /^\/proc\/(4100|4101)\/(fd\/61|exe)$/u);
+    procReads.push(path);
+    const pid = Number(path.split('/')[2]);
+    if (path.endsWith('/exe')) return pid === 4101 ? fixture.node : '/PRIVATE_EXECUTABLE/electron';
+    const count = (links.get(pid) ?? 0) + 1; links.set(pid, count);
+    return comparing && pid === 4101 && comparison === 'changed-socket' && count >= 3
+      ? 'socket:[99999]' : 'socket:[45678]';
+  });
+  t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[]) => {
+    if (file === '/bin/ps') return '4100 4000 4100\n4101 4100 4100\n';
+    assert.equal(file, '/usr/bin/lsof');
+    assert.ok(args.includes('-FpfDtinPT') && args.includes('-Ts') && args.includes('-a'));
+    reads++;
+    return output;
+  });
+  t.mock.method(process, 'kill', () => assert.fail('a descriptor census never signals'));
+  syncBuiltinESMExports();
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  let original: unknown;
+  try { assertOwnedCdpListener(4100); } catch (error) { original = error; }
+  assert.ok(original instanceof assert.AssertionError);
+  assert.match(original.message, /one CDP listener/u);
+  assert.equal(reads, 1, 'failure projection does not perform a second racy census');
+  const facts = readOwnedCdpListenerFailure(original);
+  assert.ok(facts);
+  assert.equal(facts.holderCount, 2, 'a second PID past the retained16rows still refuses, even with the same inode');
+  assert.equal(facts.fileCount, 18); assert.equal(facts.files.length, 16); assert.equal(facts.truncated, true);
+  assert.equal(JSON.stringify(facts).includes('PRIVATE_PATH_MUST_NOT_LEAK'), false);
+  assert.equal(readOwnedCdpListenerFailure(new Error('unrelated')), undefined);
+  output = 'p4100\n' + fields(1) + fields(2);
+  assert.equal(assertOwnedCdpListener(4100), 4100, 'two descriptors of one original holder preserve the prior PID rule');
+  assert.equal(readOwnedCdpListenerFailure(original), facts, 'a later successful read does not replace the original failure');
+  output = 'p4100\n';
+  assert.throws(() => assertOwnedCdpListener(4100), /Positive original lsof descriptor census/u);
+
+  const unknownInode = 'f61\ntIPv4\nPTCP\nTST=LISTEN\nn127.0.0.1:9222\n';
+  output = 'p4100\n' + unknownInode + 'p4101\n' + unknownInode;
+  for (const variant of ['none', 'replaced', 'vanished'] as const) {
+    change = variant; statReads.clear(); procReads.length = 0;
+    let failure: unknown;
+    try { assertOwnedCdpListener(4100); } catch (error) { failure = error; }
+    assert.ok(failure instanceof assert.AssertionError);
+    assert.match(failure.message, /one CDP listener/u);
+    const retained = readOwnedCdpListenerFailure(failure)!;
+    assert.equal(retained.holderCount, 2, 'even equal supplemental socket inodes never admit two holders');
+    assert.equal(retained.files[0]!.inode, null, 'original lsof facts are never rewritten');
+    assert.deepEqual(retained.files[0]!.afterCensus, {
+      scope: 'after-original-census', atomic: false, birth: 'same', startTicks: '100',
+      ppid: 4000, pgid: 4100, role: 'electron-main', socketInode: '45678',
+    });
+    assert.deepEqual(retained.files[1]!.afterCensus, variant === 'none' ? {
+      scope: 'after-original-census', atomic: false, birth: 'same', startTicks: '100',
+      ppid: 4100, pgid: 4100, role: 'electron-zygote', socketInode: '45678',
+    } : {
+      scope: 'after-original-census', atomic: false, birth: 'unknown', startTicks: null,
+      ppid: null, pgid: null, role: 'unknown', socketInode: null,
+    });
+    assert.equal(JSON.stringify(retained).includes('PRIVATE_'), false, 'raw argv, comm, paths and errors stay private');
+    assert.deepEqual(procReads.slice(0, 2), ['/proc/4100/stat', '/proc/4101/stat']);
+    assert.equal(opened.size, 0, 'all diagnostic file descriptors close, including vanished birth');
+  }
+  for (const variant of ['exact', 'other-argv', 'builder', 'other-builder', 'builder-duplicate-output',
+    'builder-empty-output', 'builder-no-expectation', 'missing-flags', 'duplicate-flags',
+    'reused-birth', 'changed-socket'] as const) {
+    comparison = variant; comparing = false; change = 'none';
+    statReads.clear(); links.clear(); procReads.length = 0;
+    let failure: unknown;
+    try { assertOwnedCdpListener(4100); } catch (error) { failure = error; }
+    assert.ok(failure instanceof assert.AssertionError);
+    const originalFacts = readOwnedCdpListenerFailure(failure)!;
+    const originalBytes = JSON.stringify(originalFacts), censusReads: number = reads;
+    comparing = true;
+    const selection = variant === 'builder-no-expectation'
+      ? { node: fixture.node, hostEntry: fixture.hostEntry } : fixture;
+    const projected = readOwnedCdpListenerFailure(failure, selection)!;
+    assert.equal(projected.holderCount, 2);
+    const child = projected.fixtureCorrelation![1]!;
+    const unknown = variant === 'reused-birth' || variant === 'changed-socket';
+    assert.deepEqual(child, {
+      pid: 4101, fd: '61', scope: 'after-failed-census', atomic: false,
+      birth: unknown ? 'unknown' : 'same', socket: unknown ? 'unknown' : 'same-as-supplemental',
+      fixtureHostArgv: unknown ? null : ['exact', 'missing-flags', 'duplicate-flags'].includes(variant),
+      fixtureNodeExecutable: unknown ? null : true,
+      fixtureMcpBuilderEntry: unknown || variant === 'builder-no-expectation' ? null : variant === 'builder',
+      closeOnExec: unknown || variant === 'missing-flags' || variant === 'duplicate-flags' ? null : false,
+    });
+    assert.equal(projected.fixtureCorrelation![0]!.fixtureHostArgv, false);
+    assert.equal(projected.fixtureCorrelation![0]!.fixtureNodeExecutable, false);
+    assert.equal(projected.fixtureCorrelation![0]!.fixtureMcpBuilderEntry,
+      variant === 'builder-no-expectation' ? null : false);
+    if (variant === 'exact') assert.equal(projected.fixtureCorrelation![0]!.closeOnExec, true);
+    const comparedReads = procReads.length;
+    assert.equal(readOwnedCdpListenerFailure(failure, selection), projected, 'one correlation per original error');
+    assert.equal(procReads.length, comparedReads);
+    assert.equal(reads, censusReads, 'fixture comparison never repeats lsof or ps');
+    assert.equal(readOwnedCdpListenerFailure(failure), originalFacts);
+    assert.equal(JSON.stringify(originalFacts), originalBytes, 'original failed census stays byte-identical');
+    assert.equal(JSON.stringify(projected).includes('PRIVATE_'), false);
+    assert.ok(Buffer.byteLength('TEST_CDP_LISTENER_FAILURE ' + JSON.stringify(projected), 'utf8') <= 32 * 1024);
+    assert.equal(opened.size, 0);
+    assert.match(failure.message, /one CDP listener/u);
+  }
+});
 
 test('Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error', (t) => {
   let output = '1 0 1\n2 0 0\n4100 4000 4100\n';
@@ -38,6 +291,43 @@ test('Linux zero-group rows remain observable without becoming owned app groups;
     output = malformed + '\n';
     assert.throws(() => processTable(), /Malformed process table row|Invalid process table identity/);
   }
+});
+
+test('the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads', t => {
+  const capture = { version: 3 as const, platform: 'linux' as const,
+    registrar: { backendId: 'TEST-backend', teamId: 'TEST-team', runId: 'TEST-run', memberId: 'TEST-member', generation: '1' },
+    root: { pid: 4100, sessionId: 4100, pidfdId: '100', pidNamespaceId: '4026531836', bootId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' },
+    target: { pid: 4101, sessionId: 4100, pidfdId: '101', pidNamespaceId: '4026531836', bootId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' } };
+  const selection = { directory: '/TEST-original-artifact', manifestSha256: 'a'.repeat(64) };
+  let clock = 1000, calls = 0, late = false;
+  const budgets: number[] = [];
+  t.mock.method(Date, 'now', () => clock);
+  t.mock.method(childProcess, 'execFileSync', (file: string, args: string[], options: { timeout: number }) => {
+    assert.equal(file, '/TEST-original-node'); assert.equal(args.length, 4);
+    assert.equal(args[1], '--observe-linux-root');
+    assert.deepEqual(JSON.parse(args[2]!), selection); assert.deepEqual(JSON.parse(args[3]!), capture);
+    assert.ok(options.timeout > 0 && options.timeout <= 5000); budgets.push(options.timeout);
+    calls++; if (late) clock += options.timeout + 1;
+    return calls === 1 ? 'same-live\n' : 'absent\n';
+  });
+  syncBuiltinESMExports();
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  const oracle = createDesktopProcessRootOracle({ node: '/TEST-original-node', capture, selection,
+    observe: () => assert.fail('Linux root observation uses only the bounded read-only actor') });
+  assert.equal(oracle.observe(clock + 5000), 'same-live');
+  clock += 180_001;
+  const cleanupDeadline = clock + 30_000;
+  assert.equal(oracle.observe(cleanupDeadline), 'absent', 'unrelated provider phases do not spend the cleanup read budget');
+  assert.throws(() => oracle.observe(clock), /original-root oracle/u);
+  assert.equal(calls, 2, 'an expired caller never starts another native read');
+  for (let i = 0; i < 8; i++) { clock++; assert.equal(oracle.observe(cleanupDeadline), 'absent'); }
+  clock = cleanupDeadline - 250; late = true;
+  assert.throws(() => oracle.observe(cleanupDeadline), /original-root oracle/u);
+  assert.equal(budgets.at(-1), 250, 'the final read receives only the original caller remainder');
+  assert.equal(calls, 11);
+  late = false;
+  assert.throws(() => oracle.observe(clock + 5000), /original-root oracle/u);
+  assert.equal(calls, 11, 'the13th call cannot reset the shared read cap with another deadline');
 });
 
 test('read-only discovery survives navigation during the actual IPC read, then reads the new context', async () => {

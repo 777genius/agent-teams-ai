@@ -6,17 +6,21 @@ import { encodeLaunch } from '../../owned-process/codec.js';
 import { createWindowsOwnedLaunchPort, verifyStagedBroker } from '../../owned-process/windowsBroker.js';
 import { OwnedProcessFacade } from '../../owned-process/processFacade.js';
 import { isCanonicalNativePath } from '../../owned-process/nativePath.js';
+import { captureWindowsLauncher, capturedWindowsCommandLine,
+  verifyCapturedWindowsLauncher } from '../../owned-process/capturedWindowsLauncher.js';
 
 import type { NativeProcessProfile } from '../../composition/nativeProcessProfile.js';
-import type { PendingOwnedProcess, PreparedOwnedProcess, ProcessOwner, ResolvedLaunchSpec } from '../../owned-process/contract.js';
+import type { OwnedLaunchPort, PendingOwnedProcess, PreparedOwnedProcess, ProcessOwner, ResolvedLaunchSpec } from '../../owned-process/contract.js';
+import type { RegistrarBinding } from '../../process/registeredProcessContracts.js';
+import type { WindowsRegisteredProcessPort, WindowsServiceIntent } from '../../owned-process/retainedServiceContracts.js';
 import type { CapturedProcessLaunch } from './CapturedProcess.js';
+import type { CapturedWindowsLauncher } from '../../owned-process/capturedWindowsLauncher.js';
 
-/** CreateProcessW argv quoting. No cmd.exe, PATH resolution or shell metacharacter expansion. */
-export function windowsLaunchSpec(profile: NativeProcessProfile, args: readonly string[]): ResolvedLaunchSpec {
-  const quote = (value: string) => `"${value
-    .replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/g, '$1$1')}"`;
-  const result = Object.freeze({ executable: profile.executable.path,
-    commandLine: [profile.executable.path, ...args].map(quote).join(' '), cwd: profile.cwd,
+/** Uses the original captured recipe; wrapper interpretation never bypasses broker custody. */
+export function windowsLaunchSpec(profile: NativeProcessProfile, args: readonly string[],
+  captured: CapturedWindowsLauncher = captureWindowsLauncher(profile)): ResolvedLaunchSpec {
+  const result = Object.freeze({ executable: captured.executable.path,
+    commandLine: capturedWindowsCommandLine(captured, args), cwd: profile.cwd,
     environment: Object.freeze(Object.entries(profile.environment).map(([key, value]) => `${key}=${value}`)) });
   encodeLaunch(result); // Reject aliases/duplicate environment and bounded wire failures before allocation.
   return result;
@@ -38,14 +42,21 @@ export class WindowsCapturedProcess {
   private readonly allocations = new Set<Allocation>();
   private readonly incarnation = randomUUID();
   private readonly profile: NativeProcessProfile;
+  private readonly launcher: CapturedWindowsLauncher;
   private readonly port: ReturnType<typeof createWindowsOwnedLaunchPort>;
+  private readonly registeredProcesses: WindowsRegisteredProcessPort | undefined;
   private sealed = false;
 
   constructor(profile: NativeProcessProfile, private readonly current: () => boolean,
-    private readonly verifyTarget: () => void) {
+    private readonly verifyTarget: () => void,
+    retainedPort?: OwnedLaunchPort & { readonly registeredProcesses?: WindowsRegisteredProcessPort }) {
     this.profile = structuredClone(profile);
+    this.launcher = captureWindowsLauncher(this.profile);
+    this.registeredProcesses = retainedPort?.registeredProcesses;
+    if (this.profile.windowsBroker?.capability && !retainedPort)
+      throw new Error('Scoped Windows custody requires the original Main owner');
     this.verifyBroker();
-    this.port = createWindowsOwnedLaunchPort(this.profile.windowsBroker!.path);
+    this.port = retainedPort ?? createWindowsOwnedLaunchPort(this.profile.windowsBroker!.path);
   }
 
   private verifyBroker(): void {
@@ -56,7 +67,7 @@ export class WindowsCapturedProcess {
     const before = lstatSync(broker.path, { bigint: true });
     if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > 16n * 1024n * 1024n ||
       realpathSync(broker.path) !== broker.path) throw new Error('Windows native custody unavailable');
-    verifyStagedBroker(broker.path, broker.arch);
+    verifyStagedBroker(broker.path, broker.arch, broker.capability ?? 'whole-job-v1');
     if (createHash('sha256').update(readFileSync(broker.path)).digest('hex') !== broker.sha256)
       throw new Error('Windows native custody unavailable');
     const after = lstatSync(broker.path, { bigint: true });
@@ -69,12 +80,17 @@ export class WindowsCapturedProcess {
     if (this.sealed || !this.current()) throw new Error('Native launch unavailable');
   }
 
+  private verifySelection(): void {
+    this.verifyTarget();
+    verifyCapturedWindowsLauncher(this.launcher);
+  }
+
   launch(request: CapturedProcessLaunch): OwnedProcessFacade {
     this.assertCurrent();
     if (request.command !== this.profile.executable.path || request.cwd !== this.profile.cwd)
       throw new Error('Native launch unavailable');
-    this.verifyBroker(); this.verifyTarget();
-    const spec = windowsLaunchSpec(this.profile, request.args);
+    this.verifyBroker(); this.verifySelection();
+    const spec = windowsLaunchSpec(this.profile, request.args, this.launcher);
     const owner: ProcessOwner = Object.freeze({ teamIncarnation: this.incarnation,
       runId: this.incarnation, laneId: 'provider-native', processGeneration: randomUUID() });
     const allocation: Allocation = { pending: this.port.allocate(owner), installed: false,
@@ -83,13 +99,13 @@ export class WindowsCapturedProcess {
     const child = new OwnedProcessFacade({ owner,
       current: () => !this.sealed && this.current(),
       prepare: async () => {
-        this.assertCurrent(); this.verifyBroker(); this.verifyTarget();
+        this.assertCurrent(); this.verifyBroker(); this.verifySelection();
         const preparation = await this.port.prepare(allocation.pending, spec);
         if (preparation.kind === 'prepared') allocation.prepared = preparation.process;
         return preparation;
       },
       installOwner: async (prepared) => {
-        this.assertCurrent(); this.verifyBroker(); this.verifyTarget();
+        this.assertCurrent(); this.verifyBroker(); this.verifySelection();
         if (allocation.prepared !== prepared || allocation.installed)
           throw new Error('Native root authority unavailable');
         // The original capability and its observers are installed while the root is
@@ -102,6 +118,18 @@ export class WindowsCapturedProcess {
     allocation.child = child;
     child.stderr.on('data', () => {}); // Diagnostics are private, consumed without retaining credentials.
     return child;
+  }
+
+  /** Called under the Team fence after its captured source guard; no Runtime lookup or native IO. */
+  prepareRegisteredProcess(pid: number, registrar: RegistrarBinding): WindowsServiceIntent {
+    if (this.sealed || this.profile.windowsBroker?.capability !== 'service-scopes-v1' || !this.registeredProcesses)
+      throw new Error('process:hold');
+    this.verifyBroker(); this.verifySelection();
+    const roots = [...this.allocations].filter(value => value.installed && value.prepared &&
+      !value.stopped && !value.cleanup && value.child?.exitCode === null);
+    if (roots.length !== 1) throw new Error('process:hold');
+    // The private port requires the original resume ACK and its Team-only capture guard.
+    return this.registeredProcesses.prepareCapture(roots[0]!.pending, pid, registrar);
   }
 
   seal(): void { this.sealed = true; }
@@ -138,7 +166,7 @@ export class WindowsCapturedProcess {
         if (outcome.kind !== 'confirmed') return false;
         // Drain is separately bounded. An incomplete tail is never root/tree proof;
         // only the genuine Stop receipt and full release ACK/exit settle custody.
-        if (allocation.prepared) await allocation.prepared.drain(performance.now() + 3000);
+        await allocation.pending.drain(performance.now() + 3000);
         await allocation.pending.release(outcome.receipt, 'job-membership');
         allocation.stopped = true;
         return true;

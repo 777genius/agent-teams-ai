@@ -10,6 +10,7 @@ import type { HostedTeam, RuntimeTeamCoordinator } from './RuntimeTeamCoordinato
 import type { TeamRuntimeDeliveryPort } from '../team/contracts.js';
 import type { FileStoppedTeamImport } from '../stopped-team-import/FileStoppedTeamImport.js';
 import type { ProcessCustody } from './processCustody.js';
+import type { WindowsRegisteredProcessPort } from '../owned-process/retainedServiceContracts.js';
 
 /** One captured storage lifetime for lifecycle, backup and the native WorkSync identity port. */
 export function createHostTeamLifecycleComposition(options: {
@@ -17,7 +18,8 @@ export function createHostTeamLifecycleComposition(options: {
   teams: Map<string, HostedTeam>;
   runtime(): Pick<RuntimeTeamCoordinator, 'lifecyclePorts'> | undefined;
   importer(): Pick<FileStoppedTeamImport, 'publication'> | undefined;
-  processCustody?: Pick<NonNullable<ProcessCustody>, 'observe'>;
+  processCustody?: Pick<NonNullable<ProcessCustody>, 'observe' | 'releaseTeam'>;
+  windows?: Omit<WindowsRegisteredProcessPort, 'prepareCapture'>;
   assertCurrent(): void;
   assertWriter(): void;
   isShuttingDown(): boolean;
@@ -29,6 +31,26 @@ export function createHostTeamLifecycleComposition(options: {
     if (!team || !store) throw new TeamOwnerError('hold');
     return { team, store };
   };
+  const processCommands = (teamId: string) => resources(teamId).team.owner.processCommands(profile.principalId, {
+    assertCurrent: options.assertCurrent,
+    assertAsyncCurrent: options.assertCurrent,
+    ...(options.windows ? { windows: {
+      prepareControl: (capture, operation) => options.windows!.prepareControl(capture, operation),
+      run: (intent, deadline) => options.windows!.run(intent, deadline),
+      lookup: (intent, deadline) => options.windows!.lookup(intent, deadline),
+      query: (capture, deadline) => options.windows!.query(capture, deadline),
+    } } : {}),
+    ...(options.processCustody ? { native: {
+      capture() { throw new TeamOwnerError('forbidden'); },
+      observe(capture) {
+        options.assertCurrent();
+        const value = options.processCustody!.observe(capture);
+        options.assertCurrent();
+        return value;
+      },
+      signal() { throw new TeamOwnerError('forbidden'); },
+    } } : {}),
+  });
   const storage = createTeamBackupComposition({
     directories: { teams: join(profile.owner.storageRoot, 'teams'), tasks: join(profile.owner.storageRoot, 'tasks'),
       appData: join(profile.owner.storageRoot, 'appData'), backups: join(profile.owner.storageRoot, 'backups') },
@@ -48,21 +70,22 @@ export function createHostTeamLifecycleComposition(options: {
         request.binding.teamName !== teamName || request.binding.teamId !== identityId || teams.has(identityId)) throw new TeamOwnerError('hold');
     },
     purge: {
+      ...(options.windows ? {
+        async prepareReferencesReleased(teamId: string, originalDeadline: number) {
+          options.assertCurrent();
+          const commands = processCommands(teamId).windows;
+          if (!commands) throw new TeamOwnerError('hold');
+          await commands.reconcileNaturalAbsence(originalDeadline);
+          options.assertCurrent();
+        },
+      } : {}),
       assertReferencesReleased(teamId) {
         options.assertCurrent();
-        resources(teamId).team.owner.processCommands(profile.principalId, {
-          assertCurrent: options.assertCurrent,
-          ...(options.processCustody ? { native: {
-            capture() { throw new TeamOwnerError('forbidden'); },
-            observe(capture) {
-              options.assertCurrent();
-              const value = options.processCustody!.observe(capture);
-              options.assertCurrent();
-              return value;
-            },
-            signal() { throw new TeamOwnerError('forbidden'); },
-          } } : {}),
-        }).assertReleased();
+        processCommands(teamId).assertReleased();
+      },
+      releasePurgedReferences(teamId) {
+        // Physical deletion is already durable. Uncertain cleanup retains custody, not a new purge.
+        options.processCustody?.releaseTeam?.({ backendId: profile.owner.ownerId, teamId });
       },
       onPurged(teamId) {
         const team = teams.get(teamId);

@@ -3,6 +3,7 @@ import { constants, createReadStream } from 'node:fs';
 import { access, realpath, stat } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 
+import { resolveElectronNodeLaunch } from '@main/utils/electronNodeLaunch';
 import { execFileWithLinuxChildLaunch } from '@main/utils/linuxChildLaunch';
 
 import type { HostClientFailureCode, HostRequestOutcome } from '../../contracts';
@@ -63,6 +64,14 @@ export function captureHostProfile(profile: SelectedHostProfile): SelectedHostPr
   return Object.freeze({ ...profile, env: Object.freeze({ ...profile.env }) });
 }
 
+/** Same immutable source binding used by the replaceable client and its original physical owner. */
+export function capturedHostProfileDigest(profile: SelectedHostProfile): string {
+  const { env, startupTimeoutMs: _startup, requestTimeoutMs: _request,
+    writeTimeoutMs: _write, shutdownTimeoutMs: _shutdown, ...source } = profile;
+  return createHash('sha256').update(JSON.stringify({ ...source,
+    env: Object.entries(env).sort(([a], [b]) => a.localeCompare(b)) })).digest('hex');
+}
+
 export async function validateHostProfile(profile: SelectedHostProfile): Promise<void> {
   try {
     for (const [path, expected] of [
@@ -81,10 +90,11 @@ export async function validateHostProfile(profile: SelectedHostProfile): Promise
     if (!(await stat(profile.cwd)).isDirectory() || !(await stat(profile.env.HOME)).isDirectory()) {
       throw new HostClientError('invalid-profile', 'not-dispatched');
     }
+    const launch = await resolveElectronNodeLaunch(profile.nodeExecutable, ['--version'], 'generic');
     const version = await new Promise<string>((resolve, reject) => {
       execFileWithLinuxChildLaunch(
-        profile.nodeExecutable,
-        ['--version'],
+        launch.command,
+        launch.args,
         {
           cwd: profile.cwd,
           env: { ...profile.env },

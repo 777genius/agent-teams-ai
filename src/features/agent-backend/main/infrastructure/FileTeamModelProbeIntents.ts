@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { constants } from 'node:fs';
-import { mkdir, open, stat } from 'node:fs/promises';
+import { type BigIntStats, constants } from 'node:fs';
+import { lstat, mkdir, open, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import { atomicCreateAsync, syncDirectoryDurably } from '@main/utils/atomicWrite';
@@ -11,6 +11,15 @@ const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 const validId = (value: unknown): value is string =>
   typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(value);
 type Kind = 'preparation' | 'successor';
+
+// Atomic publication may unlink its temp hardlink during a concurrent read; that is not replacement.
+function sameRecordFile(before: BigIntStats, after: BigIntStats): boolean {
+  return after.isFile() && !after.isSymbolicLink() &&
+    after.dev === before.dev && after.ino === before.ino &&
+    after.size === before.size && after.mtimeNs === before.mtimeNs &&
+    (process.platform === 'win32' || (after.mode & 0o077n) === 0n);
+}
+
 
 /** Immutable intent associations, not outcomes. No mutable head or replacement race. */
 export class FileTeamModelProbeIntents implements TeamModelProbeIntents {
@@ -47,13 +56,16 @@ export class FileTeamModelProbeIntents implements TeamModelProbeIntents {
   }
   private async lookup(rootId: string, kind: Kind, key: string): Promise<string | null> {
     const { directory, path } = this.location(rootId, kind, key);
-    let opened = false;
+    let observed = false;
     try {
+      const before = await lstat(path, { bigint: true });
+      observed = true;
+      if (!before.isFile() || before.isSymbolicLink() || before.size > 4096n ||
+          (process.platform !== 'win32' && (before.mode & 0o077n) !== 0n))
+        throw new Error('Invalid model intent');
       const file = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-      opened = true;
       try {
-        const before = await file.stat();
-        if (!before.isFile() || before.size > 4096 || (before.mode & 0o077) !== 0)
+        if (!sameRecordFile(before, await file.stat({ bigint: true })))
           throw new Error('Invalid model intent');
         const bytes = Buffer.alloc(4097);
         let length = 0;
@@ -62,8 +74,10 @@ export class FileTeamModelProbeIntents implements TeamModelProbeIntents {
           if (!read.bytesRead) break;
           length += read.bytesRead;
         }
-        const after = await file.stat();
-        if (length > 4096 || before.size !== after.size || before.mtimeMs !== after.mtimeMs)
+        const after = await file.stat({ bigint: true });
+        const named = await lstat(path, { bigint: true });
+        if (length > 4096 || BigInt(length) !== before.size ||
+            !sameRecordFile(before, after) || !sameRecordFile(before, named))
           throw new Error('Invalid model intent');
         const raw = JSON.parse(
           new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, length))
@@ -92,7 +106,7 @@ export class FileTeamModelProbeIntents implements TeamModelProbeIntents {
         await file.close();
       }
     } catch (error) {
-      if (!opened && (error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      if (!observed && (error as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw new Error('Model intent unavailable');
     }
   }

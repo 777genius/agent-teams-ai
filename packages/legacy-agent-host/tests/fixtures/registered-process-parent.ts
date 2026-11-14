@@ -4,7 +4,7 @@ import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const [role, root, actor, name, mode] = process.argv.slice(2);
 assert.ok(root && actor && name && mode);
-assert.ok(root.startsWith('/private/tmp/TEST-') && /^[a-z]+$/.test(name));
+assert.ok(/^\/(?:private\/)?tmp\/TEST-/.test(root) && /^[a-z]+$/.test(name));
 assert.ok(mode === 'same' || mode === 'cross');
 assert.ok(role === 'root' || role === 'bridge');
 const child = role === 'root' && mode === 'cross'

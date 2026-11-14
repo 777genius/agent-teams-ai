@@ -1,3 +1,7 @@
+import { capturedRuntimeMcpReferencesSchema } from './capturedRuntimeMcpReferences.js';
+import type { CapturedRuntimeMcpReference } from './capturedRuntimeMcpReferences.js';
+export { capturedRuntimeMcpReferencesSchema } from './capturedRuntimeMcpReferences.js';
+export type { CapturedRuntimeMcpReference } from './capturedRuntimeMcpReferences.js';
 import { z } from 'zod';
 import { join } from 'node:path';
 import { lstatSync } from 'node:fs';
@@ -9,12 +13,14 @@ import { runtimeMemberProfileSchema } from './runtimeProfile.js';
 import { nativeProfilePathSchema } from './nativeProcessProfile.js';
 import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { readCodexMcpCatalog } from '../adapters/providers/readCodexMcpCatalog.js';
+import { capturedNativeProcessFactory } from '../adapters/providers/capturedNativeProcessFactory.js';
 import { openCodeV2CapturedMcp } from '../adapters/providers/OpenCodeV2CapturedMcp.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
-import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
-import type { CodexMemberProfile, RuntimeMemberProfile } from './runtimeProfile.js';
+import type { RuntimeMemberProfile } from './runtimeProfile.js';
+import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/u);
 const id = z
@@ -22,13 +28,6 @@ const id = z
   .min(1)
   .max(256)
   .refine((value) => !value.includes('\0'));
-export const capturedRuntimeMcpReferencesSchema = z
-  .array(z.object({ memberId: id, digest: hash }).strict())
-  .max(256)
-  .refine((rows) => new Set(rows.map((row) => row.memberId)).size === rows.length);
-export type CapturedRuntimeMcpReference = z.infer<
-  typeof capturedRuntimeMcpReferencesSchema
->[number];
 const overlaySchema = z
   .object({
     capturedMcpServers: capturedMcpServersSchema,
@@ -189,11 +188,9 @@ export async function prepareCapturedRuntimeMcpRecipes(options: {
   selectedRecipes: readonly RuntimeMemberProfile[];
   assertCurrent(): void;
   withAuthority<T>(action: () => T): T;
-  readCatalog?: (
-    profile: CodexMemberProfile,
-    assertCurrent: () => void,
-    signal?: AbortSignal
-  ) => Promise<CodexConfiguredMcpCatalog>;
+  retainedWindowsLaunch?: HostWindowsLaunch;
+  processOrigin?(profile: RuntimeMemberProfile): RuntimeSourceProcessOrigin | undefined;
+  readCatalog?: typeof readCodexMcpCatalog;
   signal?: AbortSignal;
 }): Promise<CapturedRuntimeMcpReference[]> {
   id.parse(options.commandId);
@@ -238,7 +235,8 @@ export async function prepareCapturedRuntimeMcpRecipes(options: {
         await (options.readCatalog ?? readCodexMcpCatalog)(
           selected,
           options.assertCurrent,
-          options.signal
+          options.signal,
+          capturedNativeProcessFactory(options.retainedWindowsLaunch, options.processOrigin?.(selected))
         )
       );
     options.assertCurrent();

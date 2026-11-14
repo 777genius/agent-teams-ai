@@ -1797,6 +1797,16 @@ publication. Existing types and the original native extension Desktop gate
 remain mandatory; source review alone does not qualify native behavior.
 
 
+**Concurrent audit provenance (2026-11-13):** The appendices below retain the independently published additions from `f0d275e6ee8ed5072ec393a9c714f4b8f519e8c8` and base `e29dbde300ea73ec4e46e5f57f9e007ca5473552`. Their original section numbers, titles, source references and qualification limits are preserved; repeated numbers refer to the distinct titled audits, not to a replacement or a combined acceptance result.
+
+## R22 — original OpenCode V1 question boundary and permitted Claude peer (2026-11-13)
+
+The current request permits subscription-free protocol emulation, but does not turn an absent original frontend capability into a parity requirement. An independent read of the locked original orchestrator `v0.0.158` (`f5c69c2e9024ffc36a5db5eafe30f53539b52f62`) and the separately retained `e13edcd` baseline found identical V1 transport blobs: `OpenCodeClientFactory.ts` `8d3d04c298344ca76fcd4240739d950260fa1640`, `OpenCodeSessionBridge.ts` `6498d7e1663a52f83ea61e398220747bd7b6dc25`, and `bridge/OpenCodeBridgeProtocol.ts` `e7444463e46f5f8fc3e1423571a8523158324b17`. Their finite surface lists and answers native permissions only. There is no native question list/reply/reject API or bridge command. Original handler blob `e3635879aac927bbfb5f0d69f1ae137bd54a4068` dispatches the same permission-only route. These are immutable files under [the locked original source](https://github.com/777genius/agent_teams_orchestrator/tree/f5c69c2e9024ffc36a5db5eafe30f53539b52f62/src/services/opencode).
+
+Frontend bridge command names (`5bd3301cd08fd8ba774b56319e971b9d18411c46`), the OpenCode runtime permission boundary (`54f4bc79a5472d674462626ad97ff03201733bc6`), and generic `ToolApprovalSheet` (`3f8ee1f231bb7810069f40cd126e78543c502206`) are unchanged from frontend `1160b575`. The sheet's `AskUserQuestion` answer map serves the Claude SDK interaction path; no original OpenCode branch translates it to a native question endpoint. Therefore V1 structured question answer/decline remains an explicit **unsupported baseline** row. Current D's `GET /question` is a conservative unsettled-turn fence, not evidence of an advertised answer capability. Do not add a D/Host question mutation or count an unvisited V1 question as passing. Original V1 permission, conversation, Stop and schedule routes remain in the emulated UI journey; Claude questions remain in its own supported journey.
+
+The finite Claude TEST peer runs behind the real pinned SDK and original Host process owner, without executing real Claude Code. Its metadata and original no-tool probe through an actual Node child passed the existing management suite (5 passed, 0 skipped); business runtime/UI actions remain separately unqualified until observed. The next narrow peer addition advertises only the recorded builtin `code-review` alias `review` and recognizes the exact existing `legacy-inline-review-v1` expansion of `/review TEST_UI_REVIEW`. It returns one ordinary attributed assistant/result pair. It must not replace that original prompt path with a local-command result, execute `gh`, accept arbitrary review prompts, or claim unseen runtime scenarios. Independent review and the original Composer-to-ledger/cleanup journey are required.
+
 ### R22 — show the complete original /cost reply in its own rendered message row
 
 #### Review 1 — actual failure and the overly narrow TEST oracle
@@ -1822,6 +1832,39 @@ The same original12 observation attempts and150ms intervals bound this scoped ro
 Independent review must verify the renderer identity derivation, full-text equality, clipping/hit checks and preservation of all existing source guards and command effects. Retain both original /cost commands, the single /compact, subsequent conversation and review paths, original model/input counts, selected command IDs, Stop/cold/cleanup semantics and strict final receipts. Do not add broad unit cases that mirror the selector.
 
 Run existing source/script typing/lint and the same required native-command Desktop invocation in normal coherent CI. The current failure at the first cost observation does not qualify the later compact/review UI path. Any initial source publication remains SOURCE_ONLY_UNEXECUTED until those gates actually execute. Root publishes this plan before source, immediately pushes each commit, and makes no main/upward merge here.
+
+## R23 — original OpenCode V1 usage and cost boundary (2026-11-13)
+
+Root followed the original native-to-renderer path instead of inferring a missing
+feature from the new adapter. In locked runtime `f5c69c2`,
+`OpenCodeTranscriptProjector.ts` (blob `89a778772cd4e0f47f5cee74fbe10d3dfabe6d91`)
+and `OpenCodeLogProjector.ts` (blob `44cc0ddad7a071b617f6c4b2971103886f3aea56`)
+do not project native token, cache or cost counters. Their canonical and
+frontend log messages contain attributed text, reasoning and tool effects.
+`OpenCodeEventTranslator.ts` (blob `bb48227f802473a49c16710a7d6c1bcc7b351aeb`)
+delegates to that same transcript projector; it does not add usage.
+
+At original frontend [`4a0e062`](https://github.com/777genius/agent-teams-ai/tree/4a0e06277fe216d9f82dbbede362668fe46622ee),
+`MemberStatsComputer.ts` (blob `0d6cf532152c004868d0b18ad3553c13588178cd`)
+reads original JSONL paths from `TeamMemberLogsFinder.ts`
+(`1340ff425a8303ed75f36e7dbcda1fe5973798ef`), extracts only the generic
+`usage.input_tokens`, `output_tokens` and cache fields, and hardcodes `costUsd: 0`.
+It has no native OpenCode counter reader. Consequently the V1 emulated UI must
+show unavailable usage as Unknown, preserve actual text/tool/activity evidence,
+and must not invent a zero cost or reported token totals. Codex/Claude reported
+usage remains independently checked through each actual adapter. This is an
+explicit original capability boundary, not permission to disable a working
+usage source in another provider.
+
+
+---
+
+## Incoming base history preserved at 0543d437
+
+The following append-only entries are retained verbatim from base
+`0543d437695318f0157e6d600d76abdce5c51e8e`. Their original section numbers
+refer to that branch history; they do not renumber or replace the completion
+branch entries above. Current integration is governed by plan 12.
 
 ## R23 — expand the exact native /cost card from its actual UI state
 

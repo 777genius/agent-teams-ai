@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { pageOwnerMessages } from './pageOwnerMessages.js';
+import { createOwnerMessageReads } from './ownerMessageReads.js';
+import type { TeamConversationReadPort } from './ownerMessageReads.js';
 import { pageOwnerTaskDetail } from './pageOwnerTaskDetail.js';
 import { pageOwnerKanban } from './pageOwnerKanban.js';
 import { pageOwnerSnapshot } from './pageOwnerSnapshot.js';
@@ -27,7 +28,7 @@ import { projectCrossTeamMessages } from '../cross-team/projectCrossTeamMessages
 import { ordinarySubagentAllowed } from './ordinarySubagentPolicy.js';
 import { lookupRetainedTaskStartCause } from './lookupRetainedTaskStartCause.js';
 import { readCrossTeamReplyHints } from './readCrossTeamReplyHints.js';
-import { createTeamDeliveryAuthority } from './TeamDeliveryAuthority.js';
+import { authorizeTeamGrant, createTeamDeliveryAuthority } from './TeamDeliveryAuthority.js';
 import { crossTeamTargetCommand } from '../cross-team/crossTeamInbound.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
 import { lookupEvidenceCause } from './lookupEvidenceCause.js';
@@ -272,12 +273,19 @@ export class TeamOwner {
     members: readonly Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings'>[],
     savedSettings?: TeamSavedSettings
   ): boolean {
+    return this.roster.matchesCaptured(members, savedSettings);
+  }
+
+  /** Closed trusted provider check; no callback, retained state or Runtime lookup escapes. */
+  capturedProviderAuthority(principalId: string, binding: RuntimeMemberBinding, expectedRevision: string,
+    expected: Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings' | 'delivery'> | undefined,
+    savedSettings?: TeamSavedSettings): 'current' | 'roster-not-applicable' {
     return this.store.fenced(() => {
-      const state = this.state();
-      return (
-        teamRosterRevision(state.members, state.rosterVersion, state.savedSettings) ===
-        teamRosterRevision(members, 0, savedSettings)
-      );
+      const state = this.state(), grant = authorizeTeamGrant(state, this.store, principalId, 'read');
+      if (!this.deliveryAuthority.providerAuthorized(state, grant, binding)) throw new TeamOwnerError('forbidden');
+      const current = this.roster.capturedMemberCurrentInState(state, expectedRevision, expected, savedSettings);
+      // Recovery and policy reads precede this original nested namespace revalidation.
+      return this.store.fenced(() => current ? 'current' : 'roster-not-applicable');
     });
   }
 
@@ -429,8 +437,17 @@ export class TeamOwner {
   }
 
   /** principalId must come from captured IPC/MCP authentication, not tool arguments. */
-  connect(principalId: string) {
+  connect(principalId: string, conversation?: TeamConversationReadPort) {
     validateTeamText(principalId);
+    const messages = createOwnerMessageReads({
+      binding: this.binding, principalId, key: this.messagesPageKey, changes: this.productChanges,
+      fenced: action => this.store.fenced(action),
+      authority: () => ({ grant: this.authorize(principalId, 'read'),
+        members: this.state().members, removedMembers: this.state().removedMembers ?? [] }),
+      productMessages: (grant, members) => this.productMessages(grant, members),
+      productRevision: () => digest(this.collectProductState(principalId)),
+      ...(conversation ? { conversation } : {}),
+    });
     return Object.freeze({
       execute: (command: TeamCommand, prepare?: Parameters<typeof executeTeamCommand>[5]) =>
         this.execute(principalId, command, undefined, undefined, prepare),
@@ -456,7 +473,7 @@ export class TeamOwner {
       listTasks: () => this.listTasks(principalId),
       readSnapshot: (query: { cursor?: string } = {}) => this.readSnapshot(principalId, query),
       readMessagesPage: (options: { cursor?: string; limit?: number; groupChatId?: string } = {}) =>
-        this.readMessagesPage(principalId, options),
+        messages.readMessagesPage(options),
       readDeletedTasks: (query: { cursor?: string } = {}) => this.readDeletedTasks(principalId, query),
       ...(this.policy.reads
         ? {
@@ -472,7 +489,7 @@ export class TeamOwner {
             }),
           }
         : {}),
-      readChanges: (cursor?: string) => this.readChanges(principalId, cursor),
+      readChanges: (cursor?: string) => messages.readChanges(cursor),
       pendingDeliveries: () => this.pendingDeliveries(principalId),
       revoke: (target: string) => this.revoke(principalId, target),
       readRoster: () => this.roster.read(principalId),
@@ -535,13 +552,7 @@ export class TeamOwner {
   }
 
   private authorize(principalId: string, permission: TeamGrant['permissions'][number]): TeamGrant {
-    const state = this.state();
-    if (permission === 'task.write' || permission === 'message.write')
-      assertTeamExecutionAllowed(state, this.store);
-    const grant = state.grants.find((entry) => entry.principalId === principalId);
-    if (!grant || grant.revoked || !grant.permissions.includes(permission))
-      throw new TeamOwnerError('forbidden');
-    return grant;
+    return authorizeTeamGrant(this.state(), this.store, principalId, permission);
   }
 
   private taskAuthorityCurrent(receipt: CommandReceipt): boolean {
@@ -689,38 +700,6 @@ export class TeamOwner {
           feed: this.productChanges.snapshot(principalId, revision),
         }),
         ...query,
-      });
-    });
-  }
-
-  private readChanges(principalId: string, cursor?: string): JsonValue {
-    return this.store.fenced(() => {
-      // A change-feed response contains only finite invalidation metadata, never
-      // unbounded task/inbox history. Keep it readable after a complete snapshot
-      // becomes oversized, without weakening the snapshot/transport size guards.
-      const revision = digest(this.collectProductState(principalId));
-      return json(this.productChanges.read(principalId, revision, cursor));
-    });
-  }
-
-
-  /** The existing Owner supplies grant, inbox records and the filesystem fence. */
-  private readMessagesPage(
-    principalId: string,
-    options: { cursor?: string; limit?: number; groupChatId?: string }
-  ): JsonValue {
-    return this.store.fenced(() => {
-      const grant = this.authorize(principalId, 'read');
-      return pageOwnerMessages({
-        principalId,
-        grant,
-        teamName: this.binding.teamName,
-        key: this.messagesPageKey,
-        messages: this.productMessages(grant, [
-          ...this.state().members,
-          ...(this.state().removedMembers ?? []),
-        ]),
-        ...options,
       });
     });
   }

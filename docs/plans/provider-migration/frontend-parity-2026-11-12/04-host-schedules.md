@@ -758,3 +758,39 @@ and finally removal. R2: independent review of this single existing helper;
 no cleanup timeout, scheduling semantics, async boundary or authority changes.
 R3: run the existing SchedulerStopBarrier tests and lint this file; no new test
 or formatting pass. Required Main lint on the next source head remains mandatory.
+
+## R16 — retain unreadable run history before another occurrence
+
+The scheduler uses retained `linkedTaskId` and `pendingTaskCommandId` to avoid
+duplicating work after a lost Host acknowledgement. `JsonScheduleRepository`
+currently treats a failed run-history read as an empty array. A subsequent
+`saveRun` can overwrite the original receipt before task-first dispatch checks
+it. This can admit another task while the original task is still active.
+
+R1: use the existing strict-read option for run history. A genuinely absent file
+still means no previous run; malformed JSON, access failure or timeout must
+remain an error. Preserve the original bytes and release the failed admission's
+locks. Do not introduce another journal, retry, repair operation or fallback.
+
+R2: extend the existing child-Host lost-ACK/cold-context journey. After restart,
+damage only its isolated TEST run file; one Run now must fail before a new Host
+effect, without rewriting that file or changing the neighbor. Restore the
+original bytes, then continue the existing task recovery and history-pruning
+assertions. No vendor executable or model request is involved.
+
+R3: run that failing-before/fixed-after journey, existing repository/scheduler
+cases and controlled finite-session Host cases. This qualifies the storage and
+recovery boundary only; it is not native-provider or Desktop UI evidence.
+Estimated delta: 1–10 production lines and 15–30 integration-test lines;
+complexity 3/10, reliability after verification 8/10, confidence 9/10.
+
+Verification on the `1160b575` source plus this slice: the extended child-Host
+journey failed before the fix because Run now returned a new running occurrence.
+After strict reads, all six existing scheduler suites passed (131 tests,
+0 failures, 0 skipped), including real Croner ticks, cold context renewal,
+lost acknowledgements and Stop during admission. Three existing controlled
+Host session/activity/message files also passed (32 tests, 0 skipped).
+The correction adds no provider input and changes no native execution policy.
+The existing controlled Team/Runtime Host suite passed all 30 cases, including
+Codex usage, mixed V2 ownership, launch replay and checkpoint recovery. Focused
+lint passed for the changed repository and integration file.

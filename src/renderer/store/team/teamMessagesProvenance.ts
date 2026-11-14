@@ -215,10 +215,12 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
             );
             const nextEntry: TeamMessagesCacheEntry = {
               ...current,
-              provenance: { head: page.messages, pages, requestScope },
+              provenance: { head: page.messages, pages, requestScope,
+                ...(page.historyWarning ? { historyWarning: page.historyWarning } : {}),
+              },
               historyReloadRequired:
                 (historyReloadRequired || current.historyReloadRequired) && page.hasMore,
-              messagesError: historyError,
+              messagesError: historyError ?? page.historyWarning ?? null,
               canonicalMessages: nextCanonical,
               optimisticMessages: nextOptimistic,
               feedRevision: page.feedRevision,
@@ -391,19 +393,22 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
               ...pages.map((loaded) => loaded.messages),
               head
             );
+            const historyWarning = page.historyWarning ?? liveEntry.provenance?.historyWarning;
             return {
               teamMessagesByName: {
                 ...state.teamMessagesByName,
                 [teamName]: {
                   ...liveEntry,
-                  provenance: { head, pages, requestScope },
+                  provenance: { head, pages, requestScope,
+                    ...(historyWarning ? { historyWarning } : {}),
+                  },
                   canonicalMessages: mergedCanonical,
                   optimisticMessages: pruneOptimisticMessages(
                     liveEntry.optimisticMessages,
                     mergedCanonical
                   ),
                   historyReloadRequired: false,
-                  messagesError: null,
+                  messagesError: historyWarning ?? null,
                   nextCursor: page.nextCursor,
                   hasMore: page.hasMore,
                   feedRevision: page.feedRevision,

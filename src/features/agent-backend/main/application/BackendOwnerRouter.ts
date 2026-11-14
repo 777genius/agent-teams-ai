@@ -29,6 +29,7 @@ import type {
   StoredBackendBinding,
 } from './backendBinding';
 import type { HostHandshake, JsonValue } from '@agent-teams/legacy-agent-host/contracts';
+import type { RetainedWindowsCustody } from '@agent-teams/legacy-agent-host/owned-process';
 import type { LiveRosterPrivateInput, LocalModelReadinessCapture, LocalModelReadinessTransfer } from '@agent-teams/legacy-agent-host/team-host';
 
 interface RegisteredOwner {
@@ -41,6 +42,8 @@ interface RegisteredOwner {
 export interface CapturedBackendOwner extends BackendOwnerRef {
   readonly storageRoot: string;
   readonly client: CapturedHostClient;
+  /** Original Main lifetime, independent of this replaceable Host client. */
+  readonly nativeCustody?: RetainedWindowsCustody;
 }
 
 export interface BoundBackendCommand {

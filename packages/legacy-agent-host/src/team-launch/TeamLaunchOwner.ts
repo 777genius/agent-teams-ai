@@ -8,7 +8,7 @@ import {
   memberActionBlocksStart,
   memberActionBlocksSelection,
 } from './memberActions.js';
-import { projectLaunchRestorations } from './projectLaunchRestorations.js';
+import { projectLaunchActivityLineage, projectLaunchRestorations } from './projectLaunchRestorations.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { canFinalizeWorktreeLaunch, finalizedWorktreeCapture } from './worktreePreparation.js';
 import { validateLaunchRecord } from './validateLaunchRecord.js';
@@ -229,6 +229,9 @@ export class TeamLaunchOwner {
   readRestorations() {
     return this.options.authorized('read', () => projectLaunchRestorations(this.load()));
   }
+
+  readonly readActivityLineage = (memberId: string) =>
+    this.options.authorized('read', () => projectLaunchActivityLineage(this.load(), memberId));
 
   liveMembership(authorized: <T>(operation: () => T) => T) {
     return createLiveRosterLaunch({ authorized, read: () => this.load(),

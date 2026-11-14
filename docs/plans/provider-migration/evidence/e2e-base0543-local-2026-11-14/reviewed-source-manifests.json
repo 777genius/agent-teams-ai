@@ -1,0 +1,549 @@
+[
+  {
+    "originalFreeze": "TEST-plan13-host-r4-types-final-freeze.json",
+    "originalFreezeSha256": "5a9300266e3e650b855c28494f11f532aa8d2bfc3746043073b1c4fdfabc723a",
+    "files": [
+      {
+        "path": "packages/legacy-agent-host/src/adapters/runtime/FileRuntimeEventStorage.ts",
+        "sha256": "af27689084c9be324bd0a1dfca870f2c3550a5988141a58ac73dddf0ab4a8c78",
+        "gitBlob": "08764b5e21c0e56807db16747442cf40233748bb",
+        "lines": 185
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/runtime/FileRuntimeStore.ts",
+        "sha256": "b33e3d6a60c0af5b84aa2c90e307f2fccffb659c57458bf056dc289cb09dde4b",
+        "gitBlob": "60873a7a750aacfd4affbff90b21e1a739f127d4",
+        "lines": 325
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+        "sha256": "27e38d75461d42ea765f9ec70ace822852491b77972bae3398921f1fe33988ea",
+        "gitBlob": "309c3bc5e1b3eda58f3830967c6e66bbc656415d",
+        "lines": 791
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/TeamHost.ts",
+        "sha256": "62febe4a066fbbc3db33f392674b072b541085503739fd15776a0dc3f3ade28b",
+        "gitBlob": "1950c59f37ee7b55e375778d4b6f78aa25904a62",
+        "lines": 787
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/runtimeActivitySources.ts",
+        "sha256": "d11de7bcb3b5073762d8e5d571a4049e4c44f582d977d76d04b6b8a483cfa243",
+        "gitBlob": "69c15566c0d3c04d9f88e84b8dbecd491624f938",
+        "lines": 104
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/readTeamConversation.ts",
+        "sha256": "4a2a6f2dd050c11451eb6063451e9ea4f3a1fb2fdaa5bed53c8af3213c180c5a",
+        "gitBlob": "9a28251fa3d959711735b3cf75301ffe0d78c742",
+        "lines": 79
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+        "sha256": "90a7a2e4b2d7ef294c68bc23cc84a07a947116eeeade9798dc484d0fc9b4d083",
+        "gitBlob": "504be286f7ef7eb147310503a2a5ed3a6f339381",
+        "lines": 561
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+        "sha256": "3ab3928664f7e83fabda0547de2f6ecfa3f0e4180df971d6987901314c606bfc",
+        "gitBlob": "7ef05204eb696e2b498595a5f04a544fe20d0036",
+        "lines": 752
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+        "sha256": "415b5ba4edbcd78f587ad8826d5e2661aa7eb4f7245e2914b2a7e55e288f21ae",
+        "gitBlob": "22503cf7430200a8e221c7495a320740bbe7a474",
+        "lines": 124
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/contracts.ts",
+        "sha256": "1da0db3b09d43e3007bd0531e66afa2512400bf34e26fbd5c9f2c69ebe0fff0a",
+        "gitBlob": "a0ffc0ad8504e65ffb0113bd534f950647a997b3",
+        "lines": 140
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/runtimeConversation.ts",
+        "sha256": "dcfb693873b07ce23009980458b8dcd1f2e2aa879ac7a94858b9c7d0e8530a40",
+        "gitBlob": "af849fa3641ab0acb1edb1b7f46da0fe3cbbdb96",
+        "lines": 201
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+        "sha256": "9610d3d6da8328b4d0bf2a336413a16c4f575963b68fea04594e1c446cdb43e2",
+        "gitBlob": "7e9ee123dcd20099f1333f6f9dfd84f24738da52",
+        "lines": 779
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/pageOwnerMessages.ts",
+        "sha256": "dedddb0c6a90bb156c7c8cadce77a533748069bff7c11b717b15e11898a05091",
+        "gitBlob": "559a444da55c44e9a069dc78e222b1ac2033f7b9",
+        "lines": 117
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/pageOwnerSnapshot.ts",
+        "sha256": "ff74e76490338d305d864228cf83e027b28b2387037bc09c78de98b710b0c62b",
+        "gitBlob": "a393b94a7ce4ecde5691cb53c27068b26ce18724",
+        "lines": 334
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/ownerMessageReads.ts",
+        "sha256": "23027e89299641e4da080feee0309775716f70a154b24396308ec186b70f8b32",
+        "gitBlob": "15e535c3a7f8dab9149504b79582480b5a67408b",
+        "lines": 103
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts",
+        "sha256": "ac65899632bf10b753dbedae84ed2589272960884bef84cf8958dbfcc820b437",
+        "gitBlob": "f9c28fc2d9670fb03b0ab39172eb21cfd156b54b",
+        "lines": 800
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team-launch/projectLaunchRestorations.ts",
+        "sha256": "72524a54530154d56e69adc1b64a4d722791920ff95cf39766eac01692a00bb9",
+        "gitBlob": "51e14945f0311b7eedee69d373fc3e8820c243bc",
+        "lines": 36
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+        "sha256": "4e8bec1d651805653f6fa130de4d5a37ed2d98bb85f7dcdbcedde9733a161426",
+        "gitBlob": "c506a68f03167abfc674c4fc109796fffcf985aa",
+        "lines": 1003
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "sha256": "455b579af4b33169944e1bdd4458889127e2e3bd5e8980028462c8db99ce3a54",
+        "gitBlob": "278d0ae220b22f60d9a875b2cf90469b7a21f6ce",
+        "lines": 3018
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team-snapshot.test.ts",
+        "sha256": "ce48410be42cd171bac00af32625613cf898ff9caadd54ce1363c8c2908d60d6",
+        "gitBlob": "9048d8a1756df97af82e971014cebd6329d30d1c",
+        "lines": 781
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/13-lead-conversation-parity-2026-11-14.md",
+        "sha256": "a1ecc64e907171c38a2eb1e8ee6aff257a526248f06688f659f886414c8fceb0",
+        "gitBlob": "843765e703f3b68491f4ba37adbf1baf4f85b1e1",
+        "lines": 412
+      }
+    ]
+  },
+  {
+    "originalFreeze": "TEST-plan13-frontend-r4-freeze.json",
+    "originalFreezeSha256": "9eecb8a587d88045c628130076743283afcf426ce781cabe6ee105e1b0035173",
+    "files": [
+      {
+        "path": "src/features/agent-backend/contracts/teamChanges.ts",
+        "sha256": "e4ef179cb8f48e7e8bd1fd1dcce2e6e1da8571f2e68d796a9079f32051362239",
+        "gitBlob": "bf81ff9345001420414eb488e25677b49d5c0c55",
+        "bytes": 801,
+        "lines": 20
+      },
+      {
+        "path": "src/features/agent-backend/contracts/teamSnapshot.ts",
+        "sha256": "8de2e423ac4f71069a13980b0fc193c3b130711a369a3023ff3bc76c6a185821",
+        "gitBlob": "22430ba7aee55607069b662e7f85d5574b9f16b2",
+        "bytes": 2347,
+        "lines": 59
+      },
+      {
+        "path": "src/features/agent-backend/main/adapters/output/projectTeamChanges.ts",
+        "sha256": "4fbfe8e91213988530a0b39d6bd52c78da05436b22628c02257d9c0940cb87a2",
+        "gitBlob": "e11ded0bac5c8456ee64c3e800ce2d2d11f9735f",
+        "bytes": 3227,
+        "lines": 72
+      },
+      {
+        "path": "src/features/agent-backend/main/adapters/output/projectTeamMessagesPage.ts",
+        "sha256": "d2b3dac262627277218dec23ce48669eba3162869ba7e8494ab975af605fbafe",
+        "gitBlob": "826b8d7aaf2a5ac9dade2831f6aec408677689d4",
+        "bytes": 2898,
+        "lines": 61
+      },
+      {
+        "path": "src/features/agent-backend/main/adapters/output/projectTeamSnapshot.ts",
+        "sha256": "a3d7f48b4e28ee59f502a95c7c4b918ab1a60a051a27b23d15130262c7ff1873",
+        "gitBlob": "d1093e70788d99ec80181f3dadfe291bb81f9b9f",
+        "bytes": 15121,
+        "lines": 358
+      },
+      {
+        "path": "src/features/agent-backend/renderer/createHostTeamChanges.ts",
+        "sha256": "ad3e4c38f9c2772394e3b82accf5bcd925709c7efc9b068186a15ea982eb462a",
+        "gitBlob": "7758b1253c77f5532ded7e7ad41345676eda6d99",
+        "bytes": 8893,
+        "lines": 219
+      },
+      {
+        "path": "src/features/agent-backend/renderer/readHostMessagesPage.ts",
+        "sha256": "46f010692afdd5afb70aecde9dd5f7efb04877e90d75175962fcc2dcb650169d",
+        "gitBlob": "4a61344544470cf40bc85577a3fd7e8e7703e0d2",
+        "bytes": 5581,
+        "lines": 123
+      },
+      {
+        "path": "src/shared/types/team.ts",
+        "sha256": "fa957e719466945bf80e1312c24aa9374c05fce2be224984bc82ffd5694b7697",
+        "gitBlob": "9f3665d9aa1ed5adfc2f6d048d1d75c5c97bce42",
+        "bytes": 58608,
+        "lines": 1826
+      },
+      {
+        "path": "src/shared/types/teamMessages.ts",
+        "sha256": "1676f70c5678542eee80b85042cb5efccfbec7818f0bd54ee0f2e4b3ccd1e6cd",
+        "gitBlob": "ba5a4c96140fa3ec7d0780ac4e0b315a116e30f9",
+        "bytes": 582,
+        "lines": 16
+      },
+      {
+        "path": "src/renderer/store/team/teamMessagesCache.ts",
+        "sha256": "22f7a47116de85dbdea2a80e2602236dcb41af7cfcc2f536a2a6ab15466c61ec",
+        "gitBlob": "f9bfd4883db4fae36969443284b85195b91ae752",
+        "bytes": 8960,
+        "lines": 304
+      },
+      {
+        "path": "src/renderer/store/team/teamMessagesProvenance.ts",
+        "sha256": "018257385a1dfd6846ca7557a9c03eabb3413c5fd80cbb32b0d2147891780c2f",
+        "gitBlob": "e4f9cbc7483381b22a74dd9901ea5db33b3896e7",
+        "bytes": 17813,
+        "lines": 456
+      },
+      {
+        "path": "test/features/agent-backend/hostTeamChanges.test.ts",
+        "sha256": "54a8aeee05df63eab28133a96909ac203afbdb6c11d644411e0ef6db05d50d96",
+        "gitBlob": "61c64ba13fe579f4949c321e2d6ea2df9deb9eb1",
+        "bytes": 9369,
+        "lines": 249
+      },
+      {
+        "path": "test/features/agent-backend/hostMessagesPageTransport.test.ts",
+        "sha256": "57d0454799b621e46f6d2f541b671529509d8cbb801729eb011facb92041b85d",
+        "gitBlob": "50bcc5f283a07aedb483eba9dd391c5e91efa13b",
+        "bytes": 10753,
+        "lines": 242
+      },
+      {
+        "path": "test/renderer/store/teamSlice.test.ts",
+        "sha256": "f7082574b3e73619411cbcb2599331397fd50fad99d128469a051d168a4afd36",
+        "gitBlob": "7542c53238ca24abea5d4115402cc5ec8e7e825c",
+        "bytes": 324240,
+        "lines": 9248
+      }
+    ]
+  },
+  {
+    "originalFreeze": "TEST-plan14-review-final-freeze.json",
+    "originalFreezeSha256": "09218dc4ab44219a1a4894aeb37baf274cb67f53cd2422bb86d54c358b2040a6",
+    "files": [
+      {
+        "path": "src/renderer/components/team/review/CodeMirrorDiffView.tsx",
+        "bytes": 34016,
+        "lines": 956,
+        "sha256": "8365c1c010d5f9b4fccfd45f1a0d1bb80058ba647909f1151b1a1a3516ef190f",
+        "gitBlob": "883e5f94b2181a9daf530c6c068a84f5e957450b"
+      },
+      {
+        "path": "src/renderer/components/team/review/CodeMirrorDiffUtils.ts",
+        "bytes": 10870,
+        "lines": 293,
+        "sha256": "954d150496a80a7e1749b3cdf84f877d854fc22f8c336a2483d2717496157cb7",
+        "gitBlob": "fd1a17f68da273179b2bec287d1bf0cb0b32e19b"
+      },
+      {
+        "path": "test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx",
+        "bytes": 8597,
+        "lines": 220,
+        "sha256": "3c033e96da47d936221e183ceca3928f8655655be99724d8f5aa75be9c339f9e",
+        "gitBlob": "5234eea466c87f7f2b29ba4cc4494119dfb860dd"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/14-review-toolbar-2026-11-14.md",
+        "bytes": 6989,
+        "lines": 124,
+        "sha256": "22297d95da7ab26fd406da5e643006c7f66e119d7cad6485a52856b352555247",
+        "gitBlob": "38cb44f80a6ad2421105f093783e1cec81ce843e"
+      }
+    ]
+  },
+  {
+    "originalFreeze": "TEST-plan15-ui-launch-inputs-freeze.json",
+    "originalFreezeSha256": "5b691cd25c5df9f08b51bf0ffd5f1ad157b01cb9f7373f197edaea1c2bad4209",
+    "files": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 26337,
+        "lines": 385,
+        "sha256": "b7d618a7a464610ae4412b4e702723db197f1953a565d3283148d7f07df3cebf",
+        "gitBlob": "f978d970296449c6c1d653e58150a99754f312a5"
+      },
+      {
+        "path": "scripts/ci/install-dependencies-with-retry.mjs",
+        "bytes": 5259,
+        "lines": 128,
+        "sha256": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e",
+        "gitBlob": "cbf2463eb47d22c3d87d9eec001edad26dd68ff0"
+      },
+      {
+        "path": "test/scripts/installDependenciesWithRetry.test.mjs",
+        "bytes": 4939,
+        "lines": 112,
+        "sha256": "3aab9d6568157c883993c43b8057193175e69c16c31129ce3867a14e686a8f00",
+        "gitBlob": "c1c0232d09e5cd898d7acabcc48b87bab58f3c82"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-readback-fixture.ts",
+        "bytes": 13099,
+        "lines": 289,
+        "sha256": "eb37cc1698fe78acaa0a1a4e68339ee621e157d710117ee83c5f1a52950cae30",
+        "gitBlob": "c50bb37b63a707ab771eda478e336483c8850931"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-review-fixture.test.ts",
+        "bytes": 5534,
+        "lines": 104,
+        "sha256": "e5e9fb43c56ed96bbc9815d6057e227af952ba197589b72d2e7139f61af0de8a",
+        "gitBlob": "fbe6b3866c7586065efc1f1bc49c3bcf04676bed"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/15-ui-launch-inputs-2026-11-14.md",
+        "bytes": 10660,
+        "lines": 190,
+        "sha256": "1f3cd647af44b67188fcd97b306e7faebbe043308a8c1eaac0efe6359e0ae415",
+        "gitBlob": "ed112228ee7c1ad92b6a38c15f5d8e143a4764ec"
+      }
+    ]
+  },
+  {
+    "originalFreeze": "TEST-plan16-source-freeze.json",
+    "originalFreezeSha256": "fb639b11d35c2171d7f13da185be46140115534a8fe861b360c2445b6bc5e194",
+    "files": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "sha256": "1a523e0068e2064b4a3dd16e78e791819efeca3f5150c33332d85014156324b6",
+        "physicalLines": 517
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/16-selection-processes-ui-2026-11-14.md",
+        "sha256": "54170f17601e012266b9a56f1dd39a7a3f7859624d6d303dee67b2677b670651",
+        "physicalLines": 184
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "sha256": "0700c773a9c01da59c97c5d9b812c835eda85ee0a6be8d44fe4b514ea5544634",
+        "physicalLines": 800
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "sha256": "47190a2a4f8528d9ce987040b4ce756a1f70419160d585d2dfcff82d1d70c447",
+        "physicalLines": 695
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "sha256": "389ffd995d98f033df24e7c2a8bec0363c8678d7ff7a65d81f462bf41e0768bb",
+        "physicalLines": 800
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-controlled-process-fixture.ts",
+        "sha256": "6125e6a5f52ca5db258b9022525b29b5ddb57c0fa7f4611b96176ebb6e2dc3de",
+        "physicalLines": 291
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "sha256": "03a67900cdb96a9b4e30888bc16ce1d8d951d2e25075958e4ce78f169a798f33",
+        "physicalLines": 198
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "sha256": "bcd8d465355e26d1b8657f7aa77fa8227332b816a627e9bf50d200a35c4cf40c",
+        "physicalLines": 381
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "sha256": "388e00ac89b8237dceb3ebc199349099897998611489103f65870391505c879c",
+        "physicalLines": 215
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-fixture.ts",
+        "sha256": "e4f4ba8a9908a6a3effa277a3c8520846f3dddd3a912aaa4368944c33b339172",
+        "physicalLines": 232
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "sha256": "742f2e978a8866c37d0ce10dd81bb30e533f61487726e937fc32e49e7c2fe6e9",
+        "physicalLines": 104
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+        "sha256": "41fbad7366d0155b873d7fb2a310fc700ac3c01ba7ac412f2d1b828cf19b71df",
+        "physicalLines": 437
+      }
+    ]
+  },
+  {
+    "originalFreeze": "TEST-plan13-host-r4-publish-freeze.json",
+    "originalFreezeSha256": "aef452dc46ab715930a59f6d52bd5bebfc2ac2447f8a6ed94cfcdb54dc1e092d",
+    "publicationOnlyDelta": {
+      "previousFreeze": "TEST-plan13-host-r4-types-final-freeze.json",
+      "previousFreezeSha256": "5a9300266e3e650b855c28494f11f532aa8d2bfc3746043073b1c4fdfabc723a",
+      "changes": [
+        {
+          "path": "packages/legacy-agent-host/src/composition/readTeamConversation.ts",
+          "beforeSha256": "4a2a6f2dd050c11451eb6063451e9ea4f3a1fb2fdaa5bed53c8af3213c180c5a",
+          "afterSha256": "40536d69ed938947f3f5fe320008321b893810f6530af17c86ebd605b17e0c74",
+          "kind": "remove exactly one terminal empty line"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/runtime/runtimeConversation.ts",
+          "beforeSha256": "dcfb693873b07ce23009980458b8dcd1f2e2aa879ac7a94858b9c7d0e8530a40",
+          "afterSha256": "1c112719175f3f09621f8448c1365633e61a253617a1d90c7b4f48dc48f319fe",
+          "kind": "remove exactly one terminal empty line"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/team/ownerMessageReads.ts",
+          "beforeSha256": "23027e89299641e4da080feee0309775716f70a154b24396308ec186b70f8b32",
+          "afterSha256": "d497120b2d51a5faae4b6415f883cef20b8165fb51b1bf9828bd515194ab23d3",
+          "kind": "remove exactly one terminal empty line"
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/13-lead-conversation-parity-2026-11-14.md",
+          "beforeSha256": "a1ecc64e907171c38a2eb1e8ee6aff257a526248f06688f659f886414c8fceb0",
+          "afterSha256": "18f7f7a78a15de253540e1d3228e2a45d802f166f0b5f05cb20fc8280dd64179",
+          "kind": "preceding written whitespace plan"
+        }
+      ],
+      "qualification": "No new test execution; three terminal empty lines only. Production statements and assertions unchanged."
+    },
+    "files": [
+      {
+        "path": "packages/legacy-agent-host/src/adapters/runtime/FileRuntimeEventStorage.ts",
+        "sha256": "af27689084c9be324bd0a1dfca870f2c3550a5988141a58ac73dddf0ab4a8c78",
+        "gitBlob": "08764b5e21c0e56807db16747442cf40233748bb",
+        "lines": 185
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/runtime/FileRuntimeStore.ts",
+        "sha256": "b33e3d6a60c0af5b84aa2c90e307f2fccffb659c57458bf056dc289cb09dde4b",
+        "gitBlob": "60873a7a750aacfd4affbff90b21e1a739f127d4",
+        "lines": 325
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+        "sha256": "27e38d75461d42ea765f9ec70ace822852491b77972bae3398921f1fe33988ea",
+        "gitBlob": "309c3bc5e1b3eda58f3830967c6e66bbc656415d",
+        "lines": 791
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/TeamHost.ts",
+        "sha256": "62febe4a066fbbc3db33f392674b072b541085503739fd15776a0dc3f3ade28b",
+        "gitBlob": "1950c59f37ee7b55e375778d4b6f78aa25904a62",
+        "lines": 787
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/runtimeActivitySources.ts",
+        "sha256": "d11de7bcb3b5073762d8e5d571a4049e4c44f582d977d76d04b6b8a483cfa243",
+        "gitBlob": "69c15566c0d3c04d9f88e84b8dbecd491624f938",
+        "lines": 104
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/readTeamConversation.ts",
+        "sha256": "40536d69ed938947f3f5fe320008321b893810f6530af17c86ebd605b17e0c74",
+        "gitBlob": "53e3b3ad7efe96688a6958f3d4c775d911168c46",
+        "lines": 78
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+        "sha256": "90a7a2e4b2d7ef294c68bc23cc84a07a947116eeeade9798dc484d0fc9b4d083",
+        "gitBlob": "504be286f7ef7eb147310503a2a5ed3a6f339381",
+        "lines": 561
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+        "sha256": "3ab3928664f7e83fabda0547de2f6ecfa3f0e4180df971d6987901314c606bfc",
+        "gitBlob": "7ef05204eb696e2b498595a5f04a544fe20d0036",
+        "lines": 752
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+        "sha256": "415b5ba4edbcd78f587ad8826d5e2661aa7eb4f7245e2914b2a7e55e288f21ae",
+        "gitBlob": "22503cf7430200a8e221c7495a320740bbe7a474",
+        "lines": 124
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/contracts.ts",
+        "sha256": "1da0db3b09d43e3007bd0531e66afa2512400bf34e26fbd5c9f2c69ebe0fff0a",
+        "gitBlob": "a0ffc0ad8504e65ffb0113bd534f950647a997b3",
+        "lines": 140
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/runtimeConversation.ts",
+        "sha256": "1c112719175f3f09621f8448c1365633e61a253617a1d90c7b4f48dc48f319fe",
+        "gitBlob": "4d7423aba0e58061de54112b5c907534e9ab1b97",
+        "lines": 200
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+        "sha256": "9610d3d6da8328b4d0bf2a336413a16c4f575963b68fea04594e1c446cdb43e2",
+        "gitBlob": "7e9ee123dcd20099f1333f6f9dfd84f24738da52",
+        "lines": 779
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/pageOwnerMessages.ts",
+        "sha256": "dedddb0c6a90bb156c7c8cadce77a533748069bff7c11b717b15e11898a05091",
+        "gitBlob": "559a444da55c44e9a069dc78e222b1ac2033f7b9",
+        "lines": 117
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/pageOwnerSnapshot.ts",
+        "sha256": "ff74e76490338d305d864228cf83e027b28b2387037bc09c78de98b710b0c62b",
+        "gitBlob": "a393b94a7ce4ecde5691cb53c27068b26ce18724",
+        "lines": 334
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/ownerMessageReads.ts",
+        "sha256": "d497120b2d51a5faae4b6415f883cef20b8165fb51b1bf9828bd515194ab23d3",
+        "gitBlob": "d8bc621be87c7f0d5e74e846a80a7b6e671b6cdc",
+        "lines": 102
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts",
+        "sha256": "ac65899632bf10b753dbedae84ed2589272960884bef84cf8958dbfcc820b437",
+        "gitBlob": "f9c28fc2d9670fb03b0ab39172eb21cfd156b54b",
+        "lines": 800
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team-launch/projectLaunchRestorations.ts",
+        "sha256": "72524a54530154d56e69adc1b64a4d722791920ff95cf39766eac01692a00bb9",
+        "gitBlob": "51e14945f0311b7eedee69d373fc3e8820c243bc",
+        "lines": 36
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+        "sha256": "4e8bec1d651805653f6fa130de4d5a37ed2d98bb85f7dcdbcedde9733a161426",
+        "gitBlob": "c506a68f03167abfc674c4fc109796fffcf985aa",
+        "lines": 1003
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "sha256": "455b579af4b33169944e1bdd4458889127e2e3bd5e8980028462c8db99ce3a54",
+        "gitBlob": "278d0ae220b22f60d9a875b2cf90469b7a21f6ce",
+        "lines": 3018
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team-snapshot.test.ts",
+        "sha256": "ce48410be42cd171bac00af32625613cf898ff9caadd54ce1363c8c2908d60d6",
+        "gitBlob": "9048d8a1756df97af82e971014cebd6329d30d1c",
+        "lines": 781
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/13-lead-conversation-parity-2026-11-14.md",
+        "sha256": "18f7f7a78a15de253540e1d3228e2a45d802f166f0b5f05cb20fc8280dd64179",
+        "gitBlob": "cb1c8c161728ccbb23494dfc748dbb8697ada577",
+        "lines": 422
+      }
+    ]
+  }
+]

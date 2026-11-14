@@ -11,11 +11,15 @@ export function captureMemberProviderAuthority(options: {
   profileId: string;
   hostIncarnation: string;
   assertAllocation?: () => void;
+  /** Original writer lease, required by the production factory before sharing a Team fence. */
+  assertWriter?(): void;
+  /** Closed Team operation; a denied/corrupt source must throw, never return legacy applicability. */
+  assertProviderAuthority?(): 'current' | 'roster-not-applicable';
   beforeTeamAuthority?: () => void;
   assertCurrent(): void;
   readRuntime(): { record: RuntimeSessionRecord | undefined; attached: boolean };
 }) {
-  const { entry, beforeTeamAuthority } = options;
+  const { entry, assertWriter, beforeTeamAuthority } = options;
   const original = {
     team: entry.team,
     binding: runtimeDigest(entry.binding),
@@ -26,9 +30,7 @@ export function captureMemberProviderAuthority(options: {
     principalId: entry.profile.principalId,
     fingerprint: runtimeDigest({ profileId: options.profileId, config: options.request }),
   };
-  // No Runtime lookup here: called inside Runtime/Team fences as well as native callbacks.
-  function assertCapturedCurrent() {
-    options.assertCurrent();
+  function assertOriginal() {
     if (
       entry.team !== original.team ||
       runtimeDigest(entry.binding) !== original.binding ||
@@ -39,9 +41,38 @@ export function captureMemberProviderAuthority(options: {
     )
       throw new RuntimeOwnerError('forbidden');
   }
+  // No Runtime lookup here: called inside Runtime/Team fences as well as native callbacks.
+  function assertCapturedCurrent() {
+    options.assertCurrent();
+    assertOriginal();
+  }
+  function checkCurrent() {
+    assertCapturedCurrent();
+    if (
+      !entry.team.owner.authorizeMemberBinding(entry.binding, 'admit') ||
+      !entry.team.owner.authorizeRuntimeAccess(original.principalId, entry.binding, 'control')
+    )
+      throw new RuntimeOwnerError('forbidden');
+  }
   function assertCurrent() {
-    if (beforeTeamAuthority) beforeTeamAuthority();
-    else assertCapturedCurrent();
+    // Never enter a different Team's lock through a replaced mutable entry.
+    assertOriginal();
+    // A replaced store root must be refused before even publishing a lock there.
+    assertWriter?.();
+    beforeTeamAuthority?.();
+    assertOriginal();
+    if (assertWriter && options.assertProviderAuthority) {
+      const authority = options.assertProviderAuthority();
+      if (authority === 'current') return;
+      if (authority !== 'roster-not-applicable') throw new RuntimeOwnerError('forbidden');
+    }
+    // Preserve the original direct writer composition; production fallback uses
+    // the provider-only shared fence after its separate availability prelude.
+    if (assertWriter && !beforeTeamAuthority) {
+      original.team.owner.withLaunchAuthority(original.principalId, 'read', checkCurrent);
+      return;
+    }
+    if (!beforeTeamAuthority) assertCapturedCurrent();
     if (!original.team.owner.authorizeRuntimeAccess(
       original.principalId, entry.binding, 'provider',
       beforeTeamAuthority ? assertCapturedCurrent : undefined

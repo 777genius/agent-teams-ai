@@ -43,11 +43,12 @@ export async function capturedWitness(
   pid: number,
   birth: string,
   track: (child: ChildProcess) => void,
-  events: NativeGateEvents
+  events: NativeGateEvents,
+  mode: 'wait-gated' | 'vendor-wait-gated' = 'wait-gated'
 ): Promise<{ process: ChildProcess; exit: Promise<number | null> }> {
   const guardedTimeout = <T>(operation: Promise<T>, ms?: number): Promise<T> =>
     timeout(events.wait(operation), ms);
-  const process = spawn(fixture, ['wait-gated', String(pid), birth], {
+  const process = spawn(fixture, [mode, String(pid), birth], {
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
   });
@@ -79,6 +80,77 @@ export async function capturedWitness(
   }));
   return { process, exit };
 }
+
+/** TEST-only fresh zero-time observations of one HANDLE retained before provider resume. */
+export async function capturedQueryableWitness(
+  fixture: string, pid: number, birth: string, track: (child: ChildProcess) => void,
+  events: NativeGateEvents
+): Promise<{
+  process: ChildProcess;
+  observe(): Promise<'alive' | 'absent'>;
+  wait(): Promise<number | null>;
+}> {
+  const child = spawn(fixture, ['vendor-query-wait-gated', String(pid), birth], {
+    stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
+  });
+  track(child);
+  let pending: { resolve(value: string): void; reject(error: Error): void } | undefined;
+  let buffer = '', queries = 0, querying = false;
+  let waiting: Promise<number | null> | undefined;
+  const failure = () => new Error('Original HANDLE witness unavailable');
+  child.stdout.on('data', events.guard((bytes: Buffer) => {
+    buffer += bytes.toString('ascii');
+    assert.ok(buffer.length <= 64, 'Bounded original witness output');
+    const end = buffer.indexOf('\n');
+    if (end < 0) return;
+    const line = buffer.slice(0, end).replace(/\r$/, '');
+    buffer = buffer.slice(end + 1);
+    assert.ok(pending && !buffer.length, 'Exactly one original witness reply');
+    const original = pending; pending = undefined; original.resolve(line);
+  }));
+  child.stdin.on('error', events.guard(() => { throw failure(); }));
+  const exit = new Promise<number | null>((resolveExit, reject) => {
+    child.once('exit', code => { pending?.reject(failure()); pending = undefined; resolveExit(code); });
+    child.once('error', error => { pending?.reject(failure()); pending = undefined; reject(error); });
+  });
+  void exit.catch(() => undefined);
+  const line = () => {
+    assert.equal(pending, undefined);
+    assert.equal(child.exitCode, null);
+    return new Promise<string>((resolveLine, reject) => {
+      pending = { resolve: resolveLine, reject };
+    });
+  };
+  assert.equal(await timeout(events.wait(line())), 'captured');
+  return {
+    process: child,
+    async observe() {
+      assert.ok(!querying && !waiting && queries++ < 4, 'Finite sequential original HANDLE observations');
+      querying = true;
+      try {
+        const response = line();
+        void response.catch(() => undefined);
+        await timeout(events.wait(new Promise<void>((done, reject) => {
+          child.stdin.write('Q', error => error ? reject(error) : done());
+        })));
+        const result = await timeout(events.wait(response));
+        assert.ok(result === 'alive' || result === 'absent', 'Closed original HANDLE facts only');
+        return result;
+      } finally { querying = false; }
+    },
+    wait() {
+      assert.equal(querying, false);
+      waiting ??= (async () => {
+        await timeout(events.wait(new Promise<void>((done, reject) => {
+          child.stdin.end('W', (error?: Error | null) => error ? reject(error) : done());
+        })));
+        return timeout(events.wait(exit));
+      })();
+      return waiting;
+    },
+  };
+}
+
 export function preparationError(failure: Extract<Preparation, { kind: 'failed' }>): Error {
   console.error(
     JSON.stringify({

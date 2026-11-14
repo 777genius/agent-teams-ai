@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
 
 import {
@@ -24,9 +23,13 @@ import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
 import { captureCreatedTeamConversation, requestWithLocalModelReadiness } from '../infrastructure/CapturedLocalModelReadiness';
 import { captureProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import { CapturedRosterCommands } from '../infrastructure/CapturedRosterCommands';
+import { capturedRuntimeSourceGrant } from '../infrastructure/capturedRuntimeSourceGrant';
 import { captureRuntimeSources } from '../infrastructure/CapturedRuntimeSources';
 import { CapturedScheduledRuns } from '../infrastructure/CapturedScheduledRuns';
 import { CapturedTeamRegistry } from '../infrastructure/CapturedTeamRegistry';
+import { captureMainWindowsCustody } from '../infrastructure/CapturedWindowsCustody';
+import { prepareMainWindowsRuntimeConfiguration, prepareMainWindowsRuntimeSource,
+  prepareMainWindowsRuntimeSourceRecovery } from '../infrastructure/CapturedWindowsRuntimeSources';
 import { FileHandleBindingStore } from '../infrastructure/FileHandleBindingStore';
 import { loadDesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
 import { readCapturedTeamRetirements } from '../infrastructure/readCapturedTeamRetirements';
@@ -160,11 +163,15 @@ export class DesktopBackendFeature {
       this.router = router;
       phase = 'owner-registration';
       for (const owner of descriptor.owners) {
+        const nativeCustody = captureMainWindowsCustody(owner.profile, (descriptor.management ?? [])
+          .filter(entry => ownerKey(entry.owner) === ownerKey(owner))
+          .map(entry => capturedRuntimeSourceGrant(descriptor, entry)));
         const captured = {
           ownerId: owner.ownerId,
           revision: owner.revision,
           storageRoot: owner.storageRoot,
-          client: new CapturedHostClient(owner.profile),
+          client: new CapturedHostClient(owner.profile, nativeCustody),
+          ...(nativeCustody ? { nativeCustody } : {}),
         };
         router.registerOwner(captured);
         this.clients.set(ownerKey(owner), captured);
@@ -207,6 +214,7 @@ export class DesktopBackendFeature {
         /* Diagnostics cannot alter the original failed admission. */
       }
       await this.router?.shutdown();
+      await this.closeNativeOwners();
     }
   }
 
@@ -666,11 +674,8 @@ export class DesktopBackendFeature {
   private managementTargetId(
     selected: NonNullable<DesktopBackendDescriptor['management']>[number]
   ): string {
-    const owner = this.descriptor?.owners.find(
-      (entry) => ownerKey(entry) === ownerKey(selected.owner)
-    );
-    if (!owner) throw new BackendRoutingError('hold');
-    return createHash('sha256').update(JSON.stringify({ selected, owner })).digest('hex');
+    if (!this.descriptor) throw new BackendRoutingError('hold');
+    return capturedRuntimeSourceGrant(this.descriptor, selected).targetId;
   }
 
   private captureManagementTarget(
@@ -728,36 +733,22 @@ export class DesktopBackendFeature {
     if (this.sealed || this.clients.get(ownerKey(selected.owner)) !== owner)
       throw new BackendRoutingError('unavailable');
     if (!handshake.capabilities.includes('runtime.sources')) return undefined;
-    const teamScopes = [...new Map((this.descriptor?.handles ?? [])
-      .filter(
-        (entry) =>
-          entry.contextId === selected.contextId &&
-          ownerKey(entry.owner) === ownerKey(selected.owner)
-      )
-      .map(({ scope }) => [JSON.stringify([scope.teamId, scope.projectId, scope.workspaceId]), {
-        teamId: scope.teamId,
-        projectId: scope.projectId,
-        workspaceId: scope.workspaceId,
-      }] as const)).values()];
+    if (!this.descriptor) throw new BackendRoutingError('hold');
+    const grant = capturedRuntimeSourceGrant(this.descriptor, selected);
+    const ownerAvailable = () => !this.sealed && this.state === 'ready' &&
+      this.clients.get(ownerKey(selected.owner)) === owner;
+    const nativeCurrent = () => ownerAvailable() && (guard?.isCurrent() ?? true);
     return captureRuntimeSources({
-      grant: {
-        targetId: this.managementTargetId(selected),
-        ownerId: selected.owner.ownerId,
-        ownerRevision: selected.owner.revision,
-        contextId: selected.contextId,
-        projectPath: selected.projectPath,
-        runtimeId: selected.runtimeId,
-        profileId: selected.profileId,
-        configRevision: selected.configRevision,
-        teamScopes,
-      },
+      grant,
       client: owner.client,
       start: () => router.startOwner(selected.owner),
-      ownerAvailable: () =>
-        !this.sealed &&
-        this.state === 'ready' &&
-        this.clients.get(ownerKey(selected.owner)) === owner,
+      ownerAvailable,
       foregroundCurrent: () => guard?.isCurrent() ?? true,
+      ...(owner.nativeCustody ? {
+        prepareNativePublication: input => prepareMainWindowsRuntimeSource(owner.nativeCustody!, grant, input, nativeCurrent),
+        prepareNativeRecovery: () => prepareMainWindowsRuntimeSourceRecovery(owner.nativeCustody!, grant, nativeCurrent),
+        prepareNativeConfiguration: input => prepareMainWindowsRuntimeConfiguration(owner.nativeCustody!, grant, input, nativeCurrent),
+      } : {}),
       ...(selected.runtimeId === 'opencode' && selected.preferences ? {
         capturePreferences: () => captureManagedProviderRuntimePreferences(selected.preferences!, () =>
           !this.sealed && this.state === 'ready' && this.clients.get(ownerKey(selected.owner)) === owner &&
@@ -769,6 +760,14 @@ export class DesktopBackendFeature {
   shutdown(): ReturnType<BackendOwnerRouter['shutdown']> {
     this.sealed = true;
     this.state = 'shutting-down';
-    return this.router?.shutdown() ?? Promise.resolve([]);
+    return (this.router?.shutdown() ?? Promise.resolve([])).then(async results => {
+      await this.closeNativeOwners();
+      return results;
+    });
+  }
+
+  private async closeNativeOwners(): Promise<void> {
+    const outcomes = await Promise.all([...this.clients.values()].map(owner => owner.nativeCustody?.close() ?? Promise.resolve(true)));
+    if (outcomes.some(value => !value)) throw new BackendRoutingError('hold');
   }
 }

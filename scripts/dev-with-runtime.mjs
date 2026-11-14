@@ -28,6 +28,7 @@ import {
 } from './lib/runtime-cli-version.mjs';
 import { spawnSyncWithWindowsShell } from './lib/windows-shell-spawn.mjs';
 import { resolveElectronViteArgs } from './lib/dev-remote-debugging.ts';
+import { stageLinuxNodeExec } from './build/buildLinuxNodeExec.mjs';
 
 const runAndCapture = createRuntimeCommandCapture(spawnSyncWithWindowsShell);
 
@@ -695,6 +696,8 @@ async function main() {
       `Runtime version: ${formatRuntimeVersionForDisplay(resolvedRuntime.versionText)}\n`
     );
   }
+
+  stageLinuxNodeExec();
 
   const uiEnv = {
     ...process.env,

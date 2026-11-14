@@ -29,10 +29,12 @@ import { inheritNativeMemberMcp } from '../dist/composition/inheritNativeMemberM
 import { verifyOpenCodeMcpPolicyPlugin } from '../dist/adapters/providers/openCodeMcpPolicy.js';
 import { openCodeV2CapturedMcp } from '../dist/adapters/providers/OpenCodeV2CapturedMcp.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
+import { HostWindowsLaunch } from '../dist/owned-process/HostWindowsLaunch.js';
 import type { ClaudeMemberProfile } from '../dist/composition/runtimeProfile.js';
 import type { CodexMemberProfile } from '../dist/composition/runtimeProfile.js';
 import type { OpenCodeMemberProfile } from '../dist/composition/runtimeProfile.js';
 import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
+import type { RuntimeSourceProcessOrigin } from '../dist/composition/runtimeSourceProcessOrigin.js';
 
 const V2_SUPPORTED = ['linux', 'darwin', 'win32'].includes(process.platform) &&
   ['x64', 'arm64'].includes(process.arch) &&
@@ -51,7 +53,7 @@ function fixture() {
     provider: 'codex',
     cwd,
     environment: { HOME: root, CODEX_HOME: root, PATH: '/usr/bin:/bin' },
-    executable: { path: '/TEST/codex', sha256: 'a'.repeat(64) },
+    executable: { path: join(root, 'TEST-codex'), sha256: 'a'.repeat(64) },
     teamId: 'TEST-team',
     memberId: 'TEST-member',
     principalId: 'TEST-principal',
@@ -93,6 +95,41 @@ function fixture() {
     withAuthority: <T>(action: () => T) => store.fenced(action),
   };
 }
+
+test('new Codex MCP recipe capture forwards its exact retained Main owner to the finite catalog read', async t => {
+  const f = fixture(), retained = new HostWindowsLaunch(() => undefined);
+  const marker = new Error('TEST original Main catalog port');
+  const origin: RuntimeSourceProcessOrigin = { sourceId: 'c'.repeat(64), revision: 'd'.repeat(64),
+    origin: { kind: 'runtime', projectPath: f.profile.cwd, teamId: f.profile.teamId, memberId: f.profile.memberId,
+      scope: { teamId: f.profile.teamId, projectId: 'TEST-project', workspaceId: 'TEST-workspace' },
+      recipeIdentity: 'e'.repeat(64) } };
+  const originalOrigin = structuredClone(origin), canLaunch = () => true;
+  let reads = 0, ports = 0;
+  try {
+    const selected = captureRuntimeMcp({ recipes: [f.profile], savedCwd: f.profile.cwd,
+      members: [{ role: 'lead', settings: {} }] });
+    t.mock.method(retained, 'port', (...[profile, current, captureCurrent, processOrigin]: Parameters<HostWindowsLaunch['port']>) => {
+      ports++; assert.deepEqual(profile, selected[0]); assert.equal(current, canLaunch);
+      assert.equal(captureCurrent, undefined); assert.deepEqual(processOrigin, originalOrigin);
+      throw marker; // Refuse before CapturedProcess construction or any executable access/allocation.
+    });
+    const references = await prepareCapturedRuntimeMcpRecipes({ store: f.store, commandId: 'TEST-command',
+      baseRecipes: [f.profile], selectedRecipes: selected, assertCurrent() {}, withAuthority: f.withAuthority,
+      retainedWindowsLaunch: retained, processOrigin: () => origin,
+      readCatalog: async (profile, current, _signal, createProcess) => {
+        reads++; current(); assert.ok(createProcess);
+        origin.revision = 'f'.repeat(64); // Later caller mutation cannot replace the captured source.
+        assert.throws(() => createProcess(profile, canLaunch), error => error === marker);
+        return f.catalog;
+      } });
+    assert.equal(reads, 1); assert.equal(ports, 1); assert.equal(references.length, 1);
+    await prepareCapturedRuntimeMcpRecipes({ store: f.store, commandId: 'TEST-command',
+      baseRecipes: [f.profile], selectedRecipes: selected, assertCurrent() {}, withAuthority: f.withAuthority,
+      retainedWindowsLaunch: retained, processOrigin: () => assert.fail('Retained recipe cannot replace its original source'),
+      readCatalog: async () => assert.fail('Retained recipe cannot repeat native IO') });
+    assert.equal(reads, 1); assert.equal(ports, 1);
+  } finally { rmSync(f.root, { recursive: true, force: true }); }
+});
 
 function nativeV2(f: ReturnType<typeof fixture>): OpenCodeMemberProfile {
   const profile = runtimeMemberProfileSchema.parse({

@@ -9,6 +9,7 @@ import {
   type CapturedRuntimeProviderStatusDependencies,
   createCapturedRuntimeProviderStatusClient,
 } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient';
+import { getTeamEffortSelectorPresentation } from '../../../src/renderer/utils/teamEffortOptions';
 
 import type { CapturedProviderManagement } from '../../../src/features/agent-backend/main';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
@@ -46,6 +47,7 @@ function fixture(
               contextTokens: 4096,
               outputTokens: 128,
               free: false,
+              variants: ['low', 'high', 'max', 'ultra', 'TEST-custom-variant'],
             },
           ],
         },
@@ -112,9 +114,35 @@ it('projects bounded native catalog and effective default without treating crede
     routeKind: 'configured_local',
     proofState: 'needs_probe',
   });
+  expect(status.modelCatalog?.models[0]?.supportedReasoningEfforts).toEqual(['low', 'high']);
+  expect(getTeamEffortSelectorPresentation({
+    providerId: 'opencode', model: 'TEST-local/TEST-model', providerStatus: status,
+  })).toMatchObject({
+    disabled: false,
+    options: [{ value: '', label: 'Default' }, { value: 'low', label: 'Low' }, { value: 'high', label: 'High' }],
+  });
   expect(f.request.mock.calls).toHaveLength(1);
   expect(status.catalogScope).toMatch(/^[a-f0-9]{64}$/);
   expect(status.catalogScope).not.toBe('a'.repeat(64));
+});
+
+it('only valid current native variants enable the existing effort selector', async () => {
+  for (const variants of [undefined, [], ['high', 'high'], [' high'], [7], 'high']) {
+    const f = fixture();
+    const response = await f.request.getMockImplementation()!();
+    Object.assign(response.value.providers[0]!.models[0]!, { variants });
+    f.request.mockResolvedValue(response);
+    const status = await f.port.getProviderStatus('opencode');
+    if (variants === undefined || Array.isArray(variants) && variants.length === 0) {
+      expect(status.statusCheckOutcome).toBe('model_only');
+      expect(getTeamEffortSelectorPresentation({
+        providerId: 'opencode', model: 'TEST-local/TEST-model', providerStatus: status,
+      }).disabled).toBe(true);
+    } else {
+      expect(status.statusCheckOutcome).toBe('transient_error');
+      expect(status.models).toEqual([]);
+    }
+  }
 });
 
 it('partial adapters fail explicitly and never consult an ambient legacy runtime; stale catalog data is discarded', async () => {

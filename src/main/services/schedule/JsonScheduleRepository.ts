@@ -155,7 +155,8 @@ export class JsonScheduleRepository implements ScheduleRepository {
   }
 
   private async readRunsFile(scheduleId: string): Promise<ScheduleRun[]> {
-    return this.readJsonFile<ScheduleRun[]>(this.runsFilePath(scheduleId), []);
+    // Missing history is empty; unreadable history may still own pending work.
+    return this.readJsonFile<ScheduleRun[]>(this.runsFilePath(scheduleId), [], true);
   }
 
   private async writeRunsFile(scheduleId: string, runs: ScheduleRun[]): Promise<void> {

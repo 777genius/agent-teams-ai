@@ -76,7 +76,7 @@ function selectedProcess(pid = 901) {
   });
   return { process, status, child: process as unknown as child.ChildProcess };
 }
-function execStatus(errno = 2) {
+function execStatus(errno = 2): Buffer<ArrayBuffer> {
   const frame = Buffer.alloc(12);
   frame.writeUInt32BE(0x41544c58, 0); frame[4] = 1; frame[5] = 3; frame.writeUInt32LE(errno, 8);
   return frame;
@@ -503,32 +503,48 @@ describe('cli child process helpers', () => {
             vi.stubEnv('AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256', hasDescriptor ? '5'.repeat(64) : undefined);
             vi.resetModules();
             const selected = await import('@main/utils/linuxChildLaunchSelection');
+            expect(() => selected.hasSelectedLinuxChildLaunch()).toThrow('selection');
             expect(() => selected.selectedLinuxChildExecutable()).toThrow('selection');
             const captured = { ...process.env };
             selected.initializeLinuxChildLaunch(captured);
+            expect(selected.hasSelectedLinuxChildLaunch()).toBe(true);
             expect(selected.selectedLinuxChildExecutable()).toBe(binary);
             selected.initializeLinuxChildLaunch(captured);
             expect(() => selected.initializeLinuxChildLaunch({ ...captured,
               AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH: '/TEST/changed-descriptor',
               AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256: '5'.repeat(64) })).toThrow('selection');
+            expect(() => selected.hasSelectedLinuxChildLaunch()).toThrow('selection');
           }
           vi.stubEnv('AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH', '/TEST/partial');
           vi.stubEnv('AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256', undefined);
           vi.resetModules();
           const partial = await import('@main/utils/linuxChildLaunchSelection');
           expect(() => partial.initializeLinuxChildLaunch({ ...process.env })).toThrow('selection');
+          expect(() => partial.hasSelectedLinuxChildLaunch()).toThrow('selection');
           vi.stubEnv('AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH', undefined);
           vi.resetModules();
           const changed = await import('@main/utils/linuxChildLaunchSelection');
           changed.initializeLinuxChildLaunch({ ...process.env });
           chmodSync(binary, 0o700); writeFileSync(binary, Buffer.alloc(120)); chmodSync(binary, 0o500);
+          // Routing reads only the retained mode. The original allocation still
+          // revalidates the changed image, before calling native spawn.
+          expect(changed.hasSelectedLinuxChildLaunch()).toBe(true);
           expect(() => changed.selectedLinuxChildExecutable()).toThrow('selection');
+          const originalCalls = vi.mocked(child.spawn).mock.calls.length;
+          const allocation = await import('@main/utils/linuxChildLaunch');
+          expect(() => allocation.spawnWithLinuxChildLaunch('/TEST/node', [])).toThrow('selection');
+          expect(child.spawn).toHaveBeenCalledTimes(originalCalls);
           vi.stubEnv('AGENT_TEAMS_LINUX_CHILD_EXEC_MANIFEST', undefined);
           vi.stubEnv('AGENT_TEAMS_LINUX_CHILD_EXEC_SHA256', undefined);
           vi.resetModules();
           const unselected = await import('@main/utils/linuxChildLaunchSelection');
+          expect(unselected.hasSelectedLinuxChildLaunch()).toBe(false);
           expect(unselected.selectedLinuxChildExecutable()).toBeNull();
           unselected.initializeLinuxChildLaunch({ ...process.env });
+          expect(unselected.selectedLinuxChildExecutable()).toBeNull();
+          vi.stubEnv('AGENT_TEAMS_LINUX_CHILD_EXEC_MANIFEST', manifestPath);
+          vi.stubEnv('AGENT_TEAMS_LINUX_CHILD_EXEC_SHA256', hash(manifest));
+          expect(unselected.hasSelectedLinuxChildLaunch()).toBe(false);
           expect(unselected.selectedLinuxChildExecutable()).toBeNull();
         } finally {
           vi.unstubAllEnvs(); vi.resetModules();

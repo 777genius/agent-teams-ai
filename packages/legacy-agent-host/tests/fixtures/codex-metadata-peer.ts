@@ -2,6 +2,9 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 
+const desktopLogin = process.env.TEST_LOGIN === 'desktop-pending';
+if (desktopLogin && JSON.stringify(process.argv.slice(2)) !== JSON.stringify(['app-server', '--listen', 'stdio://']))
+  throw new Error('TEST Desktop login peer refuses any other invocation');
 const nativeOption = (key: string) => {
   const selected = process.argv.slice(2).find((arg) => arg.startsWith(key + '='));
   return selected === undefined
@@ -28,10 +31,10 @@ const saveLogin = () => writeFileSync(loginAccount, 'true', { mode: 0o600 });
 if (loginCase) {
   appendFileSync(
     join(process.env.HOME!, 'TEST-login-processes.ndjson'),
-    JSON.stringify({ pid: process.pid }) + '\n',
+    JSON.stringify({ pid: process.pid, ...(desktopLogin ? { args: process.argv.slice(2) } : {}) }) + '\n',
     { mode: 0o600 }
   );
-  setInterval(() => {
+  if (!desktopLogin) setInterval(() => {
     if (!loginId || !existsSync(join(process.env.HOME!, 'TEST-complete-login'))) return;
     saveLogin();
     notifyLogin(loginId);
@@ -46,9 +49,12 @@ lines.on('line', (line) => {
   };
   appendFileSync(
     join(process.env.HOME!, 'TEST-wire.ndjson'),
-    JSON.stringify({ method: message.method, params: message.params }) + '\n',
+    JSON.stringify({ method: message.method, params: message.params, ...(desktopLogin ? { pid: process.pid } : {}) }) + '\n',
     { mode: 0o600 }
   );
+  if (desktopLogin && !['initialize', 'initialized', 'account/read', 'account/rateLimits/read',
+    'config/read', 'model/list', 'account/login/start', 'account/login/cancel'].includes(message.method))
+    throw new Error('TEST Desktop login peer refuses non-management operations');
   let result: unknown;
   if (message.method === 'initialize' && loginCase === 'cancel-before-login') return;
   if (message.method === 'initialize')
@@ -59,6 +65,9 @@ lines.on('line', (line) => {
     };
   else if (message.method === 'initialized') return;
   else if (loginCase && message.method === 'account/login/start') {
+    if (desktopLogin && (loginId !== undefined ||
+      !['chatgpt', 'chatgptDeviceCode'].includes(String(message.params?.type))))
+      throw new Error('TEST Desktop login peer requires one original browser or device authorization');
     loginId = 'TEST-native-login-' + process.pid;
     if (loginCase === 'overflow') {
       for (let index = 0; index < 9; index++) notifyLogin('TEST-foreign-' + index);
@@ -81,13 +90,13 @@ lines.on('line', (line) => {
         ? {
             type: 'chatgptDeviceCode',
             loginId,
-            verificationUrl: 'https://example.invalid/device',
+            verificationUrl: desktopLogin ? 'https://auth.openai.com/TEST-device' : 'https://example.invalid/device',
             userCode: 'TEST-PRIVATE-CODE',
           }
         : {
             type: 'chatgpt',
             loginId,
-            authUrl: 'https://example.invalid/login?state=TEST-private-state',
+            authUrl: desktopLogin ? 'https://auth.openai.com/TEST-login?state=TEST-private-state' : 'https://example.invalid/login?state=TEST-private-state',
           };
   } else if (loginCase && message.method === 'account/login/cancel') {
     if (message.params?.loginId !== loginId)
@@ -145,9 +154,12 @@ lines.on('line', (line) => {
       account:
         process.env.TEST_CHATGPT ||
         (existsSync(loginAccount) && readFileSync(loginAccount, 'utf8') === 'true')
-          ? { type: 'chatgpt', email: 'test@example.invalid', planType: 'plus' }
+          ? process.env.TEST_CODEX_0169
+            ? { type: 'chatgpt', email: null, planType: 'sci_plus', workspaceName: 'TEST-private-workspace' }
+            : { type: 'chatgpt', email: 'test@example.invalid', planType: 'plus' }
           : null,
       requiresOpenaiAuth: true,
+      ...(process.env.TEST_CODEX_0169 ? { userId: 'TEST-private-user' } : {}),
     };
   else if (message.method === 'account/rateLimits/read')
     result = {

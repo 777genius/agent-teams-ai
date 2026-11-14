@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { lstat, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { setTimeout as delay } from 'node:timers/promises';
+import { waitForNativeProcessServices } from './desktop-native-process-model.ts';
+import { prepareControlledProcessFixture } from './desktop-controlled-process-fixture.ts';
+import { fileDigest } from './desktop-backend-fixture.ts';
 import { desktopProcessOwnerExpression, readDesktopProcessData } from './desktop-native-process-ui.ts';
 
 const selection = 'TEST-owner', id = 'TEST-process';
@@ -80,4 +87,80 @@ test('initial original-ref observation remains exact and cannot select a replace
     await assert.rejects(readDesktopProcessData(duplicate.cdp, duplicate.selection, duplicate.packed), /Duplicate process identity/);
     assert.equal(duplicate.requests.length, 1);
   })();
+});
+test('background acceptance waits for atomic service publication without masking corrupt readiness', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'TEST-native-service-readiness-'));
+  const path = join(root, 'services.json');
+  const services = { primary: { role: 'primary', nonce: 'TEST-primary', pid: 123, port: 1234, url: 'http://127.0.0.1:1234/TEST-primary' },
+    neighbor: { role: 'neighbor', nonce: 'TEST-neighbor', pid: 456, port: 5678, url: 'http://127.0.0.1:5678/TEST-neighbor' } };
+  let reads = 0;
+  const publication = delay(100).then(async () => {
+    await writeFile(path + '.pending', JSON.stringify(services), { flag: 'wx' });
+    await rename(path + '.pending', path);
+  });
+  try {
+    const actual = await waitForNativeProcessServices(async () => {
+      reads++;
+      return JSON.parse(await readFile(path, 'utf8')) as typeof services;
+    });
+    assert.deepEqual(actual, services);
+    assert.ok(reads >= 2, 'initial missing publication was observed');
+    await writeFile(path, '{');
+    let invalidReads = 0;
+    await assert.rejects(waitForNativeProcessServices(async () => {
+      invalidReads++;
+      return JSON.parse(await readFile(path, 'utf8')) as typeof services;
+    }), SyntaxError);
+    assert.equal(invalidReads, 1, 'present but invalid evidence is never retried');
+    await assert.rejects(waitForNativeProcessServices(async () => {
+      await readFile(join(root, 'never-published'));
+      return services;
+    }, 25), /did not publish before the deadline/);
+  } finally { await publication; await rm(root, { recursive: true, force: true }); }
+});
+
+test('captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime', {
+  skip: process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH === undefined && 'requires the isolated Processes lane original native artifact capture',
+}, async (t) => {
+  assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
+  const repo = await realpath(join(import.meta.dirname, '../..'));
+  const pnpm = process.env.LEGACY_DESKTOP_PNPM_PATH!;
+  const originalPath = process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH!, originalSha = process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256!;
+  const source = JSON.parse(await readFile(originalPath, 'utf8'));
+  assert.equal(source.kind, 'TEST-controlled-process-no-provider-v1');
+  assert.equal(await fileDigest(originalPath), originalSha);
+  const root = await mkdtemp(join(tmpdir(), 'TEST-process-input-validation-'));
+  t.after(async () => {
+    process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH = originalPath;
+    process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 = originalSha;
+    await rm(root, { recursive: true, force: true });
+  });
+  for (const [index, capture] of [
+    { ...source, kind: 'unselected' },
+    { ...source, claude: { path: '/TEST-never-executed', sha256: 'a'.repeat(64) } },
+    { ...source, node: { ...source.node, extra: true } },
+    { ...source, corepack: { ...source.corepack, extra: true } },
+  ].entries()) {
+    const path = join(root, `capture-${index}.json`);
+    await writeFile(path, JSON.stringify(capture), { flag: 'wx', mode: 0o600 });
+    process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH = path;
+    process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 = await fileDigest(path);
+    await assert.rejects(prepareControlledProcessFixture(repo, pnpm), { code: 'ERR_ASSERTION' });
+  }
+  process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH = originalPath;
+  process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 = '0'.repeat(64);
+  await assert.rejects(prepareControlledProcessFixture(repo, pnpm), { code: 'ERR_ASSERTION' });
+  process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 = originalSha;
+  const fixture = await prepareControlledProcessFixture(repo, pnpm);
+  t.after(async () => { await fixture.controlledProcess.cleanup(); await rm(fixture.root, { recursive: true, force: true }); });
+  const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8'));
+  const descriptor = JSON.parse(await readFile(fixture.descriptorPath, 'utf8'));
+  assert.equal(profile.runtime, undefined); assert.equal(profile.management, undefined);
+  assert.equal(descriptor.management, undefined);
+  assert.ok(profile.teams.every((team: { members: { delivery?: unknown }[] }) => team.members.every(member => member.delivery === undefined)));
+  await assert.rejects(lstat(join(fixture.root, 'hoststore/runtime-sessions')), { code: 'ENOENT' });
+  await assert.rejects(lstat(join(fixture.root, 'workspace/process-primary.json')), { code: 'ENOENT' });
+  assert.equal(fixture.controlledProcess.proof.captureKind, source.kind);
+  assert.equal(fixture.controlledProcess.proof.providersConfigured, false);
+  assert.equal(fixture.controlledProcess.proof.status, 'INCOMPLETE', 'preparation does not claim actual process/UI qualification');
 });

@@ -1,0 +1,71 @@
+{
+  "kind": "TEST_NATIVE_V2_CAPTURED_MCP",
+  "sourceHead": "d10409d1887d6a81955adcfad5c10d4a7596d0dc",
+  "platform": "linux-x64",
+  "nodeVersion": "v24.21.0",
+  "version": "2.1.4",
+  "status": "PASS",
+  "digests": {
+    "node": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "bun": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+    "manifest": "840d7cc145155e0ad97a407af87eb347da1a9cbf034d19c632897e1a5efbff9b",
+    "source": "5a3554e5fcf13fcfd2eb6e90afacce1e385832dd919a6256194256e90afdc8df",
+    "dist": "0e5c5f7a07a2620e9e42938c396a1759f02682b255fc604b6a01c2cd3d0e61cd",
+    "provider": "73dbbfba5e8fed6719ccdeaae499a47284b72ac831c33a2c7206fbf2799f77b8",
+    "actor": "912c78d344d5fce48fd8c4907681171cf9821ee6ef2c64991356acb6eac9174a"
+  },
+  "cleanup": true,
+  "steps": [
+    "captured_allowlist_actual_tool_once_permission_original_result_and_cleanup",
+    "app_only_has_no_external_tool_or_process_and_preserves_team_reply",
+    "cold_original_receipts_and_readback_do_not_replay_native_or_external_tools"
+  ],
+  "modelRequests": [
+    {
+      "turn": "ALLOW",
+      "step": 0,
+      "tool": "TEST_selected_write_marker"
+    },
+    {
+      "turn": "ALLOW",
+      "step": 1,
+      "tool": "agent-teams_message_send"
+    },
+    {
+      "turn": "ALLOW",
+      "step": 2,
+      "tool": null
+    },
+    {
+      "turn": "APP_ONLY",
+      "step": 0,
+      "tool": "agent-teams_message_send"
+    },
+    {
+      "turn": "APP_ONLY",
+      "step": 1,
+      "tool": null
+    }
+  ],
+  "modelFailures": [],
+  "manualPermissionBeforeEffect": true,
+  "excludedProcessStarts": 0,
+  "externalProcessStarts": 1,
+  "externalToolCalls": 1,
+  "externalProcessCloses": 1,
+  "hosts": [
+    {
+      "exitCode": 0,
+      "signalCode": null,
+      "stdoutValid": true
+    },
+    {
+      "exitCode": 0,
+      "signalCode": null,
+      "stdoutValid": true
+    }
+  ],
+  "vendorAuthQualified": false,
+  "desktopQualified": false,
+  "releaseQualified": false
+}

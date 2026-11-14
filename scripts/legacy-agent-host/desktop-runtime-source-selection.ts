@@ -429,10 +429,10 @@ export async function runDesktopRuntimeSourceSelection(input: {
             assert.ok(selected, 'original publication remains selected');
             assert.equal(selected.commandId, originalSelection.commandId);
             assert.equal(selected.revision, originalSelection.revision);
-          } else if (selected && index.records.length === count && (version === null ? selected?.intent === 'configuration' : selected?.candidate.nativeCli?.version === version)) {
+          } else if (selected !== undefined && index.records.length === count && (version === null ? selected.intent === 'configuration' : selected.candidate.nativeCli?.version === version)) {
             originalSelection = { commandId: selected.commandId, revision: selected.revision };
           }
-          const command = selected && index.records.length === count && (version === null ? selected?.intent === 'configuration' : selected?.candidate.nativeCli?.version === version)
+          const command = selected !== undefined && index.records.length === count && (version === null ? selected.intent === 'configuration' : selected.candidate.nativeCli?.version === version)
             ? (await managementRows(root)).find(row => row.commandId === selected.commandId) : undefined;
           return { index, selected, command };
         }, value => value.index.records.length === count && value.index.current.length === 1 &&

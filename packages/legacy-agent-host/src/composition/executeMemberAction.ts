@@ -16,6 +16,7 @@ import type { LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import type { ModelReadinessReference } from '../management/commandRecords.js';
 import { captureInitialRuntimeRestart } from './initialRuntimeModelAdmission.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
 type Launch = Pick<TeamLaunchOwner, 'read' | 'startMember' | 'readModelReadinessAction' |
   'readModelReadiness' | 'readModelReadinessSource' | 'attachModelReadiness' | 'retireModelReadiness'> & {
@@ -61,6 +62,7 @@ export function executeMemberAction(
     launch: Launch;
     runtime: RuntimeOwner;
     modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget' | 'admitTeamProbeProfile'>;
+    captureProcessOrigin?(entry: MemberEntry): RuntimeSourceProcessOrigin | undefined;
     principalId: string;
     assertWriter(): void;
     isSealed(): boolean;
@@ -175,6 +177,7 @@ export function executeMemberAction(
       }) : undefined;
       prepared = captureActionModelReadiness({ management: options.modelReadiness, launch,
         targets: [{ entry, profile, binding }], commandId, payload: raw, actorDigest,
+        ...(options.captureProcessOrigin ? { captureProcessOrigin: options.captureProcessOrigin } : {}),
         ...(readiness ? { readiness } : {}), ...(nativeSource ? { nativeSource } : {}),
         ...(authorized ? { authorized } : {}), assertCurrent: current,
       });

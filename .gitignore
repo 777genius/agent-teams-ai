@@ -110,3 +110,7 @@ remotion/*
 # Deterministic announcement build output (edit landing/content/announcements).
 /landing/public/announcements/
 /landing/public/announcements.tmp-*/
+
+# Built Linux child exec stage (source and build actor remain tracked)
+resources/process-launch/*
+!resources/process-launch/.gitkeep

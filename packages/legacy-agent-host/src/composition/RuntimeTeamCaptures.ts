@@ -21,6 +21,7 @@ import type { CaptureModelReadinessTransfer } from './prepareTeamModelReadiness.
 import type { LiveReadinessCapture } from '../team-launch/launchReadiness.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { prepareCapturedRuntimeMcpRecipes } from './capturedRuntimeMcpRecipes.js';
+import { captureRuntimeSourceProcessOrigin } from './captureRuntimeProcessOrigin.js';
 import {
   hasRuntimeWorktrees,
   runtimeWorktreeGit,
@@ -46,6 +47,7 @@ import type { RuntimeMemberProfile } from './runtimeProfile.js';
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import type { TeamLaunchRecord } from '../team-launch/contracts.js';
 import type { TeamRuntimeCapture } from '../team/runtimeRegistrationContracts.js';
+import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 
 const id = z
   .string()
@@ -64,6 +66,7 @@ export class RuntimeTeamCaptures {
       hostIncarnation: string;
       modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
       sources?: RuntimeRecipeSources;
+      retainedWindowsLaunch?: HostWindowsLaunch;
       teams: ReadonlyMap<string, HostedTeam>;
       assertCurrent(): void;
       readRuntimeSiblings(binding: RuntimeBinding): RuntimeSessionRecord[];
@@ -336,6 +339,9 @@ export class RuntimeTeamCaptures {
         baseRecipes,
         selectedRecipes,
         assertCurrent,
+        processOrigin: member => captureRuntimeSourceProcessOrigin(this.options.profile,
+          team.definition.scope, teamId, intent, member, this.options.sources),
+        ...(this.options.retainedWindowsLaunch ? { retainedWindowsLaunch: this.options.retainedWindowsLaunch } : {}),
         withAuthority: (action) =>
           team.owner.withLaunchAuthority(operator, 'control', () => {
             assertCurrent();

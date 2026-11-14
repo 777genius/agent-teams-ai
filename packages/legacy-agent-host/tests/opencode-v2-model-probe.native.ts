@@ -390,6 +390,7 @@ test(
         modelId, displayName: modelId, contextTokens: modelId.endsWith('-B') ? 64000 : 200000,
         outputTokens: modelId.endsWith('-B') ? 96 : 128,
         free: null, declaredInputModalities: ['text'],
+        variants: modelId.endsWith('-B') ? ['high'] : ['low', 'medium', 'high'],
       })));
       assert.equal(catalog.providers[0]!.connected, false, 'read-only inventory does not certify credentials');
       assert.equal(catalog.providers[0]!.configuredAuthless, true, 'captured loopback route requires a separate model probe');
@@ -446,10 +447,13 @@ test(
       if (host)
         try {
           await host.close();
-          hosts.push(host.facts());
-          host = undefined;
         } catch (error) {
           cleanupErrors.push(error);
+        } finally {
+          // A failed cleanup must retain the original exit/signal evidence too.
+          // Do not replace the failure with a successful receipt or a fresh Host.
+          hosts.push(host.facts());
+          host = undefined;
         }
       for (const release of gates) release();
       model.closeAllConnections();
@@ -486,10 +490,11 @@ test(
               steps,
               requests,
               nativeProcessCount: nativePids.length,
-              hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({
+              hosts: hosts.map(({ exitCode, signalCode, stdoutValid, diagnosticBytes }) => ({
                 exitCode,
                 signalCode,
                 stdoutValid,
+                diagnosticBytes,
               })),
               passiveNativeDiagnostics: passive.entries,
               vendorAuthQualified: false,

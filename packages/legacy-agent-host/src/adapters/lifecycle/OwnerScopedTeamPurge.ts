@@ -1,3 +1,4 @@
+import { performance } from 'node:perf_hooks';
 import { validateTeamLifecycleReceipt } from '../../team/lifecycleContracts.js';
 import { listTeamCommandEntries } from '../../team/commandEntries.js';
 import { TeamOwnerError } from '../../team/contracts.js';
@@ -14,6 +15,13 @@ import type { TeamPermanentDeletionIntent } from './TeamPermanentDeletionTypes.j
 import type { LifecycleDirectories } from './lifecycleRoots.js';
 import type { createImportPublication } from '../../stopped-team-import/importPublication.js';
 
+function releasePurgedReferences(
+  release: ((intent: TeamPermanentDeletionIntent) => void) | undefined,
+  intent: TeamPermanentDeletionIntent,
+): void {
+  try { release?.(intent); } catch { /* Durable deletion stands; exact retry may repeat custody cleanup only. */ }
+}
+
 /** Original permanent-deletion intent/proof hooks remain the sole physical transaction and recovery record. */
 export function createOwnerScopedTeamPurge(options: {
   binding: TeamBinding; capturedScope: unknown; store: TeamOwnerStore; roots: LifecycleDirectories;
@@ -22,10 +30,14 @@ export function createOwnerScopedTeamPurge(options: {
   authorizePurge(): void;
   /** Actual process/native/evidence/import reference owners qualify destructive release; no metadata-stopped inference. */
   assertReferencesReleased(): void;
+  /** Existing owner reconciliation only; all native awaits precede the final synchronous boundary. */
+  prepareReferencesReleased?(originalDeadline: number): Promise<void>;
   importPublication?: ReturnType<typeof createImportPublication>;
   onPurged(intent: TeamPermanentDeletionIntent): void;
+  /** Idempotent private custody cleanup; exact deleted retries never repeat publication or deletion. */
+  releasePurgedReferences?(intent: TeamPermanentDeletionIntent): void;
 }) {
-  function admission(expectedRevision: string): void {
+  function admission(expectedRevision: string, references = true): void {
     options.store.fenced(() => {
       options.assertWriter(); options.authorizePurge();
       for (const row of options.store.list<{ family?: string }>('commands')) {
@@ -35,17 +47,28 @@ export function createOwnerScopedTeamPurge(options: {
       const state = options.lifecycle.view(options.principalId);
       if (state.revision !== expectedRevision) throw new TeamOwnerError('conflict');
       if (!state.deleted || state.cleanupPending) throw new TeamOwnerError('hold');
-      options.assertReferencesReleased();
+      if (references) options.assertReferencesReleased();
     });
   }
   return {
-    async purge(commandId: string, expectedRevision: string): Promise<{ transactionId: string; deleted: true }> {
+    async purge(commandId: string, expectedRevision: string,
+      originalDeadline = performance.now() + 10000): Promise<{ transactionId: string; deleted: true }> {
+      const deadline = Math.min(originalDeadline, performance.now() + 10000);
+      if (!Number.isFinite(deadline)) throw new TeamOwnerError('invalid');
       options.assertWriter();
       const request = createOwnerPurgeRequest(options.binding, options.principalId, commandId, expectedRevision, options.capturedScope);
       const original = await options.coordinator.lookupOwnerPermanentDeletion(request);
       options.assertWriter();
-      if (original?.phase === 'deleted') return { transactionId: original.transactionId, deleted: true };
+      if (original?.phase === 'deleted') {
+        releasePurgedReferences(options.releasePurgedReferences, original);
+        return { transactionId: original.transactionId, deleted: true };
+      }
       if (original?.phase === 'deleting') return continueOriginal(original);
+      if (options.prepareReferencesReleased) {
+        admission(expectedRevision, false);
+        await options.prepareReferencesReleased(deadline);
+        options.assertWriter();
+      }
       admission(expectedRevision);
       let intent = await options.coordinator.beginPermanentDeletion(options.binding.teamName, { ownerRequest: request });
       if (intent.identityId !== options.binding.teamId || intent.identityKind !== 'team') throw new TeamOwnerError('hold');
@@ -71,11 +94,20 @@ export function createOwnerScopedTeamPurge(options: {
 export async function continueOwnerScopedTeamPurge(options: {
   binding: TeamBinding; roots: LifecycleDirectories; principalId: string; coordinator: TeamPermanentDeletionCoordinator;
   assertWriter(): void; onPurged(intent: TeamPermanentDeletionIntent): void;
+  releasePurgedReferences?(intent: TeamPermanentDeletionIntent): void;
 }, intent: TeamPermanentDeletionIntent): Promise<{ transactionId: string; deleted: true }> {
     options.assertWriter();
     if (intent.teamName !== options.binding.teamName || intent.identityId !== options.binding.teamId || intent.identityKind !== 'team' ||
       !intent.ownerRequest || intent.ownerRequest.principalId !== options.principalId || digest(intent.ownerRequest.binding) !== digest(options.binding) ||
       (intent.phase !== 'deleting' && intent.phase !== 'deleted')) throw new TeamOwnerError('hold');
+    if (intent.phase === 'deleted') {
+      const original = await options.coordinator.lookupOwnerPermanentDeletion(intent.ownerRequest);
+      options.assertWriter();
+      if (!original || original.phase !== 'deleted' || original.transactionId !== intent.transactionId)
+        throw new TeamOwnerError('hold');
+      releasePurgedReferences(options.releasePurgedReferences, original);
+      return { transactionId: original.transactionId, deleted: true };
+    }
     const removed = await options.coordinator.withPermanentDeletionTargetFence(intent, async (current, proof, completed) => {
         for (const target of PERMANENT_DELETION_TARGETS) {
           options.assertWriter();
@@ -91,6 +123,7 @@ export async function continueOwnerScopedTeamPurge(options: {
       if (!removed) throw new TeamOwnerError('hold');
       options.assertWriter();
       await options.coordinator.completePermanentDeletion(intent);
+      releasePurgedReferences(options.releasePurgedReferences, intent);
       options.onPurged(intent);
       return { transactionId: intent.transactionId, deleted: true };
 }

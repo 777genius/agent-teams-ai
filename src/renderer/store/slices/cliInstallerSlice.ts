@@ -1608,21 +1608,32 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     try {
       const status = await api.codexRuntime.install();
       set({ codexRuntimeStatus: status, codexRuntimeError: status.error ?? null });
+      const completed = status.installed && status.state === 'ready';
       recordRuntimeInstallEnd({
         runtime: 'codex',
-        success: status.installed,
+        success: completed,
         source: status.source,
-        errorClass: status.installed ? 'none' : classifyAnalyticsError(status.error),
+        errorClass: completed ? 'none' : classifyAnalyticsError(status.error),
         durationMs: elapsedMsSince(installStartedAtMs),
       });
-      if (status.installed) {
+      if (!completed) return;
+      try {
         await api.codexRuntime.invalidateStatus();
         await refreshCodexProviderStatusAfterRuntimeInstall(get);
+      } catch (error) {
+        logger.warn('Codex status refresh after installation failed:', error);
+        set({ codexRuntimeError: error instanceof Error ? error.message : 'Failed to check Codex runtime status' });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to install Codex runtime';
       logger.error('Failed to install Codex runtime:', error);
-      set({ codexRuntimeError: message });
+      set((state) => ({
+        codexRuntimeError: message,
+        codexRuntimeStatus: state.codexRuntimeStatus ? {
+          ...state.codexRuntimeStatus, state: 'failed', error: message,
+          progress: { phase: 'failed', detail: message },
+        } : null,
+      }));
       recordRuntimeInstallEnd({
         runtime: 'codex',
         success: false,

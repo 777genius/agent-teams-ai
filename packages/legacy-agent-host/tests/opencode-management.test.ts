@@ -354,7 +354,11 @@ function fixture(
 }
 
 test('catalog and auth use captured native profile, without Session SPI or ambient credentials', async (t) => {
-  const f = fixture();
+  const f = fixture({ modelMetadata: { variants: {
+    low: { reasoningEffort: 'low', privateSetting: 'TEST-must-stay-private' },
+    high: {},
+    hidden: { disabled: true },
+  } } });
   t.after(() => f.cleanup());
   await Promise.all([f.host.start(), f.host.start()]);
   assert.equal(f.launches.length, 1);
@@ -391,6 +395,7 @@ test('catalog and auth use captured native profile, without Session SPI or ambie
       outputTokens: 1024,
       free: null,
       declaredInputModalities: null,
+      variants: ['low', 'high'],
     },
   ]);
   assert.equal(JSON.stringify([summary, models]).includes('TEST-must-stay-private'), false);

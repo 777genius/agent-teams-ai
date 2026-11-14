@@ -14,6 +14,9 @@ import { nativeLocalReadinessPurpose } from '../management/ModelProbeOwner.js';
 import { managementDigest } from '../management/identity.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { inspectInitialRuntimeModelAdmission } from './initialRuntimeModelAdmission.js';
+import { captureTeamProbePreparation } from './captureTeamProbePreparation.js';
+import type { TeamProbeManagement } from './captureTeamProbePreparation.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
 import type { ModelProbeInput } from '../management/ModelProbeOwner.js';
 import type { ModelReadinessProbeScope, ModelReadinessReference, ReadinessPreparationAnchor,
@@ -393,6 +396,7 @@ export function captureActionModelReadiness(options: {
   targets: readonly { entry: MemberEntry; profile: RuntimeMemberProfile; binding: RuntimeBinding }[];
   commandId: string; payload: unknown; actorDigest: string; readiness?: LocalModelReadinessAction;
   nativeSource?: ReturnType<typeof captureNativeRestartReadiness>;
+  captureProcessOrigin?(entry: MemberEntry): RuntimeSourceProcessOrigin | undefined;
   authorized?: <T>(operation: () => T) => T;
   assertCurrent(): void;
 }) {
@@ -400,9 +404,13 @@ export function captureActionModelReadiness(options: {
   const targets = options.targets.filter(row => row.profile.provider === 'opencode');
   if (!targets.length || targets.length > 256 || options.readiness && options.nativeSource) held();
   options.assertCurrent();
-  const captured = targets.map(row => ({ ...row, profile: structuredClone(row.profile),
-    binding: structuredClone(row.binding), sourceBinding: structuredClone(row.entry.binding),
-    sourceProfile: runtimeDigest(row.entry.profile) }));
+  const captured = targets.map(row => {
+    const processOrigin = options.captureProcessOrigin?.(row.entry);
+    return { ...row, profile: structuredClone(row.profile),
+      binding: structuredClone(row.binding), sourceBinding: structuredClone(row.entry.binding),
+      sourceProfile: runtimeDigest(row.entry.profile),
+      ...(processOrigin ? { processOrigin: structuredClone(processOrigin) } : {}) };
+  });
   const firstTeam = runtimeDigest(captured[0]!.entry.team.definition.binding);
   if (captured.some(row => runtimeDigest(row.entry.team.definition.binding) !== firstTeam ||
       options.launch.readModelReadinessAction(options.commandId, row.entry.profile.memberId))) held();
@@ -476,6 +484,7 @@ export function captureActionModelReadiness(options: {
       if (origin && !anchor) held();
       const reference = await prepareTeamModelReadiness({ management: options.management, profile,
         commandId, context, cutoff, isCurrent: current,
+        ...(target.processOrigin ? { processOrigin: target.processOrigin } : {}),
         ...(anchor && origin ? { prepared: { anchor: { ...anchor, expiresAt: cutoff }, origin } } : {}),
         scope: { schemaVersion: 1, kind: options.nativeSource ? 'native' : 'team',
           teamBindingDigest: firstTeam, actionDigest: runtimeDigest({ commandId: options.commandId,
@@ -496,13 +505,14 @@ export function captureActionModelReadiness(options: {
 
 /** One original explicit Host action; no polling, renewal, latest selection or cold admission. */
 export async function prepareTeamModelReadiness(options: {
-  management: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget' | 'admitTeamProbeProfile'>;
+  management: TeamProbeManagement & Pick<ProviderManagementCoordinator, 'readinessTarget'>;
   profile: RuntimeMemberProfile;
   commandId: string;
   context: string;
   cutoff: number;
   scope: ModelReadinessProbeScope;
   prepared?: { anchor: ReadinessPreparationAnchor; origin?: LocalModelReadinessOrigin };
+  processOrigin?: RuntimeSourceProcessOrigin;
   isCurrent(): boolean;
 }): Promise<ModelReadinessReference> {
   const profile = teamModelProbeProfile(options.profile);
@@ -520,7 +530,8 @@ export async function prepareTeamModelReadiness(options: {
   const account = options.prepared?.origin || profile.nativeGeneration === 'v2'
     ? captureOpenCodeProbeAccount(profile, input, current, undefined, options.prepared?.origin) : undefined;
   const scope = { ...options.scope, ...(account ? { accountDigest: account.digest } : {}) };
-  options.management.probes.startPrepared(input, current, options.prepared, scope);
+  options.management.probes.startPrepared(input, current, options.prepared, scope,
+    captureTeamProbePreparation(options.management, profile, options.processOrigin));
   await options.management.probes.awaitPrepared(input.commandId, input.context);
   if (!current()) held();
   return capturePreparedModelReference({ ...options,

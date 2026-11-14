@@ -1,8 +1,7 @@
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from './contracts.js';
 import type { LaunchPreparation, TeamLaunchRecord, TeamLaunchOptions } from './contracts.js';
-import { memberActionBlocksSelection } from './memberActions.js';
-import type { ActionLaunchRecord } from './memberActions.js';
+import { memberActionBlocksSelection, validateMemberSelectionChain } from './memberActions.js';
 
 const identity = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0 && value.length <= 256 && !value.includes('\0');
@@ -36,16 +35,14 @@ export function validateLaunchPreparation(record: TeamLaunchRecord): void {
       throw new Error();
     for (const member of input.members) {
       const selected = record.definition.members.find((item) => item.memberId === member.memberId);
-      // The caller already validated this retained Skip in the original selection chain.
-      const selectedSkip =
-        selected?.skipped &&
-        (record as ActionLaunchRecord).memberActions?.some(
-          (action) =>
-            action.phase === 'selected' &&
-            action.input.action === 'skip' &&
-            action.input.memberId === member.memberId &&
-            runtimeDigest(action.selected) === runtimeDigest(selected)
-        );
+      if (selected?.skipped) {
+        validateMemberSelectionChain(record);
+        if (!(record.memberActions ?? []).some(action =>
+          action.phase === 'selected' && action.input.action === 'skip' &&
+          action.input.memberId === member.memberId &&
+          runtimeDigest(action.selected) === runtimeDigest(selected)))
+          throw new Error();
+      }
       if (
         !identity(member.memberId) ||
         !identity(member.configRevision) ||
@@ -55,7 +52,6 @@ export function validateLaunchPreparation(record: TeamLaunchRecord): void {
         typeof member.configuration !== 'object' ||
         Array.isArray(member.configuration) ||
         !selected?.binding ||
-        (selected.skipped && !selectedSkip) ||
         selected.configRevision !== member.configRevision ||
         selected.baseConfigurationDigest !== member.baseConfigurationDigest ||
         (!selected.restore && selected.configurationDigest !== member.configurationDigest)

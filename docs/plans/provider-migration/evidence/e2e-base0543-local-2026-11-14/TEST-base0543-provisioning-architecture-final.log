@@ -1,0 +1,2 @@
+$ node ./scripts/ci/check-team-provisioning-architecture.mjs
+Team Provisioning architecture guard passed: {"facadeInheritance":22,"serviceHostDeclaration":50,"serviceHostCast":31,"protectedAbstractDependency":62,"createFromServiceFactory":154}.

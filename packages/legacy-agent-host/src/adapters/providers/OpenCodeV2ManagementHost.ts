@@ -264,7 +264,7 @@ export class OpenCodeV2ManagementHost {
             !['kimi-for-coding', 'kiro', 'cursor-acp'].includes(id) &&
             (!['exa', 'tavily'].includes(id) || providers.get(id)?.integrationId)).map(id => {
             const provider = providers.get(id);
-            const integration = integrations.get(provider?.integrationId ?? id);
+            const integration = integrations.get(provider?.integrationId === undefined ? id : provider.integrationId);
             const models = catalog.models.filter(model => model.providerId === id && model.enabled);
             const configuration = id === this.configuredProviderId ? this.configuration.configuration : undefined;
             const configuredAuthless = !!configuration && !this.configuration.selectedFile && isConfiguredAuthless({ id,
@@ -285,6 +285,7 @@ export class OpenCodeV2ManagementHost {
               models: providerId === undefined && !includeModels ? [] : models.map(model => ({
                 modelId: model.id, displayName: model.name, contextTokens: model.contextTokens,
                 outputTokens: model.outputTokens, free: null, declaredInputModalities: model.inputModalities,
+                variants: model.variants,
               })),
               authMethods: integration?.plainKey ? ['api' as const] : [],
             };
@@ -334,9 +335,10 @@ export class OpenCodeV2ManagementHost {
             !(await client.savedPermissionsEmpty()) || (await client.readMcp()).length !== 0) held();
         const directory = await client.readDirectory();
         const provider = directory.providers.find(row => row.id === providerId);
-        const integrationId = provider?.integrationId
-          ?? directory.integrations.find(row => row.id === providerId &&
-            !['exa', 'tavily', 'kimi-for-coding', 'kiro', 'cursor-acp'].includes(row.id))?.id;
+        const integrationId = provider?.integrationId === undefined
+          ? directory.integrations.find(row => row.id === providerId &&
+            !['exa', 'tavily', 'kimi-for-coding', 'kiro', 'cursor-acp'].includes(row.id))?.id
+          : provider.integrationId;
         if (!integrationId) return held();
         key = createOpenCodeV2CredentialClient({ ...config, integrationId });
         result = await operation({ integrationId, read: key.read, connectKey: key.connectKey,

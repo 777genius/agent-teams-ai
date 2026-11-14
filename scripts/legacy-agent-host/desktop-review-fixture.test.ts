@@ -1,18 +1,19 @@
 import assert from 'node:assert/strict';
-import { readFile, rm } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { buildReviewChunks } from '@agent-teams/task-change-ledger/review-text';
 import { prepareDesktopBackendFixture, fileDigest } from './desktop-backend-fixture.ts';
 import { readDesktopReviewSeed } from './desktop-review-fixture.ts';
 import { prepareDesktopProofMode } from './desktop-proof-mode.ts';
+import { readSavedDesktopFixture } from './desktop-readback-fixture.ts';
 
 test('review UI seed uses one actual Task, explicit captured review profiles and two dirty filesystem hunks without agents', async (t) => {
   const repo = resolve(import.meta.dirname, '../..');
   const fixture = await prepareDesktopBackendFixture(repo, {
     seedUiTask: true,
     reviewUi: true,
-    pnpmEntry: '/opt/homebrew/Cellar/node@24/24.18.0/lib/node_modules/corepack/dist/pnpm.js',
+    pnpmEntry: process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/Cellar/node@24/24.18.0/lib/node_modules/corepack/dist/pnpm.js',
   });
   t.after(() => rm(fixture.root, { recursive: true, force: true }));
   assert.ok(fixture.uiSeed);
@@ -51,6 +52,41 @@ test('review UI seed uses one actual Task, explicit captured review profiles and
   assert.equal(event.workspaceRoot, join(fixture.root, 'workspace'));
   assert.equal(event.filePath, seed.filePath);
   await assert.rejects(readDesktopReviewSeed(fixture.root, 'TEST-wrong-task'));
+
+  // Synthetic fixture-read contract only; this is not an original UI acceptance receipt.
+  const saved: Record<string, unknown> = {
+    root: fixture.root, mode: 'review-ui', status: 'PASS', pins: fixture.pins,
+    paths: { node: fixture.node, hostEntry: fixture.hostEntry,
+      descriptor: fixture.descriptorPath, profile: fixture.profilePath },
+    packageManager: fixture.packageManager,
+    reviewUiProof: { status: 'PASS', seedSha256: await fileDigest(join(fixture.root, 'review-ui-seed.json')) },
+    ...(fixture.linuxChildExec ? { linuxChildExecInput: fixture.linuxChildExec,
+      linuxChildExecInputVerifiedAfterCleanup: true } : {}),
+  };
+  const savedPath = join(fixture.root, 'desktop-backend-receipt.json');
+  const writeSaved = async () => {
+    await writeFile(savedPath, JSON.stringify(saved), { mode: 0o600 });
+    return fileDigest(savedPath);
+  };
+  const savedHash = await writeSaved();
+  const before = await Promise.all([fixture.profilePath, fixture.descriptorPath, seed.filePath].map(fileDigest));
+  const reopened = await readSavedDesktopFixture(fixture.root, savedHash, { review: true });
+  assert.deepEqual(reopened.linuxChildExec, fixture.linuxChildExec);
+  assert.deepEqual(reopened.appEnvironment, fixture.appEnvironment);
+  assert.equal(await fileDigest(savedPath), savedHash);
+  assert.deepEqual(await Promise.all([fixture.profilePath, fixture.descriptorPath, seed.filePath].map(fileDigest)), before);
+  saved.linuxChildExecInput = { manifestPath: join(fixture.root, 'TEST-foreign-manifest.json'),
+    manifestSha256: 'a'.repeat(64), binarySha256: 'b'.repeat(64) };
+  await assert.rejects(readSavedDesktopFixture(fixture.root, await writeSaved(), { review: true }),
+    /readback retains its original Linux launch input/);
+  if (fixture.linuxChildExec) {
+    saved.linuxChildExecInput = fixture.linuxChildExec;
+    saved.linuxChildExecInputVerifiedAfterCleanup = false;
+    await assert.rejects(readSavedDesktopFixture(fixture.root, await writeSaved(), { review: true }));
+    delete saved.linuxChildExecInput;
+    await assert.rejects(readSavedDesktopFixture(fixture.root, await writeSaved(), { review: true }),
+      /readback retains its original Linux launch input/);
+  }
 });
 
 test('both explicit review proof modes never allocate a model or native runtime', async () => {

@@ -29,6 +29,8 @@ import type { TeamMcpNativeMemberActionPort } from '../mcp/nativeMemberActionCon
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { MemberEntry } from './MemberEntry.js';
 import type { ProcessCustody } from './processCustody.js';
+import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 import { consumeMemberModelReadiness } from './prepareTeamModelReadiness.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
@@ -47,6 +49,8 @@ export function createRuntimeMemberProviderFactory(options: {
   modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
   readinessLaunch?(entry: MemberEntry): TeamLaunchOwner | undefined;
   processCustody?: ProcessCustody;
+  retainedWindowsLaunch?: HostWindowsLaunch;
+  captureProcessOrigin?(entry: MemberEntry): RuntimeSourceProcessOrigin | undefined;
   createProvider?(context: MemberProviderContext): MemberProvider;
   groups?(
     entry: MemberEntry,
@@ -69,8 +73,10 @@ export function createRuntimeMemberProviderFactory(options: {
     captureSource: MemberInputCapture
   ): TeamMcpNativeMemberActionPort;
   isSealed(): boolean;
+  assertWriter(): void;
   beforeTeamAuthority?(entry: MemberEntry): void;
   assertCurrent(entry: MemberEntry): void;
+  assertProviderAuthority?(entry: MemberEntry): 'current' | 'roster-not-applicable';
   captureInteractions(entry: MemberEntry): void;
   readRuntime: RuntimeOwner['readCapturedSession'];
   readCheckpoint: RuntimeOwner['readCheckpoint'];
@@ -106,6 +112,9 @@ export function createRuntimeMemberProviderFactory(options: {
         profileId: options.profileId,
         hostIncarnation: options.hostIncarnation,
         assertAllocation,
+        assertWriter: options.assertWriter,
+        ...(options.assertProviderAuthority
+          ? { assertProviderAuthority: () => options.assertProviderAuthority!(entry) } : {}),
         ...(beforeTeamAuthority ? { beforeTeamAuthority: () => beforeTeamAuthority(entry) } : {}),
         assertCurrent: () => options.assertCurrent(entry),
         readRuntime: () => options.readRuntime(entry.binding),
@@ -175,6 +184,9 @@ export function createRuntimeMemberProviderFactory(options: {
         process: createMemberProcessMcpPort({
           entry,
           ...(options.processCustody ? { native: options.processCustody } : {}),
+          ...((entry.profile.provider !== 'opencode' || entry.profile.nativeGeneration !== 'v2') &&
+              entry.profile.windowsBroker?.capability === 'service-scopes-v1' && options.retainedWindowsLaunch
+            ? { windows: options.retainedWindowsLaunch.registeredProcesses } : {}),
           assertCurrent: authority.assertCurrent,
           assertAllocatedCurrent: authority.assertAllocatedCurrent,
           captureSource,
@@ -218,6 +230,7 @@ export function createRuntimeMemberProviderFactory(options: {
           assertCurrent: authority.assertCurrent,
           readRuntime: options.readRuntime,
         });
+        const processOrigin = options.captureProcessOrigin?.(entry);
         const provider = (
           options.createProvider ??
           (entry.profile.provider === 'claude'
@@ -229,10 +242,14 @@ export function createRuntimeMemberProviderFactory(options: {
                 : createOpenCodeMemberProvider)
         )({
           profile: entry.profile,
+          ...(processOrigin ? { processOrigin } : {}),
           request,
           endpoint,
           connection,
           ...(options.processCustody ? { processCustody: options.processCustody } : {}),
+          ...((entry.profile.provider !== 'opencode' || entry.profile.nativeGeneration !== 'v2') &&
+              options.retainedWindowsLaunch
+            ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
           instructions: memberInitialInstructions(
             selected.name,
             selected.role,

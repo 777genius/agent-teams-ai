@@ -6,12 +6,43 @@ on:
     paths:
       - '.github/workflows/sentry-owned-process-native.yml'
       - 'tools/owned-process-broker/**'
+      - 'packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts'
+      - 'src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts'
+      - 'src/features/agent-backend/main/infrastructure/CapturedHostClient.ts'
       - 'src/main/utils/ownedProcess/**'
       - 'packages/legacy-agent-host/src/owned-process/**'
       - 'packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts'
       - 'packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts'
       - 'packages/legacy-agent-host/src/composition/nativeProcessProfile.ts'
+      - 'packages/legacy-agent-host/src/composition/processCustody.ts'
+      - 'packages/legacy-agent-host/src/process/**'
+      - 'packages/legacy-agent-host/native/registered-process-linux.c'
+      - 'packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts'
+      - 'packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts'
+      - 'packages/legacy-agent-host/scripts/qualifyLinuxProcessAbi.ts'
+      - 'packages/legacy-agent-host/scripts/qualifyLinuxProcessAbiHost.ts'
+      - 'tsconfig.legacy-agent-host-scripts.json'
+      - 'packages/legacy-agent-host/tests/registered-process-linux.native.mjs'
+      - 'packages/legacy-agent-host/tests/fixtures/registered-process-actor.c'
+      - 'packages/legacy-agent-host/tests/fixtures/registered-process-parent.ts'
       - 'packages/legacy-agent-host/package.json'
+      - 'scripts/legacy-agent-host/qualify-linux-process-sdk.ts'
+      - 'scripts/legacy-agent-host/qualify-linux-process-cold-ui.ts'
+      - 'scripts/legacy-agent-host/qualify-linux-process-packed.ts'
+      - 'scripts/legacy-agent-host/candidate-*.ts'
+      - 'scripts/legacy-agent-host/stage-candidate.ts'
+      - 'scripts/legacy-agent-host/stage-node.ts'
+      - 'scripts/legacy-agent-host/desktop-proof-fixture.ts'
+      - 'scripts/legacy-agent-host/desktop-claude-native-selection.ts'
+      - 'scripts/legacy-agent-host/desktop-process-root-oracle.ts'
+      - 'scripts/legacy-agent-host/desktop-controlled-process-fixture.ts'
+      - 'scripts/legacy-agent-host/desktop-backend-smoke.ts'
+      - 'scripts/legacy-agent-host/desktop-backend-observations.ts'
+      - 'scripts/legacy-agent-host/desktop-native-process-*.ts'
+      - 'scripts/legacy-agent-host/desktop-backend-fixture.ts'
+      - 'scripts/legacy-agent-host/fixtures/process-foreground-service.ts'
+      - 'scripts/legacy-agent-host/fixtures/process-controlled-root.ts'
+      - 'scripts/legacy-agent-host/desktop-proof-management-sources.ts'
       - 'scripts/build/buildOwnedProcessBroker.ts'
       - 'eslint.config.js'
   workflow_dispatch:
@@ -25,6 +56,248 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
 
 jobs:
+  linux-registered:
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+    name: registered native (linux x64 pidfs)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Bind exact source and install frozen dependencies
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          node ./scripts/ci/install-dependencies-with-retry.mjs
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm typecheck:legacy-host-scripts
+          node --test packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts
+          mkdir -p native-evidence
+          git rev-parse HEAD > native-evidence/source-sha.txt
+      - name: Genuine repository Node pidfs and cold-original gates
+        env:
+          LEGACY_REGISTERED_PROCESS_NATIVE_GO: '1'
+        run: |
+          set -euo pipefail
+          headers=$(node -p "require('path').resolve(require('path').dirname(process.execPath),'../include/node')")
+          node packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts "$RUNNER_TEMP/TEST-linux-node26-$GITHUB_RUN_ID" "$(command -v cc)" "$(command -v readelf)" "$headers" | tee native-evidence/linux-node26.log
+          cp -R "$RUNNER_TEMP/TEST-linux-node26-$GITHUB_RUN_ID" native-evidence/node26
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24.21.0
+      - name: Genuine Host Node pidfs and cold-original gates
+        env:
+          LEGACY_REGISTERED_PROCESS_NATIVE_GO: '1'
+        run: |
+          set -euo pipefail
+          headers=$(node -p "require('path').resolve(require('path').dirname(process.execPath),'../include/node')")
+          node packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts "$RUNNER_TEMP/TEST-linux-node24-$GITHUB_RUN_ID" "$(command -v cc)" "$(command -v readelf)" "$headers" | tee native-evidence/linux-node24.log
+          cp -R "$RUNNER_TEMP/TEST-linux-node24-$GITHUB_RUN_ID" native-evidence/node24
+      - name: Genuine pinned Electron N-API and original-identity gates
+        env:
+          LEGACY_REGISTERED_PROCESS_NATIVE_GO: '1'
+          ELECTRON_RUN_AS_NODE: '1'
+        run: |
+          set -euo pipefail
+          headers=$(node -p "require('path').resolve(require('path').dirname(process.execPath),'../include/node')")
+          node_modules/electron/dist/electron packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts "$RUNNER_TEMP/TEST-linux-electron-$GITHUB_RUN_ID" "$(command -v cc)" "$(command -v readelf)" "$headers" | tee native-evidence/linux-electron.log
+          cp -R "$RUNNER_TEMP/TEST-linux-electron-$GITHUB_RUN_ID" native-evidence/electron
+      - name: Prepare private Linux Desktop dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth lsof
+          node scripts/ensure-electron-install.cjs --strict
+          node -e "require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')"
+          pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1
+      - name: Genuine Linux SDK background services and selected Stop
+        env:
+          LEGACY_PROCESS_NORMAL_SDK_GO: '1'
+        run: |
+          set -euo pipefail
+          pnpm --filter agent-teams-controller build
+          pnpm --filter agent-teams-mcp build
+          selected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-linux-sdk-inputs-XXXXXX")"
+          mkdir "$selected_inputs/cache"
+          printf '{"private":true}\n' > "$selected_inputs/package.json"
+          pnpm --dir "$selected_inputs" add --ignore-scripts --save-exact corepack@0.36.0
+          corepack_entry=$(node -e "console.log(require('node:fs').realpathSync(process.argv[1]))" "$selected_inputs/node_modules/corepack/dist/pnpm.js")
+          COREPACK_HOME="$selected_inputs/cache" node "$corepack_entry" --version
+          printf 'LINUX_PROCESS_PNPM_ENTRY=%s\nLEGACY_DESKTOP_COREPACK_HOME=%s\n' "$corepack_entry" "$selected_inputs/cache" >> "$GITHUB_ENV"
+          selection="$RUNNER_TEMP/TEST-linux-node24-$GITHUB_RUN_ID/selection.json"
+          selection_sha=$(node -e "console.log(require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(process.argv[1])).digest('hex'))" "$selection")
+          LEGACY_DESKTOP_COREPACK_HOME="$selected_inputs/cache" node scripts/legacy-agent-host/qualify-linux-process-sdk.ts \
+            "$RUNNER_TEMP/TEST-linux-sdk-$GITHUB_RUN_ID" "$selection" "$selection_sha" "$corepack_entry" \
+            2>&1 | tee native-evidence/linux-sdk.log
+      - name: Genuine cold Host Processes UI Stop and history
+        env:
+          LEGACY_PROCESS_COLD_UI_GO: '1'
+        run: |
+          set -euo pipefail
+          sdk_receipt="$RUNNER_TEMP/TEST-linux-sdk-$GITHUB_RUN_ID/sdk-receipt.json"
+          sdk_receipt_sha=$(node -e "console.log(require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(process.argv[1])).digest('hex'))" "$sdk_receipt")
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/qualify-linux-process-cold-ui.ts "$@"' \
+            bash "$RUNNER_TEMP/TEST-linux-cold-ui-$GITHUB_RUN_ID" "$sdk_receipt" "$sdk_receipt_sha" "$LINUX_PROCESS_PNPM_ENTRY" \
+            2>&1 | tee native-evidence/linux-cold-ui.log
+      - name: Prepare pinned Linux candidate inputs and production bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node --max-old-space-size=8192 node_modules/electron-vite/bin/electron-vite.js build
+          node scripts/ci/verify-radix-renderer-bundle.mjs
+          node scripts/stage-managed-git.mjs --platform linux-x64
+          node scripts/stage-terminal-platform-runtime.mjs --platform linux-x64
+          selected_pack_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-linux-packed-inputs-XXXXXX")"
+          printf '{"private":true}\n' > "$selected_pack_inputs/package.json"
+          pnpm --dir "$selected_pack_inputs" add --ignore-scripts --save-exact @openai/codex@0.162.0-linux-x64 opencode-linux-x64@1.19.4
+          node --input-type=module - "$selected_pack_inputs" "$RUNNER_TEMP/TEST-linux-node24-$GITHUB_RUN_ID/selection.json" <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const [root, selectionPath] = process.argv.slice(2);
+          const pin = path => { path = realpathSync(path); return { path, sha256: createHash('sha256').update(readFileSync(path)).digest('hex') }; };
+          const codexRoot = realpathSync(join(root, 'node_modules/@openai/codex'));
+          const opencodeRoot = realpathSync(join(root, 'node_modules/opencode-linux-x64'));
+          const codexPackage = JSON.parse(readFileSync(join(codexRoot, 'package.json'), 'utf8'));
+          const opencodePackage = JSON.parse(readFileSync(join(opencodeRoot, 'package.json'), 'utf8'));
+          assert.equal(codexPackage.name, '@openai/codex'); assert.equal(codexPackage.version, '0.162.0-linux-x64');
+          assert.equal(opencodePackage.name, 'opencode-linux-x64'); assert.equal(opencodePackage.version, '1.19.4');
+          const bin = join(codexRoot, 'vendor/x86_64-unknown-linux-musl/bin');
+          const { directory, manifestSha256 } = JSON.parse(readFileSync(selectionPath, 'utf8'));
+          writeFileSync(join(root, 'candidate-native-capture.json'), JSON.stringify({ schemaVersion: 1, platform: 'linux-x64',
+            codex: { ...pin(join(bin, 'codex')), protocolRevision: '0.162.0', codeModeHost: pin(join(bin, 'codex-code-mode-host')) },
+            opencode: { ...pin(join(opencodeRoot, 'bin/opencode')), protocolRevision: '1.19.4' },
+            processCustody: { directory, manifestSha256 } }), { mode: 0o600, flag: 'wx' });
+          NODE
+          printf 'LINUX_PROCESS_NATIVE_CAPTURE=%s\n' "$selected_pack_inputs/candidate-native-capture.json" >> "$GITHUB_ENV"
+      - name: Genuine packed Electron cold Host Processes Stop and history
+        env:
+          LEGACY_STAGE1_P7_GO: '1'
+          LEGACY_PROCESS_COLD_UI_GO: '1'
+        run: |
+          set -euo pipefail
+          cold_receipt="$RUNNER_TEMP/TEST-linux-cold-ui-$GITHUB_RUN_ID/cold-ui-receipt.json"
+          cold_receipt_sha=$(node -e "console.log(require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(process.argv[1])).digest('hex'))" "$cold_receipt")
+          native_capture_sha=$(node -e "console.log(require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(process.argv[1])).digest('hex'))" "$LINUX_PROCESS_NATIVE_CAPTURE")
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/qualify-linux-process-packed.ts "$@"' \
+            bash "$RUNNER_TEMP/TEST-linux-packed-$GITHUB_RUN_ID" "$cold_receipt" "$cold_receipt_sha" "$LINUX_PROCESS_PNPM_ENTRY" "$LINUX_PROCESS_NATIVE_CAPTURE" "$native_capture_sha" \
+            2>&1 | tee native-evidence/linux-packed.log
+      - name: Retain original SDK receipt and private TEST fixture
+        if: always()
+        run: |
+          set -euo pipefail
+          sdk_root="$RUNNER_TEMP/TEST-linux-sdk-$GITHUB_RUN_ID"
+          if test -d "$sdk_root"; then
+            mkdir -p native-evidence/sdk
+            for name in sdk-receipt.json fixture; do
+              if test -e "$sdk_root/$name"; then cp -R "$sdk_root/$name" native-evidence/sdk/; fi
+            done
+          fi
+      - name: Retain original cold Host and Desktop observations
+        if: always()
+        run: |
+          set -euo pipefail
+          cold_root="$RUNNER_TEMP/TEST-linux-cold-ui-$GITHUB_RUN_ID"
+          if test -d "$cold_root"; then
+            mkdir -p native-evidence/cold-ui
+            for name in cold-ui-receipt.json cold-ui.log controlled-capture.json fixture; do
+              if test -e "$cold_root/$name"; then cp -R "$cold_root/$name" native-evidence/cold-ui/; fi
+            done
+          fi
+      - name: Retain packed closure, builder and original UI receipts
+        if: always()
+        run: |
+          set -euo pipefail
+          packed_root="$RUNNER_TEMP/TEST-linux-packed-$GITHUB_RUN_ID"
+          if test -d "$packed_root"; then
+            mkdir -p native-evidence/packed
+            for name in packed-receipt.json candidate-build.log packed-capture.json TEST-packed-cold-ui; do
+              if test -e "$packed_root/$name"; then cp -R "$packed_root/$name" native-evidence/packed/; fi
+            done
+            if test -f "$packed_root/candidate/legacy-agent-host/candidate.json"; then
+              cp "$packed_root/candidate/legacy-agent-host/candidate.json" native-evidence/packed/candidate.json
+              cp "$packed_root/candidate/electron-builder.candidate.json" native-evidence/packed/
+            fi
+          fi
+      - name: Retain exact Linux source, artifact and native receipts
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: registered-linux-x64-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            native-evidence
+            ${{ runner.temp }}/TEST-linux-node26-${{ github.run_id }}
+            ${{ runner.temp }}/TEST-linux-node24-${{ github.run_id }}
+            ${{ runner.temp }}/TEST-linux-electron-${{ github.run_id }}
+            /tmp/TEST-linux-pidfd-*/proof.ndjson
+            /tmp/TEST-linux-pidfd-*/original-capture.json
+          if-no-files-found: error
+          retention-days: 14
+  linux-abi:
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+    name: registered ABI (linux x64 glibc2.28 and older kernel)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    env:
+      EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Bind source and build existing Host contracts
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          mkdir -p native-abi-evidence
+          git rev-parse HEAD > native-abi-evidence/source-sha.txt
+          node ./scripts/ci/install-dependencies-with-retry.mjs
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm typecheck:legacy-host-scripts
+          node --test packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24.21.0
+      - name: Same native artifact in glibc2.28 and actual older kernel
+        env:
+          LEGACY_REGISTERED_PROCESS_NATIVE_GO: '1'
+        run: |
+          set -euo pipefail
+          node packages/legacy-agent-host/scripts/qualifyLinuxProcessAbiHost.ts "$RUNNER_TEMP/TEST-linux-abi-$GITHUB_RUN_ID" 2>&1 | tee native-abi-evidence/qualification.log
+      - name: Retain resolved image and original ABI receipts
+        if: always()
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/TEST-linux-abi-$GITHUB_RUN_ID"
+          if test -d "$output"; then cp -R "$output" native-abi-evidence/abi; fi
+      - name: Retain exact-source ABI and automatic warm evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: registered-linux-abi-x64-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            native-abi-evidence
+            /tmp/TEST-linux-pidfd-*/proof.ndjson
+            /tmp/TEST-linux-pidfd-*/original-capture.json
+          if-no-files-found: error
+          retention-days: 14
+
   native:
     if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
     name: owned native (${{ matrix.arch }})
@@ -58,6 +331,7 @@ jobs:
           if ($head -ne $env:EXPECTED_SOURCE_SHA) { throw 'Unexpected checkout identity' }
           "NATIVE_BUILD=$env:RUNNER_TEMP\owned-build-${{ matrix.arch }}" >> $env:GITHUB_ENV
           "NATIVE_STAGE=$env:RUNNER_TEMP\owned-stage-${{ matrix.arch }}" >> $env:GITHUB_ENV
+          "NATIVE_SERVICE_STAGE=$env:RUNNER_TEMP\owned-service-stage-${{ matrix.arch }}" >> $env:GITHUB_ENV
           New-Item -ItemType Directory -Path native-evidence | Out-Null
           $head | Set-Content native-evidence/source-sha.txt
       - name: Install frozen dependencies
@@ -70,6 +344,8 @@ jobs:
         run: |
           node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json
           if ($LASTEXITCODE -ne 0) { throw 'Owned protocol typecheck failed' }
+          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json
+          if ($LASTEXITCODE -ne 0) { throw 'Original Main Host integration typecheck failed' }
           node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts
           if ($LASTEXITCODE -ne 0) { throw 'Owned protocol tests failed' }
       - name: Build native fixtures and stage only product broker
@@ -80,6 +356,11 @@ jobs:
           $staged = @(Get-ChildItem -File $env:NATIVE_STAGE | Select-Object -ExpandProperty Name)
           if ((($staged | Sort-Object) -join ',') -ne 'manifest.json,owned-process-broker.exe') { throw 'Unexpected staged fixture' }
           Copy-Item "$env:NATIVE_STAGE\manifest.json" native-evidence/staged-manifest.json
+          pnpm exec tsx scripts/build/buildOwnedProcessBroker.ts '${{ matrix.arch }}' $env:NATIVE_BUILD $env:NATIVE_SERVICE_STAGE $cmake service-scopes-v1
+          if ($LASTEXITCODE -ne 0) { throw 'Explicit scoped product staging failed' }
+          $scoped = @(Get-ChildItem -File $env:NATIVE_SERVICE_STAGE | Select-Object -ExpandProperty Name)
+          if ((($scoped | Sort-Object) -join ',') -ne 'manifest.json,owned-process-broker.exe') { throw 'Unexpected scoped stage fixture' }
+          Copy-Item "$env:NATIVE_SERVICE_STAGE\manifest.json" native-evidence/staged-service-manifest.json
           Get-ChildItem -File "$env:NATIVE_BUILD\Release\*.exe" | Get-FileHash -Algorithm SHA256 | Format-List | Out-File native-evidence/binary-sha256.txt
       - name: Genuine Node Job and control gates
         run: |
@@ -112,6 +393,71 @@ jobs:
           $gate = Join-Path $PWD 'tools\owned-process-broker\nativeGate.ts'
           & $controller $node $runner $gate "$env:NATIVE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-birth-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-accounting-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-release-delay.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-debug-service.exe" 2>&1 | Tee-Object native-evidence/host-node-native.log
           if ($LASTEXITCODE -ne 0) { throw 'Host Node native controller gate failed' }
+      - name: Prepare pinned official native Claude for debug compatibility
+        env:
+          OWNED_PROCESS_VENDOR_TEST_GO: '1'
+        run: |
+          $inputs = Join-Path $env:RUNNER_TEMP ("TEST-native-vendor-" + $env:GITHUB_RUN_ID + "-" + $env:RUNNER_ARCH)
+          $bash = Join-Path $env:ProgramFiles 'Git\bin\bash.exe'
+          if (-not (Test-Path $bash -PathType Leaf)) { throw 'Explicit runner Git Bash is absent' }
+          node --import tsx tools/owned-process-broker/nativeVendorInputs.ts $inputs $bash
+          if ($LASTEXITCODE -ne 0) { throw 'Official native Claude archive qualification failed' }
+          "NATIVE_VENDOR_INPUTS=$inputs" >> $env:GITHUB_ENV
+          Copy-Item "$inputs\selection.json" native-evidence/vendor-inputs.json
+      - name: Actual Claude SDK background subtree Stop and surviving provider
+        env:
+          OWNED_PROCESS_VENDOR_TEST_GO: '1'
+        run: |
+          $controller = "$env:NATIVE_BUILD\Release\owned-process-gate-controller.exe"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeVendorGate.ts'
+          $selection = "$env:NATIVE_VENDOR_INPUTS\selection.json"
+          $sha256 = (Get-FileHash -Algorithm SHA256 $selection).Hash.ToLowerInvariant()
+          $receipt = Join-Path $PWD 'native-evidence\native-vendor-receipt.json'
+          & $controller $node $runner $gate "$env:NATIVE_BUILD\Release\owned-process-broker-debug-service.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" $selection $sha256 $receipt 2>&1 | Tee-Object native-evidence/native-vendor.log
+          if ($LASTEXITCODE -ne 0) { throw 'Actual vendor native controller gate failed' }
+          node --input-type=module -e "import assert from 'node:assert/strict'; import fs from 'node:fs'; const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); assert.equal(r.kind,'TEST_WINDOWS_NATIVE_CLAUDE_SERVICE_SCOPE'); assert.equal(r.sourceHead,process.env.EXPECTED_SOURCE_SHA); assert.equal(r.platform,'win32-'+process.arch); assert.equal(r.nodeVersion,'v24.21.0'); assert.equal(r.status,'PASS'); assert.equal(r.cleanup,true); assert.equal(r.originalProviderJobReleased,true); assert.equal(r.oneOriginalSession,true); assert.equal(r.installedBeforeInput,true); assert.equal(r.scopedProof.activeProcesses,0); assert.equal(r.scopedProof.duplicateAckMatched,true); assert.deepEqual(r.nativeRequests,['native_background_tool','native_background_result','same_session_after_scoped_stop']); assert.deepEqual(r.nativeFailures,[]); assert.equal(r.registryQualified,false); assert.equal(r.coldOwnerQualified,false); assert.equal(r.vendorAuthQualified,false); assert.equal(r.desktopQualified,false); assert.equal(r.releaseQualified,false);" $receipt
+          if ($LASTEXITCODE -ne 0) { throw 'Actual vendor exact receipt is incomplete' }
+      - name: Actual ordinary Claude Host with original Main custody through graceful close and crash
+        env:
+          OWNED_PROCESS_VENDOR_TEST_GO: '1'
+        run: |
+          $controller = "$env:NATIVE_BUILD\Release\owned-process-gate-controller.exe"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $tsconfig = Join-Path $PWD 'tsconfig.json'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeRetainedHostGate.ts'
+          $selection = "$env:NATIVE_VENDOR_INPUTS\selection.json"
+          $sha256 = (Get-FileHash -Algorithm SHA256 $selection).Hash.ToLowerInvariant()
+          foreach ($mode in @('graceful', 'crash')) {
+            $receipt = Join-Path $PWD ("native-evidence\main-retained-" + $mode + ".json")
+            & $controller $node $runner --tsconfig $tsconfig $gate "$env:NATIVE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" $selection $sha256 $receipt $mode 2>&1 | Tee-Object ("native-evidence/main-retained-" + $mode + ".log")
+            if ($LASTEXITCODE -ne 0) { throw 'Actual ordinary Host Main custody gate failed' }
+            node --input-type=module -e "import assert from 'node:assert/strict'; import fs from 'node:fs'; const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); assert.equal(r.kind,'TEST_WINDOWS_MAIN_RETAINED_CLAUDE'); assert.equal(r.sourceHead,process.env.EXPECTED_SOURCE_SHA); assert.equal(r.platform,'win32-'+process.arch); assert.equal(r.nodeVersion,'v24.21.0'); assert.equal(r.mode,process.argv[2]); assert.equal(r.status,'PASS'); assert.equal(r.cleanup,true); assert.equal(r.ordinaryHostConsumer,true); assert.equal(r.nativeTurn,true); assert.equal(r.retainedAfterCrash,r.mode==='crash'); assert.equal(r.originalHandleChecks.afterInput,'alive'); assert.equal(r.originalHandleChecks.afterHostLoss,r.mode==='crash'?'alive':null); assert.equal(r.originalHandleChecks.afterCleanup,'absent'); assert.equal(r.counts.allocate,1); assert.equal(r.counts.prepare,1); assert.equal(r.counts.resume,1); assert.equal(r.modelRequests,3); assert.equal(r.modelFailures,0); for(const field of ['registryQualified','hostRebindQualified','sdkColdConversationQualified','desktopQualified','releaseQualified']) assert.equal(r[field],false);" $receipt $mode
+            if ($LASTEXITCODE -ne 0) { throw 'Actual Main custody receipt is incomplete' }
+          }
+      - name: Actual Team MCP natural exit and public scoped Stop across Host loss
+        env:
+          OWNED_PROCESS_VENDOR_TEST_GO: '1'
+        run: |
+          $controller = "$env:NATIVE_BUILD\Release\owned-process-gate-controller.exe"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $tsconfig = Join-Path $PWD 'tsconfig.json'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeRetainedHostGate.ts'
+          $selection = "$env:NATIVE_VENDOR_INPUTS\selection.json"
+          $sha256 = (Get-FileHash -Algorithm SHA256 $selection).Hash.ToLowerInvariant()
+          $receipt = Join-Path $PWD 'native-evidence\main-retained-natural-services.json'
+          & $controller $node $runner --tsconfig $tsconfig $gate "$env:NATIVE_SERVICE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" $selection $sha256 $receipt natural-services 2>&1 | Tee-Object native-evidence/main-retained-natural-services.log
+          if ($LASTEXITCODE -ne 0) { throw 'Actual Team natural service controller gate failed' }
+          node --input-type=module -e "import assert from 'node:assert/strict'; import fs from 'node:fs'; const r=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); assert.equal(r.kind,'TEST_WINDOWS_MAIN_RETAINED_CLAUDE'); assert.equal(r.sourceHead,process.env.EXPECTED_SOURCE_SHA); assert.equal(r.platform,'win32-'+process.arch); assert.equal(r.nodeVersion,'v24.21.0'); assert.equal(r.mode,'natural-services'); assert.equal(r.status,'PASS'); assert.equal(r.cleanup,true); assert.equal(r.nativeTurn,true); assert.equal(r.registryQualified,true); assert.equal(r.hostRebindQualified,true); assert.equal(r.naturalPhase,'completed'); assert.deepEqual(r.originalHandleChecks,{afterInput:'alive',afterHostLoss:'absent',afterCleanup:'absent'}); assert.equal(r.modelRequests,4); assert.equal(r.modelFailures,0); assert.equal(r.counts.allocate,1); assert.equal(r.counts.prepare,1); assert.equal(r.counts.resume,1); assert.equal(r.counts.release,1); assert.ok(r.counts.stop>=1&&r.counts.stop<=4); const s=r.naturalServices; for(const key of ['registryQualified','initialRegisterConservative','liveListBeforeNatural','naturalPrimaryAbsent','primaryNativeCompletion','providerAliveBeforeTrash','neighborAliveBeforeTrash','sameMainHostRebind','coldPurgeCompleted','originalScopeSettled','wholeConfirmed','released']) assert.equal(s[key],true,key); assert.equal(s.neighborIndependentHandle,false); assert.equal(s.durableFieldsQualifiedByThisGate,false); assert.equal(s.secondHostNativeAllocations,0); assert.equal(s.secondHostInputWrites,0); assert.equal(s.serviceCounts.capture,1); assert.equal(s.serviceCounts.stop,0); assert.equal(s.serviceCounts.settle,1); assert.equal(s.serviceCounts.query,3); assert.equal(s.serviceCounts.coldQuery,1); assert.equal(s.serviceCounts.coldSettle,1); assert.equal(s.serviceCounts.lookup,0); assert.ok(s.nativeNotificationCount>=1&&s.nativeNotificationCount<=2); for(const key of ['sdkColdConversationQualified','desktopQualified','releaseQualified']) assert.equal(r[key],false);" $receipt
+          if ($LASTEXITCODE -ne 0) { throw 'Actual natural service lifecycle receipt is incomplete' }
+          $scopedReceipt = Join-Path $PWD 'native-evidence\main-retained-scoped-services.json'
+          & $controller $node $runner --tsconfig $tsconfig $gate "$env:NATIVE_SERVICE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" $selection $sha256 $scopedReceipt scoped-services 2>&1 | Tee-Object native-evidence/main-retained-scoped-services.log
+          if ($LASTEXITCODE -ne 0) { throw 'Actual public scoped Stop controller gate failed' }
+          node --input-type=module -e "import assert from 'node:assert/strict'; import fs from 'node:fs'; const r=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); assert.equal(r.kind,'TEST_WINDOWS_MAIN_RETAINED_CLAUDE'); assert.equal(r.sourceHead,process.env.EXPECTED_SOURCE_SHA); assert.equal(r.platform,'win32-'+process.arch); assert.equal(r.nodeVersion,'v24.21.0'); assert.equal(r.mode,'scoped-services'); assert.equal(r.status,'PASS'); assert.equal(r.cleanup,true); assert.equal(r.ordinaryHostConsumer,true); assert.equal(r.nativeTurn,true); assert.equal(r.registryQualified,true); assert.equal(r.hostRebindQualified,true); assert.equal(r.retainedAfterCrash,true); assert.equal(r.scopedPhase,'completed'); assert.deepEqual(r.originalHandleChecks,{afterInput:null,afterHostLoss:'alive',afterCleanup:'absent'}); assert.equal(r.modelRequests,4); assert.equal(r.modelFailures,0); assert.deepEqual(r.counts,{allocate:1,prepare:1,resume:1,stop:0,release:0}); assert.deepEqual(r.attempted,r.counts); assert.equal(r.attemptsTruncated,false); const s=r.scopedServices; for(const key of ['dualRegistrations','initialRegisterConservative','initialLiveList','warmPublicScopedStopQualified','primaryAbsentAfterWarm','neighborAliveAfterWarm','providerAliveAfterWarm','providerAliveAfterHostLoss','sameMainHostRebind','neighborAliveAfterColdQuery','sameMainColdPublicStopQualified','neighborAbsentAfterCold','providerAliveAfterCold','primaryNotificationAcknowledged']) assert.equal(s[key],true,key); for(const key of ['secondHostNativeAllocations','secondHostInputWrites','secondHostCaptureAttempts']) assert.equal(s[key],0,key); assert.equal(s.serviceCounts.capture,2); assert.equal(s.serviceCounts.stop,2); assert.equal(s.serviceCounts.settle,2); assert.deepEqual(s.serviceAttempts,{capture:2,stop:2,settle:2,query:s.serviceCounts.query,lookup:s.serviceCounts.lookup}); assert.equal(s.serviceCounts.coldSettle,1); assert.ok(s.serviceCounts.query>=8&&s.serviceCounts.query<=64); assert.ok(s.serviceCounts.coldQuery>=4&&s.serviceCounts.coldQuery<=64); assert.ok(s.serviceCounts.lookup<=64); assert.ok(s.nativeNotificationCount>=1&&s.nativeNotificationCount<=2); for(const key of ['sdkColdConversationQualified','desktopQualified','releaseQualified']) assert.equal(r[key],false);" $scopedReceipt
+          if ($LASTEXITCODE -ne 0) { throw 'Actual public scoped Stop receipt is incomplete' }
       - name: Retain exact-source binary and independent controller evidence
         if: always()
         uses: actions/upload-artifact@v7.0.1

@@ -9,12 +9,13 @@ import { captureReadinessPreparation, originalReadinessSubset } from '../adapter
 import type { LocalModelReadinessPreparation } from '../management/commandRecords.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
 import { captureCreateTeamDraft } from './captureCreateTeamDraft.js';
+import { captureTeamProbePreparation } from './captureTeamProbePreparation.js';
+import type { TeamProbeManagement } from './captureTeamProbePreparation.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import type { HostedTeam } from './MemberEntry.js';
 import type { TeamRegistry } from '../team-registry/TeamRegistry.js';
 import type { RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
-import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import type {
   CreateTeamLaunchCaptureResult,
   CreateTeamLaunchPreparationSnapshot,
@@ -38,7 +39,7 @@ export class CreateTeamLaunchCoordinator {
       registry: Pick<TeamRegistry, 'create' | 'lookup'>;
       runtime: Pick<RuntimeTeamCoordinator, 'executeLaunch' | 'readLaunchAdmission'> &
         Partial<Pick<RuntimeTeamCoordinator, 'readLaunchSourceSelections'>>;
-      management: Pick<ProviderManagementCoordinator, 'admitTeamProbeProfile' | 'probes'>;
+      management: TeamProbeManagement;
       team(teamId: string): HostedTeam | undefined;
       assertCurrent(): void;
     }
@@ -119,7 +120,8 @@ export class CreateTeamLaunchCoordinator {
         // Existing start replay validates the original target inode/account selection.
         // No await separates read and this same-ID replay under the single profile writer;
         // a query can never take the absent-intent allocation branch here.
-        if (saved) saved = this.options.management.probes.startPrepared(originalInput, current);
+        if (saved) saved = this.options.management.probes.startPrepared(originalInput, current,
+          undefined, undefined, captureTeamProbePreparation(this.options.management, profile, row.processOrigin));
         if (action === 'start' && !advanced && !saved) {
           // Earlier probes must be green before the next shared account fence can be admitted.
           if (probes.every((probe) => probe.ok)) {
@@ -137,7 +139,8 @@ export class CreateTeamLaunchCoordinator {
                 .map(candidate => runtimeDigest(candidate.memberName)),
             } : undefined;
             saved = this.options.management.probes.startPrepared(originalInput, current,
-              prepared ? { anchor: prepared.anchor, ...(origin ? { origin } : {}) } : undefined, scope);
+              prepared ? { anchor: prepared.anchor, ...(origin ? { origin } : {}) } : undefined, scope,
+              captureTeamProbePreparation(this.options.management, profile, row.processOrigin));
             advanced = true;
           }
         }

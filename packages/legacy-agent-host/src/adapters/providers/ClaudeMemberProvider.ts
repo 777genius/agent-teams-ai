@@ -35,7 +35,13 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
     context.processCustody,
     () =>
       (context.canCaptureRegisteredProcess?.() ?? context.canAllocate()) &&
-      capturedMcpSourceCurrent(profile)
+      capturedMcpSourceCurrent(profile),
+    undefined,
+    context.retainedWindowsLaunch?.port(profile,
+      () => context.canAllocate() && capturedMcpSourceCurrent(profile),
+      context.canCaptureRegisteredProcess
+        ? () => context.canCaptureRegisteredProcess!() && capturedMcpSourceCurrent(profile) : undefined,
+      context.processOrigin)
   );
   let ready = false;
   let sealed = false;
@@ -161,6 +167,8 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
     ...(custody.captureRegisteredProcess
       ? { captureRegisteredProcess: custody.captureRegisteredProcess.bind(custody) }
       : {}),
+    ...(profile.windowsBroker?.capability === 'service-scopes-v1' && context.retainedWindowsLaunch
+      ? { prepareRegisteredWindowsProcess: custody.prepareRegisteredWindowsProcess.bind(custody) } : {}),
     isReady: () => ready && !sealed && context.isCurrent(),
     sessionCommands: () => ready && !sealed && context.isCurrent() && capturedMcpSourceCurrent(profile) ? commands : [],
     initialContextEvidence: () =>

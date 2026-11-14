@@ -47,6 +47,9 @@ export function captureRuntimeSources(options: {
   ownerAvailable(): boolean;
   foregroundCurrent(): boolean;
   capturePreferences?(): Promise<OpenCodeManagedPreferences>;
+  prepareNativePublication?(input: RuntimeSourcePublishIntent): () => void;
+  prepareNativeRecovery?(): () => void;
+  prepareNativeConfiguration?(input: RuntimeConfigurationRefreshIntent): () => void;
 }): CapturedRuntimeSources {
   const grant = runtimeSourceGrantSchema.parse(structuredClone(options.grant));
   const summary = (raw: unknown) => {
@@ -63,7 +66,8 @@ export function captureRuntimeSources(options: {
   };
   const request = async (
     operation: 'current' | 'retained' | 'publish' | 'lookup' | 'recover' | 'refreshConfiguration',
-    payload: object = {}
+    payload: object = {},
+    beforeDispatch?: () => (() => void) | undefined
   ) => {
     const retained = operation === 'lookup' || operation === 'retained';
     const check = (outcome: 'not-dispatched' | 'unknown') => {
@@ -81,28 +85,33 @@ export function captureRuntimeSources(options: {
     check('not-dispatched');
     await options.start();
     check('not-dispatched');
-    const reply = await options.client.request(
-      `runtime.source.${operation}`,
-      JSON.parse(JSON.stringify({ ...payload, grant })) as JsonValue,
-      { control: !['publish', 'recover', 'refreshConfiguration'].includes(operation) }
-    );
-    check('unknown');
-    if (
-      !reply ||
-      typeof reply !== 'object' ||
-      Array.isArray(reply) ||
-      reply.ok !== true ||
-      !Object.hasOwn(reply, 'value')
-    ) {
-      const code =
-        reply && typeof reply === 'object' && !Array.isArray(reply) ? reply.code : undefined;
-      const reason = runtimeSourceRefusalSchema.safeParse(
-        reply && typeof reply === 'object' && !Array.isArray(reply) ? reply.reason : undefined
+    const release = beforeDispatch?.();
+    try {
+      const reply = await options.client.request(
+        `runtime.source.${operation}`,
+        JSON.parse(JSON.stringify({ ...payload, grant })) as JsonValue,
+        { control: !['publish', 'recover', 'refreshConfiguration'].includes(operation) }
       );
-      if (reason.success) throw new CapturedRuntimeSourceError(reason.data);
-      throw new BackendRoutingError(code === 'conflict' ? 'binding-conflict' : 'hold', 'unknown');
+      check('unknown');
+      if (
+        !reply ||
+        typeof reply !== 'object' ||
+        Array.isArray(reply) ||
+        reply.ok !== true ||
+        !Object.hasOwn(reply, 'value')
+      ) {
+        const code =
+          reply && typeof reply === 'object' && !Array.isArray(reply) ? reply.code : undefined;
+        const reason = runtimeSourceRefusalSchema.safeParse(
+          reply && typeof reply === 'object' && !Array.isArray(reply) ? reply.reason : undefined
+        );
+        if (reason.success) throw new CapturedRuntimeSourceError(reason.data);
+        throw new BackendRoutingError(code === 'conflict' ? 'binding-conflict' : 'hold', 'unknown');
+      }
+      return reply.value;
+    } finally {
+      release?.();
     }
-    return reply.value;
   };
   return Object.freeze({
     ...(options.capturePreferences ? { capturePreferences: options.capturePreferences } : {}),
@@ -114,18 +123,12 @@ export function captureRuntimeSources(options: {
         .parse(await request('retained'))
         .map(summary),
     publish: async (input: RuntimeSourcePublishIntent) => {
-      const captured = {
-        commandId: input.commandId,
-        expectedRevision: input.expectedRevision,
-        ...(input.nativeSelection !== undefined
-          ? {
-              nativeSelection: runtimeSourceNativeSelectionSchema.parse(
-                structuredClone(input.nativeSelection)
-              ),
-            }
-          : { candidate: runtimeSourceCandidateSchema.parse(structuredClone(input.candidate)) }),
-      };
-      const result = runtimeSourcePublicationSchema.parse(await request('publish', captured));
+      const base = { commandId: input.commandId, expectedRevision: input.expectedRevision };
+      const captured: RuntimeSourcePublishIntent = input.nativeSelection !== undefined
+        ? { ...base, nativeSelection: runtimeSourceNativeSelectionSchema.parse(structuredClone(input.nativeSelection)) }
+        : { ...base, candidate: runtimeSourceCandidateSchema.parse(structuredClone(input.candidate)) };
+      const result = runtimeSourcePublicationSchema.parse(await request('publish', captured,
+        () => options.prepareNativePublication?.(captured)));
       if (result.selection) summary(result.selection);
       if (result.commandId !== captured.commandId) throw new BackendRoutingError('hold', 'unknown');
       return result;
@@ -141,13 +144,15 @@ export function captureRuntimeSources(options: {
     },
     refreshConfiguration: async (input: RuntimeConfigurationRefreshIntent) => {
       const captured = refreshRuntimeConfigurationSchema.omit({ grant: true }).parse(structuredClone(input));
-      const result = runtimeSourcePublicationSchema.parse(await request('refreshConfiguration', captured));
+      const result = runtimeSourcePublicationSchema.parse(await request('refreshConfiguration', captured,
+        () => options.prepareNativeConfiguration?.(captured)));
       if (result.selection) summary(result.selection);
       if (result.commandId !== captured.commandId) throw new BackendRoutingError('hold', 'unknown');
       return result;
     },
     recover: async () => {
-      const result = runtimeSourcePublicationSchema.nullable().parse(await request('recover'));
+      const result = runtimeSourcePublicationSchema.nullable().parse(await request('recover', {},
+        options.prepareNativeRecovery));
       if (result?.selection) summary(result.selection);
       return result;
     },
