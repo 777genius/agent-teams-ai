@@ -5113,3 +5113,34 @@ Preserve every original summary field, source frame, original error, proof statu
 The existing original controls retain their 30000 ms initial read, passive evaluations, hover/stability checks, one-click rule and owner/currentness checks. Browser/device-code action counts, native/case budgets, deadline, source/custody and cleanup oracles remain unchanged. This is a projection of retained data, with no new I/O, timer, polling, retry, service, public contract or successful outcome.
 
 Freeze the one-file full blob and exact before/after diff; independently check the explicit input/output allowlist, malformed-record isolation, original function-prefix preservation and full forward/inverse match. Root retains normal source/type/lint gates and the next ordinary CI run; no additional test file, new case, native execution or test campaign is requested. The current review is source-only. Reading the old receipt later remains useful and does not require a rerun; this projection does not retroactively recover its values or qualify the failed Login. Source remains zero until this plan is published and root grants the exact one-path GO.
+
+## 103. Retain the last existing Runtime read for the unresolved V1 source-selection timeout
+
+### 103.1. Evidence and limit
+
+Original job `132452611815`, run `43594538508`, executed checkout `09fefda4c255fa172a52b89b2815d18085c79afc`. Artifact `14118661087` is 487023 bytes, SHA-256 `ca2429b1cf4c737c9e169b491a4ebd901cd32790e9bf8d17e41e2e0b41ddabb2`. Read-only evidence is frozen at `483ac7a3c9f24141cfe03b61cf93006d9a9def03`.
+
+The first missing/install-B branch published OpenCode V1 1.19.5 and displayed ready. Create closed and the original capture/settings checks passed; its existing session wait then timed out. The receipt records one no-tools Host source-preflight request, zero business requests, no model failures, and successful final cleanup. All 15 archive entries were inspected: no Runtime/launch store was uploaded. The app log supplies no OpenCode/Runtime failure stack. Earlier coexistence passed, and later V2 source-selection did not execute. Neither a namespace/source-currentness defect nor a dispatch defect is proved. This cut adds diagnostic evidence only.
+
+### 103.2. Exact two-file TEST scope
+
+| Existing path | Common parent/native/qualification preimage |
+| --- | --- |
+| `scripts/legacy-agent-host/desktop-native-stop-fixture.ts` | `343d0cd3a45a4c16b5c7c45966373e164879b403` |
+| `scripts/legacy-agent-host/desktop-runtime-source-selection.ts` | `aa5fdb795c3037a42c27fe8bde79c8dbf5707c44` |
+
+All six preimages match current parent `1d7df37736ff80d0810e085edf07608ec4a6fec5`, native `a1a982bc3a777948bc62a9bc17f6090bf9da1de9`, and qualification `73f0a441a1aaca8abe8275b83e0f77af0f7dada3`. No new file, production path, test case, roster or workflow change.
+
+Extend the existing `readDesktopNativeStopSessions` with one optional TEST observation argument `{ runId, report }`. After its existing successful two-level read, derive a closed projection from that very returned array and call the optional observer. Preserve the complete read/validation body, errors, return value and object identities. Catch only diagnostic projection/observer failures; they must not mask or replace an original result or exception. No catch may surround or weaken the original file read, polling predicate or acceptance assertions.
+
+The original session caller passes its already selected launch ID and a callback that replaces `phase.runtimeRead`. Use two natural call lines, taking the 799-line driver to at most 800; no packing, cap change or extraction of unrelated code. The existing reader owns the projection because it owns the exact snapshot; it creates no polling/registry/authority abstraction.
+
+### 103.3. Closed observation and unchanged acceptance
+
+Label the observation explicitly as the **last successful Runtime file read**, not current authority or absence proof. Retain only the exact requested-run match count and unknown-binding count. For exactly one match, retain phase, custody, nativeReady, sealed, existing diagnostic, input count, and at most four input phase/terminal pairs with an explicit overflow flag. Multiple/zero matches retain counts, not invented selected state.
+
+Use only the literal enums in original Runtime contracts `16b92ebb35f9d011689216e82cfdd24a4a2da635`: six session phases, three custody states, eight input phases, three terminal outcomes, and five stored diagnostics (`open-unknown`, `observe-ended`, `observe-failed`, `readiness-unavailable`, `close-unknown`). Booleans remain booleans; malformed/missing required values are explicitly unavailable, and an absent optional terminal/diagnostic is null. Invalid binding/input shape cannot become an empty successful observation. Projection failure is unavailable; an observer failure has no effect on the original read. No raw error message, identifier, intent/content, config, credential, path, checkpoint or other stored field is copied.
+
+Replace the same bounded observation in memory only; use the original final receipt save. No additional disk read/write, RPC, CDP, native/model operation, timestamp, timer, retry or accumulated ledger. If a later original read fails, its original exception still propagates and the prior observation remains explicitly historical. The exact session predicate, original 90000 ms wait, all source/custody checks, requests, four business markers, counters and cleanup remain unchanged. Other callers without this optional argument behave byte-for-byte as before.
+
+Freeze full blobs/diffs, verify all variants, unchanged predicate/read body and exact forward/inverse, then obtain independent source review. Root retains normal script/type/size gates and the next ordinary existing CI lane; no additional native campaign or retrospective qualification. Source remains zero until this appendix is published and root grants this exact two-file GO.
