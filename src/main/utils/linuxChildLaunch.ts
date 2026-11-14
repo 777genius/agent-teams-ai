@@ -9,17 +9,17 @@ import {
   linuxChildLaunchFailure, retainLinuxChildAllocationFailure, selectedLinuxChildExecutable, withLinuxChildExecTarget,
 } from './linuxChildLaunchSelection';
 
-type Handoff = {
+interface Handoff {
   readonly entered: number;
   error?: Error;
   readonly listeners: Set<(error: Error) => void>;
-};
+}
 const handoffs = new WeakMap<ChildProcess, Handoff>();
 
 function decodeFailure(frame: Buffer, command: string, args: readonly string[]): Error | null {
   if (frame.length === 0) return null; // EOF is not an exec-success or ready witness.
   if (frame.length !== 12 || frame.readUInt32BE(0) !== 0x41544c58 || frame[4] !== 1 ||
-      frame[6] !== 0 || frame[7] !== 0 || frame[5]! < 1 || frame[5]! > 3)
+      frame[6] !== 0 || frame[7] !== 0 || frame[5] < 1 || frame[5] > 3)
     return linuxChildLaunchFailure('status', true);
   const errno = frame.readUInt32LE(8);
   if (errno < 1 || errno > 4095) return linuxChildLaunchFailure('status', true);
@@ -144,7 +144,7 @@ export function execFileWithLinuxChildLaunch(command: string, args: readonly str
   if (maxBuffer !== Infinity && (!Number.isFinite(maxBuffer) || maxBuffer < 0)) throw linuxChildLaunchFailure('options');
   const suppliedEncoding = Object.hasOwn(options, 'encoding') ? options.encoding : 'utf8';
   const encoding = typeof suppliedEncoding === 'string' && suppliedEncoding !== 'buffer' && Buffer.isEncoding(suppliedEncoding)
-    ? suppliedEncoding as BufferEncoding : null;
+    ? suppliedEncoding : null;
   // Same finite projection as Node execFile: in particular, no detached or argv0.
   const projected: SpawnOptions = {
     cwd: options.cwd, env: options.env, gid: options.gid, shell: options.shell,
@@ -194,8 +194,10 @@ export function execFileWithLinuxChildLaunch(command: string, args: readonly str
     // Start the original tree owner's cleanup before any immediate-child signal.
     // The ordinary callback still waits for this same child's real close.
     if (onAllocatedFailure) {
-      try { void onAllocatedFailure(child, error).catch(() => kill()); }
-      catch { kill(); }
+      let cleanup: Promise<void>;
+      try { cleanup = onAllocatedFailure(child, error); }
+      catch { kill(); return; }
+      void cleanup.catch(() => kill());
     } else kill();
   });
   if (timeout !== undefined) timer = setTimeout(kill, Math.max(0, deadline! - performance.now()));
