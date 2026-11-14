@@ -152,3 +152,4 @@ jobs:
             ${{ runner.temp }}/anthropic-default-e2e-*/desktop.log
             ${{ runner.temp }}/anthropic-default-e2e-*/preflight.ndjson
             ${{ runner.temp }}/anthropic-default-e2e-*/team.meta.json
+            ${{ runner.temp }}/anthropic-default-e2e-*/windows-product-team-result.json

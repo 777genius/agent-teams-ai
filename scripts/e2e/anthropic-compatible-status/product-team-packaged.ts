@@ -118,6 +118,10 @@ export async function proveWindowsProductTeam(input: ProductInput) {
     report.modelRequestId = receipt.id;
     report.focusedAtBoundaries = true;
     await cdp.screenshot(path.join(evidenceRoot, 'windows-product-team.png'));
+    // The original PID+birth must still exist immediately before product Stop.
+    // Otherwise a no-op Stop could falsely qualify prior worker retirement.
+    assert(original && alive(original), 'Original worker exited before real product Stop');
+    report.originalWorkerAliveImmediatelyBeforeStop = true;
     await ipc(cdp, 'window.electronAPI.teams.stop(' + JSON.stringify(name) + ')',
       '__windowsProductStop');
     started = false;
