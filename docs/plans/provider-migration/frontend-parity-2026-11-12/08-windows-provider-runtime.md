@@ -890,3 +890,34 @@ Write only the existing native-branch TEST file `tools/owned-process-broker/nati
 In the existing Codex-only selected-member construction, copy the original limits and override only `outputBytes: 1_048_576`, before the unchanged schema parse, profile installation, recipe digest and original profile/source hash. Keep every other limit and the original limits object unchanged. V1 and all old Claude modes retain their original values. Do not clamp production input, enlarge its schema, cast around validation or mutate a captured profile.
 
 Preserve all model/native request counts, allocation/root/registration/Stop ledgers, actual physical custody oracles, shared 45-second opening budget, clocks, shutdown and cleanup; no native input/version, action, retry, test case, helper, workflow or compiler configuration changes. Freeze the one-file diff/inverse and exact native preimage for independent source review after publication and explicit root GO. Root owns existing compiler/source checks, the original native x64/ARM service gates, and the unchanged Windows Processes UI journey in its separate workflow/job. Fixing this pre-capture TEST construction does not establish those unexecuted results. Source remains zero until that GO.
+
+## 21. Windows private-file reads: platform mode semantics with unchanged captured authority
+
+Plan only; source remains zero until independent review, publication and explicit root GO. Evidence `ca17a20dbc91103f2c16a480ec3a721779414685` records both original packaged Windows jobs: x64 `132540058415` and ARM64 `132540058519`, run `43622201234`, executed checkout `f5440463cf8030bd3ac47f549f8d94b4ef6375a2`. Both retained Main logs report descriptor-phase `hold`; original binding requires `ready`. Each receipt has zero Runtime opens, business/model requests, Refresh, Retry and UI Stops, with App exit 0, cleanup true and all 1607 source pins unchanged. The actual descriptor stat/DACL was not retained. This establishes the failed phase and a necessary source obstruction, not the first captured throwing condition or a Windows UI qualification.
+
+### 21.1. Exact cause boundary and existing platform contract
+
+Pinned [Node 24.21.0/libuv 1.52.1](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/src/win/fs.c) (`4092de0ab31e5628d628fd2c3f0ea3c75c0d6803`, disk fstat and lines 1956–1960) reports permission bits `0444` or `0666` from the read-only attribute. These bits do not represent a Windows DACL. Its [Windows header](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/include/uv/win.h) (`7b4ebd4b7b2e8597409ed54a6474e2dbfe3e66f0`) defines `UV_FS_O_NOFOLLOW` as zero. Accordingly, writing/chmodding `0600` cannot repair the unconditional private-mode predicate or supply no-follow protection.
+
+Use the repository's existing Windows boundary: trusted captured namespace and exact file identity/content, with POSIX mode enforced only outside Windows. Read-only precedents are `FileRuntimeSourceIndex.ts` (`ed164ecd499dac64d4df2b7890e45cf1b5c7f1cd`) and `FileCodexAuthIntentStore.ts` (`a1ae0b22306817c57ca16c50c8fd4f1742a596fe`). [Windows file access](https://learn.microsoft.com/en-us/windows/win32/fileio/file-security-and-access-rights) remains governed by the existing OS/parent-directory ACL; this cut neither changes nor claims to have inspected that ACL. The trusted shell still selects the descriptor, and Main still owns the intent directory under its original userData root.
+
+### 21.2. Finite native implementation scope
+
+| Existing path | Exact native preimage |
+| --- | --- |
+| `src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor.ts` | `d72d98a1dd31d03f54d013a3c3524b3d88151b01` |
+| `src/features/agent-backend/main/infrastructure/FileTeamModelProbeIntents.ts` | `8b356e87e63bc40e21234cb47b29596484c7b38d` |
+| `test/features/agent-backend/desktopBackendFeature.test.ts` | `8576a26d15a601ef2f2fc29bce3326a845e1b196` |
+| `test/features/agent-backend/fileTeamModelProbeIntents.test.ts` | `016a7cbd97e8249c1729a551f5f3e47578c9de42` |
+
+This is the native/Windows repair cut. Parent/qualification reference preimages are recorded in the manifest; their descriptor TEST is `180ac708a6354e3d03eb1ba1997b818d5e679bff`, with the other three preimages identical.
+
+In the descriptor loader, gate only the existing `mode & 0o077` rejection by `process.platform !== 'win32'`. Preserve the original absolute/canonical selected path, trusted SHA256, opened regular file, 256-KiB bound, exact FD bytes, fatal UTF-8, closed schema, close/finally and public `hold` behavior.
+
+In intent lookup, apply the same POSIX-only mode predicate. Since Windows no-follow is zero, add a private Windows-only bookend inside this existing method: lstat the original regular non-link file and require its canonical path before open; match the opened FD's dev/ino/size/mtime to that observation; after the unchanged bounded read require the same path/regular non-link identity and canonical path. Preserve existing after-FD size/mtime checks. Once a file has been observed, disappearance or replacement is unavailable, never an absent association; only original genuine initial ENOENT can return null. POSIX reads keep their existing no-follow and mode behavior. Retain the exact digest/root/kind/key/command checks, immutable publication, original IDs, cold replay, concurrent winner, directory durability and finite history bound. No alternate directory, public option, stored/wire field or reusable helper is introduced.
+
+### 21.3. Existing tests and acceptance
+
+Extend only the existing descriptor rejection case and existing intent symlink/invalid-ID case. Use real temporary files with a closed test-local Windows mode/no-follow model, restored in finally: valid captured wide-mode files must load/replay on Windows, the POSIX wide-mode refusal remains, and the same Windows path must still reject aliases/replacement and corrupt/digest-mismatched inputs. Do not rely on Linux's nonzero O_NOFOLLOW to make the Windows alias control pass. Preserve every old case declaration/assertion and the original cold/concurrent intent cases; no new native case, process, request, clock, timeout, skip or permissive fallback.
+
+Freeze exact source/diff/inverses for independent review. Root owns the existing two-file Main tests, types/lint/source guards and original packaged x64/ARM64 journey. Existing production source pins already include both files. The fixture, workflow, source rosters, ACLs, original native/input/Retry/Stop/Quit counts and cleanup oracles remain outside this cut. Any later failed phase stays an explicit failure requiring its own evidence.
