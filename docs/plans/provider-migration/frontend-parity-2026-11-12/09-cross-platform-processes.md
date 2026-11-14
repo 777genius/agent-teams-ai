@@ -4223,3 +4223,17 @@ The ordinary current Main and final whole-log sentinel assertions, permitted-cal
 ### Review 3 — preserve the current failure until it is explained
 
 Root and a peer compare the exact two-file delta, especially unchanged sentinel execution and whole-log consumer predicates. Run existing script types and source-size checks; do not add a new unit suite for this read-only diagnostic. Use the next same ordinary actual donor/import E2E. The old receipt is not retroactively reclassified and this evidence correction is not a native or routing pass. Commit and immediately push, leaving active live heads and main unchanged.
+
+## 81.1. Preserve the existing exact sentinel fixture expectation
+
+### Review 1 — existing consumer and platform boundary
+
+The §81 fixed redacted command field is published in working source72dc5d82796396de336c935da0edbb8311c1f116. scripts/legacy-agent-host/candidate-runtime-paths.test.ts compares the complete generated sentinel records: its codex --version object lacks the new command:null field. Parent/qualification preimage is b98e1fffc943074c710894149e31b4fa05761f7b; native-child preimage is 96294445978e533b6485232e691caaa46320a723. The affected packed-paths case is Darwin ARM64 only in parent/qualification, while the existing native-child variant also permits Linux x64. Preserve both original platform conditions. The current workflows do not invoke this particular file directly, so do not claim an automatic future script-test pass. Ordinary Desktop acceptance predicates remain unchanged.
+
+### Review 2 — one field in each branch's own test
+
+Add command:null to only that existing expected codex --version object. Preserve complete deepEqual, original three sentinel calls, refusal/exit checks, shell rows, subsequent metadata rows and slice(3), original platform skip and every unrelated variant byte. Add no case, provider call, fallback, timeout, cap, workflow or production change. Do not project away the added field or weaken exact record equality. The same one-line edit must invert to each branch's own exact preimage.
+
+### Review 3 — focused execution and honest qualification
+
+Root and peer verify both exact variant deltas against the generated §81 sentinel record. Materialize the current native-child source with this one-field correction in an isolated checkout; reuse available Git objects, then use a fresh canonical frozen install rather than copying dependencies. When the current heavy check has released its slot, run the same existing test file on Linux x64 under pinned Node24. Its original native-child condition must execute the packed-paths assertion without a platform override. A Linux skip in parent/qualification is not a pass for their Darwin-only case. Retain exact source/test identities and actual case counts; direct Darwin execution and native donor/import qualification remain unclaimed. Publish the reviewed correction with immediate commit/push/readback after this focused existing Linux case passes. No additional test suite, platform substitution, native provider launch, runner or CI replay is introduced.
