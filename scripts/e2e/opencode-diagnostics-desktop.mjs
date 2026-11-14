@@ -207,6 +207,11 @@ if (mode === 'seed-packaged') {
     ...(options.candidateEvidence ? { candidateEvidence: options.candidateEvidence } : {}),
   };
   await preparePackagedProfile(data);
+  if (options.runtimeSetup === 'app-install-v2-repair') {
+    const marker = path.join(dir, '.native-crash-test');
+    await writeFile(marker, 'opencode-packaged-native-crash-v1\n', { flag: 'wx', mode: 0o600 })
+      .catch(() => undefined); // Optional diagnostics cannot prevent the original startup.
+  }
   data.projectSentinel = await prepareExistingProject(data);
   await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
   console.log(dir);
@@ -468,6 +473,8 @@ if (mode === 'seed-packaged') {
     data.cleanupLaunchStartedAt = Date.now();
   }
   if (data.packaged) env.ELECTRON_ENABLE_STACK_DUMPING = '1';
+  if (data.packaged && data.runtimeSetup === 'app-install-v2-repair')
+    env.AGENT_TEAMS_PACKAGED_CRASH_RUN = data.run;
   const child = spawn(launch.command, launch.args, {
     cwd: data.packaged ? data.root : repo,
     stdio: 'inherit',

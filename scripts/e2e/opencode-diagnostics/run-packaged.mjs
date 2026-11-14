@@ -3,7 +3,8 @@
 // copies credentials, edits runtime manifests or launches agents/teams.
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { open, readFile, writeFile, mkdir, lstat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { open, readFile, writeFile, mkdir, lstat, opendir, realpath, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { connect, createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +22,202 @@ import {
   windowsCleanupEvidence,
   ownedTree,
 } from './platform.mjs';
+
+async function retainPackagedNativeCrash(data, run, runDir, owner, cleanupConfirmed) {
+  if (!data.packaged || data.runtimeSetup !== 'app-install-v2-repair') return;
+  const result = {
+    schemaVersion: 1, observationOnly: true, run, state: 'unknown', phase: 'owner',
+    pid: null, bootstrap: 'unavailable', entries: 0, totalBytes: 0, files: [],
+  };
+  const same = (left, right) =>
+    left.isFile() && right.isFile() && !left.isSymbolicLink() && !right.isSymbolicLink() &&
+    left.nlink === 1n && right.nlink === 1n && left.ino !== 0n &&
+    left.dev === right.dev && left.ino === right.ino && left.size === right.size &&
+    left.mtimeNs === right.mtimeNs && left.ctimeNs === right.ctimeNs;
+  const directory = async (selected) => {
+    const info = await lstat(selected, { bigint: true });
+    assert(info.isDirectory() && !info.isSymbolicLink() && info.ino !== 0n);
+    assert.equal(path.relative(await realpath(selected), path.resolve(selected)), '');
+    const after = await lstat(selected, { bigint: true });
+    assert(after.isDirectory() && !after.isSymbolicLink());
+    assert(info.dev === after.dev && info.ino === after.ino && info.birthtimeNs === after.birthtimeNs);
+    return info;
+  };
+  const owned = new Map();
+  const currentOwned = async () => {
+    assert.equal(owned.size, 3);
+    for (const [selected, original] of owned) {
+      const now = await directory(selected);
+      assert(now.dev === original.dev && now.ino === original.ino);
+    }
+  };
+  const regular = async (selected, maxBytes) => {
+    const before = await lstat(selected, { bigint: true });
+    assert(same(before, before) && before.size > 0n && before.size <= BigInt(maxBytes));
+    assert.equal(path.relative(await realpath(selected), path.resolve(selected)), '');
+    const fd = await open(selected, 'r');
+    try {
+      assert(same(before, await fd.stat({ bigint: true })));
+      const bytes = Buffer.alloc(Number(before.size));
+      assert.equal((await fd.read(bytes, 0, bytes.length, 0)).bytesRead, bytes.length);
+      assert(same(before, await fd.stat({ bigint: true })));
+      assert(same(before, await lstat(selected, { bigint: true })));
+      assert.equal(path.relative(await realpath(selected), path.resolve(selected)), '');
+      return bytes;
+    } finally {
+      await fd.close();
+    }
+  };
+  try {
+    assert(cleanupConfirmed === true, 'Original physical cleanup required');
+    assert(['cold', 'warm-1', 'warm-2', 'support-repair', 'support-repair-restart'].includes(run));
+    assert(owner && Number.isSafeInteger(owner.pid) && owner.pid > 0);
+    assert(typeof owner.birth === 'string' && Number.isFinite(Date.parse(owner.birth)));
+    assert.equal(path.relative(owner.appPath, data.artifact.app.path), '');
+    assert.equal(path.relative(path.join(data.root, 'user-data'), data.userData), '');
+    assert.equal(path.relative(path.join(data.root, run), runDir), '');
+    assert(path.basename(data.root).startsWith('opencode-diagnostics-e2e-'));
+    for (const selected of [data.root, data.userData, runDir])
+      owned.set(selected, await directory(selected));
+    result.pid = owner.pid;
+    result.phase = 'bootstrap';
+    const bootstrap = JSON.parse(
+      (await regular(path.join(data.root, 'native-crash-' + run + '.json'), 4096)).toString('utf8')
+    );
+    if (['started', 'refused', 'failed'].includes(bootstrap?.state))
+      result.bootstrap = bootstrap.state;
+    assert(bootstrap?.schemaVersion === 1 && bootstrap.observationOnly === true);
+    assert(bootstrap.run === run && bootstrap.pid === owner.pid);
+    assert(bootstrap.state === 'started' && bootstrap.uploadToServer === false);
+    assert(typeof bootstrap.electronVersion === 'string' && bootstrap.electronVersion.length <= 32);
+    assert(bootstrap.directory && typeof bootstrap.directory === 'object');
+    const crashRoot = path.join(data.userData, 'crashes');
+    const source = path.join(crashRoot, run);
+    await directory(crashRoot);
+    const original = await directory(source);
+    assert(original.birthtimeNs >= BigInt(Date.parse(owner.birth)) * 1000000n);
+    const current = async () => {
+      await currentOwned();
+      await directory(crashRoot);
+      const info = await directory(source);
+      assert.equal(info.dev.toString(), bootstrap.directory.device);
+      assert.equal(info.ino.toString(), bootstrap.directory.inode);
+      assert.equal(info.birthtimeNs.toString(), bootstrap.directory.birthtimeNs);
+      assert(info.dev === original.dev && info.ino === original.ino);
+    };
+    await current();
+    result.phase = 'reports';
+    const destination = path.join(runDir, 'native-crash');
+    let outputDirectory;
+    const walk = async (selected, depth) => {
+      if (depth > 4) {
+        result.state = 'unknown-truncated';
+        throw new Error('Diagnostic directory bound');
+      }
+      await current();
+      const before = await directory(selected);
+      const names = [];
+      const entries = await opendir(selected, { bufferSize: 1 });
+      try {
+        for (;;) {
+          if (result.entries >= 128) {
+            result.state = 'unknown-truncated';
+            throw new Error('Diagnostic entry bound');
+          }
+          const entry = await entries.read();
+          if (!entry) break;
+          result.entries += 1;
+          names.push(entry.name);
+        }
+      } finally {
+        await entries.close();
+      }
+      for (const name of names.sort()) {
+        assert(/^[A-Za-z0-9_.-]{1,128}$/.test(name) && name !== '.' && name !== '..');
+        const file = path.join(selected, name);
+        const info = await lstat(file, { bigint: true });
+        assert(!info.isSymbolicLink());
+        if (info.isDirectory()) {
+          await walk(file, depth + 1);
+          continue;
+        }
+        assert(info.isFile());
+        if (!name.toLowerCase().endsWith('.dmp')) continue;
+        if (
+          result.files.length >= 8 || info.size > 32n * 1024n * 1024n ||
+          BigInt(result.totalBytes) + info.size > 64n * 1024n * 1024n
+        ) {
+          result.state = 'unknown-truncated';
+          throw new Error('Diagnostic dump bound');
+        }
+        const bytes = await regular(file, Math.min(32 * 1024 * 1024, 64 * 1024 * 1024 - result.totalBytes));
+        assert(bytes.length >= 32 && bytes.subarray(0, 4).equals(Buffer.from('MDMP')));
+        await current();
+        await directory(runDir);
+        if (!outputDirectory) {
+          await mkdir(destination, { mode: 0o700 });
+          outputDirectory = await directory(destination);
+        }
+        const outputNow = await directory(destination);
+        assert(outputNow.dev === outputDirectory.dev && outputNow.ino === outputDirectory.ino);
+        const sha256 = createHash('sha256').update(bytes).digest('hex');
+        const staged = String(result.files.length + 1) + '-' + sha256 + '.dmp';
+        const targetPath = path.join(destination, staged);
+        const target = await open(targetPath, 'wx', 0o600);
+        let created;
+        try {
+          created = await target.stat({ bigint: true });
+          assert(same(created, created));
+          await target.writeFile(bytes);
+          const written = await target.stat({ bigint: true });
+          assert(written.dev === created.dev && written.ino === created.ino);
+          assert(written.size === BigInt(bytes.length));
+          assert(same(written, await lstat(targetPath, { bigint: true })));
+          assert.equal(path.relative(await realpath(targetPath), targetPath), '');
+          await current();
+          const after = await directory(destination);
+          assert(after.dev === outputDirectory.dev && after.ino === outputDirectory.ino);
+          await target.close();
+        } catch (error) {
+          try { await target.close(); } catch { /* Keep the original diagnostic failure. */ }
+          try {
+            await currentOwned();
+            const after = await directory(destination);
+            assert(after.dev === outputDirectory.dev && after.ino === outputDirectory.ino);
+            const failed = await lstat(targetPath, { bigint: true });
+            assert.equal(path.relative(await realpath(targetPath), targetPath), '');
+            if (created && same(failed, failed) && failed.dev === created.dev && failed.ino === created.ino)
+              await unlink(targetPath);
+          } catch { /* Never claim that an incomplete staged file was retained. */ }
+          throw error;
+        }
+        result.files.push({
+          relativePath: path.relative(source, file).split(path.sep).join('/'),
+          staged, bytes: bytes.length, sha256,
+        });
+        result.totalBytes += bytes.length;
+      }
+      const after = await directory(selected);
+      assert(before.dev === after.dev && before.ino === after.ino);
+    };
+    await walk(source, 0);
+    await current();
+    result.state = result.files.length ? 'retained' : 'absent';
+    result.phase = 'complete';
+  } catch {
+    // This observation never changes the original verification or cleanup result.
+  }
+  try {
+    await currentOwned();
+    const serialized = JSON.stringify(result) + '\n';
+    if (Buffer.byteLength(serialized, 'utf8') <= 16384)
+      await writeFile(path.join(runDir, 'native-crash.json'), serialized, {
+        flag: 'wx', mode: 0o600,
+      });
+  } catch {
+    // Retention/serialization failure cannot replace the first native failure.
+  }
+}
 
 const args = process.argv.slice(2);
 const options = packagedArguments(args); // Validate before creating a profile or launching anything.
@@ -566,6 +763,11 @@ $ids = @($errors | ForEach-Object { $_.integratorReportId } | Where-Object { $_ 
         );
       } catch {
         /* Diagnostic retention cannot replace the original failure or cleanup decision. */
+      }
+      try {
+        await retainPackagedNativeCrash(data, run, runDir, crashOwner, result.cleanup);
+      } catch {
+        /* No diagnostic failure may replace the original result or cleanup decision. */
       }
     }
     await log.close();
