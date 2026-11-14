@@ -2812,3 +2812,35 @@ The test fixture may expose its existing one model in the summary catalog for th
 ### Review 3 — checks and original acceptance
 
 Root and an independent peer review the exact small diff against these preimages. Run the existing captured-defaults test file, the relevant renderer/main type gate, fast lint and source-size guard in the serialized slot. Publish each reviewed commit with immediate push and readback. Both original mixed V1/V2 Settings → Create → native conversation → cold reopen → physical cleanup cases remain mandatory with their existing controls, budgets, model counts and assertions. Passing this focused contract test does not qualify either Desktop journey.
+
+
+## R34.1. Construct the absent-preferences TEST target without mutating its readonly contract
+
+### Exact current failure and scope
+
+Two ordinary pull-request runs at head `ea16834de1c133fcd2756965977064a97e82afba` fail the unchanged `tooling-quality` step `pnpm typecheck` with the same TS2704 at `test/features/runtime-provider-management/capturedDefaults.test.ts:167`: “The operand of a 'delete' operator cannot be a read-only property.”
+
+| Run | Original failed job | Full original log blob |
+| --- | --- | --- |
+| `43570716994`, Windows official installer fresh and native OTA | `132374282347` | `ce6560a88cc8c2afb10a1b293a5dfee02537132f` |
+| `43570716881`, Windows native updater predecessor feasibility | `132374282230` | `21f286f28b129120b46a11c68467e2f086cc8617` |
+
+The exact workflow sources are `.github/workflows/updater-windows-ota.yml` `b3e0f2399762cbbe0ba1b207515be63267c8566e` and `.github/workflows/updater-windows.yml` `9fdb53189d0712a5111c00071677a0bdd6eff25d`. Their pull-request arm runs whole-workspace typechecking and then the existing controlled tooling checks. The native Windows input and installation arms require `workflow_dispatch`; their skipped result in these pull-request runs is intentional event gating, not evidence of an installer/native failure or a reason to dispatch new Windows work. No branch-protection or merge-policy status is inferred from the workflow names.
+
+R34's fresh missing-store scope creates a `CapturedProviderManagement` target with preferences and then deletes its readonly `preferences` property before the first `loadView`. The runtime behavior exercised by the existing case is correct, but the synthetic construction violates the target's declared immutable contract. This is one TEST setup correction, with no production capability, API or guard change.
+
+### Exact one-existing-file change
+
+Only `test/features/runtime-provider-management/capturedDefaults.test.ts`, common preimage `d9ae6d299f6c089a6e33f4ecba61dfc57fc3f26f`, is in scope. Official reads confirm these same bytes in the current parent head and current qualification/native working trees; no variant substitution is needed.
+
+Add a default-true third parameter `withPreferences = true` to the existing private `fixture(configuredAuthless = false, summaryModels = false)` helper. In the same original `const target: CapturedProviderManagement` literal, include `preferences: { projectRoot, globalRoot }` only when that parameter is true, using a conditional object spread. Keep the readonly target type annotation and every other target field, captured object, callback, directory, request, refresh and currentness behavior unchanged.
+
+In only the existing global-default case's fresh missing-store scope, construct `await fixture(false, false, false)` and remove the subsequent `delete absent.target.preferences`. The target must lack its own preferences property from creation, before it is closed over by the original capture callback. Preserve the unchanged `loadView(input)` call, the real `supportsScopedDefaultModelInheritance(...)` false assertion and the `configuredModels` property-absence assertion. This retains the exact intended missing-store observation without an unsafe cast, a widened mutable type, a delete helper or a caller-side projection.
+
+All original fixture calls keep the default-true behavior. Preserve all seven existing case declarations, assertions, model/catalog/probe counts, inheritance/default/limit behavior and source/current-context refusals. Do not add a suite or test case, change production/store/UI code, alter workflow conditions, skip typechecking, add an installation/native invocation, or change a timer, source-size baseline or resource limit.
+
+### Review and actual gate
+
+Root publishes this exact amendment before source work. Freeze the three small source hunks and full final file; exact inverse must restore `d9ae6d299f6c089a6e33f4ecba61dfc57fc3f26f`. Root and an independent peer check the absent-property construction and unchanged assertions/default branch. Root owns the canonical `pnpm typecheck` continuation and the existing captured-defaults file in the serial check slot, plus the applicable existing lint/size gate. Do not advance active live heads, rerun or cancel their workflows.
+
+Previous runtime test success did not establish TypeScript validity; source review does not replace the currently failing canonical typecheck. Original mixed Settings/Create/native acceptance from R34 remains unchanged. The separate P11 fixture digest correction, V2 `runtime.open` refusal and process cold-UI startup heap failure are not part of this TEST change.
