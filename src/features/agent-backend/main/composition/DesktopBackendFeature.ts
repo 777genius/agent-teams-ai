@@ -178,12 +178,13 @@ export class DesktopBackendFeature {
               ? raw as Record<string, unknown> : null;
             if (typeof value?.teamId !== 'string') return;
             const matches = this.handleDefinitions().filter((entry) =>
-              ownerKey(entry.owner) === ownerKey(owner) && entry.scope.teamId === value.teamId
+              ownerKey(entry.owner) === ownerKey(owner) &&
+              entry.scope.teamId === value.teamId && entry.scope.runId === value.runId
             );
             if (matches.length !== 1) return;
             const selected = matches[0]!;
             const projected = projectHostPromptSuggestion(
-              raw, hostTeamSelectionKey(selected.handleId), selected.scope.teamId
+              raw, hostTeamSelectionKey(selected.handleId), selected.scope.teamId, selected.scope.runId
             );
             if (projected) this.options.onNativePromptSuggestion?.(projected);
           }),
