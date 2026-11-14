@@ -212,7 +212,7 @@ export async function startCodexModel(
         assert.equal(body.model, selected, 'actual inference consumes the original native model selection');
       }
       const input = (Array.isArray(body.input) ? body.input : []).map(record);
-      const palette = options.uiGeneratedMessageIds ? uiPalette(body) : undefined;
+      const palette = options.uiGeneratedMessageIds || options.candidate169 ? uiPalette(body) : undefined;
       if (
         options.allowModelProbes &&
         isCodexModelProbeInput(input, options.modelProbeWorkspace?.())
@@ -412,10 +412,6 @@ export async function startCodexModel(
             palette.exec !== undefined,
             turn === 'CODEX_TEAM_ONE' ? 7 : 0
           ) !== 0;
-      if (options.candidate169 &&
-          ((turn === 'CODEX_TEAM_ONE' && step === 4) || (turn === 'CODEX_TEAM_TWO' && step === 1)))
-        toolResultError = commandExit(input.filter(item => item.type === 'function_call_output').at(-1)?.output,
-          false, turn === 'CODEX_TEAM_ONE' ? 7 : 0) !== 0;
       if (options.candidate169 && turn === 'CODEX_TEAM_TWO')
         assert.deepEqual(originalCallIds(input), Array.from({ length: 7 }, (_, index) => 'native_CODEX_TEAM_ONE_' + index),
           'genuine cold thread retains every original ONE tool and output');
