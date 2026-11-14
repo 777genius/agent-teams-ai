@@ -183,8 +183,12 @@ export class DesktopBackendFeature {
               ownerKey(entry.owner) === ownerKey(owner) &&
               entry.scope.teamId === value.teamId && entry.scope.runId === value.runId
             );
-            if (matches.length !== 1) return;
-            const selected = matches[0]!;
+            // A discovered registry handle can also be present in the original
+            // descriptor. That is one logical owner, not an ambiguous recipient.
+            // Distinct handles for the same native source remain fail-closed.
+            const unique = new Map(matches.map((entry) => [entry.handleId, entry]));
+            if (unique.size !== 1) return;
+            const selected = unique.values().next().value!;
             const projected = projectHostPromptSuggestion(
               raw, hostTeamSelectionKey(selected.handleId), selected.scope.teamId, selected.scope.runId
             );
