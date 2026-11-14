@@ -360,6 +360,8 @@ export interface AppConfig {
     defaultTab: 'dashboard' | 'last-session';
     /** Whether to use the multimodel runtime instead of the stock Claude CLI */
     multimodelEnabled: boolean;
+    /** Explicit opt-in: extra Claude/Codex inference, captured only for fresh Host sessions. */
+    nativeNextPromptSuggestionsEnabled: boolean;
     /** Optional custom Claude root folder (auto-detected when null) */
     claudeRootPath: string | null;
     /** Agent communication language ('system' = use OS locale) */
