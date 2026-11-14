@@ -26,34 +26,27 @@ export function readOpenCodeReadinessSource(
       path !== root && !path.startsWith(root.endsWith(sep) ? root : root + sep) || /[\0\r\n]/u.test(path + root) ||
       maximum < 1 || maximum > 1024 * 1024) return held();
   const locate = () => {
-    current();
     const directories: unknown[] = [];
     let directory = parsePath(path).root;
     for (const part of ['', ...dirname(path).slice(directory.length).split(sep).filter(Boolean)]) {
       if (part) directory = join(directory, part);
-      current();
       let stat;
       try { stat = lstatSync(directory); }
       catch (error) {
-        current();
         if (object(error) && error.code === 'ENOENT')
           return { identity: { directories, missing: directory }, file: undefined };
         throw error;
       }
-      current();
       if (stat.isSymbolicLink() || !stat.isDirectory()) return held();
       directories.push([directory, stat.dev, stat.ino, stat.mode, stat.uid]);
     }
-    current();
     let file;
     try { file = lstatSync(path); }
     catch (error) {
-      current();
       if (object(error) && error.code === 'ENOENT')
         return { identity: { directories, missing: path }, file: undefined };
       throw error;
     }
-    current();
     if (!file.isFile() || file.isSymbolicLink() || file.nlink < 1 || file.size > maximum) return held();
     return { identity: { directories, file: [
       file.dev, file.ino, file.mode, file.uid, file.size, file.mtimeMs, file.ctimeMs, file.nlink,
@@ -61,6 +54,8 @@ export function readOpenCodeReadinessSource(
   };
   let fd: number | undefined;
   try {
+    // The same owner brackets one bounded synchronous readonly source observation.
+    current();
     const before = locate();
     if (!before.file) {
       if (source.present || managementDigest(locate().identity) !== managementDigest(before.identity) ||
@@ -68,33 +63,32 @@ export function readOpenCodeReadinessSource(
       return null;
     }
     if (!source.present) return held();
-    current();
     fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-    current();
-    const first = fstatSync(fd); current();
+    const first = fstatSync(fd);
     if (!first.isFile() || first.dev !== before.file.dev || first.ino !== before.file.ino ||
         first.size > maximum || first.nlink < 1) return held();
     const bytes = Buffer.alloc(maximum + 1);
     let length = 0;
     while (length < bytes.length) {
-      current();
       const count = readSync(fd, bytes, length, bytes.length - length, length);
-      current();
       if (!count) break;
       length += count;
     }
     if (length > maximum || length !== first.size) return held();
-    const after = fstatSync(fd); current();
+    const after = fstatSync(fd);
     const named = locate();
     if (after.dev !== first.dev || after.ino !== first.ino || after.size !== first.size ||
         after.mtimeMs !== first.mtimeMs || after.ctimeMs !== first.ctimeMs || after.nlink !== first.nlink ||
         managementDigest(named.identity) !== managementDigest(before.identity)) return held();
     const body = bytes.subarray(0, length);
     if (source.digest !== managementDigest({ path, root, ...before.identity, bytes: hash(body) })) return held();
-    const raw = new TextDecoder('utf-8', { fatal: true }).decode(body); current();
+    const raw = new TextDecoder('utf-8', { fatal: true }).decode(body);
     return raw;
   } catch { return held(); }
-  finally { if (fd !== undefined) { closeSync(fd); current(); } }
+  finally {
+    if (fd !== undefined) closeSync(fd);
+    current();
+  }
 }
 
 function parsedConfiguration(raw: string | null): { invalid: boolean; value: Row } {
