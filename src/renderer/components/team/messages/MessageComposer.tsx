@@ -642,9 +642,23 @@ const MemberMessageComposer = ({
     return latest?.messageId ?? null;
   }, [conversationMessages, effectiveRecipient]);
   const insertNativeSuggestion = useCallback((text: string) => {
+    // The candidate's render-time eligibility is not an atomic draft write:
+    // a local edit/chip/revision may have reached the draft store before React
+    // renders it. Recheck the live content and captured address before insert.
+    const current = draft.snapshot();
+    if (!draft.canSubmit || draft.isRestoring ||
+        draft.renderedAddressKey !== draft.addressKey ||
+        draft.address.target.kind !== 'direct' ||
+        draft.editorContext.kind !== 'plain' ||
+        current.text.length > 0 || current.chips.length > 0 ||
+        current.attachments.length > 0 || current.restoredOrigin != null) return;
     draft.setText(text);
     focusComposerTextarea();
-  }, [draft.setText, focusComposerTextarea]);
+  }, [
+    draft.snapshot, draft.canSubmit, draft.isRestoring,
+    draft.renderedAddressKey, draft.addressKey, draft.address.target.kind,
+    draft.editorContext.kind, draft.setText, focusComposerTextarea,
+  ]);
   const nativeSuggestion = useNativeNextPrompt({
     teamName,
     recipient: effectiveRecipient,
