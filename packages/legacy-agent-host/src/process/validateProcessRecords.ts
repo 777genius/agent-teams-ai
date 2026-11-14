@@ -138,6 +138,7 @@ export function processReceiptFingerprint(
     ...(row.originalRegistration ? { originalRegistration: row.originalRegistration } : {}),
     ...(row.nativeSettlement ? { nativeSettlement: row.nativeSettlement } : {}),
     ...(row.nativeSettlementNotDispatched !== undefined ? { nativeSettlementNotDispatched: row.nativeSettlementNotDispatched } : {}),
+    ...(row.nativeSettlementCompleted !== undefined ? { nativeSettlementCompleted: row.nativeSettlementCompleted } : {}),
     ...(row.nativeAbsence ? { nativeAbsence: row.nativeAbsence } : {}),
   });
 }
@@ -243,6 +244,7 @@ function validateWindowsProcessReceipt(row: ProcessCommandReceipt, digest: (valu
   const registration = row.originalRegistration;
   if (!intent) {
     if (registration || row.nativeSettlement || row.nativeSettlementNotDispatched !== undefined ||
+        row.nativeSettlementCompleted !== undefined ||
         row.nativeAbsence !== undefined || row.capture?.version === 5) hold();
     return;
   }
@@ -293,6 +295,10 @@ function validateWindowsProcessReceipt(row: ProcessCommandReceipt, digest: (valu
         !row.capture || row.capture.version !== 5 || digest(settlement.command.capture) !== digest(row.capture) ||
         digest(serviceSource(settlement)) !== digest(serviceSource(row.capture))) hold();
   }
+  if (row.nativeSettlementCompleted !== undefined &&
+      (row.nativeSettlementCompleted !== true || !row.nativeSettlement || row.nativeSettlementNotDispatched !== undefined ||
+        row.operation !== 'terminate' || row.state.phase !== 'completed' ||
+        row.state.native !== 'observed-absent' || row.capture?.version !== 5)) hold();
   if (row.nativeSettlementNotDispatched !== undefined &&
       (row.nativeSettlementNotDispatched !== true || !row.nativeSettlement || row.operation !== 'terminate' ||
         row.state.phase !== 'completed' || row.state.native !== 'observed-absent' || row.capture?.version !== 5)) hold();

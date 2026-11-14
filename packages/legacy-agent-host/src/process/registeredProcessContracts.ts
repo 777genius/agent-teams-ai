@@ -134,6 +134,8 @@ export interface ProcessCommandReceipt {
   nativeSettlement?: WindowsServiceIntent;
   /** Original completed Stop's definitive no-dispatch; only a later call may replace that intent. */
   nativeSettlementNotDispatched?: true;
+  /** Actual same-intent settlement confirmed before the original deadline; never inferred from absence. */
+  nativeSettlementCompleted?: true;
   phase: 'prepared' | 'held' | 'completed' | 'rejected';
   state: ProcessStopState;
   /** Exact metadata-selected rows retained before policy write; never OS signal authority. */

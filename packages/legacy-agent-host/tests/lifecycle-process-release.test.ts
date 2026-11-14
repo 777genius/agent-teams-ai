@@ -112,14 +112,15 @@ test('actual purge preflight persists natural Windows absence without a list or 
       return { state: 'observed', capture: structuredClone(capture), observation: 'absent', evidence: 'native-scope' };
     },
   };
-  function composed(windows?: WindowsProcessNative) {
-    const store = new TeamOwnerStore(root, definition.binding.teamName);
-    const owner = createFilesystemTeamOwner({ root, store, binding: definition.binding,
+  function composed(windows?: WindowsProcessNative, storageRoot = root) {
+    const selectedProfile = storageRoot === root ? profile : { ...profile, owner: { ...profile.owner, storageRoot } };
+    const store = new TeamOwnerStore(storageRoot, definition.binding.teamName);
+    const owner = createFilesystemTeamOwner({ root: storageRoot, store, binding: definition.binding,
       members: definition.members, grants: definition.grants });
     const team: HostedTeam = { definition, owner, connection: owner.connect('human'), operatorPrincipalId: 'human' };
     const teams = new Map([[definition.binding.teamId, team]]);
     const lifecycle = createHostTeamLifecycleComposition({
-      profile, teams, runtime: () => undefined, importer: () => undefined,
+      profile: selectedProfile, teams, runtime: () => undefined, importer: () => undefined,
       assertCurrent() {}, assertWriter() {}, isShuttingDown: () => false,
       ...(windows ? { windows } : {}),
     });
@@ -127,7 +128,7 @@ test('actual purge preflight persists natural Windows absence without a list or 
     async function call(method: string, commandId: string, payload: JsonValue): Promise<Record<string, unknown>> {
       const handler = lifecycle.methods[method]; assert.ok(handler);
       const result = await handler.handle({ commandId, binding: {
-        schemaVersion: 1, handleId: 'TEST-handle', owner: profile.owner, scope: definition.scope,
+        schemaVersion: 1, handleId: 'TEST-handle', owner: selectedProfile.owner, scope: definition.scope,
       }, payload }, { requestId: commandId, signal: new AbortController().signal });
       assert.ok(result && typeof result === 'object' && !Array.isArray(result)); return result;
     }
@@ -166,4 +167,75 @@ test('actual purge preflight persists natural Windows absence without a list or 
   assert.equal(result.transactionId, prepared.transactionId); assert.equal(result.phase, 'deleted');
   assert.equal(existsSync(join(root, 'teams', definition.binding.teamName)), false);
   assert.equal(captures, 1); assert.equal(queries, 1); assert.equal(settlements, 1); assert.equal(stops, 0);
+
+  const stoppedRoot = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-lifecycle-stop-release-')));
+  t.after(() => rmSync(stoppedRoot, { recursive: true, force: true }));
+  let stopCaptures = 0, stopCalls = 0, stopSettlements = 0, stopLookups = 0, stopQueries = 0, deletionBoundaries = 0;
+  const stopReplies = new Map<string, WindowsServiceOutcome>();
+  const stoppedNative: WindowsProcessNative = {
+    prepareCapture: native.prepareCapture!, prepareControl: native.prepareControl,
+    async run(intent, deadline) {
+      assert.ok(deadline > performance.now()); assert.equal(stopReplies.has(intent.operationRef), false);
+      let outcome: WindowsServiceOutcome;
+      if (intent.command.operation === 'capture') {
+        stopCaptures++; outcome = { state: 'captured', capture: structuredClone(capture) };
+      } else {
+        const prepared = stopped.store.read<ProcessCommandReceipt>('commands/' + digest('TEST-genuine-stop') + '.json')!;
+        if (intent.command.operation === 'stop') {
+          assert.equal(prepared.state.phase, 'requested'); assert.deepEqual(prepared.nativeIntent, intent);
+          stopCalls++; outcome = { state: 'stopped', capture: structuredClone(capture), observation: 'absent', evidence: 'native-scope' };
+        } else {
+          assert.equal(prepared.state.native, 'observed-absent'); assert.deepEqual(prepared.nativeSettlement, intent);
+          assert.equal(prepared.nativeSettlementCompleted, undefined);
+          stopSettlements++; outcome = { state: 'unknown' };
+        }
+      }
+      stopReplies.set(intent.operationRef, structuredClone(outcome)); return outcome;
+    },
+    async lookup(intent, deadline) {
+      assert.ok(deadline > performance.now()); stopLookups++;
+      return structuredClone(stopReplies.get(intent.operationRef) ?? { state: 'unknown' });
+    },
+    async query() { stopQueries++; return { state: 'unknown' }; },
+  };
+  const stopped = composed(stoppedNative, stoppedRoot);
+  const stoppedMember = stopped.owner.processCommands('native-lead', { windows: stoppedNative, registrar: () => capture.registrar });
+  const stoppedRegistration = await stoppedMember.windows!.register('TEST-stopped-register',
+    { pid: 1001, label: 'TEST genuine Stop' }, performance.now() + 10000);
+  assert.ok(stoppedRegistration.result && !Array.isArray(stoppedRegistration.result));
+  const stopAdmin = stopped.owner.processCommands('human', { windows: stoppedNative, registrar: () => capture.registrar });
+  const originalStop = await stopAdmin.windows!.terminate('TEST-genuine-stop', stoppedRegistration.result.processRef, performance.now() + 10000);
+  assert.equal(originalStop.state.native, 'observed-absent'); assert.equal(originalStop.nativeSettlementCompleted, undefined);
+  assert.ok(originalStop.nativeSettlement);
+  assert.throws(() => stopAdmin.assertReleased(), /hold/);
+  const stoppedTrash = await stopped.call('team.lifecycle.change', 'TEST-trash-stopped', {
+    expectedRevision: stopped.owner.lifecycleCommands('human').view().revision, action: 'trash',
+  });
+  assert.equal(stoppedTrash.ok, true);
+  const stoppedRevision = stopped.owner.lifecycleCommands('human').view().revision;
+  const originalBoundary = stopped.lifecycle.storage.coordinator.commitPermanentDeletionBoundary
+    .bind(stopped.lifecycle.storage.coordinator);
+  stopped.lifecycle.storage.coordinator.commitPermanentDeletionBoundary = async (...args) => {
+    deletionBoundaries++;
+    const confirmed = stopped.store.read<ProcessCommandReceipt>('commands/' + digest('TEST-genuine-stop') + '.json')!;
+    assert.equal(confirmed.nativeSettlementCompleted, true);
+    assert.deepEqual(confirmed.nativeSettlement, originalStop.nativeSettlement);
+    assert.deepEqual(confirmed.nativeIntent, originalStop.nativeIntent);
+    assert.equal(confirmed.principalId, originalStop.principalId);
+    assert.equal(confirmed.commandId, originalStop.commandId);
+    assert.deepEqual(confirmed.capture, originalStop.capture);
+    return originalBoundary(...args);
+  };
+  const blocked = await stopped.call('team.lifecycle.purge', 'TEST-stopped-purge', { expectedRevision: stoppedRevision });
+  assert.deepEqual(blocked, { ok: false, code: 'hold', outcome: 'unknown' });
+  assert.equal(deletionBoundaries, 0, 'Completed absence without confirmed settlement cannot reach deletion');
+  assert.equal(existsSync(join(stoppedRoot, 'teams', definition.binding.teamName)), true);
+  assert.equal(stopped.store.read<ProcessCommandReceipt>('commands/' + digest('TEST-genuine-stop') + '.json')!.nativeSettlementCompleted, undefined);
+  assert.equal(stopSettlements, 1); assert.equal(stopCalls, 1); assert.equal(stopCaptures, 1);
+  stopReplies.set(originalStop.nativeSettlement.operationRef, { state: 'settled', capture: structuredClone(capture) });
+  const deleted = await stopped.call('team.lifecycle.purge', 'TEST-stopped-purge', { expectedRevision: stoppedRevision });
+  assert.equal(deleted.ok, true); assert.equal(deletionBoundaries, 1);
+  assert.equal(existsSync(join(stoppedRoot, 'teams', definition.binding.teamName)), false);
+  assert.equal(stopSettlements, 1); assert.equal(stopCalls, 1); assert.equal(stopCaptures, 1);
+  assert.equal(stopLookups, 2); assert.equal(stopQueries, 0, 'Completed Stop maintenance uses its retained intent without a new query');
 });
