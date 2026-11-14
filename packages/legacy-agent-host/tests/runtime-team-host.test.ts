@@ -846,8 +846,9 @@ test('NDJSON roster replacement refuses live allocation, then saves only after c
   assert.notEqual(restoredTarget.profile.sessionId, firstTarget.profile.sessionId);
   assert.ok(restoredTarget.profile.generation > firstTarget.profile.generation);
   assert.deepEqual(await live.rpc('runtime.stop', { memberId: target.memberId, expectedGeneration: oldBinding.generation }),
-    { ok: false, code: 'conflict', outcome: 'rejected' });
+    { ok: false, code: 'forbidden', outcome: 'rejected' });
   assert.equal(live.session().closeCalls, 0, 'stale target authority cannot close the restored generation');
+  assert.equal(firstDriver.closeCalls, 1, 'retained historical control cannot close the released provider again');
   for (const [index, peer] of originalPeers.entries()) {
     assert.deepEqual(live.contexts[index]!.request, peer.config);
     assert.deepEqual(live.contexts[index]!.profile, peer.profile);
