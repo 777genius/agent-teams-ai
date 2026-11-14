@@ -154,6 +154,34 @@ describe('native next prompt UX in the actual feature hook + row', () => {
     expect(x.onInsert).not.toHaveBeenCalled();
   });
 
+  it('does not insert a verified candidate after the editor unmounts', async () => {
+    const x = fixture();
+    x.emit(origin);
+    let release: (() => void) | undefined;
+    vi.mocked(verifyCurrentNativeSuggestion).mockImplementationOnce(() =>
+      new Promise<boolean>(resolve => { release = () => resolve(true); })
+    );
+    act(() => x.host.querySelector<HTMLButtonElement>('[aria-label="Insert"]')!.click());
+    act(() => roots.splice(0).forEach(root => root.unmount()));
+    await act(async () => { release?.(); });
+    expect(x.onInsert).not.toHaveBeenCalled();
+  });
+
+  it('does not mutate a draft after focus moves during the Runtime check', async () => {
+    const x = fixture();
+    x.emit(origin);
+    const focusTarget = document.createElement('button');
+    x.host.append(focusTarget);
+    let release: (() => void) | undefined;
+    vi.mocked(verifyCurrentNativeSuggestion).mockImplementationOnce(() =>
+      new Promise<boolean>(resolve => { release = () => resolve(true); })
+    );
+    act(() => x.host.querySelector<HTMLButtonElement>('[aria-label="Insert"]')!.click());
+    focusTarget.focus();
+    await act(async () => { release?.(); });
+    expect(x.onInsert).not.toHaveBeenCalled();
+  });
+
   it('uses the captured native provider even when UI model metadata is unavailable', () => {
     const x = fixture();
     x.emit({ ...origin, provider: 'codex', completedTurnRef: 'TEST-codex-native-turn' });

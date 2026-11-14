@@ -32,6 +32,12 @@ export function useNativeNextPrompt(input: {
   const invalidatedMessageIdRef = useRef<string | null>(null);
   const conversationRef = 'direct:' + input.recipient.trim().toLowerCase();
 
+  // An in-flight read must never resume insertion after the editor unmounts.
+  useEffect(() => () => {
+    validationEpochRef.current++;
+    acceptingRef.current = false;
+  }, []);
+
   useEffect(() => {
     validationEpochRef.current++;
     acceptingRef.current = false;
@@ -113,6 +119,7 @@ export function useNativeNextPrompt(input: {
   const insert = useCallback((): boolean => {
     if (!candidate || !visible || acceptingRef.current) return false;
     const selected = candidate;
+    const startingFocus = document.activeElement;
     const epoch = ++validationEpochRef.current;
     acceptingRef.current = true;
     // A read-only independent Runtime generation/input check precedes
@@ -123,6 +130,7 @@ export function useNativeNextPrompt(input: {
         acceptingRef.current = false;
         const now = latestInputRef.current;
         const sameEditor =
+          document.activeElement === startingFocus &&
           now.teamName === selected.ownerHandle &&
           now.memberId === selected.memberId &&
           now.recipient.trim().toLowerCase() === selected.memberName.trim().toLowerCase() &&
