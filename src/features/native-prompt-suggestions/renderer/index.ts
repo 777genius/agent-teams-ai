@@ -9,3 +9,5 @@ export type {
   NativeNextPromptIdentity,
   NativeNextPromptProvider,
 } from '../contracts';
+
+export { useNativeNextPrompt } from './hooks/useNativeNextPrompt';
