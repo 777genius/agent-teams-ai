@@ -584,7 +584,7 @@ export function captureLaunchModelReadiness(options: {
           saved.readinessScope.rosterRevision !== input.rosterRevision ||
           !saved.readinessScope.destinationKeys.includes(runtimeDigest(input.draft?.target ?? {
             launchId: input.launchId, memberId: input.memberId }))) held();
-      if (input.draft && !input.launchId.startsWith('saved-model-') &&
+      if (!input.launchId.startsWith('saved-model-') &&
           saved.readinessScope.actionDigest !== teamModelProbeActionDigest(original.commandId, saved.context!)) {
         if (saved.readinessScope.actionDigest !== teamModelProbeActionDigest(original.commandId, saved.context!,
           transfer.roster.expected.expectedRevision)) held();
