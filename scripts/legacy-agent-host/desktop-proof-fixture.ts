@@ -147,6 +147,7 @@ export async function prepareDesktopProofFixture(
   const fixture = await prepareDesktopBackendFixture(repo, {
     ...(donorSavedOnly ? { donorSavedOnly: true as const } : {}),
     ...(selectedV2 ? { nativeOpenCodeV2: selectedV2 } : {}),
+    ...(options.nativeStopMode ? { configuredLaunchSetup: true as const } : {}),
     ...(options.capturedMcpNonce ? { capturedMcpNonce: options.capturedMcpNonce } : {}),
     ...(options.candidateRuntime ? { candidateRuntime: options.candidateRuntime } : {}),
     ...(process.env.LEGACY_DESKTOP_DIAGNOSTIC_HOST_ENTRY
