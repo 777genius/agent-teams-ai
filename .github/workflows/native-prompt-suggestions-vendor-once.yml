@@ -73,6 +73,8 @@ jobs:
 
   stage-exact-archive:
     needs: reproduce-source
+    outputs:
+      pinned_sha: ${{ steps.publish.outputs.sha }}
     permissions:
       contents: write
       actions: read
@@ -131,6 +133,7 @@ jobs:
           git diff --check
 
       - name: Commit and push without running provider code under a write token
+        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -143,10 +146,70 @@ jobs:
             pnpm-lock.yaml \
             vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
           git diff --cached --check
-          git diff --cached --quiet && exit 0
+          if git diff --cached --quiet; then
+            echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           git commit -m 'chore(native-suggestions): pin exact CI-qualified provider artifact'
           auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           GIT_CONFIG_COUNT=1 \
             GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \
             GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" \
             git push origin HEAD:refs/heads/feat/native-prompt-suggestions-stage1-20261114
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  captured-original-host-after-pin:
+    needs: stage-exact-archive
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - name: Checkout exact successfully published consumer commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.stage-exact-archive.outputs.pinned_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Verify selected source-qualified package and exact published HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n '${{ needs.stage-exact-archive.outputs.pinned_sha }}'
+          test "$(git rev-parse HEAD)" = '${{ needs.stage-exact-archive.outputs.pinned_sha }}'
+          archive=vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
+          test -f "$archive"
+          echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $archive" | sha256sum --check
+          node <<'JS'
+          const fs = require('node:fs');
+          const pkg = JSON.parse(fs.readFileSync('packages/legacy-agent-host/package.json','utf8'));
+          const selected = 'file:../../vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz';
+          if(pkg.dependencies?.['@agent-teams/provider-implementations'] !== selected) throw Error('Provider source pin missing');
+          JS
+      - name: Install frozen published workspace and compile original Host
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/install-dependencies-with-retry.mjs
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter @agent-teams/legacy-agent-host typecheck:test
+          pnpm --filter @agent-teams/legacy-agent-host test
+      - name: Verify original captured Host SDK binding
+        run: node --test packages/legacy-agent-host/tests/native-prompt-suggestions-binding.test.ts
+      - name: Original Host plus real Claude CLI and localhost model inference
+        env:
+          NATIVE_SUGGESTIONS_HOST_GO: "1"
+          NATIVE_SUGGESTIONS_HOST_RECEIPT: ${{ github.workspace }}/native-prompt-suggestions-host-receipt.json
+        run: node --test packages/legacy-agent-host/tests/native-prompt-suggestions-host.native.ts
+      - name: Retain original Host native E2E proof at published SHA
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: host-native-suggestions-pinned-${{ needs.stage-exact-archive.outputs.pinned_sha }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: native-prompt-suggestions-host-receipt.json
