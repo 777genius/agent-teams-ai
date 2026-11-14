@@ -1375,3 +1375,55 @@ Add bounded observations within that same case. Before original sealing, show th
 Use fresh finite scopes inside the same case for a write that throws before publication, an internally coherent unrelated definition whose fingerprint differs from both retained expectations, and a malformed record at the attempted fingerprint. The original unchanged record must remain readable after the before-write failure and its original retry must retain its normal no-allocation behavior. The unrelated/malformed records must still raise HOLD during sealing and must not be rewritten, treated as ready or opened. These are negative persistence/authority boundaries, not a test that merely mirrors a flag or private field. Keep all existing case names, native action expectations and default setup behavior; do not add a suite, elapsed-time allowance, native invocation, new polling or a synthetic release.
 
 Freeze exact two-file sources/diffs with complete preimage inverses and an independent review of the private expectation, unchanged ordinary validator calls, local-disposal ordering and original assertions. Root owns the canonical Host build/test types, the targeted existing case/file and source-size gate after publication. Broaden a check only for a concrete remaining risk; do not repeat the full 1231-case suite just to collect another green summary. Source review is not execution or native qualification. Publish this appendix before source changes; root remains the only publisher and active CI heads are not advanced by this amendment.
+
+## 21. Preserve the original Create deadline by bounding repeated readonly source authority checks
+
+### 21.1 Actual failure and source boundary
+
+Status: **PLAN ONLY; source changes have not started.** This is independent of §19 initial native admission and §20 ambiguous-publication sealing. It does not broaden either authority path.
+
+At parent `13abb52436446b64900a819f8d9b3b1cc94112cc`, the original Host suite completed with 1,231 tests: 1,226 passed, three failed, two skipped, none cancelled. The complete retained log is blob `f9efe913e6e74d96373a0ffaa60243fd1bcbf3e7` (SHA-256 `c060faeb00ca54f7054fb611c6d685670795f34f86f56aa4321ef0c70b645bfc`). The existing `submit uses original registry/roster/capture/start receipts and recovers same-ID admission after proof expiry` case failed in its OpenCode worktree branch: the original 1,000 ms launch attempt expired before the provider opened. All four original preparation probes had completed and released their resources; the diagnostic recorded zero business opens. Cleanup HOLD followed that failure and is not evidence of successful allocation.
+
+A single diagnostic execution of that unchanged existing case with Node's CPU profiler reproduced the same failure. Evidence is blob `0478a93f47eff74194593f3c1e87991b73cd96aa`; the retained CPU profile has SHA-256 `1386abcdac4179ebfce450b249d3f69773a43915752e10a7abf7e855241c5c36`. Of 40.039 sampled seconds, 34.768 seconds were inclusive under `OpenCodeReadinessOrigin.current`, and 31.121 under its `locate` function. These inclusive values overlap. They identify the repeated synchronous owner validation cost, not a portable latency benchmark or permission to change a deadline.
+
+The current reader calls the same `current()` callback before and after individual directory `lstat`, file `lstat`, descriptor reads, descriptor checks and decoding. Under the actual Runtime factory callback this repeatedly reacquires and validates the original Team/Runtime owner state. The bounded source observation itself contains only synchronous readonly filesystem operations and pure identity/byte validation; it cannot allocate a provider, admit a probe, write a record, resolve an API-key file token, yield to the event loop or return a partial result.
+
+### 21.2 Finite source scope
+
+Only these two existing files are writable, with identical preimages in parent, native and qualification variants:
+
+| File | Exact preimage | Change |
+| --- | --- | --- |
+| `packages/legacy-agent-host/src/adapters/providers/OpenCodeReadinessOrigin.ts` | `11ef5d8f820c70795dbd448452eb7bc992f93b97` | Bracket one bounded synchronous source observation with the existing owner-current check. |
+| `packages/legacy-agent-host/tests/opencode-configuration-source.test.ts` | `614133c13aece69aebea046d1a29c3e781d3099a` | Extend the existing grouped-probe/source case with actual authority-loss boundaries. |
+
+`team-create-launch.test.ts`, the Runtime factory, Team/Runtime stores, model probe owner, launch journal, original deadlines, workflows, package pins and native fixtures are readonly references for this cut. There is no new file, helper owner, cache, storage format, callback bypass, authorization flag or deadline. The production file remains below 800 lines with ordinary formatting.
+
+### 21.3 Implementation
+
+1. Keep all original source reference normalization and bounds. Inside the existing guarded read, invoke the real `current()` callback before the first filesystem observation. A rejected owner cannot begin that observation.
+2. Remove only repeated invocations of this same expensive authority callback around individual synchronous syscalls. Keep the original two pathname observations and every filesystem/content identity check. The observation remains bounded by the existing maximum of 1 MiB (128 KiB for approvals), unchanged ancestry traversal and finite read loop.
+3. Close any opened descriptor in the existing `finally` path, then run the same real owner-current callback before a raw value or missing-file `null` can return. An authority loss during observation must prevent either value from escaping. A failed close also prevents a successful return; it must not become a success-shaped result.
+4. Keep `captureOpenCodeReadinessOrigin.inspect()` entry/exit currentness checks, fresh per-inspection source map, repeated `isCurrent()` reinspection, policy parsing, approval matching and preparation commitments unchanged. No result is reused across inspections, calls, launch attempts or owner generations.
+5. Keep all native allocation, writer availability, original Team fence, Runtime action/current binding, custody, credential import and provider readiness checks at their existing call sites. This changes the granularity of a readonly observation only. It does not move any native work into the Team fence or assert that unchanged profile bytes prove native readiness.
+
+The unchanged source validation includes absolute canonical paths, root containment, NUL/newline rejection, each ancestor's lstat and symlink refusal, missing identity on both observations, regular-file checks, hard-link count, size limits, `O_NOFOLLOW`, descriptor/path inode/device comparisons, before/after size and time checks, exact content digest, fatal UTF-8 decoding and descriptor cleanup. Keep their existing order and refusal behavior; do not substitute a cached stat, path-only identity or permissive parse. Source bytes remain a local temporary until final owner validation permits return.
+
+### 21.4 Critical verification in the existing case
+
+Extend only `original Main source, exact approval and whole-command commitment survive bounded grouped probes`. Preserve all existing test names and their other inputs/assertions. Use the original real TEST file and narrowly scoped, restored Node builtin observation hooks if needed to revoke the test owner during the actual readonly observation. No production injection seam is added.
+
+- An already invalid owner prevents filesystem observation and yields the original HOLD.
+- Loss of the owner during a real read refuses output and closes the observed descriptor; checking the descriptor after refusal must show it is closed.
+- Loss of the owner during an actual missing-source observation also refuses `null` as successful output.
+- A valid owner still returns the original exact bytes or the original verified absence. Existing source-change, symlink, oversized-file, approval, commitment, cold read and no-extra-probe assertions remain.
+
+These assertions cover the authority boundary, not a fixed count of internal callback invocations. Temporary builtin hooks must be restored in `finally` before the existing asynchronous probe part of the case; any ESM builtin binding update must be restored as well. Do not add timing assertions, sleeps, tests, retries, model requests or a profiler to CI.
+
+### 21.5 Review, publication and acceptance
+
+Before source edits, independently review this plan against the real reader and factory callback, then publish the reviewed appendix to the existing P05 document in the docs and three repair branches. Root remains the only publisher and commits followed immediately by expected-head pushes/readbacks. Current live CI heads remain unchanged while their original runs are active.
+
+After source review, publish the exact two-file delta with inverse and unchanged-outside-function/case evidence. On the canonical frozen dependency checkout, build Host and check Host test types, run the existing configuration-source file, and rerun the original unchanged three-variant Create case once. Its original 1,000 ms attempt, two business opens, four OpenCode-worktree preparation probes, same-ID recovery, no replay and cold reconstruction assertions must pass. Do not increase the deadline, move its start, make failure successful or drop its worktree branch. If it still fails, retain the actual result and diagnose the remaining source-backed cost before any additional implementation scope; this plan does not promise an unmeasured latency improvement.
+
+Run the source-size/architecture gate only for the changed production boundary and continue the original native/Desktop CI on a subsequent fully reviewed batch after current runs finish. Local source success does not qualify native credentials, provider execution, packaged UI or platforms that have not actually run.
