@@ -224,7 +224,7 @@ test(
     assert.equal(rejectedShell.status, 78);
     const invocations = (await readFile(executableFixture.sentinelLog, 'utf8')).trim().split('\n').map(line => JSON.parse(line));
     assert.deepEqual(invocations, [
-      { executable: 'codex', allowed: false, argc: 1, flags: ['--version'] },
+      { executable: 'codex', allowed: false, argc: 1, command: null, flags: ['--version'] },
       { executable: 'shell-env', allowed: true, argc: 2, flags: ['-lic'] },
       { executable: 'shell-env', allowed: false, argc: 2, flags: ['-lic'] },
     ]);
