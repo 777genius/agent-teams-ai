@@ -118,6 +118,7 @@ const runtimeSnapshot = {
 };
 
 vi.mock('@renderer/api', () => ({
+  isElectronMode: () => false,
   api: apiMock,
 }));
 
