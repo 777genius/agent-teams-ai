@@ -4045,14 +4045,14 @@ The other old test-shard failure, management-model-probe.test.ts434's SDK transp
 | Path | Exact current preimage | Bounded change |
 | --- | --- | --- |
 | `src/main/utils/linuxChildLaunch.ts` | `17fc7cdd21d5a5fff9527c114b96bef7372571d2` | Use an interface for Handoff, remove only the three redundant assertions reported in this file, and separate synchronous original cleanup invocation from its returned promise rejection handler. |
-| `src/main/utils/linuxChildLaunchSelection.ts` | `86103b92c6c8dc1dae9333c19afc53c730b2cba8` | State the existing Error predicate as a type guard, type the original memo Error-or-undefined, and remove the one already-narrowed string assertion. |
+| `src/main/utils/linuxChildLaunchSelection.ts` | `86103b92c6c8dc1dae9333c19afc53c730b2cba8` | Keep the exported boolean classifier unchanged, narrow the original memo assignment locally to Error-or-undefined, and remove the one already-narrowed string assertion. |
 | `test/main/utils/childProcess.test.ts` | `9446abefc6578baaef789bfa333dec085bda7052` | Remove only execStatus's widening return annotation; infer the exact Buffer.alloc return. |
 
 Root rechecks these preimages in all three working trees. There are no workflow, dependency, descriptor, native C, provider or unrelated formatting changes.
 
 ### Review 2 — preserve the original effects and failure identities
 
-`isLinuxChildLaunchFailure` already returns true only for a LinuxChildLaunchFailure (an Error subclass) or an Error in the original WeakSet. Change its signature to `error is Error` without changing that boolean expression. The initializer already preserves such an original Error or constructs the same fixed selection failure. Therefore `initializationFailure: Error | undefined` describes its actual existing values; it neither casts an unknown into Error nor wraps/replaces an existing Error. Keep the original initialization, repeated-selection refusal, native allocation classification and every thrown object unchanged.
+`isLinuxChildLaunchFailure` returns true only for a LinuxChildLaunchFailure (an Error subclass) or an Error in the original WeakSet, but false also includes ordinary Error instances. Keep its exported boolean signature and body byte-identical: an `error is Error` predicate would incorrectly exclude ordinary Errors from its false branch. Type only the original memo as `Error | undefined`; at its existing assignment retain the original classifier first, then use `&& error instanceof Error` for local narrowing. A true classifier already guarantees this second condition, so the same original Error object is retained; every other value still constructs the same fixed selection failure. No cast, wrapping, changed classifier call order or new fallback is introduced. Keep the original initialization, repeated-selection refusal, native allocation classification and every thrown object unchanged.
 
 In linuxChildLaunch, replace only the Handoff declaration syntax, remove the two unnecessary `frame[5]!` assertions after the exact-length guard, and let Buffer.isEncoding supply its existing narrowing without `as BufferEncoding`. In Selection, retain the original typeof check and pass its already-narrowed row[key] to hashPattern without the cast. Do not remove any length, frame, checksum, file identity, descriptor, directory, architecture or option predicate.
 
@@ -4062,8 +4062,36 @@ The TEST execStatus helper continues allocating the same12 bytes and writing the
 
 ### Review 3 — bounded verification and publication
 
-Root publishes this appendix after independent plan review, then reviews and publishes only the three exact source deltas with immediate pushes and ref/tree/blob readback. Source-only review must distinguish erased type changes from the narrowly equivalent valid-Promise cleanup control flow; no lint rule, type check or platform guard is disabled.
+Root publishes this appendix after independent plan review, then reviews and publishes only the three exact source deltas with immediate pushes and ref/tree/blob readback. Source-only review must distinguish erased type changes, the equivalent local Error narrowing and the narrowly equivalent valid-Promise cleanup control flow; no lint rule, type check or platform guard is disabled.
 
 Use the existing childProcess critical cases, the existing source-size guard, Main test types and the normal type-aware Main lint shard. The earlier fast lint result does not cover these type-aware rules, and the earlier54 passing childProcess runtime cases do not establish test compilation. Do not add a new suite or expand native inputs. The ordinary existing CI remains authoritative for native helper/custody and full application qualification; no active head is replaced or manually rerun for this static correction.
 
 The local executor became unavailable before this proposal. That does not make a source review or a queued CI run a successful check. Keep execution pending until the existing checks actually complete through the restored normal environment or ordinary exact-head CI.
+
+## 77. Mixed Settings failure summary: follow the original nested proof owner
+
+### 77.1. Evidence and exact remaining uncertainty
+
+The original mixed V1/V2 Main jobs 132132912633/132132912657 in run 43497088359 and the later exact-checkout 0543d437695318f0157e6d600d76abdce5c51e8e jobs 132237640568/132237640765 in run 43527759884 have the same closed failure projections. They retain 10/9 UI steps respectively, with the last step the original OpenCode Manage mouseClick marked attempted; both retain final cleanup remaining 6, capturedHostAbsent:false and appSignalCode:SIGTERM. The final cleanup assertion is an independent unresolved debt and can mask the earlier error in the console. It is not permission to signal again, relax absence or mark the journey passed.
+
+The new full original job logs are immutable blobs c5d030df2e7b16db01695e513ed9c9b76a95ada4 (V1) and 063a564c5ad2d9d3eaead345fa623a0b9fe9d4a4 (V2), with complete readback. Their artifacts are 14087660020 (185644 bytes; ZIP SHA256 88cda10ee664fc8cdcb0451ddb1b431f5ca6adbddb7232effee8cff119916fca) and 14086698584 (187143 bytes; ZIP SHA256 f6ed76a8f4a208a46866344baea34f2b2184950a79a0c2938e38071d17b5e252). Their name suffix is d7419a7f67d0f6fce6486f294c609d6b5d4b86f7, distinct from the checked-out PR head; the earlier artifact suffix is ddea0acc3cab5b487f43f563335220aca364913d. Full old/new receipt source identities and archive members are still unread because the executor is unavailable. No claim of artifact source identity is made from these suffixes.
+
+This amendment corrects a demonstrated source projection defect, not the cause of the UI failure. The existing attempted click is recorded before the two original CDP input commands finish; without the original receipt it does not establish DOM delivery. Actual Manage in CliStatusBanner 0d811b6e5c980876b7eaca5846f459bdd61fe895 only selects the provider and opens its existing lazy dialog. The nested Models tab is present independently of catalog completion but may remain disabled by the original state. No guessed lazy-load, input, native catalog or cleanup cause is adopted.
+
+### 77.2. The original owner and one-line correction
+
+The original desktop-mixed-create-launch-ui-smoke.ts 3b689edbe2a5dd9f0c1af453164dc2397ba5839d assigns its proof to evidence.mixedCreateLaunchProof, then passes that same proof as the evidence argument to createMixedProviderSettingsProof. The original desktop-mixed-provider-settings.ts 522c99c88a9ddbb0dfa7a7397046188aa963402b assigns providerSettings on this passed object before returning the helper whose runPrelude emits the Settings/Manage steps. Thus the retained Settings record belongs at evidence.mixedCreateLaunchProof.providerSettings.
+
+The existing projectDesktopMixedSettingsFailure instead reads providerSettings from the root evidence. Its settingsRecorded:false, settingsStatus:null, settingsSteps:null and settings-derived milestone/owner fields therefore do not locate the original failure. Change only that own-data lookup to read providerSettings from the already captured mixed object. Do not create a root alias, relocate stored proof, add fallback to a foreign root record or infer a missing/malformed nested record from UI steps.
+
+| Path | Exact preimage | Bounded change |
+| --- | --- | --- |
+| scripts/legacy-agent-host/desktop-backend-observations.ts | 6b6c3fa3846c9dd080223865866f5baceb8be7e3 | In the existing mixed failure projection only, replace own(value, 'providerSettings') with own(mixed, 'providerSettings'). |
+
+Keep root coldSettingsBoundary and cleanup observations at their original owners. Preserve every closed field, enum, count/byte cap, own-data descriptor check, getter refusal, null/missing semantics, all original errors and throw/finally order. The summary remains failure-only diagnostics; no product/runtime/renderer/source/custody code, clicks, CDP calls, IO, listeners, timers, retries, budgets, inputs, cleanup signals or acceptance assertions change. This common one-line delta must be applied only against the verified preimage in each working branch.
+
+### 77.3. Review, checks and next evidence
+
+Root publishes the plan before source. Independent review verifies the two original producer assignments, the common preimage and the exact inverse: removing this one-line delta recovers the full original file. The existing source-size/types and ordinary mixed UI acceptance remain required; no new test suite or diagnostic-only native rerun is added for this record-owner correction.
+
+The first substantive runtime diagnosis still comes from the original archive: evidence.failure, nested mixedCreateLaunchProof.providerSettings and its steps, rendererFailureSnapshot.inputEvents and visible DOM, rendererDiagnostics, failureQuit, beforeHarnessCleanup and original group/Host observations. The receipt was already written before the console cleanup assertion. Read these original retained facts when execution becomes available, or the next already-authorized ordinary CI artifact; do not add diagnostics merely because transfer/extraction is temporarily unavailable. Corrected summary output does not establish that Manage delivered a click, that Models became usable, or that any cleanup debt settled. Actual mixed V1/V2 parity remains INCOMPLETE until the original UI, native, cold-start and absence assertions pass.
