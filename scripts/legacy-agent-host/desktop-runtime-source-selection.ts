@@ -191,11 +191,12 @@ export async function runDesktopRuntimeSourceSelection(input: {
   };
   await verifyInputs();
   const model = await startRetainedOpenCodeModel({ sourceSelection: true });
+  const projectInputs: Row[] = [];
   const namespaces: Row[] = [], steps: Row[] = [], originals = new Map<string, Birth>();
   const roots: string[] = [], installed = new Map<string, string>();
   const metadata = new Map<string, { root: string; lineage: DesktopSourceMetadataLineage }>();
   const proof: Row = { kind: 'TEST_NATIVE_OPENCODE_SOURCE_SELECTION_DESKTOP', sourceHead: input.sourceHead,
-    generation: v2 ? 'v2' : 'v1',
+    generation: v2 ? 'v2' : 'v1', projectInputs,
     platform: 'linux-x64', status: 'INCOMPLETE', build: input.build, inputs, namespaces, steps,
     businessInputs: [...SOURCE_SELECTION_MARKERS], vendorAuthQualified: false, releaseQualified: false };
   let app: App | undefined, fixture: Fixture | undefined;
@@ -261,6 +262,16 @@ export async function runDesktopRuntimeSourceSelection(input: {
       assert.equal(management.length, 1); assert.equal(management[0]!.projectPath, null);
       assert.equal(management[0]!.profileId, 'TEST-opencode-source-management');
       assert.equal(management[0]!.configRevision, 'TEST-opencode-management');
+      const projectPath = join(root, 'workspace/opencode.json'), project = await readJson(projectPath, 64 * 1024);
+      assert.deepEqual(Object.keys(project), ['provider']);
+      const projectProviders = record(project.provider), projectProvider = record(projectProviders['test-local']);
+      assert.deepEqual(Object.keys(projectProviders), ['test-local']); assert.equal(projectProvider.npm, '@ai-sdk/openai-compatible');
+      assert.equal(record(projectProvider.options).baseURL, model.url + '/host/v1');
+      assert.ok(record(projectProvider.options).apiKey === 'TEST-LOCALHOST-ONLY', 'original TEST project key');
+      assert.deepEqual(Object.keys(record(projectProvider.models)), ['TEST-model']);
+      const projectPin = { path: projectPath, sha256: await fileDigest(projectPath) };
+      projectInputs.push(projectPin); immutablePins.push(projectPin); assert.ok(projectInputs.length <= 2);
+      await verifyInputs();
       const embeddedEntry = v2 ? await realpath(join(dirname(fixture.hostEntry), 'adapters/providers/OpenCodeV2EmbeddedChild.js')) : '';
       if (v2) immutablePins.push({ path: embeddedEntry, sha256: await fileDigest(embeddedEntry) });
       let retainedIndex: Awaited<ReturnType<typeof sourceIndex>> | undefined;
@@ -552,9 +563,9 @@ export async function runDesktopRuntimeSourceSelection(input: {
       };
       const create = async (name: string, marker: Marker, selected: Source, prepared = false) => {
         if (!prepared) await prepareCreate(name);
-        const provider = '[data-testid="create-team-page"] [data-testid="team-model-selector-provider-nav-opencode"]';
-        await ui.scrollTo(provider, 'original OpenCode provider');
-        await ui.click(provider, 'select original OpenCode provider');
+        const provider = '[data-testid="create-team-page"] [data-testid="team-model-selector-provider-nav-local-models"]';
+        await ui.scrollTo(provider, 'original Local models provider');
+        await ui.click(provider, 'select original Local models provider');
         const option = '[data-testid="create-team-page"] [data-testid="team-model-selector-model-option"][aria-label^="TEST-model"]';
         await ui.scrollTo(option, 'original TEST-model');
         await ui.click(option, 'select original TEST-model');
