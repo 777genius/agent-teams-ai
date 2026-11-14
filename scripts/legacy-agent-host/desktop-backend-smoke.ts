@@ -21,6 +21,7 @@ import assert from 'node:assert/strict';
 import { runDesktopNativeQuitMode, verifyDesktopNativeQuitAfterShutdown, capturePendingDesktopNativeQuit } from './desktop-native-quit-ui-smoke.ts';
 import { prepareDesktopMixedNativeFixture, reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
 import { runDesktopMixedCreateLaunchUiSmoke } from './desktop-mixed-create-launch-ui-smoke.ts';
+import { runDesktopLiveMembershipUiSmoke } from './desktop-live-membership-ui-smoke.ts';
 import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { desktopProofEvidence } from './desktop-proof-evidence.ts';
 import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
@@ -305,7 +306,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   let quitRequested = false;
   let finishMixedSettings: (() => Promise<void>) | undefined;
   const restartSameProfile = async (selection: Pick<Parameters<typeof restartCapturedDesktopApp>[0],
-    'model' | 'provider' | 'boundary' | 'createdHandleId' | 'afterOriginalSettingsQuit'>) => {
+    'model' | 'provider' | 'boundary' | 'createdHandleId' | 'afterOriginalSettingsQuit' | 'afterOriginalMembershipQuit'>) => {
     assert.ok(cdp && !packed && selection.model);
     return restartCapturedDesktopApp({
       app, cdp, group, fixture, repo, mode, evidence, cdpLibrary, ...selection,
@@ -446,12 +447,15 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       });
     } else if (mixedMode) {
       assert.ok(mixedModels);
-      const mixed = await runDesktopMixedCreateLaunchUiSmoke(cdp, {
+      const mixed = await (mixedModels.membership ? runDesktopLiveMembershipUiSmoke : runDesktopMixedCreateLaunchUiSmoke)(cdp, {
         fixture, models: mixedModels, capturedGroup: () => group, evidence,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
-        restartSameProfile: (createdHandleId, afterOriginalSettingsQuit) => restartSameProfile({
+        restartSameProfile: (createdHandleId, afterOriginalQuit) => restartSameProfile(mixedModels!.membership ? {
+          model: mixedModels!.opencode, provider: 'opencode', boundary: 'live-membership-after-stop',
+          createdHandleId, afterOriginalMembershipQuit: afterOriginalQuit,
+        } : {
           model: mixedModels!.claude, provider: 'claude', boundary: 'settings-saved-before-launch',
-          createdHandleId, afterOriginalSettingsQuit,
+          createdHandleId, afterOriginalSettingsQuit: afterOriginalQuit,
         }),
       });
       finishMixedSettings = mixed.finishSettings;
@@ -660,7 +664,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const { remaining, cleanupFailure, capturedHostAbsent, hostPid: cleanedHostPid } =
       await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity, hostPid, packedRelaunchMode });
     hostPid = cleanedHostPid;
-    const coldBoundary = evidence.coldResumeBoundary ?? evidence.coldExtensionBoundary ?? evidence.coldSettingsBoundary;
+    const coldBoundary = evidence.coldResumeBoundary ?? evidence.coldExtensionBoundary ?? evidence.coldSettingsBoundary ?? evidence.coldMembershipBoundary;
     if (coldBoundary && object(coldBoundary).secondEpoch) object(coldBoundary).secondCleanup = {
       processGroup: group, remaining, appExitCode: app.exitCode, appSignalCode: app.signalCode, capturedHostAbsent,
       ...(cleanupFailure ? { cleanupFailure } : {}),

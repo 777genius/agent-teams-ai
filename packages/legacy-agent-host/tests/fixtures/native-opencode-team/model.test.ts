@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { opencodeFailedShellCaptureFixture } from './capture.ts';
+import { OPENCODE_V2_PROBE_STEP_LIMIT } from './model-probe.ts';
 import { CAPTURE_FAILED_AFTER, assertCaptureFailedShellOutput } from './model.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -12,6 +13,7 @@ import {
   COORDINATION_PROMPT,
   COORDINATION_TOOLS,
   REQUIRED_TOOLS,
+  type LiveMembershipModelPhase,
   startOpenCodeModel,
 } from './model.ts';
 
@@ -116,6 +118,88 @@ test('OpenCode inference oracle requires native context/catalog and scripts two 
     assert.deepEqual(model.failures, []);
   } finally {
     await model.close();
+  }
+
+  for (const mode of ['pass', 'pass-v2', 'premature-probe', 'duplicate-probe', 'foreign-key', 'business-before-probe',
+    'wrong-order', 'missing-result', 'foreign-id', 'wrong-principal', 'wrong-command', 'wrong-operation',
+    'wrong-args', 'extra-round', 'old-restored-principal', 'after-stop']) {
+    let phase: LiveMembershipModelPhase = 'idle', principal = 'TEST-add-principal';
+    const v2 = mode === 'pass-v2', liveTools = v2 ? tools.map(tool => ({ ...tool, function: { name:
+      tool.function.name === 'bash' ? 'shell' : tool.function.name.replace(/^team_/, 'agent-teams_') } })) : tools;
+    const original = await startOpenCodeModel({ ...(v2 ? { nativeGeneration: 'v2' as const } : {}),
+      allowModelProbes: true, uiGeneratedMessageIds: true,
+      principalId: () => principal, liveMembershipPhase: () => phase, selectedModel: { id: 'TEST-model' } });
+    type Call = { id: string; type: string; function: { name: string; arguments: string } };
+    const post = async (messages: unknown[], offered: unknown[] = liveTools, key = 'TEST-LOCALHOST-ONLY') => {
+      const response = await fetch(original.url + '/v1/chat/completions', { method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
+        body: JSON.stringify({ model: 'TEST-model', messages: v2 && messages === ordinaryProbeMessages
+          ? [...messages, { role: 'assistant', content: OPENCODE_V2_PROBE_STEP_LIMIT }] : messages, tools: offered }) });
+      const wire = await response.text(), line = wire.split('\n').find(value => value.startsWith('data: {'));
+      return { status: response.status, delta: line ? JSON.parse(line.slice(6)).choices[0].delta as {
+        content?: string; tool_calls?: Call[];
+      } : undefined };
+    };
+    const refused = (response: Awaited<ReturnType<typeof post>>) => {
+      assert.equal(response.status, 400); assert.equal(original.failures.length, 1, mode);
+    };
+    const incoming = (turn: string): unknown[] => [{ role: 'system', content: CONTEXT_MARKER }, {
+      role: 'user', content: JSON.stringify({ messageId: '00000000-0000-4000-8000-000000000001', text: turn }) +
+        '\nUse the message_send tool to="user", including commandId and text. ' +
+        'Do not reuse the incoming messageId as a reply commandId.',
+    }];
+    try {
+      if (mode === 'premature-probe') { refused(await post(ordinaryProbeMessages, [])); continue; }
+      phase = 'add';
+      if (mode === 'foreign-key') { refused(await post(ordinaryProbeMessages, [], 'TEST-foreign')); continue; }
+      if (mode !== 'business-before-probe') {
+        assert.equal((await post(ordinaryProbeMessages, [])).delta?.content, 'OK');
+        assert.equal(original.probes.length, 1);
+      }
+      if (mode === 'duplicate-probe') { refused(await post(ordinaryProbeMessages, [])); continue; }
+      phase = 'add-ready';
+      const turn = mode === 'wrong-order' ? 'TEST_LIVE_MEMBERSHIP_RESTORE' : 'TEST_LIVE_MEMBERSHIP_ADD';
+      const messages = incoming(turn), first = await post(messages);
+      if (mode === 'business-before-probe' || mode === 'wrong-order') { refused(first); continue; }
+      assert.equal(first.status, 200); assert.equal(original.observations.length, 1);
+      const call = first.delta!.tool_calls![0]!;
+      assert.equal(call.function.name, v2 ? 'agent-teams_message_send' : 'team_message_send');
+      const args = JSON.parse(call.function.arguments) as { commandId: string; to: string; text: string };
+      assert.deepEqual(args, { commandId: 'TEST-live-reply-add', to: 'user', text: 'REPLY_' + turn });
+      if (mode === 'wrong-args') call.function.arguments = JSON.stringify({ ...args, to: 'bob' });
+      messages.push({ role: 'assistant', tool_calls: [call] });
+      if (mode !== 'missing-result') messages.push({ role: 'tool',
+        tool_call_id: mode === 'foreign-id' ? 'TEST-other-tool' : call.id,
+        content: JSON.stringify({ phase: 'completed', principalId: principal,
+          operation: mode === 'wrong-operation' ? 'task.create' : 'message.send',
+          commandId: mode === 'wrong-command' ? 'TEST-other-command' : args.commandId,
+          effects: { messageId: 'TEST-actual-add-reply' } }) });
+      if (mode === 'wrong-principal') principal = 'TEST-foreign-principal';
+      const terminal = await post(messages);
+      if (['missing-result', 'foreign-id', 'wrong-principal', 'wrong-command', 'wrong-operation', 'wrong-args'].includes(mode)) {
+        refused(terminal); assert.equal(original.observations.length, 1); continue;
+      }
+      assert.equal(terminal.delta?.content, 'DONE_' + turn);
+      if (mode === 'extra-round') { refused(await post(messages)); continue; }
+      phase = 'remove'; assert.equal(original.probes.length, 1); assert.equal(original.observations.length, 2);
+      phase = 'restore'; assert.equal((await post(ordinaryProbeMessages, [])).delta?.content, 'OK');
+      phase = 'restore-ready'; if (mode !== 'old-restored-principal') principal = 'TEST-restored-principal';
+      const restoredTurn = 'TEST_LIVE_MEMBERSHIP_RESTORE', restored = incoming(restoredTurn), next = await post(restored);
+      if (mode === 'old-restored-principal') { refused(next); continue; }
+      assert.equal(next.status, 200);
+      const restoredCall = next.delta!.tool_calls![0]!, restoredArgs = JSON.parse(restoredCall.function.arguments) as { commandId: string };
+      assert.equal(restoredArgs.commandId, 'TEST-live-reply-restore'); assert.notEqual(restoredCall.id, call.id);
+      restored.push({ role: 'assistant', tool_calls: [restoredCall] }, { role: 'tool', tool_call_id: restoredCall.id,
+        content: JSON.stringify({ phase: 'completed', principalId: principal, operation: 'message.send',
+          commandId: restoredArgs.commandId, effects: { messageId: 'TEST-actual-restore-reply' } }) });
+      assert.equal((await post(restored)).delta?.content, 'DONE_' + restoredTurn);
+      phase = 'stopped';
+      assert.equal(original.probes.length, 2); assert.equal(original.observations.length, 4);
+      assert.deepEqual(original.observations.map(row => [row.turn, row.step]), [[turn, 0], [turn, 1], [restoredTurn, 0], [restoredTurn, 1]]);
+      assert.ok(original.observations.every(row => row.contextEffective && row.visibleReplyContract));
+      if (mode === 'after-stop') refused(await post(ordinaryProbeMessages, []));
+      else assert.deepEqual(original.failures, []);
+    } finally { await original.close(); }
   }
 });
 

@@ -1609,6 +1609,7 @@ jobs:
       - name: Require the original retained receipt to report PASS
         if: always()
         run: |
+          set -euo pipefail
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import { createHash } from 'node:crypto';
@@ -1829,6 +1830,71 @@ jobs:
           verify('desktop', process.env.STAGE1_MODE);
           if (process.env.STAGE1_READBACK_MODE) verify('readback', process.env.STAGE1_READBACK_MODE);
           NODE
+          if [ "$STAGE1_MODE" = native-mixed-create-launch-ui ]; then
+            selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+            LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI=1 "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-live-membership-$STAGE1_VARIANT.log"
+            "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const variant = process.env.STAGE1_VARIANT;
+          const prepared = phase => readFileSync(join(process.env.RUNNER_TEMP, 'stage1-' + phase + '-' + variant + '.log'), 'utf8')
+            .split('\n').flatMap(line => {
+              try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+              catch { return []; }
+            });
+          const original = prepared('desktop'), current = prepared('live-membership');
+          assert.equal(original.length, 1); assert.equal(current.length, 1, 'one new original membership case');
+          const path = realpathSync(current[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          assert.notEqual(dirname(path), dirname(realpathSync(original[0].receipt)), 'separate original TEST root');
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(realpathSync(receipt.root), dirname(path));
+          assert.equal(receipt.mode, 'native-mixed-create-launch-ui'); assert.equal(receipt.status, 'PASS');
+          const proof = receipt.liveMembershipProof, cold = receipt.coldMembershipBoundary;
+          assert.equal(proof?.kind, 'mixed-live-membership'); assert.equal(proof.status, 'PASS');
+          assert.equal(proof.openCodeGeneration, variant === 'native-mixed-v2-create-launch-ui' ? 'v2' : 'v1');
+          assert.deepEqual(proof.counts, { ordinaryProbes: 2, businessRequests: 4, inputs: 2, runtimeGenerations: 4 });
+          assert.deepEqual(proof.coldHistory, { unchanged: true, noPreparation: true, noInput: true, noRuntimeAllocation: true });
+          assert.equal(proof.physicalEpochs.length, 2); assert.ok(proof.physicalEpochs.every(row => row.released === true));
+          assert.equal(proof.removed.released, true);
+          assert.equal(proof.added.identity.memberId, proof.restored.identity.memberId);
+          assert.notEqual(proof.added.identity.principalId, proof.restored.identity.principalId);
+          assert.notEqual(proof.added.identity.sessionId, proof.restored.identity.sessionId);
+          assert.notEqual(proof.added.identity.binding.generation, proof.restored.identity.binding.generation);
+          assert.notEqual(proof.added.physical.pid, proof.restored.physical.pid);
+          assert.equal(proof.beforeCold.sessions.length, 4);
+          assert.ok(proof.beforeCold.sessions.every(row => row.phase === 'closed' && row.custody === 'released'));
+          const models = JSON.parse(readFileSync(join(dirname(path), 'mixed-models.json'), 'utf8'));
+          assert.equal(models.schemaVersion, 1); assert.equal(models.phase, 'before-model-close');
+          assert.equal(realpathSync(models.root), dirname(path));
+          for (const name of ['claude', 'codex', 'opencode']) {
+            assert.deepEqual(models.providers[name].failures, []);
+            assert.deepEqual(models.providers[name].notificationObservations ?? [], []);
+          }
+          const native = models.providers.opencode;
+          assert.equal(native.probes.length, 2); assert.ok(native.probes.every(row => row.settingsStep === undefined));
+          assert.deepEqual(native.observations.map(row => [row.turn, row.step]),
+            [['TEST_LIVE_MEMBERSHIP_ADD', 0], ['TEST_LIVE_MEMBERSHIP_ADD', 1],
+             ['TEST_LIVE_MEMBERSHIP_RESTORE', 0], ['TEST_LIVE_MEMBERSHIP_RESTORE', 1]]);
+          assert.deepEqual(models.providers.claude.observations, []); assert.deepEqual(models.providers.codex.observations, []);
+          assert.deepEqual(proof.initial.probeCounts, [models.providers.claude.probes.length, models.providers.codex.probes.length]);
+          assert.ok(models.providers.claude.probes.length >= 1 && models.providers.claude.probes.length <= 9);
+          assert.ok(models.providers.codex.probes.length >= 1 && models.providers.codex.probes.length <= 8);
+          assert.equal(cold.status, 'PASS'); assert.equal(cold.secondEpoch.status, 'PASS');
+          assert.equal(cold.firstQuit.attempted, true); assert.equal(cold.firstCleanup.writerLockReleased, true);
+          assert.equal(cold.originalHistoryDigest, cold.secondEpoch.originalHistoryDigest);
+          assert.deepEqual(cold.originalSavedTeamBindings.map(row => row.members.length).sort(), [1, 3]);
+          for (const cleanup of [cold.firstCleanup, cold.secondCleanup, receipt.cleanup]) {
+            assert.equal(cleanup.appExitCode, 0); assert.equal(cleanup.appSignalCode, null);
+            assert.equal(cleanup.capturedHostAbsent, true); assert.deepEqual(cleanup.remaining, []);
+            assert.equal(cleanup.cleanupFailure, undefined);
+          }
+          assert.equal(receipt.sourceFreezeFailure, undefined);
+          assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+          console.log(JSON.stringify({ status: receipt.status, kind: proof.kind, variant, receipt: path, counts: proof.counts }));
+          NODE
+          fi
       - name: Check out the exact old frontend for genuine saved-only records
         if: matrix.mode == 'stopped-import-ui' && !matrix.variant
         uses: actions/checkout@v6
@@ -2271,6 +2337,7 @@ jobs:
           path: |
             ${{ runner.temp }}/stage1-desktop-${{ matrix.variant || matrix.mode }}.log
             ${{ runner.temp }}/stage1-readback-${{ matrix.variant || matrix.mode }}.log
+            ${{ runner.temp }}/stage1-live-membership-${{ matrix.variant || matrix.mode }}.log
             ${{ runner.temp }}/stage1-setup-${{ matrix.variant || matrix.mode }}.log
             ${{ runner.temp }}/stage1-native-restore.log
             ${{ runner.temp }}/stage1-native-restore-inputs.json
