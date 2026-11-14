@@ -6,6 +6,7 @@ import {
   startNativeTeamModel,
   CONTEXT_MARKER as claudeContext,
 } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
+import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { digest, effectId } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import {
   createMixedTaskNoticeReader,
@@ -465,24 +466,24 @@ test('mixed principal callback requires exact canonical capture delivery and liv
     const principalId = `agent:${fresh}`, settings = { providerId: 'opencode', model: 'local/TEST-model' };
     const current = { memberId, name: 'carol', role: 'member', settings,
       delivery: { ...binding, runId: registered.launchId, memberId, generation: `live-${generation}` } };
-    const captured = { commandId, requestDigest, sourceCaptureDigest: digest(source), launchId: registered.launchId,
+    const captured = { commandId, requestDigest, sourceCaptureDigest: runtimeDigest(source), launchId: registered.launchId,
       workspace: join(root, 'workspace'), member: { memberId, name: 'carol', settings },
       configurationDigest: digest({ commandId, profile: true }), runtimeGeneration: generation };
     const { configurationDigest: _digest, runtimeGeneration: _generation, ...origin } = captured;
     const { teamName: _teamName, ...delivery } = current.delivery;
     const selected = { memberId, binding: delivery, configurationDigest: captured.configurationDigest,
-      configRevision: `live-${digest(origin)}`, runtimeGeneration: generation };
-    const view = { commandId, teamId: binding.teamId, requestDigest, sourceCaptureDigest: digest(source),
-      captureDigest: digest(captured), target: { memberId, name: 'carol', provider: 'opencode',
+      configRevision: `live-${runtimeDigest(origin)}`, runtimeGeneration: generation };
+    const view = { commandId, teamId: binding.teamId, requestDigest, sourceCaptureDigest: runtimeDigest(source),
+      captureDigest: runtimeDigest(captured), target: { memberId, name: 'carol', provider: 'opencode',
         workspace: captured.workspace, configurationDigest: captured.configurationDigest } };
     const fingerprint = digest({ commandId, fingerprint: true }), expectedRevision = digest({ commandId, before: true });
     liveState.rosterCommands.push({ commandId, fingerprint, revision, liveMembership: { phase: 'completed',
-      input: { expectedRevision }, requestDigest, launchId: registered.launchId, sourceCaptureDigest: digest(source),
+      input: { expectedRevision }, requestDigest, launchId: registered.launchId, sourceCaptureDigest: runtimeDigest(source),
       delta: { kind, targetId: memberId }, capture: view,
       selection: { principalId, delivery: current.delivery, configurationDigest: selected.configurationDigest } } });
-    launch.liveMembership.push({ intent: { commandId, memberId, requestDigest, sourceCaptureDigest: digest(source),
+    launch.liveMembership.push({ intent: { commandId, memberId, requestDigest, sourceCaptureDigest: runtimeDigest(source),
       expectedRevision, launchId: registered.launchId, originalFingerprint: fingerprint }, phase: 'selected',
-      rosterRevision: revision, capture: captured, captureDigest: digest(captured), selected });
+      rosterRevision: revision, capture: captured, captureDigest: runtimeDigest(captured), selected });
     liveState.members = [...peers, current]; launch.definition.members = [...peerSelections, selected];
     for (const grant of liveState.grants) if (grant.memberName === 'carol') grant.revoked = true;
     liveState.grants.push({ memberName: 'carol', principalId, permissions: [...grants[0]!.permissions], revoked: false });
