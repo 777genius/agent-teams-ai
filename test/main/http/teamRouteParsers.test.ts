@@ -33,8 +33,37 @@ describe('HTTP team route parsers', () => {
       () => assertOptionalExtraCliArgs('--dangerously-skip-permissions=1'),
       'app-managed flags'
     );
+    // A long option after a short flag cluster is read by the CLI as its own option.
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('-p-resume=other-session'),
+      'app-managed flags'
+    );
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs(`-p-settings='{"env":{"FOO":"bar"}}'`),
+      'app-managed flags'
+    );
     // A genuinely user-safe flag (not app-managed) passes through untouched.
+    for (const raw of ['--max-turns=', '--max-turns ""', '-p-max-turns=']) {
+      expectBadRequest(
+        () => assertOptionalExtraCliArgs(raw),
+        'ends with --max-turns but no value'
+      );
+    }
     expect(assertOptionalExtraCliArgs('--max-turns=5')).toBe('--max-turns=5');
+    expect(assertOptionalExtraCliArgs('--max-turns=5 --teammate-mode tmux')).toBe(
+      '--max-turns=5 --teammate-mode tmux'
+    );
+    expect(assertOptionalExtraCliArgs('--teammate-mode=in-process')).toBe(
+      '--teammate-mode=in-process'
+    );
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('--teammate-mode unsupported'),
+      'app-managed flags'
+    );
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('--teammate-mode tmux --teammate-mode auto'),
+      'app-managed flags'
+    );
   });
 
   it('validates common string and cwd fields with the route error messages', () => {

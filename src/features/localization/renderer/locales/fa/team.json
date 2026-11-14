@@ -2569,6 +2569,7 @@
       "allFlagsValid": "همه فلگ‌ها معتبر هستند",
       "unknownFlags": "ناشناخته: {{flags}}",
       "protectedFlags": "محافظت‌شده: {{flags}}",
+      "missingValue": "مقدار وجود ندارد: {{flags}}",
       "failed": "اعتبارسنجی ناموفق بود"
     },
     "placeholders": {

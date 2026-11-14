@@ -2783,7 +2783,8 @@
       "allFlagsValid": "所有標誌均有效",
       "unknownFlags": "未知：{{flags}}",
       "protectedFlags": "密碼保護：{{flags}}",
-      "failed": "驗證失敗"
+      "failed": "驗證失敗",
+      "missingValue": "缺少引數值：{{flags}}"
     },
     "placeholders": {
       "worktreeName": "worktree 名稱"

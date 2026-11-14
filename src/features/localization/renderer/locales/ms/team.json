@@ -2569,6 +2569,7 @@
       "allFlagsValid": "Semua bendera sah",
       "unknownFlags": "Tidak diketahui: {{flags}}",
       "protectedFlags": "Dilindungi: {{flags}}",
+      "missingValue": "Nilai tiada: {{flags}}",
       "failed": "Pengesahan gagal"
     },
     "placeholders": {

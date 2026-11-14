@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   extractFlagsFromHelp,
   extractUserFlags,
+  findInvalidUserFlags,
+  findOptionMissingValue,
+  findProtectedUserFlags,
   parseCliArgs,
   PROTECTED_CLI_FLAGS,
 } from '@shared/utils/cliArgsParser';
@@ -151,6 +154,182 @@ describe('extractUserFlags', () => {
     );
     expect(protectedHits).toEqual(['--mcp-config', '--permission-mode']);
   });
+
+  it('reads short flag clusters and attached values like the CLI does', () => {
+    expect(extractUserFlags('-rabc')).toEqual(['-r']);
+    expect(extractUserFlags('-r=abc')).toEqual(['-r']);
+    expect(extractUserFlags('-pr abc')).toEqual(['-p', '-r']);
+    expect(extractUserFlags('-pcr abc')).toEqual(['-p', '-c', '-r']);
+    // -d takes a value, so the `r` in `-dr` is its value, not a flag.
+    expect(extractUserFlags('-dr')).toEqual(['-d']);
+    // --max-turns takes a required value, so `-1` is its value, not a flag.
+    expect(extractUserFlags('--max-turns -1')).toEqual(['--max-turns']);
+  });
+
+  it('skips the value of an option that requires one, even if it starts with a dash', () => {
+    expect(extractUserFlags('--append-system-prompt "-review the patch"')).toEqual([
+      '--append-system-prompt',
+    ]);
+    expect(extractUserFlags('-n -rname -p')).toEqual(['-n', '-p']);
+    // `-n` at the end of a cluster also takes the next token.
+    expect(extractUserFlags('-pn -review')).toEqual(['-p', '-n']);
+    // An attached value (`-nfoo`) leaves the next token as a flag.
+    expect(extractUserFlags('-nfoo -r abc')).toEqual(['-n', '-r']);
+    // An attached value is already part of the token, so the next token is a flag.
+    expect(extractUserFlags('--append-system-prompt=x -r abc')).toEqual([
+      '--append-system-prompt',
+      '-r',
+    ]);
+  });
+
+  it('keeps a non-letter remainder of a short cluster so validation can report it', () => {
+    expect(extractUserFlags('-p1')).toEqual(['-p', '-1']);
+    expect(extractUserFlags('-pc2')).toEqual(['-p', '-c', '-2']);
+  });
+
+  it('reads a long option after a short flag cluster like the CLI does', () => {
+    expect(extractUserFlags('-p-resume=other-session')).toEqual(['-p', '--resume']);
+    expect(extractUserFlags(`-p-settings='{"env":{}}'`)).toEqual(['-p', '--settings']);
+    expect(extractUserFlags(`-p-settings '{"env":{}}' -r abc`)).toEqual(['-p', '--settings', '-r']);
+    expect(extractUserFlags('-p-continue=x')).toEqual(['-p', '--continue=x']);
+    expect(extractUserFlags('-p-max-turns=3')).toEqual(['-p', '--max-turns']);
+  });
+});
+
+describe('findOptionMissingValue', () => {
+  it('reports empty equals values for required options', () => {
+    expect(findOptionMissingValue('--max-turns=')).toBe('--max-turns');
+    expect(findOptionMissingValue('--max-turns=""')).toBe('--max-turns');
+    expect(findOptionMissingValue('--append-system-prompt=')).toBe('--append-system-prompt');
+    expect(findOptionMissingValue('-p-max-turns=')).toBe('--max-turns');
+    expect(findOptionMissingValue('-p-append-system-prompt=')).toBe('--append-system-prompt');
+    expect(findOptionMissingValue('-pn=')).toBe('-n');
+    expect(findInvalidUserFlags('-p-max-turns=', new Set()).missingValueFlag).toBe('--max-turns');
+    expect(findInvalidUserFlags('--max-turns=', new Set()).missingValueFlag).toBe('--max-turns');
+    expect(findOptionMissingValue('--max-turns=5')).toBeUndefined();
+  });
+
+  it('rejects separate quoted empty required operands without hiding dash-prefixed values', () => {
+    expect(findOptionMissingValue('--max-turns ""')).toBe('--max-turns');
+    expect(findOptionMissingValue("--append-system-prompt ''")).toBe('--append-system-prompt');
+    expect(findOptionMissingValue('-pn ""')).toBe('-n');
+    expect(findOptionMissingValue('--teammate-mode ""')).toBe('--teammate-mode');
+    expect(findOptionMissingValue('--append-system-prompt "-review"')).toBeUndefined();
+    expect(findOptionMissingValue('-pn -dash-name')).toBeUndefined();
+    expect(findOptionMissingValue('-nname=')).toBeUndefined();
+    expect(findOptionMissingValue('-p-max-turns=5')).toBeUndefined();
+  });
+
+  it('reports an option that needs a value but ends the args', () => {
+    expect(findOptionMissingValue('-n')).toBe('-n');
+    expect(findOptionMissingValue('-pn')).toBe('-n');
+    expect(findOptionMissingValue('--max-turns')).toBe('--max-turns');
+    expect(findOptionMissingValue('--verbose --append-system-prompt')).toBe(
+      '--append-system-prompt'
+    );
+  });
+
+  it('accepts options that have their value', () => {
+    expect(findOptionMissingValue('-n name')).toBeUndefined();
+    expect(findOptionMissingValue('-pn -dash-name')).toBeUndefined();
+    expect(findOptionMissingValue('-nname')).toBeUndefined();
+    expect(findOptionMissingValue('--append-system-prompt=x')).toBeUndefined();
+    expect(findOptionMissingValue('-p --verbose')).toBeUndefined();
+  });
+});
+
+describe('findInvalidUserFlags', () => {
+  const known = new Set(['--model', '-p', '-n', '--append-system-prompt', '--continue', '--debug']);
+
+  it('reports unknown and protected flags once each', () => {
+    expect(findInvalidUserFlags('-p --nope --nope', known)).toEqual({
+      valid: false,
+      invalidFlags: ['--nope'],
+      missingValueFlag: undefined,
+    });
+    expect(findInvalidUserFlags('--model x', known)).toEqual({
+      valid: false,
+      invalidFlags: ['--model'],
+      missingValueFlag: undefined,
+    });
+  });
+
+  it('reports an option without its value as missing value, not unknown', () => {
+    expect(findInvalidUserFlags('-p --append-system-prompt', known)).toEqual({
+      valid: false,
+      invalidFlags: undefined,
+      missingValueFlag: '--append-system-prompt',
+    });
+    expect(findInvalidUserFlags('-pn', known)).toEqual({
+      valid: false,
+      invalidFlags: undefined,
+      missingValueFlag: '-n',
+    });
+  });
+
+  it('keeps an attached =value on a no-value option after a short cluster', () => {
+    expect(findInvalidUserFlags('-p-continue=x', known)).toEqual({
+      valid: false,
+      invalidFlags: ['--continue=x'],
+      missingValueFlag: undefined,
+    });
+    expect(findInvalidUserFlags('-p-continue', known).valid).toBe(true);
+    expect(findInvalidUserFlags('-p-debug=api', known).valid).toBe(true);
+    expect(findInvalidUserFlags('-p-model=x', known).invalidFlags).toEqual(['--model']);
+  });
+
+  it('accepts valid args', () => {
+    expect(findInvalidUserFlags('-p -n name --append-system-prompt "-x"', known)).toEqual({
+      valid: true,
+      invalidFlags: undefined,
+      missingValueFlag: undefined,
+    });
+    expect(findInvalidUserFlags('', known).valid).toBe(true);
+  });
+});
+
+describe('documented teammate mode override', () => {
+  const known = new Set(['--teammate-mode', '--max-turns', '--append-system-prompt', '-p']);
+
+  it('accepts supported options missing from the CLI --help output without opening unknown flags', () => {
+    const incompleteHelp = new Set(['--append-system-prompt', '-p']);
+    expect(findInvalidUserFlags('--max-turns 5 --teammate-mode tmux', incompleteHelp).valid).toBe(true);
+    expect(findInvalidUserFlags('--teammate-mode bad', incompleteHelp).invalidFlags).toEqual([
+      '--teammate-mode',
+    ]);
+    expect(findInvalidUserFlags('--unknown-override', incompleteHelp).invalidFlags).toEqual([
+      '--unknown-override',
+    ]);
+  });
+
+  it.each([
+    '--teammate-mode tmux',
+    '--teammate-mode=tmux',
+    '--teammate-mode auto --max-turns 5',
+    '--max-turns=5 --teammate-mode=in-process',
+  ])('accepts one supported per-launch mode: %s', (args) => {
+    expect(findProtectedUserFlags(args)).toEqual([]);
+    expect(findInvalidUserFlags(args, known).valid).toBe(true);
+  });
+
+  it.each([
+    '--teammate-mode',
+    '--teammate-mode other',
+    '--teammate-mode=',
+    '--teammate-mode tmux --teammate-mode auto',
+    '--append-system-prompt --teammate-mode tmux',
+    '-p-teammate-mode=tmux',
+  ])('rejects ambiguous or unsupported override: %s', (args) => {
+    expect(findProtectedUserFlags(args)).toContain('--teammate-mode');
+    expect(findInvalidUserFlags(args, known).valid).toBe(false);
+  });
+
+  it('keeps all other app-managed flags blocked beside a supported mode', () => {
+    expect(findProtectedUserFlags('--teammate-mode tmux -rabc --mcp-config=bad')).toEqual([
+      '-r',
+      '--mcp-config',
+    ]);
+  });
 });
 
 describe('PROTECTED_CLI_FLAGS', () => {
@@ -166,5 +345,23 @@ describe('PROTECTED_CLI_FLAGS', () => {
     expect(PROTECTED_CLI_FLAGS.has('--model')).toBe(true);
     expect(PROTECTED_CLI_FLAGS.has('--effort')).toBe(true);
     expect(PROTECTED_CLI_FLAGS.has('--worktree')).toBe(false);
+  });
+
+  it('still reports a protected long flag in a skipped value position', () => {
+    // Launch splits --settings out of the raw args, so it must not hide behind a value.
+    const hits = (raw: string) =>
+      extractUserFlags(raw).filter((flag) => PROTECTED_CLI_FLAGS.has(flag));
+    expect(hits(`--append-system-prompt --settings '{"env":{}}' prompt`)).toEqual(['--settings']);
+    expect(hits('-n --settings={} x')).toEqual(['--settings']);
+    expect(hits('-p-resume=other-session')).toEqual(['--resume']);
+    expect(hits(`-p-settings='{"env":{}}'`)).toEqual(['--settings']);
+    expect(hits('--append-system-prompt "-review the patch"')).toEqual([]);
+  });
+
+  it('covers the CLI aliases of protected flags', () => {
+    // `claude --help` lists `--disallowedTools, --disallowed-tools` and `-r, --resume`.
+    const injected = '--disallowed-tools=Bash -r abc -rabc -pr abc';
+    const hits = extractUserFlags(injected).filter((flag) => PROTECTED_CLI_FLAGS.has(flag));
+    expect(hits).toEqual(['--disallowed-tools', '-r', '-r', '-r']);
   });
 });

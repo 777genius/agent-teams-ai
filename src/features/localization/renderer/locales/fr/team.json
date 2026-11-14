@@ -2569,6 +2569,7 @@
       "allFlagsValid": "Tous les drapeaux valides",
       "unknownFlags": "Inconnu: {{flags}}",
       "protectedFlags": "Protégé: {{flags}}",
+      "missingValue": "Valeur manquante: {{flags}}",
       "failed": "La validation a échoué"
     },
     "placeholders": {
