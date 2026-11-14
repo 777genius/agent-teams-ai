@@ -2772,3 +2772,20 @@ appendix precedes publication; independent review of exact frozen connected
 source precedes delivery. Root commits and immediately pushes each reviewed
 plan/source change with expected-head and readback checks. Active PR heads wait
 for their current CI; no merge to main, activation or release is part of this cut.
+
+### R33.6. Exact connected preimages and the existing thin delegate
+
+The already approved R33 change uses the following frozen connected source, including B2, live membership and the R10 fresh-credential callback. These preimages replace the earlier inspection-only hashes in R33.3; the same six existing paths are the entire scope. No additional source file, test case, owner or public contract is introduced.
+
+| Existing path | Repair / qualification preimage | Native preimage |
+| --- | --- | --- |
+| `packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts` | `5bc960019be8bfa884fd660522507cb3429feaa0` | `5195d41ecb9c57561bb34efd146b74f8e53078f6` |
+| `packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts` | `adef6bf38b5278d2d968748fa21fbfc6cc0fb1a3` | `c0e97718f436e63b1dda033c65501d5d9026f516` |
+| `packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts` | `bccb77ceb951a0fada6c1637211d2171926b561b` | `bccb77ceb951a0fada6c1637211d2171926b561b` |
+| `packages/legacy-agent-host/src/team/TeamOwner.ts` | `3418f77e61c48aa683060120b00d4c6f025fb1ab` | `3418f77e61c48aa683060120b00d4c6f025fb1ab` |
+| `packages/legacy-agent-host/src/team/TeamDeliveryAuthority.ts` | `857e9673a2f9d7f5a4cb9841b6adde81d108d42c` | `857e9673a2f9d7f5a4cb9841b6adde81d108d42c` |
+| `packages/legacy-agent-host/tests/member-provider-authority.test.ts` | `e0cd4db39c3b201de59613585e94347448bb7516` | `e0cd4db39c3b201de59613585e94347448bb7516` |
+
+`TeamOwner.authorizeRuntimeAccess` remains a direct delegate to its existing `deliveryAuthority.runtimeAccess`. Its parameter tuple is derived with `Parameters<ReturnType<typeof createTeamDeliveryAuthority>['runtimeAccess']>` and forwarded unchanged. The one existing method therefore owns the exact three original arguments and optional fourth synchronous callback; there is no duplicate signature or new interface. This cohesive delegate simplification retains the 800-line limit without removing checks or changing formatting elsewhere. The other R33 semantics and the original two test names remain exactly as specified in R33.2 and R33.4.
+
+The factory retains R10's independent fresh-preparation credential callback after `canAllocate`; grouping the original current guard does not move readiness consumption, credential verification, endpoint creation, allocation or any await. Coordinator and factory preserve every existing native Windows-launch field and forwarding path. Each variant is composed from its own frozen preimage. Root reviews the exact R33-only diff before publication and owns all compiler, test and original native acceptance runs.
