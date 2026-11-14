@@ -262,7 +262,7 @@ export class CapturedHostClient {
   request(
     method: string,
     params?: JsonValue,
-    options: { control?: boolean } = {}
+    options: { control?: boolean; remainingMs?: () => number } = {}
   ): Promise<JsonValue> {
     if (method.startsWith(HOST_CUSTODY_METHOD))
       return Promise.reject(new HostClientError('protocol-error', 'not-dispatched'));
@@ -271,7 +271,17 @@ export class CapturedHostClient {
         new HostClientError(this.sealed || this.quiescing ? 'shutting-down' : 'transport-closed', 'not-dispatched')
       );
     }
-    return this.send(method, params, options.control ?? false, this.profile.requestTimeoutMs);
+    let timeoutMs = this.profile.requestTimeoutMs;
+    if (options.remainingMs) {
+      try {
+        const remaining = Math.floor(options.remainingMs());
+        if (!Number.isSafeInteger(remaining) || remaining <= 0) throw new Error('expired');
+        timeoutMs = Math.min(timeoutMs, remaining);
+      } catch {
+        return Promise.reject(new HostClientError('request-timeout', 'not-dispatched'));
+      }
+    }
+    return this.send(method, params, options.control ?? false, timeoutMs);
   }
 
   private send(

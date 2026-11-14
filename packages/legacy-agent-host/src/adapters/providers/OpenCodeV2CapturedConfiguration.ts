@@ -5,6 +5,7 @@ import {
 } from './OpenCodeConfigurationSource.js';
 import { bindOpenCodeV2ConfigurationKey, OpenCodeV2CredentialScope } from './OpenCodeV2CredentialScope.js';
 import { managementDigest } from '../../management/identity.js';
+import { DeferredOpenCodeV2FileKey } from './OpenCodeV2SelectedFileKey.js';
 
 import type { OpenCodeV2EmbeddedProfile } from '../../composition/openCodeV2EmbeddedProfile.js';
 import type { OpenCodeMemberProfile } from '../../composition/runtimeProfile.js';
@@ -83,9 +84,12 @@ export function captureOpenCodeV2Configuration(
       : undefined;
   if (Buffer.byteLength(JSON.stringify(configuration ?? {})) > 256 * 1024) invalid();
   let key: CapturedOpenCodeV2Key | undefined;
+  let selectedFile: DeferredOpenCodeV2FileKey | undefined;
   if (prepared.apiKey !== undefined || prepared.apiKeyFile !== undefined) {
     if (!source) return invalid();
-    key = new OpenCodeV2CredentialScope(profile, selection.providerId, ownerCurrent).captureConfiguration(source);
+    const scope = new OpenCodeV2CredentialScope(profile, selection.providerId, ownerCurrent);
+    selectedFile = scope.captureDeferredConfiguration(source, selection.modelId, profile.cwd);
+    if (!selectedFile) key = scope.captureConfiguration(source);
     // The original explicit config key wins; only the existing native credential owner receives it.
     const settings = jsonRecord(configuration?.settings);
     if (configuration && Object.hasOwn(settings, 'apiKey')) {
@@ -95,8 +99,9 @@ export function captureOpenCodeV2Configuration(
   let bound = false;
   const isCurrent = () => {
     if (key && !key.isCurrent()) return false;
+    if (selectedFile && !selectedFile.isCurrent()) return false;
     if (!bound && source) return source.isCurrent();
-    return key !== undefined || ownerCurrent();
+    return key !== undefined || selectedFile !== undefined || ownerCurrent();
   };
   const check = () => {
     if (!isCurrent()) throw new OpenCodeConfigurationError('configuration-changed');
@@ -106,6 +111,7 @@ export function captureOpenCodeV2Configuration(
     configuration,
     isCurrent,
     ...(key ? { key: bindOpenCodeV2ConfigurationKey(key, isCurrent) } : {}),
+    ...(selectedFile ? { selectedFile: DeferredOpenCodeV2FileKey.bind(selectedFile, isCurrent) } : {}),
     /** A running native child owns its private immutable config; a new file publication affects the next capture. */
     bindRunningSession() {
       check();

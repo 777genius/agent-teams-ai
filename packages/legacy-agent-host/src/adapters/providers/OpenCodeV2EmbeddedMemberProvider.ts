@@ -55,7 +55,8 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
   const { config, selection, requiredToolNames, requiredServerNames } =
     openCodeV2EmbeddedConfig(context, configuration.configuration);
   const credential = captureOpenCodeV2SessionCredential(profile, profile.nativeOptions.providerId,
-    configuration.isCurrent, configuration.key);
+    configuration.isCurrent, configuration.key, configuration.selectedFile);
+  const selectedFile = configuration.selectedFile;
   const current = credential.isCurrent;
   let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
   const matchesSelection = (observed: Awaited<ReturnType<OwnedClient['readSession']>>) =>
@@ -162,6 +163,8 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
         canCaptureRegisteredProcess: () => current() &&
           (context.canCaptureRegisteredProcess?.() ?? context.isCurrent()),
         ...(context.processCustody ? { processCustody: context.processCustody } : {}),
+        ...(selectedFile ? { selectedFile: { source: selectedFile,
+          mode: context.request.checkpointRef ? 'restore' as const : 'fresh' as const } } : {}),
       });
       const ready = await server.start(AbortSignal.any([signal, abort.signal]));
       check();
@@ -174,7 +177,13 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
       // Credential import and session creation retain their full-before-request
       // mutation transport; the read-only port cannot reach these methods.
       nativeCredential = await withClient(signal,
-        (client, wire) => credential.prepare(wire, client, restored), deadline);
+        (client, wire) => credential.prepare(wire, client, restored,
+          integrationId => server!.selectedFileKey(ready, integrationId)), deadline);
+      if (context.assertReadinessCredential) {
+        if (!nativeCredential) return unavailable();
+        context.assertReadinessCredential(nativeCredential.scopeDigest);
+        check();
+      }
       await attestOpenCodeV2ModelSelection({
         readCatalog: providerId => withReadOnlyClient(signal, deadline, client => client.readCatalog(providerId)),
       }, selection.model, { signal, deadline, isCurrent: current, requireTools: true });

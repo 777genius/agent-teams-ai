@@ -26,6 +26,7 @@ import type { ModelProbeInput, NativeModelProbe, NativeModelProbePurpose } from 
 import { createV1CoordinationProbe } from '../adapters/providers/OpenCodeCoordinationProbe.js';
 import { createOpenCodeLocalModelReadiness } from '../adapters/providers/OpenCodeLocalModelReadiness.js';
 import type { NativeReadinessCoordination } from '../adapters/providers/OpenCodeLocalModelReadiness.js';
+import type { AcceptedOpenCodeV2FileKey } from '../adapters/providers/OpenCodeV2SelectedFileKey.js';
 import type { OpenCodeV1Coordination } from '../adapters/providers/OpenCodeCoordinationProbe.js';
 import { closeCoordinationByDeadline } from '../adapters/providers/OpenCodeCoordinationEndpoint.js';
 import { createOpenCodeV2ModelProbe } from '../adapters/providers/OpenCodeV2ModelProbe.js';
@@ -212,7 +213,7 @@ export class ProviderManagementCoordinator {
   }
 
   private prepareProbe(input: ModelProbeInput, isCurrent: () => boolean,
-    purpose?: NativeModelProbePurpose, observeProvider?: (provider: unknown) => boolean,
+    purpose?: NativeModelProbePurpose, observeProvider?: (provider: unknown, fileProof?: AcceptedOpenCodeV2FileKey) => boolean,
     origin?: LocalModelReadinessOrigin): NativeModelProbe {
     if (purpose && !this.profiles.has(input.profileId)) throw new ManagementCommandError('invalid');
     if (this.claude.has(input.profileId)) return this.claude.prepareProbe(input, isCurrent);
@@ -450,6 +451,14 @@ export class ProviderManagementCoordinator {
       selectionDigest: managementDigest({ profile, directories }),
       resourceId: managementDigest(directories.XDG_DATA_HOME),
     };
+  }
+
+  /** Readonly target comparison after an explicitly validated product publication. */
+  readinessTarget(raw: OpenCodeManagementProfile): CredentialTarget {
+    this.assertCurrent();
+    const profile = providerManagementProfileSchema.parse(raw);
+    if (profile.provider !== 'opencode') throw new ManagementCommandError('invalid');
+    return this.credentialTarget(profile);
   }
 
   private async performCredential(

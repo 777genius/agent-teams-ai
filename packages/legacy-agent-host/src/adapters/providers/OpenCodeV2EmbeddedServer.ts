@@ -5,6 +5,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CapturedProcess } from './CapturedProcess.js';
 import { createWindowsJobCustody } from './WindowsJobCustody.js';
+import { AcceptedOpenCodeV2FileKey, DeferredOpenCodeV2FileKey,
+  openCodeV2SelectedSourceReference } from './OpenCodeV2SelectedFileKey.js';
+import type { OpenCodeV2SelectedFileMode } from './OpenCodeV2SelectedFileKey.js';
 import {
   verifyOpenCodeV2EmbeddedGraph,
   verifyOpenCodeV2EmbeddedManifest,
@@ -52,6 +55,7 @@ export interface OpenCodeV2EmbeddedServerOptions {
   processCustody?: RegisteredProcessRootSource;
   startupTimeoutMs?: number;
   endpoint?: string;
+  selectedFile?: Readonly<{ source: DeferredOpenCodeV2FileKey; mode: OpenCodeV2SelectedFileMode }>;
 }
 export interface OpenCodeV2EmbeddedReady {
   endpoint: string;
@@ -108,6 +112,10 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   const databasePath = options.databasePath;
   const startupTimeoutMs = options.startupTimeoutMs ?? 120_000;
   const requestedEndpoint = options.endpoint;
+  const selectedFile = options.selectedFile;
+  if (selectedFile && (!DeferredOpenCodeV2FileKey.is(selectedFile.source) ||
+      !selectedFile.source.isCurrent() || selectedFile.source.descriptor.cwd !== profile.cwd ||
+      !['fresh', 'restore', 'catalog'].includes(selectedFile.mode))) return fail();
   if (
     requestedEndpoint !== undefined &&
     (!/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(requestedEndpoint) ||
@@ -148,6 +156,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   let readyChild: ObservableNativeProcess | undefined;
   let starting: Promise<OpenCodeV2EmbeddedReady> | undefined;
   let stopping: Promise<boolean> | undefined;
+  let selectedIntegration: string | undefined;
   const alive = () =>
     child?.pid !== undefined && child.exitCode === null && child.signalCode === null;
 
@@ -274,6 +283,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
           configDirectory,
           databasePath,
           config,
+          ...(selectedFile ? { selectedFile: { descriptor: selectedFile.source.descriptor, mode: selectedFile.mode } } : {}),
         });
         if (Buffer.byteLength(input) + 1 > 256 * 1024) return fail();
         combined.throwIfAborted();
@@ -384,6 +394,24 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
 
   return {
     start,
+    /** Only the original catalog-selected relation and nonce-checked ready object can issue this reference. */
+    selectedFileKey(capture: Readonly<OpenCodeV2EmbeddedReady>, integrationId: string) {
+      const current = () => !!selectedFile && selectedFile.source.isCurrent() && ready !== undefined &&
+        capture === ready && child === readyChild && !stopping && !lifecycle.signal.aborted && alive();
+      if (!selectedFile || selectedFile.mode === 'catalog' || !current() ||
+          !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u.test(integrationId) ||
+          selectedIntegration !== undefined && selectedIntegration !== integrationId) return fail();
+      selectedIntegration = integrationId;
+      const reference = openCodeV2SelectedSourceReference(selectedFile.source.descriptor, nonce, integrationId, selectedFile.mode);
+      return Object.freeze({ reference,
+        acceptProof(proof: Readonly<{ schemaVersion: 1; sourceReference: string; witness: string }>) {
+          if (!current() || proof.schemaVersion !== 1 || proof.sourceReference !== reference ||
+              Object.keys(proof).length !== 3) return fail();
+          return AcceptedOpenCodeV2FileKey.accept(selectedFile.source, proof.witness,
+            { nonce, pid: capture.pid, integrationId, reference }, current);
+        },
+      });
+    },
     // This is lifetime evidence for a nonce-checked original ready object, not
     // an executable digest or a new PID capture. Read snapshots still bracket
     // their requests with the full native/image measure below.

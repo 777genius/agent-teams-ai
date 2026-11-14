@@ -5,6 +5,7 @@ import { runtimeDigest } from '../runtime/identity.js';
 import { validateRestoreJournal } from './validateRestoreJournal.js';
 import { validateResumePreparations } from './launchResume.js';
 import { validateLaunchPreparation } from './launchPreparation.js';
+import { validateLaunchReadiness } from './launchReadiness.js';
 /** Existing launch record validation, shared without another persistence authority. */
 export function validateLaunchRecord(
   record: TeamLaunchRecord,
@@ -45,6 +46,7 @@ export function validateLaunchRecord(
   )
     throw new TeamLaunchError('hold', 'record-corrupt');
   validateLaunchPreparation(record);
+  validateLaunchReadiness(record);
   for (const member of record.members) {
     if (
       !record.definition.members.some((item) => item.memberId === member.memberId) ||

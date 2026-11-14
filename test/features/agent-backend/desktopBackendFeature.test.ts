@@ -90,6 +90,11 @@ async function fixture(blockStartup = false): Promise<{
       if (${blockStartup}) await new Promise(resolve=>{
         const timer=setInterval(()=>{if(existsSync(${JSON.stringify(join(storageRoot, 'release-startup'))})){clearInterval(timer);resolve();}},10);
       });
+      const historicalLaunch = {launchId:'historical-launch',rosterRevision:'roster-1',
+        status:'pending',ready:0,expected:1,retryCapability:'same-binding-no-allocation-only',
+        admission:{commandId:'historical-start',sourceRosterRevision:'roster-1'},
+        members:[{memberId:'member-1',binding:null,attempt:{attemptId:'attempt-1',status:'not-started',
+          nativeReady:false,usable:false,controlAvailable:false,noAllocation:true,reason:'not-started'}}]};
       const server = createHostServer({ input: process.stdin, output: process.stdout, buildId:'TEST-desktop-v1', methods: {
         'team.execute': { lane:'work', handle: (request) => {
           appendFileSync(${JSON.stringify(join(storageRoot, 'effects'))}, request.commandId+'\\n');
@@ -104,6 +109,10 @@ async function fixture(blockStartup = false): Promise<{
         'team.lifecycle.retired.read': { lane:'control', handle: () => ({ok:true,value:{teamIds:[]}}) },
         'team.launch.configuration.read': { lane:'control', handle: (request) => {
           appendFileSync(${JSON.stringify(join(storageRoot, 'launch-reads'))}, request.commandId+'\\n');
+          if (request.payload.launchId === 'historical-launch') return {ok:true,
+            localModelReadinessCapture:null,value:{launch:historicalLaunch,
+              members:[{memberId:'member-1',label:'Worker',role:'lead',selected:{provider:'opencode',
+                workspace:${JSON.stringify(storageRoot)},model:'home-server/TEST-model',capabilities:['model']}}]}};
           return {ok:true,value:{launch:{launchId:request.payload.launchId,rosterRevision:'roster-1',
             status:'pending',ready:0,expected:1,retryCapability:'same-binding-no-allocation-only',
             members:[{memberId:'member-1',binding:null,attempt:{attemptId:'attempt-1',status:'not-started',
@@ -115,6 +124,10 @@ async function fixture(blockStartup = false): Promise<{
           appendFileSync(${JSON.stringify(join(storageRoot, 'probe-requests'))}, JSON.stringify(request)+'\\n');
           return {ok:true,value:{...request.payload,commandId:request.commandId,phase:'completed',ok:true,
             expiresAt:Date.now()+90000}};
+        }},
+        'team.launch.start': { lane:'work', handle: request => {
+          appendFileSync(${JSON.stringify(join(storageRoot, 'launch-starts'))}, JSON.stringify(request)+'\\n');
+          return {ok:true,value:historicalLaunch};
         }},
         'team.creation.prepare': { lane:'work', handle: (request) => ({ok:true,value:{
           preparationId:request.payload.preparationId,draftDigest:'a'.repeat(64),ready:true,
@@ -481,7 +494,8 @@ it('uses two lazily captured subprocess hosts and captured context grants for fi
     }]);
     expect(raw).not.toContain('{file:');
     expect(raw).not.toContain('TEST-secret-token');
-    expect(await readFile(join(workspace, 'launch-reads'), 'utf8')).toBe('original-probe:origin\n');
+    const originalReads = await readFile(join(workspace, 'launch-reads'), 'utf8');
+    expect(originalReads.trim().split('\n')).toHaveLength(1);
     await rm(unusedGlobal);
 
     const view: NonNullable<LocalModelReadinessContext['view']> = {
@@ -496,7 +510,7 @@ it('uses two lazily captured subprocess hosts and captured context grants for fi
       { view, remainingMs: () => deadline - performance.now() });
     view.members[0].selected!.workspace = join(home, 'changed-after-capture');
     expect(await saved).toMatchObject({ ok: true, value: { commandId: 'saved-probe', ok: true } });
-    expect(await readFile(join(workspace, 'launch-reads'), 'utf8')).toBe('original-probe:origin\n');
+    expect(await readFile(join(workspace, 'launch-reads'), 'utf8')).toBe(originalReads);
     const savedWire = JSON.parse((await readFile(join(workspace, 'probe-requests'), 'utf8'))
       .trim().split('\n')[1]);
     expect(savedWire.localModelReadinessOrigin.origin.workspaces[0].global).toMatchObject({
@@ -547,6 +561,14 @@ it('uses two lazily captured subprocess hosts and captured context grants for fi
       expect(await creation.prepare('prepare', { preparationId: 'claude-create', draft: {
         contextId: 'context-A', teamName: 'TEST-team', savedSettings: { cwd: workspace, providerId: 'anthropic' }, members: [],
       } })).toMatchObject({ preparationId: 'claude-create', ready: true });
+      const beforeHistorical = await readFile(join(workspace, 'probe-requests'), 'utf8');
+      expect(await desktop.facade.invoke({ handle: { handleId: 'opaque-A' }, commandId: 'historical-start',
+        operation: 'team.launch.start', payload: { launchId: 'historical-launch', rosterRevision: 'roster-1' } }))
+        .toMatchObject({ ok: true, value: { admission: { commandId: 'historical-start' } } });
+      expect(await readFile(join(workspace, 'probe-requests'), 'utf8')).toBe(beforeHistorical);
+      const historicalWire = JSON.parse(await readFile(join(workspace, 'launch-starts'), 'utf8'));
+      expect(historicalWire.localModelReadinessOrigin).toBeUndefined();
+      expect(historicalWire.localModelReadinessTransfer).toBeUndefined();
       expect(approvalCapture).not.toHaveBeenCalled();
     } finally { approvalCapture.mockRestore(); }
   } finally {

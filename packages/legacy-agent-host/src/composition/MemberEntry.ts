@@ -6,6 +6,7 @@ import type { OpenConfig } from '@agent-teams/provider-session-contracts';
 import type { RuntimeBinding } from '../runtime/contracts.js';
 import type { MemberProvider } from '../adapters/providers/MemberProvider.js';
 import type { TeamMcpEndpoint } from '../mcp/contracts.js';
+import type { LiveRuntimeCapture } from './captureLiveRosterMember.js';
 
 export interface HostedTeam {
   definition: TeamHostProfile['teams'][number];
@@ -22,6 +23,7 @@ export interface MemberEntry {
   profile: RuntimeMemberProfile;
   baseProfile: RuntimeMemberProfile;
   selection?: import('../team/ports.js').TeamRuntimeSelection;
+  liveRosterCapture?: LiveRuntimeCapture;
   team: HostedTeam;
   delivery: DeliveryBinding;
   binding: RuntimeBinding;

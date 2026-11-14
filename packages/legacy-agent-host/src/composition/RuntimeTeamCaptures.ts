@@ -8,11 +8,18 @@ import { settledRuntimeInput } from '../runtime/settledRuntimeInput.js';
 import { validateLaunchRecord } from '../team-launch/validateLaunchRecord.js';
 import { validateMemberSelectionChain } from '../team-launch/memberActions.js';
 import { validateNativeLaunchAdditions } from '../team-launch/nativeLaunchAddition.js';
+import { liveRosterSegment, liveRosterValidationRecord } from '../team-launch/liveRosterMembership.js';
 import { createMemberEntry } from './createMemberEntry.js';
 import { restoreNativeRuntimeEntries, validateRetainedNativeRuntimeEntries } from './restoreNativeRuntimeEntries.js';
+import { restoreLiveRosterRuntimeEntries, validateRetainedLiveRuntimeEntries } from './captureLiveRosterMember.js';
 import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
 import { effectId } from '../team/identity.js';
 import { prepareWorktreeLaunch } from '../team-launch/worktreePreparation.js';
+import { prepareReadinessCapture } from '../team-launch/launchReadiness.js';
+import { captureLaunchModelReadiness } from './prepareTeamModelReadiness.js';
+import type { CaptureModelReadinessTransfer } from './prepareTeamModelReadiness.js';
+import type { LiveReadinessCapture } from '../team-launch/launchReadiness.js';
+import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { prepareCapturedRuntimeMcpRecipes } from './capturedRuntimeMcpRecipes.js';
 import {
   hasRuntimeWorktrees,
@@ -54,6 +61,8 @@ export class RuntimeTeamCaptures {
   constructor(
     private readonly options: {
       profile: TeamHostProfile;
+      hostIncarnation: string;
+      modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
       sources?: RuntimeRecipeSources;
       teams: ReadonlyMap<string, HostedTeam>;
       assertCurrent(): void;
@@ -61,7 +70,8 @@ export class RuntimeTeamCaptures {
       install(
         team: HostedTeam,
         profiles: RuntimeMemberProfile[],
-        mode: 'prepare' | 'retain' | 'activate'
+        mode: 'prepare' | 'retain' | 'activate',
+        liveReadinessCapture?: LiveReadinessCapture
       ): void;
     }
   ) {}
@@ -79,12 +89,19 @@ export class RuntimeTeamCaptures {
       const seedRecord = this.record(this.store(team), team.definition.scope.runId);
       this.assertRecordScope(team, seedRecord);
       validateRetainedNativeRuntimeEntries(this.options.profile, team);
-      for (const row of sourceRows)
-        validateRetainedNativeRuntimeEntries(this.options.profile, capturedTeam(team, row.source, row.registration));
+      validateRetainedLiveRuntimeEntries(this.options.profile, team);
+      for (const row of sourceRows) {
+        const captured = capturedTeam(team, row.source, row.registration);
+        validateRetainedNativeRuntimeEntries(this.options.profile, captured);
+        validateRetainedLiveRuntimeEntries(this.options.profile, captured);
+      }
       try {
         const seeds = this.options.profile.runtime?.members.filter(row => row.teamId === teamId) ?? [];
+        const liveSelected = new Set(seedRecord?.liveMembership?.flatMap(row =>
+          row.selected && ['selected', 'compensated'].includes(row.phase) ? [row.selected.memberId] : []));
         if (seedRecord?.definition.members.some(member => member.configurationDigest !== null &&
             !seedRecord.nativeAdditions?.some(row => row.member.memberId === member.memberId) &&
+            !liveSelected.has(member.memberId) &&
             !seeds.some(seed => seed.memberId === member.memberId)))
           throw new RuntimeSourceUnavailable();
         this.preflightEntries(team, seeds, seedRecord);
@@ -108,12 +125,15 @@ export class RuntimeTeamCaptures {
       team: projected, baseProfile, restoring: true,
     }));
     for (const entry of entries) {
-      const expected = record?.definition.members.find(member => member.memberId === entry.profile.memberId);
+      const expected = (record ? liveRosterSegment(record, entry.binding)?.member : undefined) ??
+        record?.definition.members.find(member => member.memberId === entry.profile.memberId);
       if (expected && expected.configurationDigest !== runtimeDigest(entry.profile))
         throw new RuntimeSourceUnavailable();
     }
     const registry = new Map(entries.map(entry => [runtimeDigest(normalizeBinding(entry.binding)), entry]));
     restoreNativeRuntimeEntries({ profile: this.options.profile, team: projected, entries, registry, restoring: true });
+    restoreLiveRosterRuntimeEntries({ profile: this.options.profile, team: projected, entries, registry,
+      ...(this.options.sources ? { sources: this.options.sources } : {}), restoring: true });
   }
 
   available(teamId: string): boolean {
@@ -152,6 +172,7 @@ export class RuntimeTeamCaptures {
       };
       const inspect = (record: TeamLaunchRecord | undefined, bindings: readonly RuntimeBinding[]) => {
         const settled = record && !record.memberActions?.some(row => !['selected', 'refused'].includes(row.phase)) &&
+          !record.liveMembership?.some(row => !['selected', 'removed', 'compensated', 'rejected'].includes(row.phase)) &&
           !record.resumePreparations?.some(row => row.members.some(member => !member.refused &&
             !record.restorations?.some(selected => selected.commandId === member.commandId))) &&
           (!record.worktreePreparation || record.worktreePreparation.completedSourceDigest !== undefined);
@@ -165,6 +186,8 @@ export class RuntimeTeamCaptures {
           ...(record?.memberActions?.flatMap(row => [row.source, row.selected]) ?? []),
           ...(record?.restorations?.map(row => row.member) ?? []),
           ...(record?.nativeAdditions?.map(row => row.member) ?? []),
+          ...(record?.liveMembership?.flatMap(row => [row.intent.source, row.selected].filter(
+            (member): member is NonNullable<typeof member> => member !== undefined && member !== null)) ?? []),
         ]) {
           retain(member.binding, unclaimed);
           retain(member.restore?.sourceBinding, false);
@@ -199,7 +222,9 @@ export class RuntimeTeamCaptures {
     }
   }
 
-  async capture(teamId: string, commandId: string, raw: unknown): Promise<string> {
+  async capture(teamId: string, commandId: string, raw: unknown,
+    readiness?: CaptureModelReadinessTransfer): Promise<string> {
+    const admittedAt = Date.now();
     id.parse(commandId);
     const input = captureTeamRuntimeSchema.parse(raw),
       team = this.options.teams.get(teamId);
@@ -209,6 +234,11 @@ export class RuntimeTeamCaptures {
     team.owner.withLaunchAuthority(operator, 'control', () => undefined);
     const prior = team.owner.runtimeCaptures(operator).find((row) => row.commandId === commandId);
     if (prior) {
+      // A repeated capture cannot regain the first invocation's continuation after an uncertain ACK.
+      const store = this.store(team), retained = this.record(store, prior.launchId);
+      if (retained?.readiness?.capture) team.owner.withLaunchAuthority(operator, 'control', () =>
+        store.write(`launches/${runtimeDigest(prior.launchId)}.json`, { ...retained,
+          readiness: { ...retained.readiness, capture: { ...retained.readiness!.capture!, phase: 'retired' } } }));
       const source = this.source(team, prior);
       if (source.rosterCommandId !== input.rosterCommandId)
         throw new TeamLaunchError('conflict', 'capture-command');
@@ -229,6 +259,14 @@ export class RuntimeTeamCaptures {
     const store = this.store(team),
       launchId = effectId('team-launch', teamId, commandId);
     const original = this.record(store, launchId);
+    if (original?.readiness?.capture?.phase === 'capturing') {
+      team.owner.withLaunchAuthority(operator, 'control', () => store.write(`launches/${runtimeDigest(launchId)}.json`,
+        { ...original, readiness: { ...original.readiness,
+          capture: { ...original.readiness!.capture!, phase: 'retired' } } }));
+      throw new TeamLaunchError('hold', 'capture-readiness-continuation-lost');
+    }
+    if (original?.readiness?.capture?.phase === 'retired')
+      throw new TeamLaunchError('hold', 'capture-readiness-retired');
     let intent = original
       ? runtimeCaptureSourceSchema.parse(
           original.worktreePreparation?.intent ?? original.definition.capture
@@ -260,8 +298,28 @@ export class RuntimeTeamCaptures {
         throw new TeamLaunchError('hold', 'capture-authority-changed');
       // Initial intent binds original templates/accounts/options; final MCP reads wait for the actual cwd.
       compileRuntimeCapture(this.options.profile, team, intent, 'model-preflight', this.options.sources);
+      const retained = this.record(store, launchId)?.readiness?.capture;
+      if (retained && (retained.phase === 'retired' || Date.now() >= retained.cutoff))
+        throw new TeamLaunchError('hold', 'capture-readiness-expired');
     };
     assertCurrent();
+    let liveReadinessCapture: LiveReadinessCapture | undefined;
+    if (!original && readiness) {
+      if (!this.options.modelReadiness) throw new TeamLaunchError('hold', 'capture-readiness-unavailable');
+      const initial = compileRuntimeCapture(this.options.profile, team, intent, 'model-preflight', this.options.sources);
+      const prepared = captureLaunchModelReadiness({ management: this.options.modelReadiness,
+        team, source: intent, profiles: initial.profiles, principalId: operator,
+        hostIncarnation: this.options.hostIncarnation, transfer: readiness, admittedAt,
+        isCurrent: () => { try { assertCurrent(); return true; } catch { return false; } } });
+      prepared.capture.admission = expectedAdmission;
+      team.owner.withLaunchAuthority(operator, 'control', () => {
+        assertCurrent();
+        prepareReadinessCapture(store, { launchId, rosterRevision: intent.configurationRevision,
+          intent: JSON.parse(JSON.stringify(intent)), ...prepared });
+      });
+      liveReadinessCapture = { commandId, associationDigest: prepared.capture.associationDigest,
+        cutoff: prepared.capture.cutoff };
+    }
     const finalizeSource = async (
       context: NonNullable<Parameters<typeof captureRuntimeSource>[5]> = {}
     ) => {
@@ -384,14 +442,14 @@ export class RuntimeTeamCaptures {
     this.options.install(capturedTeam(team, source, registration), compiled.profiles, 'prepare');
     assertCurrent();
     team.owner.registerRuntime(operator, compiled.registration);
-    this.options.install(capturedTeam(team, source, registration), compiled.profiles, 'activate');
+    this.options.install(capturedTeam(team, source, registration), compiled.profiles, 'activate', liveReadinessCapture);
     return registration.launchId;
   }
 
   /** Native append receipts preserve this one original run; never register a replacement roster. */
   private nativeSuccessor(team: HostedTeam, registration: TeamRuntimeCapture): boolean {
     const record = this.record(this.store(team), registration.launchId);
-    if (!record?.nativeAdditions?.length) return false;
+    if (!record?.nativeAdditions?.length && !record?.liveMembership?.length) return false;
     const source = this.source(team, registration), lead = source.members.find(member => member.role === 'lead');
     const selected = registration.members.find(member => member.memberId === lead?.memberId);
     if (!lead || !selected) return false;
@@ -427,7 +485,7 @@ export class RuntimeTeamCaptures {
       record.fingerprint !== runtimeDigest(record.definition)
     )
       throw new TeamLaunchError('hold', 'capture-record');
-    validateLaunchRecord(record, record.fingerprint, record.definition.members.length);
+    validateLaunchRecord(liveRosterValidationRecord(record), record.fingerprint, record.definition.members.length);
     validateNativeLaunchAdditions(record);
     validateMemberSelectionChain(record);
     return record;

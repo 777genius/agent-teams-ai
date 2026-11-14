@@ -110,6 +110,18 @@ describe('ordinary Host launch intent', () => {
     expect(
       vi.mocked(f.backend.invoke).mock.calls.filter(([r]) => r.operation === 'team.launch.start')
     ).toHaveLength(1);
+    const prepared = fixture();
+    const modelPreparation = { preparationId: 'original-model-check', selections: [{
+      launchId: 'run', rosterRevision: 'original-revision', memberId: 'alice', model: 'selected-model',
+    }] };
+    vi.mocked(prepared.backend.invoke).mockResolvedValueOnce({ ok: true, value: structuredClone(view) });
+    const captured = await prepared.control.capture('original-roster', 'original-capture', modelPreparation);
+    expect(prepared.backend.invoke).toHaveBeenLastCalledWith({ handle, commandId: 'original-capture',
+      operation: 'team.launch.capture', payload: { rosterCommandId: 'original-roster', modelPreparation } });
+    await prepared.control.start(captured, choices, undefined, modelPreparation);
+    expect(prepared.backend.invoke).toHaveBeenLastCalledWith({ handle, commandId: expect.any(String),
+      operation: 'team.launch.start', payload: { launchId: 'run', rosterRevision: 'original-revision',
+        configuration: choices, modelPreparation } });
   });
   it('does not generate another launch after uncertain or malformed results; read status remains available', async () => {
     for (const response of [

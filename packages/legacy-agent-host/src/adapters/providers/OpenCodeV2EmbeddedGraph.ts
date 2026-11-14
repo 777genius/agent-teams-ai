@@ -23,6 +23,9 @@ export interface VerifiedOpenCodeV2EmbeddedGraph {
     nativeRewritePath: string;
     resolvePackage(specifier: string): Promise<string>;
   }>;
+  selectedFileModules?: Readonly<{
+    variablePath: string; fileSystemPath: string; authorizationPath: string; httpPath: string;
+  }>;
 }
 
 const manifestName = 'opencode-v2-engine-manifest.json';
@@ -251,6 +254,7 @@ export async function verifyOpenCodeV2EmbeddedGraph(
   // The Node parent verifies every delivered byte. Import-only package exports
   // are resolved by the actual Bun executor, immediately before its first import.
   let configurationModules: VerifiedOpenCodeV2EmbeddedGraph['configurationModules'];
+  let selectedFileModules: VerifiedOpenCodeV2EmbeddedGraph['selectedFileModules'];
   if (process.versions.bun) {
     for (const [name, subpath] of [
       ['core', 'bus'],
@@ -274,6 +278,12 @@ export async function verifyOpenCodeV2EmbeddedGraph(
     await verifyDependency(modulePath, '@effect/platform-node-shared', 'NodeStream', effectVersion);
     const providerPath = await verifyDependency(modulePath, '@opencode/core', 'provider', selection.version);
     const nativeRewritePath = await verifyDependency(modulePath, '@opencode/core', 'aisdk-native', selection.version);
+    selectedFileModules = Object.freeze({
+      variablePath: await verifyDependency(modulePath, '@opencode/core', 'config/variable', selection.version),
+      fileSystemPath: await verifyDependency(modulePath, '@opencode/util', 'fs-util', selection.version),
+      authorizationPath: await verifyDependency(modulePath, '@opencode/server', 'middleware/authorization', selection.version),
+      httpPath: await verifyDependency(modulePath, 'effect', 'http', effectVersion),
+    });
     configurationModules = Object.freeze({ providerPath, nativeRewritePath,
       async resolvePackage(specifier: string) {
         if (!/^(?:@[A-Za-z0-9._-]+\/)?[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/u.test(specifier) ||
@@ -299,5 +309,5 @@ export async function verifyOpenCodeV2EmbeddedGraph(
   await verifyOpenCodeV2EmbeddedManifest(selection);
   signal?.throwIfAborted();
   return { modulePath, effectPath, requiredBunVersion, ...(windowsJobBinding ? { windowsJobBinding } : {}),
-    ...(configurationModules ? { configurationModules } : {}) };
+    ...(configurationModules ? { configurationModules } : {}), ...(selectedFileModules ? { selectedFileModules } : {}) };
 }

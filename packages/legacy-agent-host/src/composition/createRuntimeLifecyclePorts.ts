@@ -1,22 +1,38 @@
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
-import type { MemberEntry } from './MemberEntry.js';
-import type { TeamRuntimeDeliveryPort } from '../team/contracts.js';
+import type { MemberEntry, HostedTeam } from './MemberEntry.js';
+import type { TeamRuntimeDeliveryPort, TeamBinding } from '../team/contracts.js';
+import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
+import type { ModelProbeOwner } from '../management/ModelProbeOwner.js';
 
 /** Original captured cleanup only; no selection, generation allocation, input admission or native retry. */
 export function createRuntimeLifecyclePorts(options: {
   runtime: RuntimeOwner; entries: ReadonlyMap<string, MemberEntry>; delivery: TeamRuntimeDeliveryPort;
   assertWriter(): void; closeEndpoint(entry: MemberEntry): Promise<void>;
   assertAvailable?(binding: Parameters<RuntimeOwner['stopCapturedSession']>[0]): void;
+  readiness?: {
+    retainedLaunches: ReadonlyMap<string, { team: HostedTeam; launch: TeamLaunchOwner }>;
+    probes: Pick<ModelProbeOwner, 'cancelTeamPreparations'>;
+  };
 }) {
   return {
     delivery: options.delivery,
     runtime: {
       readCapturedSession: options.runtime.readCapturedSession.bind(options.runtime),
+      ...(options.readiness ? { async cancelPreparations(binding: TeamBinding) {
+        options.assertWriter();
+        for (const retained of options.readiness!.retainedLaunches.values())
+          if (runtimeDigest(retained.team.definition.binding) === runtimeDigest(binding))
+            retained.launch.retireModelReadiness();
+        await options.readiness!.probes.cancelTeamPreparations(runtimeDigest(binding));
+        options.assertWriter();
+      } } : {}),
       async stopCapturedSession(binding: Parameters<RuntimeOwner['stopCapturedSession']>[0]) {
         options.assertWriter();
         options.assertAvailable?.(binding);
+        options.readiness?.retainedLaunches.get(runtimeDigest({ teamId: binding.teamId, launchId: binding.runId }))
+          ?.launch.retireModelReadiness(binding.memberId);
         const entry = options.entries.get(runtimeDigest(binding));
         const result = await options.runtime.stopCapturedSession(binding);
         options.assertWriter();

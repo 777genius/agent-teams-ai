@@ -1,6 +1,7 @@
 import { TeamLaunchError } from './contracts.js';
 import { runtimeDigest as digest } from '../runtime/identity.js';
 import { memberActionBlocksSelection } from './memberActions.js';
+import { reuseReadinessForRetry } from './launchReadiness.js';
 import type {
   TeamLaunchRecord,
   TeamLaunchDefinition,
@@ -30,6 +31,7 @@ export interface LaunchRetryJournal {
   current(member: LaunchMemberRecord): LaunchAttempt;
   initial(member: ExpectedLaunchMember, attemptId: string): LaunchAttempt;
   start(memberId: string, assertAuthority?: () => void): Promise<void> | undefined;
+  assertModelReadiness?(memberId: string): void;
   summary(record: TeamLaunchRecord): TeamLaunchSummary;
 }
 const id = (value: string) => {
@@ -61,6 +63,8 @@ export function retryLaunchMember(
     ...(actor ? { actor } : {}),
   });
   native?.assertCurrent();
+  if (!projected.retries.some(row => row.commandId === input.commandId || row.attemptId === input.attemptId))
+    for (const memberId of input.memberIds) journal.assertModelReadiness?.(memberId);
   const duplicate = authorized('control', () => {
     const record = journal.load(),
       prior = record.retries.find(
@@ -100,7 +104,7 @@ export function retryLaunchMember(
         ? { native: { actor: structuredClone(actor), input: structuredClone(input) } }
         : {}),
     });
-    journal.write(record);
+    journal.write(reuseReadinessForRetry(record, input.memberIds, input.commandId, input.attemptId, fingerprint));
     return false;
   });
   if (!duplicate)
