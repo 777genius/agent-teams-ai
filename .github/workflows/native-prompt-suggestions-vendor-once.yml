@@ -91,6 +91,11 @@ jobs:
         with:
           name: native-prompt-suggestions-source-74991c21
           path: .native-provider-archive
+      - name: Select exact consumer Node and frozen pnpm toolchain
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
 
       - name: Reject altered or unexpected provider archive before staging
         shell: bash
