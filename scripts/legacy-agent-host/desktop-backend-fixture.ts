@@ -19,6 +19,7 @@ import { desktopBackendEnvironment, desktopRuntimeSourceEnvironment, prepareDesk
 import type { DesktopOpenCodeSourceSelection } from './desktop-runtime-source-fixture.ts';
 export { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
+import { desktopClaudeSha256 } from './desktop-claude-native-selection.ts';
 import { DESKTOP_MCP_MEMBERS, prepareDesktopCapturedMcpRecipes } from './desktop-opencode-v2-mcp-fixture.ts';
 
 export const digest = (bytes: Uint8Array | string): string =>
@@ -114,7 +115,7 @@ export async function prepareDesktopBackendFixture(
   const linuxChildExec = readDesktopLinuxChildExecInput();
   const node =
     options.candidateRuntime?.nodeExecutable ??
-    (await realpath(options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? process.execPath :
+    (await realpath(options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection || process.platform === 'linux' ? process.execPath :
       join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
   const hostEntry =
     options.candidateRuntime?.hostEntry ??
@@ -264,8 +265,7 @@ export async function prepareDesktopBackendFixture(
     if (
       binary !== options.nativeClaude.path ||
       (await fileDigest(binary)) !== options.nativeClaude.sha256 ||
-      options.nativeClaude.sha256 !==
-        'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f'
+      options.nativeClaude.sha256 !== desktopClaudeSha256()
     )
       throw new Error('Unqualified TEST Claude executable');
     for (const directory of [

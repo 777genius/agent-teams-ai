@@ -181,7 +181,9 @@ export function createOpenCodeMemberProvider(
         selected,
         canAllocate,
         context.processCustody,
-        context.canCaptureRegisteredProcess
+        context.canCaptureRegisteredProcess,
+        undefined,
+        context.retainedWindowsLaunch?.port(selected, canAllocate, context.canCaptureRegisteredProcess)
       ))
   )(captured, context.canAllocate);
   let sealed = false;
@@ -504,6 +506,9 @@ export function createOpenCodeMemberProvider(
           captureRegisteredProcess: custody.captureRegisteredProcess.bind(custody),
         }
       : {}),
+    ...(profile.windowsBroker?.capability === 'service-scopes-v1' && context.retainedWindowsLaunch &&
+      custody.prepareRegisteredWindowsProcess
+      ? { prepareRegisteredWindowsProcess: custody.prepareRegisteredWindowsProcess.bind(custody) } : {}),
     isReady: () => ready && configurationAccepted && current(),
     initialContextEvidence: () =>
       ready && configurationAccepted && current()

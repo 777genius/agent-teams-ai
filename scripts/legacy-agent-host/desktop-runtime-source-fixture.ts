@@ -268,6 +268,11 @@ export function desktopBackendEnvironment(
         (process.env.LEGACY_DESKTOP_BACKEND_GO === '1' &&
           !process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH))
       ? { NODE_OPTIONS: '--max-old-space-size=8192' } : {}),
+    ...(process.platform === 'linux' ? {
+      DISPLAY: process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '',
+      XAUTHORITY: process.env.LEGACY_DESKTOP_TEST_XAUTHORITY ?? '',
+    } : {}),
+    ...(process.env.LEGACY_DESKTOP_COREPACK_HOME ? { COREPACK_HOME: process.env.LEGACY_DESKTOP_COREPACK_HOME } : {}),
     NO_COLOR: '1',
     // A TEST HOME changes pnpm's store lookup. Report drift without installing
     // into the frozen worktree; the harness verifies its selected archive bytes.

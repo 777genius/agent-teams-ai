@@ -1,3 +1,4 @@
+import { performance } from 'node:perf_hooks';
 import type { JsonValue } from '../contracts.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import { projectProcessReceipt as receipt } from './projectProcessViews.js';
@@ -42,6 +43,7 @@ export function createTeamProcessMethods(options: {
     methods[`team.process.${method}`] = {
       lane: 'control',
       async handle(raw): Promise<JsonValue> {
+        const deadline = performance.now() + 10000;
         let entered = false;
         try {
           const envelope = object(raw, ['binding', 'commandId', 'payload']);
@@ -56,7 +58,8 @@ export function createTeamProcessMethods(options: {
           switch (method) {
             case 'list':
               object(envelope.payload, []);
-              result = call(() => target.commands.list());
+              result = await call(() => target.commands.windows
+                ? target.commands.windows.list(deadline) : target.commands.list());
               break;
             case 'pending.read':
               object(envelope.payload, []);
@@ -64,7 +67,10 @@ export function createTeamProcessMethods(options: {
               break;
             case 'lookup': {
               const payload = object(envelope.payload, ['originalCommandId']);
-              result = receipt(call(() => target.commands.lookup(text(payload.originalCommandId))));
+              const originalCommandId = text(payload.originalCommandId);
+              result = receipt(await call(() => target.commands.windows
+                ? target.commands.windows.lookup(originalCommandId, deadline)
+                : target.commands.lookup(originalCommandId)));
               break;
             }
             case 'register': {
@@ -81,27 +87,18 @@ export function createTeamProcessMethods(options: {
                   throw new Error('process:invalid');
               if (payload.port !== undefined && typeof payload.port !== 'number')
                 throw new Error('process:invalid');
-              result = receipt(
-                call(() =>
-                  target.commands.register(
-                    commandId,
-                    payload as {
-                      pid: number;
-                      label: string;
-                      port?: number;
-                      url?: string;
-                      command?: string;
-                    }
-                  )
-                )
-              );
+              const input = payload as { pid: number; label: string; port?: number; url?: string; command?: string };
+              result = receipt(await call(() => target.commands.windows
+                ? target.commands.windows.register(commandId, input, deadline)
+                : target.commands.register(commandId, input)));
               break;
             }
             case 'terminate': {
               const payload = object(envelope.payload, ['processRef']);
-              result = receipt(
-                call(() => target.commands.terminate(commandId, reference(payload.processRef)))
-              );
+              const processRef = reference(payload.processRef);
+              result = receipt(await call(() => target.commands.windows
+                ? target.commands.windows.terminate(commandId, processRef, deadline)
+                : target.commands.terminate(commandId, processRef)));
               break;
             }
             default: {

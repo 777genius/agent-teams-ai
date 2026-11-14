@@ -245,6 +245,34 @@ it('leaves unconfigured mode empty and initializes configured handles without st
   });
   expect(desktop.listBindings('other-context').bindings).toEqual([]);
   expect(desktop.authorizeHandle('context-A', { handleId: 'opaque-B' })).toBe(false);
+
+  const originalBindings = desktop.listBindings('context-A');
+  const recovery = {
+    handle: { handleId: 'opaque-A' }, commandId: 'TEST-explicit-recovery',
+    operation: 'host.recovery.capture', payload: {},
+  };
+  const current = { isCurrent: () => true };
+  const noCustody = process.platform === 'win32' ? 'hold' : 'unavailable';
+  expect(desktop.facade.validate(recovery)).toEqual(recovery);
+  expect(await desktop.facade.invoke(recovery, current)).toEqual({
+    ok: false, code: noCustody, outcome: 'not-dispatched',
+  });
+  const continuation = { ...recovery, operation: 'host.recovery.start',
+    payload: { capability: '11111111-1111-4111-8111-111111111111' } };
+  expect(desktop.facade.validate(continuation)).toEqual(continuation);
+  expect(await desktop.facade.invoke(continuation, current)).toEqual({
+    ok: false, code: noCustody, outcome: 'not-dispatched',
+  });
+  expect(await desktop.facade.invoke({
+    ...continuation, payload: { ...continuation.payload, pid: 1234 },
+  }, current)).toEqual({ ok: false, code: 'invalid', outcome: 'not-dispatched' });
+  expect(await desktop.facade.invoke(recovery, { isCurrent: () => false })).toEqual({
+    ok: false, code: 'forbidden', outcome: 'not-dispatched',
+  });
+  expect(await disabled.facade.invoke(recovery, current)).toEqual({
+    ok: false, code: 'unavailable', outcome: 'not-dispatched',
+  });
+  expect(desktop.listBindings('context-A')).toEqual(originalBindings);
   for (const owner of setup.descriptor.owners)
     await expect(access(join(owner.storageRoot, 'started'))).rejects.toMatchObject({
       code: 'ENOENT',

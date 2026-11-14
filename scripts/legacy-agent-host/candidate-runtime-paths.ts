@@ -3,7 +3,7 @@ import { access, readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import { candidateDigest } from './candidate-closure.ts';
-import { readPackagedProcessArtifact } from '../../packages/legacy-agent-host/dist/process/readPackagedProcessArtifact.js';
+import { readPackagedLinuxProcessArtifact, readPackagedProcessArtifact } from '../../packages/legacy-agent-host/dist/process/readPackagedProcessArtifact.js';
 import type { CandidateNativeArtifacts } from './candidate-native.ts';
 import type { CandidatePackage } from './candidate-closure.ts';
 
@@ -143,7 +143,8 @@ export async function readCandidateRuntimePaths(
     directory: await path(natives.processCustody.directory),
     manifestSha256: natives.processCustody.manifestSha256,
   };
-  const bridge = readPackagedProcessArtifact(processCustody);
+  const bridge = process.platform === 'linux' && process.arch === 'x64'
+    ? readPackagedLinuxProcessArtifact(processCustody) : readPackagedProcessArtifact(processCustody);
   await verified(
     `${natives.processCustody.directory}/manifest.json`,
     processCustody.manifestSha256

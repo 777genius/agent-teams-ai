@@ -8,13 +8,14 @@ import {
   readFileSync,
   realpathSync,
 } from 'node:fs';
-import { createRequire } from 'node:module';
+import { loadProcessNativeArtifact } from './loadProcessNativeArtifact.js';
 import { isQualifiedDarwinBuild } from './qualifiedDarwinBuild.js';
 import type { QualifiedDarwinBuild } from './qualifiedDarwinBuild.js';
 
 import type { ChildProcess } from 'node:child_process';
 import type {
   DarwinProcessIdentity,
+  DarwinRegisteredProcessCapture,
   RegistrarBinding,
   RegisteredProcessCapture,
   ProcessObservation,
@@ -68,34 +69,13 @@ export function createQualifiedDarwinProcessApi(artifact: {
     !artifact.path.endsWith('.node')
   )
     return hold();
-  const selected = lstatSync(artifact.path);
-  const assertBinary = () => {
-    const info = lstatSync(artifact.path);
-    if (
-      !info.isFile() ||
-      info.isSymbolicLink() ||
-      info.nlink !== 1 ||
-      realpathSync(artifact.path) !== artifact.path ||
-      info.dev !== selected.dev ||
-      info.ino !== selected.ino ||
-      info.size !== selected.size ||
-      info.mtimeMs !== selected.mtimeMs ||
-      info.ctimeMs !== selected.ctimeMs ||
-      createHash('sha256').update(readFileSync(artifact.path)).digest('hex') !== artifact.sha256
-    )
-      hold();
-  };
-  assertBinary();
-  const require = createRequire(import.meta.url);
-  // One private composition loader; do not silently adopt a previously cached different artifact.
-  if (require.cache[artifact.path]) return hold();
-  const native = require(artifact.path) as NativeApi;
-  assertBinary();
+  const { native, assertBinary } = loadProcessNativeArtifact<NativeApi>(artifact);
   const assertCurrent = () => {
     assertBinary();
     if (native.osBuild() !== artifact.osBuild) hold();
   };
   const original = (capture: RegisteredProcessCapture) => {
+    if (capture.version !== 1 && capture.version !== 2) return hold();
     identity(capture.root, artifact.osBuild);
     return identity(capture.target, artifact.osBuild);
   };
@@ -125,7 +105,7 @@ export function createQualifiedDarwinProcessApi(artifact: {
         current: () => alive && current() && child.exitCode === null && child.signalCode === null,
       });
       return {
-        capture(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture {
+        capture(pid: number, registrar: RegistrarBinding): DarwinRegisteredProcessCapture {
           if (!alive || !current() || child.exitCode !== null || child.signalCode !== null)
             return hold();
           assertCurrent();

@@ -18,5 +18,10 @@ export {
   hostTeamSelectionKey,
   isHostTeamSelectionKey,
 } from './createHostTeamsApi';
+export {
+  HostBackendRetryAction,
+  isHostReadUnavailable,
+  isWindowsHostTeamSelection,
+} from './HostBackendRetryAction';
 export { HostReviewOperationError } from './HostReviewOperationError';
 export { acknowledgeHostTaskSubmission } from './retainedTaskSubmissions';

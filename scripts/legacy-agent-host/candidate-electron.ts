@@ -21,23 +21,27 @@ export async function readCapturedCandidateElectron(selected: { path: string; sh
     throw new Error('Packed Electron capture mismatch');
   const input = JSON.parse(bytes.toString('utf8')) as {
     schemaVersion: number;
+    platform?: string;
     bundleRoot: string;
     executableName: string;
     executableSha256: string;
     appAsarSha256: string;
     candidateManifestSha256: string;
   };
+  const linux = process.platform === 'linux' && process.arch === 'x64';
   if (
-    input.schemaVersion !== 1 ||
-    process.platform !== 'darwin' ||
+    input.schemaVersion !== (linux ? 2 : 1) ||
+    !(linux || process.platform === 'darwin') ||
+    (linux && input.platform !== 'linux-x64') ||
     !isAbsolute(input.bundleRoot) ||
-    !input.bundleRoot.endsWith('.app') ||
+    (!linux && !input.bundleRoot.endsWith('.app')) ||
     (await realpath(input.bundleRoot)) !== input.bundleRoot ||
     !/^[^/\\\0]+$/.test(input.executableName)
   )
     throw new Error('Packed Electron tuple/capture unavailable');
-  const executable = join(input.bundleRoot, 'Contents/MacOS', input.executableName);
-  const resources = join(input.bundleRoot, 'Contents/Resources');
+  const executable = linux ? join(input.bundleRoot, input.executableName)
+    : join(input.bundleRoot, 'Contents/MacOS', input.executableName);
+  const resources = join(input.bundleRoot, linux ? 'resources' : 'Contents/Resources');
   const appAsar = join(resources, 'app.asar');
   for (const [path, expected, native] of [
     [executable, input.executableSha256, true],
@@ -83,13 +87,17 @@ export async function captureCandidateElectron(options: {
   )
     throw new Error('Packed capture inputs invalid');
   const bundleRoot = await realpath(options.bundleRoot);
-  const executable = join(bundleRoot, 'Contents/MacOS', options.executableName);
+  const linux = process.platform === 'linux' && process.arch === 'x64';
+  if (!(linux || process.platform === 'darwin')) throw new Error('Packed Electron tuple unavailable');
+  const executable = linux ? join(bundleRoot, options.executableName)
+    : join(bundleRoot, 'Contents/MacOS', options.executableName);
   const bytes = JSON.stringify({
-    schemaVersion: 1,
+    schemaVersion: linux ? 2 : 1,
+    ...(linux ? { platform: 'linux-x64' } : {}),
     bundleRoot,
     executableName: options.executableName,
     executableSha256: await candidateDigest(executable),
-    appAsarSha256: await candidateDigest(join(bundleRoot, 'Contents/Resources/app.asar')),
+    appAsarSha256: await candidateDigest(join(bundleRoot, linux ? 'resources/app.asar' : 'Contents/Resources/app.asar')),
     candidateManifestSha256: options.candidateManifestSha256,
   });
   await writeFile(options.output, bytes + '\n', { mode: 0o600, flag: 'wx' });

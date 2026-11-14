@@ -27,10 +27,13 @@ import { CapturedRosterCommands } from '../infrastructure/CapturedRosterCommands
 import { captureRuntimeSources } from '../infrastructure/CapturedRuntimeSources';
 import { CapturedScheduledRuns } from '../infrastructure/CapturedScheduledRuns';
 import { CapturedTeamRegistry } from '../infrastructure/CapturedTeamRegistry';
+import { captureMainWindowsCustody } from '../infrastructure/CapturedWindowsCustody';
 import { FileHandleBindingStore } from '../infrastructure/FileHandleBindingStore';
 import { loadDesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
 import { readCapturedTeamRetirements } from '../infrastructure/readCapturedTeamRetirements';
 import { CapturedStoppedTeamImport } from '../infrastructure/stopped-import/CapturedStoppedTeamImport';
+
+import { recoverCapturedHost } from './recoverCapturedHost';
 
 import type { BackendHandle } from '../../contracts';
 import type { BackendConnectionSnapshot } from '../../contracts/connections';
@@ -139,7 +142,12 @@ export class DesktopBackendFeature {
         lookup: async (handle, commandId, method, guard) =>
           (await target(handle, guard)).lookup(handle, commandId, method, guard),
       },
-      rosterCommands
+      rosterCommands,
+      (request, guard) => recoverCapturedHost(request, guard, {
+        selection: this.options.descriptor, descriptor: () => this.descriptor,
+        router: () => this.router, definitions: () => this.handleDefinitions(), clients: this.clients,
+        isCurrent: () => !this.sealed && this.state === 'ready',
+      })
     );
   }
 
@@ -160,11 +168,13 @@ export class DesktopBackendFeature {
       this.router = router;
       phase = 'owner-registration';
       for (const owner of descriptor.owners) {
+        const nativeCustody = captureMainWindowsCustody(owner.profile);
         const captured = {
           ownerId: owner.ownerId,
           revision: owner.revision,
           storageRoot: owner.storageRoot,
-          client: new CapturedHostClient(owner.profile),
+          client: new CapturedHostClient(owner.profile, nativeCustody),
+          ...(nativeCustody ? { nativeCustody } : {}),
         };
         router.registerOwner(captured);
         this.clients.set(ownerKey(owner), captured);
@@ -207,6 +217,7 @@ export class DesktopBackendFeature {
         /* Diagnostics cannot alter the original failed admission. */
       }
       await this.router?.shutdown();
+      await this.closeNativeOwners();
     }
   }
 
@@ -769,6 +780,14 @@ export class DesktopBackendFeature {
   shutdown(): ReturnType<BackendOwnerRouter['shutdown']> {
     this.sealed = true;
     this.state = 'shutting-down';
-    return this.router?.shutdown() ?? Promise.resolve([]);
+    return (this.router?.shutdown() ?? Promise.resolve([])).then(async results => {
+      await this.closeNativeOwners();
+      return results;
+    });
+  }
+
+  private async closeNativeOwners(): Promise<void> {
+    const outcomes = await Promise.all([...this.clients.values()].map(owner => owner.nativeCustody?.close() ?? Promise.resolve(true)));
+    if (outcomes.some(value => !value)) throw new BackendRoutingError('hold');
   }
 }

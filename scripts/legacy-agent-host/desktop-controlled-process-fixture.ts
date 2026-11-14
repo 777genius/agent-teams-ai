@@ -6,8 +6,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { treeHash, startHost } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
 import { acquireProfileWriterLease } from '../../packages/legacy-agent-host/dist/adapters/profile/ProfileWriterLease.js';
 import { createFilesystemTeamOwner } from '../../packages/legacy-agent-host/dist/adapters/team/createFilesystemTeamOwner.js';
-import { createQualifiedDarwinProcessApi } from '../../packages/legacy-agent-host/dist/process/DarwinRegisteredProcess.js';
-import { readPackagedProcessArtifact } from '../../packages/legacy-agent-host/dist/process/readPackagedProcessArtifact.js';
+import { createProcessCustody } from '../../packages/legacy-agent-host/dist/composition/processCustody.js';
+import { readPackagedLinuxProcessArtifact, readPackagedProcessArtifact } from '../../packages/legacy-agent-host/dist/process/readPackagedProcessArtifact.js';
 import { createControllerProcessPolicy } from '../../packages/legacy-agent-host/dist/process/ControllerProcessPolicy.js';
 import { digest as teamDigest } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import { TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../../packages/legacy-agent-host/src/contracts.ts';
@@ -16,6 +16,9 @@ import type { RegisteredProcessCapture } from '../../packages/legacy-agent-host/
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { prepareProcessFixture, probeProcessService, readProcessServices } from './desktop-native-process-fixture.ts';
 import { PROCESS_LABEL, qualifyNativeServiceCompletion } from './desktop-native-process-model.ts';
+import { desktopClaudeSha256 } from './desktop-claude-native-selection.ts';
+import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
+import type { CandidateRuntimePaths } from './candidate-runtime-paths.ts';
 
 const row = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -46,42 +49,55 @@ export interface ControlledProcessUiSource {
 }
 
 /** Trusted TEST setup; no provider model/session or production capture entrypoint is introduced. */
-export async function prepareControlledProcessFixture(repo: string, pnpm: string) {
+export async function prepareControlledProcessFixture(repo: string, pnpm: string, candidate?: CandidateRuntimePaths) {
   assert.equal(process.env.LEGACY_PROCESS_COLD_UI_GO, '1');
   assert.equal(process.env.LEGACY_M19_ORIGINAL_HOST_CRASH_GO, undefined);
   assert.equal(process.env.LEGACY_DESKTOP_READBACK_ROOT, undefined);
-  assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
+  const linux = process.platform === 'linux' && process.arch === 'x64';
+  assert.ok(linux || (process.platform === 'darwin' && process.arch === 'arm64'));
   assert.equal(process.version, 'v24.21.0');
+  const privatePath = (path: string) => assert.match(path, linux
+    ? /^\/(?:[^/]+\/)*TEST-[^/]+\// : /^\/private\/tmp\/TEST-[^/]+\//);
   const capturePath = process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH!;
-  assert.match(capturePath, /^\/private\/tmp\/TEST-[^/]+\//);
+  privatePath(capturePath);
   const capturePin = await pinned({ path: capturePath, sha256: process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 });
   assert.ok((await lstat(capturePath)).size <= 32 * 1024);
   const capture = row(JSON.parse(await readFile(capturePath, 'utf8')));
   assert.equal(capture.schemaVersion, 1);
+  if (linux) assert.equal(capture.platform, 'linux-x64');
   const node = await pinned(capture.node), hostPin = await pinned(capture.host), claude = await pinned(capture.claude);
   const corepack = row(capture.corepack);
   const packageEntry = await pinned(corepack.entry), packagePin = await pinned(corepack.package), library = await pinned(corepack.library);
   assert.equal(node.path, await realpath(process.execPath));
-  assert.equal(node.path, await realpath(join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
-  assert.equal(hostPin.path, await realpath(join(repo, 'packages/legacy-agent-host/dist/cli.js')));
+  if (!linux) assert.equal(node.path, await realpath(join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
+  assert.equal(hostPin.path, await realpath(candidate?.hostEntry ?? join(repo, 'packages/legacy-agent-host/dist/cli.js')));
   assert.equal(packageEntry.path, pnpm);
   assert.equal(packagePin.path, await realpath(join(dirname(pnpm), '../package.json')));
   assert.equal(library.path, await realpath(join(dirname(pnpm), 'lib/corepack.cjs')));
   const packageJson = row(JSON.parse(await readFile(packagePin.path, 'utf8')));
   assert.equal(packageJson.name, 'corepack'); assert.equal(packageJson.version, '0.36.0');
-  assert.equal(claude.sha256, 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f');
+  assert.equal(claude.sha256, desktopClaudeSha256());
   const selection = row(capture.processArtifact);
   const artifact = { directory: text(selection.directory), manifestSha256: text(selection.manifestSha256) };
-  assert.match(artifact.directory, /^\/private\/tmp\/TEST-[^/]+\//);
-  const bridge = readPackagedProcessArtifact(artifact);
+  if (candidate) {
+    assert.equal(linux, true, 'bounded Linux packed process proof');
+    assert.equal(node.path, candidate.nodeExecutable); assert.equal(node.sha256, candidate.nodeSha256);
+    assert.equal(hostPin.sha256, candidate.hostEntrySha256); assert.equal(claude.path, candidate.claudeExecutable);
+    assert.deepEqual(artifact, candidate.processCustody);
+  }
+  privatePath(artifact.directory);
+  const bridge = linux ? readPackagedLinuxProcessArtifact(artifact) : readPackagedProcessArtifact(artifact);
   const manifest = await pinned({ path: join(artifact.directory, 'manifest.json'), sha256: artifact.manifestSha256 });
   const binary = await pinned(bridge);
-  const artifactSource = await pinned({ path: join(artifact.directory, 'registered-process-darwin.c'),
+  const nativeSource = join(repo, `packages/legacy-agent-host/native/registered-process-${linux ? 'linux' : 'darwin'}.c`);
+  const artifactSource = await pinned({ path: linux ? nativeSource : join(artifact.directory, 'registered-process-darwin.c'),
     sha256: row(JSON.parse(await readFile(manifest.path, 'utf8'))).sourceSha256 });
-  assert.equal(artifactSource.sha256, 'a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5');
-  assert.equal(await fileDigest(join(repo, 'packages/legacy-agent-host/native/registered-process-darwin.c')), artifactSource.sha256);
+  if (!linux) assert.equal(artifactSource.sha256, 'a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5');
+  assert.equal(await fileDigest(nativeSource), artifactSource.sha256);
   const fixture = await prepareProcessFixture(repo, { pnpmEntry: pnpm, processArtifact: artifact, controlledServicesOnly: true,
+    ...(candidate ? { candidateRuntime: candidate } : {}),
     nativeClaude: { ...claude, modelUrl: 'http://127.0.0.1:9' } });
+  assert.equal(fixture.node, node.path); assert.equal(fixture.hostEntry, hostPin.path);
   const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8')) as TeamHostProfile;
   assert.equal(profile.runtime, undefined);
   assert.ok(profile.teams.every(team => team.members.every(member => member.delivery === undefined)));
@@ -99,7 +115,8 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
     assert.equal(await treeHash(join(repo, 'packages/legacy-agent-host/dist'), '.js'), distSha256);
   };
   await verify();
-  const native = createQualifiedDarwinProcessApi(bridge);
+  const native = createProcessCustody(artifact);
+  assert.ok(native);
   const proof: Record<string, unknown> = { status: 'INCOMPLETE', scope: 'Controlled native kernel/canonical owner registration, real Host restart, existing UI original-ref Stop; no SDK session',
     sourcePins: pins, hostSourceSha256: sourceSha256, hostDistSha256: distSha256,
     runtimeCustody: 'NOT_ALLOCATED', original911Unchanged: true };
@@ -172,8 +189,12 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
         const primary = children.find(value => value.role === 'primary')!, neighbor = children.find(value => value.role === 'neighbor')!;
         assert.equal(result.rootPid, child.pid);
         for (const value of children) { assert.equal(value.exitCode, 0); assert.equal(value.signalCode, null); assert.equal(value.error, undefined); }
-        assert.ok(primaryCapture && neighborCapture && rootCapture, 'all original captures retained before qualification');
-        await until(async () => [primaryCapture!, neighborCapture!, rootCapture!].every(value => native.observe(value) === 'absent'), 3_000, 'three original capsules absent');
+        assert.ok(primaryCapture && neighborCapture, 'original service captures retained before qualification');
+        await until(async () => [primaryCapture!, neighborCapture!].every(value => native.observe(value) === 'absent'), 3_000, 'two original services absent');
+        const rootOracle = createDesktopProcessRootOracle({ node: fixture.node, capture: primaryCapture,
+          selection: artifact, observe: capture => native.observe(capture) });
+        const originalRootObservation = rootOracle.observe(Date.now() + 5000);
+        assert.equal(originalRootObservation, 'absent', 'one bounded exact-root read after original EOF exit');
         const lifecycle = async (role: string) => (await readFile(join(fixture.root, `workspace/process-${role}-lifecycle.ndjson`), 'utf8')).trim().split('\n').map(line => row(JSON.parse(line)));
         const services = await readProcessServices(fixture.root), primaryLifecycle = await lifecycle('primary'), neighborLifecycle = await lifecycle('neighbor');
         const p = qualifyNativeServiceCompletion('primary', services.primary, primaryLifecycle), n = qualifyNativeServiceCompletion('neighbor', services.neighbor, neighborLifecycle);
@@ -184,7 +205,7 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
         proof.cleanup = { status: 'PASS', rootExitCode: child.exitCode, rootSignalCode: child.signalCode,
           primaryCleanupSignals: primary.cleanupSignals, neighborCleanupSignals: neighbor.cleanupSignals,
           originalTargetObservation: native.observe(primaryCapture), originalNeighborObservation: native.observe(neighborCapture),
-          originalRootObservation: native.observe(rootCapture), primaryLifecycle, neighborLifecycle, result };
+          originalRootObservation, primaryLifecycle, neighborLifecycle, result };
       } catch (error) { failures.push(String(error)); }
     }
     try { await verify(); } catch (error) { failures.push(String(error)); }
@@ -226,7 +247,13 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
       } finally { lease.release(); }
       const canonical = createControllerProcessPolicy(registry).readStrict(); assert.equal(canonical.length, 1);
       primaryCapture = canonical[0]!.capturedNative; assert.ok(primaryCapture);
-      rootCapture = { ...structuredClone(primaryCapture), target: structuredClone(primaryCapture.root) };
+      assert.ok(primaryCapture.version !== 4 && primaryCapture.version !== 5, 'Cold POSIX Processes fixture requires durable original identity');
+      if (primaryCapture.version === 3) {
+        assert.equal(linux, true);
+        // Original live ChildProcess + kernel executable evidence; never a root-as-service signal capture.
+        proof.originalRootExecutable = native.readRootExecutable(child, node);
+        proof.originalLinuxRoot = structuredClone(primaryCapture.root);
+      } else rootCapture = { ...structuredClone(primaryCapture), target: structuredClone(primaryCapture.root) };
       registrySha256 = await fileDigest(registry);
       Object.assign(proof, { registration, original, originalProcessRef: original!.processRef, canonicalPrimary: canonical[0], rootCapture, neighborCapture, services });
       hostA = startHost({ node: fixture.node, entry: fixture.hostEntry, root: fixture.root,

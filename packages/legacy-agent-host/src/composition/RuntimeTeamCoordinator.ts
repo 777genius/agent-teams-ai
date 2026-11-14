@@ -31,6 +31,7 @@ import { prepareNativeSessionCommand, nativeSessionCommandAuthorized } from './n
 import { publishNativeCommandOutput } from './publishNativeCommandOutput.js';
 import { projectRuntimeMember } from './projectRuntimeMember.js';
 import type { ProcessCustody } from './processCustody.js';
+import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 import type { TeamMcpCrossTeamPort } from '../mcp/nativeCrossTeamContracts.js';
 import { readHostTeamActivity } from './readHostTeamActivity.js';
 import { readRuntimeActivitySources, readEntryActivitySources, isRetainedActivityBinding } from './runtimeActivitySources.js';
@@ -96,6 +97,7 @@ export class RuntimeTeamCoordinator {
       teams: ReadonlyMap<string, HostedTeam>;
       assertWriter(): void;
       processCustody?: ProcessCustody;
+      retainedWindowsLaunch?: HostWindowsLaunch;
       workSync?: ReturnType<typeof createHostWorkSyncComposition>;
       nativeMemberModelPreflight?: NativeMemberModelPreflight;
       groups?(
@@ -172,6 +174,7 @@ export class RuntimeTeamCoordinator {
         readinessLaunch: entry => this.retainedLaunches.get(runtimeDigest({
           teamId: entry.binding.teamId, launchId: entry.binding.runId }))?.launch,
         ...(options.processCustody ? { processCustody: options.processCustody } : {}),
+        ...(options.retainedWindowsLaunch ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
         ...(options.createProvider ? { createProvider: options.createProvider } : {}),
         groups: (entry, capture, current) => options.groups?.(entry, capture, current),
         crossTeam: (entry, isCurrent) =>

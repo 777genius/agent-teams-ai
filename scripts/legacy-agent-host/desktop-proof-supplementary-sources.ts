@@ -172,3 +172,27 @@ export const desktopProofSupplementarySources = [
   'scripts/legacy-agent-host/fixtures/process-bootstrap.ts',
   'scripts/legacy-agent-host/fixtures/process-service.ts',
 ];
+
+/** Exact native Windows same-Main recovery and original Processes UI construction inputs. */
+export const desktopProofWindowsRetrySources = [
+  'src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts',
+  'tools/owned-process-broker/nativeRetainedHostGate.ts',
+  'tools/owned-process-broker/tsconfig.json',
+  'tools/owned-process-broker/tsconfig.retained-host.json',
+  '.github/workflows/electron-packaged-ci.yml',
+  'src/features/agent-backend/main/composition/recoverCapturedHost.ts',
+  'src/features/agent-backend/renderer/HostBackendRetryAction.tsx',
+  'tools/owned-process-broker/nativeWindowsAppFixture.ts',
+  'tools/owned-process-broker/nativeWindowsAppGate.mjs',
+  'tools/owned-process-broker/nativeGateContext.ts',
+  'tools/owned-process-broker/nativeGateEvents.ts',
+  'tools/owned-process-broker/nativeVendorInputs.ts',
+  'scripts/build/buildOwnedProcessBroker.ts',
+  'scripts/e2e/opencode-diagnostics/packaged.mjs',
+  'scripts/e2e/opencode-diagnostics/platform.mjs',
+  'scripts/e2e/release-updater/cdp.mts',
+  'test/features/agent-backend/backendOwnerRouter.test.ts',
+  'test/features/agent-backend/capturedHostClient.test.ts',
+  'test/features/agent-backend/desktopBackendFeature.test.ts',
+  'test/renderer/store/teamSlice.test.ts',
+];

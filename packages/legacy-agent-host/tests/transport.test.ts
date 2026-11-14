@@ -11,6 +11,10 @@ import { fileURLToPath } from 'node:url';
 
 import { createHostServer, HostRpcError } from '../dist/index.js';
 import { DEFAULT_HOST_LIMITS, HOST_PROTOCOL_VERSION } from '../dist/contracts.js';
+import {
+  HOST_CUSTODY_BIND_METHOD,
+  HOST_CUSTODY_READY_METHOD,
+} from '../dist/owned-process/index.js';
 
 import type { HostServerOptions, JsonValue } from '../dist/index.js';
 
@@ -198,6 +202,224 @@ class GateOutput extends Writable {
     await tick();
   }
 }
+
+test('private custody hints are reliable/sticky and an old epoch reply cannot finish a current read', async () => {
+  const f = fixture({ nativeCustody: { timeoutMs: 1000 } });
+  await handshake(f.input);
+  const binding = {
+    mainEpoch: 'TEST-main',
+    hostIncarnation: f.server.handshake.hostIncarnation,
+    profileDigest: 'a'.repeat(64),
+  };
+  f.input.write(request(2, HOST_CUSTODY_BIND_METHOD, binding));
+  await tick();
+  const hint = { capability: 'TEST-original', stream: 'stdout' };
+  const ready =
+    JSON.stringify({
+      jsonrpc: '2.0',
+      method: HOST_CUSTODY_READY_METHOD,
+      params: { binding, hint },
+    }) + '\n';
+  f.input.write(ready + ready);
+  await tick();
+  let hints = 0;
+  f.server.nativeCustody!.onReadable(() => {
+    hints++;
+  });
+  assert.equal(hints, 1, 'An early readiness hint survives until its confirmed read');
+  let completed = false;
+  const read = f.server
+    .nativeCustody!.request({ operation: 'read', capability: 'TEST-original', stream: 'stdout' })
+    .then((reply) => {
+      completed = true;
+      return reply;
+    });
+  await tick();
+  const id = f.frames.find(
+    (frame) => typeof frame.id === 'string' && frame.id.startsWith('custody:')
+  )!.id;
+  const result = {
+    binding,
+    reply: {
+      status: 'completed',
+      value: {
+        operation: 'read',
+        state: 'data',
+        bytes: Buffer.from('TEST-private-stream').toString('base64'),
+        more: false,
+      },
+    },
+  };
+  f.input.write(JSON.stringify({ jsonrpc: '2.0', id: 'custody:TEST-old-host:1', result }) + '\n');
+  await tick();
+  assert.equal(completed, false);
+  f.input.write(JSON.stringify({ jsonrpc: '2.0', id, result }) + '\n');
+  assert.deepEqual(await read, result.reply);
+  f.input.write(ready);
+  await tick();
+  assert.equal(hints, 2, 'Confirmed read permits the next reliable hint');
+  const expiredRead = f.server.nativeCustody!.request(
+    { operation: 'read', capability: 'TEST-original', stream: 'stdout' }, performance.now() + 20);
+  await tick();
+  const expiredId = f.frames.filter(frame => typeof frame.id === 'string' && frame.id.startsWith('custody:')).at(-1)!.id;
+  assert.deepEqual(await expiredRead, { status: 'unknown' });
+  f.input.write(JSON.stringify({ jsonrpc: '2.0', id: expiredId, result }) + '\n');
+  await tick();
+  assert.deepEqual(await expiredRead, { status: 'unknown' }, 'Late ACK never rewrites the original caller outcome');
+  f.input.write(ready);
+  await tick();
+  assert.equal(hints, 3, 'Exact late ACK retires its original hint marker before new readiness');
+  const pending = f.server.nativeCustody!.request({
+    operation: 'write',
+    capability: 'TEST-original',
+    bytes: 'VEVTVA==',
+  });
+  await f.server.dispose();
+  assert.deepEqual(await pending, { status: 'unknown' });
+});
+
+test('private stream frames leave byte capacity for control and yield the next frame to Stop', async () => {
+  const input = new PassThrough(),
+    output = new GateOutput();
+  const server = createHostServer({
+    input,
+    output,
+    buildId: 'TEST-native-pressure',
+    nativeCustody: { timeoutMs: 1000 },
+    limits: { maxFrameBytes: 65536, maxPriorityBytes: 196608 },
+  });
+  await handshake(input);
+  await output.release();
+  input.write(
+    request(2, HOST_CUSTODY_BIND_METHOD, {
+      mainEpoch: 'TEST-main',
+      hostIncarnation: server.handshake.hostIncarnation,
+      profileDigest: 'b'.repeat(64),
+    })
+  );
+  await tick();
+  await output.release();
+  const before = output.frames.length;
+  const work = Array.from({ length: 24 }, () =>
+    server.nativeCustody!.request({
+      operation: 'write',
+      capability: 'TEST-original',
+      bytes: Buffer.alloc(16 * 1024, 0x61).toString('base64'),
+    })
+  );
+  const stop = server.nativeCustody!.request({
+    operation: 'stop',
+    capability: 'TEST-original',
+    attemptRef: 'TEST-stop',
+    budgetMs: 1000,
+  });
+  assert.equal(output.frames.length, before + 1, 'Only one write is in flight');
+  await output.release();
+  const control = output.frames[before + 1] as { params: { call: { operation: string } } };
+  assert.equal(
+    control.params.call.operation,
+    'stop',
+    'Control precedes queued private stream work'
+  );
+  const binding = { mainEpoch: 'TEST-main', hostIncarnation: server.handshake.hostIncarnation,
+    profileDigest: 'b'.repeat(64) };
+  const answered = new Set<string>();
+  const answerWork = (frame: Record<string, unknown>) => {
+    const original = frame as { id: string; params: { call: { operation: string } } };
+    assert.equal(original.params.call.operation, 'write');
+    assert.equal(answered.has(original.id), false);
+    answered.add(original.id);
+    input.write(JSON.stringify({ jsonrpc: '2.0', id: original.id,
+      result: { binding, reply: { status: 'completed', value: { operation: 'write', state: 'completed' } } } }) + '\n');
+  };
+  answerWork(output.frames[before]!);
+  for (let index = 1; index < 24; index++) {
+    await output.release();
+    answerWork(output.frames.at(-1)!);
+  }
+  assert.equal(answered.size, 24, 'Every original queued payload eventually crosses once');
+  assert.ok((await Promise.all(work)).every(reply => reply.status === 'completed'));
+  await server.dispose();
+  assert.deepEqual(await stop, { status: 'unknown' },
+    'A dispatched Stop with no native reply remains unknown despite stream progress');
+});
+
+test('private admission waits for original slots in both lanes and never dispatches expired or sealed work', async () => {
+  const f = fixture({ nativeCustody: { timeoutMs: 1000 } });
+  await handshake(f.input);
+  const binding = { mainEpoch: 'TEST-queued-main',
+    hostIncarnation: f.server.handshake.hostIncarnation, profileDigest: 'c'.repeat(64) };
+  f.input.write(request(2, HOST_CUSTODY_BIND_METHOD, binding));
+  await tick();
+  const wire = () => f.frames.filter(frame => typeof frame.id === 'string' && frame.id.startsWith('custody:')) as
+    { id: string; params: { call: { operation: string; capability: string } } }[];
+  let builtWork = 0, builtControl = 0;
+  const work = Array.from({ length: 40 }, (_, index) =>
+    f.server.nativeCustody!.requestWhenReady('write', () => {
+      builtWork++; return { operation: 'write', capability: `TEST-work-${index}`, bytes: 'YQ==' };
+    }));
+  assert.equal(builtWork, 24, 'Only admitted frames materialize their original bytes');
+  const controls = Array.from({ length: 40 }, (_, index) =>
+    f.server.nativeCustody!.requestWhenReady('stop', () => {
+      builtControl++; return { operation: 'stop', capability: `TEST-control-${index}`,
+        attemptRef: `TEST-stop-${index}`, budgetMs: 1000 };
+    }));
+  assert.equal(builtControl, 8, 'The original eight reserved slots remain available');
+  await tick();
+  const replied = new Set<string>();
+  const answer = (frame: ReturnType<typeof wire>[number]) => {
+    assert.equal(replied.has(frame.id), false);
+    replied.add(frame.id);
+    const value = frame.params.call.operation === 'write'
+      ? { operation: 'write', state: 'completed' }
+      : { operation: 'stop', state: 'unknown' };
+    f.input.write(JSON.stringify({ jsonrpc: '2.0', id: frame.id,
+      result: { binding, reply: { status: 'completed', value } } }) + '\n');
+  };
+  answer(wire()[0]!);
+  await tick();
+  assert.equal(builtControl, 9, 'A freed work slot admits original queued control first');
+  assert.equal(builtWork, 24);
+  for (let rounds = 0; replied.size < 80 && rounds < 80; rounds++) {
+    const available = wire().filter(frame => !replied.has(frame.id));
+    assert.ok(available.length, 'Each barrier releases previously dispatched original requests');
+    for (const frame of available) answer(frame);
+    await tick();
+  }
+  assert.equal(replied.size, 80);
+  assert.equal(new Set(wire().map(frame => frame.params.call.capability)).size, 80);
+  assert.equal(builtWork, 40); assert.equal(builtControl, 40);
+  assert.ok((await Promise.all([...work, ...controls])).every(reply => reply.status === 'completed'));
+
+  const heldDeadline = performance.now() + 20;
+  const held = Array.from({ length: 24 }, (_, index) =>
+    f.server.nativeCustody!.request({ operation: 'write', capability: `TEST-held-${index}`, bytes: 'Yg==' }, heldDeadline));
+  let expiredBuilt = 0, sealedBuilt = 0, afterLateBuilt = 0;
+  const expired = f.server.nativeCustody!.requestWhenReady('write', () => {
+    expiredBuilt++; return { operation: 'write', capability: 'TEST-expired', bytes: 'Yw==' };
+  }, heldDeadline + 20);
+  assert.deepEqual(await expired, { status: 'refused' });
+  assert.equal(expiredBuilt, 0, 'The original queue deadline precedes any payload or wire ID');
+  assert.ok((await Promise.all(held)).every(reply => reply.status === 'unknown'));
+  const afterLate = f.server.nativeCustody!.requestWhenReady('write', () => {
+    afterLateBuilt++; return { operation: 'write', capability: 'TEST-after-late', bytes: 'ZQ==' };
+  });
+  assert.equal(afterLateBuilt, 0, 'Caller timeouts do not free original wire slots');
+  answer(wire().find(frame => frame.params.call.capability === 'TEST-held-0')!);
+  await tick();
+  assert.equal(afterLateBuilt, 1, 'Only the original ACK releases a slot for a new request');
+  assert.deepEqual(await held[0], { status: 'unknown' });
+
+  const queued = f.server.nativeCustody!.requestWhenReady('write', () => {
+    sealedBuilt++; return { operation: 'write', capability: 'TEST-sealed', bytes: 'ZA==' };
+  });
+  await f.server.dispose();
+  assert.deepEqual(await queued, { status: 'refused' });
+  assert.equal(sealedBuilt, 0);
+  assert.deepEqual(await afterLate, { status: 'unknown' });
+  assert.ok((await Promise.all(held)).every(reply => reply.status === 'unknown'),
+    'Already dispatched requests retain unknown outcomes on EOF, with no replay');
+});
 
 test('slow data consumer receives an explicit gap and control overtakes queued data', async () => {
   const output = new GateOutput();

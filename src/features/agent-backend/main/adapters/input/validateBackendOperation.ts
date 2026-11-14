@@ -60,6 +60,14 @@ function payload(
   if (isBackendReviewOperation(operation)) return parseBackendReviewPayload(operation, value);
   if (operation.startsWith('group.')) return parseGroupPayload(operation, value);
   switch (operation) {
+    case 'host.recovery.start': {
+      const p = object(value, ['capability']);
+      const capability = text(p.capability, 36);
+      if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(capability))
+        throw new InvalidBackendOperation();
+      return { capability };
+    }
+    case 'host.recovery.capture':
     case 'process.list':
     case 'process.pending.read':
     case 'crossTeam.lookup':

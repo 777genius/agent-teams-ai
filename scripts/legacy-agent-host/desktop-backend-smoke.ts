@@ -29,7 +29,7 @@ import { assertCapturedDesktopMetadataAbsent, observeDesktopMetadataClose, captu
 import { readDesktopMetadataLineageFailure } from './desktop-opencode-metadata-lineage.ts';
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
-import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
+import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopPackedFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
 import { runDesktopF08ReadTimingProof, runDesktopHostRoutingProof } from './desktop-host-routing-proof.ts';
 import { startDesktopCodexQuestionModel } from './desktop-codex-question-model.ts';
 import { prepareDesktopCodexQuestionFixture, prepareDesktopCodexQuestionLaunch, waitDesktopCodexQuestionRenderer } from './desktop-codex-question-fixture.ts';
@@ -65,6 +65,7 @@ import {
 } from './desktop-team-ui-smoke.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import {
+  assertDesktopProofEnvironment,
   assertOwnedCdpListener,
   command,
   groupMembers,
@@ -72,6 +73,7 @@ import {
   processTable,
   projectDesktopHarnessFailure,
   projectDesktopMixedSettingsFailure,
+  readOwnedCdpListenerFailure,
   selectedCdpPort,
 } from './desktop-backend-observations.ts';
 import type { ProcessIdentity } from './desktop-backend-observations.ts';
@@ -103,20 +105,15 @@ function assertNoNativeHostChildren(group: number, fixture: {node: string; hostE
   for (const host of hosts) assert.equal(table.filter(row=>row.ppid===host.pid).length,0,'readback never allocates a native child');
 }
 async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
-  assert.equal(
-    process.env.LEGACY_DESKTOP_BACKEND_GO,
-    '1',
-    'root must authorize actual pnpm dev:mcp launch'
-  );
-  assert.equal(process.platform, 'darwin', 'this captured process evidence uses macOS ps/lsof');
+  const repo = resolve(import.meta.dirname, '../..');
+  const packedRelaunchMode = process.env.LEGACY_DESKTOP_PROOF_MODE === 'packed-app-relaunch-ui';
+  const mode = packedRelaunchMode ? 'native-launch-ui' : process.env.LEGACY_DESKTOP_PROOF_MODE ?? 'bridge-diagnostics';
+  assertDesktopProofEnvironment(mode === 'process-cold-ui');
   assert.equal(
     await portOccupied(),
     false,
     'Selected CDP port is occupied; refuse without attaching to or stopping another app'
   );
-  const repo = resolve(import.meta.dirname, '../..');
-  const packedRelaunchMode = process.env.LEGACY_DESKTOP_PROOF_MODE === 'packed-app-relaunch-ui';
-  const mode = packedRelaunchMode ? 'native-launch-ui' : process.env.LEGACY_DESKTOP_PROOF_MODE ?? 'bridge-diagnostics';
   const quitScenario = process.env.LEGACY_DESKTOP_QUIT_SCENARIO;
   assert.ok(quitScenario === undefined || (mode === 'native-quit-ui' && quitScenario === 'pending-open'), 'explicit TEST Quit scenario');
   const startupDiagnosticMode = mode === 'startup-diagnostic-ui';
@@ -127,7 +124,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const packedCapturePath = process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH;
   const packed = packedCapturePath ? await readCapturedCandidateElectron({ path: packedCapturePath, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! }) : undefined;
   const permittedSentinelObservation = (row: Record<string, unknown>) => (mode === 'skills-ui' && isSkillsMetadataRefusal(row)) || (!packed ? row.allowed === true : row.executable === 'shell-env' ? row.allowed === true : row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version');
-  if (packed) assert.equal(mode, 'native-launch-ui', 'one bounded packed workflow reuses the original native Launch proof');
+  if (packed) assert.ok(mode === 'native-launch-ui' || (process.platform === 'linux' && process.arch === 'x64' && mode === 'process-cold-ui'), 'bounded packed Launch or Linux cold process proof');
   if (packedRelaunchMode) assert.ok(packed, 'automatic app relaunch is an explicit captured packed scope');
   if (scheduleUiMode) assert.ok(mode === 'native-launch-ui' && !packed, 'original source schedule controls');
   if (donorSavedOnly) assert.ok(mode === 'stopped-import-ui' && !packed && !process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH, 'one actual donor saved-only scope');
@@ -195,7 +192,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const electronPackage = require.resolve('electron/package.json');
     const electronRoot = resolve(electronPackage, '..');
     const electronRelative = (await readFile(join(electronRoot, 'path.txt'), 'utf8')).trim();
-    assert.equal(electronRelative, 'Electron.app/Contents/MacOS/Electron');
+    assert.equal(electronRelative, process.platform === 'linux' ? 'electron' : 'Electron.app/Contents/MacOS/Electron');
     electron = await realpath(join(electronRoot, 'dist', electronRelative));
   }
   assert.ok((await stat(electron)).isFile());
@@ -266,9 +263,12 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     join(fixture.root, artifacts.appLog),
     { mode: 0o600 }
   );
+  const mcpBuilderEntry = !packed && process.platform === 'linux'
+    ? await realpath(join(repo, 'mcp-server/node_modules/tsup/dist/cli-default.js')).catch(() => undefined)
+    : undefined;
   // Invoke the pinned pnpm JS entry through selected Node: no /usr/bin/env
   // shebang exec transition can invalidate the captured leader identity.
-  const invocation = packed ? [packed.executable, `--remote-debugging-port=${selectedCdpPort}`] : [fixture.node, pnpm, 'dev:mcp', '--remoteDebuggingPort', String(selectedCdpPort)];
+  const invocation = packed ? [packed.executable, `--remote-debugging-port=${selectedCdpPort}`, ...(process.platform === 'linux' ? ['--no-sandbox'] : [])] : [fixture.node, pnpm, 'dev:mcp', '--remoteDebuggingPort', String(selectedCdpPort), ...(process.platform === 'linux' ? ['--noSandbox'] : [])];
   let app = spawn(invocation[0]!, invocation.slice(1), {
     cwd: packed ? fixture.root : repo,
     env: packed ? { ...fixture.appEnvironment, NODE_ENV: 'production', PATH: join(fixture.root, 'bin') + ':/usr/bin:/bin' } : fixture.appEnvironment,
@@ -606,6 +606,17 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     evidence.status = 'PASS';
   } catch (error) {
     evidence.failureSource = projectDesktopHarnessFailure(error, repo, desktopProofSources);
+    const listenerFailure = readOwnedCdpListenerFailure(error, {
+      node: fixture.node, hostEntry: fixture.hostEntry, ...(mcpBuilderEntry ? { mcpBuilderEntry } : {}),
+    });
+    if (listenerFailure) {
+      evidence.cdpListenerFailure = listenerFailure;
+      try {
+        const line = 'TEST_CDP_LISTENER_FAILURE ' + JSON.stringify(listenerFailure);
+        console.log(Buffer.byteLength(line, 'utf8') <= 32 * 1024 ? line :
+          'TEST_CDP_LISTENER_FAILURE {"scope":"original-linux-lsof-test-cdp","unavailable":"over-limit"}');
+      } catch { /* Diagnostic failure never replaces the original listener assertion. */ }
+    }
     evidence.failure =
       error instanceof Error ? error.message.slice(0, 4000) : 'unclassified harness failure';
     const metadataFailure = readDesktopMetadataLineageFailure(error);
@@ -736,16 +747,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         evidence.status = 'INCOMPLETE';
       }
     );
-    if (packed) {
-      try {
-        const after = await readCapturedCandidateElectron({ path: packedCapturePath!, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! });
-        assert.deepEqual(after, packed, 'actual candidate resources remain exact after UI/Stop/Quit cleanup');
-        evidence.packedCandidateVerifiedAfterCleanup = true;
-      } catch (error) {
-        evidence.packedCandidateVerificationFailure = error instanceof Error ? error.message.slice(0, 1000) : 'candidate changed';
-        evidence.status = 'INCOMPLETE';
-      }
-    }
+    if (packed) await verifyDesktopPackedFreeze(
+      { path: packedCapturePath!, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! }, packed, evidence);
     if (controlledProcess) {
       try {
         await controlledProcess.cleanup();

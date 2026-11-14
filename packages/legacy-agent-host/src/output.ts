@@ -1,11 +1,17 @@
 import { HOST_GAP_METHOD } from './contracts.js';
 
-import type { HostCloseReason, HostLimits, RpcNotification, RpcResponse } from './contracts.js';
+import type {
+  HostCloseReason,
+  HostLimits,
+  RpcNotification,
+  RpcRequest,
+  RpcResponse,
+} from './contracts.js';
 import type { Writable } from 'node:stream';
 
 /** One in-flight write; bounded priority/data budgets never await a producer. */
 export class HostOutput {
-  private priority: Buffer[] = [];
+  private priority: { frame: Buffer; control: boolean }[] = [];
   private data: Buffer[] = [];
   private priorityBytes = 0;
   private dataBytes = 0;
@@ -17,7 +23,8 @@ export class HostOutput {
   constructor(
     private readonly output: Writable,
     private readonly limits: HostLimits,
-    private readonly fail: (reason: HostCloseReason) => void
+    private readonly fail: (reason: HostCloseReason) => void,
+    private readonly privateCapacity?: () => void
   ) {}
 
   sendPriority(
@@ -34,7 +41,33 @@ export class HostOutput {
       this.fail('priority_overflow');
       return false;
     }
-    this.priority.push(frame);
+    this.priority.push({ frame, control: true });
+    this.priorityBytes += frame.length;
+    this.pump();
+    return true;
+  }
+
+  /** Conservative admission for one private frame; the following send is synchronous. */
+  canSendPrivate(control: boolean, maxFrameBytes: number): boolean {
+    const count = this.limits.maxPriorityMessages -
+      (control ? 0 : this.limits.reservedControlRequests);
+    const budget = this.limits.maxPriorityBytes - (control ? 0 : this.limits.maxFrameBytes);
+    const bytes = Math.min(maxFrameBytes, this.limits.maxFrameBytes) + 1;
+    return !this.stopped && this.priority.length < count && this.priorityBytes + bytes <= budget;
+  }
+
+  /** Private work shares the existing priority budget and leaves the original control reserve. */
+  sendPrivate(message: RpcRequest, control: boolean, maxFrameBytes: number): boolean {
+    if (this.stopped) return false;
+    const frame = this.encode(message, maxFrameBytes);
+    const count =
+      this.limits.maxPriorityMessages - (control ? 0 : this.limits.reservedControlRequests);
+    const bytes = this.limits.maxPriorityBytes - (control ? 0 : this.limits.maxFrameBytes);
+    if (!frame || this.priority.length >= count || this.priorityBytes + frame.length > bytes) {
+      if (control) this.fail('priority_overflow');
+      return false;
+    }
+    this.priority.push({ frame, control });
     this.priorityBytes += frame.length;
     this.pump();
     return true;
@@ -69,7 +102,7 @@ export class HostOutput {
   }
 
   private encode(
-    message: RpcResponse | RpcNotification,
+    message: RpcResponse | RpcNotification | RpcRequest,
     maxFrameBytes = this.limits.maxFrameBytes
   ): Buffer | undefined {
     try {
@@ -84,7 +117,8 @@ export class HostOutput {
 
   private pump(): void {
     if (this.stopped || this.writing) return;
-    let frame = this.priority.shift();
+    const control = this.priority.findIndex((entry) => entry.control);
+    let frame: Buffer | undefined = this.priority.splice(control < 0 ? 0 : control, 1)[0]?.frame;
     if (frame) this.priorityBytes -= frame.length;
     else if (this.dropped > 0) {
       frame = this.encode({
@@ -107,7 +141,10 @@ export class HostOutput {
         this.writing = false;
         if (this.stopped) return;
         if (error) this.fail('output_error');
-        else this.pump();
+        else {
+          this.pump();
+          this.privateCapacity?.();
+        }
       });
     } catch {
       this.fail('output_error');

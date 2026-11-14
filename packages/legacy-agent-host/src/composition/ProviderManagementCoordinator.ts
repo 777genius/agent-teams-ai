@@ -42,6 +42,7 @@ import type {
 import { providerManagementProfileSchema } from '../management/profile.js';
 import type { CredentialCommand, CredentialTarget, CredentialProgressWriter } from '../management/CredentialCommandOwner.js';
 import type { RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
+import type { CapturedProcessPort, CapturedProcessProfile } from '../adapters/providers/CapturedProcess.js';
 import type { StoredCredentialCommand } from '../management/commandRecords.js';
 
 /** The captured Host owns management process custody; Team policy and Session SPI stay separate. */
@@ -71,10 +72,11 @@ export class ProviderManagementCoordinator {
     profiles: ProviderManagementProfile[],
     private readonly assertWriter: () => void,
     storageRoot: string,
-    options: {
+    private readonly options: {
       onOAuthProgress?(snapshot: ProviderOAuthSnapshot): void;
       unavailableProfiles?: readonly { profileId: string; configRevision: string }[];
       processCustody?: RegisteredProcessRootSource;
+      createProcess?(profile: CapturedProcessProfile, current: () => boolean): CapturedProcessPort;
     } = {}
   ) {
     this.processCustody = options.processCustody;
@@ -82,7 +84,8 @@ export class ProviderManagementCoordinator {
       throw new ManagementCommandError('invalid');
     this.codex = new CodexManagementCoordinator(
       profiles.filter((profile) => profile.provider === 'codex'),
-      assertWriter
+      assertWriter,
+      options.createProcess
     );
     this.claude = new ClaudeManagementCoordinator(
       profiles.filter((profile) => profile.provider === 'claude'),
@@ -668,7 +671,10 @@ export class ProviderManagementCoordinator {
     return new OpenCodeManagementHost(profile, {
       isCurrent,
       canAllocate: isCurrent,
-    }, coordination ? { coordination } : {});
+    }, {
+      ...(coordination ? { coordination } : {}),
+      ...(this.options.createProcess ? { createProcess: this.options.createProcess } : {}),
+    });
   }
 
   async catalog(raw: unknown): Promise<ProviderManagementCatalog> {

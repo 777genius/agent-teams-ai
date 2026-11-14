@@ -63,8 +63,29 @@ export function captureHostProfile(profile: SelectedHostProfile): SelectedHostPr
   return Object.freeze({ ...profile, env: Object.freeze({ ...profile.env }) });
 }
 
-export async function validateHostProfile(profile: SelectedHostProfile): Promise<void> {
+/** Same immutable source binding used by the replaceable client and its original physical owner. */
+export function capturedHostProfileDigest(profile: SelectedHostProfile): string {
+  const { env, startupTimeoutMs: _startup, requestTimeoutMs: _request,
+    writeTimeoutMs: _write, shutdownTimeoutMs: _shutdown, ...source } = profile;
+  return createHash('sha256').update(JSON.stringify({ ...source,
+    env: Object.entries(env).sort(([a], [b]) => a.localeCompare(b)) })).digest('hex');
+}
+
+export function remainingHostStartup(profile: SelectedHostProfile, remaining?: () => number): number {
+  if (!remaining) return profile.startupTimeoutMs;
   try {
+    const value = Math.floor(remaining());
+    if (Number.isSafeInteger(value) && value > 0) return Math.min(profile.startupTimeoutMs, value);
+  } catch { /* The original recovery cutoff/currentness remains authoritative. */ }
+  throw new HostClientError('request-timeout', 'not-dispatched');
+}
+
+export async function validateHostProfile(
+  profile: SelectedHostProfile,
+  remaining?: () => number
+): Promise<void> {
+  try {
+    remainingHostStartup(profile, remaining);
     for (const [path, expected] of [
       [profile.nodeExecutable, profile.nodeSha256],
       [profile.hostEntry, profile.hostEntrySha256],
@@ -72,8 +93,10 @@ export async function validateHostProfile(profile: SelectedHostProfile): Promise
       if ((await realpath(path)) !== path || !(await stat(path)).isFile()) {
         throw new HostClientError('profile-mismatch', 'not-dispatched');
       }
+      remainingHostStartup(profile, remaining);
       const hash = createHash('sha256');
       for await (const chunk of createReadStream(path)) hash.update(chunk);
+      remainingHostStartup(profile, remaining);
       const digest = hash.digest('hex');
       if (digest !== expected) throw new HostClientError('profile-mismatch', 'not-dispatched');
     }
@@ -81,6 +104,7 @@ export async function validateHostProfile(profile: SelectedHostProfile): Promise
     if (!(await stat(profile.cwd)).isDirectory() || !(await stat(profile.env.HOME)).isDirectory()) {
       throw new HostClientError('invalid-profile', 'not-dispatched');
     }
+    remainingHostStartup(profile, remaining);
     const version = await new Promise<string>((resolve, reject) => {
       execFileWithLinuxChildLaunch(
         profile.nodeExecutable,
@@ -88,13 +112,14 @@ export async function validateHostProfile(profile: SelectedHostProfile): Promise
         {
           cwd: profile.cwd,
           env: { ...profile.env },
-          timeout: profile.startupTimeoutMs,
+          timeout: remainingHostStartup(profile, remaining),
           maxBuffer: 1024,
           windowsHide: true,
         },
         (error, stdout) => (error ? reject(error) : resolve(String(stdout).trim()))
       );
     });
+    remainingHostStartup(profile, remaining);
     if (version !== profile.nodeVersion)
       throw new HostClientError('profile-mismatch', 'not-dispatched');
   } catch (error) {
