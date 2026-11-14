@@ -1616,9 +1616,13 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         errorClass: completed ? 'none' : classifyAnalyticsError(status.error),
         durationMs: elapsedMsSince(installStartedAtMs),
       });
-      if (completed) {
+      if (!completed) return;
+      try {
         await api.codexRuntime.invalidateStatus();
         await refreshCodexProviderStatusAfterRuntimeInstall(get);
+      } catch (error) {
+        logger.warn('Codex status refresh after installation failed:', error);
+        set({ codexRuntimeError: error instanceof Error ? error.message : 'Failed to check Codex runtime status' });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to install Codex runtime';

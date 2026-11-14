@@ -33,6 +33,7 @@ export function createTeamBackupComposition(options: {
     prepareReferencesReleased?(teamId: string, originalDeadline: number): Promise<void>;
     assertReferencesReleased(teamId: string): void;
     onPurged(teamId: string): void;
+    releasePurgedReferences?(teamId: string): void;
   };
 }) {
   const roots = options.directories;
@@ -55,7 +56,8 @@ export function createTeamBackupComposition(options: {
         if (!request || request.binding.backendId !== options.ownerId || request.principalId !== options.principalId || !options.purge) continue;
         try {
           await continueOwnerScopedTeamPurge({ binding: request.binding, roots, principalId: options.principalId, coordinator,
-            assertWriter: options.assertWriter, onPurged: () => options.purge!.onPurged(request.binding.teamId) }, intent);
+            assertWriter: options.assertWriter, onPurged: () => options.purge!.onPurged(request.binding.teamId),
+            releasePurgedReferences: () => options.purge!.releasePurgedReferences?.(request.binding.teamId) }, intent);
         } catch { /* Original target/release proof remains held; unrelated Teams stay readable. */ }
       }
       await pruneDeletedTeamBackups({ entries: registry.entries, directory,
@@ -156,7 +158,8 @@ export function createTeamBackupComposition(options: {
           prepareReferencesReleased: (originalDeadline: number) => hooks.prepareReferencesReleased!(teamId, originalDeadline),
         } : {}),
         ...(selected.imported ? { importPublication: selected.imported } : {}),
-        onPurged: () => hooks.onPurged(teamId) });
+        onPurged: () => hooks.onPurged(teamId),
+        releasePurgedReferences: () => hooks.releasePurgedReferences?.(teamId) });
       const result = await purge.purge(commandId, expectedRevision, deadline);
       return { kind: 'team_purge', commandId, transactionId: result.transactionId, phase: 'deleted' };
     },

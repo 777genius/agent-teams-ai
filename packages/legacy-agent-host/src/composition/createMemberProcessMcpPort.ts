@@ -7,7 +7,7 @@ import type { WindowsRegisteredProcessPort } from '../owned-process/retainedServ
 /** Private original member capability; input PID never selects a runtime/member/root. */
 export function createMemberProcessMcpPort(options: {
   entry: MemberEntry;
-  native?: Pick<RegisteredProcessNative, 'observe' | 'signal'>;
+  native?: Pick<RegisteredProcessNative, 'observe' | 'signal' | 'acknowledgeAbsence'>;
   windows?: WindowsRegisteredProcessPort;
   assertCurrent(): void;
   assertAllocatedCurrent?(): void;
@@ -55,6 +55,10 @@ export function createMemberProcessMcpPort(options: {
               },
               observe: options.native.observe,
               signal: options.native.signal,
+              acknowledgeAbsence(capture) {
+                assertCurrent();
+                options.native!.acknowledgeAbsence?.(capture);
+              },
             },
           }
         : {}),

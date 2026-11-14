@@ -1970,6 +1970,38 @@ describe('cliInstallerSlice', () => {
   });
 
   describe('Codex runtime status invalidation', () => {
+    it.each(['runtime invalidation', 'provider refresh'] as const)(
+      'preserves the installed and published runtime when %s fails after installation',
+      async (failedStep) => {
+        const status: CodexRuntimeStatus = {
+          installed: true, source: 'captured-host', sourceRevision: 'b'.repeat(64),
+          version: '0.169.0', latestVersion: '0.169.0', updateAvailable: false, state: 'ready',
+          progress: { phase: 'ready', percent: 100, detail: 'Codex is ready for new launches.' },
+        };
+        const refreshError = new Error('TEST original status refresh unavailable');
+        vi.mocked(api.codexRuntime.install).mockResolvedValueOnce(status);
+        if (failedStep === 'runtime invalidation') {
+          vi.mocked(api.codexRuntime.invalidateStatus).mockRejectedValueOnce(refreshError);
+        } else {
+          vi.mocked(api.codexRuntime.invalidateStatus).mockResolvedValueOnce(undefined);
+          vi.mocked(api.cliInstaller.invalidateStatus).mockRejectedValueOnce(refreshError);
+        }
+
+        await useStore.getState().installCodexRuntime();
+
+        expect(useStore.getState().codexRuntimeStatus).toEqual(status);
+        expect(useStore.getState().codexRuntimeStatusLoading).toBe(false);
+        expect(useStore.getState().codexRuntimeError).toBe(refreshError.message);
+        expect(api.codexRuntime.install).toHaveBeenCalledTimes(1);
+        expect(api.codexRuntime.invalidateStatus).toHaveBeenCalledTimes(1);
+        expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
+        expect(posthogMocks.capturePostHogEvent.mock.calls.filter(([event]) => event === 'runtime_setup:install_end'))
+          .toEqual([['runtime_setup:install_end', expect.objectContaining({
+            runtime: 'codex', success: true, source: 'unknown', error_class: 'none',
+          })]]);
+      }
+    );
+
     it('keeps an installed but unselected runtime failed without reporting success or refreshing another source', async () => {
       const status: CodexRuntimeStatus = {
         installed: true, source: 'app-managed', version: '0.169.0', latestVersion: '0.169.0',
@@ -1980,6 +2012,7 @@ describe('cliInstallerSlice', () => {
       await useStore.getState().installCodexRuntime();
       expect(useStore.getState().codexRuntimeStatus).toEqual(status);
       expect(useStore.getState().codexRuntimeStatusLoading).toBe(false);
+      expect(useStore.getState().codexRuntimeError).toBe(status.error);
       expect(api.codexRuntime.invalidateStatus).not.toHaveBeenCalled();
       expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
       expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith('runtime_setup:install_end',
@@ -1994,6 +2027,10 @@ describe('cliInstallerSlice', () => {
         codexRuntimeStatus: { state: 'failed', progress: { phase: 'failed' } },
       });
       expect(api.codexRuntime.invalidateStatus).not.toHaveBeenCalled();
+      expect(posthogMocks.capturePostHogEvent.mock.calls.filter(([event]) => event === 'runtime_setup:install_end'))
+        .toEqual([['runtime_setup:install_end', expect.objectContaining({
+          runtime: 'codex', success: false, source: 'unknown',
+        })]]);
     });
 
     it('retires a pending native read and publishes only the status fetched after invalidation', async () => {

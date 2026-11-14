@@ -158,6 +158,13 @@ export function createQualifiedLinuxProcessApi(artifact: {
           ? observed as ProcessObservation : 'unknown';
       } catch { return 'unknown'; }
     },
+    acknowledgeAbsence(capture: RegisteredProcessCapture): void {
+      assertCurrent();
+      warm?.acknowledgeAbsence(capture);
+    },
+    releaseTeam(binding: Pick<RegistrarBinding, 'backendId' | 'teamId'>): boolean {
+      return warm?.releaseTeam(binding) ?? true;
+    },
     signal(capture: RegisteredProcessCapture): 'accepted' | 'refused' {
       assertCurrent();
       if (capture.version === 4) return warm ? warm.signal(capture) : 'refused';

@@ -18,7 +18,7 @@ export function createHostTeamLifecycleComposition(options: {
   teams: Map<string, HostedTeam>;
   runtime(): Pick<RuntimeTeamCoordinator, 'lifecyclePorts'> | undefined;
   importer(): Pick<FileStoppedTeamImport, 'publication'> | undefined;
-  processCustody?: Pick<NonNullable<ProcessCustody>, 'observe'>;
+  processCustody?: Pick<NonNullable<ProcessCustody>, 'observe' | 'releaseTeam'>;
   windows?: Omit<WindowsRegisteredProcessPort, 'prepareCapture'>;
   assertCurrent(): void;
   assertWriter(): void;
@@ -82,6 +82,10 @@ export function createHostTeamLifecycleComposition(options: {
       assertReferencesReleased(teamId) {
         options.assertCurrent();
         processCommands(teamId).assertReleased();
+      },
+      releasePurgedReferences(teamId) {
+        // Physical deletion is already durable. Uncertain cleanup retains custody, not a new purge.
+        options.processCustody?.releaseTeam?.({ backendId: profile.owner.ownerId, teamId });
       },
       onPurged(teamId) {
         const team = teams.get(teamId);

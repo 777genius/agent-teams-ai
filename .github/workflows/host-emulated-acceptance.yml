@@ -752,7 +752,7 @@ jobs:
 
   offline-desktop:
     name: Offline Host Desktop
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    if: ${{ always() && !cancelled() && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) }}
     needs: offline-desktop-scenario
     runs-on: ubuntu-latest
     timeout-minutes: 5

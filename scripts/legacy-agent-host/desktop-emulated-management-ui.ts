@@ -54,6 +54,15 @@ export async function runDesktopEmulatedManagementUi(
     step: value => steps.push({ monotonicMs: Math.round(performance.now()), ...value }) });
   const peerLog = async () => (await readFile(join(fixture.emulatedManagement.peerRoot, 'native-effects.ndjson'), 'utf8'))
     .trim().split('\n').filter(Boolean).map(line => record(JSON.parse(line)));
+  const waitOriginal = async <T>(read: () => Promise<T>, ready: (value: T) => boolean, deadline: number, label: string) => {
+    for (;;) {
+      assert.ok(performance.now() < deadline, label + '; original action is never repeated');
+      const value = await read();
+      assert.ok(performance.now() < deadline, label + '; original observation exceeded its deadline');
+      if (ready(value)) return value;
+      await new Promise<void>(resolve => setTimeout(resolve, 100));
+    }
+  };
   const teamName = 'test-emulated-model-effort';
   const page = '[data-testid="create-team-page"]';
   await openOriginalCreateForm(cdp, ui, join(fixture.root, 'workspace'), teamName);
@@ -145,16 +154,38 @@ export async function runDesktopEmulatedManagementUi(
   await ui.scrollTo(`${oauthRow} button`, 'original OAuth connection', 'Connect');
   await ui.click(`${oauthRow} button`, 'open original OAuth form', 'Connect');
   await ui.waitRead(`Boolean(document.querySelector('${oauthRow} form button[type="submit"]'))`, 'original OAuth submit');
-  await ui.click(`${oauthRow} form button[type="submit"]`, 'start TEST OAuth through original form');
-  await ui.waitRead(`Boolean(document.querySelector('${oauthRow} input[aria-label="Authorization code"]'))`, 'original waiting-for-code UI');
-  proof.oauthWaitingScreenshot = await screenshot('ui-emulated-oauth-waiting.png');
-  await ui.click(`${oauthRow} form button`, 'cancel original pending OAuth once', 'Cancel');
-  await ui.waitRead(`!document.querySelector('${oauthRow} form')`, 'original OAuth cancellation settles');
-  assert.deepEqual(await json(authPath), {}, 'cancelled OAuth never writes a credential');
   const commandsDirectory = join(fixture.root, 'hoststore/management-commands');
-  const commands = await Promise.all((await readdir(commandsDirectory)).filter(name => name.endsWith('.json'))
-    .map(name => json(join(commandsDirectory, name))));
-  const oauth = commands.filter(row => row.kind === 'oauth');
+  const oauthCommands = async () => (await Promise.all((await readdir(commandsDirectory)).filter(name => name.endsWith('.json'))
+    .map(name => json(join(commandsDirectory, name))))).filter(row => row.kind === 'oauth');
+  const openedRecords = async () => (await readFile(join(fixture.root, 'ui-emulated-external-open.ndjson'), 'utf8')
+    .catch((error: unknown) => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return '';
+      throw error;
+    })).trim().split('\n').filter(Boolean).map(line => record(JSON.parse(line)));
+  const openingDeadline = performance.now() + 30_000;
+  await ui.click(`${oauthRow} form button[type="submit"]`, 'start TEST OAuth through original form');
+  await ui.waitRead(`Boolean(document.querySelector('${oauthRow} input[aria-label="Authorization code"]'))`, 'original waiting-for-code UI', Math.max(1, openingDeadline - performance.now()));
+  const pendingOAuth = await waitOriginal(async () => {
+    const oauth = await oauthCommands(), opened = await openedRecords();
+    assert.ok(oauth.length <= 1, 'At most one original OAuth command');
+    assert.ok(opened.length <= 1, 'At most one original TEST browser dispatch');
+    return { oauth, opened };
+  }, value => value.oauth.length === 1 && value.opened.length === 1, openingDeadline, 'original OAuth browser dispatch');
+  const originalOAuth = pendingOAuth.oauth[0]!;
+  assert.equal(typeof originalOAuth.commandId, 'string');
+  assert.equal(originalOAuth.phase, 'waiting-for-code'); assert.equal(originalOAuth.resourceHeld, true);
+  assert.deepEqual(pendingOAuth.opened, [{ accepted: true, peerOnly: true }]);
+  proof.oauthWaitingScreenshot = await screenshot('ui-emulated-oauth-waiting.png');
+  const cancellationDeadline = performance.now() + 30_000;
+  await ui.click(`${oauthRow} form button`, 'cancel original pending OAuth once', 'Cancel');
+  await ui.waitRead(`!document.querySelector('${oauthRow} form')`, 'original OAuth form closes', Math.max(1, cancellationDeadline - performance.now()));
+  const oauth = await waitOriginal(async () => {
+    const current = await oauthCommands();
+    assert.equal(current.length, 1);
+    assert.equal(current[0]!.commandId, originalOAuth.commandId, 'Observe the original OAuth cancellation only');
+    return current;
+  }, value => value[0]!.phase === 'cancelled' && value[0]!.resourceHeld === false, cancellationDeadline, 'original OAuth cancellation settles');
+  assert.deepEqual(await json(authPath), {}, 'cancelled OAuth never writes a credential');
   assert.equal(oauth.length, 1); assert.equal(oauth[0]!.phase, 'cancelled');
   assert.equal(oauth[0]!.resourceHeld, false);
   const effects = await peerLog();
@@ -162,7 +193,7 @@ export async function runDesktopEmulatedManagementUi(
   assert.equal(effects.filter(row => row.event === 'credential-written' && row.providerId === 'TEST-api').length, 1);
   assert.equal(effects.filter(row => row.event === 'credential-forgotten' && row.providerId === 'TEST-api').length, 1);
   assert.equal(effects.filter(row => row.event === 'credential-written' && row.providerId === 'TEST-oauth-code').length, 0);
-  const opened = (await readFile(join(fixture.root, 'ui-emulated-external-open.ndjson'), 'utf8')).trim().split('\n').map(line => JSON.parse(line));
+  const opened = await openedRecords();
   assert.deepEqual(opened, [{ accepted: true, peerOnly: true }]);
   proof.credentialEffects = effects.filter(row => ['authorize', 'credential-written', 'credential-forgotten'].includes(String(row.event)));
   proof.oauthCancellation = { phase: oauth[0]!.phase, resourceHeld: false, credentialAbsent: true, testOpenerCount: opened.length };

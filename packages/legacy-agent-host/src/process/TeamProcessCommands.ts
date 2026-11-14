@@ -466,8 +466,13 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
           };
           persist(completed);
           options.invalidate();
+          if (completed.capture?.version === 4) options.native?.acknowledgeAbsence?.(completed.capture);
           return completed;
         }
+        // A saved completion may have outlived a failed acknowledgement; retry no signal or policy write.
+        if (receipt.operation === 'terminate' && receipt.state.phase === 'completed' &&
+            receipt.state.native === 'observed-absent' && receipt.capture?.version === 4)
+          options.native?.acknowledgeAbsence?.(receipt.capture);
         return structuredClone(receipt);
       });
     },

@@ -119,6 +119,8 @@ async function providerScenario(sandbox: string, broker: string, actor: string,
       assert.ok(row); assert.equal(row.pid, service.pid); assert.equal(row.observation, 'same-live'); assert.equal(row.canTerminate, true);
     }
     for (const [index, service] of services.entries()) {
+      const originalRow = rows.find(value => value.processRef === service.processRef);
+      assert.ok(originalRow, 'Select the original live registration before its one Stop');
       const commandId = `TEST-stop-${index}`, stopDeadline = performance.now() + 10000;
       let receipt = object(await rpc('team.process.terminate', commandId, { processRef: String(service.processRef) }));
       for (;;) {
@@ -131,7 +133,10 @@ async function providerScenario(sandbox: string, broker: string, actor: string,
       assert.equal(object(receipt.state).signalAccepted, 'unknown');
       assert.equal(await timeout(witnesses[index + 1]!.exit), 0);
       rows = await list(`TEST-after-stop-${index}`);
-      assert.equal(rows.find(value => value.processRef === service.processRef)!.observation, 'absent');
+      // Stop updates metadata and therefore its content-addressed processRef, not the registration ID.
+      const stopped = rows.filter(value => value.id === originalRow.id);
+      assert.equal(stopped.length, 1); assert.equal(stopped[0]!.pid, service.pid);
+      assert.equal(stopped[0]!.observation, 'absent'); assert.equal(stopped[0]!.canTerminate, false);
       if (index === 0) {
         const neighbor = rows.find(value => value.processRef === services[1]!.processRef)!;
         assert.equal(neighbor.observation, 'same-live'); assert.equal(neighbor.canTerminate, true);

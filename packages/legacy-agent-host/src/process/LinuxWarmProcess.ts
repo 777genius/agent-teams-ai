@@ -51,6 +51,9 @@ export function createLinuxWarmProcess(native: LinuxWarmNativeApi, assertCurrent
   const ownerInstance = randomUUID();
   const roots = new WeakMap<ChildProcess, Root>();
   const captures = new Map<string, Retained>();
+  const handles = new Set<Retained>();
+  let sweepCursor = handles.values();
+  let sweepTimer: ReturnType<typeof setTimeout> | undefined;
   const exact = (capture: RegisteredProcessCapture): Retained | undefined => {
     validateProcessCapture(capture);
     if (capture.version !== 4 || capture.ownerInstance !== ownerInstance) return undefined;
@@ -62,11 +65,29 @@ export function createLinuxWarmProcess(native: LinuxWarmNativeApi, assertCurrent
     if (!value.handle) return 'unknown';
     const state = native.observeWarm(value.handle);
     if (state === 'absent') {
-      // Keep finite terminal metadata, release the original descriptor only after native exit proof.
+      // Keep the terminal proof until its owner acknowledges it; only the descriptor is released here.
       native.closeWarm(value.handle); delete value.handle; value.absent = true;
+      handles.delete(value);
+      if (!handles.size && sweepTimer) { clearTimeout(sweepTimer); sweepTimer = undefined; }
       return 'absent';
     }
     return state === 'same-live' ? 'same-live' : 'unknown';
+  };
+  const scheduleSweep = () => {
+    if (sweepTimer || !handles.size) return;
+    sweepTimer = setTimeout(() => {
+      sweepTimer = undefined;
+      // A bounded round-robin scan also covers descendants whose provider root has exited.
+      // Unknown/failed native observations retain the original handle and its authority.
+      for (let left = Math.min(128, handles.size); left > 0; left--) {
+        let next = sweepCursor.next();
+        if (next.done) { sweepCursor = handles.values(); next = sweepCursor.next(); }
+        if (next.done) break;
+        try { assertCurrent(); observe(next.value); } catch { /* Retain the original on uncertainty. */ }
+      }
+      scheduleSweep();
+    }, 1000);
+    sweepTimer.unref();
   };
   return {
     captureRoot(child: ChildProcess, current: () => boolean) {
@@ -107,8 +128,11 @@ export function createLinuxWarmProcess(native: LinuxWarmNativeApi, assertCurrent
               admission: 'owner-pidfd-v1', ownerInstance, captureKey: randomUUID(),
               registrar: structuredClone(registrar), root: { ...root.identity }, target: selected.identity };
             validateProcessCapture(capture);
-            captures.set(capture.captureKey, { capture: structuredClone(capture), root, handle: selected.handle, absent: false });
+            const value = { capture: structuredClone(capture), root, handle: selected.handle, absent: false };
+            captures.set(capture.captureKey, value);
+            handles.add(value);
             saved = true;
+            scheduleSweep();
             return capture;
           } finally { if (!saved) native.closeWarm(selected.handle); }
         },
@@ -125,6 +149,25 @@ export function createLinuxWarmProcess(native: LinuxWarmNativeApi, assertCurrent
       assertCurrent();
       const selected = exact(capture);
       return selected ? observe(selected) : 'unknown';
+    },
+    /** Only the durable owner of an exact completed Stop may acknowledge this terminal proof. */
+    acknowledgeAbsence(capture: RegisteredProcessCapture): void {
+      assertCurrent();
+      const selected = exact(capture);
+      if (selected?.absent && capture.version === 4) captures.delete(capture.captureKey);
+    },
+    /** Called only after the original Team's durable purge; never discards live/unknown custody. */
+    releaseTeam(binding: Pick<RegistrarBinding, 'backendId' | 'teamId'>): boolean {
+      try {
+        assertCurrent();
+        const selected = [...captures.values()].filter(({ capture }) =>
+          capture.registrar.backendId === binding.backendId && capture.registrar.teamId === binding.teamId);
+        // Closing proven-absent descriptors is safe, but retire no metadata unless every proof succeeds.
+        for (const value of selected) if (observe(value) !== 'absent') return false;
+        assertCurrent();
+        for (const value of selected) captures.delete(value.capture.captureKey);
+        return true;
+      } catch { return false; }
     },
     signal(capture: RegisteredProcessCapture): 'accepted' | 'refused' {
       assertCurrent();

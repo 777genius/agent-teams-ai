@@ -23,7 +23,7 @@ export function createTeamProcessComposition(options: {
   profile: Pick<TeamHostProfile, 'owner' | 'principalId'>;
   teams: ReadonlyMap<string, HostedTeam>;
   assertCurrent(): void;
-  native?: Pick<RegisteredProcessNative, 'observe' | 'signal'>;
+  native?: Pick<RegisteredProcessNative, 'observe' | 'signal' | 'acknowledgeAbsence'>;
   windows?: WindowsRegisteredProcessPort;
 }) {
   return {
@@ -66,6 +66,10 @@ export function createTeamProcessComposition(options: {
                   signal(capture) {
                     options.assertCurrent();
                     return options.native!.signal(capture);
+                  },
+                  acknowledgeAbsence(capture) {
+                    options.assertCurrent();
+                    options.native!.acknowledgeAbsence?.(capture);
                   },
                 },
               }

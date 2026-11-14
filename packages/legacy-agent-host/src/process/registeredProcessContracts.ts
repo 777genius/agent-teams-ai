@@ -55,6 +55,8 @@ export interface RegisteredProcessNative {
   observe(capture: RegisteredProcessCapture): ProcessObservation;
   /** Synchronous; caller must persist requested before entry. Throw means requested-unknown. */
   signal(capture: RegisteredProcessCapture): 'accepted' | 'refused';
+  /** Retire warm terminal custody only after this original capture's completed absence receipt is durable. */
+  acknowledgeAbsence?(capture: RegisteredProcessCapture): void;
 }
 /** Private asynchronous Windows facet; captures select only this member's original provider root. */
 export type WindowsProcessNative = Pick<WindowsRegisteredProcessPort, 'prepareControl' | 'run' | 'lookup' | 'query'> & {

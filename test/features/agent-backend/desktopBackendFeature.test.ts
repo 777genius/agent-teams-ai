@@ -78,7 +78,7 @@ async function selected(value: unknown): Promise<DesktopBackendDescriptorSelecti
   await writeFile(path, bytes, { mode: 0o600 });
   return { path, sha256: createHash('sha256').update(bytes).digest('hex') };
 }
-async function fixture(blockStartup = false): Promise<{
+async function fixture(startup: { block?: boolean; markerDelayMs?: number; closeBeforeMarker?: boolean } = {}): Promise<{
   descriptor: DesktopBackendDescriptor;
   bindingDirectory: string;
 }> {
@@ -87,8 +87,10 @@ async function fixture(blockStartup = false): Promise<{
     const storageRoot = await root();
     const hostEntry = join(storageRoot, 'host.mts');
     const source = `import { writeFileSync, appendFileSync, existsSync } from 'node:fs';
+      if (${startup.markerDelayMs ?? 0}) await new Promise(resolve=>setTimeout(resolve,${startup.markerDelayMs ?? 0}));
+      if (${startup.closeBeforeMarker ?? false}) process.exit(0);
       writeFileSync(${JSON.stringify(join(storageRoot, 'started'))}, 'started');
-      if (${blockStartup}) await new Promise(resolve=>{
+      if (${startup.block ?? false}) await new Promise(resolve=>{
         const timer=setInterval(()=>{if(existsSync(${JSON.stringify(join(storageRoot, 'release-startup'))})){clearInterval(timer);resolve();}},10);
       });
       const { createHostServer } = await import(${JSON.stringify(serverUrl)});
@@ -219,6 +221,30 @@ function request(handleId: string, commandId: string): BackendOperationRequest {
     operation: 'task.create',
     payload: { subject: 'Task' },
   };
+}
+
+async function waitForStartupMarker(storageRoot: string, pending: Promise<unknown>, deadline: number): Promise<void> {
+  let finished = false;
+  const terminal = pending.then(
+    () => { throw new Error('TEST Host operation completed before its startup marker'); },
+    () => { throw new Error('TEST Host operation rejected before its startup marker'); }
+  );
+  const marker = async () => {
+    while (!finished) {
+      const remaining = deadline - performance.now();
+      if (remaining <= 0) throw new Error('TEST original Host startup deadline expired');
+      try {
+        await access(join(storageRoot, 'started'));
+        if (performance.now() >= deadline) throw new Error('TEST original Host startup deadline expired');
+        return;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, Math.min(25, remaining)));
+    }
+  };
+  try { await Promise.race([terminal, marker()]); }
+  finally { finished = true; }
 }
 
 it('leaves unconfigured mode empty and initializes configured handles without starting either host', async () => {
@@ -847,7 +873,7 @@ it('HTTP discovery uses the same captured context and rejects client context ove
 });
 
 it('rechecks captured context after lazy host startup before dispatching a finite command', async () => {
-  const setup = await fixture(true);
+  const setup = await fixture({ block: true, markerDelayMs: 1100 });
   const desktop = feature({
     descriptor: await selected(setup.descriptor),
     bindingDirectory: setup.bindingDirectory,
@@ -881,6 +907,9 @@ it('rechecks captured context after lazy host startup before dispatching a finit
   try {
     process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = '1';
     let current = true;
+    // One original budget from the selected fixture, including validation and child startup.
+    const startedAt = performance.now();
+    const startupDeadline = startedAt + setup.descriptor.owners[0]!.profile.startupTimeoutMs;
     const pending = desktop.facade.invoke(request('opaque-A', 'stale-during-start'), {
       isCurrent: () => current,
     });
@@ -897,9 +926,8 @@ it('rechecks captured context after lazy host startup before dispatching a finit
         pendingObservation = { state: 'resolved-unprojected' };
       }
     }, () => { pendingObservation = { state: 'rejected' }; });
-    await vi.waitFor(async () => {
-      await access(join(setup.descriptor.owners[0].storageRoot, 'started'));
-    });
+    await waitForStartupMarker(setup.descriptor.owners[0]!.storageRoot, pending, startupDeadline);
+    expect(performance.now() - startedAt).toBeGreaterThan(1000);
     current = false;
     await writeFile(join(setup.descriptor.owners[0].storageRoot, 'release-startup'), 'release');
     expect(await pending).toEqual({ ok: false, code: 'forbidden', outcome: 'not-dispatched' });
@@ -920,6 +948,20 @@ it('rechecks captured context after lazy host startup before dispatching a finit
       // A passive observation cannot replace the original test result.
     }
   }
+});
+
+it('rejects a lazy startup marker when the original selected Host closes first', async () => {
+  const setup = await fixture({ closeBeforeMarker: true });
+  const desktop = feature({ descriptor: await selected(setup.descriptor), bindingDirectory: setup.bindingDirectory });
+  await desktop.initialize();
+  const owner = setup.descriptor.owners[0]!;
+  const deadline = performance.now() + owner.profile.startupTimeoutMs;
+  const pending = desktop.facade.invoke(request('opaque-A', 'closed-before-start'), { isCurrent: () => true });
+  await expect(waitForStartupMarker(owner.storageRoot, pending, deadline))
+    .rejects.toThrow('TEST Host operation completed before its startup marker');
+  expect(await pending).toMatchObject({ ok: false });
+  for (const file of ['started', 'host-created', 'effects'])
+    await expect(access(join(owner.storageRoot, file))).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
 it('native health starts only the granted default owner and reports actual handshake without provider or Team work', async () => {

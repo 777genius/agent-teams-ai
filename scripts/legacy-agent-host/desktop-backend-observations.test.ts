@@ -93,7 +93,7 @@ test('TEST management admission retains only the exact direct detached Host peer
   const peer = { command: '/TEST/node /TEST/peer.ts serve --hostname 127.0.0.1 --port 12345', observedPeerPids: [] as number[] };
   let peerCommand = peer.command, peerGroup = 4200;
   t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[]) => {
-    if (file === '/usr/bin/lsof') return process.platform === 'linux'
+    if (file === (process.platform === 'linux' ? '/usr/bin/lsof' : '/usr/sbin/lsof')) return process.platform === 'linux'
       ? 'p4100\nf61\ntIPv4\nD0xabcd\ni12345\nPTCP\nTST=LISTEN\nn127.0.0.1:9222\n' : '4100\n';
     assert.equal(file, '/bin/ps');
     if (args[0] === '-ax') return `4100 4000 4100\n4101 4100 4100\n4200 4101 ${peerGroup}\n`;

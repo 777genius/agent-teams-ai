@@ -88,11 +88,20 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   assert.equal(record(saved.savedSettings).prompt, 'TEST_UI_BOOT');
   assert.equal(record(saved.savedSettings).model, fixture.emulatedRuntime.savedModel);
   assert.equal(record(saved.savedSettings).skipPermissions, false);
-  const session = async () => {
-    const all = (await readDesktopNativeStopSessions(fixture.root)).filter(row => record(row.binding).runId === capture.launchId);
-    assert.equal(all.length, 1); return all[0]!;
+  const pendingSession = async () => {
+    const all = (await readDesktopNativeStopSessions(fixture.root).catch((error: unknown) => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw error;
+    })).filter(row => record(row.binding).runId === capture.launchId);
+    assert.ok(all.length <= 1, 'At most one original Runtime session per launch capture');
+    return all[0];
   };
-  await poll(session, value => array(value.inputs).length === 1 && array(value.inputs)[0]!.terminal === 'succeeded', 'original boot prompt completes once');
+  await poll(pendingSession, value => Boolean(value && array(value.inputs).length === 1 && array(value.inputs)[0]!.terminal === 'succeeded'), 'original boot prompt completes once');
+  const session = async () => {
+    const value = await pendingSession();
+    assert.ok(value, 'Previously observed original Runtime session remains present');
+    return value;
+  };
   await ui.click('button[aria-label^="alice,"]', 'open original lead conversation');
   await visible('TEST boot ready'); proof.launchScreenshot = await screenshot('launch'); proof.capture = capture;
   const observeSent = async (before: Set<unknown>, text: string) => {

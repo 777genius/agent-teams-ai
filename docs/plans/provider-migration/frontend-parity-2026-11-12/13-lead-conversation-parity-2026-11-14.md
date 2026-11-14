@@ -420,3 +420,44 @@ only that final empty line from `readTeamConversation.ts`,
 internal spacing, source caps, assertions or command coverage. Preserve the
 previous runtime/type receipts and record this source-only difference in the
 publication freeze; it is not a new execution result.
+
+## Codex intermediate replies follow the current frontend's complete-item contract
+
+Current-main review on 2026-11-14 resolves frontend
+`7408b30b34d2ff280a429766fdbb51976d899af8`'s
+[runtime lock](https://github.com/777genius/agent-teams-ai/blob/7408b30b34d2ff280a429766fdbb51976d899af8/runtime.lock.json)
+to `v0.0.160`, whose original orchestrator commit is
+`e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`. Its
+[app-server mapper](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/codexNative/appServerRunner.ts)
+buffers `item/agentMessage/delta` without publishing assistant text. It emits
+text on `item/completed`, before the enclosing turn completes, or flushes
+unfinished text at the original turn terminal. Its
+[exec JSONL mapper](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/codexNative/jsonlMapper.ts)
+also publishes assistant text only for completed agent-message items.
+The extracted Codex provider preserves that behavior.
+
+The finite Codex Desktop peer instead sent only a delta and waited for a
+release file that the UI writes after seeing intermediate text. That fixture
+cycle cannot complete under the original contract. A controlled child-peer
+protocol check reproduced the missing completed intermediate item before
+the release gate; this is protocol evidence, not an Electron failure receipt.
+
+Correct only the finite Codex peer: complete the intermediate agent-message
+item while keeping its original turn active; after the existing release gate,
+complete a second item with a distinct original item ID in that same turn,
+then emit the original usage and turn terminal. A held turn also completes
+its intermediate item before waiting for the original interrupt. Continue
+emitting deltas before their item completions, so the original buffering path
+remains exercised. Do not reuse a completed item ID, synthesize a second turn,
+publish a premature terminal, or replace ordinary text with a Team tool call.
+
+This qualifies obligation 18's finite-peer wording: keep every existing
+Desktop visibility, nonterminal-before-release, one release, final reply,
+interaction, restored history and cleanup assertion. For Codex this journey
+proves intermediate completed messages before the turn terminal. It does not
+prove token streaming or replacement of one completed message. Obligation 2
+continues to apply to accepted snapshot/complete events with the same message
+identity; it does not require a provider to emit snapshots its original
+frontend did not expose. Provider source, archives and protocol bounds stay
+unchanged. Fresh exact-source Desktop evidence remains required before
+claiming that journey passes.

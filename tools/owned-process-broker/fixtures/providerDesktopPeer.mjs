@@ -169,13 +169,15 @@ const delta = (turn, text) => {
   assert.equal(active, turn); turn.text += text;
   notify('item/agentMessage/delta', { ...fields(turn), delta: text });
 };
+const completeItem = (turn, text) => {
+  assert.equal(active, turn);
+  if (text.startsWith(turn.text)) delta(turn, text.slice(turn.text.length));
+  notify('item/completed', { threadId, turnId: turn.id,
+    item: { id: turn.itemId, type: 'agentMessage', text } });
+};
 const finish = (turn, text, status = 'completed') => {
   assert.equal(active, turn); assert.equal(pending, undefined);
-  if (text !== undefined) {
-    if (text.startsWith(turn.text)) delta(turn, text.slice(turn.text.length));
-    notify('item/completed', { threadId, turnId: turn.id,
-      item: { id: turn.itemId, type: 'agentMessage', text } });
-  }
+  if (text !== undefined) completeItem(turn, text);
   notify('thread/tokenUsage/updated', { threadId, turnId: turn.id,
     tokenUsage: { last: { inputTokens: 120, cachedInputTokens: 0, outputTokens: 7 } } });
   notify('turn/completed', { threadId, turn: { id: turn.id, status } });
@@ -186,7 +188,9 @@ async function runTurn(turn) {
   if (marker === 'TEST_MODEL_PROBE' || marker === 'TEST_UI_BOOT')
     return finish(turn, marker === 'TEST_MODEL_PROBE' ? 'OK' : 'TEST boot ready');
   if (marker === 'TEST_UI_STREAM') {
-    delta(turn, 'TEST stream partial'); effect({ event: 'partial', turnId: turn.id });
+    // Original Codex exposes completed text items before the enclosing turn terminal.
+    completeItem(turn, 'TEST stream partial'); effect({ event: 'partial', turnId: turn.id });
+    turn.itemId += '-final'; turn.text = '';
     const deadline = Date.now() + 60_000;
     while (active === turn && !existsSync(join(root, 'release-stream'))) {
       assert.ok(Date.now() < deadline, 'Bounded TEST stream gate');
@@ -200,7 +204,7 @@ async function runTurn(turn) {
     return;
   }
   if (marker === 'TEST_UI_HOLD' || marker === 'TEST_UI_SCHEDULE_HOLD') {
-    delta(turn, 'TEST held partial'); return;
+    completeItem(turn, 'TEST held partial'); return;
   }
   if (marker === 'TEST_UI_SCHEDULE_DONE') {
     await scheduledCompletion(); return finish(turn, 'TEST scheduled complete');

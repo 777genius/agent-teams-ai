@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { createQualifiedDarwinProcessApi } from '../process/DarwinRegisteredProcess.js';
 import { createQualifiedLinuxProcessApi } from '../process/LinuxRegisteredProcess.js';
 import { readPackagedLinuxProcessArtifact, readPackagedProcessArtifact } from '../process/readPackagedProcessArtifact.js';
-import type { RegisteredProcessNative, RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
+import type { RegistrarBinding, RegisteredProcessNative, RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
 
 /** Private captured packaging selection only. No renderer/IPC/env/argv selection. */
 const posixCustody = z
@@ -20,7 +20,11 @@ export const processCustodyProfileSchema = z.union([
   posixCustody,
   z.object({ kind: z.literal('main-windows-v1') }).strict(),
 ]);
-export type ProcessCustody = Required<RegisteredProcessRootSource> & Pick<RegisteredProcessNative, 'observe' | 'signal'>;
+export type ProcessCustody = Required<RegisteredProcessRootSource> &
+  Pick<RegisteredProcessNative, 'observe' | 'signal' | 'acknowledgeAbsence'> & {
+    /** Trusted lifecycle cleanup after the exact Team's durable purge. */
+    releaseTeam?(binding: Pick<RegistrarBinding, 'backendId' | 'teamId'>): boolean;
+  };
 /** Loads the exact prebuilt tuple once. Absence never upgrades an unqualified PID. */
 export function createProcessCustody(
   selection: z.infer<typeof processCustodyProfileSchema> | undefined
