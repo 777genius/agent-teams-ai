@@ -11,6 +11,7 @@ import { desktopActiveMetadata, desktopMetadataProcess, desktopMetadataProfileHa
 import type { DesktopNativeHostSnapshot } from './desktop-opencode-metadata-lineage.ts';
 import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import type { UiCdpPort } from './desktop-team-ui-smoke.ts';
+import type { ConfiguredOpenCodeLaunchPreparation } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model-probe.ts';
 export {
   readNativeProviderArtifact as readDesktopNativeProviderArtifact,
   verifyNativeProviderArtifact as verifyDesktopNativeStopArtifact,
@@ -27,12 +28,15 @@ export async function prepareDesktopNativeStop(options: {
   group: number;
   evidence: Record<string, unknown>;
   executable: string;
-  provider?: 'opencode';
+  openCode?: { model: { configuredLaunchPreparation?: ConfiguredOpenCodeLaunchPreparation;
+    probes: readonly { requestedModel?: string }[] } | undefined };
   manualPermissions?: boolean;
   returnAt?: 'opening';
 }) {
   const { cdp, fixture, group, evidence, executable } = options;
   assert.ok(executable);
+  const openCodeModel = options.openCode?.model, preparation = openCodeModel?.configuredLaunchPreparation;
+  if (options.openCode) assert.ok(preparation, 'the selected OpenCode setup requires its original preparation port');
   const invokeSetup = async (operation: string, commandId: string, payload: unknown) => {
     assertOwnedCdpListener(group);
     return object(
@@ -41,8 +45,8 @@ export async function prepareDesktopNativeStop(options: {
       )
     );
   };
-  if (options.provider === 'opencode') assert.ok(fixture.root);
-  const globalMetadata = options.provider === 'opencode'
+  if (options.openCode) assert.ok(fixture.root);
+  const globalMetadata = options.openCode
     ? await captureDesktopOpenCodeGlobalMetadata(cdp, { ...fixture, root: fixture.root! }, group,
       () => assertOwnedCdpListener(group)) : undefined;
   const read = await invokeSetup('team.launch.read', 'TEST-setup-read', {});
@@ -72,12 +76,12 @@ export async function prepareDesktopNativeStop(options: {
   const configuration = {
     members: memberIds.map((memberId) => ({
       memberId,
-      model: options.provider === 'opencode' ? 'test-local/TEST-model' : 'claude-opus-4-6',
-      ...(options.provider === 'opencode' ? {} : { effort: 'medium', fastMode: false, context: 'model-default' }),
+      model: options.openCode ? 'test-local/TEST-model' : 'claude-opus-4-6',
+      ...(options.openCode ? {} : { effort: 'medium', fastMode: false, context: 'model-default' }),
       permissions: options.manualPermissions ? 'manual' : 'bypass',
     })),
   };
-  if (options.provider === 'opencode') {
+  if (options.openCode) {
     assert.ok(fixture.root, 'the original Composer has an exact TEST workspace');
     assertOwnedCdpListener(group);
     const response = object(await cdp.evaluate(
@@ -122,14 +126,34 @@ export async function prepareDesktopNativeStop(options: {
     return { hostPid, nativeChildren: table.filter(row =>
       row.ppid === hostPid && command(row.pid).startsWith(executable)) };
   };
-  const readinessMs = options.provider === 'opencode' ? 180_000 : 45_000;
-  const start = await invokeSetup('team.launch.start', 'TEST-explicit-sandbox-setup-launch', {
-    launchId: selection.launchId,
-    rosterRevision: selection.rosterRevision,
-    configuration,
-  });
-  evidence.nativeLaunchResponse = start;
-  assert.equal(start.ok, true, `TEST configured launch response: ${JSON.stringify(start)}`);
+  const readinessMs = options.openCode ? 180_000 : 45_000;
+  const commandId = 'TEST-explicit-sandbox-setup-launch';
+  let disarm: (() => void) | undefined;
+  if (preparation) {
+    const { launchId, rosterRevision } = selection;
+    assert.ok(typeof launchId === 'string' && typeof rosterRevision === 'string');
+    assert.deepEqual(memberIds, ['alice-id']);
+    disarm = preparation.arm({ commandId, launchId,
+      rosterRevision, memberId, model: configuration.members[0]!.model });
+  }
+  let start: Record<string, unknown>;
+  try {
+    start = await invokeSetup('team.launch.start', commandId, {
+      launchId: selection.launchId,
+      rosterRevision: selection.rosterRevision,
+      configuration,
+    });
+    evidence.nativeLaunchResponse = start;
+    assert.equal(start.ok, true, `TEST configured launch response: ${JSON.stringify(start)}`);
+    if (preparation) {
+      assert.ok(openCodeModel);
+      assert.equal(preparation.consumed, 1);
+      assert.equal(openCodeModel.probes.length, 1);
+      assert.equal(openCodeModel.probes[0]!.requestedModel, 'TEST-model');
+      evidence.nativeConfiguredPreparation = { commandId, consumed: preparation.consumed,
+        probe: openCodeModel.probes[0] };
+    }
+  } finally { disarm?.(); }
   if (options.returnAt === 'opening') {
     assert.ok(fixture.root, 'exact TEST Runtime store for pending-open observation');
     const deadline = Date.now() + readinessMs;

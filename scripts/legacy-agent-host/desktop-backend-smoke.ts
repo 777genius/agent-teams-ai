@@ -382,7 +382,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         group,
         evidence,
         executable: openCodeLifecycleMode ? process.env.OPENCODE_V2_EMBEDDED_BUN! : process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
-        ...(openCodeLifecycleMode ? { provider: 'opencode' as const } : {}),
+        ...(openCodeLifecycleMode ? { openCode: { model: openCodeLifecycleModel } } : {}),
         manualPermissions: approvalUiMode,
         ...(quitScenario === 'pending-open' ? { returnAt: 'opening' as const } : {}),
       });
