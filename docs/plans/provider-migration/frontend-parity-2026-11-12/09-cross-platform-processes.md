@@ -4672,3 +4672,59 @@ All other executable statements and conditions remain byte-identical except for 
 Keep source at zero until this exact appendix is independently reviewed and published. Freeze source/diffs for all three variants with ten original/full final hashes, explicit old/new import declarations, and a finite inverse for the four local syntax categories. Independently verify that all original native custody additions and all out-of-scope bytes survive. Root remains the sole publisher and heavy-check owner.
 
 Root then runs the existing features lint gate and the canonical Main typecheck on the composed source. The published R34.1 and P11 §16 checks retain their separate evidence. No new unit case is needed for erased declarations or an equivalent local extraction; do not create a broad new test campaign. The next authorized ordinary CI runs provide actual whole-head results. This appendix does not rerun/cancel a workflow, change a live head, relax a warning/error policy, or qualify any native runtime acceptance.
+
+## 91. Keep the original process-stop selection type in the backend contract leaf
+
+### 91.1 Actual failure and the dependency that exposes it
+
+This is a two-path type-ownership repair for the existing strict scripts build after §89. The original two process-observer cases passed separately; that result does not qualify the scripts typecheck. Root's actual scripts typecheck on composed source `a390e771aaced8f7eacc0517b6b4b9b9b84dc380` failed with exactly `src/features/agent-backend/contracts/processes.ts(37,43): error TS2307: Cannot find module '@shared/types/team' or its corresponding type declarations.` The complete original log is immutable blob `d39bb0b96468029cb843c223bac7c7464d9791c3`; it is a compiler failure before a new native acceptance run.
+
+The source edge is concrete: the §89 `scripts/legacy-agent-host/desktop-native-process-ui.ts` imports the existing strict `readBackendProcesses` parser from `../../src/features/agent-backend/contracts/processes.ts` at line 13 and calls it at line 62. That contract module has no other import dependency; its line 37 aliases `ProcessStopSelection` to `import('@shared/types/team').CapturedTeamProcessStop`. The original shared declaration at `src/shared/types/team.ts:806–809` contains only `processRef: string` and `originalCommandId?: string`. Resolving this otherwise unrelated erased alias pulls in the shared Team type graph. The scripts project `tsconfig.legacy-agent-host-scripts.json` (`cc479baf31482568a34f7ec4971f45070437777d`) intentionally uses strict NodeNext/noEmit and has no UI aliases.
+
+The repair puts that existing two-field contract beside the process operations and parser that already own it. It does not change compiler resolution policy or copy the runtime parser into a fixture. The former §89 accepted/refused process observations, exact owner joins and native oracles remain separate and unchanged.
+
+### 91.2 Exact writable scope and current preimages
+
+The following two complete source blobs were freshly fetched from all three working variants. No third source, config, test or roster path is authorized by this appendix.
+
+| Existing writable path | Parent / native / qualification preimage | Planned delta |
+| --- | --- | --- |
+| `src/features/agent-backend/contracts/processes.ts` | `41dd6a8e480b98e85922312fbc4e95089b58f609` on all three | Replace its one erased type alias with the exact original two-field exported interface named `ProcessStopSelection`. |
+| `src/shared/types/team.ts` | `a2620b67a93bc82c78124f4b6ea0f55ed72ee01a` on all three | Replace its original four-line `CapturedTeamProcessStop` interface with a type-only re-export of `ProcessStopSelection` under that same original public name. |
+
+The pinned source-read heads are parent `bd26037a23069c8cbdd8fbbbe85af5ac57c1c0b3`, native `29fc2ba25ad192a22a63d1898d380898218e2023`, and qualification `ea4d9df8ccc76afae978569ae8717098e84486f4`. Publication must recheck these exact two blob preimages even if unrelated working changes advance. Current P09 prefix is exactly `00bc1c937e5d1eaae46234ed3b72749fa3ca811b`; this appendix does not replace any §90 text.
+
+### 91.3 One canonical declaration, two unchanged exported names
+
+At the existing alias location in `contracts/processes.ts`, retain the preceding original comment and introduce only:
+
+```ts
+export interface ProcessStopSelection {
+  processRef: string;
+  originalCommandId?: string;
+}
+```
+
+At the existing shared declaration location, use the ordinary existing feature-alias resolution available to the UI/Main projects, with a type-only re-export:
+
+```ts
+export type {
+  ProcessStopSelection as CapturedTeamProcessStop,
+} from '@features/agent-backend/contracts/processes';
+```
+
+There is one canonical field declaration. Its names, string types, required/optional distinction and mutability are unchanged; no index signature, readonly modifier, default or widening is added. Both original exported names remain available. The scripts graph now terminates at the backend contract leaf instead of resolving Team/UI types. The shared side already uses feature contract imports and exports; this reverse type-only edge introduces no runtime import or new file.
+
+The bounded repository-wide TypeScript/JavaScript usage census found only the original declaration/alias, the renderer's type-only import and `captured?: ProcessStopSelection` parameter in `src/features/agent-backend/renderer/createHostProcessControls.ts`, and `captured?: import('./team').CapturedTeamProcessStop` in `src/shared/types/api.ts:590`. There is no internal use of the old name inside `team.ts`, so a re-export is sufficient. No second declaration or module augmentation of either type or these two modules was found in repository source/tests/scripts/packages. This is the compatibility basis for replacing the former interface with a re-export; it is not an assertion about hypothetical external declaration-merging clients.
+
+### 91.4 Runtime and acceptance boundaries
+
+Every byte of `processes.ts` outside that one type declaration and every byte of `team.ts` outside its replaced declaration must remain unchanged. In particular, retain all original process record fields, `isProcessRef`, `assertOriginalProcessStop`, `readBackendProcess`, `readBackendProcesses`, the 1024-row bound, duplicate-identity refusal, capability checks and original stop selection/recovery logic. The renderer consumer and shared API parameter are read-only source references, not edit targets.
+
+Keep `tsconfig.legacy-agent-host-scripts.json`, every other config, NodeNext, strict/noEmit, include roots and alias tables byte-identical. Do not add a suppression, cast, duplicate interface/schema/parser, looser process DTO, runtime import, fixture fallback or package dependency. No source action, read, request, mutation, timer, native count, owner authority, cleanup or retry changes. Existing source-proof roster `scripts/legacy-agent-host/desktop-proof-sources.ts` already contains the contracts path at line 645; no new path is introduced or roster allowance requested. The small contracts module grows from 141 to 144 physical lines; the existing shared module shrinks by one line.
+
+### 91.5 Review and finite verification
+
+Source stays zero until independent review and root publication of this exact plan. After source GO, stage only these two deltas, freeze full before/after hashes and exact inverse proof for all three variants, and verify the runtime suffix from `export const isProcessRef` through end-of-file byte-for-byte. Independently verify the type export name/shape and that no import edge remains from the contracts leaf to shared Team types.
+
+Root owns canonical validation: repeat the originally failing scripts typecheck on the composed source, then the existing Main/renderer typechecks needed to verify both unchanged consumer names, plus the existing source/lint gates for these paths. Reuse already scheduled canonical checks where they cover the same composed source. No new unit case or new native campaign is justified for this erased two-field relocation; existing §89 tests retain their own prior result and actual future ordinary CI retains its original acceptance role. This appendix does not claim that the compiler has passed, that a native failure is fixed, or that any workflow has been rerun.
