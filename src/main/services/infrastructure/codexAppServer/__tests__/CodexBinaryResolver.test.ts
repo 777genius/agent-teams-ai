@@ -248,6 +248,51 @@ describe('CodexBinaryResolver', () => {
       expect(captured).not.toBeNull();
       if (!captured) throw new Error('TEST captured npm selection missing');
       await captured.assertCurrent();
+
+      const originalOptionsEnvironment = buildEnrichedEnvMock.getMockImplementation();
+      if (!originalOptionsEnvironment) throw new Error('TEST npm environment builder missing');
+      try {
+        for (const nodeOptions of [
+          '',
+          ' \t--max-old-space-size=000 --max-semi-space-size=16\t--max-old-space-size=4 ',
+          '--max-old-space-size=1--max-semi-space-size=2',
+        ]) {
+          buildEnrichedEnvMock.mockImplementation(() => ({
+            PATH: f.root,
+            NODE_OPTIONS: nodeOptions,
+          }));
+          execCliMock.mockClear();
+          const allowed = await CodexBinaryResolver.captureSelection(() => true).resolve();
+          expect(allowed?.selection.nativeCli.executable).toEqual(
+            captured.selection.nativeCli.executable
+          );
+          expect(execCliMock).toHaveBeenCalledExactlyOnceWith(
+            shim,
+            ['--version'],
+            expect.objectContaining({
+              env: expect.objectContaining({ PATH: f.root, NODE_OPTIONS: nodeOptions }),
+              timeout: expect.any(Number),
+            })
+          );
+        }
+        const repeatedOptions = '--max-old-space-size=0 '.repeat(8);
+        for (const environment of [
+          { NODE_OPTIONS: ' \t ' },
+          { NODE_OPTIONS: repeatedOptions + '--require=TEST' },
+          { NODE_OPTIONS: repeatedOptions + '--max-semi-space-size=8x' },
+          { NODE_OPTIONS: '--max-old-space-size=0', node_options: '--max-old-space-size=0' },
+        ]) {
+          buildEnrichedEnvMock.mockImplementation(() => ({ PATH: f.root, ...environment }));
+          execCliMock.mockClear();
+          await expect(CodexBinaryResolver.captureSelection(() => true).resolve()).rejects.toThrow(
+            'The original Codex executable or installation changed during verification.'
+          );
+          expect(execCliMock).not.toHaveBeenCalled();
+        }
+      } finally {
+        buildEnrichedEnvMock.mockImplementation(originalOptionsEnvironment);
+        execCliMock.mockClear();
+      }
       const earlierPackage = path.join(root, 'bin', 'node_modules', '@openai', platformPackage);
       await fs.mkdir(earlierPackage, { recursive: true });
       await expect(captured.assertCurrent()).rejects.toThrow('changed');
