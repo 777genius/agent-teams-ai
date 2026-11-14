@@ -356,24 +356,24 @@ class CdpClient {
     this.listeners.set(method, listeners);
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, timeoutMs = 30_000) {
     const id = ++this.nextId;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`CDP command timed out: ${method}`));
-      }, 30_000);
+      }, timeoutMs);
       this.pending.set(id, { resolve, reject, timer });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
   }
 
-  async evaluate(expression) {
+  async evaluate(expression, timeoutMs = 30_000) {
     const response = await this.send('Runtime.evaluate', {
       expression,
       awaitPromise: true,
       returnByValue: true,
-    });
+    }, timeoutMs);
     if (response.exceptionDetails) {
       throw new Error(
         response.exceptionDetails.exception?.description ?? 'Renderer evaluation failed'
@@ -1160,7 +1160,8 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
       '  });',
       '})()',
     ].join('\n');
-    const evidence = await inspector.evaluate(expression);
+    // 25s fixture deadline + up to 30s verified tree cleanup + 10s margin.
+    const evidence = await inspector.evaluate(expression, 65_000);
     assert.equal(evidence.detached, false);
     assert.equal(evidence.windowsHide, true);
     assert.ok(evidence.mainElectronPid > 0 && evidence.teammatePid > 0);
