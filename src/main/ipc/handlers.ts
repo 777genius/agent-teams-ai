@@ -151,6 +151,7 @@ export function initializeAgentBackendConnection(
     getMainWindow: () => import('electron').BrowserWindow | null;
     rendererIndexPath: string;
     publishHttpNativePromptSuggestion?: (candidate: NativeNextPromptCandidate) => void;
+    nativeNextPromptEnabled?: boolean;
   }
 ): void {
   registerDesktopAgentBackend({
