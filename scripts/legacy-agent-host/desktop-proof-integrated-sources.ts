@@ -569,6 +569,8 @@ export const desktopProofIntegratedSources = [
   'scripts/legacy-agent-host/desktop-donor-saved-producer.ts',
   'scripts/legacy-agent-host/desktop-donor-saved-import-ui.ts',
   'scripts/legacy-agent-host/desktop-stopped-import-prior-run.ts',
+  'src/main/services/runtime/ClaudeMultimodelBridgeService.ts',
+  'test/main/services/runtime/ClaudeMultimodelBridgeService.test.ts',
   'scripts/dev-with-runtime.mjs',
   'scripts/lib/runtime-payload-cache.mjs',
   'scripts/legacy-agent-host/desktop-stopped-import-launch-ui.ts',

@@ -77,6 +77,32 @@ const providerStatusReadCache = new Map<
   { readonly expiresAt: number; readonly status: CliProviderStatus }
 >();
 
+let testCurrentStoppedStatusInvocations = 0;
+
+function observeTestCurrentStoppedStatusInvocation(
+  providerId: CliProviderId,
+  summary: boolean,
+  projectScoped: boolean
+): void {
+  if (
+    process.env.NODE_ENV !== 'development' ||
+    process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH !== '1' ||
+    testCurrentStoppedStatusInvocations >= 33
+  )
+    return;
+  const sequence = ++testCurrentStoppedStatusInvocations;
+  try {
+    const provider = ['anthropic', 'codex', 'gemini', 'opencode'].includes(providerId)
+      ? providerId : 'unknown';
+    const observation = sequence === 33
+      ? { sequence, overflow: true }
+      : { sequence, overflow: false, provider, summary, projectScoped };
+    process.stderr.write(`TEST_CURRENT_STOPPED_RUNTIME_STATUS ${JSON.stringify(observation)}\n`);
+  } catch {
+    // Diagnostic loss must not replace or retry the original status invocation.
+  }
+}
+
 function getProviderStatusCommandCwd(projectPath: string | null | undefined): string | undefined {
   const normalized = projectPath?.trim();
   if (!normalized || !path.isAbsolute(normalized)) {
@@ -1226,13 +1252,19 @@ export class ClaudeMultimodelBridgeService {
     connectionIssues: Partial<Record<CliProviderId, string>>,
     options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
-    const context = await resolveRuntimeStatusExecutionContext(providerId, getProviderStatusCommandCwd(options.projectPath));
+    const projectCwd = getProviderStatusCommandCwd(options.projectPath);
+    const context = await resolveRuntimeStatusExecutionContext(providerId, projectCwd);
     const args = ['runtime', 'status', '--json', '--provider', providerId];
     if (options.summary) {
       args.push('--summary');
     }
     args.push(...context.projectArgs);
     const timeout = this.getProviderStatusRuntimeTimeout(binaryPath, providerId, options);
+    observeTestCurrentStoppedStatusInvocation(
+      providerId,
+      args.includes('--summary'),
+      projectCwd !== undefined
+    );
     const parsed = await readRuntimeStatusCommand(
       binaryPath,
       args,
