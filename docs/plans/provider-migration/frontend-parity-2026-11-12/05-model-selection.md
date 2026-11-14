@@ -1848,3 +1848,49 @@ The existing later launch snapshot already retains launch IDs, member IDs, curre
 Keep every original case declaration/assertion, the original maximum-deadline wait, strict timestamp-before-own-deadline checks, 1000 ms claims, inputs/counters and skips unchanged. This is failure evidence only; it does not change an outcome or close the intermittent Host failure.
 
 Freeze the minimal one-file diff/full inverse and obtain one independent source peer after plan publication and explicit root SOURCE GO. Root owns integration and ordinary CI; this appendix requires no new case, benchmark, profiler or repeated diagnostic/full-suite campaign. Source remains zero until that GO.
+
+## 33. Bind ordinary retained OpenCode model probes to the original product-roster publication
+
+### 33.1 Original Review failure and the exact identity mismatch
+
+Batch5 parent job `132530121809` in run `43622192438`, actual checkout `def734338f13bcc3209e78079a0cedbc48f05a5b`, reached the real Darwin ARM64 Review Launch dialog and its successful no-tools model check. Native prerequisite custody steps passed. The original Desktop failed at its existing “one original runtime capture” assertion; the renderer retained “Launch capture result unknown. Retry the same intent.” The artifact contains one completed, successful, released model probe, zero business model observations and no Runtime capture. Task Start, native edits, targeted Stop, Review operations and cold readback were not reached. Failure Quit completed; the captured Host and app process group were absent. Cleanup is separate from the incomplete journey.
+
+Evidence `bef52621b025df025c2970f456609cd6a5c4bd9a` retains the exact source joins and original artifact projections. Full job log is `b53c5a3ee6e36c43615d3d4fbe417683ff297d81`; artifact `14124304374` is 381150 bytes, SHA-256 `b58bac6d0d1ee90659ea983789b726e4fa5ad79ef66c7915cc1fa55135255a12`. The original receipt SHA-256 is `cc0fd31bbe2223d2170209abccecc5bd2e1248d4e3aa85dbaad02e866a370283`; before/after source hashes match.
+
+Four read-only hash reconstructions match the retained records: the probe's exact selection has no `draft`, its destination is the original launch/member, its action digest contains only the original command/context, and the full original `roster.replace` payload matches the retained command fingerprint. The selection's technical Runtime roster revision is `0d186ec66a91e3dbc67c4bd5d53b8bd91c79b9043b213d7eabc6447ab26dec74`; the successful full product CAS used `e0b084db001e829ba29063e2fdb0ee56ae1d76aa7154257fadda61f3f26a2766` as its expected revision. These are distinct identity domains.
+
+Main legitimately omits draft for an unchanged explicit model/provider/workspace (`prepareCapturedTeamModels.ts`, `f0f38d65196e54e31e7eebed71cf036e5a352971`). The current Host producer captures a product revision only for draft OpenCode. The transfer bridge likewise uses the product action commitment only for draft, then otherwise compares the technical revision directly with the product CAS revision. The retained ordinary selection necessarily fails that comparison. The raw private capture exception/reply is not in the artifact: this proves a concrete mandatory failing source join, not the exact first thrown frame or that every other admission guard would pass.
+
+### 33.2 Exactly three existing writable paths
+
+| Path | Common current preimage |
+| --- | --- |
+| `packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts` | `97d84451fd242eb2a897f7ebde21253891bc4215` |
+| `packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts` | `89c3d12550a12bd00f3e9821a66f5ae8e7a0edea` |
+| `packages/legacy-agent-host/tests/saved-team-model-probe.test.ts` | `ff791b368ffb6c753d89fc3f5778e57782d6a949` |
+
+All nine preimages match in parent `647a2e2cf129276fb201f48c24fd0b6c1ee7a94d`, native `504b58e9ffb91285900dbabe55a8ae84ecebf435` and qualification `a9bee3fd2ea3e3890acecee0befb90d68af63c27`. No Main/renderer, runtime record/schema, source-input, native fixture, workflow, deadline or source-roster path changes. The two production files remain within their existing 800-line cap without packing or extraction for the cap.
+
+### 33.3 Reuse the existing private product commitment for ordinary selection
+
+In `captureTeamModelProbe`, remove only the draft prerequisite from capturing `productRosterRevision` for an OpenCode profile. Read that revision from the same actual Team connection before the existing selection assertion. Keep the same returned private field, three-field `teamModelProbeActionDigest(commandId, context, productRosterRevision)`, and every fresh `assertSelection` check of that exact product revision, Runtime selection, member binding/grant, recipe and operator authority. No caller-supplied product revision or new trust input is admitted.
+
+In `captureLaunchModelReadiness`, remove only the draft prerequisite from the existing non-saved-model/product-bound branch. After the unchanged exact full original `lookupRoster(commandId, expected)`, successful receipt/current published revision, source, scope, selection and destination checks, an action digest distinct from the plain legacy command/context digest must equal the existing three-field digest using `transfer.roster.expected.expectedRevision`. This binds ordinary and draft technical selections to the product revision witnessed by their actual original probe and subsequently used by that same full CAS. It does not adopt the new product revision as an old technical revision or rerun an obsolete pre-publication callback after intentional publication.
+
+Compatibility remains explicit. A retained plain legacy action digest still takes the original direct revision-equality branch; it is never upgraded into product-bound evidence. The existing same-ID producer rule preserving a retained plain digest and original cutoff remains byte-identical. Missing, old-format or foreign product commitments cannot cross unequal domains. The `saved-model-*` producer remains separate (`savedTeamModelProbe.ts`, `e23d96e11cc191b480d7f75f08eddc871b3b7f17`), already uses the product revision and keeps the original direct equality branch. Claude, Codex and Create transfers are unchanged. This narrowly supersedes §29's statement retaining direct equality for every non-draft path; its legacy and saved-model restrictions remain.
+
+Keep all original completed/success/released native-readiness, account/file, mechanism, current source, owner, policy-origin and expiry checks, including §31's fresh inspector calls. The original cutoff is still the minimum of the original transfer budget and probe expiries. No admission renewal, new native probe, provider allocation, cache, journal rewrite, retry or timer is introduced by production.
+
+### 33.4 One additional variant inside the existing controlled case
+
+Retain all 12 literal case declarations and every original assertion, including the existing producer-driven draft transfer sub-scope in the OpenCode/roster parameterized case. Reuse that same `assertRetainedProductRosterTransfer` helper for one ordinary selection variant, with draft genuinely absent and the same effective model/workspace. The existing draft call and default fixture behavior stay unchanged.
+
+The new ordinary variant must possess real initial member authority: carry the already-declared exact delivery into the existing TeamOwner constructor and supply the same member's scoped read/message-write grant before construction. The current draft fixture intentionally omits that stored delivery and needs only a read grant. A private opt-in parameter in the existing fixture may expose this real initial configuration only to the new variant. This mirrors the original Host constructor's delivery projection and `TeamDeliveryAuthority.runtimeAccess` contract; it must not mock authorization, return a synthetic green or install a readiness record. Production authority remains unchanged.
+
+For each transfer variant, run its one original controlled probe through the actual `ModelProbeOwner`, completion and release, retain its actual command/context/source/cutoff, perform the same exact full roster CAS, then call the real transfer helper. Assert technical and product revisions differ and the ordinary selection has no draft; the produced action digest must commit the exact original product revision. Retain same-ID no-extra-probe behavior and all existing old/plain, foreign product, command, selection and expired-proof refusals with exact record-byte restoration, zero provider allocations and no Runtime capture. The new controlled variant adds one controlled probe/release in that existing case; every native Desktop request/operation budget stays unchanged.
+
+### 33.5 Review and original acceptance
+
+Freeze all three full sources/diffs, exact inverses and current preimages for independent source review after this appendix is published and root grants SOURCE GO. Root owns the existing-case old-source RED at the real ordinary transfer, coherent GREEN, original Host build/test-type/source guards and the appropriate unchanged Host tests. No new case, exhaustive matrix, repeated-until-green run or timing relaxation is authorized.
+
+The same ordinary Review Desktop journey must then pass its original Launch capture, business/Stop/Review/cold assertions and cleanup. The earlier prerequisite and cleanup successes do not qualify those unexecuted steps. Source review and controlled transfer success cannot substitute for native acceptance. The separate original strict allocation-deadline failure, Windows retained-service gate and POSIX §75 remain separately tracked. Source remains zero until explicit root GO.
