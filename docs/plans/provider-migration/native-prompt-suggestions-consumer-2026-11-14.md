@@ -62,3 +62,15 @@ Add only layers that own real behavior. Host proof belongs in its existing Team/
 Use existing Stage 1 candidate/native/Desktop harnesses, not a parallel test framework. Run affected TS 7.0.2 build, lint and feature tests, packed vendor consumer, Host protocol E2E and Electron visual checks. Exact HEAD, provider artifact SHA, Node/OS, in/out request counts, real message identities, cleanup observations, passed/failed/skipped/HOLD and screenshots go into the PR. Queued/skipped work never counts as PASS.
 
 No release, branch cutover to \`main\`, auto-merge of PR #982/#1186 or provider publication without distinct reviewed source and actual requested E2E acceptance. The dedicated stacked PR remains Draft until evidence is complete.
+
+## Review ledger / current HOLDs (2026-11-14)
+
+**Critical review round 1, provenance + dependency (fixes pushed):**
+`44d36db`/`87f0339`/`457899e` require and test the **independent captured descriptor run** in both Main owner selection and Host notice projection; team-only rebinding was not sufficient. `60c1940` corrects the one-shot staging workflow's exact previous provider archive selector, without dropping its byte/hash and compare-before-write guards. A queued vendor-staging job is not an adopted or verified artifact.
+
+**Critical review round 2, transport privacy (fix + fail-closed HOLD):**
+`src/main/http/events.ts` broadcasts SSE to *every* connected `/api/events` browser. Publishing human-DM suggestion text there is unsafe regardless of renderer filters. `fa5c5a2` stops that Main broadcast; `b08175c` records why. **Electron's selected scoped IPC may receive offers; HTTP browser subscriptions intentionally receive none.** Implement and test per-owner/context authenticated SSE before restoring HTTP delivery. Do not call current HTTP acceptance complete.
+
+**Still required before claiming end-to-end:** real global Settings opt-in and safe Host session application; independent post-publication UI generation/native-turn freshness or revocation (do not compare a candidate to its own fields as proof); staged exact provider archive plus frozen lockfile; actual captured Host native-source/no-subscription proofs; actual Electron UI visual, IME, compact, light/dark and cross-member privacy proofs; Codex consumer binary >=0.165 explicitly adopted and conformance-tested. The isolated provider's native localhost CI `43610197873` (Claude) and `43610197814` (Codex 0.166) **succeeded** on `f08a2e1`; these do **not** qualify Host/Desktop. Current integration CI pending or skipped/cancelled is not PASS.
+
+This is a Draft feature branch only. No main/default/release mutation and no dependent PR merge.
