@@ -1,0 +1,51 @@
+name: Windows product teammate with local model boundary
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/windows-product-teammate-console-e2e.yml'
+      - 'scripts/e2e/windows-product-teammate-console.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-product-synthetic-boundary:
+    runs-on: windows-latest
+    timeout-minutes: 55
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install pinned dependencies and native Electron
+        run: |
+          node scripts/ci/install-dependencies-with-retry.mjs
+          node scripts/ensure-electron-install.cjs --strict
+      - name: Stage checksum-pinned released orchestrator
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: node scripts/stage-runtime.mjs --platform win32-x64
+      - name: Stage checksum-pinned terminal daemon
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ensure-terminal-platform-runtime.mjs
+      - name: Native product IPC teammate restart and shell tools against loopback model
+        env:
+          WINDOWS_PRODUCT_CONSOLE_EVIDENCE: ${{ runner.temp }}/windows-product-console-e2e
+        run: node scripts/e2e/windows-product-teammate-console.mjs
+      - name: Upload product proof (failure is not accepted)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-product-synthetic-e2e-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: ${{ runner.temp }}/windows-product-console-e2e/
