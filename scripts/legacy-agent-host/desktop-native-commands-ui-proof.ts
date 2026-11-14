@@ -146,8 +146,11 @@ export async function runDesktopNativeCommandsUiProof(
     assert.equal(found.length, 1);
     return found[0]!;
   };
-  const events = async () =>
-    rows(record(await json(join(root, 'hoststore/runtime-events', `${bindingKey}.json`))).events);
+  const events = async () => {
+    const feed = record(await json(join(root, 'hoststore/runtime-events', `${bindingKey}.json`)));
+    assert.deepEqual(feed.binding, binding);
+    return rows(feed.events);
+  };
   const inbox = async () => rows(await json(join(team, 'inboxes/user.json')));
   const owner = async () => record(await json(join(team, '.host-owner/state.json')));
   const poll = async <T>(read: () => Promise<T>, accept: (value: T) => boolean, label: string) => {
@@ -260,7 +263,11 @@ export async function runDesktopNativeCommandsUiProof(
     assert.equal(reply.from, 'alice');
     assert.equal(reply.summary, '/cost');
     assert.ok(typeof reply.text === 'string' && reply.text.length > 0);
-    const local = (await events()).filter(
+    const snapshot = await events(), lastSequence = snapshot.at(-1)?.sequence;
+    assert.ok(
+      typeof lastSequence === 'number' && Number.isSafeInteger(lastSequence) && lastSequence > 0
+    );
+    const local = snapshot.filter(
       (event) =>
         event.inputId === original.inputId &&
         event.operationRef === original.operationRef &&
@@ -321,24 +328,42 @@ export async function runDesktopNativeCommandsUiProof(
       nativeMessageRef: record(local[0]!.data).messageRef,
       text: reply.text,
     });
+    return lastSequence;
   };
 
-  await cost();
+  const beforeCompactSequence = await cost();
   await writeFile(nativeCommandUiState(root), JSON.stringify({ phase: 'compact' }), {
     mode: 0o600,
   });
   const compact = await send('compact', COMPACT_AUTHORIZATION);
-  const boundary = (await events()).filter(
-    (event) =>
-      event.inputId === compact.inputId &&
-      event.operationRef === compact.operationRef &&
-      record(event.data).kind === 'compaction'
-  );
+  const boundary = (await events()).filter((event) => {
+    if (record(event.data).kind !== 'compaction') return false;
+    assert.ok(
+      typeof event.sequence === 'number' && Number.isSafeInteger(event.sequence) && event.sequence > 0
+    );
+    return event.sequence > beforeCompactSequence;
+  });
   assert.equal(boundary.length, 1);
   assert.equal(record(boundary[0]!.data).reason, 'manual');
   const epochs = rows((await owner()).contextEpochs);
   assert.equal(epochs.length, 1);
   assert.equal(epochs[0]!.represented, undefined);
+  const epoch = epochs[0]!,
+    originalBoundary = boundary[0]!,
+    sourceRef = record(originalBoundary.data).sourceRef;
+  assert.ok(typeof sourceRef === 'string' && sourceRef.length > 0);
+  assert.deepEqual(epoch.binding, binding);
+  assert.ok(typeof options.session.sessionRef === 'string' && options.session.sessionRef.length > 0);
+  assert.equal(epoch.sessionRef, options.session.sessionRef);
+  assert.equal(epoch.sourceRef, sourceRef);
+  assert.equal(originalBoundary.inputId, epoch.inputId);
+  assert.equal(originalBoundary.operationRef, epoch.operationRef);
+  if (epoch.inputId === undefined) assert.equal(epoch.operationRef, undefined);
+  else {
+    assert.equal(epoch.inputId, compact.inputId);
+    assert.ok(typeof epoch.operationRef === 'string' && epoch.operationRef.length > 0);
+    assert.equal(epoch.operationRef, compact.operationRef);
+  }
   await cost();
   assert.equal(
     rows((await owner()).contextEpochs)[0]!.represented,
