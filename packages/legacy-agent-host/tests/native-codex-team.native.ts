@@ -574,7 +574,7 @@ async function runCodexCandidate(options: {
     remaining(); await pins.verify(); remaining();
     const driver = await nativeCodexDriver({ root, binary: pins.binary, modelUrl: model.url,
       endpoint: options.endpoint, currentBinding: options.current, candidate,
-      ...(suggestionBinding && candidate.phase === 'start' ? { promptSuggestions: suggestionBinding } : {}),
+      ...(suggestionBinding && candidate.phase !== 'catalog' ? { promptSuggestions: suggestionBinding } : {}),
       onCapturedChild: child => { children.push(child); options.cleanup.push(() => cleanupCapturedCodexChild(child)); } });
     drivers.push(driver);
     remaining();
@@ -746,6 +746,12 @@ async function runCodexCandidate(options: {
     assert.equal(await readFile(effect, 'utf8'), 'ONE\n'); assert.equal(bob.lookup('codex-reply-two'), undefined);
     const twoDeadline = Math.min(options.deadline, performance.now() + 60_000);
     const two = originalInput('TWO'), twoTerminal = observe(c2, second, two, 'TWO', twoDeadline);
+    if (options.nativeSuggestions) {
+      originalSuggestionInput = two;
+      assert.equal(suggestionBinding?.eligible(two), true,
+        'resumed C2 is eligible for a suggestion before its original cancelled turn');
+      assert.equal(nativeOffers.length, 1, 'one original C1 sample before C2');
+    }
     const handedTwo = await within(() => c2.submit(two), twoDeadline - performance.now());
     assert.deepEqual(handedTwo, { ok: true, value: { inputId: two.inputId, operationRef: two.operationRef,
       delivery: 'client-consumed', providerAcceptance: 'unknown' } });
@@ -757,6 +763,13 @@ async function runCodexCandidate(options: {
     assert.deepEqual(interruption, { ok: true, value: { requested: true, terminal: 'unconfirmed' } });
     await wait(() => twoTerminal() !== undefined, twoDeadline);
     assert.equal(twoTerminal()?.outcome, 'cancelled');
+    if (options.nativeSuggestions) {
+      assert.equal(suggestionBinding?.eligible(two), true,
+        'cancellation outcome must suppress an otherwise eligible sampled turn');
+      assert.equal(nativeOffers.length, 1, 'cancelled C2 never publishes a second sample');
+      assert.equal(model.suggestionRequests.length, 1,
+        'cancelled C2 never invokes experimental sample even with eligibility enabled');
+    }
     assert.equal(first.submitted.length, 1); assert.equal(second.submitted.length, 1);
     assert.equal(first.candidateWire.turns.length, 1); assert.equal(second.candidateWire.turns.length, 1);
     assert.equal(new Set([one.inputId, two.inputId]).size, 2);
