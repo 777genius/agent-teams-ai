@@ -28,7 +28,17 @@ function fixture() {
     bindings: [{ handle: { handleId: 'TEST-handle-A' }, label: 'Test team',
       members: [{ memberId: candidate.memberId, label: 'alice' }] }],
   }));
-  const invoke = vi.fn(async () => ({ ok: true as const, value: state }));
+  const invoke = vi.fn(async (command: { payload: { nativePromptProof?: {
+    inputId: string; operationRef: string;
+  } } }) => ({
+    ok: true as const,
+    value: {
+      ...state,
+      nativePromptCurrent: state.nativePromptCurrent &&
+        command.payload.nativePromptProof?.inputId === candidate.inputId &&
+        command.payload.nativePromptProof?.operationRef === candidate.operationRef,
+    },
+  }));
   const backend = { getConnections, invoke } as unknown as Pick<AgentBackendApi, 'getConnections' | 'invoke'>;
   return { backend, state, invoke, getConnections };
 }
@@ -71,9 +81,9 @@ describe('native suggestion acceptance-time captured Runtime read', () => {
     expect(await verifyCurrentNativeSuggestion(candidate, x.backend)).toBe(false);
     x.state.nativePromptCurrent = true;
     expect(await verifyCurrentNativeSuggestion({ ...candidate, operationRef: '' }, x.backend)).toBe(false);
-    expect(await verifyCurrentNativeSuggestion({ ...candidate, operationRef: 'TEST-foreign-operation' }, x.backend)).toBe(true);
-    // The fake backend accepts any request; only the original Host can vouch
-    // for the exact operation. The wire contract must carry the changed proof.
+    expect(await verifyCurrentNativeSuggestion({ ...candidate, operationRef: 'TEST-foreign-operation' }, x.backend)).toBe(false);
+    // The fixture mimics Host's strict original operation match. A mismatched
+    // operation must be sent as data and rejected rather than self-verified.
     expect(x.invoke).toHaveBeenLastCalledWith(expect.objectContaining({
       payload: expect.objectContaining({
         nativePromptProof: { inputId: candidate.inputId, operationRef: 'TEST-foreign-operation' },
