@@ -66,7 +66,7 @@ export type OpenCodeManagementProfile = z.infer<typeof openCodeManagementProfile
 export const codexManagementProfileSchema = nativeProcessProfileSchema
   .extend({
     provider: z.literal('codex'),
-    protocolRevision: z.literal('0.162.0'),
+    protocolRevision: z.enum(['0.162.0', '0.169.0']),
     modelProbeTimeoutMs: z.number().int().min(1).max(180000).optional(),
     modelProvider: z.string().min(1).max(256).optional(),
     reasoningEffort: z
