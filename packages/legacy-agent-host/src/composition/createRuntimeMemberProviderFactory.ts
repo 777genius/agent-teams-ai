@@ -1,5 +1,7 @@
 import type { TeamMcpGroupPort } from '../mcp/groupChatTools.js';
 import { createMemberAttachmentPort } from './createMemberAttachmentPort.js';
+import { createCapturedPromptSuggestionBinding } from './createCapturedPromptSuggestionBinding.js';
+import type { CapturedPromptSuggestionNotice } from './createCapturedPromptSuggestionBinding.js';
 import type { TeamMcpNativeMemberCreationPort } from '../mcp/nativeMemberCreationContracts.js';
 import { createClaudeMemberProvider } from '../adapters/providers/ClaudeMemberProvider.js';
 import { createCodexMemberProvider } from '../adapters/providers/CodexMemberProvider.js';
@@ -76,6 +78,9 @@ export function createRuntimeMemberProviderFactory(options: {
   readCheckpoint: RuntimeOwner['readCheckpoint'];
   observe: RuntimeOwner['observeProviderActivity'];
   onProgress(entry: MemberEntry): void;
+  /** Captured Host opt-in, default off; no per-role restrictions. */
+  promptSuggestionsEnabled?: boolean;
+  onPromptSuggestion?: (notice: CapturedPromptSuggestionNotice) => void;
 }): RuntimeOwnerOptions['driverFactory'] {
   const beforeTeamAuthority = options.beforeTeamAuthority;
   return {
@@ -212,6 +217,16 @@ export function createRuntimeMemberProviderFactory(options: {
           readRuntime: options.readRuntime,
           observe: options.observe,
         });
+        const promptSuggestions =
+          options.promptSuggestionsEnabled === true && options.onPromptSuggestion &&
+          (entry.profile.provider === 'claude' || entry.profile.provider === 'codex')
+            ? createCapturedPromptSuggestionBinding({
+                entry,
+                isCurrent: authority.isCurrent,
+                readRuntime: options.readRuntime,
+                publish: options.onPromptSuggestion,
+              })
+            : undefined;
         const attachmentDelivery = createMemberAttachmentPort({
           entry,
           storageRoot: options.storageRoot,
@@ -241,6 +256,7 @@ export function createRuntimeMemberProviderFactory(options: {
           ),
           ...evidence,
           attachments: attachmentDelivery.port,
+          ...(promptSuggestions ? { promptSuggestions } : {}),
           ...(subagents ? { subagents } : {}),
           isCurrent: authority.isCurrent,
           canAllocate: readiness ? canAllocate : authority.canAllocate,
@@ -254,7 +270,12 @@ export function createRuntimeMemberProviderFactory(options: {
               readRuntime: options.readRuntime, assertCurrent: authority.assertCurrent, assertAllocation,
             }),
           } : {}),
-          onProgress: () => options.onProgress(entry),
+          onProgress: () => {
+            // Native SDK push may precede the Runtime result's durable settlement.
+            // Recheck once through this existing feed callback, without polling.
+            promptSuggestions?.flushPending();
+            options.onProgress(entry);
+          },
         });
         options.captureInteractions(entry);
         entry.provider = provider;

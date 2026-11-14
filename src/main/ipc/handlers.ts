@@ -15,6 +15,7 @@
  */
 
 import { createLogger } from '@shared/utils/logger';
+import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
 import { app, ipcMain } from 'electron';
 
 import { createTeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
@@ -149,6 +150,8 @@ export function initializeAgentBackendConnection(
   selection: {
     getMainWindow: () => import('electron').BrowserWindow | null;
     rendererIndexPath: string;
+    publishHttpNativePromptSuggestion?: (candidate: NativeNextPromptCandidate) => void;
+    nativeNextPromptEnabled?: boolean;
   }
 ): void {
   registerDesktopAgentBackend({

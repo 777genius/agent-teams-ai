@@ -745,6 +745,8 @@ export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'>, Native
   name: string;
   /** Presentation provenance only; does not assert native liveness or grant control. */
   runtimeOwner?: 'captured-host';
+  /** Public roster identity for matching a Host-owned native suggestion to its teammate. */
+  hostMemberId?: string;
   sessionCommands?: readonly { name: string; description: string }[];
   /** Opaque configured-state token from an application owner, never native identity. */
   configuredSettingsFingerprint?: string;

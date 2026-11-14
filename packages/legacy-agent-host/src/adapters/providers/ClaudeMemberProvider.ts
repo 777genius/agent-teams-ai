@@ -49,6 +49,7 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
     observeCommands: (value) => { commands = claudeSessionCommands(value); },
     ...(context.toolEvidence ? { capture: context.toolEvidence } : {}),
     ...(context.attachments ? { attachments: context.attachments } : {}),
+    ...(context.promptSuggestions ? { promptSuggestions: context.promptSuggestions } : {}),
     // Stable principal scope across technical generations; MCP and Runtime separately fence generation.
     trustedBinding: `${context.endpoint.binding.backendId}/${context.endpoint.binding.teamId}/${context.endpoint.binding.runId}/${profile.memberId}`,
     cwd: profile.cwd,

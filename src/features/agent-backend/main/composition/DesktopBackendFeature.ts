@@ -6,6 +6,10 @@ import {
   crossTeamTeamResourceRef,
 } from '@agent-teams/legacy-agent-host/cross-team';
 import { captureManagedProviderRuntimePreferences } from '@features/runtime-provider-management/main';
+import { projectHostPromptSuggestion } from '@features/native-prompt-suggestions/main/projectHostPromptSuggestion';
+import { hostTeamSelectionKey } from '../../contracts/teamSelection';
+
+import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
 import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 
 import { BackendOperationsFacade } from '../adapters/input/BackendOperationsFacade';
@@ -76,6 +80,10 @@ export interface DesktopBackendFeatureOptions {
   /** Existing durable Main ledger is supplied before renderer work admission. */
   commandRunner?: () => ApplicationCommandRunner | null;
   modelIntents?: TeamModelProbeIntents;
+  /** Ephemeral, validated Host output; the Main shell owns IPC and HTTP publication. */
+  onNativePromptSuggestion?: (value: NativeNextPromptCandidate) => void;
+  /** Immutable for each captured Host launch; global settings take effect on app restart. */
+  nativeNextPromptEnabled?: boolean;
 }
 
 export class DesktopBackendFeature {
@@ -164,7 +172,31 @@ export class DesktopBackendFeature {
           ownerId: owner.ownerId,
           revision: owner.revision,
           storageRoot: owner.storageRoot,
-          client: new CapturedHostClient(owner.profile),
+          client: new CapturedHostClient(owner.profile, (raw) => {
+            // The private Host is still untrusted transport input. Rebind to
+            // the one owner + team handle captured by this Desktop descriptor.
+            if (this.sealed || this.state !== 'ready') return;
+            const value = raw && typeof raw === 'object' && !Array.isArray(raw)
+              ? raw as Record<string, unknown> : null;
+            if (typeof value?.teamId !== 'string') return;
+            const matches = this.handleDefinitions().filter((entry) =>
+              ownerKey(entry.owner) === ownerKey(owner) &&
+              entry.scope.teamId === value.teamId && entry.scope.runId === value.runId
+            );
+            // A discovered registry handle can also be present in the original
+            // descriptor. That is one logical owner, not an ambiguous recipient.
+            // Distinct handles for the same native source remain fail-closed.
+            const unique = new Map(matches.map((entry) => [entry.handleId, entry]));
+            if (unique.size !== 1) return;
+            const selected = unique.values().next().value!;
+            // A Host notice cannot introduce a member absent from the
+            // original pinned roster, even when the team/run IDs match.
+            if (!selected.members.some(member => member.memberId === value.memberId)) return;
+            const projected = projectHostPromptSuggestion(
+              raw, hostTeamSelectionKey(selected.handleId), selected.scope.teamId, selected.scope.runId
+            );
+            if (projected) this.options.onNativePromptSuggestion?.(projected);
+          }, this.options.nativeNextPromptEnabled === true),
         };
         router.registerOwner(captured);
         this.clients.set(ownerKey(owner), captured);

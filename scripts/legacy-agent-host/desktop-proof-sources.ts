@@ -153,6 +153,7 @@ const desktopProofBaseSources = [
   'src/features/agent-backend/contracts/teamChanges.ts',
   'src/features/agent-backend/contracts/operations.ts',
   'scripts/legacy-agent-host/desktop-composer-ui-smoke.ts',
+  'scripts/legacy-agent-host/desktop-native-next-prompt-ui.ts',
   'scripts/legacy-agent-host/desktop-native-group-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-native-chat-attachments-ui.ts',
   'scripts/legacy-agent-host/desktop-backend-bridge-proof.ts',

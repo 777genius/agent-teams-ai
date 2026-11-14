@@ -8,6 +8,13 @@ export const runtimeMember = z
   })
   .strict();
 export const runtimeControlId = z.string().min(1).max(256);
+/** Read-only, optional original-operation proof; never accepted by control/mutation routes. */
+export const runtimeReadWithPromptProof = runtimeMember.extend({
+  nativePromptProof: z.object({
+    inputId: runtimeControlId,
+    operationRef: runtimeControlId,
+  }).strict().optional(),
+}).strict();
 export const runtimeActivityCursor = z
   .string()
   .min(1)

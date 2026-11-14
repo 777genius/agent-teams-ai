@@ -394,6 +394,7 @@ const DEFAULT_CONFIG: AppConfig = {
     theme: 'dark',
     defaultTab: 'dashboard',
     multimodelEnabled: true,
+    nativeNextPromptSuggestionsEnabled: false,
     claudeRootPath: null,
     agentLanguage: 'system',
     appLocale: 'system',
@@ -652,6 +653,8 @@ export class ConfigManager {
       ...(loaded.general ?? {}),
     };
     mergedGeneral.multimodelEnabled = true;
+    // Existing or tampered config cannot enable extra model usage by type coercion.
+    mergedGeneral.nativeNextPromptSuggestionsEnabled = loaded.general?.nativeNextPromptSuggestionsEnabled === true;
     mergedGeneral.claudeRootPath = normalizeConfiguredClaudeRootPath(mergedGeneral.claudeRootPath);
     mergedGeneral.appLocale = normalizeAppLocalePreference(mergedGeneral.appLocale);
 

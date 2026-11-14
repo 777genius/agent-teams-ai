@@ -24,7 +24,20 @@ export function parseBackendRuntimeOperation(
   value: unknown
 ): BackendOperationPayloads[keyof BackendOperationPayloads] {
   switch (operation) {
-    case 'runtime.read':
+    case 'runtime.read': {
+      const p = object(value, ['memberId', 'expectedGeneration', 'nativePromptProof']);
+      const proof = p.nativePromptProof === undefined
+        ? undefined : object(p.nativePromptProof, ['inputId', 'operationRef']);
+      return {
+        memberId: text(p.memberId),
+        ...(p.expectedGeneration === undefined
+          ? {} : { expectedGeneration: text(p.expectedGeneration) }),
+        ...(proof === undefined
+          ? {} : { nativePromptProof: {
+            inputId: text(proof.inputId), operationRef: text(proof.operationRef),
+          } }),
+      };
+    }
     case 'runtime.open':
     case 'runtime.dispatch':
     case 'runtime.stop':

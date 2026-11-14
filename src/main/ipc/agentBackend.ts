@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 import {
   hostTeamSelectionKey,
+  parseHostTeamSelectionKey,
   STOPPED_TEAM_IMPORT_CHANNEL,
   TeamCreationRefusal,
 } from '@features/agent-backend/contracts';
@@ -30,6 +31,8 @@ import {
 } from '@features/runtime-provider-management/main';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 import { createLogger } from '@shared/utils/logger';
+import { NATIVE_NEXT_PROMPT_UPDATED } from '@features/native-prompt-suggestions/contracts/channel';
+import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
 import { shell } from 'electron';
 
 import { createDesktopHostSchedules } from '../composition/createDesktopHostSchedules';
@@ -74,6 +77,10 @@ interface BackendShellOptions {
   userDataPath: string;
   /** Captured main-process environment, never renderer arguments. */
   env: Readonly<Record<string, string | undefined>>;
+  /** Existing trusted-local HTTP/SSE publisher, no second transport. */
+  publishHttpNativePromptSuggestion?: (candidate: NativeNextPromptCandidate) => void;
+  /** Global opt-in captured from trusted Main config before first Host spawn. */
+  nativeNextPromptEnabled?: boolean;
 }
 
 function withoutHash(value: string): string | null {
@@ -606,6 +613,24 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
     bindingDirectory: join(options.userDataPath, 'agent-backend', 'bindings'),
     modelIntents: new FileTeamModelProbeIntents(join(options.userDataPath, 'agent-backend', 'team-model-intents'), options.userDataPath),
     commandRunner: () => desktopCommandRunner,
+    nativeNextPromptEnabled: options.nativeNextPromptEnabled === true,
+    onNativePromptSuggestion(candidate) {
+      // UI selection is resolved from the captured descriptor, not renderer data.
+      const current = options.captureActiveSelection();
+      if (!current.isCurrent() || active?.feature !== feature || !active.selected) return;
+      let handleId: string;
+      try { handleId = parseHostTeamSelectionKey(candidate.ownerHandle); }
+      catch { return; }
+      if (!feature.authorizeHandle(current.contextId, { handleId })) return;
+      const window = options.getMainWindow();
+      const contents = window && !window.isDestroyed() ? window.webContents : null;
+      if (contents && !contents.isDestroyed() &&
+          withoutHash(contents.getURL()) === withoutHash(expectedRendererUrl)) {
+        contents.send(NATIVE_NEXT_PROMPT_UPDATED, candidate);
+      }
+      try { options.publishHttpNativePromptSuggestion?.(candidate); }
+      catch { /* Auxiliary transport may drop an offer; original work is unaffected. */ }
+    },
     onInitializationFailure: (phase, code) =>
       createLogger('IPC:AgentBackend').warn('Captured backend initialization held', {
         phase,

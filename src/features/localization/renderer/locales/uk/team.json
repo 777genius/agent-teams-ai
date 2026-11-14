@@ -1782,6 +1782,11 @@
       "voiceToText": "Голос у текст",
       "send": "Надіслати",
       "sendingUnavailableLaunching": "Надсилання недоступне, поки команда запускається"
+    },
+    "suggestions": {
+      "insert": "Вставити",
+      "dismiss": "Приховати підказку",
+      "tab": "Tab"
     }
   },
   "claudeLogs": {

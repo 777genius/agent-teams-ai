@@ -106,6 +106,7 @@ remotion/*
 !/vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz
 !/vendor/provider-migration/readonly-probe-metadata-v1/agent-teams-provider-implementations-0.0.0.tgz
 !/vendor/provider-migration/codex-runtime-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz
+!/vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
 
 # Deterministic announcement build output (edit landing/content/announcements).
 /landing/public/announcements/

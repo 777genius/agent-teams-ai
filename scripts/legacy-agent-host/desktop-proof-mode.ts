@@ -164,6 +164,11 @@ export async function prepareDesktopProofMode(
   );
   const approvalUiMode = mode === 'approval-ui';
   const conversationMode = mode === 'native-conversation-ui';
+  const nativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI === '1';
+  if (nativeNextPromptUi) {
+    assert.ok(conversationMode && process.env.LEGACY_DESKTOP_OPENCODE_GENERATION !== 'v2' && process.platform === 'darwin' &&
+      process.arch === 'arm64', 'native followup UI extends existing owned Darwin conversation proof');
+  }
   const chatAttachments = process.env.LEGACY_DESKTOP_CHAT_ATTACHMENTS === '1';
   const groupChats = process.env.LEGACY_DESKTOP_GROUP_CHATS === '1';
   if (groupChats) {
@@ -418,6 +423,7 @@ export async function prepareDesktopProofMode(
               ? await startNativeTeamModel({
                   requireVisibleReply: true,
                   uiGeneratedMessageIds: true,
+                  ...(nativeNextPromptUi ? { nativeNextPromptUi: true } : {}),
                   ...(chatAttachments ? { chatAttachments: true } : {}),
                   ...(groupChats ? { groupChats: true } : {}),
                 })

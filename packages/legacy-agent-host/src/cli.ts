@@ -35,7 +35,13 @@ try {
       import('./composition/TeamHost.js'),
       import('./composition/readProfile.js'),
     ]);
-    server = createTeamHost(readTeamHostProfile(path, digest), streams);
+    // Trusted Main passes a captured user preference at Host startup.
+    // No renderer command or alteration of an already-running SDK Query.
+    const preference = process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED;
+    if (preference !== undefined && preference !== '0' && preference !== '1')
+      throw new Error('Invalid native suggestion startup preference');
+    server = createTeamHost(readTeamHostProfile(path, digest), streams,
+      preference === undefined ? undefined : { promptSuggestionsEnabled: preference === '1' });
   } else {
     server = createHostServer({ ...streams, buildId: 'legacy-agent-host/0.1.0' });
   }

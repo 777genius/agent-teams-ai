@@ -354,6 +354,9 @@ interface MentionableTextareaProps extends Omit<
   onQueue?: () => void;
   /** Called when Shift+Tab is pressed. */
   onShiftTab?: () => void;
+  /** Optional last-priority native follow-up accept; cannot override editor menus or IME. */
+  onNativeNextPromptTab?: (event: React.KeyboardEvent<HTMLTextAreaElement>) => boolean;
+  onNativeNextPromptEscape?: () => boolean;
   /** Ref that receives the dismiss callback to close mention dropdown from outside */
   dismissMentionsRef?: React.MutableRefObject<(() => void) | null>;
   /** Additional rotating tips to append after the defaults */
@@ -387,6 +390,8 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       onModEnter,
       onQueue,
       onShiftTab,
+      onNativeNextPromptTab,
+      onNativeNextPromptEscape,
       dismissMentionsRef,
       extraTips = [],
       style,
@@ -940,6 +945,20 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           });
           if (e.defaultPrevented) return;
         }
+        // Native follow-up accepts only an empty editor with no active menu or
+        // chip. No listener means unchanged native browser Tab navigation.
+        if (
+          e.key === 'Tab' && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey &&
+          !isOpen && value.length === 0 && chips.length === 0 &&
+          onNativeNextPromptTab?.(e)
+        ) {
+          e.preventDefault();
+          return;
+        }
+        if (e.key === 'Escape' && !isOpen && onNativeNextPromptEscape?.()) {
+          e.preventDefault();
+          return;
+        }
         // Shift+Tab → cycle action mode
         if (e.key === 'Tab' && e.shiftKey && onShiftTab) {
           e.preventDefault();
@@ -957,6 +976,10 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         onQueue,
         suggestionPlacement,
         onShiftTab,
+        onNativeNextPromptTab,
+        onNativeNextPromptEscape,
+        value,
+        chips.length,
         handleChipKeyDown,
         mentionHandleKeyDown,
         isOpen,

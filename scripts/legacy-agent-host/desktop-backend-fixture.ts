@@ -111,6 +111,10 @@ export async function prepareDesktopBackendFixture(
     options.claudeCheckpointDonor || options.diagnosticHostEntry || options.capturedMcpNonce ||
     options.nativeGroupChats || options.nativeChatAttachments || options.nativeReviewUi || options.reviewUi || options.approvalUi))
     throw new Error('Saved-only donor requires its original isolated Claude Create fixture');
+  const nativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI === '1';
+  if (nativeNextPromptUi && (!options.nativeClaude?.modelUrl || !options.seedUiTask ||
+      options.nativeOpenCodeV2 || options.nativeChatAttachments || options.nativeGroupChats))
+    throw new Error('Native next-prompt UI requires one captured localhost Claude conversation fixture');
   const linuxChildExec = readDesktopLinuxChildExecInput();
   const node =
     options.candidateRuntime?.nodeExecutable ??
@@ -164,7 +168,8 @@ export async function prepareDesktopBackendFixture(
   if (options.seedUiTask || options.seedUiPreferences)
     await writeFile(
       join(root, 'claude/agent-teams-config.json'),
-      JSON.stringify({ general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark' } }),
+      JSON.stringify({ general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark',
+        ...(nativeNextPromptUi ? { nativeNextPromptSuggestionsEnabled: true } : {}) } }),
       { mode: 0o600 }
     );
   // The outer and nested pnpm invocations use the same selected Corepack bytes

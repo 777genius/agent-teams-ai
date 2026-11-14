@@ -116,7 +116,7 @@ export interface CaptureFileUpdateScenario {
 }
 export async function startCodexModel(
   options: {
-    candidate169?: { selectedModel(): string };
+    candidate169?: { selectedModel(): string; nativeSuggestions?: boolean };
     sourceSelection?: true;
     nativeMessageImage?: boolean;
     mixedGroups?: boolean;
@@ -176,6 +176,7 @@ export async function startCodexModel(
   const counts = new Map<string, number>();
   const issued = new Map<string, RecordValue>();
   const requests: ReturnType<typeof retainUiRequest>[] = [];
+  const suggestionRequests: Array<{ originalContext: boolean; tools: number }> = [];
   let taskId: string | undefined;
   let candidateFinalHeld = false;
   let heldFirst: { send(): void; live(): boolean } | undefined;
@@ -215,6 +216,27 @@ export async function startCodexModel(
         assert.equal(body.model, selected, 'actual inference consumes the original native model selection');
       }
       const input = (Array.isArray(body.input) ? body.input : []).map(record);
+      if (options.candidate169?.nativeSuggestions &&
+          /Predict the next message|next message the user will send/u.test(JSON.stringify(body.input))) {
+        assert.equal(suggestionRequests.length, 0, 'one auxiliary native Codex sample only');
+        const originalContext = JSON.stringify(input).includes('CODEX_TEAM_ONE');
+        assert.ok(originalContext, 'sample reuses the original completed native source context');
+        const tools = Array.isArray(body.tools) ? body.tools.length : 0;
+        suggestionRequests.push({ originalContext, tools });
+        const id = 'TEST-codex-native-followup-' + suggestionRequests.length;
+        const events = [
+          { type: 'response.created', response: { id } },
+          { type: 'response.output_item.done', item: { type: 'message', role: 'assistant',
+            id: id + '-message', content: [{ type: 'output_text', text: 'TEST_CODEX_NATIVE_NEXT_PROMPT' }] } },
+          { type: 'response.completed', response: { id, usage: {
+            input_tokens: 10, input_tokens_details: null, output_tokens: 6,
+            output_tokens_details: null, total_tokens: 16,
+          } } },
+        ];
+        response.writeHead(200, { 'content-type': 'text/event-stream' });
+        response.end(events.map(event => 'event: ' + event.type + '\ndata: ' + JSON.stringify(event) + '\n\n').join(''));
+        return;
+      }
       const palette = options.uiGeneratedMessageIds || options.candidate169 || options.sourceSelection ? uiPalette(body) : undefined;
       if (
         options.allowModelProbes &&
@@ -687,6 +709,7 @@ export async function startCodexModel(
   return {
     url: `http://127.0.0.1:${address.port}`,
     observations,
+    suggestionRequests,
     candidateFinalHeld: () => candidateFinalHeld,
     firstFinalHeld: () => heldFirst?.live() === true && !firstFinalReleased,
     releaseFirstFinal: () => {

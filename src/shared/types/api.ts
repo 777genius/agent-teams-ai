@@ -143,6 +143,7 @@ import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contract
 import type { ExternalAgentConnectionApi } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
+import type { NativeNextPromptApi } from '@features/native-prompt-suggestions/contracts/channel';
 import type {
   MemberWorkSyncMetricsRequest,
   MemberWorkSyncReportRequest,
@@ -1048,6 +1049,9 @@ export interface ElectronAPI
 
   // Member log stream API
   memberLogStream: MemberLogStreamApi;
+
+  // Optional until the captured Host advertises this native feature.
+  nativePromptSuggestions?: NativeNextPromptApi;
 
   // Organization map API
   organizations: OrganizationsElectronApi;

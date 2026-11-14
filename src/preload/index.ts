@@ -8,6 +8,7 @@ import { createExternalAgentConnectionBridge } from '@features/external-agent-co
 import { createGatewayProviderBridge } from '@features/gateway-provider/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
+import { createNativeNextPromptBridge } from '@features/native-prompt-suggestions/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
@@ -529,6 +530,7 @@ const electronAPI: ElectronAPI = {
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),
   memberLogStream: createMemberLogStreamBridge(),
+  nativePromptSuggestions: createNativeNextPromptBridge(ipcRenderer),
   organizations: createOrganizationsBridge(ipcRenderer),
   terminalWorkspace: createTerminalWorkspaceBridge(ipcRenderer),
   tokenUsage: createTokenUsageBridge(ipcRenderer),

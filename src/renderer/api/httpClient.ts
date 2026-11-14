@@ -163,6 +163,8 @@ import type {
 } from '@shared/types';
 import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
+import { NATIVE_NEXT_PROMPT_UPDATED } from '@features/native-prompt-suggestions/contracts/channel';
+import type { NativeNextPromptApi } from '@features/native-prompt-suggestions/contracts/channel';
 import type { TerminalAPI } from '@shared/types/terminal';
 
 function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
@@ -564,6 +566,10 @@ export class HttpAPIClient implements ElectronAPI {
     setMemberLogStreamTracking: async () => {
       // Not available in browser mode - no-op.
     },
+  };
+
+  nativePromptSuggestions: NativeNextPromptApi = {
+    onUpdated: (callback) => this.addEventListener(NATIVE_NEXT_PROMPT_UPDATED, callback),
   };
 
   tokenUsage: TokenUsageElectronApi['tokenUsage'] = {
