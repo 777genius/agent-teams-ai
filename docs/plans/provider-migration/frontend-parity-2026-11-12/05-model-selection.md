@@ -1780,3 +1780,27 @@ Extend the existing OpenCode/roster probe-journal case in saved-team-model-probe
 Within the same sub-scope, check same-ID replay does not run another probe and that old-format/mismatched publication commitment, altered selection/command and expired original proof cannot transfer; bounded negative record mutations must restore the exact original bytes. Existing account/source/revocation/cleanup assertions remain intact. Saved-model behavior, original scoped cleanup and cold non-replay stay covered by the unchanged surrounding cases. No Desktop/native request budget or named case is added.
 
 Freeze exact three-path variants and inverses, obtain independent review and root publication. Root owns the existing-case old-source RED, coherent GREEN, original Host build/test types and source guards, followed by the original Resume/Review Desktop lanes. Source review is not native acceptance. Claude Resume's earlier rejected Host operation, §95 setup/oracle joins and stopped/donor failures remain separate.
+
+## 30. Preserve strict allocation deadlines with explicit Host test-file scheduling
+
+### 30.1 Original evidence and bounded conclusion
+
+Batch4 parent and native `test (1/4)` fail only the existing worktree branch of `submit uses original registry/roster/capture/start receipts and recovers same-ID admission after proof expiry`: both original providers opened, all four probes completed successfully and released their resources, but an allocation observation failed the strict comparison with that member's own original 1000ms deadline. Parent reports 1228 pass / 1 fail / 2 original skips, native 1244 / 1 / 2, with no cancelled tests. Raw logs are `e9ba7c85845e08a72fb7a068be58eb21c53c0359` and `63ce25d44d0dfb70c9a7b6c408d1446f785a2f19`; actual checkouts are respectively `889325183907aa17e91c8fb992afa086cab9c621` and `d1829c9f1f0749fa725c5f6466c53f5827b159f1`.
+
+Both logs show the original workflow capturing Node 24.21.0 and placing its exact directory on PATH for the Host command. Earlier controller Node 26 warnings do not identify the Host interpreter. The Host script currently leaves file concurrency implicit. [Node 24.21 CLI documentation](https://nodejs.org/download/release/v24.21.0/docs/api/cli.html#--test-concurrency) specifies the process-isolated default as `os.availableParallelism() - 1`; its [execution model](https://nodejs.org/download/release/v24.21.0/docs/api/test.html#test-runner-execution-model) preserves a separate child process per file.
+
+Root's unchanged isolated case on the current composed build passed in 4.229558s (6.840s command wall time). Its existing CPU profile shows substantial Team journal/currentness/source work, including synchronous reads; this is neither a profile of the failed CI runs nor proof of safely removable production checks. CPU contention remains an inference, not an established unique cause or performance guarantee. Exact original observations, current preimages and profile-file digests are in evidence `00102ab54a98f35a6fe3c919b59628c1e32ed8d8`.
+
+### 30.2 Exact single-path change
+
+The only writable path is `packages/legacy-agent-host/package.json`. Its current preimage is `d7976e13a62c23caaa371a31b4aade20f3639fc0` in parent `6640102f46e63a24b9c72a303b0e00121aed87bc`, native `3ebdb74bdebe8d58aae0b2730b6a0518a716fb5c` and qualification `9ee232b9fa663baaf45fa53b2076af14db57824a`.
+
+Insert exactly `--test-concurrency=1` after `node --test` in the existing `scripts.test` value. Preserve the build and test-type prerequisites, every original file argument and its order, Node engine range, separate process isolation and all other script/package/dependency fields. This makes the complete Host suite admit one file worker at a time; the original tests still exercise their own concurrent operations.
+
+No test body, assertion, case, skip, production path, workflow, request counter, timeout, timer, clock, native script or source guard changes. In particular §§18/21/25 retain the single wait bounded by the maximum original deadline and each exact member's strict observation-before-its-own-deadline assertion. No production validation is cached or removed.
+
+### 30.3 Qualification and remaining risk
+
+Freeze the one-field diff, full inverse and all three preimages for independent review and root-controlled integration/publication. The two original failures are the existing failure evidence; no new stress case or retry collector is introduced.
+
+Root must run the unchanged complete Host suite through the amended script and retain its actual totals, original skips, failure/cleanup evidence and duration. The original ordinary CI gate on the published source remains required. Serial files can increase total suite wall time; no job or operation deadline is enlarged. An isolated PASS or source review cannot substitute for that full-suite result. Any remaining failure stays a failure and must be diagnosed without relaxing the allocation oracle. Source remains zero until explicit root GO.
