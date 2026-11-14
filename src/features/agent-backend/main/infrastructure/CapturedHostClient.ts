@@ -393,7 +393,14 @@ export class CapturedHostClient {
         if (typeof message.method !== 'string' || !('params' in message))
           throw new Error('notification');
         if (message.method === HOST_GAP_METHOD) this.notificationGap = true;
-        else if (
+        else if (message.method === 'runtime.prompt-suggestion.updated' && this.onNativePromptSuggestion) {
+          // The selected Main owner consumes this ephemeral offer synchronously.
+          // Do not also retain it in the unrelated pull buffer: there is no
+          // pending-data reader for prompt suggestions, and that would
+          // eventually overflow and drop future valid offers.
+          try { this.onNativePromptSuggestion(message.params); }
+          catch { /* Auxiliary observations never change a Host result. */ }
+        } else if (
           this.notifications.length >= this.limits.maxDataNotifications ||
           this.notificationBytes + frame.length > this.limits.maxDataBytes
         ) {
@@ -403,10 +410,6 @@ export class CapturedHostClient {
         } else {
           this.notifications.push(message as unknown as RpcNotification);
           this.notificationBytes += frame.length;
-          if (message.method === 'runtime.prompt-suggestion.updated') {
-            try { this.onNativePromptSuggestion?.(message.params); }
-            catch { /* Auxiliary observations never change the Host wire result. */ }
-          }
         }
       }
       return true;
