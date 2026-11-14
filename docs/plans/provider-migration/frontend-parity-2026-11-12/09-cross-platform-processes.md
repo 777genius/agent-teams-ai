@@ -4390,3 +4390,38 @@ Keep the original exact TEST-model option selector, physical model click, custom
 Before source GO: root and independent peer read this exact appendix and the old/current consumer chain. Before source publication: review both full variant diffs, prove all bytes outside the declared opt-in preparation and original nav/input-pin changes remain unchanged, and verify the five native/qualification environment lines remain intact. Existing non-source-selection branches must receive no new filesystem write.
 
 Use the existing script type check and source-size/diff guards in the assigned serialized verification slot; no new unit suite or native diagnostic run is requested. Final acceptance requires the unchanged existing Linux retained Desktop lane at the actual candidate head: original coexistence plus both explicit V1 and V2 source-selection invocations, their original receipts and all downstream gates. A source review or synthetic config check cannot qualify the installation, native runtime, source transition, model execution, cold history or cleanup. Preserve the original0543 failure and classify any next actual failure separately before changing anything else.
+
+## 84. Complete the existing Linux qualification inputs
+
+### 84.1. Actual failures and unchanged acceptance
+
+At live native head `dfd0089e038669b3c662df18cf20841e365bbeac`, Sentry run `43548417919` passed the Windows x64 and ARM64 native jobs. Linux ABI job `132305022500` failed in the existing `proveIsolatedChild` assertion because its caller supplied neither `LEGACY_LINUX_CHILD_EXEC_MANIFEST` nor `LEGACY_LINUX_CHILD_EXEC_SHA256`; immutable full log is `67cb7ddf6ebe91d120b411b4a83539acfbaca95e`. Linux pidfs job `132305022667` passed native/SDK/cold-UI phases and failed before packed cold UI at the terminal resource tree comparison; full log is `7c233d3a23d2bab747c30903056d935ca3cbbd93`. Artifact `14097391897` is 30,706,845 bytes with SHA256 `3350901a0d88595c499200daefe7fbf0859464cb6310da578ead9eeb2df891a1`; its packed receipt retains sourceFreeze PASS and the unequal source/packed digests. Neither Linux gate is qualified.
+
+The locked builder's actual `builder-util@26.16.0/out/fs.js` (SHA256 `69c433388691bb4dde009f5d50f9650aeaa600ce4d8340c971ac3de98d6afa51`) unconditionally omits names `.gitkeep` and `.DS_Store` while copying. The committed terminal source directory retains exactly the root `.gitkeep` placeholder (Git blob `8b137891791fe96927ad78e64b0aad7bded08bdc`, one newline, SHA256 `01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b`). This establishes an invalid comparison between the source staging tree and shipping payload. The available artifact does not contain both terminal file trees, so it does not establish that this is the only difference. The next exact-head native run must still prove equality of every shipping path and byte; any other discrepancy remains a failure.
+
+### 84.2. Exact scope and minimal changes
+
+Only these two existing TEST actors in the native child change. Parent and qualification branches do not contain them. Production code, the native helper/builder, dependency pins, workflow/job matrix, native case set, model/business inputs, process ownership, observation oracles and all deadlines remain unchanged. No new file or unit suite is required.
+
+| Existing path | Exact preimage | Change |
+| --- | --- | --- |
+| `packages/legacy-agent-host/scripts/qualifyLinuxProcessAbiHost.ts` | `29feeb37ef17e61a5057c3d94b61200dbb2ca425` | Stage the same original checked static helper once and pass its exact manifest to the existing older-kernel journey. |
+| `scripts/legacy-agent-host/qualify-linux-process-packed.ts` | `8da6c933a126c17fff08dfdb7a758d26b8932331` | Compare the complete packed terminal payload with the source payload after excluding only the exact tracked root placeholder; retain the complete original source-tree freeze. |
+
+The source basis is native working head `e59abd934a30a499e70b1d6426d67d91fd1e95da`. This appendix extends exact P09 `03b1a1814e42cbd661fb9feb1b459a5a246640c1`.
+
+### 84.3. ABI caller supplies the existing helper
+
+Reuse `buildLinuxChildExecArtifact` from the already captured `buildLinuxProcessNativeArtifact.ts` (`e81aca726f321a77fded1f0d051ba7e1da5aefaf`), exactly as the existing `qualifyLinuxProcessNative.ts` caller does. Use the original host compiler plus real inspector, source hashes and a new private child directory beneath this same TEST output. This helper is static and separate from the unchanged NAPI artifact built/loaded in actual glibc2.28; do not relabel a host-built NAPI module as ABI evidence.
+
+Pass the exact returned manifest path/hash only to this existing native invocation through a narrow optional environment argument on its existing `run` function. Preserve the original 45-second journey and overall job timeout. Recheck the helper manifest/binary hashes after the journey and require its already emitted `isolated-same-child-launch` fact to name that binary, retain the parent descriptor and complete cleanup. Retain the helper selection in the same host receipt. No extra native journey, process fallback, capability override or changed older-kernel oracle is introduced.
+
+### 84.4. Strict packed payload equality
+
+Keep the original complete source terminal tree in `frozenInputs.trees` and every before/after `verify()` check. Before building, compute one additional expected shipping digest with the same sorted relative-path + NUL + exact bytes + NUL algorithm as the existing `treeHash`. Its only exception is the root-relative `.gitkeep`, whose exact contents must first equal the committed one newline. Do not omit arbitrary hidden files, other placeholders, metadata, executable files, nested paths or `.DS_Store`; any additional builder exclusion still makes equality fail.
+
+Compare the full packed terminal `treeHash` against that expected shipping digest and retain both expected shipping digest and original complete source digest in the receipt. Retain full packed-tree freezing after comparison and all existing managed Git, asar, native selection, packed-capture, cold UI, original Stop/history and cleanup assertions. Do not copy extra files into the builder result, modify source staging after capture, trust a new mutable default, replace a package or relax a runtime hash. The source and shipping scopes are explicit and independently frozen.
+
+### 84.5. Review and proof
+
+Root and an independent peer review this exact plan before source. Review both full source deltas and verify that all original invocation counts, native assertions, timeouts and downstream packed cold UI calls remain. Root runs the existing script typecheck, source-size and diff guards in the serial slot. The actual unchanged ABI and packed Linux jobs on the next ordinary reviewed head are mandatory; local checks cannot qualify glibc2.28, the actual older kernel, packed Electron or its cold UI. Preserve these failed run receipts and classify any next failure separately.
