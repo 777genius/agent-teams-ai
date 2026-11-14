@@ -1526,3 +1526,45 @@ The newly reachable existing production `action.prepare` issues one ordinary mod
 Extend only the existing Main IPC case `uses two lazily captured subprocess hosts and captured context grants for finite IPC operations`, retaining all eleven literal case declarations. In its existing subprocess fixture add a finite initial-launch response that owns null, plus a missing-field form and an expired non-null form. The meaningful positive contains two OpenCode workspaces, a per-member requested model override and a non-OpenCode peer: inspect the actual forwarded private origin/full payload and one original start, proving the complete target set, exact original selection digest and finite original remaining budget. A requested missing attachment must produce no start; an expired non-null capture must hold on the captured route without a fresh origin/start. Keep the existing invalid public-origin, owner/currentness and historical same-command no-preparation assertions. No exhaustive field-permutation matrix, new test case, fake model readiness success or changed native assertion is added.
 
 Freeze full sources and diffs; independently verify exact inverses, unchanged original case names/assertions, original source-selection body, same existing launch call/business sequence and line caps. Root runs the existing focused Main file plus canonical applicable type/lint/source guards. Source-only/controlled PASS does not qualify a native engine. The original retained V1/V2 Desktop job, with its unchanged physical owner/Stop/cold/cleanup acceptance and the explicit one-preparation extension above, remains mandatory on the next ordinary reviewed head. Do not rerun or advance currently active heads as part of this amendment.
+
+
+## 23. Keep the OpenCode lifetime authority safe inside the existing Runtime dispatch fence
+
+### 23.1 Original failure and source trace
+
+Current original packaged Darwin ARM jobs132415890718 (parent3a2882e1) and132415242935 (qualification0e88cb3d) reach the real embedded OpenCode2.1.4 ready/context-applied state. Their first original message is admitted, but remains admitted through the unchanged90000ms wait; the original localhost model receives zero requests. Both original Host exits and cleanup are confirmed, so this is a dispatch failure after successful Open. The Windows source-native job132409199642 also retains an admitted input with zero model requests, but reports an independent bootstrap-timeout; that startup outcome is not reclassified here. Original full logs and embedded failure receipts are frozen by root in the evidence record accompanying this appendix. No replay or native success is inferred.
+
+The exact current `RuntimeOwner.dispatchNext` holds its Runtime activity fence while invoking `canDispatch`. `RuntimeTeamCoordinator.canDispatch` calls `provider.isReady`; both OpenCode providers call the captured `isCurrent` callback. In `createRuntimeMemberProviderFactory`, that callback is currently `setupCurrent`, which unconditionally calls `options.readRuntime(entry.binding)` before checking whether the record is still opening. This re-enters the same Runtime store. V2 treats a failed lifetime callback as permanent lease revocation, while V1 cannot pass readiness. The existing `captureMemberProviderAuthority.isCurrent` deliberately performs no Runtime lookup and was designed for callbacks under Runtime/Team fences.
+
+Original evidence: `5c04ba3b619b7d21dbdf3d33c0b7f7529a6aa66a`; full original log bundle: `9ea7b1f48bda234585631d49751e892b2f5fbe86`.
+
+This source trace is the concrete candidate cause. The existing initial-V2 Host case currently covers Open, exact original admission, checkpoint, Stop and cold Restore, but never submits a message. Its controlled provider already calls the real context `isCurrent` from `isReady`, so one ordinary message in that same case can reproduce the boundary without a new mock or native experiment.
+
+### 23.2 Two existing writable paths and their exact variants
+
+| Path | Parent / qualification preimage | Native preimage |
+| --- | --- | --- |
+| `packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts` | `f5a5e5320409fb481b41b194aa11889d03e3bc14` | `4222f92b8e50368fb488d95ba5981e6051e7db09` |
+| `packages/legacy-agent-host/tests/runtime-team-host.test.ts` | `8fc799cb28f94726aac179eafdcf1f1380f0560b` | same |
+
+All other files, the native Windows retained-process variant, shared authority implementation, Runtime owner/fences, readiness consumers, provider implementation and native harness remain unchanged. Platform's separate W01 continuation must compose its future factory edit on this reviewed result.
+
+### 23.3 Minimal correction and allocation preservation
+
+Pass the original fence-safe `authority.isCurrent` as the provider lifetime `isCurrent` and `canCaptureRegisteredProcess` callbacks. Keep the existing `canAllocate` composition and its `setupCurrent`/`readiness.assertCurrent` checks unchanged. No new latch, owner, state field, readiness cache or timeout is needed.
+
+The initial model source is still attached and consumed once before allocation. `authority.canAllocate` still joins the exact original Runtime opening/allocated state; `setupCurrent` still checks the consumed readiness during opening. V1's captured process and startup loop explicitly use `context.canAllocate`. V2's embedded factory, native startup and server allocation retain the same explicit `canAllocate` callback; its SPI checks allocation before first readiness and retains the existing lifetime lease afterwards. Returning the lifetime callbacks to their existing owner does not create permission to allocate, dispatch a held Runtime, reuse an expired preparation or change provider/source/configuration.
+
+Registration remains subject to its original grant, member binding and physical process custody. Its general authority callback must also be safe under the existing owner fences; it must not re-enter Runtime simply to confirm that opening has ended.
+
+### 23.4 One critical existing-case extension and normal acceptance
+
+Extend only the existing `mixed Host boots V2 Session SPI profile without invoking V1 management registration` case. After its already-admitted initial Open, send one original `message.send` to that member through `team.execute`, retain its deliveryId, wait using the existing finite helper for exactly one controlled native submit, and verify its original content and input identity. Publish the existing controlled terminal event, confirm that the same Runtime input reaches terminal, then continue all original checkpoint/Stop/cold-Restore assertions unchanged. Do not introduce a dispatch RPC, a new case, a new fake owner or an increased wait.
+
+First run that amended case against the old factory and retain the actual failed dispatch result. Then apply the two callback corrections and run the same case plus the existing runtime-team-host/saved-team-model-probe files. This meaningful before/after check addresses the real Runtime-to-provider join; it is not a conditional-mirroring unit matrix. Root owns compilation and guards. No model request, deadline, launch/startup/cleanup assertion or native fixture is changed.
+
+Actual acceptance still requires the original packaged and source-native jobs on the next ordinary eligible head. Linux's separate initial-open refusal after its coordination fixture and any native startup failure remain separate investigations; neither is declared fixed by this source review.
+
+### 23.5 Review and publication
+
+R1 traced the original failure to the nested Runtime lookup and rejected a new mutable setup-complete latch in favor of the existing authority split. Independent review must verify every native allocation callsite still reaches `canAllocate`, the two factory variants preserve all unrelated bytes, and the same original case fails before and passes after the correction. Root publishes this exact appendix before source edits, commits and immediately pushes each reviewed cut, and leaves active live CI heads unchanged until their current runs finish.
