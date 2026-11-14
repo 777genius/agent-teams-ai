@@ -5058,3 +5058,58 @@ The relevant readonly source anchors are submitted-ref producer `e1cbbb05ee2fbaf
 Freeze the one-file diff/full inverse and all three preimages for independent review before root integration. Root owns the existing scripts type check and source-cap gate. No new test suite, case, native execution, timeout adjustment, or permutation matrix is requested. The next original ordinary UI run retains its existing PASS/failure/cleanup result; diagnostic availability cannot turn failure into success.
 
 If the exact submitted source passes this schema check while the original Host still rejects it, the Host envelope/internal issue remains open. A later minimal Host diagnostic would need its own reviewed scope; this section does not silently add that surface. Source remains zero until the plan is published and root grants GO.
+
+## 102. Expose the already retained first Codex Login target facts in the existing failure summary
+
+### 102.1. Original evidence and the unresolved question
+
+The original Codex Login job `132458083695` in run `43594542099` checked out `62a79f00fedee2c552819985a9496e7b08861a93`. Full log `ba119bb96c44c6915081b59db48be389ad4ff127` records an INCOMPLETE result, the initial account snapshot and original proof/error as recorded, zero input steps and zero login cases. Its original failure frames are `desktop-ui-controls.ts:257/261` and `desktop-codex-login-ui-proof.ts:57`: the first read of the existing More actions button failed before its first mouseMoved or mouseClick step. The earlier original focus/emulation and passive input observation had already run. The later generic incomplete-proof assertion does not identify the original cause.
+
+Artifact `14118647096` was uploaded as 524674 bytes with ZIP SHA256 `2a9c912aec36ea83bbe8583ca804227825985ddf72a023daa723bd072160c129`. Its receipt remains the appropriate original evidence. This investigation has not read that ZIP: the executor is unavailable and the connector's artifact result is a file reference, while its ordinary UTF-8 fetch rejects binary ZIPs. Do not infer the retained flag values or a renderer, timing, click, authentication or cleanup cause from that access limitation. The actual Login cause remains unknown.
+
+Read-only evidence `250f7e40b110866197916c62d3898966764f8a3d` records the exact source/log comparison. Login helper `101a569636180d2110af2d01fc65d98b6c4b195f` and UI controls `3af62c431d5b26e9ba4310af98efb27c4d8fd717` are identical in the original checkout and the inspected current source. Actual smoke `efdd11ac15b84c43f10e8fabcdd468e0c0314e20` versus current qualification smoke `c467c98ffedeb971ec8a39341985a56c127f9d09` changes only unrelated C10/OpenCode joins (full comparison `375c147602216e571ac519c88230e1cbf03dead8`). Login dispatch, error retention, cleanup, receipt writing, summary invocation and final assertions remain byte-identical.
+
+### 102.2. Existing collection and the single missing projection
+
+The existing controls collect an `unavailableTarget` sample inside the same original passive read/deadline. The first More-menu phase also collects bounded bootstrap flags in that same evaluation. At controls line 257, an error is wrapped with a fixed phase and JSON facts only if a sample was retained. The exact frame therefore establishes a retained sample, without revealing its values or proving that the eventual cause was a timeout.
+
+The existing smoke catch saves the original message with `.slice(0, 4000)` into `evidence.failure`. The existing `projectDesktopCodexLoginFailure` summary only reports whether that string exists. The complete original log contains none of the target/bootstrap field names or original target-read message, although it already prints the summary. No new observer, receipt field, UI request, screenshot, Host call or retry is needed. Expose a closed projection of those already retained facts through that existing summary for the next ordinary CI execution.
+
+### 102.3. Exact source scope and branch boundary
+
+The sole writable path is `scripts/legacy-agent-host/desktop-codex-login-ui-proof.ts`, preimage `101a569636180d2110af2d01fc65d98b6c4b195f`, and only its existing `projectDesktopCodexLoginFailure` function changes.
+
+This is an existing **qualification-only** helper. Fresh read at qualification `791367894b39c55c919771bf7ea2bf82ce6412e3` returns that exact blob. Parent `d78269cde649fc3cc6f930685928622996b8c8c1` and native `fe92dc9f1ec0928ed56524a0d033b8a131b2e93c` have no such path, confirmed by both Contents 404 and their complete original helper-directory listings. Do not add the file, propagate the Login mode or invent common preimages on those branches. The P09 plan can be synchronized normally.
+
+UI controls, all smoke variants, workflows, source rosters, product files and tests are read-only for this cut. The original Login action/case code preceding the projector remains byte-identical. No new helper file, generic diagnostic framework or test declaration is authorized.
+
+### 102.4. Fixed input recognition and output allowlist
+
+Add one `initialUnavailableTarget` property to the existing failure projection. It describes the **last retained unavailable sample from the initial More-menu read**, not a diagnosis or fresh observation. Its state is a fixed enum:
+
+- `not-recorded`: no string with the exact existing prefix is present;
+- `unavailable`: the exact prefix is present but its bounded JSON record cannot be validated;
+- `retained`: the original closed facts validate and the property contains their safe projection.
+
+Recognize only the literal prefix `UI target read failed: open existing More menu; facts=` in the existing error string. Require the original total input limit of 4000 characters before parsing its suffix as one JSON object. No search through nested causes, arbitrary labels, regular-expression scraping, secondary error field or alternate phase is admitted. A malformed, oversized, array or unexpected-key record yields only the new property's `unavailable` state; it must not suppress the old summary fields or escape the diagnostic boundary.
+
+The exact 18 permitted facts are:
+
+| Fields | Permitted retained value |
+| --- | --- |
+| `matches`, `rawMatches` | Safe integer from 0 through 256 |
+| `rootChildren` | Safe integer from 0 through 16 |
+| `disabled`, `ariaDisabled`, `pointerEventsNone`, `centerInViewport`, `hitPresent` | Boolean |
+| `rootPresent`, `uiInitialized`, `splashPresent`, `splashPositiveSize`, `splashError`, `splashSlow`, `documentComplete`, `languageEnglish`, `languageEmpty`, `rootFallbackShape` | Boolean |
+
+The existing collector always supplies `matches` and the five target booleans; require those six own fields with the exact types/ranges. The twelve bootstrap fields are optional in the collector. Validate every present optional value and emit null for absence, preserving unknown rather than converting it to false. Reject any other own key; never spread parsed input directly into the output. Emit only the explicitly listed numbers/booleans/nulls and the fixed state enum. JSON parsing failure stays local to this new projection.
+
+The original collector already caps counts, so 256 or 16 must not be interpreted as an uncapped exact underlying population. When there is no unique positive-size target, the collector normalizes absent target booleans to false; those flags cannot establish that an actual element was enabled or unobstructed. An unavailable sample may precede a later CDP/currentness error, so no timeout, causal reason, fresh liveness or permission result is synthesized. `capturedHostObserved: false` remains distinct from confirmed Host absence.
+
+### 102.5. Preserved gates and bounded verification
+
+Preserve every original summary field, source frame, original error, proof status, cleanup fact and final assertion. Keep the existing maximum serialized summary size of **4096 bytes** and its existing unavailable fallback. No raw error string, DOM text/HTML/attribute, profile/account name, URL, path, key, token or secret may be added to the summary. Do not change how the original receipt records its evidence.
+
+The existing original controls retain their 30000 ms initial read, passive evaluations, hover/stability checks, one-click rule and owner/currentness checks. Browser/device-code action counts, native/case budgets, deadline, source/custody and cleanup oracles remain unchanged. This is a projection of retained data, with no new I/O, timer, polling, retry, service, public contract or successful outcome.
+
+Freeze the one-file full blob and exact before/after diff; independently check the explicit input/output allowlist, malformed-record isolation, original function-prefix preservation and full forward/inverse match. Root retains normal source/type/lint gates and the next ordinary CI run; no additional test file, new case, native execution or test campaign is requested. The current review is source-only. Reading the old receipt later remains useful and does not require a rerun; this projection does not retroactively recover its values or qualify the failed Login. Source remains zero until this plan is published and root grants the exact one-path GO.
