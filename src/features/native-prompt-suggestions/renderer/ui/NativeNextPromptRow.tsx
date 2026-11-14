@@ -26,7 +26,7 @@ export function NativeNextPromptRow({
       data-testid="native-next-prompt-row"
     >
       <Sparkles size={14} className="shrink-0 opacity-70" aria-hidden="true" />
-      <span className={compact ? 'min-w-0 flex-1 truncate' : 'min-w-0 flex-1 line-clamp-2'}>
+      <span aria-live="polite" aria-atomic="true" className={compact ? 'min-w-0 flex-1 truncate' : 'min-w-0 flex-1 line-clamp-2'}>
         {text}
       </span>
       {!compact ? (
@@ -39,7 +39,7 @@ export function NativeNextPromptRow({
       ) : null}
       <button
         type="button"
-        className="inline-flex min-h-8 shrink-0 items-center rounded px-2 font-medium text-[var(--color-text-secondary)] hover:bg-white/[0.045] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="inline-flex min-h-11 shrink-0 items-center rounded px-2 font-medium text-[var(--color-text-secondary)] hover:bg-white/[0.045] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         aria-label={insertLabel}
         onMouseDown={(event) => event.preventDefault()}
         onClick={onInsert}
@@ -48,7 +48,7 @@ export function NativeNextPromptRow({
       </button>
       <button
         type="button"
-        className="inline-flex min-h-8 min-w-8 shrink-0 items-center justify-center rounded hover:bg-white/[0.045] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded hover:bg-white/[0.045] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         aria-label={dismissLabel}
         onMouseDown={(event) => event.preventDefault()}
         onClick={onDismiss}
