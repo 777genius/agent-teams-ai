@@ -33,11 +33,27 @@ export function canManagedInstallChangeOpenCodeRuntime(
   );
 }
 
-export function isOpenCodeRuntimeUsable(runtimeStatus: OpenCodeRuntimeStatus | null): boolean {
+/** Presentation of an attested V1 engine never invents a selecting CLI version. */
+export function isCapturedOpenCodeV1Runtime(runtimeStatus: OpenCodeRuntimeStatus | null): boolean {
   return (
     runtimeStatus?.installed === true &&
-    runtimeStatus.v2Support !== 'required' &&
-    isOpenCodeVersionServedByRuntime(runtimeStatus.version)
+    runtimeStatus.state === 'ready' &&
+    runtimeStatus.source === 'captured-host' &&
+    runtimeStatus.nativeGeneration === 'v1' &&
+    runtimeStatus.version === undefined &&
+    runtimeStatus.engineVersion === undefined &&
+    runtimeStatus.v2Support === undefined &&
+    runtimeStatus.compatibleV2Version === undefined &&
+    runtimeStatus.v2Maintenance === undefined
+  );
+}
+
+export function isOpenCodeRuntimeUsable(runtimeStatus: OpenCodeRuntimeStatus | null): boolean {
+  return (
+    isCapturedOpenCodeV1Runtime(runtimeStatus) ||
+    (runtimeStatus?.installed === true &&
+      runtimeStatus.v2Support !== 'required' &&
+      isOpenCodeVersionServedByRuntime(runtimeStatus.version))
   );
 }
 
@@ -121,6 +137,7 @@ export function resolveOpenCodeQuickConnectRuntimeRevision(input: {
     runtimeStatus.version ?? null,
     runtimeStatus.binaryPath ?? null,
     ...(runtimeStatus.sourceRevision ? [runtimeStatus.sourceRevision] : []),
+    ...(runtimeStatus.nativeGeneration ? [runtimeStatus.nativeGeneration] : []),
   ]);
 }
 

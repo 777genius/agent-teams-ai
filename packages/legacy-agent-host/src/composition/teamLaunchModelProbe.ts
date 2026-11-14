@@ -122,6 +122,11 @@ export function teamModelProbeProfile(base: RuntimeMemberProfile): ProviderManag
 export const teamModelProbeContext = (teamId: string, input: TeamModelProbeSelection) =>
   runtimeDigest({ teamId, input });
 
+/** Product publication is committed only by the original retained prospective admission. */
+export const teamModelProbeActionDigest = (commandId: string, context: string, productRosterRevision?: string) =>
+  runtimeDigest(productRosterRevision === undefined
+    ? { commandId, context } : { commandId, context, productRosterRevision });
+
 export function teamModelProbeEffort(
   profile: RuntimeMemberProfile
 ): TeamModelProbeSelection['effort'] {
@@ -176,6 +181,8 @@ export function captureTeamModelProbe(options: {
   const selected = recipe();
   const source = runtimeDigest({ entry: entry?.profile, recipe: selected });
   const profile = applyTeamModelProbeSelection(selected, input);
+  const productRosterRevision = input.draft && profile.provider === 'opencode'
+    ? options.team.connection.readRoster().revision : undefined;
   const authority = () => ({
     operator: options.team.owner.withLaunchAuthority(
       options.principalId,
@@ -210,6 +217,7 @@ export function captureTeamModelProbe(options: {
     if (
       current.launchId !== input.launchId ||
       current.rosterRevision !== input.rosterRevision ||
+      (productRosterRevision !== undefined && options.team.connection.readRoster().revision !== productRosterRevision) ||
       (!input.draft && !current.memberIds.includes(input.memberId)) ||
       runtimeDigest({ entry: entry?.profile, recipe: recipe() }) !== source ||
       runtimeDigest(authority()) !== runtimeDigest(admittedAuthority)
@@ -219,6 +227,7 @@ export function captureTeamModelProbe(options: {
   assertSelection();
   return {
     profile: teamModelProbeProfile(profile.provider === 'claude' ? selected : profile),
+    ...(productRosterRevision === undefined ? {} : { productRosterRevision }),
     provenance: { teamBindingDigest: runtimeDigest(options.team.definition.binding),
       selectionDigest: runtimeDigest(input), sourceRevision: input.launchId, rosterRevision: input.rosterRevision,
       destinationKeys: [runtimeDigest(input.draft?.target ?? { launchId: input.launchId, memberId: input.memberId })] },
@@ -311,9 +320,12 @@ export async function executeTeamModelProbe(options: {
     prepared.anchor.expiresAt = Math.min(prepared.anchor.expiresAt, parent.cutoff);
   }
   const origin = prepared ? originalReadinessSubset(prepared.origin, captured.profile.cwd, captured.providerId) : undefined;
+  const legacyActionDigest = teamModelProbeActionDigest(options.commandId, captured.context);
+  const productRosterRevision = 'productRosterRevision' in captured ? captured.productRosterRevision : undefined;
   const privateScope = captured.profile.provider === 'opencode' && (!retained || retained.readinessScope) ? {
     schemaVersion: 1 as const, kind: 'team' as const, ...captured.provenance,
-    actionDigest: runtimeDigest({ commandId: options.commandId, context: captured.context }),
+    actionDigest: retained?.readinessScope?.actionDigest === legacyActionDigest ? legacyActionDigest
+      : teamModelProbeActionDigest(options.commandId, captured.context, productRosterRevision),
     mechanismDigest: modelReadinessMechanismDigest(captured.profile), workspace: captured.profile.cwd,
     cutoff: retained?.readinessScope?.cutoff ?? Math.min(prepared?.anchor.expiresAt ?? admittedAt + (captured.profile.modelProbeTimeoutMs ?? 90000),
       parent?.cutoff ?? Infinity),

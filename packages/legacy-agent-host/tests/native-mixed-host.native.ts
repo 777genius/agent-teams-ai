@@ -129,6 +129,7 @@ test(
         `${name}/cache`,
         `${name}/workspace`,
       ]),
+      'carol/config/opencode',
     ])
       await mkdir(join(root, directory), { mode: 0o700 });
     const crossSourcePinsBefore = exerciseCrossTeam

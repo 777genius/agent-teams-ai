@@ -379,6 +379,7 @@ function fixture(withSources = false, provider: 'claude' | 'opencode' = 'claude'
     },
     opens: () => opens,
     spends: () => spends,
+    originalAllocationTimes: () => [...allocatedMembers].map(([memberId, allocatedAtMs]) => ({ memberId, allocatedAtMs })),
     async waitForOriginalAllocation(members: TeamLaunchSummary['members']) {
       const expected = members.map(({ memberId, attempt }) => ({ memberId, deadline: attempt.deadlineMs }));
       assert.equal(expected.length, 2);
@@ -823,6 +824,7 @@ test('submit uses original registry/roster/capture/start receipts and recovers s
     } catch (error) {
       t.diagnostic(JSON.stringify({ provider, worktree, opens: f.opens(), spends: f.spends(),
         ownerRevision: f.profile.owner.revision,
+        originalAllocationTimes: f.originalAllocationTimes(),
         originalFailure: error instanceof Error ? error.stack : String(error) }));
       try {
         const runtimeRoot = join(f.root, 'runtime-sessions');
