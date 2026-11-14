@@ -22,12 +22,32 @@ export function useNativeNextPrompt(input: {
 }) {
   const [candidate, setCandidate] = useState<NativeNextPromptCandidate | null>(null);
   const dismissedOperationRef = useRef<string | null>(null);
+  // A user editing an empty composer can precede the provider's late offer.
+  // Dismiss by the original human message, not just an arrived operation.
+  const invalidatedMessageIdRef = useRef<string | null>(null);
   const conversationRef = 'direct:' + input.recipient.trim().toLowerCase();
 
   useEffect(() => {
     setCandidate(null);
     dismissedOperationRef.current = null;
+    invalidatedMessageIdRef.current = null;
   }, [input.teamName, input.recipient, input.memberId]);
+
+  useEffect(() => {
+    // A new direct human message is a new revision and may get a new offer.
+    if (invalidatedMessageIdRef.current !== input.latestDirectMessageId)
+      invalidatedMessageIdRef.current = null;
+    if (candidate && candidate.messageId !== input.latestDirectMessageId)
+      setCandidate(null);
+  }, [input.latestDirectMessageId, candidate]);
+
+  useEffect(() => {
+    if (!input.editable) {
+      if (input.latestDirectMessageId)
+        invalidatedMessageIdRef.current = input.latestDirectMessageId;
+      setCandidate(null);
+    }
+  }, [input.editable, input.latestDirectMessageId]);
 
   useEffect(() => {
     const unsubscribe = api.nativePromptSuggestions?.onUpdated((value) => {
@@ -36,6 +56,7 @@ export function useNativeNextPrompt(input: {
         value.memberId !== input.memberId ||
         value.conversationRef !== conversationRef ||
         value.messageId === undefined ||
+        value.messageId === invalidatedMessageIdRef.current ||
         value.operationRef === dismissedOperationRef.current
       ) return;
       setCandidate(value);
@@ -93,9 +114,11 @@ export function useNativeNextPrompt(input: {
 
   /** Invalidate a displayed or pending old offer before an ordinary user send. */
   const invalidate = useCallback(() => {
+    if (input.latestDirectMessageId)
+      invalidatedMessageIdRef.current = input.latestDirectMessageId;
     if (candidate) dismissedOperationRef.current = candidate.operationRef;
     setCandidate(null);
-  }, [candidate]);
+  }, [candidate, input.latestDirectMessageId]);
 
   return { candidate: visible ? candidate : null, visible, insert, dismiss, onTab, invalidate };
 }
