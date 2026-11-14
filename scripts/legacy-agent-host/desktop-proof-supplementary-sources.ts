@@ -7,6 +7,7 @@ export const desktopProofProcessSources = [
   'scripts/legacy-agent-host/desktop-native-process-ui.test.ts',
   'scripts/legacy-agent-host/desktop-controlled-process-fixture.ts',
   'scripts/legacy-agent-host/qualify-process-cold-ui.ts',
+  'scripts/lib/node-options.mjs',
   'scripts/legacy-agent-host/fixtures/process-controlled-root.ts',
   'scripts/legacy-agent-host/fixtures/process-controlled-root.test.ts',
   'scripts/legacy-agent-host/fixtures/process-service.ts',
