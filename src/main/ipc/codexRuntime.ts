@@ -13,8 +13,10 @@ const logger = createLogger('IPC:codexRuntime');
 const codexRuntimeInstallerFeature = createCodexRuntimeInstallerFeature();
 
 export function registerCodexRuntimeHandlers(ipcMain: IpcMain): void {
-  registerCodexRuntimeInstallerIpc(ipcMain, codexRuntimeInstallerFeature, (event) =>
-    captureDesktopRuntimeSources(event, 'codex')
+  registerCodexRuntimeInstallerIpc(
+    ipcMain,
+    codexRuntimeInstallerFeature,
+    (event) => captureDesktopRuntimeSources(event, 'codex') ?? null
   );
   logger.info('Codex runtime handlers registered');
 }
