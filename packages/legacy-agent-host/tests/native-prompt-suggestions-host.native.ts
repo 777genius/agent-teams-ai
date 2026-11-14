@@ -205,13 +205,16 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     assert.ok(bodies.length>=2,'SDK generated an additional native suggestion inference');
     assert.deepEqual(errors,[]);
     assert.equal(typeof latestGeneration,'string');
+    const originalOperationRef = event.operationRef;
+    assert.ok(typeof originalOperationRef === 'string' && originalOperationRef.length > 0,
+      'Host notice carries a bounded original operation');
     const proofPayload={memberId:'alice-id',expectedGeneration:latestGeneration,
-      nativePromptProof:{inputId:deliveryId,operationRef:event.operationRef}};
+      nativePromptProof:{inputId:deliveryId,operationRef:originalOperationRef}};
     const verified=await host.rpc('runtime.read',envelope('TEST-prove-original-operation',proofPayload));
     assert.equal(verified.ok,true,'same original Runtime read accepts optional proof without mutation');
     assert.equal(scalar(verified.value).nativePromptCurrent,true,
       'captured Host independently checks terminal original human DM and exact operation');
-    assert.equal(JSON.stringify(verified.value).includes(event.operationRef),false,
+    assert.equal(JSON.stringify(verified.value).includes(originalOperationRef),false,
       'private operation token never leaves captured Host in Runtime read projection');
     const rejected=await host.rpc('runtime.read',envelope('TEST-reject-foreign-operation',{
       ...proofPayload,nativePromptProof:{inputId:deliveryId,operationRef:'TEST-foreign-operation'},

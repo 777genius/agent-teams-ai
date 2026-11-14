@@ -88,7 +88,13 @@ export async function nativeCodexDriver(options: {
   root: string; binary: string; modelUrl: string; endpoint: TeamMcpEndpoint;
   candidate?: Candidate;
   /** Optional original Host-like observation port, never a Session SPI change. */
-  promptSuggestions?: CodexDriverConfig['promptSuggestions'];
+  promptSuggestions?: {
+    eligible(input: Readonly<{ inputId: string; operationRef: string }>): boolean;
+    offer(value: Readonly<{
+      provider: 'claude' | 'codex'; sessionRef: string; inputId: string;
+      operationRef: string; nativeSessionRef: string; nativeTurnRef?: string; text: string;
+    }>): void | Promise<void>;
+  };
   currentBinding(): boolean;
   onCapturedChild(child: ChildProcess): void;
 }) {
