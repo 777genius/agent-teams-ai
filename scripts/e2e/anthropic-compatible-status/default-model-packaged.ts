@@ -2,6 +2,7 @@
 // Real packaged app -> bundled released status -> inherited UI -> native save ->
 // saved-model inference. No team is launched; every provider request is localhost.
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -15,6 +16,7 @@ import {
   startDefaultModelGateway,
 } from './default-model-gateway.ts';
 import { defaultArtifact, qualifyDefaultArtifact } from './packaged-default-artifact.ts';
+import { proveWindowsProductTeam } from './product-team-packaged.ts';
 import { PackagedDefaultCdp, pause } from './packaged-default-cdp.ts';
 import {
   nativeDiagnosticProgress,
@@ -261,7 +263,10 @@ try {
     evidence.gitBash = await fingerprint(gitBash);
   }
   const sentinel = (await prepareExistingProject(data)) as string;
-  gateway = await startDefaultModelGateway();
+  const productProbe = process.platform === 'win32' &&
+    process.env.AGENT_TEAMS_E2E_PRODUCT_PROBE === '1';
+  const productMarker = productProbe ? 'WINDOWS_PRODUCT_TEAM_E2E_' + randomUUID() : undefined;
+  gateway = await startDefaultModelGateway({ productMarker });
   // These are fixture launch inputs. The app's normal provider/settings paths
   // construct all native child environments; no child launcher is substituted.
   Object.assign(env, {
@@ -626,6 +631,17 @@ try {
   record('saved-model-inference-and-native-children-complete', {
     diagnosticCount: complete.length,
   });
+  if (productProbe) {
+    assert(cdp && appIdentity && gateway && productMarker);
+    evidence.productTeam = await proveWindowsProductTeam({
+      cdp, ledger, appIdentity, gatewayRequests: gateway.requests,
+      project: data.project, evidenceRoot, marker: productMarker,
+    });
+    assert.deepEqual(
+      await ledger.runtimeQuiet(data.artifact.app.path), [],
+      'Real product Stop must retire the original teammate and tools'
+    );
+  }
   scenarioComplete = true;
 } catch (error) {
   evidence.error = redact(error instanceof Error ? error.stack : error);
