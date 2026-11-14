@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createCapturedPromptSuggestionBinding } from '../dist/composition/createCapturedPromptSuggestionBinding.js';
+import { checkCapturedPromptOperation } from '../dist/composition/checkCapturedPromptOperation.js';
 
 import type { CapturedPromptSuggestion, CapturedPromptSuggestionNotice } from '../src/composition/createCapturedPromptSuggestionBinding.ts';
 import type { RuntimeOwner } from '../src/runtime/RuntimeOwner.ts';
@@ -49,7 +50,7 @@ function harness(provider: 'claude' | 'codex' = 'claude') {
     publish: value => { notices.push(value); },
   });
   return {
-    source, notices, rows, binding,
+    source, notices, rows, binding, entry, snapshot,
     terminal(outcome: 'succeeded' | 'failed' = 'succeeded') {
       rows[0]!.phase = 'terminal';
       (rows[0] as unknown as {terminal: string}).terminal = outcome;
