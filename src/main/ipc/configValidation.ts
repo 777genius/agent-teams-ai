@@ -458,6 +458,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
     'theme',
     'defaultTab',
     'multimodelEnabled',
+    'nativeNextPromptSuggestionsEnabled',
     'claudeRootPath',
     'agentLanguage',
     'appLocale',
@@ -501,6 +502,10 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
           };
         }
         result.defaultTab = value;
+        break;
+      case 'nativeNextPromptSuggestionsEnabled':
+        if (typeof value !== 'boolean') return { valid: false, error: 'general.nativeNextPromptSuggestionsEnabled must be a boolean' };
+        result.nativeNextPromptSuggestionsEnabled = value;
         break;
       case 'multimodelEnabled':
         if (typeof value !== 'boolean') {
