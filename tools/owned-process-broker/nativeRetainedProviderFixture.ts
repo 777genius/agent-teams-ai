@@ -276,6 +276,7 @@ export async function prepareRetainedProviderFixture(options: {
       configPath = join(env.CODEX_HOME, 'config.toml'); writeFileSync(configPath, lines.join('\n') + '\n', { flag: 'wx' });
       configSha = hash(readFileSync(configPath));
       selectedMember = { ...common, provider: 'codex', protocolRevision: '0.162.0', model: 'mock-model', environment: env,
+        limits: { ...common.limits, outputBytes: 1_048_576 },
         capturedMcpServers: {}, capturedMcpCatalog: captureCodexConfiguredMcpCatalog({ digest: hash('[]'), servers: [] }),
         nativeOptions: { approvalPolicy: 'never', sandbox: 'workspace-write', modelProvider: 'TEST_fixture',
           developerInstructions: CODEX_CONTEXT + '. You are alice working only in ' + workspace + '.' } };
