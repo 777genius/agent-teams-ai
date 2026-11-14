@@ -634,3 +634,138 @@ Bare `@agent-teams/provider-implementations/codex` из root-level `tools/` не
 До source нужны root + independent bounded plan review и plan publication. Source freeze содержит четыре полных файла, exact forward/inverse diffs и line counts; все старые case names/assertions и Claude/default branches сохраняются. Новых unit cases не добавляется: это correction реально остановившегося original compiler gate и его уже существующих consumers, а не новый behavior framework.
 
 Root последовательно выполняет original low-level compiler, неизменный retained-host compiler и исходный protocol test command, затем только требуемые существующие focused/script/size guards. Обе compiler команды и все их strict options остаются обязательными; отсутствие helper в low-level project не означает отсутствие проверки helper. Source PASS/локальный compiler PASS не равен Windows qualification: actual W01 x64 и ARM64 cases должны пройти в следующем обычном CI на соответствующих exact heads, без rerun текущего run, изменения workflow/deadline или превращения отсутствующего native receipt в PASS.
+
+## 18. Windows: explicit product Retry in the same Main, then original Processes UI Stop
+
+**PLAN ONLY; source 0.** Append to exact P08 f32fe430b9b1fc1886d009e7c910f6e49d1c7c6a, after the published W01 compiler correction. This is the connected continuation of W01 / P09 §38, delivered to the native branch first. Root reserves this section and owns plan publication, SOURCE GO, canonical checks, refs and the next ordinary CI. Evidence/source inventory: 66fe531ff425e327892533bb482548474ea076d2. No unmerged Main or new physical owner is implied by this plan.
+
+### 18.1. Concrete remaining product and acceptance gaps
+
+The current native Router ca56af0e stores a captured client per owner, rejects duplicate owner registration, and can only restart that same client object. CapturedHostClient 2b947608 becomes permanently sealed after failure. DesktopBackendFeature 9dfb9058 keeps the same captured object in its clients map and uses that identity in existing registry/import/management/source-currentness closures. A Router-only replacement would therefore be incomplete. The actual TeamDetailView b009c986 load-error surface has no Retry action. The old native ServiceScenario creates its successor through an externally supplied TEST controller; this proves neither product rebind nor a real Processes UI action.
+
+This is distinct from the completed original evidence. Linux 393e7e0a86026e3daddc5597b0543565b89f412f (43582230320/132409208084) starts a new Electron Main after its earlier Host; Darwin 399be4f7807eeaa9cc689ec3cf15e376483fa6af (43582225377/132409194111) combines SDK warm Stop with a separate controlled cold UI. Neither is same-Main Windows evidence. Windows Dashboard 88c4cbefa4f6bf512d40c5db69222b87a178f7e4 (43582225409/132409193650) supplies a working packaged Windows app/bootstrap path, with zero model inputs; it does not prove registered process Stop. Batch4 W01 x64 and ARM64 both stopped before native execution at the same first compiler gate; the §17 fix and local compiler/protocol PASS do not replace actual W01 x64/ARM64 qualification.
+
+### 18.2. Finite existing public route and one explicit user action
+
+Use the existing validated agentBackend.invoke transport and existing captured sender/context guard. Add only two closed operations: host.recovery.capture with an empty payload, and host.recovery.start with exactly one opaque capability string. Both carry the original handle and the same original commandId. The capability has no PID, executable path, owner selector, profile, native key or permission fields. No method is added to Host RPC or the native broker protocol.
+
+Capture can return only a closed ready result, meaning the exact current captured native client is already positively ready and no work was started, or a captured result with one opaque Main-issued capability. Start returns only the closed ready result after the exact candidate completes its original handshake and native bind. Failures use existing invalid/forbidden/hold/unavailable/shutting-down outcomes. Missing callbacks, malformed extra fields, stale/foreign capabilities and absent authority refuse. This result is projected directly in the Main facade and cannot pass arbitrary private objects through the generic Host projector.
+
+The capability is issued only after a positive original-client observation: the existing Main-owned native custody object is present, that exact ChildProcess really had a PID and emitted its own close event, its client is sealed/native-aborted, and the full original owner/handle/source tuple remains current. An error string, timeout, disconnected transport, missing PID, saved journal, process-table absence or ready-looking receipt cannot establish this condition. A positively ready current native client may answer capture read-only, covering a lost prior acknowledgement without making another Host.
+
+The existing real Team load-error surface gains one small Retry component. It uses the existing localized Retry label and Button, is shown for a captured Host selection in Electron Windows (platform presentation is not authority), and retains one original command/capability while pending. The click performs capture and, only for a captured result, start. A ready result requests the original scoped refreshTeamData; no initial Runtime Open, Resume, Launch, message/input, model proof or prior command is replayed. A second click while pending sends nothing. Context change/unmount discards the UI result and prevents a not-yet-admitted continuation; Main owns cleanup once a candidate is admitted. No recovery is initiated by getConnections, getData, process.list, discovery, background refresh or a timer.
+
+### 18.3. Same owner, one candidate, original currentness and shutdown
+
+Retain the finite capability, original full input/scope, cutoff, predecessor client, candidate and one in-flight/result promise on the existing RegisteredOwner. There is no new owner registry, durable journal, generalized retry queue or saved rebind ticket. Each start admits at most one candidate; repeated same-capability/same-command calls join that same promise and recheck current authority around awaits. A capability cannot be replayed against another original client, handle, context or later recovery generation. Another explicit action cannot replace a running/uncertain candidate. Once a known failed candidate is itself positively closed, a later explicit action may capture that exact current predecessor; old capabilities stay non-dispatching. A completed ready candidate may later have its own genuine exit and its own explicit action.
+
+A thin stateless composition helper receives the original descriptor selection, handle definitions, clients map and Router. It uses the existing original source readers; it never calls captureMainWindowsCustody to make a second owner. Reuse the existing CapturedWindowsCustody profile/source parser through a read-only extraction in that same infrastructure file. Keep its original constructor path and checks. Re-read the captured descriptor/private Host profile, original SHA, exact Node/CLI files and source tuple; no latest source search, global preference substitution or mutable renderer inputs are accepted.
+
+Immediately before publication, the original guard, full retained binding, predecessor identity, physical owner identity, source and deadline must still match. Replace the Router record and Feature clients-map value synchronously in one non-awaiting composition step, retaining the same physical custody reference and unchanged handle store/binding. Install the one candidate before awaiting its start. Existing object-identity closures then become stale naturally, and late catches belonging to the old Router record cannot seal the new record. A failed candidate is retained for original cleanup/currentness rather than rolling the maps back over an uncertain effect.
+
+The new client binds to the same RetainedWindowsCustody instance/mainEpoch and exact profile digest through the existing attach path, which already requires previous native-aborted context plus the genuine hostExited promise. Broker, kernel Job, original service HANDLEs, capabilities/generations and pending original control receipts remain with that owner. The new Host obtains the ordinary writer lease through the existing controller protocol; Main neither deletes a lock nor adopts its PID. No native root is reacquired from persisted process metadata.
+
+Shutdown seals recovery synchronously and joins any admitted candidate/start flight and its original client disposal before Feature closes the single retained physical owner. A late source read cannot publish after shutdown or allocate an untracked child. This preserves the existing Main cleanup owner even if the UI disappears or the response is lost.
+
+### 18.4. One original startup cutoff, limited to explicit recovery
+
+The first capture for a genuinely exited client fixes the original deadline before its asynchronous binding/source work, using that captured profile's existing startupTimeoutMs. Replayed capture/start does not create or extend a clock. No timeout/budget field is accepted from the renderer. A read-only ready response admits no work.
+
+Add an optional trusted remaining callback to the existing CapturedHostClient construction/start path, used only by this explicit recovery. The ordinary default client path remains unchanged. Carry the same callback through existing source/Node validation, clip the original Node --version timeout, check it immediately before the actual Host spawn, and use its remaining value for the original handshake and native bind. Check original authority/time again after each await and before publication of readiness. Failure after child creation seals and disposes that same child; no later implicit retry follows. Existing startup/native/default timeouts are not increased.
+
+This is a small admission addition, not a new startup state machine. Keep CapturedHostClient within 800 physical lines, Feature within 800 and TeamDetailView within its unchanged 3750 baseline. Thin calls may delegate the new recovery composition to its cohesive helper; no cap-only code relocation, packing, cap increase or strictness exemption is authorized.
+
+### 18.5. Exact writable production and controlled-case scope
+
+All nineteen existing preimages below were independently fetched at native 0099a763 after §17 source. The Feature predecessor is specifically the published §27/28 9dfb9058 successor, including both original source-selection refresh call changes. Parent and qualification do not receive partial native custody or recovery activation.
+
+| Existing path | Exact native preimage |
+| --- | --- |
+| src/features/agent-backend/contracts/operations.ts | 31db672efac0bf96cbb00bb8a8b3a319afd17023 |
+| src/features/agent-backend/main/adapters/input/validateBackendOperation.ts | eab2e2bb61eae5ad3f1ebcce32712fbde7f51f5d |
+| src/features/agent-backend/main/adapters/input/BackendOperationsFacade.ts | b99b2b26e5727cf458cb993befd4bc2abbc5af3b |
+| src/features/agent-backend/main/application/BackendOwnerRouter.ts | ca56af0e2b3a706d02189103e65e5410f8116ec6 |
+| src/features/agent-backend/main/infrastructure/CapturedHostClient.ts | 2b94760821f9c0154d6e14994ed35fe63a6bb8dd |
+| src/features/agent-backend/main/infrastructure/selectedHostProfile.ts | 64da74ac4d9d4280b2d768ce214120b416ab6566 |
+| src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts | 8d51bdb0480d74afc1d9fb086cdc706b4f6b4437 |
+| src/features/agent-backend/main/composition/DesktopBackendFeature.ts | 9dfb9058af5fa1fefbc44d003fd0e7613bfdd8e7 |
+| src/features/agent-backend/renderer/createHostBackendRenderer.ts | baddadb15ab013f923036718dc1aec88744a69d2 |
+| src/features/agent-backend/renderer/index.ts | 014444eba8be98681ffb69763556f804a235dd5c |
+| src/renderer/components/team/TeamDetailView.tsx | b009c986172915e8017beb3501f8bdb21cfa4984 |
+| test/features/agent-backend/backendOwnerRouter.test.ts | 974999b069a67b2d7c988a92a44a8b64440f3b04 |
+| test/features/agent-backend/capturedHostClient.test.ts | 62e039fed7c0dcef6cb566d2c5dc02968b5415eb |
+| test/features/agent-backend/desktopBackendFeature.test.ts | 180ac708a6354e3d03eb1ba1997b818d5e679bff |
+| tools/owned-process-broker/nativeRetainedHostGate.ts | f90ac7253d33ed46ef563e8e77403e56ab2d25e8 |
+| tools/owned-process-broker/tsconfig.json | ffa71d12592f0449f7000cf0d43f75db6e05c5a4 |
+| tools/owned-process-broker/tsconfig.retained-host.json | b9399da33bc4da55ac819f266cf6f279ab057d7a |
+| .github/workflows/electron-packaged-ci.yml | bdf3d06491b3d2ad8e0c41c8aa3a23ec85eb1dce |
+| scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts | f5708eb7d23a05f11a3a9f383886d3ade653dfb1 |
+
+Four new paths, and no other new source files:
+
+- src/features/agent-backend/main/composition/recoverCapturedHost.ts
+- src/features/agent-backend/renderer/HostBackendRetryAction.tsx
+- tools/owned-process-broker/nativeWindowsAppFixture.ts
+- tools/owned-process-broker/nativeWindowsAppGate.mjs
+
+Production responsibilities are finite. operations/validator/facade add the two closed calls; Router owns the existing-owner capability/flight; client and its existing profile validator enforce the original exit/budget; CapturedWindowsCustody exposes only its existing read-only source validation; Feature supplies one thin original-map delegate. The new renderer component is exported through the existing renderer index and inserted into the existing load-error branch; the existing renderer read-order set classifies only recovery.capture as a read. No TeamsAPI widening, preload channel, HTTP endpoint, source preference API, process DTO or native protocol change is needed.
+
+Use only the three named existing Main test files and their existing cases. Exercise the meaningful boundaries: actual original child-close versus missing/alive/unknown; same-owner successful rebind with one candidate and unchanged handles; duplicate continuation/lost ACK without another start; stale guard/source/foreign capability refusal before effect; ordinary discovery/read does not recover; same fixed cutoff including source/handshake delay; and shutdown during candidate startup retains/disposes it before physical-owner close. Existing case names/assertions remain. No field-by-field permutation matrix or new broad unit suite is authorized. The actual Windows lane below remains mandatory.
+
+### 18.6. Connected packaged Windows acceptance using existing owners and codecs
+
+Extend only the existing win32-x64 and win32-arm64 rows of electron-packaged-ci, with their existing 90-minute job deadline, original matrix and all original assertions/steps retained. Add one finite real-app scenario after the original packaged V2 Host qualification has completed. Do not add a workflow/job or rerun an old journey. Final acceptance requires the original W01 provider/custody cases on both Windows tuples as well as this new UI case; until those real gates pass, source/controlled tests do not establish Windows parity.
+
+Reuse the existing trusted buildAndStageBroker selection and service-scopes-v1 product, original exact vendor-selection input and query/synchronize-only native fixture. Stage the existing scoped broker/manifest into the actual candidate extraResources before packaging. The original native broker C++/protocol, vendor versions, hashes and build timeouts stay unchanged. The new driver reuses packagedArtifact, preparePackagedProfile, packagedTarget and original Windows process/listener ownership helpers; it does not copy their large implementations. Its application executable, app.asar/renderer, Host closure, captured Node and broker are the actual packaged resources, with the existing readPackagedOpenCodeV2 manifest/full-closure verification reused for the Node/Host paths. The earlier packaged V2 qualification retains its source/legacy relocation checks; nothing about that gate is bypassed or reclassified.
+
+Export/reuse the existing native Gate's prepareProfile with one narrow optional captured packaged Node/CLI input, so old Gate calls, their defaults and recipes remain exact. Complete the new fixture recipe before its original hash: actual packaged Node and Host CLI, exact old vendor/Bash, main-windows-v1, one ordinary Claude member, private HOME/workspace, real process.write registration grant, and the original static UI seed. Its small TEST Host wrapper imports that actual CLI and exposes only the existing one-shot crash barrier. It is never a fake provider. The existing preparePackagedProfile result is the base for a new closed immutable app environment with only the two captured descriptor path/hash fields added before first spawn; parent environment is not merged arbitrarily and no field is changed after capture.
+
+The new TEST fixture reuses startProcessModel with its existing windowsScopedServices port, readProcessServices/probeProcessService, original foreground actor, existing strict process receipt/schema parser and original Cdp/UI controls. There is no new model mode or broad model/probe allowance. Its port joins each completion to the exact original public UI Stop command/result, same WindowsServiceCapture and retained query HANDLE evidence. The actual callback may wait only within that Stop's already-started deadline.
+
+The finite sequence is:
+
+1. Launch one actual packaged Electron Main and capture its original PID/birth, application/renderer identity and actual backend handle. Through the existing public Main route, perform the one ordinary initial member Open and the original PROCESS_BOOTSTRAP input. Both original services must be genuinely registered through MCP. Capture the full two original registration receipts before changing lifetime; provider root/mainEpoch/capability/generation and target pid/birth/key must agree with those original records.
+2. Retain exactly three observation-only query/synchronize witnesses from those receipts: provider root, primary and neighbor. These confer no stop/adoption authority. Check both original Processes rows from the same Main and exact handle. Validate complete rows, not just count or labels.
+3. Trigger only the captured TEST Host-A crash barrier. Establish actual Host A exit while the original Main, provider and both service witnesses remain alive. Do not create another CapturedHostClient in the harness, replace Main, supply another descriptor, delete a writer lock, refresh source selection or send native input.
+4. Show the genuine existing Team load-error surface and click its new Retry once. Verify the same Main PID/birth and mainEpoch, one new actual Host B, original source/handle/captures unchanged and ordinary writer ownership recovered by Host B. The public Processes view must again contain both exact original processRefs/tuples. No Runtime Open/Resume/Launch/input occurs after the crash.
+5. Use the existing Processes UI Kill control for primary once. Before the next action require its exact completed original scoped Stop/settlement receipt and retained target HANDLE absence, while neighbor and provider are still alive. Then use the same original UI Kill control for neighbor once and require its own exact completed scope/settlement plus absence. This second explicit action permits reuse of the already strict two-scope model protocol; it does not replace the untouched earlier native or Linux/Darwin scenarios.
+6. Invoke original product Quit once and require actual Main/App/Host exit, retained provider/service witness completion, no owned native/broker/group/listener remainder, and unchanged source/packaged/native input hashes. Cleanup/observation uncertainty leaves the receipt INCOMPLETE; no taskkill, PID adoption or external cleanup can turn it into PASS.
+
+Read original records only to join these exact observed commands, captures, runtime input and writer/source identities. No fake receipt, synthetic accepted native intent or latest-green search is allowed. The model server is closed once in finally; actual process cleanup stays with the product Main and its original owner. Any fallback cleanup is separately reported and disqualifies the successful acceptance claim.
+
+### 18.7. Explicit counts, clocks, source pins and compiler coverage
+
+The new case uses the existing Claude protocol: one member root, one initial Runtime Open, one business input and exactly four business model POSTs; zero ordinary/Settings probes; two MCP process registrations; two explicit UI Stop commands with their original two native scope Stop/settlement pairs; at most the existing two native notification acknowledgements. There is no business request after Host A exit. The same provider root stays retained until final Quit. Original Main startup plus the one explicit successor perform their ordinary Node validation/handshake, with exactly one Host successor; neither is a provider ModelProbe. Build/vendor preparation is separate pre-App work, not disguised inference. No new native allocation is authorized by the recovery path beyond the one replacement Host child; cold control is only read/lookup/Stop of the retained service captures.
+
+Each of the three query witnesses uses the existing maximum of four zero-time observations and one wait: provider alive after bootstrap/Host exit/Retry/final scoped Stops; primary alive before crash/after Retry then absent after its Stop; neighbor alive before crash/after Retry/after primary Stop then absent after its own Stop. Existing source/writer/runtime records and independent whole-family census remain required. The evidence reports what was observed; numeric PID metadata by itself never becomes product authority.
+
+One 300-second outer TEST case cutoff is fixed before App startup and only clips existing segments: original packaged startup ≤120s; original initial Open ≤45s; original PROCESS_BOOTSTRAP turn ≤35s; original Host-exit observation ≤10s; Retry limited to the captured original profile startup timeout (the reused fixture is 10s, including source validation/handshake/bind); each original UI Stop ≤10s; the existing original cold-process Quit observation ≤30s, with one existing ≤3s Quit acknowledgement wait inside that phase. These sum below the outer limit. UI/readonly polling must check the active original phase cutoff, without renewing it after a reply. No job deadline, native actor TTL, protocol bound or old case timer is increased. Failure cannot be repaired by another click/Host/input/model request.
+
+The new app fixture is an integration entry: add only that file to the existing low-level compiler exclusions, and include it explicitly in the original retained-host project. Both original compiler commands and strict flags remain mandatory. The new .mjs app driver uses the established Windows .mjs harness style and receives a parser check; its imported typed fixture/Gate remain in retained-host compilation. Do not drag the Main graph under the low-level project's flags or disable checking. The original 49 protocol cases remain the same.
+
+Append a separate finite Windows Retry source-list export to the existing supplementary roster; do not change the original roster order/default arrays. The new driver combines the existing complete desktopProofSources with that explicit list. In addition to all new production/driver files, the list pins the reused Windows Gate, native witness/events/vendor selectors, both original compiler configs, build selector, packaged/platform/CDP helpers and the exact packaged workflow. The concrete extra construction roots, absent from the base roster snapshot, are:
+
+- src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts
+- tools/owned-process-broker/nativeRetainedHostGate.ts
+- tools/owned-process-broker/tsconfig.json
+- tools/owned-process-broker/tsconfig.retained-host.json
+- .github/workflows/electron-packaged-ci.yml
+- src/features/agent-backend/main/composition/recoverCapturedHost.ts
+- src/features/agent-backend/renderer/HostBackendRetryAction.tsx
+- tools/owned-process-broker/nativeWindowsAppFixture.ts
+- tools/owned-process-broker/nativeWindowsAppGate.mjs
+- tools/owned-process-broker/nativeGateContext.ts
+- tools/owned-process-broker/nativeGateEvents.ts
+- tools/owned-process-broker/nativeVendorInputs.ts
+- scripts/build/buildOwnedProcessBroker.ts
+- scripts/e2e/opencode-diagnostics/packaged.mjs
+- scripts/e2e/opencode-diagnostics/platform.mjs
+- scripts/e2e/release-updater/cdp.mts
+
+This is a source pin list, not runtime discovery or import traversal. All new files are at most 800 lines, all existing caps stay unchanged, and all old source/default branches are checked by exact inverse at freeze. Frozen source lists and actual packaged/broker/Node/CLI/vendor hashes are captured before App and checked after original cleanup.
+
+### 18.8. Review, source and acceptance gates
+
+Before source: root and an independent agent review the exact plan, root composes any now-current predecessor changes, publishes the append, and gives SOURCE GO. Scope additions or a failed physical prerequisite require an explicit amendment; the plan itself does not authorize a generic recovery service or code outside the table.
+
+Source freeze must provide all exact native variants, full forward/inverse diffs, physical line counts and the unchanged old branch/oracle evidence. Root runs the original focused Main cases, full app type/lint/size gates where available, both unchanged broker compiler commands, original protocol cases and only the required script guards. Native/packaged evidence comes from the next ordinary CI at exact published heads. All W01 provider cases and the new real-app scenario must pass on both x64 and ARM64 before this parity item is complete. Current POSIX §75 remains its distinct issue; neither this plan nor earlier Linux/new-Main receipts resolves it.
