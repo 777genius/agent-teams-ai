@@ -155,8 +155,8 @@ function escapeWindowsCmdCommand(command: string): string {
  */
 function escapeWindowsCmdFallbackArg(arg: string, doubleEscapeMetaCharacters: boolean): string {
   const quoted = `"${arg
-    .replace(/(?=(\\+?)?)\1"/g, '$1$1\\"')
-    .replace(/(?=(\\+?)?)\1$/g, '$1$1')}"`;
+    .replace(/(\\*)"/g, '$1$1\\"')
+    .replace(/(\\+)$/g, '$1$1')}"`;
   let escaped = escapeWindowsCmdMetaCharacters(quoted);
   if (doubleEscapeMetaCharacters) {
     escaped = escapeWindowsCmdMetaCharacters(escaped);

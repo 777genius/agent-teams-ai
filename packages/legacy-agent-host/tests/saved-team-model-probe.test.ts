@@ -449,6 +449,7 @@ function selectProvider(f: ReturnType<typeof fixture>, provider: 'claude' | 'cod
 for (const provider of ['claude', 'codex', 'opencode'] as const)
   for (const change of ['roster', 'revoke', 'recipe'] as const)
     test(`existing probe journal retains original intents and exact ${provider} cleanup after ${change} without native Team allocation`, async (t) => {
+      t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
       const f = fixture(t);
       selectProvider(f, provider);
       const payload = f.selection('alice'),
@@ -610,6 +611,8 @@ test('operator grant revocation invalidates saved source evidence even when the 
 });
 
 test('Team probe read rejects completed evidence after physical config-directory replacement while exact contextual cleanup remains addressable', async (t) => {
+  // These synthetic readers validate provenance, not filesystem throughput within the unchanged 1s lease.
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   const f = fixture(t),
     captured = f.runtime.captureLaunchModelProbe('TEST-imported-team', f.selection(), 'read');
   assert.ok(captured.profile);
@@ -1363,7 +1366,7 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       provider: 'opencode', protocolRevision: '1.19.4', teamId: definition.binding.teamId, memberId: 'alice',
       principalId: 'TEST-retained-agent', sessionId: 'TEST-retained-session', generation: 1,
       configRevision: 'TEST-retained-config', accountBinding: 'TEST-retained-account', model: modelId, cwd: root,
-      executable: { path: '/TEST/opencode', sha256: 'c'.repeat(64) }, endpoint: 'http://127.0.0.1:9',
+      executable: { path: join(root, 'TEST-opencode'), sha256: 'c'.repeat(64) }, endpoint: 'http://127.0.0.1:9',
       mcpPolicyPlugin: testPolicyPlugin(root),
       environment: { HOME: root, XDG_CONFIG_HOME: root, XDG_DATA_HOME: root, XDG_CACHE_HOME: root },
       nativeOptions: { providerId, agent: 'build' },
@@ -1519,5 +1522,12 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
   } finally {
     records.write(original); assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
   }
+  t.mock.timers.setTime(original.expiresAt - 1);
+  assert.deepEqual(captureLaunchModelReadiness(options), transferred,
+    'the original readiness remains usable strictly before its unchanged cutoff');
+  t.mock.timers.setTime(original.expiresAt);
+  assert.throws(() => captureLaunchModelReadiness(options), { code: 'held' },
+    'the original readiness expires exactly at its cutoff without any lease extension');
+  assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
   assert.equal(runs, 1); assert.equal(closes, 1); assert.equal(allocations, 0);
 }

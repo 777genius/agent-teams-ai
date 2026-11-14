@@ -106,12 +106,46 @@ export function capturedWindowsCommandLine(captured: CapturedWindowsLauncher, ar
   return [captured.executable.path, ...captured.argsPrefix, ...args].map(quoteWindowsArg).join(' ');
 }
 
-/** Main independently binds the actual image and fixed launcher prefix to its captured recipe. */
+/** Decode only the fully quoted argv grammar emitted by the captured launcher policy. */
+function capturedArguments(value: string, escapeLayers: number): string[] | undefined {
+  for (let layer = 0; layer < escapeLayers; layer++) value = value.replace(/\^(.)/gs, '$1');
+  const args: string[] = [];
+  let offset = 0;
+  while (offset < value.length) {
+    if (value[offset++] !== '"') return;
+    let arg = '', closed = false;
+    while (offset < value.length) {
+      let slashes = 0;
+      while (value[offset] === '\\') { slashes++; offset++; }
+      if (value[offset] === '"') {
+        arg += '\\'.repeat(Math.floor(slashes / 2)); offset++;
+        if (slashes % 2) { arg += '"'; continue; }
+        closed = true; break;
+      }
+      arg += '\\'.repeat(slashes);
+      if (offset === value.length) return;
+      arg += value[offset++];
+    }
+    if (!closed) return;
+    args.push(arg);
+    if (offset < value.length && (value[offset++] !== ' ' || offset === value.length)) return;
+  }
+  return args;
+}
+
+/** Main binds the complete launch command to the captured encoder, including every argument. */
 export function matchesCapturedWindowsLauncher(captured: CapturedWindowsLauncher, spec: ResolvedLaunchSpec): boolean {
   if (spec.executable !== captured.executable.path) return false;
   // Direct native images keep the existing ResolvedLaunchSpec argv0 contract.
   if (!isWindowsBatchLauncher(captured.original.path)) return true;
   const empty = capturedWindowsCommandLine(captured, []);
   const prefix = captured.batch ? empty.slice(0, -1) : empty;
-  return spec.commandLine === empty || spec.commandLine.startsWith(prefix + ' ');
+  if (spec.commandLine === empty) return true;
+  if (!spec.commandLine.startsWith(prefix + ' ') || (captured.batch && !spec.commandLine.endsWith('"')))
+    return false;
+  const suffix = spec.commandLine.slice(prefix.length + 1, captured.batch ? -1 : undefined);
+  const args = capturedArguments(suffix, captured.batch ? (captured.batch.reparsesArgs ? 2 : 1) : 0);
+  // Decoding cannot authorize an alternative shell spelling: only the original encoder can.
+  try { return args !== undefined && capturedWindowsCommandLine(captured, args) === spec.commandLine; }
+  catch { return false; }
 }

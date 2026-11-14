@@ -39,7 +39,7 @@ function fixture() {
     contextId: 'TEST-context', projectPath: root, runtimeId: 'codex', profileId: seed.profileId, configRevision: seed.configRevision, teamScopes: [] };
   const executable = { path: join(root, 'TEST-next.exe'), sha256: 'e'.repeat(64) };
   const input: RuntimeSourcePublishIntent = { commandId: 'TEST-command', expectedRevision: 'f'.repeat(64),
-    nativeSelection: { sourceKind: 'app-managed', nativeCli: { executable, version: '0.169.0' } } };
+    nativeSelection: { sourceKind: 'app-managed', nativeCli: { executable, version: '0.162.0' } } };
   let original = true, current = true;
   const main = new CapturedWindowsRuntimeSources(context, [grant], [], () => { if (!original) throw new Error('TEST original lost'); });
   const spec = windowsLaunchSpec(runtimeSourceVersionProfile(seed, executable), ['--version']);

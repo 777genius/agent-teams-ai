@@ -106,7 +106,7 @@ export class SchedulerService {
     this.stopped = false;
 
     // Recovery: mark interrupted runs from previous session
-    const recoveredCount = await recoverInterruptedScheduleRuns(this.repository);
+    const { recoveredCount, unavailableScheduleIds } = await recoverInterruptedScheduleRuns(this.repository);
     if (recoveredCount > 0) {
       logger.info(`Recovered ${recoveredCount} interrupted runs as failed_interrupted`);
     }
@@ -115,7 +115,7 @@ export class SchedulerService {
     const schedules = await this.repository.listSchedules();
     let activeCount = 0;
 
-    for (const schedule of schedules) {
+    for (const schedule of schedules.filter(({ id }) => !unavailableScheduleIds.has(id))) {
       if (schedule.status === 'active' && hasScheduledTeamTarget(schedule, this.smartDispatcher?.supportsHost === true)) {
         this.createCronJob(schedule);
         if (this.cronJobs.has(schedule.id)) activeCount++;

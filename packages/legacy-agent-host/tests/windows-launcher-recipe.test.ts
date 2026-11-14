@@ -91,6 +91,41 @@ test('captured fallback preserves the shared shell policy and pins its actual cm
   assert.throws(() => verifyCapturedWindowsLauncher(captured), /launcher unavailable/);
 });
 
+test('captured batch recipe rejects shell suffixes outside its encoded arguments', t => {
+  const { profile } = fixture(t, '@echo off\r\necho TEST %*\r\n');
+  const captured = captureWindowsLauncher(profile);
+  const commandLine = capturedWindowsCommandLine(captured, ['TEST argument']);
+  const spec = { executable: captured.executable.path, commandLine, cwd: profile.cwd, environment: [] };
+  assert.equal(matchesCapturedWindowsLauncher(captured, spec), true);
+  for (const suffix of [' & C:\\Foreign\\other.exe', ' | C:\\Foreign\\other.exe',
+    ' > C:\\Foreign\\output.txt', '\nC:\\Foreign\\other.exe']) {
+    assert.equal(matchesCapturedWindowsLauncher(captured, { ...spec,
+      commandLine: commandLine.slice(0, -1) + suffix + '"' }), false, suffix);
+  }
+  assert.equal(matchesCapturedWindowsLauncher(captured, { ...spec,
+    commandLine: capturedWindowsCommandLine(captured, []).slice(0, -1) + ' & C:\\Foreign\\other.exe"' }), false);
+});
+
+for (const mode of ['shell', 'passthrough', 'direct-wrapper'] as const) {
+test(`captured ${mode} recipe preserves quoted arguments and rejects malformed suffixes`, t => {
+  const content = mode === 'direct-wrapper' ? '@echo off\r\n"%_prog%" "%~dp0cli.cjs" %*\r\n'
+    : `@echo off\r\necho TEST ${mode === 'passthrough' ? '%*' : ''}\r\n`;
+  const { profile } = fixture(t, content);
+  const captured = captureWindowsLauncher(profile);
+  const argumentsToPreserve = ['', 'TEST plain text', 'C:\\TEST trailing\\', 'C:\\TEST\\', 'C:\\TEST\\\\',
+    'TEST "quoted"', '\\"', '\\\\"', '%PATH%', '!PATH!', 'TEST ^ & | > < ( ) [ ] ; , * ? `', 'TEST Я'];
+  for (const args of [[], ...argumentsToPreserve.map(arg => [arg]), argumentsToPreserve]) {
+    const commandLine = capturedWindowsCommandLine(captured, args);
+    const spec = { executable: captured.executable.path, commandLine, cwd: profile.cwd, environment: [] };
+    assert.equal(matchesCapturedWindowsLauncher(captured, spec), true, JSON.stringify(args));
+    if (args.length) {
+      assert.equal(matchesCapturedWindowsLauncher(captured, { ...spec, commandLine: commandLine + ' ' }), false);
+      assert.equal(matchesCapturedWindowsLauncher(captured, { ...spec, commandLine: commandLine.slice(0, -1) }), false);
+    }
+  }
+});
+}
+
 test('known wrapper rejects ambiguous captured PATH and a changed original before selection', t => {
   const { files, profile } = fixture(t, '@echo off\r\n"%_prog%" "%~dp0cli.cjs" %*\r\n');
   profile.environment.Path = profile.environment.PATH!;

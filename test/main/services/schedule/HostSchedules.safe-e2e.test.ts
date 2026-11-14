@@ -208,6 +208,44 @@ it('carries a lost task-create acknowledgement through cold context renewal unti
   expect(await f.snapshot('TEST-handle-1')).toMatchObject({ ok: true, value: { tasks: [] } });
 }, 20000);
 
+it('keeps a damaged schedule closed while another captured team recovers and runs its real cron', async () => {
+  const f = await fixture();
+  const damaged = await f.scheduler.createSchedule(f.input(), await f.capture());
+  await f.scheduler.triggerNow(damaged.id);
+  const original = await f.waitRun(damaged.id, row => row.status === 'skipped' && Boolean(row.linkedTaskId));
+  const neighborTeam = hostTeamSelectionKey('TEST-handle-1');
+  f.switchForeground('TEST-B');
+  const neighbor = await f.scheduler.createSchedule({ ...f.input(), teamName: neighborTeam },
+    await f.host.capture({} as IpcMainInvokeEvent, neighborTeam));
+  await f.scheduler.stop();
+  const retainedSchedule = { ...(await f.scheduler.getSchedule(damaged.id))!, cronExpression: '*/1 * * * * *' };
+  await f.repository.saveSchedule(retainedSchedule);
+  await f.repository.saveSchedule({ ...neighbor, cronExpression: '*/1 * * * * *' });
+  const interrupted: ScheduleRun = { id: 'TEST-neighbor-interrupted', scheduleId: neighbor.id,
+    teamName: neighbor.teamName, hostTarget: neighbor.hostTarget, status: 'running',
+    scheduledFor: new Date().toISOString(), retryCount: 0 };
+  await f.repository.saveRun(interrupted);
+  const historyPath = join(getSchedulesBasePath(), 'runs', `${damaged.id}.json`);
+  const damagedBytes = (await readFile(historyPath, 'utf8')).slice(0, -1);
+  await writeFile(historyPath, damagedBytes);
+
+  await f.restart();
+  expect(console.warn).toHaveBeenCalledExactlyOnceWith('[Service:SchedulerRecovery]',
+    expect.stringContaining(`Failed to recover schedule ${damaged.id}:`));
+  vi.mocked(console.warn).mockClear();
+  const neighborRun = await f.waitRun(neighbor.id, row => row.status === 'skipped' && Boolean(row.linkedTaskId));
+  await f.scheduler.pauseSchedule(neighbor.id);
+  expect((await f.repository.listRuns(neighbor.id)).find(row => row.id === interrupted.id))
+    .toMatchObject({ ...interrupted, status: 'failed_interrupted', error: 'Interrupted by app restart' });
+  expect(await f.snapshot('TEST-handle-1')).toMatchObject({ ok: true, value: {
+    tasks: [{ id: neighborRun.linkedTaskId, status: 'pending', owner: 'team-lead' }] } });
+  await expect(f.scheduler.triggerNow(damaged.id)).rejects.toBeInstanceOf(SyntaxError);
+  expect(await readFile(historyPath, 'utf8')).toBe(damagedBytes);
+  expect(await f.scheduler.getSchedule(damaged.id)).toEqual(retainedSchedule);
+  expect(await f.snapshot()).toMatchObject({ ok: true, value: {
+    tasks: [{ id: original.linkedTaskId, status: 'pending', owner: 'team-lead' }] } });
+}, 20000);
+
 it('runs the actual cron against the captured team and keeps an unavailable launch quiet and recoverable', async () => {
   const f = await fixture();
   const schedule = await f.scheduler.createSchedule(f.input('*/1 * * * * *'), await f.capture());
