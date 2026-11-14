@@ -1612,3 +1612,34 @@ Root first runs this amended original case against the old helper and retains th
 R1 traced the original producer/store/consumer mismatch and rejected changing the original native request or stripping arbitrary model basenames. R2 checks both consumers, the exact account-reader extraction, the complete original proof/currentness joins and the real existing-case path. Independent plan review precedes source GO. Freeze both full sources and exact forward/inverse diffs, preserving all three branch variants and the production800-line cap. Root commits and immediately pushes the reviewed plan/source and owns all execution gates.
 
 Controlled before/after PASS establishes this model-comparison correction only. The original Linux V2 job still must pass on the next ordinary eligible reviewed head with its existing four-request coordination proof, one metadata request, original business/Stop/cleanup sequence and unchanged assertions. Other platform failures remain separate until their actual causes and original results are checked.
+
+
+## 25. Correct §18 to keep each Create member's own original allocation deadline
+
+### 25.1 Exact original failure and the incorrect shared cutoff
+
+Original parent Host-suite job132411599883 executed merge checkout `9ca2fac456faf7cbc138b984f282df8f606ac659`, verified from its actual checkout and git-log. It reported1231 tests,1228 pass,1 fail and2 original skips. The failed existing Create receipt case reached its OpenCode worktree variant; four original probes were completed/ok/released, the first member was allocated and its preparation consumed, while the second member was still opening with its preparation pending. The original failure diagnostic was `Original Create allocation deadline expired`; later cleanup HOLD did not replace that preserved cause. Evidence `cddf0c59fcd7db4993ccbfe2c1b39138d94eb375` contains the exact retained clocks and source references; the original full log remains `0bbf557d3856d0510ec8c939674d085454a81a7c`, key `batch3HostSuiteLog`.
+
+The retained first attempt starts at1794654071022 and expires at1794654072022. The second starts at1794654071127 and expires at1794654072127. Each has its original1000ms allocation budget. The fixture's §18 waiter instead uses the minimum deadline for both members, removing105ms from the second attempt. The failure diagnostic was already emitted at11:01:12.074, before the second own deadline11:01:12.127. This does not prove that the second attempt would have completed within its own deadline; it proves that this failure cannot establish that its own deadline had already expired.
+
+The controlled fixture's provider never reads context.isCurrent or canCaptureRegisteredProcess: its isReady is literal false and checkReadiness only records the original allocation observation. Therefore §23's lifetime callback correction is not a direct correction of this fixture's timing. The factory still verifies the actual worktree before consuming preparation; no production check is removed or cached here.
+
+### 25.2 One existing TEST path
+
+The only writable path is `packages/legacy-agent-host/tests/team-create-launch.test.ts`, preimage `f13866ec45afa76a9c7af0b9996218a0ce25c769` in all three branches. Exact reads at parent `7ddda966020e4eba09526a3574041ecbc1475473`, native `3b81a4b6866aacaa003304b7ae34160fae2adcc5` and qualification `f9fd291d30ca88068f772c500da167f5ee4900af` match that preimage. Production source, native fixtures, Runtime/Team owners, probe clocks, source guards, CI workflows and every other existing test are unchanged.
+
+### 25.3 Replace only the §18 waiter deadline rule
+
+This appendix supersedes only §18 Review2's `max(0, min(original deadlines) - now)` timer rule and its corresponding shared timestamp comparison. Keep the same two unique member IDs and the same deadlines from the original returned launch summary. Fix the wait's sole outer cutoff once to `max(original deadlines)`; arm the existing one finite timer for `max(0, cutoff - now)` and clear it in the existing finally block. This outer wait is bounded by the last already admitted attempt, not a new action or a new duration.
+
+After the original two-member allocation signal resolves, require exactly the same two member IDs. Compare each retained observation timestamp strictly with that member's own original attempt.deadlineMs. A timestamp equal to or after its own cutoff still fails, even if the other member's cutoff is later. A missing, duplicate or foreign member observation still fails. No timestamp, deadline, proof or source record is rewritten. No fresh1000ms interval, timer rearm, polling, sleep, additional read/start/open/probe or retry is introduced.
+
+Both original per-member1000ms limits remain exact. Do not weaken allocation/currentness, native readiness, release/custody or the actual claimed deadline to make the fixture pass. The change removes a TEST-only accidental shared deadline; it does not authorize a late original allocation.
+
+### 25.4 Bounded verification and publication
+
+Preserve the existing callback, exact member set, strict inequality, original worktree-only use, all case declarations, probe/input counts, diagnostics, same-ID replay, expiry mutation and cold cleanup sequence. Change only the outer min-to-max selection and the per-member timestamp comparison in the existing waiter. No new case, synthetic timing delay, expanded fixture matrix or native operation is needed.
+
+R1 compared the actual two retained claim clocks and read the exact fixture/factory/worktree seams. Independent plan review must verify that the maximum is calculated only from the original finite deadlines and that each observation is still checked against its own earlier or later deadline. Root publishes this append-only correction before source GO, then reviews the exact one-file forward/inverse diff and runs the original team-create-launch file with the applicable existing type/source checks. Root alone executes and publishes, committing and immediately pushing each reviewed cut.
+
+A passing focused run establishes the corrected TEST deadline join only. The original full Host-suite CI remains required; neither the actual second member's unobserved timely completion nor native E2E success is inferred from this plan.
