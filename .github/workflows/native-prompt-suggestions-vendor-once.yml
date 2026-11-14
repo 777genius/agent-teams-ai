@@ -110,6 +110,45 @@ jobs:
           dest=vendor/provider-migration/native-prompt-suggestions-74991c21
           mkdir -p "$dest"
           cp "$archive" "$dest/"
+          node <<'JS'
+          const fs = require('node:fs');
+          const { createHash } = require('node:crypto');
+          const path = 'vendor/provider-migration/native-prompt-suggestions-74991c21';
+          const file = 'agent-teams-provider-implementations-0.0.0.tgz';
+          const bytes = fs.readFileSync(path + '/' + file);
+          const digest = createHash('sha256').update(bytes).digest('hex');
+          if (digest !== 'c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a')
+            throw new Error('Provider archive mutated after verification');
+          const receipt = {
+            schemaVersion: 1,
+            sourceRepository: 'agent-teams-ai/old-provider-implementations',
+            sourceCommit: '74991c21a64f44a268bdb1d769b4a580b33a4853',
+            qualification: 'source-and-packed-consumer-only',
+            nativeHostQualified: false,
+            packagedElectronQualified: false,
+            fullChecks: [
+              { node: '24.21.0', pnpm: '11.18.0', command: 'pnpm check', result: 'PASS', runId: 43607379609 },
+              { node: '26.11.1', pnpm: '11.18.0', command: 'pnpm check', result: 'PASS', runId: 43607379609 },
+            ],
+            checkedArtifact: {
+              id: 14118487243,
+              name: 'opencode-v2-spi-consumer-checked-74991c21a64f44a268bdb1d769b4a580b33a4853',
+              url: 'https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43607379609/artifacts/14118487243',
+            },
+            packages: {
+              'provider-implementations': {
+                file, newSha256: digest, bytes: bytes.length,
+                integrity: 'sha512-' + createHash('sha512').update(bytes).digest('base64'),
+              },
+              'provider-session-contracts': {
+                file: 'agent-teams-provider-session-contracts-0.0.0.tgz',
+                existingPath: '../opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz',
+                newSha256: 'aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db',
+              },
+            },
+          };
+          fs.writeFileSync(path + '/source-receipt.json', JSON.stringify(receipt, null, 2) + '\n', { mode: 0o644 });
+          JS
 
       - name: Update only the selected package and its frozen lockfile
         shell: bash
@@ -144,6 +183,7 @@ jobs:
           git add -- \
             packages/legacy-agent-host/package.json \
             pnpm-lock.yaml \
+            vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json \
             vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
           git diff --cached --check
           if git diff --cached --quiet; then
@@ -184,6 +224,7 @@ jobs:
           archive=vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
           test -f "$archive"
           echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $archive" | sha256sum --check
+          test -f vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json
           node <<'JS'
           const fs = require('node:fs');
           const pkg = JSON.parse(fs.readFileSync('packages/legacy-agent-host/package.json','utf8'));
