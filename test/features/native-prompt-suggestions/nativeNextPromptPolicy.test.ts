@@ -81,12 +81,12 @@ describe('native teammate next-prompt policy', () => {
   });
 
   it('keeps Main-projected owner handles within the same bounded UI policy', () => {
-    const selected = 'host-team:' + 'a'.repeat(450);
+    const selected = 'host-team:' + 'a'.repeat(246); // 256 characters: Main boundary
     expect(canDisplayNativeNextPrompt(
       { ...candidate, ownerHandle: selected },
       { ...view, ownerHandle: selected },
     )).toBe(true);
-    const oversized = 'host-team:' + 'a'.repeat(503);
+    const oversized = 'host-team:' + 'a'.repeat(247); // 257 must fail closed
     expect(canDisplayNativeNextPrompt(
       { ...candidate, ownerHandle: oversized },
       { ...view, ownerHandle: oversized },
