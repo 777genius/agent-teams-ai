@@ -24,6 +24,7 @@ export interface MemberEntry {
   baseProfile: RuntimeMemberProfile;
   selection?: import('../team/ports.js').TeamRuntimeSelection;
   liveRosterCapture?: LiveRuntimeCapture;
+  initialModelAdmission?: import('./initialRuntimeModelAdmission.js').InitialRuntimeMemberAdmission;
   team: HostedTeam;
   delivery: DeliveryBinding;
   binding: RuntimeBinding;

@@ -354,9 +354,10 @@ export class ProviderManagementCoordinator {
     return this.probes.startNativeCoordination(input, isCurrent);
   }
 
-  startNativeReadiness(input: unknown, isCurrent: () => boolean) {
+  startNativeReadiness(input: unknown, isCurrent: () => boolean,
+    scope?: import('../management/commandRecords.js').ModelReadinessProbeScope) {
     this.assertCurrent();
-    return this.probes.startNativeReadiness(input, isCurrent);
+    return this.probes.startNativeReadiness(input, isCurrent, scope);
   }
 
   private prepareCoordination(profile: OpenCodeManagementProfile, input: ModelProbeInput,

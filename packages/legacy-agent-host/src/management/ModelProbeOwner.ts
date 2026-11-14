@@ -92,9 +92,9 @@ export class ModelProbeOwner {
   }
 
   /** Private compound proof; the public start parser cannot supply purpose or evidence. */
-  startNativeReadiness(raw: unknown, guard: () => boolean): ProviderModelProbeSnapshot {
+  startNativeReadiness(raw: unknown, guard: () => boolean, scope?: ModelReadinessProbeScope): ProviderModelProbeSnapshot {
     const input = startSchema.extend({ context: coordinationIdentity.shape.context }).parse(raw);
-    return this.admit(input, guard, nativeLocalReadinessPurpose);
+    return this.admit(input, guard, nativeLocalReadinessPurpose, undefined, scope);
   }
 
   /** Private preparation composition; never upgrades an already retained ordinary receipt. */

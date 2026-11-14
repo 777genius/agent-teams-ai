@@ -36,6 +36,7 @@ import { readHostTeamActivity } from './readHostTeamActivity.js';
 import { readRuntimeActivitySources, readEntryActivitySources, isRetainedActivityBinding } from './runtimeActivitySources.js';
 import { HostInteractionControls } from './HostInteractionControls.js';
 import { createMemberEntry, installRuntimeCaptureEntries } from './createMemberEntry.js';
+import { captureInitialRuntimeMemberAdmission } from './initialRuntimeModelAdmission.js';
 import { projectRuntimeActivity } from './runtimeActivityProjection.js';
 import { installRuntimeTeamLaunch } from './createRuntimeTeamLaunch.js';
 import { RuntimeTeamCaptures } from './RuntimeTeamCaptures.js';
@@ -113,6 +114,8 @@ export class RuntimeTeamCoordinator {
     }
   ) {
     const store = new FileRuntimeStore(options.profile.owner.storageRoot);
+    const initialProfile = options.profile.runtime?.initialModelAdmissions?.length
+      ? structuredClone(options.profile) : undefined;
     this.captures = new RuntimeTeamCaptures({
       profile: options.profile,
       hostIncarnation: this.hostIncarnation,
@@ -142,6 +145,8 @@ export class RuntimeTeamCoordinator {
         baseProfile,
       });
       const key = this.key(entry.binding);
+      const initial = initialProfile && captureInitialRuntimeMemberAdmission(initialProfile, entry);
+      if (initial) entry.initialModelAdmission = initial;
       if (this.entries.has(key)) throw new RuntimeOwnerError('invalid');
       this.entries.set(key, entry);
     }
@@ -431,6 +436,7 @@ export class RuntimeTeamCoordinator {
     return executeRuntimeLaunch(
       {
         profile: this.options.profile,
+        hostIncarnation: this.hostIncarnation,
         ...(this.options.modelReadiness ? { modelReadiness: this.options.modelReadiness } : {}),
         ...(this.options.sources ? { sources: this.options.sources } : {}),
         teams: this.options.teams,
@@ -650,6 +656,7 @@ export class RuntimeTeamCoordinator {
     return executeCapturedRuntimeControl(
       {
         teams: this.options.teams,
+        hostIncarnation: this.hostIncarnation,
         retainedLaunches: this.retainedLaunches,
         ...(this.options.modelReadiness ? { modelReadiness: this.options.modelReadiness } : {}),
         capturedTeams: this.capturedTeams,
