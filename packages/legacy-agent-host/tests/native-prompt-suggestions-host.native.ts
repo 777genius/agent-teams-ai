@@ -38,7 +38,7 @@ test('original captured Host forwards native Claude follow-up for the exact huma
   const errors: string[] = [];
   let host: ReturnType<typeof startHost> | undefined;
   let server: ReturnType<typeof createServer> | undefined;
-  let receipt = { passed: false, note: 'not executed' };
+  let receipt: Record<string, unknown> = { passed: false, note: 'not executed' };
   const frames = (response: import('node:http').ServerResponse, id: number) => {
     const event = (type: string, body: object) => response.write(
       'event: '+type+'\ndata: '+JSON.stringify({type,...body})+'\n\n'
@@ -162,9 +162,11 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     assert.equal(scalar(sent.value).phase,'completed');
     const deadline=Date.now()+55_000;
     let terminal=false;
+    let latestGeneration: unknown;
     while(Date.now()<deadline){
       assert.deepEqual(errors,[]);
       const state=await host.rpc('runtime.read',envelope('TEST-read',{memberId:'alice-id'}));
+      latestGeneration = scalar(state.value).generation;
       const rows=(scalar(state.value).inputs as unknown[]|undefined)?.map(scalar)??[];
       if(rows.some(x=>x.phase==='terminal'&&x.terminal==='succeeded'))terminal=true;
       if(terminal&&received.length>0)break;
@@ -183,7 +185,8 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     assert.ok(typeof event.text==='string'&&event.text.length>0);
     assert.ok(bodies.length>=2,'SDK generated an additional native suggestion inference');
     assert.deepEqual(errors,[]);
-    const stopped=await host.rpc('runtime.stop',envelope('TEST-stop',{memberId:'alice-id'}));
+    assert.equal(typeof latestGeneration,'string');
+    const stopped=await host.rpc('runtime.stop',envelope('TEST-stop',{memberId:'alice-id',expectedGeneration:latestGeneration}));
     assert.equal(stopped.ok,true);
     receipt={passed:true,nativeSdk:'0.3.305',normalHumanMessages:1,originalHostNotifications:1,
       localhostModelCalls:bodies.length,allModelCallsContainOriginalHuman:bodies.every(x=>x.inputHasHuman),
