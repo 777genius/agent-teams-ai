@@ -55,7 +55,7 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
   const { config, selection, requiredToolNames, requiredServerNames } =
     openCodeV2EmbeddedConfig(context, configuration.configuration);
   const credential = captureOpenCodeV2SessionCredential(profile, profile.nativeOptions.providerId,
-    configuration.isCurrent);
+    configuration.isCurrent, configuration.key);
   const current = credential.isCurrent;
   let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
   const matchesSelection = (observed: Awaited<ReturnType<OwnedClient['readSession']>>) =>

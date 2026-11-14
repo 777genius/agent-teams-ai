@@ -46,7 +46,7 @@ function fixture(t: { after(cleanup: () => void): void }) {
   return { root, home, project, xdg, input, write };
 }
 
-test('captured OpenCode config keeps donor precedence and stores only original source identities', (t) => {
+test('captured OpenCode config keeps donor precedence and stores only original source identities', async (t) => {
   const f = fixture(t);
   f.write(join(f.home, '.config/opencode/opencode.json'), {
     model: 'TEST-local/TEST-model',
@@ -82,6 +82,11 @@ test('captured OpenCode config keeps donor precedence and stores only original s
     },
   });
   assert.equal(captured.reference.files.length, 7);
+  assert.equal(captured.selectedKeyOrigin('TEST-local')?.kind, 'file');
+  const keyOrigin = captured.selectedKeyOrigin('TEST-local');
+  assert.ok(keyOrigin?.kind === 'file');
+  assert.equal(keyOrigin.path, join(f.home, '.config/opencode/opencode.json'),
+    'later model-only documents retain the actual original key leaf');
   assert.ok(!JSON.stringify(captured.reference).includes('TEST-private-key'));
   assert.equal(
     captureOpenCodeConfigurationSource(f.input, captured.reference).digest,
@@ -114,11 +119,24 @@ test('captured OpenCode config keeps donor precedence and stores only original s
   };
   const writeKey = (key: string) => f.write(auth, { 'TEST-local': { type: 'api', key } });
   writeKey('TEST-conflicting-key');
-  assert.throws(() => captureOpenCodeV2Configuration(profile, selection, () => current),
-    { reason: 'configuration-invalid' });
+  const originalAuth = readFileSync(auth);
+  const explicit = captureOpenCodeV2Configuration(profile, selection, () => current);
+  assert.equal(explicit.key?.readKey(), 'TEST-private-key', 'original explicit config wins same-account plain auth');
+  assert.deepEqual(readFileSync(auth), originalAuth, 'selecting a config key cannot rewrite auth');
+  assert.notEqual(explicit.key?.digest, new OpenCodeV2CredentialScope(profile, selection.providerId, () => current).capture().digest);
   writeKey('TEST-private-key');
   const configuration = captureOpenCodeV2Configuration(profile, selection, () => current);
-  const session = captureOpenCodeV2SessionCredential(profile, selection.providerId, configuration.isCurrent);
+  assert.equal(configuration.key?.digest, new OpenCodeV2CredentialScope(profile, selection.providerId, () => current).capture().digest,
+    'matching literal key retains the historical auth-only digest');
+  const configuredKey = configuration.key;
+  assert.ok(configuredKey);
+  assert.throws(() => captureOpenCodeV2SessionCredential(profile, selection.providerId,
+    configuration.isCurrent, { ...configuredKey }), { code: 'held' }, 'a structurally equal view has no provenance');
+  assert.throws(() => captureOpenCodeV2SessionCredential(profile, selection.providerId,
+    () => configuration.isCurrent(), configuredKey), { code: 'held' }, 'another configuration owner cannot borrow it');
+  assert.throws(() => captureOpenCodeV2SessionCredential({ ...profile, accountBinding: 'TEST-foreign' }, selection.providerId,
+    configuration.isCurrent, configuredKey), { code: 'held' });
+  const session = captureOpenCodeV2SessionCredential(profile, selection.providerId, configuration.isCurrent, configuredKey);
   assert.equal(session.isCurrent(), true);
   writeKey('TEST-replaced-key');
   assert.equal(configuration.isCurrent(), false, 'explicit config key keeps its original auth witness');
@@ -128,7 +146,7 @@ test('captured OpenCode config keeps donor precedence and stores only original s
 
   const running = captureOpenCodeV2Configuration(profile, selection, () => current);
   running.bindRunningSession();
-  const runningSession = captureOpenCodeV2SessionCredential(profile, selection.providerId, running.isCurrent);
+  const runningSession = captureOpenCodeV2SessionCredential(profile, selection.providerId, running.isCurrent, running.key);
   f.write(join(f.project, 'opencode.jsonc'), {
     provider: { 'TEST-local': { models: { 'TEST-model': { name: 'next-capture' } } } },
   });
@@ -141,6 +159,94 @@ test('captured OpenCode config keeps donor precedence and stores only original s
   assert.equal(runningSession.isCurrent(), false);
   assert.equal(captured.isCurrent(), false);
   assert.throws(captured.read, { reason: 'configuration-changed' });
+
+  const origins = fixture(t), originGlobal = join(origins.home, '.config/opencode/opencode.json');
+  origins.write(originGlobal, { provider: { 'TEST-local': { options: { apiKey: 'TEST-same' } } } });
+  origins.write(origins.input.environment.OPENCODE_CONFIG, { provider: { 'TEST-local': { options: null } } });
+  const originProject = join(origins.project, 'opencode.jsonc');
+  origins.write(originProject, { provider: { 'TEST-local': { options: { baseURL: 'http://127.0.0.1/v1' } } } });
+  assert.equal(captureOpenCodeConfigurationSource(origins.input).selectedKeyOrigin('TEST-local'), undefined,
+    'replacing an ancestor cannot retain a historical key origin');
+  origins.write(originProject, { provider: { 'TEST-local': { options: { apiKey: 'TEST-same' } } } });
+  const replacedOrigin = captureOpenCodeConfigurationSource(origins.input).selectedKeyOrigin('TEST-local');
+  assert.ok(replacedOrigin?.kind === 'file'); assert.equal(replacedOrigin.path, originProject,
+    'an equal later key value still belongs to its own actual source leaf');
+
+  for (const mode of ['absolute', 'legacy', 'env', 'wrong-provider', 'wrong-config', 'missing',
+    'empty', 'oversize', 'utf8', 'hardlink', 'inline', 'manual', 'relative',
+    ...(process.platform === 'win32' ? [] : ['symlink'])]) {
+    const v = fixture(t), leaf = join(v.project, 'opencode.jsonc'), dataRoot = join(v.root, 'data');
+    mkdirSync(dataRoot, { mode: 0o700 });
+    const owned = join(v.home, '.config/opencode/agent-teams-credentials');
+    mkdirSync(owned, { recursive: true, mode: 0o700 });
+    const scopePath = mode === 'wrong-config' ? join(v.project, 'other.json') : leaf;
+    const provider = mode === 'wrong-provider' ? 'TEST-other' : selection.providerId;
+    const filename = provider + '-' + createHash('sha256').update(scopePath).digest('hex').slice(0, 16) +
+      (mode === 'absolute' ? '-12345678-1234-4123-8123-123456789abc' : '') + '.key';
+    const file = join(owned, filename), keyValue = 'TEST-managed-original';
+    if (mode !== 'missing') writeFileSync(file,
+      mode === 'empty' ? ' \n' : mode === 'oversize' ? Buffer.alloc(65537, 65)
+        : mode === 'utf8' ? Buffer.from([0xff]) : '  ' + keyValue + '\n', { mode: 0o600 });
+    if (mode === 'hardlink') linkSync(file, file + '.linked');
+    if (mode === 'symlink') {
+      const target = join(v.root, 'target.key'); writeFileSync(target, keyValue, { mode: 0o600 });
+      rmSync(file); symlinkSync(target, file);
+    }
+    const reference = mode === 'legacy' ? '{file:~/.config/opencode/agent-teams-credentials/' + filename + '}'
+      : mode === 'manual' ? '{file:/TEST-never-read-this-key}'
+        : mode === 'relative' ? '{file:' + filename + '}' : '{file:' + file + '}';
+    const declaration = { provider: { [selection.providerId]: { npm: '@ai-sdk/openai-compatible',
+      options: { baseURL: 'http://127.0.0.1:12345/v1', apiKey: mode === 'env' ? '{env:TEST_KEY}' : reference } } } };
+    const environment = { ...v.input.environment, XDG_DATA_HOME: dataRoot, TEST_KEY: keyValue,
+      ...(mode === 'inline' ? { OPENCODE_CONFIG_CONTENT: JSON.stringify(declaration) } : {}) };
+    if (mode !== 'inline') v.write(leaf, declaration);
+    const keyProfile = { ...profile, ...v.input, environment, embedded: { ...profile.embedded! } };
+    keyProfile.embedded.configurationSource = captureOpenCodeConfigurationSource(keyProfile).reference;
+    const authPath = join(dataRoot, 'opencode/auth.json');
+    v.write(authPath, { 'TEST-foreign': { type: 'api', key: 'TEST-unselected' },
+      ...(mode === 'legacy' || mode === 'env' ? { [selection.providerId]: {
+        type: 'api', key: mode === 'env' ? keyValue : 'TEST-different-primary' } } : {}) });
+    const authBytes = readFileSync(authPath);
+    const accepted = mode === 'absolute' || mode === 'legacy' || mode === 'env';
+    if (!accepted) {
+      assert.throws(() => captureOpenCodeV2Configuration(keyProfile, selection, () => true), { code: 'held' }, mode);
+      assert.deepEqual(readFileSync(authPath), authBytes);
+      continue;
+    }
+    const actual = captureOpenCodeV2Configuration(keyProfile, selection, () => true);
+    assert.equal(actual.key?.readKey(), keyValue, mode);
+    assert.equal(captureOpenCodeV2Configuration(keyProfile, selection, () => true).key?.digest, actual.key?.digest,
+      'cold recapture of the unchanged source/key has the same private witness');
+    if (mode === 'env') assert.equal(actual.key?.digest,
+      new OpenCodeV2CredentialScope(keyProfile, selection.providerId, () => true).capture().digest,
+      'matching resolved environment key preserves the historical digest');
+    assert.equal(JSON.stringify(actual).includes(keyValue), false);
+    if (mode === 'absolute') {
+      let inputs = 0, closes = 0;
+      const probe = createOpenCodeLocalModelReadiness(keyProfile, { commandId: 'TEST-managed-readiness',
+        profileId: keyProfile.profileId, configRevision: keyProfile.configRevision, ...selection }, () => true, {
+        ordinary: observe => ({ timeoutMs: 1000, run: async () => {
+          observe({ npm: '@ai-sdk/openai-compatible', options: { baseURL: 'http://127.0.0.1:12345/v1' },
+            credentialScopeDigest: actual.key!.digest }); inputs++; return true;
+        }, close: async () => { closes++; return true; } }),
+        coordination: () => { throw Error('TEST managed key cannot enter authless coordination'); },
+        fetchImpl: async () => { throw Error('TEST managed key cannot fetch local metadata'); },
+      });
+      const cutoff = Date.now() + 900;
+      try {
+        assert.equal(await probe.run(t.signal, cutoff), true);
+        assert.equal(probe.readiness?.()?.coordination, 'not-applicable'); assert.equal(inputs, 1);
+      } finally { assert.equal(await probe.close(cutoff), true); assert.equal(closes, 1); }
+    }
+    actual.bindRunningSession();
+    v.write(leaf, { model: 'TEST-local/TEST-next' });
+    assert.equal(actual.isCurrent(), true, 'bound original key remains with config A');
+    if (mode !== 'env') {
+      writeFileSync(file, keyValue + '-changed', { mode: 0o600 });
+      assert.equal(actual.isCurrent(), false, 'binding never discards the original file witness');
+    }
+    assert.deepEqual(readFileSync(authPath), authBytes);
+  }
 });
 
 test('new or replaced config invalidates its original reference; malformed JSONC is never an empty success', (t) => {
@@ -228,6 +334,10 @@ test('selected V2 declaration preserves alias, limits, variant body and captured
     },
   });
   assert.ok(!JSON.stringify(selected.configuration).includes('TEST-private-key'));
+  assert.throws(() => selectOpenCodeV2ProviderConfiguration({ provider: { 'TEST-provider': {
+    options: { apiKey: '{env:TEST_KEY}' },
+  } } }, { providerId: 'TEST-provider', modelId: 'TEST-model' }, { TEST_KEY: '{file:/TEST-never-read}' }),
+  { reason: 'configuration-invalid' }, 'an environment value cannot manufacture a file grant');
   assert.deepEqual(
     mapOpenCodeV2SelectedModel('TEST-model', { variants: { high: { reasoningEffort: 'high' } } }),
     { 'TEST-model': { variants: [{ id: 'high', settings: { reasoningEffort: 'high' } }] } }
