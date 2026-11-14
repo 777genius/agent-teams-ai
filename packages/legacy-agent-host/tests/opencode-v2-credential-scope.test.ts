@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -8,9 +9,12 @@ import { test } from 'node:test';
 import { createOpenCodeV2OwnedSessionClient } from '@agent-teams/provider-implementations/opencode';
 
 import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/OpenCodeV2SessionCredential.js';
+import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
+import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
 import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
 import { OpenCodeV2ManagementHost } from '../dist/adapters/providers/OpenCodeV2ManagementHost.js';
 import { openCodeManagementProfileSchema } from '../dist/management/profile.js';
+import type { OpenCodeManagementProfile } from '../dist/management/profile.js';
 
 function fixture() {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-credential-scope-')));
@@ -57,18 +61,46 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
   const originalAuth = readFileSync(f.file);
   // Real pinned protocol clients against a finite TEST peer; no native engine is claimed.
   for (const mode of ['configured', 'absent', 'explicit', 'missing', 'foreign',
-    'foreign-scope', 'explicit-foreign', 'explicit-scope'] as const) {
+    'foreign-scope', 'explicit-foreign', 'explicit-scope', 'config-literal', 'config-env', 'config-file'] as const) {
     const explicit = mode.startsWith('explicit');
+    const fromConfig = mode.startsWith('config-');
     const integrationId = explicit ? 'TEST-explicit' : 'TEST-provider';
-    const accepted = mode === 'configured' || mode === 'absent' || mode === 'explicit';
+    const accepted = mode === 'configured' || mode === 'absent' || mode === 'explicit' || fromConfig;
+    const effectiveKey = fromConfig ? 'TEST-config-original-key' : 'TEST-corrected-key';
+    let configProfile: OpenCodeManagementProfile | undefined, managedKey: string | undefined;
+    if (fromConfig) {
+      const cwd = join(f.root, mode); mkdirSync(cwd, { mode: 0o700 });
+      const leaf = join(cwd, 'opencode.json');
+      const owned = join(f.home, '.config/opencode/agent-teams-credentials');
+      mkdirSync(owned, { recursive: true, mode: 0o700 });
+      managedKey = join(owned, 'TEST-provider-' + createHash('sha256').update(leaf).digest('hex').slice(0, 16) + '.key');
+      writeFileSync(managedKey, effectiveKey, { mode: 0o600 });
+      writeFileSync(leaf, JSON.stringify({ provider: { 'TEST-provider': {
+        npm: '@ai-sdk/openai-compatible', options: { baseURL: 'http://127.0.0.1:12345/v1',
+          apiKey: mode === 'config-file' ? '{file:' + managedKey + '}'
+            : mode === 'config-env' ? '{env:TEST_CONFIG_KEY}' : effectiveKey },
+      } } }), { mode: 0o600 });
+      configProfile = { ...f.profile, cwd, environment: { ...f.profile.environment,
+        XDG_CONFIG_HOME: join(f.home, '.config'), TEST_CONFIG_KEY: effectiveKey },
+        provider: 'opencode', profileId: 'TEST-config-profile', configRevision: 'TEST-config-revision',
+        executable: { path: process.execPath, sha256: 'a'.repeat(64) }, endpoint: 'http://127.0.0.1:12345',
+        timeoutMs: 5000, nativeGeneration: 'v2', protocolRevision: '2.1.4',
+        nativeModel: { providerId: 'TEST-provider', modelId: 'TEST-model' },
+        embedded: { version: '2.1.4', directory: f.root, manifestSha256: 'b'.repeat(64),
+          platform: process.platform === 'win32' ? 'win32' : process.platform === 'darwin' ? 'darwin' : 'linux',
+          arch: process.arch === 'arm64' ? 'arm64' : 'x64', externalDirectory: 'deny' },
+      };
+      configProfile.embedded!.configurationSource = captureOpenCodeConfigurationSource(configProfile).reference;
+    }
+    const nativeDirectory = configProfile?.cwd ?? f.root;
     const requests: string[] = [], failures: unknown[] = [];
-    let connected = false;
+    let connected = false, coldRead = false;
     const server = createServer((request, response) => {
       void (async () => {
-        assert.ok(requests.length < 10, 'one finite preparation, with no replay');
+        assert.ok(requests.length < (coldRead ? 18 : 10), 'one finite preparation and original cold read, with no replay');
         const url = new URL(request.url!, 'http://127.0.0.1');
         requests.push(request.method + ' ' + url.pathname);
-        assert.deepEqual([...url.searchParams], [['location[directory]', f.root]]);
+        assert.deepEqual([...url.searchParams], [['location[directory]', nativeDirectory]]);
         assert.equal(request.headers.authorization,
           'Basic ' + Buffer.from('opencode:TEST-server-password').toString('base64'));
         const chunks: Buffer[] = [];
@@ -84,14 +116,14 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
           assert.equal(url.pathname, '/api/integration/' + integrationId + '/connect/key');
           assert.equal(accepted, true, 'refused integration cannot receive a key');
           assert.equal(connected, false, 'only one original key connect');
-          assert.deepEqual(JSON.parse(body), { key: 'TEST-corrected-key' });
+          assert.deepEqual(JSON.parse(body), { key: effectiveKey });
           connected = true;
           response.writeHead(204); response.end(); return;
         }
         assert.equal(request.method, 'GET');
         assert.equal(body, '');
         let data: unknown;
-        let directory = f.root;
+        let directory = nativeDirectory;
         if (url.pathname === '/api/provider') data = mode === 'absent' ? [] : [{
           id: 'TEST-provider', name: 'TEST provider', activation: 'enabled',
           ...(explicit ? { integrationID: integrationId } : {}),
@@ -130,15 +162,19 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
     try {
       const address = server.address();
       assert.ok(address && typeof address !== 'string');
-      const config = { endpoint: 'http://127.0.0.1:' + address.port, directory: f.root,
+      const config = { endpoint: 'http://127.0.0.1:' + address.port, directory: nativeDirectory,
         version: '2.1.4' as const, signal: t.signal, deadline: Date.now() + 5000,
         readPassword: () => 'TEST-server-password' };
       owner = createOpenCodeV2OwnedSessionClient({ ...config, nativeSessionId: 'ses_TEST' });
-      const prepared = captureOpenCodeV2SessionCredential(f.profile, 'TEST-provider', () => true);
+      const originalConfiguration = configProfile ? captureOpenCodeV2Configuration(configProfile,
+        { providerId: 'TEST-provider', modelId: 'TEST-model' }, () => true) : undefined;
+      const prepared = captureOpenCodeV2SessionCredential(configProfile ?? f.profile, 'TEST-provider',
+        originalConfiguration?.isCurrent ?? (() => true), originalConfiguration?.key);
       const original = prepared.prepare(config, owner);
       assert.equal(prepared.prepare(config, owner), original, 'same original pending Promise');
       if (accepted) {
-        assert.deepEqual(await original, { scopeDigest: f.scope().capture().digest, credentialId: 'cred_TEST' });
+        assert.deepEqual(await original, { scopeDigest: originalConfiguration?.key?.digest ?? f.scope().capture().digest,
+          credentialId: 'cred_TEST' });
         assert.equal(await prepared.prepare(config, owner), await original);
       } else {
         const code = mode === 'foreign-scope' ? 'native_catalog_binding_mismatch'
@@ -155,6 +191,29 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
       assert.equal(connected, accepted);
       assert.deepEqual(failures, [], 'TEST peer accepted only the original finite protocol');
       assert.deepEqual(readFileSync(f.file), originalAuth, 'native preparation never rewrites source auth');
+      if (configProfile) {
+        const witness = await original; assert.ok(witness);
+        const selected = { providerId: 'TEST-provider', modelId: 'TEST-model' };
+        const coldConfig = captureOpenCodeV2Configuration(configProfile, selected, () => true);
+        const restored = { id: 'ses_TEST', directory: nativeDirectory, agent: 'TEST-agent',
+          model: { providerID: 'TEST-provider', id: 'TEST-model' },
+          permissions: [{ action: '*', resource: '*', effect: 'deny' as const }], credential: witness };
+        const cold = captureOpenCodeV2SessionCredential(configProfile, 'TEST-provider', coldConfig.isCurrent, coldConfig.key);
+        coldRead = true; // The original ten-request preparation has already passed every assertion above.
+        assert.deepEqual(await cold.prepare(config, owner, restored), witness);
+        assert.equal(requests.length, 18, 'cold uses only the original finite catalog/integration reads');
+        assert.equal(requests.filter(row => row.startsWith('POST ')).length, 1);
+        if (mode === 'config-file') {
+          writeFileSync(managedKey!, 'TEST-changed-file-key', { mode: 0o600 });
+          assert.equal(originalConfiguration!.isCurrent(), false);
+          const changed = captureOpenCodeV2Configuration(configProfile, selected, () => true);
+          const refused = captureOpenCodeV2SessionCredential(configProfile, 'TEST-provider', changed.isCurrent, changed.key);
+          await assert.rejects(refused.prepare(config, owner, restored), { code: 'held' });
+          assert.equal(requests.length, 18, 'changed original file cannot reconnect or read a foreign cold credential');
+        }
+        assert.deepEqual(readFileSync(f.file), originalAuth);
+        assert.deepEqual(failures, []);
+      }
     } finally {
       try { await owner?.dispose(); }
       finally {
