@@ -2630,3 +2630,46 @@ Root alone runs the original relevant type/lint/source guards and these existing
 ### 29.8. Review and publication
 
 Root and an independent peer review this exact appendix and source chain before publication. Author stages only these18 existing paths after explicit GO, freezes each original/final blob plus complete forward/inverse diffs, and requests source review. Root owns canonical composition, checks and immediate publication to the three working refs; live CI/head advancement remains root's ordinary gate. P05 §27/28, C10, W01 and the distinct remaining native failures retain their own evidence and completion criteria.
+
+## 30. Remove ambiguous repetition from captured Codex NODE_OPTIONS validation
+
+### 30.1. Applicable CodeQL finding and input boundary
+
+PR1186 review thread `PRRT_kwDORVTEtM63eEU7`, comment `4573603075`, links security alert 610 against `captureCodexNativeSelection.ts:357`. The thread remains open and current. Read-only evidence `abba416ac6d9f7a1e2773f1e1a5808d9e8ef7f45` verifies the same source in parent `5f07c1e9e0c0e4459a25d4586dd4009c275224b0`, native `c546aefafeaf5e613c779a5ef76f6d7e516cab0e`, and qualification `cfc20848e45926750698d0135561a8772a3370ac`. This appendix preserves the entire current P06 prefix `10b36d6d25110c513184459c249fd37916ce1bb0`.
+
+The finding is valid at source level. The Windows npm-shim path tests captured `NODE_OPTIONS` with a repeated group containing both leading and trailing `\s*`. Repeated allowed flags followed by a rejected suffix permit independent whitespace partitions between adjacent groups. The input comes from the original merged process/cached-shell environment, not a newly introduced IPC field. The shim/script 64 KiB bounds do not bound this environment string. The existing 15,000 ms resolver deadline is checked before/after work and cannot interrupt this synchronous match. No application freeze, exploit duration or unauthenticated remote route is claimed. [CodeQL's original query guidance](https://codeql.github.com/codeql-query-help/javascript/js-redos/) recommends removing ambiguous repetition.
+
+### 30.2. One equivalent expression, unchanged selection contract
+
+Replace only the existing validator expression:
+
+```ts
+/^(?:\s*--(?:max-old-space-size|max-semi-space-size)=\d+\s*)*$/
+```
+
+with:
+
+```ts
+/^(?:(?:\s*--(?:max-old-space-size|max-semi-space-size)=\d+)+\s*)?$/
+```
+
+The repeated nonempty group ends at its digits; only the next group owns inter-option whitespace, and one suffix owns final whitespace. This removes the repeated ambiguous boundary without a parser, helper, dependency or size policy. Language equivalence follows by writing the old group as W F D W: W W = W, so (W F D W)* equals optional (W F D)+ W. Keep the existing anchors, flags and original input unchanged. Thus absent/undefined/empty values, exact hyphenated names, ASCII digits including zero/leading zeros, repeated flags, leading/trailing/inter-option whitespace, adjacent flags without a separator, and the original end-anchor behavior retain their previous acceptance. Do not trim, normalize, split or forward a modified value.
+
+Keep the existing case-insensitive environment-key census, refusal of multiple NODE_OPTIONS keys, original held error, full environment fingerprint/currentness checks, exact official wrapper hashes, package-resolution witnesses, interpreter/native identities and version probe untouched. The fix does not authorize loaders, imports, conditions, symlink flags or unknown options. Resolution deadline, candidate ordering, native cleanup and source publication remain unchanged.
+
+### 30.3. Exact two-path scope and existing-case verification
+
+All three variants have these exact preimages:
+
+| Existing path | Original blob | Authorized delta after SOURCE GO |
+| --- | --- | --- |
+| `src/features/codex-runtime-installer/main/infrastructure/captureCodexNativeSelection.ts` | `62c448fc55b0d663534e4900fd608b93bcbdf6ff` | The single equivalent expression above; natural formatting only. |
+| `src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.test.ts` | `46a479072f7559f3981a56e267fa31c8eb271c72` | Extend only the existing first Windows command-shim case, retaining its official wrapper fixture and every original assertion. |
+
+The existing case already exercises actual static file capture and native identity with a mocked original version process. Preserve its omitted-options positive. Add finite positive captured values for empty and combined/repeated heap flags, including original whitespace/adjacent-flag forms; verify exact native identity and unchanged option forwarding to the one mocked version probe per accepted capture. Negative values cover space/tab-only input, an unsupported option or invalid digit suffix after eight repeated allowed flags, and duplicate differently-cased keys. Each negative must retain the original held error and zero mocked execution. Restore the original environment builder before the existing package-drift/wrapper-drift/unknown-cleanup checks. Do not duplicate the compressed wrapper, add a case, export a validator or add wall-clock assertions. All 18 original case declarations and assertions remain.
+
+These checks protect compatibility and refusal behavior. They are not a claimed old-source timing RED; do not execute a large exponential input or add a benchmark. Root owns the existing resolver test file, normal types/lint/size gates and applicable current-head CodeQL verification. No new native/UI/model request, job, timeout, retry, skip, cap or CI allowance is introduced.
+
+### 30.4. Explicit security-review disposition
+
+Disposition is **accepted finding; narrowly planned fix**, with no suppression or dismissal. Independent plan review and root publication precede SOURCE GO. Freeze both final sources, exact forward/inverse diffs, unchanged-case evidence and current variant preimages for independent source review. After publication and actual checks, root records the corrective source/validation evidence against the original review/security finding; an open thread or unobserved CodeQL result must not be silently reported resolved. Source/unit results do not substitute for the separate original Windows native qualification.
