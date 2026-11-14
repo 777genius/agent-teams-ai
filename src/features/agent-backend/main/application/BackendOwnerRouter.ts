@@ -29,7 +29,7 @@ import type {
   StoredBackendBinding,
 } from './backendBinding';
 import type { HostHandshake, JsonValue } from '@agent-teams/legacy-agent-host/contracts';
-import type { LocalModelReadinessCapture, LocalModelReadinessTransfer, LiveRosterPrivateInput } from '@agent-teams/legacy-agent-host/team-host';
+import type { LiveRosterPrivateInput, LocalModelReadinessCapture, LocalModelReadinessTransfer } from '@agent-teams/legacy-agent-host/team-host';
 
 interface RegisteredOwner {
   readonly binding: BackendOwnerBinding;
