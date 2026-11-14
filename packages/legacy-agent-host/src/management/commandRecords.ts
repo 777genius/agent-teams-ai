@@ -104,21 +104,31 @@ const readinessPolicyScopeSchema = z.union([
 ]).refine(value => new Set(value.sources.map(row => row.path)).size === value.sources.length &&
   new Set(value.providers.map(row => row.providerId)).size === value.providers.length &&
   (!value.invalid || value.providers.length === 0));
-export const localModelReadinessOriginSchema = z.object({
-  schemaVersion: z.literal(1), kind: z.enum(['create', 'team']),
-  ownerDigest: hash, contextId: id, commandId: id, selectionDigest: hash,
-  workspaces: z.array(z.object({
-    path: originPath, project: readinessPolicyScopeSchema, global: readinessPolicyScopeSchema,
-  }).strict()).min(1).max(256),
-  approval: z.object({
+const readinessGlobalPolicyScopeSchema = z.union([
+  readinessPolicyScopeSchema,
+  z.object({ notConsulted: z.literal('project-precedence') }).strict(),
+]);
+const readinessApprovalSchema = z.union([
+  z.object({
     source: readinessSourceReferenceSchema,
     approved: z.array(z.object({
       configPath: originPath, providerId: id, baseUrl: z.string().min(1).max(2048),
     }).strict()).max(256),
   }).strict(),
+  z.object({ notConsulted: z.literal('no-private-target') }).strict(),
+]);
+export const localModelReadinessOriginSchema = z.object({
+  schemaVersion: z.literal(1), kind: z.enum(['create', 'team']),
+  ownerDigest: hash, contextId: id, commandId: id, selectionDigest: hash,
+  workspaces: z.array(z.object({
+    path: originPath, project: readinessPolicyScopeSchema, global: readinessGlobalPolicyScopeSchema,
+  }).strict()).min(1).max(256),
+  approval: readinessApprovalSchema,
 }).strict().refine(value => new Set(value.workspaces.map(row => row.path)).size === value.workspaces.length &&
-  value.workspaces.every(row => row.project.sources.length === 4 && row.global.sources.length === 2) &&
-  value.workspaces.reduce((count, row) => count + row.project.providers.length + row.global.providers.length, 0) <= 256 &&
+  value.workspaces.every(row => row.project.sources.length === 4 &&
+    ('notConsulted' in row.global || row.global.sources.length === 2)) &&
+  value.workspaces.reduce((count, row) => count + row.project.providers.length +
+    ('notConsulted' in row.global ? 0 : row.global.providers.length), 0) <= 256 &&
   Buffer.byteLength(JSON.stringify(value)) <= 256 * 1024);
 export type LocalModelReadinessOrigin = z.infer<typeof localModelReadinessOriginSchema>;
 export type ReadinessSourceReference = z.infer<typeof readinessSourceReferenceSchema>;

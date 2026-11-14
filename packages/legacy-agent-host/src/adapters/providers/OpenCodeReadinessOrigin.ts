@@ -187,27 +187,36 @@ export function captureOpenCodeReadinessOrigin(
       return raw;
     };
     const project = readScope(workspace.project, workspace.path, 'project', providerId, read);
-    const global = readScope(workspace.global, workspace.path, 'global', providerId, read);
-    const selected = project.policy && !project.invalid ? project : global;
-    const invalid = selected === project ? false : project.invalid || global.invalid;
-    const source = origin.approval.source;
-    if (source.root !== dirname(source.path)) return held();
-    const approvalRaw = read(source, 131072);
-    let value: unknown;
-    try { value = approvalRaw === null ? null : JSON.parse(approvalRaw); } catch { value = null; }
-    const approved = object(value) && value.schemaVersion === 1 && Array.isArray(value.approvals)
-      ? value.approvals.filter(object).flatMap(row =>
-        typeof row.configPath === 'string' && typeof row.providerId === 'string' && typeof row.baseUrl === 'string'
-          ? [{ configPath: resolve(row.configPath), providerId: row.providerId.trim(), baseUrl: row.baseUrl.trim() }] : [])
-      : [];
-    for (const tuple of origin.approval.approved) {
-      if (!approved.some(row => managementDigest(row) === managementDigest(tuple))) return held();
+    let selected = project, invalid = project.invalid;
+    if ('notConsulted' in workspace.global) {
+      if (!project.policy || project.invalid) return held();
+      invalid = false;
+    } else {
+      const global = readScope(workspace.global, workspace.path, 'global', providerId, read);
+      selected = project.policy && !project.invalid ? project : global;
+      invalid = selected === project ? false : project.invalid || global.invalid;
     }
-    const tuple = selected.policy && selected.source ? {
-      configPath: selected.source, providerId, baseUrl: selected.policy.baseUrl,
-    } : undefined;
-    const privateNetworkApproved = tuple !== undefined && origin.approval.approved.some(row =>
-      managementDigest(row) === managementDigest(tuple));
+    let privateNetworkApproved = false;
+    if (!('notConsulted' in origin.approval)) {
+      const source = origin.approval.source;
+      if (source.root !== dirname(source.path)) return held();
+      const approvalRaw = read(source, 131072);
+      let value: unknown;
+      try { value = approvalRaw === null ? null : JSON.parse(approvalRaw); } catch { value = null; }
+      const approved = object(value) && value.schemaVersion === 1 && Array.isArray(value.approvals)
+        ? value.approvals.filter(object).flatMap(row =>
+          typeof row.configPath === 'string' && typeof row.providerId === 'string' && typeof row.baseUrl === 'string'
+            ? [{ configPath: resolve(row.configPath), providerId: row.providerId.trim(), baseUrl: row.baseUrl.trim() }] : [])
+        : [];
+      for (const tuple of origin.approval.approved) {
+        if (!approved.some(row => managementDigest(row) === managementDigest(tuple))) return held();
+      }
+      const tuple = selected.policy && selected.source ? {
+        configPath: selected.source, providerId, baseUrl: selected.policy.baseUrl,
+      } : undefined;
+      privateNetworkApproved = tuple !== undefined && origin.approval.approved.some(row =>
+        managementDigest(row) === managementDigest(tuple));
+    }
     current();
     return { policy: selected.policy, invalid, privateNetworkApproved };
   };
@@ -227,11 +236,14 @@ export function originalReadinessSubset(origin: LocalModelReadinessOrigin, cwd: 
   const scope = (value: Scope): Scope => ({ ...value,
     providers: value.providers.filter(row => row.providerId === providerId),
   });
-  const selected = { ...workspace, project: scope(workspace.project), global: scope(workspace.global) };
-  const paths = new Set([selected.project.selectedPath, selected.global.selectedPath]);
+  const selected = { ...workspace, project: scope(workspace.project),
+    global: 'notConsulted' in workspace.global ? workspace.global : scope(workspace.global) };
+  const paths = new Set([selected.project.selectedPath,
+    ...('notConsulted' in selected.global ? [] : [selected.global.selectedPath])]);
   return localModelReadinessOriginSchema.parse({ ...origin, workspaces: [selected],
-    approval: { ...origin.approval, approved: origin.approval.approved.filter(row =>
-      row.providerId === providerId && paths.has(row.configPath)) },
+    approval: 'notConsulted' in origin.approval ? origin.approval
+      : { ...origin.approval, approved: origin.approval.approved.filter(row =>
+        row.providerId === providerId && paths.has(row.configPath)) },
   });
 }
 
@@ -239,6 +251,7 @@ export function originalReadinessSubset(origin: LocalModelReadinessOrigin, cwd: 
 export function captureReadinessPreparation(raw: LocalModelReadinessPreparation, expected: {
   kind: 'create' | 'team'; owner: unknown; contextId: string; commandId: string;
   selection: unknown; workspaces: readonly string[]; anchorCommandId: string;
+  targets?: readonly { workspace: string; providerId: string }[];
   original: { present: boolean; anchor?: ReadinessPreparationAnchor };
   admittedAt: number;
 }) {
@@ -253,6 +266,17 @@ export function captureReadinessPreparation(raw: LocalModelReadinessPreparation,
       origin.selectionDigest !== identity.selectionDigest ||
       managementDigest([...new Set(expected.workspaces)].sort()) !==
         managementDigest(origin.workspaces.map(row => row.path).sort())) return held();
+  if ('notConsulted' in origin.approval || origin.workspaces.some(row => 'notConsulted' in row.global)) {
+    const targets = expected.targets;
+    if (!targets?.length || targets.length > 256 || targets.some(row => !row.providerId) ||
+        managementDigest([...new Set(targets.map(row => row.workspace))].sort()) !==
+          managementDigest(origin.workspaces.map(row => row.path).sort())) return held();
+    for (const workspace of origin.workspaces) {
+      if ('notConsulted' in workspace.global && (workspace.project.invalid ||
+          targets.filter(row => row.workspace === workspace.path).some(target =>
+            !workspace.project.providers.some(row => row.providerId === target.providerId)))) return held();
+    }
+  }
   const previous = expected.original.anchor;
   if (expected.original.present && !previous) return held();
   if (previous) {

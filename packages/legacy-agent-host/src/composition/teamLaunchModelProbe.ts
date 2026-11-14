@@ -284,6 +284,7 @@ export async function executeTeamModelProbe(options: {
       contextId: options.readiness.preparation.origin.contextId, commandId: options.commandId,
       selection: { handleId: options.readiness.handleId, scope: options.readiness.scope, payload: input },
       workspaces: [captured.profile.cwd], anchorCommandId: options.commandId,
+      targets: [{ workspace: captured.profile.cwd, providerId: captured.providerId }],
       original: owner.readPreparation(options.commandId), admittedAt,
     }
   ) : undefined;
