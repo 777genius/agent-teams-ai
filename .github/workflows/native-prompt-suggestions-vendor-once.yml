@@ -1,6 +1,6 @@
 name: Native prompt suggestions exact vendor staging (TEST only)
 
-# One-shot source-artifact adoption. Remove this workflow after the verified commit.
+# One-shot verified source-archive adoption for this isolated branch.
 on:
   push:
     branches:
@@ -14,23 +14,23 @@ on:
     paths:
       - .github/workflows/native-prompt-suggestions-vendor-once.yml
 
+# Do not let two deliveries race to advance the same feature branch.
+concurrency:
+  group: native-prompt-suggestions-stage-${{ github.repository }}
+  cancel-in-progress: false
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  stage-exact-archive:
+  reproduce-source:
     if: github.repository == '777genius/agent-teams-ai' && (github.ref_name == 'feat/native-prompt-suggestions-stage1-20261114' || (github.event.pull_request.head.ref == 'feat/native-prompt-suggestions-stage1-20261114' && github.event.pull_request.head.repo.full_name == github.repository))
+    permissions:
+      contents: read
     runs-on: ubuntu-24.04
     timeout-minutes: 18
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-        with:
-          ref: feat/native-prompt-suggestions-stage1-20261114
-          # No writable checkout credentials while executing dependency code.
-          persist-credentials: false
-          fetch-depth: 1
-
-      - name: Checkout frozen public provider source at original source-qualified commit
+      - name: Checkout frozen provider source without writable credentials
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: agent-teams-ai/old-provider-implementations
@@ -42,7 +42,7 @@ jobs:
           node-version: 24.21.0
           package-manager-cache: false
 
-      - name: Reproduce original checked provider archive locally (public source, no cross-repo token)
+      - name: Reproduce and verify original checked provider archive, read-only
         shell: bash
         run: |
           set -euo pipefail
@@ -59,12 +59,51 @@ jobs:
           test -f "$root/agent-teams-provider-session-contracts-0.0.0.tgz"
           echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $root/agent-teams-provider-implementations-0.0.0.tgz" | sha256sum --check
           echo "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db  $root/agent-teams-provider-session-contracts-0.0.0.tgz" | sha256sum --check
-          tar -tzf "$root/agent-teams-provider-implementations-0.0.0.tgz" | grep -q '^package/dist/prompt-suggestions.js$'
+          tar -tzf "$root/agent-teams-provider-implementations-0.0.0.tgz" | grep -Fx 'package/dist/prompt-suggestions.js' >/dev/null
+
+      - name: Transfer only the SHA-verified archive to a separate write job
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-prompt-suggestions-source-74991c21
+          retention-days: 1
+          if-no-files-found: error
+          path: .provider-native-74991c21/.checked/agent-teams-provider-implementations-0.0.0.tgz
+
+  stage-exact-archive:
+    needs: reproduce-source
+    permissions:
+      contents: write
+      actions: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout only the isolated consumer feature branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: feat/native-prompt-suggestions-stage1-20261114
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Download the read-only job's exact verified artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: native-prompt-suggestions-source-74991c21
+          path: .native-provider-archive
+
+      - name: Reject altered or unexpected provider archive before staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive=.native-provider-archive/agent-teams-provider-implementations-0.0.0.tgz
+          test -f "$archive"
+          echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $archive" | sha256sum --check
+          tar -tzf "$archive" | grep -Fx 'package/dist/prompt-suggestions.js' >/dev/null
           dest=vendor/provider-migration/native-prompt-suggestions-74991c21
           mkdir -p "$dest"
-          cp "$root/agent-teams-provider-implementations-0.0.0.tgz" "$dest/"
+          cp "$archive" "$dest/"
 
-      - name: Update one package selector and frozen lockfile
+      - name: Update only the selected package and its frozen lockfile
+        shell: bash
         run: |
           set -euo pipefail
           node <<'JS'
@@ -73,21 +112,21 @@ jobs:
           const value = JSON.parse(fs.readFileSync(file, 'utf8'));
           const key = '@agent-teams/provider-implementations';
           const expected = 'file:../../vendor/provider-migration/opencode-selected-file-key-421fee9/agent-teams-provider-implementations-0.0.0.tgz';
-          if (value.dependencies?.[key] !== expected) {
+          const selected = 'file:../../vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz';
+          if (value.dependencies?.[key] !== expected && value.dependencies?.[key] !== selected)
             throw new Error('Existing provider archive selection has changed. Refusing an automatic overwrite.');
-          }
-          value.dependencies[key] = 'file:../../vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz';
+          value.dependencies[key] = selected;
           fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n');
           JS
           corepack enable
-          corepack pnpm --version
+          test "$(corepack pnpm --version)" = 11.18.0
           corepack pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
           git diff --check
 
-      - name: Commit and push exact tested artifact to isolated feature branch
+      - name: Commit and push without running provider code under a write token
         env:
-          # Created only for this final step, after all provider code finished.
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
@@ -99,8 +138,6 @@ jobs:
           git diff --cached --check
           git diff --cached --quiet && exit 0
           git commit -m 'chore(native-suggestions): pin exact CI-qualified provider artifact'
-          # Inject authorization only into the final git process; never store
-          # a write-capable token in the checkout provider code can inspect.
           auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           GIT_CONFIG_COUNT=1 \
             GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \
