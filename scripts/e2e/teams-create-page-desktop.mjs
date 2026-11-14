@@ -78,7 +78,8 @@ async function seedFixture() {
     xdgStateHome: path.join(root, 'xdg-state'),
     xdgRuntimeDir: path.join(root, 'xdg-runtime'),
     projectPath: path.join(root, 'sandbox-project'),
-    teamName: `teams-create-page-e2e-${randomUUID()}`,
+    // Keep a nonnumeric suffix: Copy Team treats trailing -digits as an existing copy index.
+    teamName: `teams-create-page-e2e-${randomUUID()}-seed`,
     memberName: 'team-lead',
     runtimeScriptPath: path.join(root, 'fixture-runtime-deny.cjs'),
     runtimeWrapperPath: path.join(
