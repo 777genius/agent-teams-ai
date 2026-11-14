@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "exitCode": 0,
+  "seconds": 22.925,
+  "command": [
+    "/workspace/scratch/391e21b06e24/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+    "/workspace/scratch/391e21b06e24/TEST-corepack036-stopped-import-r6080l74/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+    "install",
+    "--frozen-lockfile",
+    "--child-concurrency=1",
+    "--network-concurrency=1",
+    "--package-import-method=copy",
+    "--store-dir=/workspace/.pnpm-store"
+  ],
+  "dependencyGraph": "new isolated worktree, exact frozen merged lock, private copied packages",
+  "realVendorExecuted": false,
+  "logSha256": "d2543f75569d75cd4a523d6f38a3cdd541b8587196d19f72243d5e4c3e5a04e9"
+}

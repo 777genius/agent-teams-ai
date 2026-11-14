@@ -1,0 +1,449 @@
+$ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content src/
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/agent-graph/renderer/hooks/useGraphMemberLogPreviews.ts
+  559:6  warning  React Hook useEffect has a missing dependency: 'memberNames'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/agent-graph/renderer/ui/GraphActivityCard.tsx
+  50:5  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+  59:7  warning  `tabIndex` should only be declared on interactive elements                                                                                                                                         jsx-a11y/no-noninteractive-tabindex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/agent-graph/renderer/ui/GraphMemberLogPreviewHud.tsx
+  339:9   warning  The 'members' logical expression could make the dependencies of useMemo Hook (at line 340) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'members' in its own useMemo() Hook                                                react-hooks/exhaustive-deps
+  378:46  warning  The ref value 'highlightTimersRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'highlightTimersRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+  644:11  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                    jsx-a11y/no-static-element-interactions
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/agent-graph/renderer/ui/GraphTaskCard.tsx
+  89:9  warning  The 'tasks' logical expression could make the dependencies of useMemo Hook (at line 97) change on every render. To fix this, wrap the initialization of 'tasks' in its own useMemo() Hook                                              react-hooks/exhaustive-deps
+  90:9  warning  The 'members' logical expression could make the dependencies of useMemo Hook (at line 105) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'members' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/agent-graph/renderer/ui/GraphTransientHandoffHud.tsx
+  149:9  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/appearance/core/domain/appearancePreferences.ts
+  42:28  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/chat-visualizations/renderer/composition.tsx
+  35:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  55:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/document-preview/renderer/ui/DocumentPreview.tsx
+  16:8  warning  Function component is not an arrow function  react/function-component-definition
+  30:1  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/external-agent-connection/renderer/ExternalAgentConnectionSettings.tsx
+  18:8  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/external-agent-connection/renderer/ExternalAgentPromptAction.tsx
+  19:8  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/external-agent-connection/renderer/ExternalAgentPromptDialog.tsx
+  230:11  warning  `tabIndex` should only be declared on interactive elements  jsx-a11y/no-noninteractive-tabindex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/external-agent-connection/renderer/ExternalAgentRunActions.tsx
+  14:8  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/external-agent-connection/renderer/TeamTemplateReferences.tsx
+  42:8  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/external-agent-connection/renderer/useConnectionInfo.ts
+  66:18  warning  The ref value 'generation.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'generation.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/external-agent-connection/renderer/useExternalAgentRun.ts
+  110:16  warning  The ref value 'revision.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'revision.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.lifecycle.test.tsx
+  55:1  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/member-log-reads/renderer/useCompletionRead.ts
+  208:6  warning  React Hook useEffect has missing dependencies: 'key', 'presentationKey', 'scope', 'state.presentationKey', and 'state.value'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/member-log-stream/renderer/ui/MemberRuntimeProcessLogsPanel.tsx
+   53:1   warning  Function component is not an arrow function                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react/function-component-definition
+   80:1   warning  Function component is not an arrow function                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react/function-component-definition
+   89:26  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/member-log-stream/renderer/ui/MemberRuntimeProcessLogsPanel.tsx:89:26
+  87 |   const parentRef = useRef<HTMLDivElement | null>(null);
+  88 |   const lines = useMemo(() => content.split(/\r?\n/), [content]);
+> 89 |   const rowVirtualizer = useVirtualizer({
+     |                          ^^^^^^^^^^^^^^ TanStack Virtual's `useVirtualizer()` API returns functions that cannot be memoized safely
+  90 |     count: lines.length,
+  91 |     getScrollElement: () => parentRef.current,
+  92 |     estimateSize: () => (wrapLines ? 36 : 20),  react-hooks/incompatible-library
+  126:8   warning  Function component is not an arrow function                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/opencode-runtime-installer/core/domain/v2Delivery.ts
+  168:5  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/organizations/renderer/ui/OrgGraphToolbar.tsx
+  50:8  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/organizations/renderer/ui/OrgMapLegendHud.tsx
+  3:8  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/organizations/renderer/ui/OrgOverviewHud.tsx
+  18:8  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/running-teams/renderer/ui/RunningTeamsSection.tsx
+  19:8  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/runtime-provider-management/renderer/hooks/useOpenCodeAttachmentDeclarations.test.tsx
+  66:1  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts
+  279:6  warning  React Hook useEffect has a missing dependency: 'input'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts
+  437:96  warning  React Hook useCallback has a missing dependency: 'projectPath'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/runtime-provider-management/renderer/ui/OpenCodeCatalogErrorAlert.tsx
+  20:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx
+   23:8   warning  Function component is not an arrow function                                                                                     react/function-component-definition
+   38:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   47:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   73:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   86:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  108:8   warning  Function component is not an arrow function                                                                                     react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/runtime-provider-management/renderer/ui/RuntimeProviderErrorAlert.tsx
+   34:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  255:18  warning  `tabIndex` should only be declared on interactive elements                                                                      jsx-a11y/no-noninteractive-tabindex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx
+    33:3   warning  'Check' is defined but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+  1118:5   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 jsx-a11y/no-static-element-interactions
+  1120:7   warning  `tabIndex` should only be declared on interactive elements                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        jsx-a11y/no-noninteractive-tabindex
+  1269:5   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 jsx-a11y/no-static-element-interactions
+  1271:7   warning  `tabIndex` should only be declared on interactive elements                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        jsx-a11y/no-noninteractive-tabindex
+  1831:28  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx:1831:28
+  1829 |   const shouldVirtualize =
+  1830 |     pickerOpen && visibleModels.length > PROVIDER_MODEL_VIRTUALIZATION_THRESHOLD;
+> 1831 |   const modelVirtualizer = useVirtualizer({
+       |                            ^^^^^^^^^^^^^^ TanStack Virtual's `useVirtualizer()` API returns functions that cannot be memoized safely
+  1832 |     count: shouldVirtualize ? visibleModels.length : 0,
+  1833 |     enabled: shouldVirtualize,
+  1834 |     getScrollElement: () => modelListRef.current,  react-hooks/incompatible-library
+  1980:11  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 jsx-a11y/no-static-element-interactions
+  2001:11  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 jsx-a11y/no-static-element-interactions
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/runtime-provider-management/renderer/ui/providerBrandIcons.tsx
+  610:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  695:8   warning  Function component is not an arrow function                                                                                     react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/team-task-detail/renderer/context/TaskDetailFileLinkContext.tsx
+  55:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/terminal-workspace/renderer/ui/TerminalWorkspacePanel.tsx
+  3680:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  3689:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  3744:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  3977:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  4017:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  4063:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  4173:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  4217:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  4483:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/tmux-installer/renderer/hooks/__tests__/useTmuxInstallerBanner.test.tsx
+  84:1  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/tmux-installer/renderer/ui/TmuxInstallerBannerView.tsx
+  38:8  warning  Function component is not an arrow function  react/function-component-definition
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/token-usage/renderer/ui/TokenUsageDashboard.budget.test.tsx
+  40:11  warning  React Hook useMemo has an unnecessary dependency: 'budget.snapshot'. Either exclude it or remove the dependency array. Outer scope values like 'budget.snapshot' aren't valid dependencies because mutating them doesn't re-render the component  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/workspace-trust/core/application/StartupDialogRules.ts
+  23:14  warning  Unexpected control character(s) in regular expression: \x1b, \x07, \x07, \x1b              no-control-regex
+  24:14  warning  Unexpected control character(s) in regular expression: \x1b                                no-control-regex
+  32:14  warning  Unexpected control character(s) in regular expression: \x00, \x08, \x0b, \x0c, \x0e, \x1f  no-control-regex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/features/workspace-trust/core/domain/CodexWorkspaceTrustSettings.ts
+  10:3  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/main/services/extensions/apikeys/ApiKeyService.ts
+  369:34  warning  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/main/services/schedule/SchedulerService.ts
+  663:32  warning  Unsafe usage of ReturnStatement  no-unsafe-finally
+  667:34  warning  Unsafe usage of ReturnStatement  no-unsafe-finally
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/main/services/team/ClaudeDoctorProbe.ts
+  32:14  warning  Unexpected control character(s) in regular expression: \x1b, \x07, \x07, \x1b              no-control-regex
+  33:14  warning  Unexpected control character(s) in regular expression: \x1b                                no-control-regex
+  41:14  warning  Unexpected control character(s) in regular expression: \x00, \x08, \x0b, \x0c, \x0e, \x1f  no-control-regex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/main/utils/pathDecoder.ts
+  162:7  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+  174:7  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/chat/viewers/DiffViewer.tsx
+  156:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/chat/viewers/FileLink.tsx
+  27:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  43:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  57:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/chat/viewers/MarkdownViewer.tsx
+  324:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/dashboard/CliStatusBanner.tsx
+  1552:14  warning  'settingsT' is assigned a value but never used. Allowed unused vars must match /^_/u                                           @typescript-eslint/no-unused-vars
+  1856:6   warning  React Hook useCallback has a missing dependency: 'openCodeDashboardCatalog'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  1918:6   warning  React Hook useCallback has a missing dependency: 'openCodeDashboardCatalog'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/extensions/common/InstallButton.tsx
+  130:23  warning  `tabIndex` should only be declared on interactive elements  jsx-a11y/no-noninteractive-tabindex
+  181:19  warning  `tabIndex` should only be declared on interactive elements  jsx-a11y/no-noninteractive-tabindex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/extensions/mcp/McpServerDetailDialog.tsx
+  161:6  warning  React Hook useEffect has missing dependencies: 'defaultSharedScope' and 'server'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/extensions/mcp/McpServersPanel.tsx
+  159:9  warning  The 'installedServers' logical expression could make the dependencies of useMemo Hook (at line 226) change on every render. To fix this, wrap the initialization of 'installedServers' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  161:9  warning  The 'mcpDiagnostics' logical expression could make the dependencies of useMemo Hook (at line 258) change on every render. To fix this, wrap the initialization of 'mcpDiagnostics' in its own useMemo() Hook      react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/extensions/skills/SkillEditorDialog.tsx
+  682:21  warning  A form label must be associated with a control                                                                                                                                                     jsx-a11y/label-has-associated-control
+  698:21  warning  A form label must be associated with a control                                                                                                                                                     jsx-a11y/label-has-associated-control
+  714:21  warning  A form label must be associated with a control                                                                                                                                                     jsx-a11y/label-has-associated-control
+  840:25  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/extensions/skills/SkillImportDialog.tsx
+  10:3  warning  'DialogFooter' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/extensions/skills/SkillReviewDialog.tsx
+  9:3  warning  'DialogFooter' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/extensions/skills/skillFolderNameUtils.ts
+  4:14  warning  Unexpected control character(s) in regular expression: \x00  no-control-regex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/extensions/skills/skillValidationUtils.ts
+  2:41  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/layout/GlobalTaskDetailDialogSlot.tsx
+  16:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/report/AssessmentBadge.tsx
+  52:7  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/report/ReportSection.tsx
+  58:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/runtime/ProviderRuntimeBackendSelector.tsx
+   33:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   65:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   92:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   98:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  104:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  164:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/LiveRuntimeStatusBridge.tsx
+  84:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/RoleSelect.tsx
+  129:6  warning  React Hook useMemo has a missing dependency: 'roleOptions'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/TeamDetailView.tsx
+  2288:5  warning  React Hook useCallback has a missing dependency: 'setCreateTaskDialog'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/activity/ActivityItem.tsx
+   32:3   warning  'getSanitizedInboxMessageText' is defined but never used. Allowed unused vars must match /^_/u                                                                                                 @typescript-eslint/no-unused-vars
+  125:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                 react-refresh/only-export-components
+  126:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                 react-refresh/only-export-components
+  127:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                 react-refresh/only-export-components
+  128:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                 react-refresh/only-export-components
+  129:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                 react-refresh/only-export-components
+  786:8   warning  React Hook useMemo has an unnecessary dependency: 'message.commandOutput'. Either exclude it or remove the dependency array                                                                    react-hooks/exhaustive-deps
+  821:8   warning  React Hook useMemo has an unnecessary dependency: 'message.commandOutput'. Either exclude it or remove the dependency array                                                                    react-hooks/exhaustive-deps
+  955:30  warning  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  961:32  warning  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/activity/ActivitySenderBadge.tsx
+  61:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/activity/ActivityTimeline.tsx
+  503:26  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/activity/ActivityTimeline.tsx:503:26
+  501 |   }, [shouldVirtualize, viewportScrollElement]);
+  502 |
+> 503 |   const rowVirtualizer = useVirtualizer({
+      |                          ^^^^^^^^^^^^^^ TanStack Virtual's `useVirtualizer()` API returns functions that cannot be memoized safely
+  504 |     count: shouldVirtualize ? renderRows.length : 0,
+  505 |     getScrollElement: () => viewportScrollElement,
+  506 |     estimateSize: (index) => ROW_SIZE_ESTIMATES[renderRows[index]?.kind ?? 'message-row'],  react-hooks/incompatible-library
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/activity/LeadThoughtsGroup.tsx
+   49:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   49:31  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   51:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   77:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  181:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  813:11  warning  `tabIndex` should only be declared on interactive elements                                                                      jsx-a11y/no-noninteractive-tabindex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/activity/ThoughtBodyContent.tsx
+  52:8  warning  React Hook useMemo has a missing dependency: 'thought'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/activity/timelineRows.tsx
+  23:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  38:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/dialogs/AdvancedCliSection.tsx
+  174:6  warning  React Hook useCallback has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/dialogs/CodexReconnectPrompt.tsx
+  23:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/dialogs/CreateTeamDialog.tsx
+    64:3  warning  'getStoredCreateTeamEffort' is defined but never used. Allowed unused vars must match /^_/u                                                             @typescript-eslint/no-unused-vars
+   500:6  warning  React Hook useCallback has a missing dependency: 'setLimitContextRaw'. Either include it or remove the dependency array                                 react-hooks/exhaustive-deps
+   505:6  warning  React Hook useCallback has a missing dependency: 'setSkipPermissionsRaw'. Either include it or remove the dependency array                              react-hooks/exhaustive-deps
+   510:6  warning  React Hook useCallback has a missing dependency: 'setSelectedEffortRaw'. Either include it or remove the dependency array                               react-hooks/exhaustive-deps
+   515:6  warning  React Hook useCallback has a missing dependency: 'setSelectedFastModeRaw'. Either include it or remove the dependency array                             react-hooks/exhaustive-deps
+   729:5  warning  React Hook useCallback has a missing dependency: 'setSelectedEffortRaw'. Either include it or remove the dependency array                               react-hooks/exhaustive-deps
+   759:5  warning  React Hook useCallback has a missing dependency: 'setSelectedEffortRaw'. Either include it or remove the dependency array                               react-hooks/exhaustive-deps
+  1480:6  warning  React Hook useEffect has missing dependencies: 'setSelectedEffortRaw' and 'setSelectedFastModeRaw'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  1844:6  warning  React Hook useEffect has a missing dependency: 'active'. Either include it or remove the dependency array                                               react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/dialogs/LaunchTeamDialog.tsx
+   604:43  warning  The ref value 'lastPrepareProviderSignatureByIdRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'lastPrepareProviderSignatureByIdRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+   605:40  warning  The ref value 'prepareProviderRequestSeqByIdRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'prepareProviderRequestSeqByIdRef.current' to a variable inside the effect, and use that variable in the cleanup function        react-hooks/exhaustive-deps
+   606:38  warning  The ref value 'prepareWarningsByProviderIdRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'prepareWarningsByProviderIdRef.current' to a variable inside the effect, and use that variable in the cleanup function            react-hooks/exhaustive-deps
+   820:9   warning  The 'closeDialog' function makes the dependencies of useEffect Hook (at line 2175) change on every render. To fix this, wrap the definition of 'closeDialog' in its own useCallback() Hook                                                                                                                             react-hooks/exhaustive-deps
+  1497:5   warning  React Hook useMemo has unnecessary dependencies: 'prepareChecks' and 'selectedModelChecksByProviderSignature'. Either exclude them or remove the dependency array                                                                                                                                                      react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider.tsx
+  19:14  warning  Fast refresh only works when a file only exports components. Move your React context(s) to a separate file                      react-refresh/only-export-components
+  21:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  26:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/dialogs/ProvisioningProviderStatusList.tsx
+    31:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+    31:40  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+    35:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+    39:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+    50:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+    62:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   134:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   659:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   757:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   805:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   864:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  1077:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/dialogs/TaskAttachments.tsx
+  209:5  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+  354:5  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+  354:5  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/dialogs/TaskCommentsSection.tsx
+  433:9  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+  433:9  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/dialogs/TeamModelSelector.tsx
+  155:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  156:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  157:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  158:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  159:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  164:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx
+   20:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  117:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  136:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/editor/EditorContextMenu.tsx
+  96:9  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/editor/EditorSearchPanel.tsx
+  135:7  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/editor/EditorTabBar.tsx
+  239:15  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener  jsx-a11y/click-events-have-key-events
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/kanban/table/TaskTableColumns.tsx
+  101:17  warning  `tabIndex` should only be declared on interactive elements  jsx-a11y/no-noninteractive-tabindex
+  116:19  warning  `tabIndex` should only be declared on interactive elements  jsx-a11y/no-noninteractive-tabindex
+  182:17  warning  `tabIndex` should only be declared on interactive elements  jsx-a11y/no-noninteractive-tabindex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/kanban/table/TaskTableView.tsx
+  130:23  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/kanban/table/TaskTableView.tsx:130:23
+  128 |
+  129 |   const tableRows = table.getRowModel().rows;
+> 130 |   const virtualizer = useVirtualizer({
+      |                       ^^^^^^^^^^^^^^ TanStack Virtual's `useVirtualizer()` API returns functions that cannot be memoized safely
+  131 |     count: tableRows.length,
+  132 |     getScrollElement: () => scrollRef.current,
+  133 |     estimateSize: () => rowHeight,  react-hooks/incompatible-library
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/members/MemberCard.tsx
+  1076:7  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/members/MemberLogsTab.tsx
+   40:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                     react-refresh/only-export-components
+  578:23  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+  578:23  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/members/MembersEditorSection.tsx
+  738:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  739:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  740:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  741:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  742:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  743:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  744:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  745:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  746:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  747:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  748:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  749:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/messages/MessagesThreadPlacement.tsx
+  15:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/schedule/ScheduleRunLogDialog.tsx
+  130:6  warning  React Hook useEffect has a missing dependency: 'run'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/schedule/ScheduleRunRow.tsx
+  57:3  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+  63:5  warning  `tabIndex` should only be declared on interactive elements                                                                                                                                         jsx-a11y/no-noninteractive-tabindex
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/schedule/useScheduleActions.ts
+  57:6  warning  React Hook useCallback has a missing dependency: 'tCommon'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/sidebar/TeamSidebarHost.tsx
+  25:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/components/team/sidebar/TeamSidebarRail.tsx
+  60:5  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+  95:7  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/hooks/useAttachments.ts
+  184:21  warning  The ref value 'generationRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'generationRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/hooks/useComposerDraft.ts
+  307:25  warning  The ref value 'loadGenerationRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'loadGenerationRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+/workspace/scratch/391e21b06e24/reconcile-base0543/src/renderer/utils/idleNotificationSemantics.ts
+  5:33  warning  'SharedClassifiedIdleNotification' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 212 problems (0 errors, 212 warnings)
+  0 errors and 20 warnings potentially fixable with the `--fix` option.
+

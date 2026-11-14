@@ -1,0 +1,44 @@
+
+ RUN  v3.2.6 /workspace/scratch/391e21b06e24/reconcile-base0543
+
+ ❯ test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx (3 tests | 2 failed) 139ms
+   × CodeMirrorDiffView hovered review actions > keeps the next hovered hunk actionable when an earlier Keep queues editor frames 86ms
+     → expected null not to be null
+   ✓ CodeMirrorDiffView hovered review actions > does not resurrect controls when the pointer leaves before queued editor frames run 32ms
+   × CodeMirrorDiffView hovered review actions > hides controls on unchanged text and preserves a parent disabling merge actions 20ms
+     → expected null not to be null
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx > CodeMirrorDiffView hovered review actions > keeps the next hovered hunk actionable when an earlier Keep queues editor frames
+AssertionError: expected null not to be null
+ ❯ hover test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx:96:21
+     94|   const hover = (text: string): void => {
+     95|     hit = [...container.querySelectorAll('.cm-line')].find((line) => l…
+     96|     expect(hit).not.toBeNull();
+       |                     ^
+     97|     act(() => hit!.dispatchEvent(new MouseEvent('mousemove', {
+     98|       bubbles: true, clientX: 120, clientY: 200,
+ ❯ test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx:120:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx > CodeMirrorDiffView hovered review actions > hides controls on unchanged text and preserves a parent disabling merge actions
+AssertionError: expected null not to be null
+ ❯ hover test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx:96:21
+     94|   const hover = (text: string): void => {
+     95|     hit = [...container.querySelectorAll('.cm-line')].find((line) => l…
+     96|     expect(hit).not.toBeNull();
+       |                     ^
+     97|     act(() => hit!.dispatchEvent(new MouseEvent('mousemove', {
+     98|       bubbles: true, clientX: 120, clientY: 200,
+ ❯ test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx:157:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  02:23:22
+   Duration  1.40s (transform 211ms, setup 66ms, collect 442ms, tests 139ms, environment 268ms, prepare 237ms)
+

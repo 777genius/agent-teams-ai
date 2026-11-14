@@ -1,0 +1,33 @@
+
+ RUN  v3.2.6 /workspace/scratch/391e21b06e24/reconcile-base0543
+
+ ❯ test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx (3 tests | 1 failed) 171ms
+   × CodeMirrorDiffView hovered review actions > keeps the next hovered hunk actionable when an earlier Keep queues editor frames 127ms
+     → expected 'none' to be 'flex' // Object.is equality
+   ✓ CodeMirrorDiffView hovered review actions > does not resurrect controls when the pointer leaves before queued editor frames run 23ms
+   ✓ CodeMirrorDiffView hovered review actions > hides controls on unchanged text and preserves a parent disabling merge actions 19ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx > CodeMirrorDiffView hovered review actions > keeps the next hovered hunk actionable when an earlier Keep queues editor frames
+AssertionError: expected 'none' to be 'flex' // Object.is equality
+
+Expected: "flex"
+Received: "none"
+
+ ❯ test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx:128:37
+    126|     expect(frames.length).toBeGreaterThan(0);
+    127|     runQueuedFrame();
+    128|     expect(toolbar().style.display).toBe('flex');
+       |                                     ^
+    129|     press('reject');
+    130|     const mixed = modified.replace('last = 2', 'last = 1');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed (3)
+   Start at  02:29:24
+   Duration  2.01s (transform 218ms, setup 67ms, collect 674ms, tests 171ms, environment 445ms, prepare 111ms)
+

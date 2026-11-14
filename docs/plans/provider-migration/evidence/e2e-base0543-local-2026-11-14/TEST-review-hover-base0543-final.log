@@ -1,0 +1,11 @@
+
+ RUN  v3.2.6 /workspace/scratch/391e21b06e24/reconcile-base0543
+
+ ✓ test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx (5 tests) 219ms
+ ✓ test/renderer/components/team/review/CodeMirrorDiffView.draft.test.tsx (3 tests) 303ms
+
+ Test Files  2 passed (2)
+      Tests  8 passed (8)
+   Start at  02:54:58
+   Duration  2.08s (transform 304ms, setup 116ms, collect 956ms, tests 523ms, environment 789ms, prepare 219ms)
+

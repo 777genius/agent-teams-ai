@@ -1,0 +1,18 @@
+
+ RUN  v3.2.6 /workspace/scratch/391e21b06e24/reconcile-base0543
+
+ ✓ test/features/agent-backend/hostTeamChanges.test.ts (7 tests) 33ms
+ ✓ test/renderer/store/teamSliceContextRace.test.ts (32 tests) 1627ms
+   ✓ team slice context races > reruns a pending global task refresh for the current context instead of applying stale tasks  1508ms
+ ✓ test/renderer/store/teamSlice.test.ts (249 tests) 994ms
+ ✓ test/features/agent-backend/hostTeamsRead.test.ts (46 tests) 121ms
+ ✓ test/features/agent-backend/hostProvisioningProgress.test.ts (15 tests) 139ms
+ ✓ test/features/agent-backend/teamProductReadOrder.test.ts (5 tests) 13ms
+ ✓ test/renderer/store/teamMessagesCache.test.ts (4 tests) 5ms
+ ✓ test/features/agent-backend/hostMessagesPageTransport.test.ts (7 tests) 265ms
+
+ Test Files  8 passed (8)
+      Tests  365 passed (365)
+   Start at  02:45:24
+   Duration  13.15s (transform 2.93s, setup 404ms, collect 5.73s, tests 3.20s, environment 1.80s, prepare 485ms)
+

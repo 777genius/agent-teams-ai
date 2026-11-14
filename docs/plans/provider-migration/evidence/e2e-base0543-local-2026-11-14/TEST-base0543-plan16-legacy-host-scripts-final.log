@@ -1,0 +1,1 @@
+$ node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json

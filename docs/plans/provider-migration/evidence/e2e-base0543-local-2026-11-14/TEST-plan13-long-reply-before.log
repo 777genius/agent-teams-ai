@@ -1,0 +1,33 @@
+✖ ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads (295.396446ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1648.629388
+
+✖ failing tests:
+
+test at packages/legacy-agent-host/tests/runtime-team-host.test.ts:127:1
+✖ ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads (295.396446ms)
+  AssertionError [ERR_ASSERTION]: activity-only size gaps cannot taint fully retained conversation
+  + actual - expected
+  
+  + [
+  +   'oversized'
+  + ]
+  - []
+  
+      at read (file:///workspace/scratch/391e21b06e24/reconcile-base0543/packages/legacy-agent-host/tests/runtime-team-host.test.ts:153:14)
+      at async TestContext.<anonymous> (file:///workspace/scratch/391e21b06e24/reconcile-base0543/packages/legacy-agent-host/tests/runtime-team-host.test.ts:175:19)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 'oversized' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/workspace/scratch/391e21b06e24/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+    "--test",
+    "test/scripts/installDependenciesWithRetry.test.mjs"
+  ],
+  "exitCode": 0,
+  "seconds": 0.696,
+  "head": "2335b403b7d015ef871e9dd8609803fb4630a6cb",
+  "logSha256": "176a6b11974cc629a3823b37c2295e9a1c9c9ee44c97c9ad6e0b1ab5cb29c48b",
+  "sources": {
+    "scripts/ci/install-dependencies-with-retry.mjs": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e",
+    "test/scripts/installDependenciesWithRetry.test.mjs": "3aab9d6568157c883993c43b8057193175e69c16c31129ce3867a14e686a8f00"
+  }
+}

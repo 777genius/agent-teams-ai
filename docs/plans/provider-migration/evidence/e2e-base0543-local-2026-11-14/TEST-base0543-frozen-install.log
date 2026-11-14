@@ -1,0 +1,238 @@
+Scope: all 7 workspace projects
+? Verifying lockfile against supply-chain policies (2533 entries)...
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +2293
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 2293, reused 314, downloaded 0, added 0
+Packages are copied from the content-addressable store to the virtual store.
+  Content-addressable store is at: /workspace/.pnpm-store/v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 2293, reused 2278, downloaded 0, added 80
+Progress: resolved 2293, reused 2278, downloaded 0, added 129
+Progress: resolved 2293, reused 2278, downloaded 0, added 171
+Progress: resolved 2293, reused 2278, downloaded 0, added 199
+Progress: resolved 2293, reused 2278, downloaded 0, added 266
+Progress: resolved 2293, reused 2278, downloaded 0, added 314
+Progress: resolved 2293, reused 2278, downloaded 0, added 333
+Progress: resolved 2293, reused 2278, downloaded 0, added 390
+Progress: resolved 2293, reused 2278, downloaded 0, added 443
+Progress: resolved 2293, reused 2278, downloaded 0, added 548
+Progress: resolved 2293, reused 2278, downloaded 0, added 614
+Progress: resolved 2293, reused 2278, downloaded 0, added 802
+Progress: resolved 2293, reused 2278, downloaded 0, added 895
+Progress: resolved 2293, reused 2278, downloaded 0, added 961
+✓ Lockfile passes supply-chain policies (2533 entries in 15.9s)
+Progress: resolved 2293, reused 2278, downloaded 0, added 1156
+Progress: resolved 2293, reused 2278, downloaded 0, added 1469
+Progress: resolved 2293, reused 2278, downloaded 0, added 1784
+Progress: resolved 2293, reused 2278, downloaded 0, added 2288
+Progress: resolved 2293, reused 2278, downloaded 0, added 2293, done
+[WARN] Failed to create bin at /workspace/scratch/391e21b06e24/reconcile-base0543/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/workspace/scratch/391e21b06e24/reconcile-base0543/packages/legacy-agent-host/dist/cli.js'
+
+dependencies:
++ @agent-teams/legacy-agent-host 0.1.0 <- packages/legacy-agent-host
++ @agent-teams/task-change-ledger 0.1.0 <- packages/task-change-ledger
++ @claude-teams/agent-graph 0.1.0 <- packages/agent-graph
++ @codemirror/autocomplete 6.20.0
++ @codemirror/commands 6.10.2
++ @codemirror/lang-cpp 6.0.3
++ @codemirror/lang-css 6.3.1
++ @codemirror/lang-go 6.0.1
++ @codemirror/lang-html 6.4.11
++ @codemirror/lang-java 6.0.2
++ @codemirror/lang-javascript 6.2.4
++ @codemirror/lang-json 6.0.2
++ @codemirror/lang-less 6.0.2
++ @codemirror/lang-markdown 6.5.0
++ @codemirror/lang-php 6.0.2
++ @codemirror/lang-python 6.2.1
++ @codemirror/lang-rust 6.0.2
++ @codemirror/lang-sass 6.0.2
++ @codemirror/lang-sql 6.10.0
++ @codemirror/lang-xml 6.1.0
++ @codemirror/lang-yaml 6.1.2
++ @codemirror/language 6.12.1
++ @codemirror/language-data 6.5.2
++ @codemirror/lint 6.9.5
++ @codemirror/merge 6.12.0
++ @codemirror/search 6.6.0
++ @codemirror/state 6.5.4
++ @codemirror/theme-one-dark 6.1.3
++ @codemirror/view 6.39.15
++ @daypicker/react 10.0.1
++ @dnd-kit/core 6.3.1
++ @dnd-kit/sortable 10.0.0
++ @dnd-kit/utilities 3.2.2
++ @fastify/cors 11.2.0
++ @fastify/static 10.1.2
++ @file-viewer/preset-office 3.1.2
++ @file-viewer/react 3.1.2
++ @floating-ui/dom 1.7.6
++ @headless-tree/core 1.7.0
++ @headless-tree/react 1.7.0
++ @openuidev/lang-core 0.3.2
++ @openuidev/react-headless 0.17.0
++ @openuidev/react-lang 0.3.2
++ @openuidev/react-ui 0.17.0
++ @radix-ui/react-alert-dialog 1.1.15
++ @radix-ui/react-checkbox 1.3.3
++ @radix-ui/react-collapsible 1.1.12
++ @radix-ui/react-context-menu 2.2.16
++ @radix-ui/react-dialog 1.1.15
++ @radix-ui/react-dropdown-menu 2.1.16
++ @radix-ui/react-hover-card 1.1.15
++ @radix-ui/react-label 2.1.8
++ @radix-ui/react-popover 1.1.15
++ @radix-ui/react-presence 1.1.5
++ @radix-ui/react-select 2.2.6
++ @radix-ui/react-slot 1.2.4
++ @radix-ui/react-switch 1.3.7
++ @radix-ui/react-tabs 1.1.13
++ @radix-ui/react-tooltip 1.2.8
++ @sentry/electron 7.10.0
++ @sentry/react 10.45.0
++ @tanstack/react-table 9.3.1
++ @tanstack/react-virtual 3.13.24
++ @terminal-platform/design-tokens 0.1.0
++ @terminal-platform/foundation 0.1.0
++ @terminal-platform/runtime-types 0.1.0
++ @terminal-platform/workspace-adapter-websocket 0.1.0
++ @terminal-platform/workspace-contracts 0.1.0
++ @terminal-platform/workspace-core 0.1.0
++ @terminal-platform/workspace-elements 0.1.0
++ @terminal-platform/workspace-gateway-node 0.1.0
++ @terminal-platform/workspace-react 0.1.0
++ @tiptap/extension-placeholder 3.30.5
++ @tiptap/markdown 3.30.5
++ @tiptap/pm 3.30.5
++ @tiptap/react 3.30.5
++ @tiptap/starter-kit 3.30.5
++ @xterm/addon-fit 0.11.0
++ @xterm/addon-web-links 0.12.0
++ @xterm/xterm 6.0.0
++ agent-teams-controller 1.0.0 <- agent-teams-controller
++ better-sqlite3 12.11.1
++ builder-util-runtime 9.7.0
++ chokidar 4.0.3
++ class-variance-authority 0.7.1
++ clsx 2.1.1
++ cmdk 1.0.4
++ croner 10.0.1
++ cronstrue 3.13.0
++ date-fns 3.6.0
++ diff 8.0.3
++ dompurify 3.4.17
++ drizzle-orm 0.45.2
++ electron-updater 6.8.9
++ fast-json-stringify 6.4.0
++ fastify 5.12.5
++ highlight.js 11.11.1
++ i18next 26.2.0
++ idb-keyval 6.2.2
++ isbinaryfile 6.0.0
++ json-schema-ref-resolver 3.0.0
++ jsonc-parser 3.3.1
++ lucide-react 0.577.0
++ mdast-util-to-hast 13.2.1
++ mermaid 11.15.0
++ motion 12.38.0
++ node-diff3 3.2.0
++ node-pty 1.1.0
++ pica 9.0.1
++ pidusage 4.0.1
++ posthog-js 1.396.6
++ react 19.2.4
++ react-dom 19.2.4
++ react-grid-layout 2.2.2
++ react-i18next 17.0.8
++ react-markdown 10.1.0
++ react-modal-sheet 5.6.0
++ react-resizable 3.1.3
++ rehype-highlight 7.0.2
++ rehype-raw 7.0.0
++ rehype-sanitize 6.0.0
++ remark-gfm 4.0.1
++ remark-parse 11.0.0
++ simple-git 4.0.2
++ ssh-config 5.0.4
++ ssh2 1.17.0
++ strip-markdown 6.0.0
++ tailwind-merge 3.5.0
++ tailwindcss-animate 1.0.7
++ terminal-platform-node terminal-platform-node@file:vendor/terminal-platform/terminal-platform-node-stub
++ unified 11.0.5
++ ws 8.21.0
++ yaml 2.9.0
++ yet-another-react-lightbox 3.29.1
++ zod 4.6.7
++ zustand 4.5.7
+
+devDependencies:
++ @electron/rebuild 4.2.0
++ @eslint-community/eslint-plugin-eslint-comments 4.6.0
++ @eslint/js 9.39.2
++ @file-viewer/vite-plugin 3.1.2
++ @sentry/vite-plugin 5.1.1
++ @tailwindcss/typography 0.5.19
++ @types/better-sqlite3 7.6.13
++ @types/hast 3.0.4
++ @types/mdast 4.0.4
++ @types/node 24.12.4
++ @types/pidusage 2.0.5
++ @types/react 19.2.14
++ @types/react-dom 19.2.3
++ @types/ssh2 1.15.5
++ @typescript/native <- typescript 7.0.2
++ @vitejs/plugin-react 4.7.0
++ @vitest/coverage-v8 3.2.6
++ autoprefixer 10.4.23
++ better-sqlite3-node <- better-sqlite3 12.10.1
++ electron 44.10.1
++ electron-builder 26.17.0
++ electron-vite 5.0.0
++ eslint 9.39.4
++ eslint-config-prettier 10.1.8
++ eslint-import-resolver-typescript 4.4.4
++ eslint-plugin-boundaries 5.3.1
++ eslint-plugin-import 2.32.0
++ eslint-plugin-jsx-a11y 6.10.2
++ eslint-plugin-react 7.37.5
++ eslint-plugin-react-hooks 7.0.1
++ eslint-plugin-react-refresh 0.4.26
++ eslint-plugin-security 3.0.1
++ eslint-plugin-simple-import-sort 12.1.1
++ eslint-plugin-sonarjs 3.0.6
++ eslint-plugin-tailwindcss 3.18.2
++ fake-indexeddb 6.2.5
++ globals 17.2.0
++ happy-dom 21.0.4
++ husky 9.1.7
++ i18next-cli 1.58.0
++ knip 5.82.1
++ lint-staged 16.2.7
++ oxfmt 0.72.0
++ oxlint 1.87.0
++ postcss 8.5.28
++ prettier 3.8.1
++ prettier-plugin-tailwindcss 0.7.2
++ tailwindcss 3.4.19
++ tsx 4.23.15
++ typescript 5.9.3
++ typescript-eslint 8.54.0
++ vite 6.4.4
++ vitest 3.2.6
+
+landing postinstall$ node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/transitive-security.ts --apply
+landing postinstall: [landing postinstall] skipped npm layout patch; pnpm patchedDependencies handles compatibility
+landing postinstall: Verified braces security backport in 1 package(s)
+landing postinstall: Verified http-cache-semantics security backport in 1 package(s)
+landing postinstall: Done
+[WARN] Failed to create bin at /workspace/scratch/391e21b06e24/reconcile-base0543/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/workspace/scratch/391e21b06e24/reconcile-base0543/node_modules/@agent-teams/legacy-agent-host/dist/cli.js'
+. preinstall$ node ./scripts/ci/enforce-pnpm-install.mjs
+. preinstall: Done
+. postinstall$ node ./scripts/postinstall-electron.cjs
+. postinstall: Done
+. prepare$ husky
+. prepare: Done
+Done in 22.7s using pnpm v11.22.0
