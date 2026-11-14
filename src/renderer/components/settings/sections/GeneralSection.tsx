@@ -306,6 +306,22 @@ export const GeneralSection = ({
         />
       </SettingRow>
 
+      {isElectron ? (
+        <>
+          <SettingsSectionHeader title={t('general.nativeNextPrompt.title')} />
+          <SettingRow
+            label={t('general.nativeNextPrompt.label')}
+            description={t('general.nativeNextPrompt.description')}
+          >
+            <SettingsToggle
+              enabled={safeConfig.general.nativeNextPromptSuggestionsEnabled}
+              onChange={value => onGeneralToggle('nativeNextPromptSuggestionsEnabled', value)}
+              disabled={saving}
+            />
+          </SettingRow>
+        </>
+      ) : null}
+
       {isElectron && (
         <>
           <SettingsSectionHeader title={t('general.startup.title')} />
