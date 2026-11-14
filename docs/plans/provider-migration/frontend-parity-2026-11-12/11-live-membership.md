@@ -363,3 +363,23 @@ This is a local read projection to break the existing two-publication cycle. Kee
 In the same existing controlled live case, after its real capture and before its real continuation, read the exact captured target binding from the original launch row and use the existing filesystem binding reader on that same TEST namespace. Require the exact immutable captured digests with `workAllowed:false`, refusal of a changed owner/Team/generation tuple and refusal of a checkpoint reference. Require unchanged original launch bytes and unchanged factory count after these reads. Preserve the existing wrong-digest and repeated-capture refusal oracles and every original Add/Remove/Restore/Stop, peer and cold assertion. After the original successful continuation, require the now-selected target to use the normal work-authorized projection; the exact third factory and target-specific lifecycle assertions remain mandatory. The original unfinished-worktree case must continue to refuse, and no new suite or production diagnostic is needed.
 
 Root publishes this exact appendix after independent source-chain review, then grants the two-path source change. Freeze the minimal delta and full bytes for root and independent peer review. Root performs the original focused checks against a successfully built exact combined source; prior worktree/unknown-cleanup successes and this diagnostic are not a substitute for the currently failing live case. The separate finite mixed native acceptance in §12 remains required and its source, counters, physical controls and deadlines are unchanged.
+
+
+## 14. Complete the existing Desktop source pins for the published connected Host changes
+
+A finite comparison of the 91 production TypeScript paths in the already published connected-source manifest `0df23df22026b8c8cd90957ca59577c4133f09a3` with all four explicit Desktop source rosters found the ten omissions below. `captureDesktopSourceHashes` and `verifyDesktopSourceFreeze` hash only the listed paths; no implicit import traversal covers these source files. Add these exact existing paths to `scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts`. This is source-proof bookkeeping for already reviewed code, with no new production behavior, discovery, owner, test, request, timeout or counter allowance.
+
+| Existing production path | Already published blob |
+| --- | --- |
+| `packages/legacy-agent-host/src/adapters/providers/OpenCodeLocalModelReadiness.ts` | `7dbf688520e735df192d7294d17e5db8685830ab` |
+| `packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CapturedConfiguration.ts` | `0449edd82efd8becbb12364faaa80d4ebd9aacda` |
+| `packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CredentialScope.ts` | `0c13f94a649dee82ffd2cfb034c7b044584ca8a3` |
+| `packages/legacy-agent-host/src/adapters/providers/OpenCodeV2SessionCredential.ts` | `011975f3118d17b4b3c9a34717c5eac4c388bb6b` |
+| `packages/legacy-agent-host/src/composition/openCodeSelectedProviderConfiguration.ts` | `bd9b3f2ebaa6c16009fb35917eec870c2c2ff520` |
+| `packages/legacy-agent-host/src/composition/teamHostEnvelope.ts` | `74b0e697a7cc6cb8d320a831dfc3cdfaea10fd66` |
+| `src/features/agent-backend/main/adapters/output/HostSmartScheduleRuntimeAdapter.ts` | `ecced51c4bc35555b342e3e7d5fe20c30cf69417` |
+| `src/features/agent-backend/main/application/captureHostScheduleTarget.ts` | `cda295f61946ac0851016d7d3850666c91ec6ad0` |
+| `src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness.ts` | `4511c5cc787163317fe563e48673880481ae5cb5` |
+| `src/shared/types/teamProvisioning.ts` | `4a111f4dcb6b1b233ac1412119ccf20cbde95296` |
+
+Root composes these ten literal entries with the already published P05 §17.2 scoped-hook entry and the separately reviewed §12 new driver entry, retaining all previous roster bytes and order. The current published supplementary roster is `bf222350e768eae6493c841197eaf447069b0afa`; the reviewed driver-only composition is `ce05df0bd5db4a5a46baaaffd7f0767375f6336a`. No source directory glob or source-size baseline change is allowed. Independently review the exact additions and before/after roster composition, then retain their actual hashes in the existing native/Desktop receipts. The other nine §12 paths and all original acceptance checks remain unchanged. Source review does not replace execution; the next ordinary CI must run the complete connected tree. Publish this amendment before the ten entries.
