@@ -32,6 +32,28 @@ export interface CapturedPromptSuggestionNotice {
   readonly text: string;
 }
 
+// Never let an untrusted provider observation manufacture a native Codex turn
+// from a Host operation ID. This boundary is deliberately stricter than TS types.
+const invalidSuggestionControl = /[\\u0000-\\u001f\\u007f]/u;
+function boundedNativeReference(value: unknown): value is string {
+  return typeof value === 'string' &&
+    value.length > 0 && value.length <= 256 &&
+    !invalidSuggestionControl.test(value);
+}
+function validProviderCandidate(candidate: CapturedPromptSuggestion): boolean {
+  return boundedNativeReference(candidate.sessionRef) &&
+    boundedNativeReference(candidate.inputId) &&
+    boundedNativeReference(candidate.operationRef) &&
+    boundedNativeReference(candidate.nativeSessionRef) &&
+    (candidate.nativeTurnRef === undefined
+      ? candidate.provider === 'claude'
+      : boundedNativeReference(candidate.nativeTurnRef)) &&
+    typeof candidate.text === 'string' &&
+    candidate.text.trim().length > 0 &&
+    !invalidSuggestionControl.test(candidate.text) &&
+    Buffer.byteLength(candidate.text, 'utf8') <= 512;
+}
+
 /**
  * One member-owned, volatile projection. The Team proves original human DM
  * provenance, Runtime proves its terminal, provider proves native turn.
@@ -76,10 +98,9 @@ export function createCapturedPromptSuggestionBinding(input: {
 
   function publishCandidate(candidate: CapturedPromptSuggestion): void {
     if (
+      !validProviderCandidate(candidate) ||
       candidate.sessionRef !== entry.profile.sessionId ||
       candidate.provider !== entry.profile.provider ||
-      !candidate.nativeSessionRef ||
-      !candidate.text.trim() ||
       lastPublishedOperation === candidate.operationRef
     ) return;
     const found = locate(candidate);
