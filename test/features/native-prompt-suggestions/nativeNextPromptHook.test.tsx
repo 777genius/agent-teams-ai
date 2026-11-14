@@ -57,7 +57,6 @@ function fixture() {
     teamName: ownerHandle,
     recipient: 'alice',
     memberId: origin.memberId,
-    provider: 'claude' as const,
     latestDirectMessageId: origin.messageId as string | null,
     editable: true,
     draftText: '',
@@ -98,6 +97,13 @@ describe('native next prompt UX in the actual feature hook + row', () => {
     expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
     x.emit(origin);
     expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+  });
+
+  it('uses the captured native provider even when UI model metadata is unavailable', () => {
+    const x = fixture();
+    x.emit({ ...origin, provider: 'codex', completedTurnRef: 'TEST-codex-native-turn' });
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).not.toBeNull();
+    expect(x.getHook()?.candidate?.provider).toBe('codex');
   });
 
   it('dismisses via a real button and rejects candidate from another teammate and chat', () => {
