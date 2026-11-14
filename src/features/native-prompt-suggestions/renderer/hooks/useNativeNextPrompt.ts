@@ -4,14 +4,13 @@ import { api } from '@renderer/api';
 
 import { canDisplayNativeNextPrompt, mayAcceptNativeNextPromptWithTab } from '../../core/domain/policy';
 
-import type { NativeNextPromptCandidate, NativeNextPromptProvider } from '../../contracts';
+import type { NativeNextPromptCandidate } from '../../contracts';
 
 /** Main has already attached the notice to one captured, authorized Host handle. */
 export function useNativeNextPrompt(input: {
   teamName: string;
   recipient: string;
   memberId?: string;
-  provider: NativeNextPromptProvider | 'unsupported';
   latestDirectMessageId: string | null;
   editable: boolean;
   draftText: string;
@@ -74,7 +73,9 @@ export function useNativeNextPrompt(input: {
       memberId: input.memberId,
       generation: candidate.generation,
       conversationRef,
-      provider: input.provider,
+      // Actual provider is proved by the captured native Host and Main,
+      // not inferred from possibly stale UI model settings for a teammate.
+      provider: candidate.provider,
       latestDirectMessageId: input.latestDirectMessageId,
       // Host independently fenced the exact last executed operation/native turn.
       latestExecutedOperationRef: candidate.operationRef,
@@ -89,7 +90,7 @@ export function useNativeNextPrompt(input: {
       hasOpenMentionOrCommand: false, // An open menu requires nonempty text; editor owns key priority.
     });
   }, [candidate, input.memberId, input.latestDirectMessageId, input.teamName, conversationRef,
-    input.provider, input.editable, input.draftText, input.hasAttachments, input.hasChips,
+    input.editable, input.draftText, input.hasAttachments, input.hasChips,
     input.editingQueueOrRevision]);
 
   const dismiss = useCallback(() => {
