@@ -5,9 +5,147 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
+import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { TeamOwnerError } from '../dist/team/contracts.js';
 import { pageOwnerSnapshot } from '../dist/team/pageOwnerSnapshot.js';
 import { boundProductCommandReceipt } from '../dist/team/boundProductCommandReceipt.js';
+import type { OwnerState } from '../dist/team/ownerState.js';
+import type { RuntimeConversationGap } from '../dist/runtime/activityContracts.js';
+
+test('private conversation reads leave the original Team fence and recheck full grant and lead identity', (t) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-conversation-authority-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const binding = { backendId: 'TEST-A', teamId: 'TEST-team', teamName: 'test-team' };
+  const store = new TeamOwnerStore(root, binding.teamName);
+  const owner = createFilesystemTeamOwner({ root, binding, store,
+    members: [{ memberId: 'alice-id', name: 'alice', role: 'lead' }],
+    grants: [{ principalId: 'human', memberName: 'user', permissions: ['read', 'admin'] }],
+  });
+  const original = store.fenced(() => store.read<OwnerState>('state.json')!);
+  const fenced = store.fenced.bind(store);
+  let depth = 0, calls = 0;
+  t.mock.method(store, 'fenced', function<T>(action: () => T): T {
+    return fenced(() => {
+      depth++;
+      try { return action(); } finally { depth--; }
+    });
+  });
+  let change: (() => void) | undefined;
+  const connection = owner.connect('human', (capture, mode) => {
+    calls++;
+    assert.equal(depth, 0, 'the private Runtime read cannot inherit the Team lock');
+    assert.equal(Object.isFrozen(capture), true);
+    assert.equal(Object.isFrozen(capture.binding), true);
+    assert.equal(Object.isFrozen(capture.lead), true);
+    assert.deepEqual(capture.binding, binding);
+    assert.equal(capture.principalId, 'human');
+    assert.equal(capture.visible, true);
+    assert.deepEqual(capture.lead, { memberId: 'alice-id', name: 'alice' });
+    change?.();
+    return { revision: 'a'.repeat(64), gaps: [], ...(mode === 'messages' ? { messages: [{
+      messageId: 'TEST-original-reply', from: 'alice', to: 'user', text: 'short reply',
+      timestamp: '2026-01-01T00:00:00.000Z', read: true, source: 'lead_session',
+    }] } : {}) };
+  });
+  assert.equal((connection.readMessagesPage() as { messages: { text: string }[] }).messages[0]!.text, 'short reply');
+  assert.equal((connection.readChanges() as { conversation: { revision: string } }).conversation.revision, 'a'.repeat(64));
+  assert.equal(calls, 2);
+  const foreign = owner.connect('TEST-foreign', () => { throw new Error('Unauthorized projection called'); });
+  assert.throws(() => foreign.readMessagesPage(), { code: 'forbidden' });
+  assert.throws(() => foreign.readChanges(), { code: 'forbidden' });
+  for (const mode of ['messages', 'metadata'] as const) {
+    for (const kind of ['grant', 'lead', 'revoke'] as const) {
+      store.fenced(() => store.write('state.json', original));
+      change = () => {
+        if (kind === 'revoke') { owner.connect('human').revoke('human'); return; }
+        store.fenced(() => {
+          const current = store.read<OwnerState>('state.json')!;
+          if (kind === 'grant') {
+            current.grants[0]!.permissions = ['read'];
+            assert.equal(current.grants[0]!.revision, original.grants[0]!.revision,
+              'same-revision grant replacement still needs full identity validation');
+          } else {
+            current.members[0]!.memberId = 'TEST-replacement-lead';
+            assert.equal(current.rosterVersion, original.rosterVersion);
+          }
+          store.write('state.json', current);
+        });
+      };
+      const before: number = calls;
+      assert.throws(() => mode === 'messages' ? connection.readMessagesPage() : connection.readChanges(),
+        { code: 'forbidden' }, kind + ' changed after the original capture');
+      assert.equal(calls, before + 1);
+      if (kind === 'revoke') {
+        assert.throws(() => connection.readMessagesPage(), { code: 'forbidden' });
+        assert.equal(calls, before + 1, 'revoked initial authority never invokes the private port');
+      }
+    }
+  }
+});
+
+test('ordinary stream revisions expire only ordinary cursors while original group pages never read conversation', (t) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-conversation-pages-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const owner = createFilesystemTeamOwner({ root,
+    binding: { backendId: 'TEST-A', teamId: 'TEST-team', teamName: 'test-team' },
+    members: [{ memberId: 'alice-id', name: 'alice', role: 'lead' }],
+    grants: [{ principalId: 'human', memberName: 'user', permissions: ['read', 'admin'] }],
+  });
+  const directory = join(root, 'teams/test-team/inboxes');
+  mkdirSync(directory, { recursive: true });
+  const group = Array.from({ length: 3 }, (_, index) => ({
+    messageId: 'TEST-group-message-' + index, groupMessageId: 'TEST-group-message-' + index,
+    groupChatId: 'TEST-group', groupChatProtocolVersion: 1,
+    groupRecipientNames: ['alice'], groupRecipientRunKeys: { alice: 'TEST-original-run' },
+    from: 'alice', to: 'user', text: 'group reply ' + index, read: true,
+    timestamp: new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString(),
+  }));
+  writeFileSync(join(directory, 'user.json'), JSON.stringify(group));
+  let revision = 'a'.repeat(64), text = 'partial', calls = 0;
+  const reader = owner.connect('human', (_capture, mode) => {
+    calls++;
+    return { revision, gaps: [], ...(mode === 'messages' ? { messages: [{
+      messageId: 'TEST-lead-stream', from: 'alice', to: 'user', text,
+      timestamp: '2026-01-02T00:00:00.000Z', read: true, source: 'lead_session',
+    }] } : {}) };
+  });
+  type Page = { revision: string; messages: { messageId: string; text: string }[];
+    nextCursor: string | null; conversation?: { revision: string } };
+  const firstGroup = reader.readMessagesPage({ groupChatId: 'TEST-group', limit: 1 }) as Page;
+  assert.equal(calls, 0);
+  assert.ok(firstGroup.nextCursor);
+  assert.equal(firstGroup.conversation, undefined);
+  assert.equal(firstGroup.messages[0]!.messageId, 'TEST-group-message-2');
+  const firstOrdinary = reader.readMessagesPage({ limit: 1 }) as Page;
+  assert.ok(firstOrdinary.nextCursor);
+  assert.deepEqual(firstOrdinary.messages.map(row => [row.messageId, row.text]), [['TEST-lead-stream', 'partial']]);
+  revision = 'b'.repeat(64); text = 'complete';
+  assert.throws(() => reader.readMessagesPage({ cursor: firstOrdinary.nextCursor!, limit: 1 }), { code: 'hold' });
+  const updated = reader.readMessagesPage({ limit: 1 }) as Page;
+  assert.deepEqual(updated.messages.map(row => [row.messageId, row.text]), [['TEST-lead-stream', 'complete']]);
+  const before = calls;
+  assert.deepEqual(reader.readMessagesPage({ groupChatId: 'TEST-group', limit: 1 }), firstGroup);
+  const secondGroup = reader.readMessagesPage({ groupChatId: 'TEST-group', limit: 1,
+    cursor: firstGroup.nextCursor! }) as Page;
+  assert.equal(secondGroup.revision, firstGroup.revision);
+  assert.equal(secondGroup.messages[0]!.messageId, 'TEST-group-message-1');
+  assert.equal(calls, before, 'unrelated streamed text cannot be read during either group page');
+});
+
+test('the original Team read boundary refuses a sparse private conversation gap array', (t) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-conversation-gap-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const owner = createFilesystemTeamOwner({ root,
+    binding: { backendId: 'TEST-A', teamId: 'TEST-team', teamName: 'test-team' },
+    members: [{ memberId: 'alice-id', name: 'alice', role: 'lead' }],
+    grants: [{ principalId: 'human', memberName: 'user', permissions: ['read', 'admin'] }],
+  });
+  const connection = owner.connect('human', () => ({
+    revision: 'a'.repeat(64), gaps: Array<RuntimeConversationGap>(1), messages: [],
+  }));
+  assert.throws(() => connection.readMessagesPage(), { code: 'hold' });
+  assert.throws(() => connection.readChanges(), { code: 'hold' });
+});
 
 test('snapshot reads persisted authority/roster/tasks/kanban and only permitted inboxes', (t) => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-snapshot-')));

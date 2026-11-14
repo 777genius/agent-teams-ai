@@ -251,3 +251,172 @@ receipts are required for visible parity; API success is not that evidence.
 Preserve all prior failed receipts, source-only reviews, unavailable checks
 and cleanup debt with their exact head and scope. No timeout, native gate,
 source pin, CDP ownership assertion or cleanup predicate is relaxed.
+
+## Fresh-record empty marker clarification
+
+Reviewed before implementation: only the original member-fenced transaction
+that proves there is no prior Runtime record may publish an explicit empty
+conversation marker at sequence zero. Its digest is the deterministic empty
+projection for that exact binding and its gap set is empty. This writes no
+conversation file. It distinguishes a genuinely new empty session from a
+retained older record lacking the optional marker; marker absence alone must
+never initialize or reset an existing record. A sequence-zero page accepts
+absence or an exactly matching validated empty file only. Any existing
+nonempty, foreign, corrupt or mismatched file refuses. Every positive-sequence
+marker requires its matching derived file. Original missing-state and
+business-settlement guards remain unchanged.
+
+## MessagesPage type boundary
+
+Reviewed before extraction: the existing shared `team.ts` is already at
+1838 physical lines against its unchanged legacy cap of 1839. Move only
+the existing MessagesPage interface, including its new optional history
+warning, into `shared/types/teamMessages.ts`. Import InboxMessage by type
+only and re-export MessagesPage by type from the original `team.ts` path.
+All consumer import paths and runtime behavior stay unchanged; this adds
+no runtime import cycle or new state owner. Do not raise the cap, compress
+the interface or remove unrelated documentation to make it fit. Include
+the new cohesive type module in the original Desktop source capture.
+
+## New blank-message retention boundary
+
+Independent review found and the existing Runtime test reproduced a concrete
+edge: a new empty or whitespace-only provider message consumed a distinct
+materialization slot, although the conversation page correctly displays no
+such row. Enough blank messages could therefore evict all visible replies.
+After the unchanged original input/date/block/text validation and existing
+message lookup, ignore only a brand-new message whose text is blank. Preserve
+updates to an existing message, including clearing one of its blocks, the
+completed-block guard, original IDs and first visible observation time.
+The existing retention regression must keep all 150 visible replies and
+their exact file/revision after 150 distinct blank outputs, and separately
+prove that an existing visible block can still be cleared. This adds no
+authority, timestamp, parser, retention-cap or provider-protocol change.
+
+## Persist the original owner regressions in the existing safe UI lane
+
+The general Draft checks do not execute these Host owner suites. Add one
+finite contract step only when the existing Emulated Acceptance matrix lane
+is `team`, after its coherent Host build. Run the original complete
+`runtime-activity.test.ts`, `runtime-team-host.test.ts`,
+`team-snapshot.test.ts` and `team-product-changes.test.ts` with the pinned
+Node and `--test-concurrency=1`. These suites use the real filesystem owners
+and controlled in-process sessions/provider composition; they do not launch
+a real Claude/Codex/OpenCode executable. Preserve all seven original UI
+commands, admission/source captures, assertions and time budgets. Root owns
+the workflow edit; this adds persistence for the reviewed owner regressions
+and does not qualify an unexecuted Desktop journey.
+
+## Original allocation witnesses survive loss of all derived files
+
+The stat-only retained-observation check cannot distinguish a never-opened
+binding if its original Runtime record and both observation files are all
+removed. Reuse evidence already present in the validated launch lineage.
+Add a private `TeamLaunchOwner.readActivityLineage(memberId)` projection,
+delegating to the existing focused `projectLaunchRestorations.ts` module.
+It runs under the original authorized read fence and original full load,
+preserving explicit member-action validation. Return only the exact selected
+member, its original actions/restorations and its current attempt's
+`everReady` witness. It performs no Runtime read, refresh or mutation.
+
+`runtimeActivitySources` replaces its two existing selection/restoration
+loads with this one original read. A private `recordRequired` sidecar is
+true only for a current exact attempt that was ever ready, a validated
+restore's source binding, or the source of a selected member action with
+`noAllocation === false`. Merely configured or claimed members and proven
+no-allocation Skip do not acquire this requirement. Duplicate exact source
+bindings union the requirement while preserving the existing cost-scope
+conflict refusal. Other activity consumers retain the same sources/order
+and original authority checks.
+
+Pass that private boolean to the existing Runtime conversation read, which
+must reject a missing original record before any empty or unsupported
+projection. It never enters public payloads, binding/config/input hashes,
+persisted records or the conversation revision. No file scan, extra metadata
+poll read, cache or authority is added. The existing actual Host tests must
+delete all three files after proven readiness and from a qualified restored
+source, require both metadata/page refusal, restore exact bytes, and preserve
+no-open/no-replay counts. A genuinely unopened lead and original unallocated
+Skip must remain empty without creating a Runtime record.
+
+## R4: preserve ordinary long answers within the original history window
+
+Original-source review found a concrete loss in the initial R3 implementation:
+`normalizeActivity` turns text above 24 KiB into a gap, whereas the old
+coalesced live overlay retains 32,768 characters, non-coalesced final text
+is unchanged, and the durable extractor combines text
+from its 8-MiB JSONL tail without a 256-KiB message limit. The activity ring
+is a diagnostic projection and must keep its original 24-KiB block,
+32-KiB event, 256-event and 1-MiB file limits byte-for-byte unchanged.
+
+For an already paired original text observation only, derive conversation
+text separately under the same Runtime writer/member fence. Read only closed
+primitive text/messageRef/block/phase fields; retain the exact original
+prepared observation's input, operation, sequence and timestamp. Missing
+preparation cannot invent a sequence or date. Unpaired/invalid input remains
+the original gap/refusal. A diagnostic activity-only oversized gap must not
+become a conversation gap when the full accepted reply was retained.
+
+This supersedes R3's artificial 256-KiB per-message and 64-block limits.
+A message may use the same 8-MiB full serialized conversation-envelope
+budget, including JSON escaping, block metadata and provenance; all messages
+together remain within that budget and the 150-message upper count. The byte
+bound also bounds the number of retained blocks. Do not truncate text or
+increase the activity/page/fragment budgets. A new reply or replacement that
+cannot fit as one valid conversation envelope must produce an explicit
+oversized gap and preserve the previously valid reply. Meaningful existing
+owner cases must cover 65 ordered blocks, a 30-KiB live snapshot/completion,
+a 300-KiB escaped multibyte reply through original signed fragment pages and
+cold reads, and the exact serialized budget boundary plus one byte.
+
+R4 transport proof: strengthen the existing 420-KiB Unicode signed-page
+positive with `source: 'lead_session'` and an opaque `host-lead-` session ID.
+The existing helper invokes the actual Host pager and Main projector before
+renderer assembly. Require exact full text, original identity/source/session
+and no private fields. First retain failure with the original continuation,
+then minimally preserve those two optional fields in original Host
+`pageOwnerSnapshot.messageSegments`; do not relax the renderer, create a new
+helper or change any transport budget. Session owns this existing Main test;
+provider owns the narrow Host fragmenter change after the before receipt.
+
+Candidate-fit measurement reserves only the finite worst-case closed gap
+array and the maximum safe high-water integer inside that same 8-MiB envelope.
+Persist exact actual gaps/sequence, not those reserved values. This small
+explicit reserve lets a later oversized/storage gap fit without evicting the
+last valid reply that already met the bound. Test an envelope exactly at the
+reserved bound and a one-byte larger replacement; neither file nor schema
+gains a larger limit or additional field.
+
+## Persist full quality checks in the existing safe Team lane
+
+Local full typed lint and a Main shard both exited 137 and remain unqualified.
+Before input/source capture, the existing `team` lane will run the canonical
+`pnpm typecheck:workspace`, then the three original typed lint scopes
+(Main/preload/shared/types, renderer, features) and `lint:mcp` sequentially
+and fail fast. Keep the existing 45-minute job budget, all compiler/lint rules,
+all seven UI commands and receipt classifiers unchanged. These are quality
+checks only; no native provider, readiness claim or Desktop acceptance is
+created by this addition. Root owns this workflow edit and publication.
+
+## Canonical Host test type corrections
+
+The first final `typecheck:test` reported two test-only diagnostics after
+122 original owner/checkpoint/restore cases passed: a mutable optional file
+descriptor loses narrowing inside the deferred `fstatSync` assertion, and
+the captured numeric call count needs an explicit annotation under TS7.
+Capture the same original descriptor in a local constant before its existing
+EBADF assertion and annotate the existing `before` count as `number`. Keep
+all cases, assertions, production source and cleanup unchanged. Preserve
+the failing typecheck and the original runtime receipt; rerun the canonical
+Host test type project after these narrow corrections, and record the three
+updated source hashes separately from the earlier runtime-test snapshot.
+
+## Final staged whitespace check
+
+The first cached diff check includes the three newly added Host helpers and
+reported one extra terminal empty line in each. Before committing, remove
+only that final empty line from `readTeamConversation.ts`,
+`runtimeConversation.ts` and `ownerMessageReads.ts`. Do not change statements,
+internal spacing, source caps, assertions or command coverage. Preserve the
+previous runtime/type receipts and record this source-only difference in the
+publication freeze; it is not a new execution result.

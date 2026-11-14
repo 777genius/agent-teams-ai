@@ -7,6 +7,8 @@ import type { RetainedNativeLaunch } from './createRuntimeNativeMemberCreation.j
 export interface RuntimeActivitySource extends Pick<MemberEntry, 'binding' | 'team'> {
   /** Read-local native-session grouping. It is never persisted or returned in an activity DTO. */
   costScope?: string;
+  /** Private original launch witness only; never persisted or used to grant access. */
+  recordRequired?: boolean;
 }
 type Launches = ReadonlyMap<string, RetainedNativeLaunch>;
 function fail(): never { throw new RuntimeOwnerError('hold'); }
@@ -25,15 +27,15 @@ export function readEntryActivitySources(
   if (!retained.entries.includes(entry) ||
       retained.team.definition.binding.backendId !== entry.binding.backendId ||
       retained.team.definition.binding.teamId !== entry.binding.teamId) fail();
-  const selected = retained.launch.memberActions().read(entry.binding.memberId);
-  const restored = retained.launch.readRestorations();
-  if (selected.launchId !== entry.binding.runId || restored.launchId !== entry.binding.runId ||
+  const selected = retained.launch.readActivityLineage(entry.binding.memberId);
+  if (selected.launchId !== entry.binding.runId ||
       runtimeDigest(selected.member.binding) !== currentKey ||
       selected.member.configurationDigest !== runtimeDigest(entry.profile) ||
       selected.member.baseConfigurationDigest !== runtimeDigest(entry.baseProfile) ||
       selected.member.runtimeGeneration !== entry.profile.generation ||
       selected.member.configRevision !== entry.config.configRevision) fail();
-  if (restored.restorations.length > 64 || selected.actions.length > 64) fail();
+  if (selected.restorations.length > 64 || selected.actions.length > 64) fail();
+  const required = new Set<string>(selected.recordRequired ? [currentKey] : []);
   const predecessors = new Map<string, { source: RuntimeBinding; resume: boolean }>();
   const add = (source: RuntimeBinding, target: RuntimeBinding, resume: boolean) => {
     source = normalizeBinding(source); target = normalizeBinding(target);
@@ -43,12 +45,17 @@ export function readEntryActivitySources(
     if (key === runtimeDigest(source) || predecessors.has(key)) fail();
     predecessors.set(key, { source, resume });
   };
-  for (const row of restored.restorations) {
+  for (const row of selected.restorations) {
     if (row.member.memberId !== entry.binding.memberId) continue;
     if (!row.member.binding || !row.member.restore) fail();
     add(row.member.restore.sourceBinding, row.member.binding, true);
+    required.add(runtimeDigest(row.member.restore.sourceBinding));
   }
   for (const row of selected.actions) {
+    if (row.phase === 'selected' && !row.noAllocation) {
+      if (!row.source.binding) fail();
+      required.add(runtimeDigest(row.source.binding));
+    }
     if (row.phase !== 'selected' || row.input.action !== 'restart') continue;
     if (!row.source.binding || !row.selected.binding) fail();
     add(row.source.binding, row.selected.binding, false);
@@ -66,7 +73,8 @@ export function readEntryActivitySources(
   let scope = '';
   return reverse.reverse().map(({ binding, resumed }) => {
     if (!resumed) scope = runtimeDigest(binding);
-    return { binding: structuredClone(binding), team: entry.team, costScope: scope };
+    return { binding: structuredClone(binding), team: entry.team, costScope: scope,
+      ...(required.has(runtimeDigest(binding)) ? { recordRequired: true } : {}) };
   });
 }
 
@@ -80,7 +88,7 @@ export function readRuntimeActivitySources(
   for (const entry of entries) for (const source of readEntryActivitySources(entry, launches)) {
     const key = runtimeDigest(source.binding), prior = sources.get(key);
     if (prior && prior.costScope !== source.costScope) fail();
-    sources.set(key, source);
+    sources.set(key, prior?.recordRequired ? { ...source, recordRequired: true } : source);
     if (sources.size > 256) fail();
   }
   return [...sources.values()];

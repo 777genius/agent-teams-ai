@@ -206,7 +206,7 @@ export function createTeamHost(
       teams.set(definition.binding.teamId, {
         definition,
         owner: team,
-        connection: team.connect(profile.principalId),
+        connection: team.connect(profile.principalId, (capture, mode) => runtime?.readConversation(capture, mode)),
         operatorPrincipalId: profile.principalId,
       });
     };

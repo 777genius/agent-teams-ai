@@ -18,6 +18,7 @@ export function createHostTeamChanges(options: {
   const listeners = new Map<symbol, Listener>();
   const progressListeners = new Map<symbol, ProgressListener>();
   const progressSignatures = new Map<string, string>();
+  const conversationSignatures = new Map<string, string>();
   const hasListeners = () => listeners.size > 0 || progressListeners.size > 0;
   const cursors = new Map<string, string>();
   const resync = new Set<string>();
@@ -36,6 +37,7 @@ export function createHostTeamChanges(options: {
       resync.clear();
       delivered.clear();
       progressSignatures.clear();
+      conversationSignatures.clear();
       resyncAll = true;
     }
     const current = options.captureScope();
@@ -53,6 +55,8 @@ export function createHostTeamChanges(options: {
       for (const key of cursors.keys()) if (!retained.has(key)) cursors.delete(key);
       for (const key of progressSignatures.keys())
         if (!retained.has(key)) progressSignatures.delete(key);
+      for (const key of conversationSignatures.keys())
+        if (!retained.has(key)) conversationSignatures.delete(key);
       for (const binding of snapshot.bindings) {
         if (!active()) return;
         const handleId = binding.handle.handleId;
@@ -110,7 +114,9 @@ export function createHostTeamChanges(options: {
           )
             continue;
           const feed = result.value;
-          if (!options.readOrder.observeFeed(handleId, feed)) continue;
+          if (!options.readOrder.observeFeed(handleId, {
+            streamId: feed.streamId, sequence: feed.sequence, cursor: feed.cursor,
+          })) continue;
           cursors.set(handleId, feed.cursor);
           const force = resync.delete(handleId);
           const acknowledged = delivered.get(handleId);
@@ -119,10 +125,16 @@ export function createHostTeamChanges(options: {
               acknowledged?.streamId !== feed.streamId || event.sequence > acknowledged.sequence
           );
           delivered.set(handleId, { streamId: feed.streamId, sequence: feed.sequence });
-          if (!fresh && !feed.gap && !force) continue;
+          const signature = feed.conversation && JSON.stringify(feed.conversation);
+          const conversationChanged = conversationSignatures.get(handleId) !== signature;
+          if (signature === undefined) conversationSignatures.delete(handleId);
+          else conversationSignatures.set(handleId, signature);
+          const productChanged = fresh || !!feed.gap || force;
+          if (!productChanged && !conversationChanged) continue;
           // These are full-read invalidations, not synthesized business events.
           // Existing consumers refresh roster/board/global tasks and message head.
-          for (const type of ['config', 'inbox'] as const) {
+          const types = productChanged ? ['config', 'inbox'] as const : ['inbox'] as const;
+          for (const type of types) {
             for (const [token, listener] of [...listeners]) {
               if (!listeners.has(token)) continue;
               if (!active()) return;
@@ -134,7 +146,7 @@ export function createHostTeamChanges(options: {
                     ? 'host-product-gap'
                     : force
                       ? 'host-subscription-resync'
-                      : 'host-product-invalidated',
+                      : productChanged ? 'host-product-invalidated' : 'host-conversation-invalidated',
                 });
               } catch {
                 /* One observer cannot prevent other observers from rehydrating. */
@@ -165,6 +177,7 @@ export function createHostTeamChanges(options: {
     resync.clear();
     delivered.clear();
     progressSignatures.clear();
+    conversationSignatures.clear();
   }
   function startIfNeeded(): void {
     if (listeners.size + progressListeners.size === 1 && !polling)

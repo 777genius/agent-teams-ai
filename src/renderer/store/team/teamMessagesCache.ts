@@ -21,6 +21,7 @@ export interface TeamMessagesProvenance {
   head: InboxMessage[];
   pages: TeamMessagesLoadedPage[];
   requestScope: TeamMessagesRequestScope;
+  historyWarning?: string;
 }
 
 export interface TeamMessagesCacheEntry {

@@ -7,7 +7,7 @@ import type {
 } from '@agent-teams/provider-session-contracts';
 import type { JsonValue } from '../contracts.js';
 import type { InputPreparationRequest, PreparedInputProof, RuntimeContextEpoch, RuntimeInputPreparation } from './inputPreparation.js';
-import type { RuntimeEventStorage } from './activityContracts.js';
+import type { RuntimeConversationMarker, RuntimeEventStorage } from './activityContracts.js';
 import type { CheckpointAttempt, CheckpointStorage } from './checkpointContracts.js';
 
 export interface RuntimeBinding {
@@ -76,6 +76,8 @@ export interface RuntimeSessionRecord {
   closeClaimed?: boolean;
   checkpoints?: CheckpointAttempt[];
   activitySequence?: number;
+  /** Derived text publication hint, outside input/config/checkpoint fingerprints. */
+  conversation?: RuntimeConversationMarker;
   /** Persisted technical context boundaries, independent of derived event retention. */
   contextEpochs?: RuntimeContextEpoch[];
   restoredFrom?: { reference: string; sourceBinding: RuntimeBinding };

@@ -4,6 +4,8 @@ import { RuntimeOwnerError } from './contracts.js';
 import type { JsonValue } from '../contracts.js';
 import { normalizeBinding, runtimeDigest } from './identity.js';
 import { normalizeActivity } from './normalizeActivity.js';
+import { conversationGaps, conversationMarker, emptyConversation, failedConversationMarker, normalizeConversationText,
+  legacyConversation, readBoundConversation, updateConversation, validateConversationMarker } from './runtimeConversation.js';
 import type {
   RuntimeBinding,
   RuntimeOwnerOptions,
@@ -18,11 +20,14 @@ import type {
   RuntimeActivityRecord,
   RuntimeActivitySnapshot,
   RuntimeActivityState,
+  RuntimeConversationRead,
+  RuntimeConversationRecord,
 } from './activityContracts.js';
 
 /** The sole event writer shares the existing member fence; projections never own business outcomes. */
 export class RuntimeActivityCoordinator implements RuntimeStore {
   private readonly degraded = new Set<string>();
+  private readonly conversationDegraded = new Set<string>();
   constructor(
     private readonly options: Pick<
       RuntimeOwnerOptions,
@@ -42,10 +47,13 @@ export class RuntimeActivityCoordinator implements RuntimeStore {
             tx.put(record, purpose);
             return;
           }
+          const previous = tx.get();
+          if (!previous && this.conversationSupported() && record.conversation === undefined)
+            record.conversation = conversationMarker(emptyConversation(record.binding));
           const prepared = this.prepare(
             record,
             [{ data: { kind: 'state', state: this.state(record) as unknown as JsonValue } }],
-            this.unprojected(tx.get())
+            this.unprojected(previous)
           );
           tx.put(record, purpose); // Includes the bounded high-water scalar before projection publication.
           this.persist(record, prepared);
@@ -85,11 +93,15 @@ export class RuntimeActivityCoordinator implements RuntimeStore {
           event.kind === 'compaction');
       if (!paired && !sessionLevel) {
         if (this.options.events) {
+          const beforeSequence = record.activitySequence ?? 0;
           const prepared = this.prepare(record, [
             { data: { kind: 'gap', reason: 'unattributed' } },
           ]);
+          const conversation = event.kind === 'text'
+            ? this.prepareConversation(record, prepared, beforeSequence) : undefined;
           tx.put(record);
           this.persist(record, prepared);
+          this.persistConversation(record, conversation);
         }
         return;
       }
@@ -118,9 +130,13 @@ export class RuntimeActivityCoordinator implements RuntimeStore {
         ...(paired ? { inputId: event.inputId!, operationRef: event.operationRef! } : {}),
         data: normalizeActivity(event),
       });
+      const beforeSequence = record.activitySequence ?? 0;
       const prepared = this.prepare(record, entries, this.unprojected(record));
+      const conversation = event.kind === 'text'
+        ? this.prepareConversation(record, prepared, beforeSequence, event) : undefined;
       tx.put(record, record.interactions.length > interactionCount ? 'growth' : undefined); // Terminal/interaction facts survive projection IO or normalization failures.
       this.persist(record, prepared);
+      this.persistConversation(record, conversation);
     });
   }
 
@@ -253,6 +269,75 @@ export class RuntimeActivityCoordinator implements RuntimeStore {
         ...(gap ? { gap } : {}),
       };
     });
+  }
+
+  /** Metadata reads inspect only the original state marker, never the derived text file. */
+  conversation(raw: RuntimeBinding, mode: 'metadata' | 'messages', requireRecord = false): RuntimeConversationRead {
+    const binding = normalizeBinding(raw);
+    return this.options.store.fenced(binding, tx => {
+      this.authorize(binding);
+      const record = tx.get();
+      if (!record && (requireRecord || this.options.events?.hasRetainedActivity?.(binding)))
+        throw new RuntimeOwnerError('hold');
+      if (record) validateConversationMarker(record);
+      let gaps: RuntimeConversationRead['gaps'] = !this.conversationSupported() ? ['unsupported']
+        : record && !record.conversation && record.inputs.length ? ['legacy-history'] : [];
+      if (this.conversationDegraded.has(runtimeDigest(binding))) gaps = conversationGaps([...gaps, 'storage']);
+      if (record?.conversation) gaps = conversationGaps([...gaps, ...record.conversation.gaps]);
+      let messages: RuntimeConversationRead['messages'];
+      if (mode === 'messages' && record && this.conversationSupported()) {
+        const feed = record.conversation ? undefined : this.read(binding, record);
+        if (feed?.gap?.reason === 'storage' || feed?.gap?.reason === 'state-unpublished')
+          gaps = conversationGaps([...gaps, feed.gap.reason]);
+        const retained = record.conversation ? readBoundConversation(this.options.events!, record)
+          : legacyConversation(record, feed!.events);
+        messages = retained.messages;
+        gaps = conversationGaps([...gaps, ...retained.gaps]);
+      }
+      return { binding, revision: runtimeDigest({ binding, marker: record?.conversation ?? null,
+        supported: this.conversationSupported() }), gaps,
+        ...(mode === 'messages' ? { messages: messages ?? [] } : {}) };
+    });
+  }
+
+  private conversationSupported(): boolean {
+    return typeof this.options.events?.readConversation === 'function' &&
+      typeof this.options.events.writeConversation === 'function' &&
+      typeof this.options.events.hasRetainedActivity === 'function';
+  }
+  private prepareConversation(
+    record: RuntimeSessionRecord, activity: RuntimeActivityRecord | undefined, beforeSequence: number,
+    rawText?: Extract<Event, { kind: 'text' }>
+  ): RuntimeConversationRecord | undefined {
+    if (!this.conversationSupported()) return undefined;
+    let event = activity?.events.at(-1);
+    try {
+      if (!event || event.sequence <= beforeSequence) throw new RuntimeOwnerError('hold');
+      if (rawText) {
+        if (event.inputId !== rawText.inputId || event.operationRef !== rawText.operationRef)
+          throw new RuntimeOwnerError('hold');
+        event = { ...event, data: normalizeConversationText(rawText) };
+      }
+      if (event.data.kind === 'text' && typeof event.data.messageRef === 'string' &&
+          event.data.messageRef.startsWith('local-command:')) return undefined;
+      const previous = record.conversation ? readBoundConversation(this.options.events!, record)
+        : legacyConversation(record, activity!.events.filter(row => row.sequence <= beforeSequence));
+      const next = updateConversation(record, previous, [event],
+        !record.conversation && record.inputs.length ? ['legacy-history'] : []);
+      if (next.digest === previous.digest) return undefined;
+      record.conversation = conversationMarker(next);
+      return next;
+    } catch {
+      record.conversation = failedConversationMarker(record);
+      this.conversationDegraded.add(runtimeDigest(record.binding));
+      return undefined;
+    }
+  }
+  private persistConversation(record: RuntimeSessionRecord, value: RuntimeConversationRecord | undefined): void {
+    if (!value) return;
+    const key = runtimeDigest(record.binding);
+    try { this.options.events!.writeConversation!(value); this.conversationDegraded.delete(key); }
+    catch { this.conversationDegraded.add(key); }
   }
 
   private read(

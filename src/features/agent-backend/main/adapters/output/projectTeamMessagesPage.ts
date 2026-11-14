@@ -1,3 +1,4 @@
+import { projectTeamConversation } from './projectTeamChanges';
 import { projectTeamMessage } from './projectTeamSnapshot';
 
 import type { BackendTeamMessagesPage } from '../../../contracts/teamSnapshot';
@@ -49,6 +50,9 @@ export function projectTeamMessagesPage(value: unknown): BackendTeamMessagesPage
     messages: source.messages.map(projectTeamMessage),
     nextCursor: source.nextCursor,
     hasMore: source.hasMore,
+    ...(source.conversation === undefined ? {} : {
+      conversation: projectTeamConversation(source.conversation),
+    }),
     ...(parts === undefined ? {} : {
       messageTotal: source.messageTotal as number,
       messageParts: parts as { index: number; part: number; total: number }[],

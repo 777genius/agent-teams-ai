@@ -11,6 +11,7 @@ import type {
   RuntimeActivityCursor,
   RuntimeActivityFeed,
   RuntimeActivitySnapshot,
+  RuntimeConversationRead,
 } from './activityContracts.js';
 import {
   activeInput as active,
@@ -84,6 +85,10 @@ export class RuntimeOwner {
   }
   readActivityFeed(binding: RuntimeBinding, cursor: RuntimeActivityCursor): RuntimeActivityFeed {
     return this.activity.feed(binding, cursor);
+  }
+  /** Trusted composition read, under the original member authority and fence. */
+  readConversation(binding: RuntimeBinding, mode: 'metadata' | 'messages', requireRecord = false): RuntimeConversationRead {
+    return this.activity.conversation(binding, mode, requireRecord);
   }
 
   /** Private Host composition input, not exposed by RPC or the provider Session SPI. */

@@ -3259,6 +3259,38 @@ describe('teamSlice actions', () => {
     ]);
   });
 
+  it('retains incomplete source history notices through paging and clears them on a complete fresh head', async () => {
+    const store = createSliceStore();
+    const warning = 'Some agent replies are incomplete or unavailable. Showing the retained messages.';
+    const message: InboxMessage = {
+      from: 'alice', to: 'user', text: 'Retained reply', read: true,
+      messageId: 'TEST-retained-reply', timestamp: '2026-11-14T00:00:00.000Z',
+      source: 'lead_session',
+    };
+    const pages = [
+      { messages: [message], nextCursor: 'older', hasMore: true,
+        feedRevision: 'partial', historyWarning: warning },
+      { messages: [{ ...message, messageId: 'TEST-older-reply' }],
+        nextCursor: null, hasMore: false, feedRevision: 'partial' },
+      { messages: [message], nextCursor: null, hasMore: false, feedRevision: 'complete' },
+      { messages: [message], nextCursor: null, hasMore: false, feedRevision: 'complete' },
+    ];
+    hoisted.getMessagesPage.mockImplementation(async () => {
+      const page = pages.shift();
+      if (!page) throw new Error('Unexpected extra history read');
+      return page;
+    });
+    await store.getState().refreshTeamMessagesHead('my-team');
+    expect(store.getState().teamMessagesByName['my-team'].messagesError).toBe(warning);
+    await store.getState().loadOlderTeamMessages('my-team');
+    expect(store.getState().teamMessagesByName['my-team'].messagesError).toBe(warning);
+    expect(store.getState().teamMessagesByName['my-team'].canonicalMessages).toHaveLength(2);
+    await store.getState().refreshTeamMessagesHead('my-team');
+    expect(store.getState().teamMessagesByName['my-team'].messagesError).toContain('Showing the current history');
+    await store.getState().refreshTeamMessagesHead('my-team');
+    expect(store.getState().teamMessagesByName['my-team'].messagesError).toBeNull();
+  });
+
   // Old code promotes each message displaced from the poll head into permanent history.
   it('keeps a 50-message head bounded across advancing polls without Load older', async () => {
     const store = createSliceStore();

@@ -33,6 +33,8 @@ import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 import type { TeamMcpCrossTeamPort } from '../mcp/nativeCrossTeamContracts.js';
 import { readHostTeamActivity } from './readHostTeamActivity.js';
 import { readRuntimeActivitySources, readEntryActivitySources, isRetainedActivityBinding } from './runtimeActivitySources.js';
+import { readTeamConversation } from './readTeamConversation.js';
+import type { TeamConversationReadPort } from '../team/ownerMessageReads.js';
 import { HostInteractionControls } from './HostInteractionControls.js';
 import { createMemberEntry, installRuntimeCaptureEntries } from './createMemberEntry.js';
 import { projectRuntimeActivity } from './runtimeActivityProjection.js';
@@ -631,6 +633,15 @@ export class RuntimeTeamCoordinator {
       raw
     );
   }
+
+  readonly readConversation: TeamConversationReadPort = (capture, mode) => readTeamConversation({
+    team: this.options.teams.get(capture.binding.teamId), principalId: this.options.profile.principalId,
+    entries: [...this.entries.values()], launches: this.retainedLaunches, runtime: this.runtime,
+    assertCurrent: () => {
+      this.options.assertWriter(); this.captures.assertAvailable(capture.binding.teamId);
+      if (this.sealed) throw new RuntimeOwnerError('hold');
+    },
+  }, capture, mode);
 
   async execute(teamId: string, operation: string, raw: unknown, commandId?: string): Promise<JsonValue> {
     this.captures.assertAvailable(teamId);
