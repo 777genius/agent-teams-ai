@@ -91,7 +91,8 @@
       "uk": "乌克兰语",
       "ur": "乌尔都语",
       "vi": "越南语",
-      "zh": "中文"
+      "zh": "中文",
+      "zh-TW": "繁体中文"
     },
     "searchPlaceholder": "搜索语言…",
     "selectPlaceholder": "选择应用语言…",

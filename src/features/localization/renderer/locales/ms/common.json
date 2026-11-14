@@ -91,7 +91,8 @@
       "uk": "Ukraine",
       "ur": "Urdu",
       "vi": "Vietnam",
-      "zh": "Cina"
+      "zh": "Cina",
+      "zh-TW": "Cina Tradisional"
     },
     "searchPlaceholder": "Cari bahasa...",
     "selectPlaceholder": "Pilih bahasa aplikasi...",

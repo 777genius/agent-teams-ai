@@ -2569,6 +2569,7 @@
       "allFlagsValid": "সব সক্রিয় ফ্ল্যাগ",
       "unknownFlags": "অজানা: {{flags}}",
       "protectedFlags": "সুরক্ষিত {{flags}}",
+      "missingValue": "মান অনুপস্থিত: {{flags}}",
       "failed": "বৈধতা যাচাই করতে ব্যর্থ"
     },
     "placeholders": {

@@ -91,7 +91,8 @@
       "uk": "Ukrainian",
       "ur": "Urdu",
       "vi": "Vietnamese",
-      "zh": "Chinese"
+      "zh": "Chinese",
+      "zh-TW": "Traditional Chinese"
     },
     "searchPlaceholder": "Search language...",
     "selectPlaceholder": "Select app language...",

@@ -2569,6 +2569,7 @@
       "allFlagsValid": "所有标志均有效",
       "unknownFlags": "未知：{{flags}}",
       "protectedFlags": "密码保护：{{flags}}",
+      "missingValue": "缺少值：{{flags}}",
       "failed": "验证失败"
     },
     "placeholders": {

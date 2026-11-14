@@ -6,6 +6,10 @@ on:
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
+      # Native desktop create/launch admission and Validate share these guards.
+      - 'src/shared/utils/cliArgsParser.ts'
+      - 'src/main/services/team/TeamRequestValidation.ts'
+      - 'src/main/ipc/teams.ts'
       # Runtime provider preflight affects the existing Create/Launch controls.
       - 'src/main/services/infrastructure/CliInstallerService.ts'
       - 'src/main/services/runtime/ClaudeMultimodelBridgeService.ts'
@@ -23,6 +27,10 @@ on:
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
+      # Native desktop create/launch admission and Validate share these guards.
+      - 'src/shared/utils/cliArgsParser.ts'
+      - 'src/main/services/team/TeamRequestValidation.ts'
+      - 'src/main/ipc/teams.ts'
       # Runtime provider preflight affects the existing Create/Launch controls.
       - 'src/main/services/infrastructure/CliInstallerService.ts'
       - 'src/main/services/runtime/ClaudeMultimodelBridgeService.ts'
@@ -68,11 +76,13 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
-      - name: Prepare Linux virtual display
+      - name: Prepare Linux virtual display and zh-TW font fallback
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb
+          sudo apt-get install -y xvfb fonts-noto-cjk
+          fc-cache -f
+          fc-match 'Noto Sans CJK TC' | grep -F 'Noto Sans CJK TC'
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Ensure Electron is installed before measuring app startup

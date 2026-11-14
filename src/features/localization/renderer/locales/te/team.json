@@ -2569,6 +2569,7 @@
       "allFlagsValid": "అన్ని ఫ్లాగ్‌లు చెల్లుబాటు అయ్యేవి",
       "unknownFlags": "తెలియనివి: {{flags}}",
       "protectedFlags": "రక్షితం: {{flags}}",
+      "missingValue": "విలువ లేదు: {{flags}}",
       "failed": "ధృవీకరణ విఫలమైంది"
     },
     "placeholders": {
