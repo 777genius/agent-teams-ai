@@ -177,7 +177,9 @@ export function createRuntimeMemberProviderFactory(options: {
         process: createMemberProcessMcpPort({
           entry,
           ...(options.processCustody ? { native: options.processCustody } : {}),
-          ...(entry.profile.provider === 'claude' && entry.profile.windowsBroker?.capability === 'service-scopes-v1' && options.retainedWindowsLaunch
+          ...((entry.profile.provider === 'claude' || entry.profile.provider === 'codex' ||
+            entry.profile.provider === 'opencode' && entry.profile.nativeGeneration !== 'v2') &&
+            entry.profile.windowsBroker?.capability === 'service-scopes-v1' && options.retainedWindowsLaunch
             ? { windows: options.retainedWindowsLaunch.registeredProcesses } : {}),
           assertCurrent: authority.assertCurrent,
           assertAllocatedCurrent: authority.assertAllocatedCurrent,
@@ -237,7 +239,8 @@ export function createRuntimeMemberProviderFactory(options: {
           endpoint,
           connection,
           ...(options.processCustody ? { processCustody: options.processCustody } : {}),
-          ...(entry.profile.provider === 'claude' && options.retainedWindowsLaunch
+          ...((entry.profile.provider === 'claude' || entry.profile.provider === 'codex' ||
+            entry.profile.provider === 'opencode' && entry.profile.nativeGeneration !== 'v2') && options.retainedWindowsLaunch
             ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
           instructions: memberInitialInstructions(
             selected.name,

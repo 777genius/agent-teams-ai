@@ -105,9 +105,16 @@ export function createCodexMemberProvider(
         selected,
         canAllocate,
         context.processCustody,
-        context.canCaptureRegisteredProcess
+        context.canCaptureRegisteredProcess,
+        undefined,
+        context.retainedWindowsLaunch?.port(selected, canAllocate, context.canCaptureRegisteredProcess)
       ))
   )(captured, context.canAllocate);
+  const readCatalog: typeof readCodexMcpCatalog = options.readCatalog ?? (context.retainedWindowsLaunch
+    ? (selected, assertCurrent, signal) => readCodexMcpCatalog(selected, assertCurrent, signal,
+      (original, current) => new CapturedProcess(original, current, undefined, undefined, undefined,
+        context.retainedWindowsLaunch!.port(original, current)))
+    : readCodexMcpCatalog);
   let sealed = false;
   let ready = false;
   let allocated = false;
@@ -121,7 +128,7 @@ export function createCodexMemberProvider(
     };
     try {
       assertCurrent();
-      const actual = await (options.readCatalog ?? readCodexMcpCatalog)(
+      const actual = await readCatalog(
         profile,
         assertCurrent,
         signal
@@ -258,6 +265,9 @@ export function createCodexMemberProvider(
     ...(custody.captureRegisteredProcess
       ? { captureRegisteredProcess: custody.captureRegisteredProcess.bind(custody) }
       : {}),
+    ...(profile.windowsBroker?.capability === 'service-scopes-v1' && context.retainedWindowsLaunch &&
+      custody.prepareRegisteredWindowsProcess
+      ? { prepareRegisteredWindowsProcess: custody.prepareRegisteredWindowsProcess.bind(custody) } : {}),
     isReady: () => ready && current(),
     initialContextEvidence: () =>
       ready && current()

@@ -114,9 +114,26 @@ export interface CaptureFileUpdateScenario {
   taskId(): string;
   phase?(): 'assignment' | 'task-start';
 }
+export interface RetainedProcessScenario {
+  turn: 'TEST_NATIVE_PROCESS_BOOTSTRAP';
+  phase(): 'standalone-management-probe' | 'business' | 'closed';
+  next(input: {
+    provider: 'codex' | 'opencode-v1';
+    step: number;
+    userText: string;
+    tools: readonly { name: string; namespace?: string }[];
+    previous: {
+      callId: string;
+      name: string;
+      input: Record<string, unknown>;
+      output: unknown;
+    } | undefined;
+  }): Promise<{ name: 'exec_command' | 'bash' | 'process_register'; input: Record<string, unknown> } | undefined>;
+}
 export async function startCodexModel(
   options: {
     candidate169?: { selectedModel(): string };
+    retainedProcess?: RetainedProcessScenario;
     nativeMessageImage?: boolean;
     mixedGroups?: boolean;
     mixedTaskNotifications?: MixedTaskNoticeReader;
@@ -133,6 +150,10 @@ export async function startCodexModel(
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate), 'one bounded fixture scenario');
   if (options.candidate169) assert.deepEqual(Object.keys(options), ['candidate169'], 'one explicit candidate scenario');
+  if (options.retainedProcess) {
+    assert.deepEqual(Object.keys(options), ['retainedProcess'], 'one retained process scenario');
+    assert.equal(options.retainedProcess.turn, 'TEST_NATIVE_PROCESS_BOOTSTRAP');
+  }
   if (options.memberName || options.uiGeneratedMessageIds || options.captureHistoryMarkers)
     assert.ok(
       !options.mixedGroups &&
@@ -211,8 +232,14 @@ export async function startCodexModel(
         assert.ok(selected.length > 0, 'actual catalog selected before inference');
         assert.equal(body.model, selected, 'actual inference consumes the original native model selection');
       }
+      if (options.retainedProcess) {
+        assert.equal(options.retainedProcess.phase(), 'business');
+        assert.equal(request.headers.authorization, 'Bearer TEST-LOCALHOST-ONLY');
+        assert.equal(body.model, 'mock-model');
+      }
       const input = (Array.isArray(body.input) ? body.input : []).map(record);
-      const palette = options.uiGeneratedMessageIds || options.candidate169 ? uiPalette(body) : undefined;
+      const palette = options.uiGeneratedMessageIds || options.candidate169 || options.retainedProcess ? uiPalette(body) : undefined;
+      if (options.retainedProcess) assert.equal(palette?.exec, undefined, 'original Codex0.162 Code Mode is disabled');
       if (
         options.allowModelProbes &&
         isCodexModelProbeInput(input, options.modelProbeWorkspace?.())
@@ -271,6 +298,12 @@ export async function startCodexModel(
       let mixedGroup: MixedGroupTurn | undefined;
       for (const message of input.toReversed()) {
         if (message.role !== 'user') continue;
+        if (options.retainedProcess) {
+          turnText = messageText(message) ?? '';
+          assert.ok(turnText.includes(options.retainedProcess.turn), 'no historical process-input fallback');
+          turn = options.retainedProcess.turn;
+          break;
+        }
         const group = options.mixedGroups ? readMixedGroupTurn(message.content, 'bob') : undefined;
         const capture =
           options.captureFileUpdate && JSON.stringify(message.content).includes(CAPTURE_TURN);
@@ -312,6 +345,15 @@ export async function startCodexModel(
           ? linkedOutput(input, previousId, palette.exec !== undefined, issued.get(previousId))
           : undefined;
       if (previous) assert.ok(issued.has(previousId), 'original emitted call exists');
+      if (options.retainedProcess) {
+        assert.ok(step < 4);
+        assert.equal(observations.length, step);
+        assert.equal(probes.length, 0);
+        const ids = Array.from({ length: step }, (_, index) => `native_${turn}_${index}`);
+        assert.deepEqual(input.filter(row => ['function_call', 'custom_tool_call'].includes(String(row.type))).map(row => row.call_id), ids);
+        assert.deepEqual(input.filter(row => ['function_call_output', 'custom_tool_call_output'].includes(String(row.type))).map(row => row.call_id), ids);
+        for (const id of ids) linkedOutput(input, id, false, issued.get(id));
+      }
       const previousValue =
         previous && palette?.exec ? codeModeResult(previous.output) : previous?.output;
       const previousReceipt = () =>
@@ -401,6 +443,16 @@ export async function startCodexModel(
         'actual native request contains fixed role/team/workspace instructions'
       );
       const tools = palette?.tools ?? flattenTools(body.tools);
+      let processAction: Awaited<ReturnType<RetainedProcessScenario['next']>>;
+      if (options.retainedProcess) {
+        const call = input.find(row => row.type === 'function_call' && row.call_id === previousId);
+        processAction = await options.retainedProcess.next({
+          provider: 'codex', step, userText: turnText, tools,
+          previous: call ? { callId: String(call.call_id), name: String(call.name),
+            input: record(JSON.parse(String(call.arguments))), output: previous?.output } : undefined,
+        });
+        assert.equal(options.retainedProcess.phase(), 'business');
+      }
       let toolResultError = false;
       if (
         palette &&
@@ -580,7 +632,9 @@ export async function startCodexModel(
                 },
               ]
         : undefined;
-      const action = notice
+      const action = options.retainedProcess
+        ? processAction
+        : notice
         ? undefined
         : (groupActions ??
             captureActions ??

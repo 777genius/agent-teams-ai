@@ -50,15 +50,18 @@ interface Selection {
   testOnly: boolean;
   platform: string;
   version: string;
+  provider?: 'codex' | 'opencode-v1';
   integrity: string;
   executable: { path: string; sha256: string };
   bash: { path: string; sha256: string };
 }
-type Case = 'graceful' | 'crash' | 'natural-services' | 'scoped-services';
+type Case = 'graceful' | 'crash' | 'natural-services' | 'scoped-services' |
+  'codex-scoped-services' | 'opencode-v1-scoped-services';
 
-function prepareProfile(originalSandbox: string, broker: string, selected: Selection, url: string, mode: Case) {
+function prepareProfile(originalSandbox: string, broker: string, selected: Selection, url: string, mode: Case,
+  configure?: (profile: TeamHostProfile, selected: Selection) => void) {
   const root = realpathSync.native(originalSandbox);
-  const services = mode === 'natural-services' || mode === 'scoped-services';
+  const services = mode === 'natural-services' || mode.endsWith('scoped-services');
   const systemRoot = process.env.SystemRoot;
   assert.ok(systemRoot && /^[a-z]:\\/i.test(systemRoot));
   for (const name of ['home', 'tmp', 'config', 'workspace', 'appdata', 'localdata', 'storage'])
@@ -200,6 +203,7 @@ function prepareProfile(originalSandbox: string, broker: string, selected: Selec
       ],
     },
   };
+  configure?.(profile, selected); // Complete immutable provider recipe before original source hash/owner capture.
   const source = join(root, 'TEST-captured-profile.json');
   writeFileSync(source, JSON.stringify(profile), { flag: 'wx' });
   const host: SelectedHostProfile = {
@@ -249,7 +253,9 @@ export async function runNativeRetainedHostGate(
   assert.equal(selected.schemaVersion, 1);
   assert.equal(selected.testOnly, true);
   assert.equal(selected.platform, 'win32-' + process.arch);
-  assert.equal(selected.version, '0.3.305');
+  const provider = mode === 'codex-scoped-services' ? 'codex' : mode === 'opencode-v1-scoped-services' ? 'opencode-v1' : undefined;
+  assert.equal(selected.provider, provider);
+  assert.equal(selected.version, provider === 'codex' ? '0.162.0' : provider === 'opencode-v1' ? '1.19.4' : '0.3.305');
   assert.equal(realpathSync(selected.executable.path), selected.executable.path);
   assert.equal(realpathSync(selected.bash.path), selected.bash.path);
   assert.equal(
@@ -288,13 +294,17 @@ export async function runNativeRetainedHostGate(
     void done.catch(() => undefined);
     exits.set(child, done);
   };
-  const serviceScenario = mode === 'natural-services' || mode === 'scoped-services'
-    ? await prepareNativeRetainedServiceScenario({ sandbox, fixture, track, events, mode }) : undefined;
+  const scopedMode = mode.endsWith('scoped-services');
+  const serviceScenario = mode === 'natural-services' || scopedMode
+    ? await prepareNativeRetainedServiceScenario({ sandbox, fixture, track, events,
+      mode: mode === 'natural-services' ? 'natural-services' : 'scoped-services',
+      ...(provider ? { provider, bash: selected.bash.path } : {}) }) : undefined;
+  const providerFixture = serviceScenario?.providerFixture;
   const model = serviceScenario?.model ?? await startNativeTeamModel({ requireVisibleReply: true });
   let captured: ReturnType<typeof prepareProfile>;
   let physical: NonNullable<ReturnType<typeof captureMainWindowsCustody>>;
   try {
-    captured = prepareProfile(sandbox, broker, selected, model.url, mode);
+    captured = prepareProfile(sandbox, broker, selected, model.url, mode, providerFixture?.configure);
     const original = captureMainWindowsCustody(captured.host);
     assert.ok(original); physical = original;
   } catch (error) { await model.close(); throw error; }
@@ -327,16 +337,22 @@ export async function runNativeRetainedHostGate(
             if (attempted[key] >= 64) attemptsTruncated = true;
             else attempted[key]++;
           }
+          providerFixture?.observeAttempt(call, epoch);
           serviceScenario?.observeAttempt(call, epoch);
           const value = await port.handle(call);
+          await providerFixture?.observeCustody(call, value);
           await serviceScenario?.observeCustody(call, value, epoch);
           if (call.operation in counts) counts[call.operation as keyof typeof counts]++;
           if (value.operation === 'prepare') {
-            assert.equal(witness, undefined, 'One actual ordinary native allocation');
-            // Independent witness retains the original HANDLE while the original root is still suspended.
-            witness = await capturedQueryableWitness(
-              fixture, value.root.pid, value.root.birth, track, events
-            );
+            if (providerFixture) {
+              if (providerFixture.isMember(call)) { assert.equal(witness, undefined); witness = providerFixture.memberWitness(); }
+            } else {
+              assert.equal(witness, undefined, 'One actual ordinary native allocation');
+              // Independent witness retains the original HANDLE while the original root is still suspended.
+              witness = await capturedQueryableWitness(
+                fixture, value.root.pid, value.root.birth, track, events
+              );
+            }
           }
           return value;
         },
@@ -351,13 +367,16 @@ export async function runNativeRetainedHostGate(
     payload,
   });
   let failedRpc: { method: string; code: string; outcome: string; read: Record<string, JsonValue> } | null = null;
-  const rpc = async (method: string, commandId: string, payload: JsonValue) => {
-    const deadline = performance.now() + captured.host.requestTimeoutMs;
+  const rpc = async (method: string, commandId: string, payload: JsonValue, originalDeadline?: number) => {
+    const deadline = originalDeadline ?? performance.now() + captured.host.requestTimeoutMs;
+    if (originalDeadline !== undefined) assert.ok(deadline > performance.now(), 'One original opening budget');
     const result = row(
       await client.request(method, envelope(commandId, payload), {
         control: method === 'runtime.read',
+        ...(originalDeadline === undefined ? {} : { remainingMs: Math.floor(deadline - performance.now()) }),
       })
     );
+    if (originalDeadline !== undefined) assert.ok(performance.now() < deadline, 'Original opening reply is current');
     try { assert.equal(result.ok, true, 'Actual original Host route succeeded'); }
     catch (error) {
       if (!failedRpc) {
@@ -402,15 +421,21 @@ export async function runNativeRetainedHostGate(
       )
     );
     await client.start();
+    const openingDeadline = providerFixture ? performance.now() + captured.host.requestTimeoutMs : undefined;
+    if (providerFixture) { assert.ok(openingDeadline); phase = 'management-prelude'; await providerFixture.prelude(client, openingDeadline); }
     phase = 'native-open';
-    await rpc('runtime.open', 'TEST-original-open', { memberId: 'alice-id' });
+    await rpc('runtime.open', 'TEST-original-open', { memberId: 'alice-id' }, openingDeadline);
     assert.equal(
-      (await rpc('runtime.read', 'TEST-ready-read', { memberId: 'alice-id' })).nativeReady,
+      (await rpc('runtime.read', 'TEST-ready-read', { memberId: 'alice-id' }, openingDeadline)).nativeReady,
       true
     );
+    if (providerFixture) { assert.ok(openingDeadline); assert.equal(await providerFixture.openingComplete(openingDeadline), witness); }
     assert.ok(witness);
     assert.equal(witness.process.exitCode, null);
-    assert.deepEqual(counts, { allocate: 1, prepare: 1, resume: 1, stop: 0, release: 0 });
+    if (providerFixture) {
+      const total = provider === 'codex' ? 6 : 2;
+      assert.deepEqual(counts, { allocate: total, prepare: total, resume: total, stop: total - 1, release: total - 1 });
+    } else assert.deepEqual(counts, { allocate: 1, prepare: 1, resume: 1, stop: 0, release: 0 });
     if (serviceScenario) {
       phase = mode;
       await serviceScenario.run({
@@ -418,13 +443,14 @@ export async function runNativeRetainedHostGate(
         originalHostExit() { assert.ok(hostExited); return hostExited; },
         createSuccessor: () => new CapturedHostClient(captured.host, observedOwner),
         async crashOriginalHost() {
-          assert.equal(mode, 'scoped-services'); assert.ok(hostExited);
+          assert.equal(scopedMode, true); assert.ok(hostExited);
+          const shortRoots = provider === 'codex' ? 6 : provider === 'opencode-v1' ? 1 : 0;
           const originalExit = hostExited;
-          assert.equal(counts.stop, 0); assert.equal(counts.release, 0);
+          assert.equal(counts.stop, shortRoots); assert.equal(counts.release, shortRoots);
           writeFileSync(captured.crash, 'TEST original Host crash\n', { flag: 'wx' });
           await timeout(originalExit, 5000);
           await client.shutdown();
-          assert.equal(counts.stop, 0); assert.equal(counts.release, 0);
+          assert.equal(counts.stop, shortRoots); assert.equal(counts.release, shortRoots);
           unlinkSync(captured.crash); // Only after A exit; B uses the same captured entry/profile bytes.
         },
       });
@@ -509,6 +535,7 @@ export async function runNativeRetainedHostGate(
     originalHandleChecks.afterCleanup = await witness.observe();
     assert.equal(originalHandleChecks.afterCleanup, 'absent');
     assert.equal(await witness.wait(), 0);
+    await providerFixture?.confirmMainCleanup(originalHandleChecks.afterCleanup);
     assert.equal(sentinel.exitCode, null, 'Original unrelated process survives Main cleanup');
     verify();
     passed = true;
@@ -529,6 +556,8 @@ export async function runNativeRetainedHostGate(
     }
     try { await serviceScenario?.drain(); }
     catch (error) { cleanupErrors.push(error); }
+    try { await providerFixture?.drain(); }
+    catch (error) { cleanupErrors.push(error); }
     try {
       if (witness) assert.equal(await witness.wait(), 0);
     } catch (error) {
@@ -548,7 +577,7 @@ export async function runNativeRetainedHostGate(
       receiptPath,
       JSON.stringify(
         {
-          kind: 'TEST_WINDOWS_MAIN_RETAINED_CLAUDE',
+          kind: providerFixture ? 'TEST_WINDOWS_MAIN_RETAINED_PROVIDER' : 'TEST_WINDOWS_MAIN_RETAINED_CLAUDE',
           sourceHead: process.env.EXPECTED_SOURCE_SHA,
           mode,
           platform: 'win32-' + process.arch,
@@ -568,13 +597,14 @@ export async function runNativeRetainedHostGate(
           cleanup,
           modelRequests: model.observations.length,
           modelFailures: model.failures.length,
-          registryQualified: mode === 'scoped-services' ? serviceScenario!.scopedEvidence().dualRegistrations
+          ...(providerFixture ? { retainedProvider: providerFixture.evidence() } : {}),
+          registryQualified: scopedMode ? serviceScenario!.scopedEvidence().dualRegistrations
             : serviceScenario?.evidence().registryQualified ?? false,
-          hostRebindQualified: mode === 'scoped-services' ? serviceScenario!.scopedEvidence().sameMainColdPublicStopQualified
+          hostRebindQualified: scopedMode ? serviceScenario!.scopedEvidence().sameMainColdPublicStopQualified
             : serviceScenario?.evidence().coldPurgeCompleted ?? false,
           ...(mode === 'natural-services' && serviceScenario
             ? { naturalServices: serviceScenario.evidence(), naturalPhase: serviceScenario.phase() } : {}),
-          ...(mode === 'scoped-services' && serviceScenario
+          ...(scopedMode && serviceScenario
             ? { scopedServices: serviceScenario.scopedEvidence(), scopedPhase: serviceScenario.phase() } : {}),
           sdkColdConversationQualified: false,
           desktopQualified: false,
@@ -597,7 +627,8 @@ export async function runNativeRetainedHostGate(
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [broker, fixture, selection, sha256, receipt, mode, flag, sandbox] = process.argv.slice(2);
   assert.ok(broker && fixture && selection && sha256 && receipt && sandbox);
-  assert.ok(mode === 'graceful' || mode === 'crash' || mode === 'natural-services' || mode === 'scoped-services');
+  assert.ok(mode === 'graceful' || mode === 'crash' || mode === 'natural-services' || mode === 'scoped-services' ||
+    mode === 'codex-scoped-services' || mode === 'opencode-v1-scoped-services');
   assert.equal(flag, '--controller-sandbox');
   await runNativeRetainedHostGate(
     realpathSync(broker),

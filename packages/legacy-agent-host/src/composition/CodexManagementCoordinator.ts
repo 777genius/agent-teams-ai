@@ -24,7 +24,8 @@ export class CodexManagementCoordinator {
 
   constructor(
     profiles: CodexManagementProfile[],
-    private readonly assertWriter: () => void
+    private readonly assertWriter: () => void,
+    private readonly createProcess?: ConstructorParameters<typeof CodexManagementHost>[2]
   ) {
     this.profiles = new Map(
       structuredClone(profiles).map((profile) => [profile.profileId, profile])
@@ -239,7 +240,7 @@ export class CodexManagementCoordinator {
       } catch {
         return false;
       }
-    });
+    }, this.createProcess);
     this.live.add(host);
     try {
       const result = await action(host);
