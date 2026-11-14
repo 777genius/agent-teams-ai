@@ -67,6 +67,60 @@ describe('Codex runtime update UI', () => {
     });
 
     expect(onInstall).toHaveBeenCalledTimes(2);
+    const pending: CodexRuntimeStatus = {
+      ...staleStatus,
+      binaryPath: undefined,
+      source: 'captured-host',
+      sourceRevision: 'a'.repeat(64),
+      state: 'installing',
+      progress: {
+        phase: 'installing',
+        percent: 100,
+        detail: 'Codex package verified; confirming the runtime selection.',
+      },
+    };
+    const render = async (status: CodexRuntimeStatus, loading = false) =>
+      act(async () => {
+        root.render(
+          <CodexRuntimeUpdateDialog
+            open
+            onOpenChange={() => undefined}
+            status={status}
+            loading={loading}
+            onInstall={onInstall}
+          />
+        );
+      });
+    await render(pending, true);
+    expect(document.body.textContent).toContain('confirming the runtime selection');
+    expect(document.body.textContent).not.toContain('Update ready');
+    const waitingButton = Array.from(
+      document.body.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')
+    ).find((button) => button.disabled && button.textContent?.includes('Updating'));
+    expect(waitingButton).toBeDefined();
+    await act(async () => {
+      waitingButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(onInstall).toHaveBeenCalledTimes(2);
+    await render({
+      ...pending,
+      state: 'failed',
+      error: 'TEST original source publication held',
+      progress: { phase: 'failed', detail: 'TEST original source publication held' },
+    });
+    expect(document.body.textContent).toContain('TEST original source publication held');
+    expect(document.body.textContent).not.toContain('Update ready');
+    await render({
+      ...pending,
+      state: 'ready',
+      version: '0.144.1',
+      updateAvailable: false,
+      sourceRevision: 'b'.repeat(64),
+      progress: { phase: 'ready', percent: 100, detail: 'Codex is ready for new launches.' },
+    });
+    expect(document.body.textContent).toContain('Update ready');
+    expect(document.body.textContent).toContain('Codex is ready for new launches.');
+    expect(onInstall).toHaveBeenCalledTimes(2);
     await act(async () => root.unmount());
   });
 

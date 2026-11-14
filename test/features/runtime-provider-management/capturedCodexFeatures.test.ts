@@ -6,18 +6,22 @@ import { createCapturedCodexFeatures } from '../../../src/features/runtime-provi
 
 import type { CapturedProviderManagement } from '../../../src/features/agent-backend/main';
 
-function fixture() {
+function fixture(suffix = '') {
   let current = true;
   const value = {
-    profileId: 'TEST-codex',
-    configRevision: 'TEST-config',
+    profileId: `TEST-codex${suffix}`,
+    configRevision: `TEST-config${suffix}`,
     account: null,
     requiresOpenaiAuth: true,
-    configuration: { model: 'TEST-model', modelProvider: 'TEST-local', reasoningEffort: 'high' },
+    configuration: {
+      model: `TEST-model${suffix}`,
+      modelProvider: 'TEST-local',
+      reasoningEffort: 'high',
+    },
     models: [
       {
-        id: 'TEST-model',
-        model: 'TEST-model',
+        id: `TEST-model${suffix}`,
+        model: `TEST-model${suffix}`,
         displayName: 'TEST model',
         description: '',
         hidden: false,
@@ -31,9 +35,9 @@ function fixture() {
   };
   const request = vi.fn(async () => ({ ok: true, value }));
   const target: CapturedProviderManagement = {
-    targetId: 'a'.repeat(64),
-    profileId: 'TEST-codex',
-    configRevision: 'TEST-config',
+    targetId: (suffix === 'B' ? 'b' : 'a').repeat(64),
+    profileId: `TEST-codex${suffix}`,
+    configRevision: `TEST-config${suffix}`,
     isCurrent: () => current,
     request,
   };
@@ -41,6 +45,7 @@ function fixture() {
   return {
     ...createCapturedCodexFeatures(capture, undefined, () => 'chatgpt'),
     value,
+    target,
     request,
     capture,
     stale: () => {
@@ -78,6 +83,55 @@ it('reads captured account/catalog, strips no policy into auth/launch, and refus
     'captured Codex profile'
   );
   expect(f.request).toHaveBeenCalledTimes(calls);
+
+  const a = fixture('A'),
+    b = fixture('B');
+  Object.assign(a.value, { account: { type: 'chatgpt', email: 'TEST-A', planType: 'plus' } });
+  Object.assign(b.value, { account: { type: 'chatgpt', email: 'TEST-B', planType: 'plus' } });
+  let release: () => void = () => {
+    throw new Error('TEST pending original read missing');
+  };
+  let entered: () => void = () => {
+    throw new Error('TEST pending original request missing');
+  };
+  const reading = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const barrier = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  a.request.mockImplementation(async () => {
+    entered();
+    await barrier;
+    return { ok: true, value: a.value };
+  });
+  let current = a.target;
+  const selected = createCapturedCodexFeatures(
+    async () => current,
+    undefined,
+    () => 'chatgpt'
+  );
+  const originalRead = selected.accountFeature.getSnapshot();
+  try {
+    await reading;
+    current = b.target;
+    const fresh = await selected.modelCatalogFeature.getCatalog();
+    release();
+    const retained = await originalRead;
+    expect(retained.managedAccount?.email).toBe('TEST-A');
+    expect(fresh.models[0]?.id).toBe('TEST-modelB');
+    expect(a.request).toHaveBeenCalledExactlyOnceWith('codex.metadata', { includeModels: false });
+    expect(b.request).toHaveBeenCalledExactlyOnceWith('codex.metadata', { includeModels: true });
+    expect(selected.accountFeature.getCachedSnapshot()).toBeNull();
+    expect(JSON.stringify({ retained, fresh })).not.toMatch(
+      /targetId|configRevision|nativeExecutableDigest|TEST-codex/
+    );
+  } finally {
+    release();
+    await originalRead.catch(() => undefined);
+    await selected.accountFeature.dispose();
+    await selected.modelCatalogFeature.dispose();
+  }
 });
 
 it('cannot publish foreign, stale or secret-bearing metadata or retained global snapshots', async () => {
