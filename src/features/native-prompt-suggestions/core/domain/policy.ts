@@ -29,6 +29,11 @@ function validSuggestion(candidate: NativeNextPromptCandidate): boolean {
     typeof candidate.completedTurnRef === 'string' &&
     candidate.completedTurnRef.length > 0 &&
     candidate.completedTurnRef.length <= 256 &&
+    typeof candidate.messageId === 'string' && candidate.messageId.length > 0 &&
+    candidate.messageId.length <= 256 &&
+    typeof candidate.memberName === 'string' && candidate.memberName.length > 0 &&
+    candidate.memberName.length <= 128 &&
+    candidate.conversationRef === `direct:${candidate.memberName.trim().toLowerCase()}` &&
     typeof candidate.text === 'string' &&
     candidate.text.trim().length > 0 &&
     !INVALID_CHARACTERS.test(candidate.text) &&
@@ -60,6 +65,7 @@ export function canDisplayNativeNextPrompt(
   }
 
   if (
+    candidate.messageId !== context.latestDirectMessageId ||
     candidate.operationRef !== context.latestExecutedOperationRef ||
     candidate.completedTurnRef !== context.latestCompletedTurnRef
   ) {
