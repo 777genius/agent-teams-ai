@@ -555,6 +555,19 @@ describe('TeamModelSelector disabled Codex models', () => {
           statusCheckOutcome: 'authoritative',
           models: ['sonnet'],
           capabilities: { teamLaunch: true, oneShot: true },
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'anthropic',
+            source: 'static-fallback',
+            status: 'degraded',
+            fetchedAt: '2026-10-20T00:00:00.000Z',
+            staleAt: '2099-10-20T00:00:00.000Z',
+            defaultModelId: 'sonnet',
+            defaultLaunchModel: 'sonnet',
+            models: [{ id: 'sonnet', launchModel: 'sonnet', displayName: 'Sonnet' }],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
         },
       ],
     };
@@ -579,6 +592,11 @@ describe('TeamModelSelector disabled Codex models', () => {
         ([providerId, options]) => providerId === 'anthropic' && options?.projectPath
       )
     ).toEqual([]);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('anthropic', {
+      silent: false,
+      checkReason: 'launch_preflight',
+    });
     expect(
       host.querySelector('[data-testid="team-model-selector-model-option"][aria-pressed="true"]')
         ?.textContent
@@ -670,6 +688,35 @@ describe('TeamModelSelector disabled Codex models', () => {
       });
       expect(host.textContent).toContain('Defaultproject-b/model');
       expect(host.textContent).not.toContain('project-a/model');
+      expect(onValueChange).not.toHaveBeenCalled();
+
+      const scopedFallback = status('project-b/model');
+      storeState.cliProviderStatusByScope[
+        getCliProviderStatusScopeKey('anthropic', '/tmp/project-b')
+      ] = { ...scopedFallback, modelCatalog: {
+        ...scopedFallback.modelCatalog, source: 'static-fallback', status: 'degraded',
+      } };
+      storeState.cliProviderStatusScopeRevision++;
+      await act(async () => {
+        render('/tmp/project-b');
+        await Promise.resolve();
+      });
+      expect(storeState.fetchCliProviderStatus.mock.calls.map(([requestedProvider, options]) =>
+        [requestedProvider, options?.projectPath ?? null])).toEqual([
+        ['anthropic', '/tmp/project-a'],
+        ['anthropic', '/tmp/project-b'],
+        ['anthropic', '/tmp/project-b'],
+      ]);
+      expect(requests.has('')).toBe(false);
+      storeState.cliProviderStatusByScope[
+        getCliProviderStatusScopeKey('anthropic', '/tmp/project-b')
+      ] = status('project-b/model');
+      await resolveDeferred(requests.get('/tmp/project-b')!, undefined);
+      await act(async () => {
+        render('/tmp/project-b');
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('Defaultproject-b/model');
       expect(onValueChange).not.toHaveBeenCalled();
       await act(async () => root.unmount());
     }
