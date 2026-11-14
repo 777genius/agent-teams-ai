@@ -63,6 +63,7 @@ import {
   attachRendererDiagnostics,
   readRendererFailureSnapshot,
   runDesktopTeamUiSmoke,
+  waitForDesktopMainUiReadiness,
 } from './desktop-team-ui-smoke.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import {
@@ -358,6 +359,14 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         remainingMs: startupBudgetMs - (performance.now() - startupStarted),
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
       });
+    else if (mode === 'codex-login-ui') {
+      const startupEvidence: Record<string, unknown> = {};
+      evidence.codexLoginStartup = startupEvidence;
+      await waitForDesktopMainUiReadiness(cdp, String(target.url), startupEvidence, {
+        deadline: startupStarted + startupBudgetMs,
+        assertOwnedRenderer: () => assertOwnedCdpListener(group),
+      });
+    }
     if (questionUiMode)
       await waitDesktopCodexQuestionRenderer(cdp, { url: String(target.url),
         remainingStartupMs: startupBudgetMs - (performance.now() - startupStarted),
