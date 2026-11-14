@@ -132,8 +132,13 @@ export function createOpenCodeLocalModelReadiness(
   if (selectedUrl && network(selectedUrl.hostname).privateNetwork && !policyOrigin?.privateNetworkApproved) held();
   const localCandidate = Boolean(selectedUrl && network(selectedUrl.hostname).loopback &&
     !hasConfiguredKey);
-  const key = localCandidate
+  const key = localCandidate || profile.nativeGeneration === 'v2'
     ? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture() : undefined;
+  const baseline = profile.nativeGeneration === 'v2' && profile.nativeModel?.providerId === input.providerId
+    ? profile.embedded?.providerConfiguration : undefined;
+  const baselineSettings = object(baseline?.settings) ? baseline.settings : undefined;
+  const baselineKey = typeof baselineSettings?.apiKey === 'string' && baselineSettings.apiKey
+    ? baselineSettings.apiKey : undefined;
   // V2 uses the captured credential; V1 observes the native SDK's resolved key below.
   let applicable = localCandidate && (profile.nativeGeneration !== 'v2' || key?.present !== true);
   const presetId = policyOrigin?.policy?.preset;
@@ -163,8 +168,20 @@ export function createOpenCodeLocalModelReadiness(
       if (next.npm !== '@ai-sdk/openai-compatible' || !actualUrl || !selectedUrl ||
           actualUrl.toString() !== selectedUrl.toString()) held();
     }
-    if (policyOrigin?.policy?.hasConfiguredApiKey &&
-        (typeof nextOptions.apiKey !== 'string' || !nextOptions.apiKey)) held();
+    const v2 = profile.nativeGeneration === 'v2';
+    const baselineKeyMatched = v2 && key?.present === false && baselineKey !== undefined &&
+      nextOptions.apiKey === baselineKey;
+    if (v2) {
+      const observed = Object.hasOwn(next, 'credentialScopeDigest');
+      if (key?.present) {
+        if (!observed || typeof next.credentialScopeDigest !== 'string' ||
+            !/^[a-f0-9]{64}$/.test(next.credentialScopeDigest) || next.credentialScopeDigest !== key.digest) held();
+      } else if (observed || typeof nextOptions.apiKey === 'string' && nextOptions.apiKey && !baselineKeyMatched) held();
+    }
+    if (policyOrigin?.policy?.hasConfiguredApiKey && (v2
+      ? !(key?.present || baselineKeyMatched)
+      : typeof nextOptions.apiKey !== 'string' || !nextOptions.apiKey)) held();
+    if (!current()) held();
     const digest = managementDigest(next);
     if (effectiveDigest !== undefined && digest !== effectiveDigest) held();
     if (typeof nextOptions.apiKey === 'string' && nextOptions.apiKey.length > 0) {

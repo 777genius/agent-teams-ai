@@ -15,6 +15,7 @@ import type { LocalModelReadinessOrigin, ReadinessSourceReference } from '../dis
 import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
 import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
 import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/OpenCodeV2SessionCredential.js';
+import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
 import type { OpenCodeManagementProfile } from '../dist/management/profile.js';
 import {
   mapOpenCodeV2SelectedModel,
@@ -401,6 +402,99 @@ test('original Main source, exact approval and whole-command commitment survive 
   await assert.rejects(rejected.run(new AbortController().signal, deadline), { code: 'held' });
   assert.equal(modelInputs, 0);
   await rejected.close(deadline);
+  // Real original config/auth captures; only the ordinary adapter observation is synthetic.
+  for (const mode of ['credential', 'missing-digest', 'null-digest', 'malformed-digest',
+    'foreign-digest', 'auth-replaced', 'owner-revoked', 'wrong-url', 'unapproved-url',
+    'authless', 'unexpected-digest', 'baseline', 'baseline-wrong-key',
+    'baseline-foreign-provider', 'baseline-unbound-key'] as const) {
+    const v = fixture(t), data = join(v.root, 'data'), nativeAuth = join(data, 'opencode/auth.json');
+    mkdirSync(data, { mode: 0o700 });
+    const baseline = mode.startsWith('baseline'), absent = baseline || mode === 'authless' || mode === 'unexpected-digest';
+    const keyedPolicy = mode !== 'authless' && mode !== 'unexpected-digest';
+    const url = keyedPolicy ? baseUrl : 'https://api.example.test/v1';
+    const originalKey = 'TEST-original-V2-key';
+    const nativeConfig = join(v.project, 'opencode.json'), approvalPath = join(v.root, 'approvals.json');
+    v.write(nativeConfig, { provider: { [providerId]: { npm: '@ai-sdk/openai-compatible',
+      options: { baseURL: url, ...(keyedPolicy ? { apiKey: originalKey } : {}) },
+    } } });
+    v.write(nativeAuth, { 'TEST-foreign': { type: 'api', key: 'TEST-unselected-key' },
+      ...(!absent ? { [providerId]: { type: 'api', key: originalKey } } : {}) });
+    const approved = mode === 'unapproved-url' || !keyedPolicy ? [] : [
+      { configPath: nativeConfig, providerId, baseUrl: url },
+    ];
+    v.write(approvalPath, { schemaVersion: 1, approvals: approved });
+    const originalScope = (global: boolean) => {
+      const paths = global ? ['opencode.json', 'opencode.jsonc'].map(name => join(v.home, '.config/opencode', name))
+        : ['opencode.json', 'opencode.jsonc', '.opencode/opencode.json', '.opencode/opencode.jsonc']
+          .map(name => join(v.project, name));
+      return { selectedPath: paths[0]!, invalid: false,
+        sources: paths.map(path => readinessReference(path, global ? v.home : v.project)),
+        providers: global ? [] : [{ providerId, baseUrl: url, preset: 'custom' as const, hasConfiguredApiKey: keyedPolicy }] };
+    };
+    const keyOrigin: LocalModelReadinessOrigin = { ...origin,
+      selectionDigest: managementDigest({ preparationId: 'TEST-keyed-preparation', workspaces: [v.project] }),
+      workspaces: [{ path: v.project, project: originalScope(false), global: originalScope(true) }],
+      approval: { source: readinessReference(approvalPath, v.root), approved },
+    };
+    let keyCurrent = true;
+    const keyProfile: OpenCodeManagementProfile = { ...profile, ...v.input,
+      environment: { ...v.input.environment, XDG_DATA_HOME: data },
+      nativeGeneration: 'v2', protocolRevision: '2.1.4', nativeModel: {
+        providerId: mode === 'baseline-foreign-provider' ? 'TEST-other-provider' : providerId, modelId: 'TEST-model',
+      }, embedded: { version: '2.1.4', directory: v.root, manifestSha256: 'b'.repeat(64),
+        platform: process.platform === 'win32' ? 'win32' : process.platform === 'darwin' ? 'darwin' : 'linux',
+        arch: process.arch === 'arm64' ? 'arm64' : 'x64', externalDirectory: 'deny',
+        ...(baseline && mode !== 'baseline-unbound-key'
+          ? { providerConfiguration: { package: 'aisdk:@ai-sdk/openai-compatible', settings: { baseURL: url, apiKey: originalKey } } } : {}),
+      },
+    };
+    keyProfile.embedded!.configurationSource = captureOpenCodeConfigurationSource(keyProfile, undefined,
+      () => keyCurrent, baseline ? 'global' : 'project').reference;
+    const capturedKey = new OpenCodeV2CredentialScope(keyProfile, providerId, () => keyCurrent).capture();
+    assert.equal(capturedKey.present, !absent);
+    let runs = 0, inputs = 0, closes = 0, metadataReads = 0, challenges = 0;
+    const ordinary = { ordinary: (observe: (provider: unknown) => boolean) => ({ timeoutMs: 1000,
+      run: async () => {
+        runs++;
+        if (mode === 'auth-replaced') v.write(nativeAuth, { [providerId]: { type: 'api', key: 'TEST-replaced-key' } });
+        if (mode === 'owner-revoked') keyCurrent = false;
+        const digest = mode === 'null-digest' ? null : mode === 'malformed-digest' ? 'TEST-not-a-digest'
+          : mode === 'foreign-digest' ? 'f'.repeat(64) : capturedKey.digest;
+        observe({ npm: '@ai-sdk/openai-compatible', options: {
+          baseURL: mode === 'wrong-url' ? 'http://192.168.1.21:8080/v1' : url,
+          ...(baseline ? { apiKey: mode === 'baseline-wrong-key' ? 'TEST-unowned-key' : originalKey } : {}),
+        }, ...(!baseline && mode !== 'authless' && mode !== 'missing-digest' ? { credentialScopeDigest: digest } : {}) });
+        inputs++; return true;
+      }, close: async () => { closes++; return true; },
+    }), coordination: () => { challenges++; throw Error('TEST keyed/remote route cannot coordinate'); },
+    fetchImpl: async () => { metadataReads++; throw Error('TEST keyed/remote route cannot inspect local metadata'); } };
+    const prepare = () => createOpenCodeLocalModelReadiness(keyProfile,
+      { ...probeInput, profileId: keyProfile.profileId, configRevision: keyProfile.configRevision },
+      () => keyCurrent, ordinary, keyOrigin);
+    if (mode === 'unapproved-url') {
+      assert.throws(prepare, { code: 'held' });
+      assert.equal(runs, 0); assert.equal(inputs, 0); assert.equal(closes, 0);
+      continue;
+    }
+    const probe = prepare(), originalDeadline = Date.now() + 900;
+    const accepted = mode === 'credential' || mode === 'authless' || mode === 'baseline';
+    try {
+      if (accepted) {
+        assert.equal(await probe.run(new AbortController().signal, originalDeadline), true);
+        assert.equal(probe.readiness?.()?.coordination, 'not-applicable');
+        assert.equal(probe.readiness?.()?.accountDigest, managementDigest({ binding: keyProfile.accountBinding,
+          key: capturedKey.digest, configuredKey: baseline || !keyedPolicy ? null : originalKey }));
+        const serialized = JSON.stringify(probe.readiness?.());
+        assert.equal(serialized.includes(originalKey), false);
+        assert.equal(serialized.includes('credentialScopeDigest'), false);
+      } else await assert.rejects(probe.run(new AbortController().signal, originalDeadline), { code: 'held' });
+      assert.equal(runs, 1); assert.equal(inputs, accepted ? 1 : 0);
+      assert.equal(metadataReads, 0); assert.equal(challenges, 0);
+    } finally {
+      assert.equal(await probe.close(originalDeadline), true);
+      assert.equal(closes, 1, 'the same original adapter closes after success or refusal');
+    }
+  }
   const foreign = { ...tuple, configPath: join(f.home, '.config', 'opencode', 'opencode.json') };
   f.write(approvals, { schemaVersion: 1, approvals: [foreign] });
   assert.equal(captured.isCurrent(), false, 'approval-source replacement invalidates the original reference');
