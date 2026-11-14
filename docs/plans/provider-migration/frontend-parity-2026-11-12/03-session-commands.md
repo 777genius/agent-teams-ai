@@ -1840,3 +1840,22 @@ When that exact card is collapsed, use the existing clickExpression and its orig
 ### Review 3 — existing gate
 
 Root publishes this plan before source. Peer review checks the scoped selector, actual-state decision, single original click and unchanged native proof. No additional unit suite or product renderer change is needed; the existing compact ActivityItem test already checks its original toggle contract. Existing script types and the same original Create/native-commands Desktop journey must pass on the coherent new head. This is a source-supported proof correction; only actual E2E can establish that it resolves the observed visibility failure.
+
+
+## R24 — expand the original long /cost body before the unchanged visibility proof
+
+### Review 1 — original retained UI evidence
+
+Parent0543d437695318f0157e6d600d76abdce5c51e8e Main43527759884/job132237640666 completes the first native Create journey, then the native commands journey fails at its first /cost visibility proof. Original artifact14086973812 was downloaded and its ZIP verified (1338452 bytes; SHA256 7d3359969980f0f713d7b65eef6a01dcac8ca7f1d2e8631309e901398a2fd752). The failing receipt has SHA256 de25f73175db40d36e0d597d2f05231b8ed0b224b9095704c1382758d42d5aa7; its original ui-failure.png has SHA256 948ff65fd6a6be9a6a002099ccc0bfe903cb7229c439fe5fd7b5b9b5f917516b. The complete receipt and screenshot, rather than the cleanup error, are now available. The native reply, exact command row, no-model-request check and outer-card expansion passed. The screenshot visibly retains a faded body and its own Show more control; subsequent wheel observations oscillate while that inner body remains clipped.
+
+ActivityItem.tsx764c3dfc6e32ea6f9063797634922f92e3847b7e renders its expanded message body through ExpandableContent.tsxb18965e69e756ed89decafb5825bbfa6009e99cf. That original component has separate local expansion state, clips long content with maxHeight/overflow:hidden and a mask, and exposes ordinary Show more/Show less buttons. R23's outer data-expanded therefore does not establish this inner state. This is an omitted original user action in the TEST journey; the product behavior stays unchanged.
+
+### Review 2 — one exact original control, no second reveal loop
+
+Only scripts/legacy-agent-host/desktop-native-commands-ui-proof.ts changes, from common preimage c7e2a1a0ccbd9b81fac5eeffc990c50c55467f0b. After the existing exact commandId row and outer-card expansion checks, read the Show more button count inside that same uniquely matched native cost card. Require zero or one, never choose an arbitrary button. When it is one, use the existing clickExpression to resolve that card's original enabled button, require its visible geometry and actual center hit, and click it once. Keep the target bound to the same card and Show more state throughout the existing stable-target reads. Then the original waitRead must see no Show more and exactly one Show less in that same card. If there is no Show more, perform no click and continue to the existing complete reply geometry proof.
+
+Do not add a scroll loop, new timeout, retry, fallback to text presence, CSS/DOM/React mutation, renderer capability or synthetic event. The original revealDesktopReply remains byte-identical, including all clipped ancestors, full normalized native text, exact message identity, every fragment/hit requirement and its original12 observation/wheel attempts with150ms intervals. Unavailable or ambiguous controls still fail through the existing bounds. The additional click is solely the real original inner expansion control; it does not replay Send, /cost, /compact, a tool, model inference or any business mutation.
+
+### Review 3 — preserved acceptance and bounded checks
+
+Preserve both original /cost outputs, the single /compact, native request/input counts, input-operation-message joins, canonical command output IDs, subsequent commands/review, Stop/cold readback and strict cleanup. Root and a peer review this one-file delta against the original component and retained screenshot. Existing script types and the normal same native commands Desktop journey are required; no added unit suite or diagnostic-only native run. The actual UI gate, not this source-supported explanation, determines whether the failure is resolved. Publish this plan before source and push each commit immediately; no main merge.
