@@ -157,3 +157,45 @@ test('foreign native provider/session, wrong terminal and detached owner never p
   y.source.offer(candidate);
   assert.equal(y.notices.length, 0);
 });
+
+test('private captured Runtime proof refuses substituted operation, revoked custody or executed successor', () => {
+  const x = harness();
+  x.terminal();
+  const record = {
+    ...x.snapshot.record,
+    hostIncarnation: 'TEST-host-incarnation',
+    custody: 'owned',
+  };
+  const projected = {
+    memberId: x.binding.memberId,
+    generation: x.binding.generation,
+    phase: 'allocated', custody: 'owned', sealed: false,
+    nativeReady: true, attached: true,
+  };
+  const matches = (inputId = candidate.inputId, operationRef = candidate.operationRef) =>
+    checkCapturedPromptOperation({
+      entry: x.entry,
+      record: record as unknown as NonNullable<Parameters<typeof checkCapturedPromptOperation>[0]['record']>,
+      projection: projected,
+      hostIncarnation: 'TEST-host-incarnation',
+      proof: { inputId, operationRef },
+    });
+  assert.equal(matches(), true, 'only a current, completed original human direct operation is fresh');
+  assert.equal(matches(candidate.inputId, 'TEST-other-operation'), false, 'an operation cannot be substituted');
+  assert.equal(matches('TEST-other-input'), false, 'an unrelated original input cannot be substituted');
+  record.sessionRef = 'TEST-other-session';
+  assert.equal(matches(), false, 'native Host session custody must still match the captured profile');
+  record.sessionRef = candidate.sessionRef;
+  record.hostIncarnation = 'TEST-other-host';
+  assert.equal(matches(), false, 'a restarted Host cannot validate an old operation');
+  record.hostIncarnation = 'TEST-host-incarnation';
+  x.setHuman(false);
+  assert.equal(matches(), false, 'revoked canonical human DM provenance fails closed');
+  x.setHuman(true);
+  x.next('admitted');
+  assert.equal(matches(), true, 'never-executed queue does not supersede original native turn');
+  x.next('claimed');
+  assert.equal(matches(), false, 'a newer executed native input revokes the earlier candidate');
+  projected.nativeReady = false;
+  assert.equal(matches(), false, 'a non-ready public projection never vouches for private custody');
+});
