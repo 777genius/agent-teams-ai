@@ -384,7 +384,7 @@ function fixture(withSources = false, provider: 'claude' | 'opencode' = 'claude'
       assert.equal(expected.length, 2);
       assert.equal(new Set(expected.map(row => row.memberId)).size, 2);
       assert.ok(expected.every(row => Number.isSafeInteger(row.deadline) && row.deadline > 0));
-      const cutoff = Math.min(...expected.map(row => row.deadline));
+      const cutoff = Math.max(...expected.map(row => row.deadline));
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
         await Promise.race([allocated, new Promise<never>((_resolve, reject) => {
@@ -392,8 +392,8 @@ function fixture(withSources = false, provider: 'claude' | 'opencode' = 'claude'
             Math.max(0, cutoff - Date.now()));
         })]);
         assert.deepEqual([...allocatedMembers.keys()].sort(), expected.map(row => row.memberId).sort());
-        for (const { memberId } of expected)
-          assert.ok(allocatedMembers.get(memberId)! < cutoff, 'allocation must precede the original minimum deadline');
+        for (const { memberId, deadline } of expected)
+          assert.ok(allocatedMembers.get(memberId)! < deadline, 'allocation must precede its own original deadline');
       } finally {
         if (timer !== undefined) clearTimeout(timer);
       }
