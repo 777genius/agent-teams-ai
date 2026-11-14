@@ -364,6 +364,20 @@ export async function attachRendererDiagnostics(
   for (const domain of ['Log', 'Network']) await send(`${domain}.enable`);
   // Document readiness precedes Main's mandatory Host backup/reconciliation fence.
   // Keep early diagnostics active while waiting; discovery must not spend its 30s CDP bound on that fence.
+  await waitForDesktopMainUiReadiness(cdp, rendererUrl, startupEvidence, {
+    deadline,
+    assertOwnedRenderer: () => startup.assertOwnedRenderer(),
+  });
+}
+
+/** Original Main/UI precondition under the caller's captured monotonic cutoff. */
+export async function waitForDesktopMainUiReadiness(
+  cdp: UiCdpPort,
+  rendererUrl: string,
+  startupEvidence: Record<string, unknown>,
+  startup: { deadline: number; assertOwnedRenderer(): void }
+): Promise<void> {
+  const { deadline } = startup;
   const appReadiness: Record<string, unknown> = { status: 'WAITING', observations: [] };
   startupEvidence.appReadiness = appReadiness;
   const observations = appReadiness.observations as unknown[];
