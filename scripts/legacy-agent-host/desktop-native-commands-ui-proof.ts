@@ -295,6 +295,21 @@ export async function runDesktopNativeCommandsUiProof(
       await ui.waitRead(cardRead('return card.getAttribute("data-expanded")==="true";'),
         'original native cost report card expanded');
     }
+    const moreButtons = '[...card.querySelectorAll("button")].filter(e=>e.textContent.trim()==="Show more")';
+    options.assertOwnedRenderer();
+    const moreCount = await cdp.evaluate(cardRead(`return ${moreButtons}.length;`));
+    assert.ok(moreCount === 0 || moreCount === 1, 'one original inner cost expansion control at most');
+    if (moreCount === 1) {
+      await ui.clickExpression(cardRead(`
+        if(card.getAttribute('data-expanded')!=='true')return null;
+        const buttons=${moreButtons};if(buttons.length!==1||buttons[0].disabled)return null;
+        const e=buttons[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);
+        return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y,tag:e.tagName}:null;
+      `), 'expand original native cost body once');
+      await ui.waitRead(cardRead(`return card.getAttribute('data-expanded')==='true'&&
+        ${moreButtons}.length===0&&[...card.querySelectorAll('button')].filter(e=>e.textContent.trim()==='Show less').length===1;`),
+        'original native cost body expanded');
+    }
     await revealDesktopReply(cdp, display, {
       messageId: commandId,
       assertOwnedRenderer: options.assertOwnedRenderer,
