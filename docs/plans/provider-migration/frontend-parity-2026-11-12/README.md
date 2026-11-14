@@ -257,3 +257,78 @@ POSIX source-identity P09 §75 остаётся отдельным открыт�
 диагностический manifest `1509c58bc565e6c50f33183361f10726e4ad819b`
 и raw log `6792a765ec94c88a6088137c11bf69357616d73d`;
 исправление CodeQL/resolver `84e69cf1b3955399348fe433192e5dc5d5627298`.
+
+## Фактическая приёмка Batch5 — обновление 14 ноября 2026
+
+Предыдущие разделы сохранены как история. Этот статус разделяет результаты
+исходных запусков Batch5 и последующие изменения в repair-ветках.
+На срезе CI 20:28:35 UTC parent Full qualification (job132567214491) завершился
+FAIL; parent packaged aggregate и native CI aggregate ещё ожидали выполнения.
+Общий итог приёмки остаётся открытым.
+
+### Подтверждённые исходные сценарии
+
+- Все 15 original packaged V2 tuple receipts прошли свой исходный Host-сценарий:
+  каждый — шесть native steps, 11 model requests, два Host exit0 и cleanup. Это
+  отдельная приёмка packaged Host; Windows Retry/Processes UI, model-readiness
+  coordination, vendor authentication и release этими receipts не подтверждаются.
+- Codex Login на Linux x64 прошёл browser/device-code pending, copy, повторное
+  открытие того же authorization, cancel и физический cleanup через исходные
+  Settings/preload/Main/Host/native app-server. Аутентифицированный vendor login
+  и другие платформы остаются за пределами этого результата.
+- Два исходных native scheduled-теста прошли: Claude — пять model requests,
+  Codex — три; finite success/limits/cancel/cold/same-intent и Codex lost-application
+  reply. Desktop Schedule остаётся отдельным skipped follow-on после Commands UI.
+- Retained V1 и Host V2 coexistence прошёл на Linux x64 в dev Electron:
+  оба исходных UI Stop сохраняют соседнего владельца, холодный старт читает обе
+  истории без replay, cleanup успешен. Записаны 12 model requests и пять business
+  markers. В том же job последующий V1 Install/PATH сценарий завершился INCOMPLETE,
+  V2 source-selection был skipped; release/vendor qualification не заявлена.
+- CodeQL610 review thread теперь resolved/outdated by github-advanced-security[bot].
+  Ручного dismiss/resolve не было; отдельное состояние security alert не установлено.
+
+### Опубликованные исправления и открытые причины
+
+В repair-ветках опубликованы R26 (Commands compaction correlation), P05 §33
+(V2 product/Runtime revision join), P06 §§31–32 (donor Codex absence и V1
+maintenance), P09 §106 (два Settings selectors) и native-only P08 §§19–23
+(Stop settlement, TEST profile limit, Windows private files и два TEST mocks).
+Их source/controlled проверки не заменяют исходные текущие Desktop/native gates.
+
+Пять семейств пока получили только диагностику: P09 §105 — первый сбой Codex
+A→B; §107 — сохранение фактического invalid/rejected Main wire для Claude Resume;
+§108 — packaged Windows access violation; §109 — Linux credential close;
+P06 §33 — лишний status/catalogue вызов stopped import. Причины этих отказов
+остаются открытыми; исходные бюджеты и условия PASS сохранены.
+
+Полный исходный serialized Host runtime suite с §110 завершился
+1247 total / 1245 PASS / 0 FAIL / 2 existing skips за 338993.528 ms.
+Перед ним focused-прогон дал 43 PASS / 1 FAIL: исходный Create lead был
+зафиксирован на 81 ms позже собственного deadline. Оба результата сохранены;
+intermittent deadline не объявлен исправленным. §110 опубликован в трёх repair-ветках.
+Стандартные build, test-types, fast lint и source-size guard прошли.
+
+Оба parent Windows broker jobs завершились exit75 в старом debug-service пути.
+Соответствующая native-child реализация уже прошла исходные ранние service gates;
+последующие Windows profile/UI failures учитываются отдельно. Оба child PR1187
+и PR1188 ещё должны пройти требуемую приёмку и интегрироваться в parity, затем
+parity — в Stage1 с проверкой итогового состава. Repair refs не означают слияние.
+
+P09 §75 остаётся открытым для POSIX custom executable с заранее открытым
+некооперативным writable FD: подтверждённого общего решения, сохраняющего
+original path/$0/argv/env/cwd/resources и valid #! scripts, не установлено.
+Действующие source guards и counterexample oracle сохранены; остальные E2E идут.
+
+### Проверяемые записи
+
+Карта 25 завершившихся failures на 20:17:09 UTC:
+`574e0d266060b8fb5ece8405cde205ebf4ce3b62` (поздний parent aggregate указан выше).
+Packaged V2: `22be288cf747c28b12f54cb12dd58793eae2463a`,
+`4b9d2c6a1025d247f5284e972e4bebc862210bd6`, `b1aded232baadf88e3c9231d7a34df0767c42db1`,
+`cccadb9c360b40ee788ecca8eb0589ca8f3af0ed`, `99a79b55ed181faddd8c2ec43ab227786ec8f53d`.
+Codex Login: `6acf32e640d267444a577c6eec3de1337d054f78`; native schedules:
+`8a0f02e0afcfc5290604fe298e7e8446c8daf12c`; retained coexistence:
+`88ea496f988e1f61c8097588d0b726a902fb48c0`.
+Host focused FAIL: `a2b06a599ad16e02acd2a8a7c163e5097b0afa16`; полный исходный PASS:
+`1588a0fe785a3d9aa97bea0c9cec021d54964138`; validation §110:
+`f794e5df742c6dbfe7a4fdd05bb77a3b1e370493`.
