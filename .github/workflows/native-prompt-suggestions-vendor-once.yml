@@ -523,6 +523,7 @@ jobs:
           set -euo pipefail
           node --input-type=module <<'JS'
           import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
           import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
           import { join } from 'node:path';
           const log = readFileSync(join(process.env.RUNNER_TEMP, 'native-codex-suggestions-0169.log'), 'utf8');
@@ -549,7 +550,7 @@ jobs:
           assert.deepEqual(proof.modelFailures, []);
           assert.equal(proof.cleanup, true);
           writeFileSync(join(process.env.RUNNER_TEMP, 'native-codex-suggestions-0169-proof.json'),
-            JSON.stringify({ publishedSource: process.env.GITHUB_SHA, proof }, null, 2));
+            JSON.stringify({ publishedSource: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), triggerSha: process.env.GITHUB_SHA, proof }, null, 2));
           JS
       - name: Retain native Codex 0.1690 prompt-suggestion proof
         if: always()
