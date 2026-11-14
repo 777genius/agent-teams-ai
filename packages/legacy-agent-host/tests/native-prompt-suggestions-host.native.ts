@@ -205,6 +205,20 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     assert.ok(bodies.length>=2,'SDK generated an additional native suggestion inference');
     assert.deepEqual(errors,[]);
     assert.equal(typeof latestGeneration,'string');
+    const proofPayload={memberId:'alice-id',expectedGeneration:latestGeneration,
+      nativePromptProof:{inputId:deliveryId,operationRef:event.operationRef}};
+    const verified=await host.rpc('runtime.read',envelope('TEST-prove-original-operation',proofPayload));
+    assert.equal(verified.ok,true,'same original Runtime read accepts optional proof without mutation');
+    assert.equal(scalar(verified.value).nativePromptCurrent,true,
+      'captured Host independently checks terminal original human DM and exact operation');
+    assert.equal(JSON.stringify(verified.value).includes(event.operationRef),false,
+      'private operation token never leaves captured Host in Runtime read projection');
+    const rejected=await host.rpc('runtime.read',envelope('TEST-reject-foreign-operation',{
+      ...proofPayload,nativePromptProof:{inputId:deliveryId,operationRef:'TEST-foreign-operation'},
+    }));
+    assert.equal(rejected.ok,true);
+    assert.equal(scalar(rejected.value).nativePromptCurrent,false,
+      'wrong operation is rejected rather than self-matching browser candidate fields');
     const stopped=await host.rpc('runtime.stop',envelope('TEST-stop',{memberId:'alice-id',expectedGeneration:latestGeneration}));
     assert.equal(stopped.ok,true);
     receipt={passed:true,nativeSdk:'0.3.305',normalHumanMessages:1,originalHostNotifications:1,
