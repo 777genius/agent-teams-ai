@@ -11,7 +11,10 @@ import {
   type ChatListItem,
   type ChatListMember,
 } from '../../core/domain/buildChatList';
-import { conversationScopeKey } from '../../core/domain/conversationScope';
+import {
+  conversationScopeKey,
+  normalizeConversationParticipant,
+} from '../../core/domain/conversationScope';
 import { type ConversationMessageKeyFn } from '../../core/domain/isUserUnreadMessage';
 
 import type { InboxMessage } from '@shared/types';
@@ -80,6 +83,15 @@ export function toChatListViewItems(
 ): ChatListViewItem[] {
   return items.map((item) => {
     const draft = draftsByScope.get(conversationScopeKey(item.scope));
+    const preview = getChatMessagePreview(item.previewMessage, emptyPreview);
+    if (
+      item.scope.kind === 'direct' &&
+      preview.previewFrom &&
+      normalizeConversationParticipant(preview.previewFrom) ===
+        normalizeConversationParticipant(item.scope.participant)
+    ) {
+      preview.previewFrom = null;
+    }
     return {
       scope: item.scope,
       displayName: item.displayName,
@@ -87,7 +99,7 @@ export function toChatListViewItems(
       unreadCount: item.unreadCount,
       attentionCount: item.attentionCount,
       previewTimestamp: item.latestActivityTimestamp,
-      ...getChatMessagePreview(item.previewMessage, emptyPreview),
+      ...preview,
       ...(draft ? { draft } : {}),
     };
   });

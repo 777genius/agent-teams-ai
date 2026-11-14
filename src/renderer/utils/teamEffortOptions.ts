@@ -133,8 +133,11 @@ export function getTeamEffortOptions(params: {
   const efforts = catalogModel
     ? [...catalogEfforts]
     : normalizeEfforts(providerId, candidateEfforts, runtimeCapability?.configPassthrough === true);
-  const defaultLabel = catalogModel?.defaultReasoningEffort
-    ? `Default (${TEAM_EFFORT_LABELS[catalogModel.defaultReasoningEffort]})`
+  const configuredEffort =
+    providerId === 'codex' ? params.providerStatus?.modelCatalog?.configuredReasoningEffort : null;
+  const displayDefault = configuredEffort ?? catalogModel?.defaultReasoningEffort;
+  const defaultLabel = displayDefault
+    ? `Default (${TEAM_EFFORT_LABELS[displayDefault]})`
     : 'Default';
 
   if (catalogModel) {
@@ -194,7 +197,11 @@ export function getTeamEffortSelectorPresentation(params: {
     return {
       options,
       disabled: false,
-      helperText: defaultHelperText,
+      helperText:
+        params.providerId === 'codex' &&
+        params.providerStatus?.modelCatalog?.configuredReasoningEffort
+          ? 'Default shows your Codex configuration. Team runtimes may use an isolated configuration; choose an effort explicitly to ensure it is applied.'
+          : defaultHelperText,
       unavailableText: null,
       canValidateValue: catalogModel !== null,
     };

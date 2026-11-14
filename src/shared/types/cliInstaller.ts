@@ -228,6 +228,8 @@ export interface CliProviderModelCatalog {
   staleAt: string;
   defaultModelId: string | null;
   defaultLaunchModel: string | null;
+  /** User-configured Codex effort; this is not necessarily the isolated team runtime default. */
+  configuredReasoningEffort?: CliProviderReasoningEffort | null;
   models: CliProviderModelCatalogItem[];
   diagnostics: {
     configReadState: 'ready' | 'unsupported' | 'failed' | 'skipped';

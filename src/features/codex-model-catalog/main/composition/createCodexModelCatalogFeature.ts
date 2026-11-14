@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import { CodexAccountEnvBuilder } from '@features/codex-account/main/infrastructure/CodexAccountEnvBuilder';
 import { createStaticCodexModelCatalogModels } from '@features/codex-model-catalog/core/domain/codexModelCatalogFallback';
+import { normalizeCodexReasoningEffort } from '@features/codex-model-catalog/core/domain/codexReasoningEffort';
 import { normalizeCodexAppServerModels } from '@features/codex-model-catalog/core/domain/normalizeCodexAppServerModel';
 import {
   CodexAppServerSessionFactory,
@@ -313,6 +314,9 @@ export function createCodexModelCatalogFeature(options: {
           staleAt: staleAtIso(),
           defaultModelId: null,
           defaultLaunchModel: null,
+          configuredReasoningEffort: payload.config.ok
+            ? normalizeCodexReasoningEffort(payload.config.value.config?.model_reasoning_effort)
+            : null,
           models: normalized.models,
           diagnostics: {
             configReadState,

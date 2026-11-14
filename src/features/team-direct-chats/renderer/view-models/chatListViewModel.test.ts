@@ -168,3 +168,35 @@ describe('shared chat preview presentation', () => {
     });
   });
 });
+
+describe('direct chat sender previews', () => {
+  it('omits the participant identity only for their own direct conversation', () => {
+    const previewMessage = {
+      from: ' Alice ',
+      to: 'user',
+      text: 'Hello',
+      timestamp: '2026-09-22T12:00:00.000Z',
+      read: true,
+    };
+    const direct = { ...item, previewMessage };
+    expect(toChatListViewItems([direct], 'No messages')[0].previewFrom).toBeNull();
+    expect(
+      toChatListViewItems(
+        [{ ...direct, scope: { kind: 'group', groupChatId: 'g1' } }],
+        'No messages'
+      )[0].previewFrom
+    ).toBe(' Alice ');
+    expect(
+      toChatListViewItems(
+        [{ ...direct, previewMessage: { ...previewMessage, from: 'user' } }],
+        'No messages'
+      )[0].previewFrom
+    ).toBe('user');
+    expect(
+      toChatListViewItems(
+        [{ ...direct, previewMessage: { ...previewMessage, from: 'bob' } }],
+        'No messages'
+      )[0].previewFrom
+    ).toBe('bob');
+  });
+});
