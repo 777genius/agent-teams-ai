@@ -83,3 +83,53 @@ No release, branch cutover to \`main\`, auto-merge of PR #982/#1186 or provider 
 **Review round 4, remaining boundaries:** exact native session freshness is still only independently proved by the selected Host *at publication*, not re-read at UI acceptance; the renderer-side candidate-to-itself comparison is not independent evidence of a current operation or generation. Browser HTTP SSE remains fail-closed; no HTTP private DM delivery without authorized per-owner scoping. Treat cancelled runs due to new commits as cancelled, not green. The new guarded editor commits still need targeted fixture/visual verification. Another contributor is improving the source-artifact staging workflow in this same feature branch; do not label a queued staging run as an adopted archive.
 
 This is a Draft feature branch only. No main/default/release mutation and no dependent PR merge.
+
+## Host native-candidate provenance hardening (2026-11-14, later review)
+
+**Critical review round 5 — native Codex turn laundering (corrected).**
+Previously `createCapturedPromptSuggestionBinding` accepted a Codex candidate
+without `nativeTurnRef` and substituted the Host `operationRef` for
+`completedTurnRef`. This could falsely present a Host operation as a
+correlated native `thread/sample` turn. The Host boundary now **requires**
+a nonempty bounded native Codex turn reference. Claude's SDK push path may
+still legitimately omit `nativeTurnRef` and retain the Host operation ref;
+it is not a Codex fallback. All candidates additionally undergo strict
+identifier, control-character and UTF-8-byte checks before private Host
+publication. Commit
+[`a920a77`](https://github.com/777genius/agent-teams-ai/commit/a920a779dd8214a444115522d51085c080511677).
+
+**Critical review round 6 — regression of the validator itself (corrected).**
+A first implementation of the control-code expression and its tests used
+escaped literal backslashes. Self-review exposed that mismatch before
+any PASS claim. The source now checks actual U+0000–U+001F and U+007F
+characters, and the tests inject real NUL/newline code points. Source
+[`73f3e3b`](https://github.com/777genius/agent-teams-ai/commit/73f3e3b4da3d0275a368df50f8a5cc66c09d42e5)
+and tests
+[`724aaf8`](https://github.com/777genius/agent-teams-ai/commit/724aaf8c0c0e283d8e3186f81e3bb47812f806be).
+Negative/positive regression cases were added in
+[`99a88f7`](https://github.com/777genius/agent-teams-ai/commit/99a88f709beaa9ab2d6f9001bb03ab70aa0e1839).
+A local Node 22 regex/UTF-8 sanity check is **not** a Node 24/TS 7 or
+Host E2E pass; those assertions require their own workflow receipts.
+
+**Qualification at this checkpoint:** provider #9 at `f08a2e1` has its
+distinct provider source+packed and native Claude/Codex workflows successful.
+The [consumer original Host E2E](https://github.com/777genius/agent-teams-ai/actions/runs/43625084215)
+was **PENDING**, the
+[provider-archive staging](https://github.com/777genius/agent-teams-ai/actions/runs/43625084206)
+was **PENDING**, the
+[consumer CI](https://github.com/777genius/agent-teams-ai/actions/runs/43625084236)
+was **QUEUED**, and
+[packaged Electron CI](https://github.com/777genius/agent-teams-ai/actions/runs/43625084197)
+was **QUEUED** when inspected on consumer head `724aaf8`.
+The subsequent documentation commit makes these historical observations;
+the new head requires its own verification. No skipped/pending/cancelled
+run is a PASS. The provider archive and lockfile are not considered
+adopted until the write job completes and the resulting branch contents
+are verified.
+
+**Unclosed scope:** captured Host/Electron native fixture; verified
+Codex >=0.165 Host binary/pin (Stage1 0.162 remains unsupported);
+read-only exact native-operation/session freshness at UI acceptance
+beyond the current Runtime snapshot; HTTP authenticated per-owner
+DM transport (unscoped SSE intentionally disabled); and visual
+compact/mobile/light/dark/IME acceptance. No merge/default release.
