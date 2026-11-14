@@ -4,11 +4,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const hoisted = vi.hoisted(() => ({
   killProcessTree: vi.fn(),
   killProcessTreeAndWait: vi.fn<() => Promise<void>>(),
+  killWindowsProcessTreeAndWait: vi.fn<() => Promise<void>>(),
 }));
 
 vi.mock('@main/utils/childProcess', () => ({
   killProcessTree: hoisted.killProcessTree,
   killProcessTreeAndWait: hoisted.killProcessTreeAndWait,
+}));
+vi.mock('@main/utils/windowsProcessTree', () => ({
+  killWindowsProcessTreeAndWait: hoisted.killWindowsProcessTreeAndWait,
 }));
 
 import {
@@ -72,6 +76,7 @@ describe('TeamProvisioningRunProgress', () => {
   beforeEach(() => {
     hoisted.killProcessTree.mockReset();
     hoisted.killProcessTreeAndWait.mockReset().mockResolvedValue(undefined);
+    hoisted.killWindowsProcessTreeAndWait.mockReset().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -115,6 +120,22 @@ describe('TeamProvisioningRunProgress', () => {
     await killTeamProcessAndWait(child);
 
     expect(hoisted.killProcessTreeAndWait).not.toHaveBeenCalled();
+    expect(hoisted.killWindowsProcessTreeAndWait).not.toHaveBeenCalled();
+  });
+
+  it('uses birth-bound Windows tree proof and waits for the original root exit', async () => {
+    setPlatform('win32');
+    const child = new EventEmitter() as ChildProcess;
+    Object.assign(child, { pid: 1234, exitCode: null, signalCode: null });
+    let settled = false;
+    const stopping = killTeamProcessAndWait(child).then(() => { settled = true; });
+    await Promise.resolve();
+    expect(hoisted.killWindowsProcessTreeAndWait).toHaveBeenCalledWith(child, 'SIGKILL');
+    expect(hoisted.killProcessTreeAndWait).not.toHaveBeenCalled();
+    expect(settled).toBe(false);
+    child.emit('close', null, 'SIGKILL');
+    await stopping;
+    expect(settled).toBe(true);
   });
 
   it('does not resolve strict team-process termination before child exit', async () => {
