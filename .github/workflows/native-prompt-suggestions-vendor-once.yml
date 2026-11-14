@@ -121,7 +121,7 @@ jobs:
           fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n');
           JS
           corepack enable
-          test "$(corepack pnpm --version)" = 11.18.0
+          test "$(corepack pnpm --version)" = 11.22.0
           corepack pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
           git diff --check
 
