@@ -641,12 +641,14 @@ const MemberMessageComposer = ({
     }
     return latest?.messageId ?? null;
   }, [conversationMessages, effectiveRecipient]);
+  // An IME preedit can exist in the DOM while the controlled draft is still empty.
+  const nativeSuggestionComposingRef = useRef(false);
   const insertNativeSuggestion = useCallback((text: string) => {
     // The candidate's render-time eligibility is not an atomic draft write:
     // a local edit/chip/revision may have reached the draft store before React
     // renders it. Recheck the live content and captured address before insert.
     const current = draft.snapshot();
-    if (!draft.canSubmit || draft.isRestoring ||
+    if (nativeSuggestionComposingRef.current || !draft.canSubmit || draft.isRestoring ||
         draft.renderedAddressKey !== draft.addressKey ||
         draft.address.target.kind !== 'direct' ||
         draft.editorContext.kind !== 'plain' ||
@@ -1178,6 +1180,12 @@ const MemberMessageComposer = ({
           }
           value={draft.text}
           readOnly={draft.isRestoring}
+          onCompositionStart={() => {
+            nativeSuggestionComposingRef.current = true;
+            // A preedit is user-owned text even before a controlled onChange.
+            nativeSuggestion.invalidate();
+          }}
+          onCompositionEnd={() => { nativeSuggestionComposingRef.current = false; }}
           onValueChange={(value) => {
             // Typing/editing is an explicit dismissal, not a temporary hide that
             // later reappears when the user clears their own draft.
