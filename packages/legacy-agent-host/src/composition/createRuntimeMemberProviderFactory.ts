@@ -270,7 +270,12 @@ export function createRuntimeMemberProviderFactory(options: {
               readRuntime: options.readRuntime, assertCurrent: authority.assertCurrent, assertAllocation,
             }),
           } : {}),
-          onProgress: () => options.onProgress(entry),
+          onProgress: () => {
+            // Native SDK push may precede the Runtime result's durable settlement.
+            // Recheck once through this existing feed callback, without polling.
+            promptSuggestions?.flushPending();
+            options.onProgress(entry);
+          },
         });
         options.captureInteractions(entry);
         entry.provider = provider;
