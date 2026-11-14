@@ -4,7 +4,8 @@ import type { NativeNextPromptCandidate } from '../contracts';
 export function projectHostPromptSuggestion(
   raw: unknown,
   ownerHandle: string,
-  expectedTeamId: string
+  expectedTeamId: string,
+  expectedRunId: string
 ): NativeNextPromptCandidate | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const value = raw as Record<string, unknown>;
@@ -18,7 +19,8 @@ export function projectHostPromptSuggestion(
   const teamId = bounded('teamId');
   const memberName = bounded('memberName', 128);
   const text = bounded('text', 512);
-  if (!teamId || teamId !== expectedTeamId || !memberName || !text ||
+  if (!teamId || teamId !== expectedTeamId ||
+      bounded('runId') !== expectedRunId || !memberName || !text ||
       new TextEncoder().encode(text).length > 512 ||
       !ownerHandle || ownerHandle.length > 512) return null;
   const keys = ['runId','memberId','generation','suggestionId',
