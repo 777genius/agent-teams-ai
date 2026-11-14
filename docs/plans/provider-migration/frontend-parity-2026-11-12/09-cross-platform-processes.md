@@ -5198,3 +5198,48 @@ Extend only the two existing readiness/deadline cases in `desktop-team-ui-smoke.
 The admission case must continue to show no continuation while Main is not ready or while UI initialization/root children are absent, and exactly one continuation after the existing accepted tuple. Apply that same observation sequence to the new readiness-only entry and make its fixture refuse diagnostic subscriptions and direct domain-enable/frame-discovery calls while permitting the original readiness evaluations. The original diagnostics path still proves DOCUMENT_READY precedes Main/UI acceptance. The deadline case exercises the same absolute cutoff for the readiness-only entry, then resolves the held snapshot late and proves that no continuation or renewed read occurs. These are two existing-case extensions, not a new matrix or test campaign.
 
 Before source publication, review the exact shared-loop extraction/inverse, original diagnostics prefix and receipt shape, Login caller cutoff/owner join, default-mode preservation and existing-case declaration/assertion retention. Root owns normal type/source checks and the focused existing file when available. No author execution or native rerun is authorized by this plan. The next original Login E2E must still prove its complete original UI/native/cleanup contract; the old failure cannot become PASS through this source correction. Source remains zero until the reviewed plan is published and root grants GO.
+
+
+## 105. C10 pre-App catalog failure: preserve the original observation and cleanup failures
+
+### 105.1. Actual original failure and limits
+
+Batch5 parent job `132530121852` in run `43622192438` checked out `def734338f13bcc3209e78079a0cedbc48f05a5b`. Native Codex 0.169.0 qualification (step 19), the original Desktop Resume flow (step 20), and its retained PASS receipt (step 23) succeeded. The separate C10 step 31 failed before App/Host startup; downstream mixed history restore (step 32) was skipped. The default Resume receipt records 11 business observations, 3 probes, no model failures, App exit 0 and captured Host absence. It is not a C10 source-selection receipt.
+
+Evidence `244428111c25b79dbf183749f847823da8676c27` retains the original full job log `a3d8570a9ef180036874143c86157f17b6698c71`, exact artifact/member hashes and source map. Artifact `14124792590` is 4971466 bytes, SHA256 `3537041b62f7b71fada15da330481fa96e5bb70653e77026d12d7705ede47f63`. Its merge-named suffix `7c2e0d` does not replace the explicit source checkout. C10 root `TEST-desktop-backend-zBYuIG` contains only descriptor/profile/config files, with no App log or C10 receipt.
+
+The stack ends at `readOwned` line 146: `census.captured().length` is 0 rather than 1, called by `readOwned('catalog')` at line 174. Prior metadata preparation returned. The original cleanup promise join, one-port assertion and one-launch assertion precede that failure; the later remaining/global-native absence assertions were not reached. The first launch/observer/action error is unavailable because the finally assertion replaces it.
+
+The delivered D421 archive `91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94` runs one genuine `mcp list --json` child. Its catalog module has Git blob `3b15baa17819ddb69793aa5ea615e58ac19f3b53`. The original census uses successive process-table, executable, birth and ancestry observations. A short-lived child disappearing between these reads is plausible, but the retained evidence does not prove this cause. Missing returned PID, an observation refusal and a birth/ancestry failure remain distinguishable only if the original failure is preserved. This cut makes no source-publication, Runtime-revision, cleanup-qualification or E2E success claim.
+
+### 105.2. Exact single-path scope
+
+The sole writable existing TEST path is:
+
+| Path | Exact common preimage | Existing lines |
+| --- | --- | --- |
+| `scripts/legacy-agent-host/desktop-codex-resume-fixture.ts` | `e6cbdaa8344f2bce6e78e4eac4602530d71e6cae` | 396 |
+
+It is identical in the current Batch5 parent, qualification and native trees. Preserve every byte outside the existing `readOwned` closure and its existing observations import, apart from natural formatting directly required by the change. No product, process owner, D package, census implementation, workflow, source roster, timeout, input pin or additional test file is writable.
+
+Read-only joins are `desktop-captured-app.ts` `11915e0d9fd425620b8c975901bd4dc65e6b8f27`, `CapturedProcess.ts` `b5c545e518ec91e7efa784ee2e494dfa0038644e`, `readCodexMcpCatalog.ts` `7230804bd10e8a521cb3e1b1e9760920e9ebcef5`, and the existing safe failure projector in `desktop-backend-observations.ts` `14b396fe37c201b848dd89a9babc3b05c3087124`.
+
+### 105.3. Retain failures without weakening the original boundary
+
+Keep the original factory/launch, immediate census, returned-child match, birth/ancestry/group assertions, one original memoized close promise, unconditional finally cleanup join, and every existing cleanup assertion in their original order. No observer result becomes authority and zero captured children still fails.
+
+Inside this closure, retain the first original failure object and its closed phase before a later wrapper or finally error can replace it. Catching the original synchronous launch or observer failure records facts and immediately continues its existing throw/cleanup path; it must not call launch, observe, close or any OS read again. The outer action error is retained when no earlier original failure was captured.
+
+Run the original finally block unconditionally. Capture any error from that same cleanup/assertion sequence separately. A sole action/observer failure is rethrown; a sole cleanup failure is rethrown. If both exist, preserve both originals in an `AggregateError` or an equivalent original-cause plus separately retained cleanup failure; do not replace one mask with the other. Both remain FAIL. The old success value and `preApp.push` remain reachable only after all original assertions succeed.
+
+Emit at most one failure-only JSON line with a fixed `C10_PRE_APP_FAILURE` tag, using the existing `projectDesktopHarnessFailure` for the first and cleanup errors. Permit only the fixed fixture, CapturedProcess and catalog adapter source paths in that projector. Its existing bounded source-frame projection excludes raw messages, assertion values, causes, environment and outside-source stacks. Do not create a generic diagnostic helper or change its public behavior.
+
+The local additional allowlist is: purpose `metadata|catalog`; phase from the fixed launch/census/match/birth/group/action/cleanup-close/port-count/launch-count/census-count/remaining/global-absence stages; port/launch/captured counts as `0|1|multiple|unavailable`; whether an original child object and positive safe-integer PID were returned; child fields sampled at the first failure as `pending|exit-zero|exit-nonzero|signal|unavailable`; original cleanup join as `confirmed|unconfirmed|unavailable`; and whether first/cleanup failures exist. Read only already retained JavaScript values and original results. The child fields are diagnostic snapshots, not liveness or no-child proof. No numeric PID, birth, path, argv, environment, stdout/stderr, config, prompt, key, account identity or raw error is serialized.
+
+Bound the complete serialized diagnostic to 4096 UTF-8 bytes. If projection/serialization/output fails, retain the same original failure(s); an unavailable diagnostic cannot replace them. There is no diagnostic output on success, extra event listener, read, native operation, poll, wait, timer, deadline renewal, suspension or retry. The ordinary non-C10 fixture branch is unchanged.
+
+### 105.4. Verification and next actual acceptance
+
+Freeze full before/after blobs, exact forward/inverse diff, common three-variant preimages and actual line count under the unchanged ceiling. Review the unchanged launch/observer/cleanup expressions and sequence, fail-only output, and the four data-only control cases: both successful; action fails alone; cleanup fails alone; both fail with both originals retained. This narrow error-preservation check needs no new unit suite, native child or repository test declaration. Root owns validation/publication and the next ordinary combined source batch.
+
+C10 remains failed until its original physical census, A-held response, real Settings Update, fresh B launch and cold history complete with the unchanged native/business/probe/cleanup oracles. The next failure must expose the first original stage without allowing an unobserved child through. Source remains zero until this plan is peer-reviewed, published and root grants explicit GO.
