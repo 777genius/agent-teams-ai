@@ -107,7 +107,7 @@ if (provider === 'codex') {
   const server = createServer((request, response) => { void (async () => {
     assert.equal(request.headers.authorization,
       'Basic ' + Buffer.from(`opencode:${process.env.OPENCODE_SERVER_PASSWORD}`).toString('base64'));
-    assert.equal(request.headers['x-opencode-directory'], process.cwd());
+    assert.equal(request.headers['x-opencode-directory'], encodeURIComponent(process.cwd()));
     const url = new URL(request.url, 'http://127.0.0.1');
     let input;
     if (request.method === 'POST') {

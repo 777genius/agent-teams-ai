@@ -117,10 +117,18 @@ export function resolveDirectWindowsLauncher(binaryPath: string, capturedContent
  * NOT arbitrary user input.
  */
 function quoteCmdChunk(chunk: string): string {
-  const escaped = chunk
-    .replace(/(\\*)"/g, (_match, backslashes: string) => `${backslashes}${backslashes}\\"`)
-    .replace(/(\\+)$/g, '$1$1');
-  return `"${escaped}"`;
+  let quoted = '"', backslashes = 0;
+  for (const character of chunk) {
+    if (character === '\\') {
+      backslashes += 1;
+      continue;
+    }
+    // Consume each run once. Searching /(\\*)"/ at every backslash is quadratic
+    // when a long run has no following quote.
+    quoted += '\\'.repeat(character === '"' ? backslashes * 2 + 1 : backslashes) + character;
+    backslashes = 0;
+  }
+  return quoted + '\\'.repeat(backslashes * 2) + '"';
 }
 
 export function quoteWindowsCmdArg(arg: string): string {
@@ -154,9 +162,7 @@ function escapeWindowsCmdCommand(command: string): string {
  * essential once windowsVerbatimArguments disables Node's escaping.
  */
 function escapeWindowsCmdFallbackArg(arg: string, doubleEscapeMetaCharacters: boolean): string {
-  const quoted = `"${arg
-    .replace(/(\\*)"/g, '$1$1\\"')
-    .replace(/(\\+)$/g, '$1$1')}"`;
+  const quoted = quoteCmdChunk(arg);
   let escaped = escapeWindowsCmdMetaCharacters(quoted);
   if (doubleEscapeMetaCharacters) {
     escaped = escapeWindowsCmdMetaCharacters(escaped);

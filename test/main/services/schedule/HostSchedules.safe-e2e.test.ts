@@ -223,7 +223,7 @@ it('keeps a damaged schedule closed while another captured team recovers and run
   await f.repository.saveSchedule({ ...neighbor, cronExpression: '*/1 * * * * *' });
   const interrupted: ScheduleRun = { id: 'TEST-neighbor-interrupted', scheduleId: neighbor.id,
     teamName: neighbor.teamName, hostTarget: neighbor.hostTarget, status: 'running',
-    scheduledFor: new Date().toISOString(), retryCount: 0 };
+    scheduledFor: new Date().toISOString(), startedAt: new Date().toISOString(), retryCount: 0 };
   await f.repository.saveRun(interrupted);
   const historyPath = join(getSchedulesBasePath(), 'runs', `${damaged.id}.json`);
   const damagedBytes = (await readFile(historyPath, 'utf8')).slice(0, -1);

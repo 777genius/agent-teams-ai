@@ -38,7 +38,6 @@ interface RecoverySnapshot {
 
 const temporaryRoots: string[] = [];
 const workerPath = path.resolve('test/fixtures/reviewMutationCrashWorker.ts');
-const tsxPath = path.resolve('node_modules/tsx/dist/cli.mjs');
 
 async function runWorker(
   mode: 'run' | 'recover' | 'inspect',
@@ -56,7 +55,7 @@ async function runWorker(
   return new Promise((resolve, reject) => {
     const child = spawn(
       process.execPath,
-      [tsxPath, workerPath, mode, claudeBasePath, filePath, auditPath, crashPoint, operationShape],
+      ['--import', 'tsx', workerPath, mode, claudeBasePath, filePath, auditPath, crashPoint, operationShape],
       {
         cwd: process.cwd(),
         env: { ...process.env, NODE_ENV: 'test' },

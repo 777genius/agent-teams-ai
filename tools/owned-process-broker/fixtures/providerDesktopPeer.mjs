@@ -1,13 +1,15 @@
 /** Finite TEST protocol responses. Original Host, checked D and MCP own all product effects. */
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
-import { appendFileSync, existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { appendFileSync, existsSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { basename, dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
 import { createInterface } from 'node:readline';
 import process from 'node:process';
-import { pathToFileURL } from 'node:url';
+import { setTimeout } from 'node:timers';
+import { fileURLToPath, pathToFileURL, URL } from 'node:url';
 const hostRequire = createRequire(new URL('../../../packages/legacy-agent-host/package.json', import.meta.url));
 const { Client } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/index.js')).href);
 const { StreamableHTTPClientTransport } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/streamableHttp.js')).href);
@@ -20,6 +22,14 @@ assert.ok(provider === 'codex' || provider === 'opencode');
 assert.ok(role === 'management' || role === 'runtime');
 const selection = process.env.TEST_DESKTOP_SELECTION;
 assert.ok(selection === undefined || selection === 'two-models-v1' && provider === 'codex');
+let collaboration;
+if (process.env.TEST_DESKTOP_COLLABORATION !== undefined) {
+  assert.equal(process.env.TEST_DESKTOP_COLLABORATION, 'mixed-v1'); assert.equal(selection, undefined);
+  const source = new URL('./providerCollaboration.mjs', import.meta.url), path = fileURLToPath(source);
+  assert.equal(realpathSync(path), path);
+  assert.equal(createHash('sha256').update(readFileSync(path)).digest('hex'), process.env.TEST_PEER_COLLABORATION_SHA256);
+  collaboration = await import(source.href);
+}
 const codexModels = selection === undefined ? ['TEST-model'] : ['TEST-model', 'TEST-model-next'];
 const root = process.env.TEST_DESKTOP_PEER_ROOT;
 assert.ok(root); assert.equal(basename(root), `TEST-peer-${provider}-scope`);
@@ -46,6 +56,45 @@ const effect = value => {
 };
 const argv = process.argv.slice(2), options = {};
 assert.ok(argv.length <= 1024 && argv.every(arg => arg.length <= 65536 && !arg.includes('\0')));
+// The managed Codex contract uses canonical inline TOML, with JSON-quoted keys/strings.
+// Accept only the closed TEST Team policy; native config/catalog inputs are never inferred.
+const managedPolicy = raw => {
+  let json = '', quoted = false, escaped = false;
+  for (const char of raw) {
+    if (quoted) {
+      json += char;
+      if (escaped) escaped = false; else if (char === '\\') escaped = true; else if (char === '"') quoted = false;
+    } else { if (char === '"') quoted = true; json += char === '=' ? ':' : char; }
+  }
+  assert.equal(quoted, false); const rows = record(JSON.parse(json));
+  const encode = value => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+    ? JSON.stringify(value) : Array.isArray(value) ? '[' + value.map(encode).join(',') + ']'
+      : '{' + Object.entries(record(value)).map(([key, field]) => JSON.stringify(key) + '=' + encode(field)).join(',') + '}';
+  assert.equal(encode(rows), raw, 'only the original canonical managed policy');
+  assert.deepEqual(readdirSync(process.env.CODEX_HOME), [], 'only the original empty TEST native catalog');
+  if (Object.keys(rows).length === 0) { assert.equal(role, 'management'); return rows; }
+  assert.deepEqual(Object.keys(rows), ['team']); const team = record(rows.team);
+  assert.ok(Object.keys(team).every(key => ['url', 'bearer_token_env_var', 'enabled_tools', 'tools', 'enabled', 'startup_timeout_sec', 'tool_timeout_sec'].includes(key)));
+  assert.equal(team.enabled, true); assert.equal(team.bearer_token_env_var, 'LEGACY_AGENT_HOST_TEAM_MCP_TOKEN');
+  const endpoint = new URL(team.url); assert.equal(endpoint.protocol, 'http:'); assert.equal(endpoint.hostname, '127.0.0.1');
+  assert.ok(endpoint.port && !endpoint.username && !endpoint.password && !endpoint.hash);
+  assert.ok(Array.isArray(team.enabled_tools) && team.enabled_tools.length <= 256 && team.enabled_tools.every(name => /^[a-z_]+$/.test(name)));
+  assert.equal(new Set(team.enabled_tools).size, team.enabled_tools.length);
+  assert.deepEqual(Object.keys(record(team.tools)).sort(), [...team.enabled_tools].sort());
+  for (const value of Object.values(team.tools)) assert.deepEqual(value, { approval_mode: 'approve' });
+  for (const key of ['startup_timeout_sec', 'tool_timeout_sec']) if (team[key] !== undefined)
+    assert.ok(typeof team[key] === 'number' && Number.isFinite(team[key]) && team[key] > 0 && team[key] <= 180000);
+  return rows;
+};
+if (provider === 'codex' && argv[0] === 'mcp') {
+  assert.deepEqual(argv, ['mcp', 'list', '--json']);
+  assert.deepEqual(readdirSync(process.env.CODEX_HOME), [], 'only the original empty TEST native catalog');
+  assert.equal(process.env.LEGACY_AGENT_HOST_TEAM_MCP_TOKEN, undefined);
+  effect({ event: 'launch', parentPid: process.ppid, argc: argv.length });
+  effect({ event: 'mcp-catalog', configuredServers: 0 });
+  await new Promise((resolve, reject) => process.stdout.write('[]\n', error => error ? reject(error) : resolve()));
+  process.exit(0);
+}
 const config = provider === 'opencode' ? record(JSON.parse(process.env.OPENCODE_CONFIG_CONTENT)) : undefined;
 if (provider === 'codex') {
 let appServer = 0;
@@ -58,11 +107,11 @@ for (let index = 0; index < argv.length; index++) {
   const value = argv[++index]; assert.equal(typeof value, 'string');
   const separator = value.indexOf('='), key = value.slice(0, separator);
   assert.ok(separator > 0 && !Object.hasOwn(options, key));
-  assert.ok(['model_reasoning_effort', 'service_tier', 'mcp_servers.team.enabled', 'mcp_servers.team.url',
+  assert.ok(['model_reasoning_effort', 'service_tier', 'features.apps', 'mcp_servers', 'mcp_servers.team.enabled', 'mcp_servers.team.url',
     'mcp_servers.team.bearer_token_env_var', 'mcp_servers.team.enabled_tools',
     'mcp_servers.team.startup_timeout_sec', 'mcp_servers.team.tool_timeout_sec'].includes(key) ||
     /^mcp_servers\.team\.tools\.[a-z_]+\.approval_mode$/.test(key), 'Finite captured native argv');
-  options[key] = JSON.parse(value.slice(separator + 1));
+  options[key] = key === 'mcp_servers' ? managedPolicy(value.slice(separator + 1)) : JSON.parse(value.slice(separator + 1));
 }
 assert.equal(appServer, 1);
 } else {
@@ -70,10 +119,39 @@ assert.equal(appServer, 1);
   assert.match(argv[4], /^[1-9][0-9]{0,4}$/); assert.ok(Number(argv[4]) <= 65535);
   assert.equal(process.env.OPENCODE_SERVER_USERNAME, 'opencode'); assert.ok(process.env.OPENCODE_SERVER_PASSWORD);
 }
+const managedMcp = options.mcp_servers;
+if (managedMcp !== undefined) {
+  assert.equal(options['features.apps'], false); assert.equal(Object.keys(options).some(key => key.startsWith('mcp_servers.')), false);
+  if (managedMcp.team) {
+    for (const [key, value] of Object.entries(managedMcp.team)) if (key !== 'tools') options['mcp_servers.team.' + key] = value;
+    for (const name of managedMcp.team.enabled_tools) options[`mcp_servers.team.tools.${name}.approval_mode`] = 'approve';
+  }
+} else assert.equal(options['features.apps'], undefined);
 effect({ event: 'launch', parentPid: process.ppid, argc: argv.length });
 let mcp, server, tools = [];
+if (provider === 'opencode' && config.plugin !== undefined) {
+  assert.equal(role, 'runtime');
+  const source = new URL('../../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js', import.meta.url);
+  assert.deepEqual(config.plugin, [source.href], 'only the pinned shipped native configuration hook');
+  const path = fileURLToPath(source), hash = process.env.TEST_PEER_MCP_POLICY_SHA256;
+  assert.match(hash, /^[a-f0-9]{64}$/); assert.equal(realpathSync(path), path);
+  assert.equal(createHash('sha256').update(readFileSync(path)).digest('hex'), hash);
+  const { mcp: beforeMcp, ...before } = globalThis.structuredClone(config);
+  assert.ok(beforeMcp);
+  const hooks = await (await import(source.href)).default(undefined);
+  assert.deepEqual(Object.keys(hooks), ['config']); await hooks.config(config);
+  const { mcp: afterMcp, ...after } = config; assert.deepEqual(after, before);
+  assert.equal(Object.isFrozen(afterMcp), true);
+  assert.equal(Object.getOwnPropertyDescriptor(config, 'mcp').writable, false);
+  assert.equal(Object.getOwnPropertyDescriptor(config, 'mcp').configurable, false);
+  effect({ event: 'policy-configured', pluginSha256: hash });
+} else if (provider === 'opencode') {
+  assert.equal(process.env.LEGACY_AGENT_HOST_MCP_POLICY_NONCE, undefined);
+  assert.equal(process.env.LEGACY_AGENT_HOST_MCP_TEAM_SERVER, undefined);
+}
 const runtimeMcp = role === 'runtime' && (provider === 'opencode' ? config.mcp?.team !== undefined : options['mcp_servers.team.url'] !== undefined);
-if (runtimeMcp) {
+const connectTeam = async () => {
+  assert.equal(runtimeMcp, true); assert.equal(mcp, undefined);
   const nativeMcp = provider === 'opencode' ? record(record(config.mcp).team) : undefined;
   const endpoint = new URL(nativeMcp ? nativeMcp.url : options['mcp_servers.team.url']);
   assert.equal(endpoint.protocol, 'http:'); assert.equal(endpoint.hostname, '127.0.0.1');
@@ -90,19 +168,23 @@ if (runtimeMcp) {
     authorization = `Bearer ${process.env[tokenName]}`;
   }
   mcp = new Client({ name: 'TEST-desktop-provider-peer', version: '1' });
-  await mcp.connect(new StreamableHTTPClientTransport(endpoint, { requestInit: { headers: { authorization } } }));
+  await mcp.connect(new StreamableHTTPClientTransport(endpoint, {
+    requestInit: { headers: nativeMcp ? { ...record(nativeMcp.headers) } : { authorization } },
+  }));
   tools = (await mcp.listTools()).tools;
   if (provider === 'codex') {
     assert.deepEqual(tools.map(tool => tool.name).sort(), [...options['mcp_servers.team.enabled_tools']].sort());
     for (const tool of tools) assert.equal(options[`mcp_servers.team.tools.${tool.name}.approval_mode`], 'approve');
   } else {
-    const agent = record(record(config.agent).build); assert.equal(agent.model, 'TEST-provider/TEST-model');
+    const agent = record(record(config.agent).build); assert.equal(agent.model, 'test-provider/TEST-model');
     const permissions = record(agent.permission);
     assert.deepEqual(Object.keys(permissions).filter(name => name.startsWith('team_')).sort(), tools.map(tool => 'team_' + tool.name).sort());
     for (const tool of tools) assert.equal(permissions['team_' + tool.name], 'allow');
   }
   effect({ event: 'connected', tools: tools.map(tool => tool.name) });
-} else if (provider === 'codex') assert.equal(Object.keys(options).some(key => key.startsWith('mcp_servers.')), false);
+};
+if (runtimeMcp) { if (managedMcp === undefined) await connectTeam(); }
+else if (provider === 'codex') assert.equal(Object.keys(options).some(key => key.startsWith('mcp_servers.')), false);
 else {
   assert.deepEqual(config.mcp ?? {}, {}); assert.deepEqual(config.permission, { '*': 'deny' });
 }
@@ -124,7 +206,7 @@ process.once('SIGINT', () => { void close(); });
 setTimeout(() => fail(new Error('TEST peer lifetime exceeded')), 10 * 60_000).unref();
 const markers = ['TEST_UI_BOOT', 'TEST_UI_STREAM', 'TEST_UI_HOLD', 'TEST_UI_APPROVAL_ALLOW',
   'TEST_UI_APPROVAL_DENY', 'TEST_UI_QUESTION', 'TEST_UI_QUESTION_DECLINE',
-  'TEST_UI_SCHEDULE_DONE', 'TEST_UI_SCHEDULE_HOLD'];
+  'TEST_UI_SCHEDULE_DONE', 'TEST_UI_SCHEDULE_HOLD', ...(collaboration?.collaborationMarkers ?? [])];
 const selectMarker = text => {
   assert.equal(typeof text, 'string'); assert.ok(Buffer.byteLength(text) <= 65536);
   if (!runtimeMcp) {
@@ -163,7 +245,7 @@ const send = value => process.stdout.write(JSON.stringify(value) + '\n');
 const reply = (id, result) => send({ id, result });
 const notify = (method, params) => send({ method, params });
 const threadId = `TEST-thread-${process.pid}`;
-let turns = 0, active, pending;
+let turns = 0, active, pending, managedConfigObserved = false;
 const fields = turn => ({ threadId, turnId: turn.id, itemId: turn.itemId });
 const delta = (turn, text) => {
   assert.equal(active, turn); turn.text += text;
@@ -185,6 +267,8 @@ const finish = (turn, text, status = 'completed') => {
 };
 async function runTurn(turn) {
   const marker = turn.marker;
+  if (collaboration?.collaborationMarkers.includes(marker)) return finish(turn, await collaboration.runCollaboration({
+    marker, raw: turn.raw, inputId: turn.id, mcp, tools, current: () => assert.equal(active, turn), effect }));
   if (marker === 'TEST_MODEL_PROBE' || marker === 'TEST_UI_BOOT')
     return finish(turn, marker === 'TEST_MODEL_PROBE' ? 'OK' : 'TEST boot ready');
   if (marker === 'TEST_UI_STREAM') {
@@ -247,13 +331,18 @@ async function receive(frame) {
     case 'initialize': result = { codexHome: process.env.CODEX_HOME, platformFamily: 'unix', platformOs: process.platform }; break;
     case 'account/read': result = { account: { type: 'chatgpt', email: 'TEST@example.invalid', planType: 'plus' }, requiresOpenaiAuth: true }; break;
     case 'account/rateLimits/read': result = { rateLimits: { primary: null, secondary: null, credits: null, planType: 'plus' } }; break;
-    case 'config/read': result = { config: { model: 'TEST-model', model_provider: 'TEST-fixture', features: { apps: false } } }; break;
+    case 'config/read':
+      if (managedMcp !== undefined) { managedConfigObserved = true; effect({ event: 'managed-configuration-read', selectedServers: Object.keys(managedMcp) }); }
+      result = { config: { model: 'TEST-model', model_provider: 'TEST-fixture', features: { apps: false },
+      ...(managedMcp === undefined ? {} : { mcp_servers: Object.fromEntries(Object.entries(managedMcp).map(([name, row]) =>
+        [name, { ...row, environment_id: 'local', tool_timeout_sec: row.tool_timeout_sec ?? null }])) }) } }; break;
     case 'model/list': result = { data: codexModels.map((model, index) => ({ id: model, model,
       displayName: index === 0 ? 'TEST model' : 'TEST next model', description: 'Finite TEST protocol peer',
       hidden: false, isDefault: index === 0, supportedReasoningEfforts: ['low', 'high'], defaultReasoningEffort: 'low',
       inputModalities: ['text'], supportsPersonality: false })), nextCursor: null }; break;
     case 'thread/start':
       assert.equal(active, undefined); assert.equal(params.cwd, process.cwd()); assert.ok(codexModels.includes(params.model));
+      if (managedMcp !== undefined) { assert.equal(managedConfigObserved, true); if (runtimeMcp) await connectTeam(); }
       if (selection !== undefined) {
         if (runtimeMcp) assert.ok(['low', 'high'].includes(options.model_reasoning_effort));
         effect({ event: 'thread-selection', threadId, model: params.model,
@@ -262,14 +351,15 @@ async function receive(frame) {
       result = { thread: { id: threadId }, cwd: params.cwd, model: params.model, modelProvider: params.modelProvider ?? 'TEST-fixture',
         reasoningEffort: options.model_reasoning_effort ?? null, serviceTier: options.service_tier ?? null }; break;
     case 'mcpServerStatus/list':
-      assert.equal(runtimeMcp, true); assert.equal(params.threadId, threadId);
+      assert.equal(runtimeMcp, true); assert.ok(mcp); assert.equal(params.threadId, threadId);
       result = { data: [{ name: 'team', authStatus: 'bearerToken', runtimeStatus: 'connected', toolsError: null,
         resources: [], resourceTemplates: [], tools: Object.fromEntries(tools.map(tool => [tool.name, tool])) }], nextCursor: null }; break;
     case 'turn/start': {
       assert.equal(params.threadId, threadId); assert.equal(active, undefined); assert.ok(++turns <= 24);
       assert.ok(Array.isArray(params.input) && params.input.length > 0 && params.input.every(part => part.type === 'text'));
       const marker = selectMarker(params.input.map(part => part.text).join('\n'));
-      const turn = { id: `TEST-turn-${process.pid}-${turns}`, itemId: `TEST-message-${turns}`, text: '', marker };
+      const turn = { id: `TEST-turn-${process.pid}-${turns}`, itemId: `TEST-message-${turns}`, text: '', marker,
+        raw: params.input.map(part => part.text).join('\n') };
       active = turn; effect({ event: 'input', marker, turnId: turn.id });
       reply(frame.id, { turn: { id: turn.id } }); notify('turn/started', { threadId, turn: { id: turn.id } });
       void runTurn(turn).catch(fail); return;
@@ -287,12 +377,16 @@ lines.on('line', line => { try { assert.ok(Buffer.byteLength(line) <= 131072); v
 lines.once('close', () => { void close(); });
 } else {
   const sessionId = `ses_TESTdesktop${process.pid}`, session = { id: sessionId, directory: workspace, version: '1.19.4' };
-  const messages = [], model = { providerID: 'TEST-provider', modelID: 'TEST-model' };
-  const configured = record(record(config.provider)['TEST-provider']);
+  const messages = [], model = { providerID: 'test-provider', modelID: 'TEST-model' };
+  const configured = record(record(config.provider)['test-provider']);
   assert.equal(record(configured.options).baseURL, 'http://127.0.0.1:19999/TEST-no-network');
+  assert.equal(record(configured.options).apiKey, 'TEST-LOCALHOST-ONLY');
   assert.deepEqual(Object.keys(record(configured.models)), ['TEST-model']);
-  const catalog = [{ id: 'TEST-provider', name: 'TEST provider', source: 'custom', env: [],
-    npm: '@ai-sdk/openai-compatible', models: configured.models }];
+  assert.equal(configured.npm, '@ai-sdk/openai-compatible');
+  const nativeModels = { 'TEST-model': { ...record(record(configured.models)['TEST-model']),
+    api: { npm: configured.npm, id: 'TEST-model', url: record(configured.options).baseURL } } };
+  const catalog = [{ id: 'test-provider', name: 'TEST provider', source: 'custom', env: [],
+    npm: configured.npm, options: { ...record(configured.options) }, models: nativeModels }];
   let allocated = false, turns = 0, active, pending;
   const json = (response, value, status = 200) => {
     const bytes = JSON.stringify(value); assert.ok(Buffer.byteLength(bytes) <= 1024 * 1024);
@@ -313,6 +407,8 @@ lines.once('close', () => { void close(); });
   };
   const runTurn = async turn => {
     const marker = turn.marker;
+    if (collaboration?.collaborationMarkers.includes(marker)) return finish(turn, await collaboration.runCollaboration({
+      marker, raw: turn.raw, inputId: turn.userId, mcp, tools, current: () => assert.equal(active, turn), effect }));
     if (marker === 'TEST_UI_BOOT') return finish(turn, 'TEST boot ready');
     if (marker === 'TEST_UI_STREAM') {
       partial(turn, 'TEST stream partial');
@@ -342,7 +438,7 @@ lines.once('close', () => { void close(); });
   };
   server = createServer((request, response) => { void (async () => {
     assert.equal(request.headers.authorization, 'Basic ' + Buffer.from(`opencode:${process.env.OPENCODE_SERVER_PASSWORD}`).toString('base64'));
-    assert.equal(request.headers['x-opencode-directory'], workspace);
+    assert.equal(request.headers['x-opencode-directory'], encodeURIComponent(workspace));
     assert.ok(request.method === 'GET' || request.method === 'POST');
     const url = new URL(request.url, 'http://127.0.0.1');
     assert.equal(url.origin, 'http://127.0.0.1'); assert.equal(url.hash, '');
@@ -359,7 +455,10 @@ lines.once('close', () => { void close(); });
     }
     if (request.method === 'POST' && url.pathname === '/session') {
       assert.equal(url.search, ''); assert.equal(allocated, false);
-      assert.deepEqual(input, { title: runtimeMcp ? 'Team member alice-id' : 'Agent Teams model connection test' });
+      if (runtimeMcp && collaboration) {
+        assert.deepEqual(Object.keys(input), ['title']); assert.match(input.title, /^Team member [A-Za-z0-9_-]{1,200}$/);
+        effect({ event: 'collaboration-session', memberId: input.title.slice('Team member '.length), sessionId });
+      } else assert.deepEqual(input, { title: runtimeMcp ? 'Team member alice-id' : 'Agent Teams model connection test' });
       allocated = true; return json(response, session);
     }
     if (request.method === 'POST' && url.pathname === `/session/${sessionId}/message`) {
@@ -394,7 +493,7 @@ lines.once('close', () => { void close(); });
         time: { created: time } }, parts: [{ id: `prt_text${turns}`, sessionID: sessionId, messageID: assistantId, type: 'text', text: '' }] };
       messages.push({ info: { id: userId, role: 'user', sessionID: sessionId, time: { created: time } },
         parts: [{ ...input.parts[0], id: `prt_user${turns}`, sessionID: sessionId, messageID: userId }] }, assistant);
-      const turn = { userId, marker, assistant }; active = turn;
+      const turn = { userId, marker, assistant, raw: input.parts[0].text }; active = turn;
       effect({ event: 'input', marker, inputId: userId, messageId: assistantId });
       response.writeHead(204); response.end(); void runTurn(turn).catch(fail); return;
     }
@@ -420,8 +519,8 @@ lines.once('close', () => { void close(); });
     assert.equal(request.method, 'GET');
     if (url.pathname === '/config') return json(response, config);
     if (url.pathname === '/agent') return json(response, [{ name: 'build', mode: 'primary' }]);
-    if (url.pathname === '/config/providers') return json(response, { providers: catalog, default: { 'TEST-provider': 'TEST-model' } });
-    if (url.pathname === '/provider') return json(response, { all: catalog, connected: ['TEST-provider'], default: { 'TEST-provider': 'TEST-model' } });
+    if (url.pathname === '/config/providers') return json(response, { providers: catalog, default: { 'test-provider': 'TEST-model' } });
+    if (url.pathname === '/provider') return json(response, { all: catalog, connected: ['test-provider'], default: { 'test-provider': 'TEST-model' } });
     if (url.pathname === '/provider/auth') return json(response, {});
     if (url.pathname === '/experimental/tool/ids') return json(response, ['bash', 'edit']);
     if (url.pathname === '/mcp') return json(response, runtimeMcp ? { team: { status: 'connected' } } : {});

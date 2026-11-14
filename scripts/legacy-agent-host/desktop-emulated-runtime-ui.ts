@@ -13,6 +13,8 @@ import { EDITED_SCHEDULE_LABEL, LEGACY_SCHEDULE_ID, LEGACY_SCHEDULE_LABEL } from
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
 import { runDesktopEmulatedSelectionUi } from './desktop-emulated-selection-ui.ts';
 import { runDesktopEmulatedLifecycleUi } from './desktop-emulated-lifecycle-ui.ts';
+import { runDesktopEmulatedCollaborationUi } from './desktop-emulated-collaboration-ui.ts';
+import { isDesktopEmulatedCollaborationFixture } from './desktop-emulated-collaboration-fixture.ts';
 import type { prepareDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 
@@ -26,6 +28,8 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   assertOwnedRenderer(): void;
   restartSameProfile?(): Promise<UiCdpPort>;
 }) {
+  if (isDesktopEmulatedCollaborationFixture(options.fixture))
+    return runDesktopEmulatedCollaborationUi(cdp, { ...options, fixture: options.fixture });
   if (options.fixture.emulatedRuntime.variant === 'selection' || options.fixture.emulatedRuntime.variant === 'installer') return runDesktopEmulatedSelectionUi(cdp, options);
   if (options.fixture.emulatedRuntime.variant === 'lifecycle') {
     assert.ok(options.restartSameProfile);
@@ -223,8 +227,9 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     assert.equal(stats.compactions, 1);
   }
   proof.stats = stats;
-  await ui.clickExpression(`(()=>{const rows=[...document.querySelectorAll('div[role="button"][tabindex="0"]')].filter(e=>[...e.querySelectorAll('span')].some(n=>n.textContent.trim()==='alice'));
-    if(rows.length!==1)return null;const e=rows[0],n=[...e.querySelectorAll('span')].find(n=>n.textContent.trim()==='alice'),r=n.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);
+  await ui.clickExpression(`(()=>{const rows=[...document.querySelectorAll('div[role="button"][tabindex="0"][class~="group/member"]')].filter(e=>[...e.querySelectorAll('span')].some(n=>n.textContent.trim()==='alice'));
+    if(rows.length!==1)return null;const e=rows[0],names=[...e.querySelectorAll('span')].filter(n=>n.textContent.trim()==='alice');if(names.length!==1)return null;
+    const n=names[0],r=n.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);
     return r.width&&r.height&&hit&&!hit.closest('button')&&(hit===e||e.contains(hit))?{x,y,tag:e.tagName}:null})()`, 'open original member detail');
   await ui.click('[role="dialog"] [role="tab"]', 'original Member Logs', 'Logs');
   await ui.waitRead(`document.querySelector('[role="dialog"] [role="tabpanel"][data-state="active"]')?.textContent.includes('Captured runtime activity')`, 'original Host Logs');

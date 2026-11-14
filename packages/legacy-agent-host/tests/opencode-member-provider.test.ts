@@ -78,6 +78,7 @@ function fixture(
     extraArgs?: string[];
     onCreateProcess?(): void;
     nativeLimitsCwd?: string;
+    cwd?: string;
     attachments?: MemberProviderContext['attachments'];
   } = {}
 ) {
@@ -92,7 +93,7 @@ function fixture(
     sessionId: 'TEST-session',
     generation: 1,
     configRevision: 'TEST-config',
-    cwd: options.nativeLimitsCwd ?? '/TEST-workspace',
+    cwd: options.cwd ?? options.nativeLimitsCwd ?? '/TEST-workspace',
     model: 'TEST-model',
     accountBinding: 'TEST-account',
     environment: {
@@ -239,7 +240,8 @@ function fixture(
       const url = new URL(request.url);
       if (request.method === 'GET') reads.push(url.pathname);
       assert.equal(url.origin, profile.endpoint);
-      assert.equal(request.headers.get('x-opencode-directory'), profile.cwd);
+      assert.equal(request.headers.get('x-opencode-directory'), encodeURIComponent(profile.cwd));
+      assert.equal(decodeURIComponent(request.headers.get('x-opencode-directory')!), profile.cwd);
       assert.equal(
         request.headers.get('authorization'),
         'Basic ' +
@@ -396,6 +398,18 @@ function fixture(
     },
   };
 }
+
+test('OpenCode native readiness preserves Unicode and literal percent directory identity', async (t) => {
+  const f = fixture({ cwd: '/TEST Я 日本語 %2F/workspace' });
+  t.after(async () => { f.provider.seal(); assert.equal(await f.provider.cleanup(), true); });
+  const opened = await f.provider.factory.open(f.context.request);
+  assert.equal((await opened.driver.checkReadiness()).ok, true);
+  assert.equal(f.launches.length, 1);
+  assert.equal(f.launches[0]!.cwd, f.profile.cwd);
+  assert.equal(f.writes.filter(row => row.path === '/session').length, 1);
+  assert.deepEqual(f.messages, [], 'directory qualification does not submit model input');
+  assert.equal((await opened.driver.close()).cleanup, 'confirmed');
+});
 
 test('OpenCode profile is finite, captures namespaces, bounds input and rejects unqualified V2', () => {
   const f = fixture();

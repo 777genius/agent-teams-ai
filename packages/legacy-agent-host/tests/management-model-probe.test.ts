@@ -672,7 +672,8 @@ async function syntheticLocalReadiness(mode: LocalReadinessMode) {
           async fetchImpl(value, init) {
             const request = new Request(value, init), target = new URL(request.url);
             assert.equal(target.origin, profile.endpoint); assert.equal(request.redirect, 'error');
-            assert.equal(request.headers.get('x-opencode-directory'), cwd);
+            assert.equal(request.headers.get('x-opencode-directory'), encodeURIComponent(cwd));
+            assert.equal(decodeURIComponent(request.headers.get('x-opencode-directory')!), cwd);
             nativeRequests.push(request.method + ' ' + target.pathname);
             if (target.pathname === '/config') return Response.json(nativeConfig);
             if (target.pathname === '/provider') return Response.json({ all: [{

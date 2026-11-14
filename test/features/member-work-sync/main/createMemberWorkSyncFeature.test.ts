@@ -3013,7 +3013,16 @@ describe('createMemberWorkSyncFeature composition', () => {
         );
         expect(nudges).toHaveLength(1);
         expect(nudges[0]?.text).toContain('11111111');
-        expect(nudges[0]?.text).toContain('mcp__agent-teams__member_work_sync_report');
+        expect(nudges[0]?.text).toContain(
+          'Required sync action: call member_work_sync_status using only the arguments declared in its schema, then call member_work_sync_report with the returned agendaFingerprint and reportToken.'
+        );
+        expect(nudges[0]?.text).toContain(
+          `For each tool, include teamName "${teamName}" and memberName "${memberName}" only when that field is declared in its schema; otherwise omit it.`
+        );
+        expect(nudges[0]?.text).toContain(
+          'Use the exact tool names and argument schemas exposed by this session, preserving any server prefix and including commandId when required.'
+        );
+        expect(nudges[0]?.text).not.toMatch(/mcp__(?:agent-teams|team)__/);
         expect(nudgeDeliveryWake.schedule).toHaveBeenCalledWith({
           teamName,
           memberName,
@@ -3139,7 +3148,16 @@ describe('createMemberWorkSyncFeature composition', () => {
         expect(nudges[0]?.text).toContain('Task protocol repair');
         expect(nudges[0]?.text).toContain('task_add_comment');
         expect(nudges[0]?.text).toContain('task_complete');
-        expect(nudges[0]?.text).toContain('mcp__agent-teams__member_work_sync_report');
+        expect(nudges[0]?.text).toContain(
+          'Required sync action: call member_work_sync_status using only the arguments declared in its schema, then call member_work_sync_report with the returned agendaFingerprint and reportToken.'
+        );
+        expect(nudges[0]?.text).toContain(
+          `For each tool, include teamName "${teamName}" and memberName "${memberName}" only when that field is declared in its schema; otherwise omit it.`
+        );
+        expect(nudges[0]?.text).toContain(
+          'Use the exact tool names and argument schemas exposed by this session, preserving any server prefix and including commandId when required.'
+        );
+        expect(nudges[0]?.text).not.toMatch(/mcp__(?:agent-teams|team)__/);
         expect(nudgeDeliveryWake.schedule).toHaveBeenCalledWith({
           teamName,
           memberName,

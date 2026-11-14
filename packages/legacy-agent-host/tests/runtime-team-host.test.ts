@@ -1,8 +1,9 @@
 import { initialContextDigest } from '../dist/team-launch/context.js';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, parse as parsePath, sep } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
 
@@ -12,13 +13,16 @@ import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
 import { normalizeBinding, runtimeDigest } from '../dist/runtime/identity.js';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
+import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
 import { teamModelProbeProfile } from '../dist/composition/teamLaunchModelProbe.js';
 import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { localModelReadinessPreparationSchema } from '../dist/management/commandRecords.js';
+import { managementDigest } from '../dist/management/identity.js';
 
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
+import type { LocalModelReadinessOrigin, ReadinessSourceReference } from '../dist/management/commandRecords.js';
 import type {
   MemberProvider,
   MemberProviderContext,
@@ -1135,6 +1139,138 @@ test('NDJSON roster replacement refuses live allocation, then saves only after c
     captureDigest: restoreCapture.liveRosterCapture.captureDigest, remainingMs: 100_000 }), restored);
   assert.deepEqual(await roster(), finalRoster);
   assert.equal(live.opens(), initialOpens + 2, 'cold retained outcomes cannot repeat native attachment');
+});
+
+test('captured-run OpenCode live Add reaches its original model probe and preserves failed-probe refusal', async t => {
+  let preparations = 0, runs = 0, closes = 0;
+  const prepare: ProviderManagementCoordinator['prepareTeamProbe'] = (selected, processOrigin) => {
+    assert.equal(selected.provider, 'opencode');
+    assert.equal(processOrigin, undefined, 'this controlled recipe has no Windows process authority');
+    return (input, isCurrent, purpose, origin) => {
+      preparations++;
+      assert.equal(isCurrent(), true);
+      assert.equal(input.profileId, selected.profileId);
+      assert.equal(input.configRevision, selected.configRevision);
+      assert.equal(input.providerId, 'test-provider');
+      assert.equal(input.modelId, 'TEST-live-model');
+      assert.equal(purpose, 'native-local-readiness-v1');
+      assert.equal(origin?.workspaces[0]?.path, selected.cwd);
+      return { timeoutMs: 1000,
+        run: async () => { runs++; assert.equal(isCurrent(), true); return false; },
+        close: async () => { closes++; return true; } };
+    };
+  };
+  t.mock.method(ProviderManagementCoordinator.prototype, 'prepareTeamProbe', prepare);
+  const live = await fixture(t, { independentProviders: true, changeProfile(selected) {
+    const root = selected.owner.storageRoot, team = selected.teams[0]!, lead = selected.runtime!.members[0]!;
+    lead.capturedMcpServers = {};
+    team.members[0]!.role = 'lead';
+    team.savedSettings = { cwd: root, providerId: 'anthropic', model: 'TEST-lead-model', syncModelsWithLead: false };
+    team.members[1]!.delivery = { ...team.members[0]!.delivery!, memberId: 'bob-id' };
+    team.grants.push({ principalId: 'TEST-bob-session', memberName: 'bob', permissions: ['read', 'task.write', 'message.write'] });
+    selected.runtime!.members.push({ ...structuredClone(lead), memberId: 'bob-id', principalId: 'TEST-bob-session', sessionId: 'TEST-bob-session' });
+    const environment = { HOME: join(root, 'home'), XDG_CONFIG_HOME: join(root, 'config'),
+      XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache') };
+    for (const directory of Object.values(environment)) mkdirSync(directory);
+    writeFileSync(join(root, 'opencode.json'), JSON.stringify({ provider: { 'test-provider': {
+      npm: '@ai-sdk/openai-compatible', options: { baseURL: 'http://127.0.0.1:9/v1' },
+      models: { 'TEST-live-model': { name: 'TEST live model' } },
+    } } }));
+    const openCode = {
+      provider: 'opencode' as const, protocolRevision: '1.19.4' as const,
+      teamId: team.binding.teamId, memberId: 'TEST-template', principalId: 'TEST-template', sessionId: 'TEST-template',
+      generation: 1, configRevision: 'TEST-opencode-template', cwd: root, model: 'TEST-live-model',
+      accountBinding: 'TEST-private-account', executable: { path: join(root, 'TEST-never-executed'), sha256: 'd'.repeat(64) },
+      environment, endpoint: 'http://127.0.0.1:19001', nativeOptions: { providerId: 'test-provider', agent: 'build' },
+      capturedMcpServers: {}, limits: { ...lead.limits },
+    };
+    selected.runtime!.providerTemplates = [structuredClone(lead), openCode];
+    selected.management = [teamModelProbeProfile(openCode)];
+  } });
+  const roster = async () => (await live.rpc('team.roster.read', {}) as { value: TeamRosterConfiguration }).value;
+  const beforeCapture = await roster();
+  assert.equal((await live.rpc('team.roster.replace', {
+    expectedRevision: beforeCapture.revision, savedSettings: beforeCapture.savedSettings,
+    members: [{ name: 'bob', model: 'TEST-peer-model' }],
+  }, { commandId: 'TEST-live-opencode-roster' }) as { ok: boolean }).ok, true);
+  const captured = await live.rpc('team.launch.capture', { rosterCommandId: 'TEST-live-opencode-roster' },
+    { commandId: 'TEST-live-opencode-capture' }) as { ok: boolean; value: { launch: { launchId: string } } };
+  assert.equal(captured.ok, true, JSON.stringify(captured));
+  assert.notEqual(captured.value.launch.launchId, live.binding.scope.runId, 'the saved Team scope is not the captured native run');
+  for (const memberId of ['alice-id', 'bob-id'])
+    assert.equal((await live.rpc('runtime.open', { memberId }) as { ok: boolean }).ok, true);
+  const originals = live.contexts.map(context => ({ profile: structuredClone(context.profile),
+    request: structuredClone(context.request), binding: normalizeBinding(context.endpoint.binding) }));
+  const originalRoster = await roster(), commandId = 'TEST-live-opencode-add';
+  const payload = { expectedRevision: originalRoster.revision,
+    members: [...originalRoster.members.filter(row => row.role !== 'lead').map(row => ({ name: row.name, ...row.settings })),
+      { name: 'carol', providerId: 'opencode', model: 'test-provider/TEST-live-model' }] };
+  const deadline = Date.now() + 30000;
+  const target = await live.rpc('team.roster.replace', payload,
+    { commandId, liveRoster: { phase: 'capture', remainingMs: deadline - Date.now() } }) as LiveRosterResponse;
+  assert.ok(target.ok && 'liveRosterCapture' in target);
+  const view = target.liveRosterCapture;
+  assert.equal(view.launchId, captured.value.launch.launchId);
+  assert.equal(view.target.workspace, live.root);
+  assert.equal(preparations, 0); assert.equal(live.opens(), 2);
+  const pending = await live.rpc('team.roster.replace', payload, { commandId,
+    liveRoster: { phase: 'continue', captureDigest: 'f'.repeat(64), remainingMs: deadline - Date.now() } });
+  assert.ok((pending as { liveRosterPending?: unknown }).liveRosterPending);
+  assert.equal(preparations, 0, 'a foreign capture cannot invoke the model boundary');
+  const reference = (path: string): ReadinessSourceReference => {
+    const directories: unknown[] = [];
+    let directory = parsePath(path).root;
+    const missing = (value: string) => ({ root: live.root, path, present: false,
+      digest: managementDigest({ path, root: live.root, directories, missing: value }) });
+    for (const part of ['', ...dirname(path).slice(directory.length).split(sep).filter(Boolean)]) {
+      if (part) directory = join(directory, part);
+      let stat;
+      try { stat = lstatSync(directory); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return missing(directory); throw error; }
+      assert.ok(stat.isDirectory() && !stat.isSymbolicLink());
+      directories.push([directory, stat.dev, stat.ino, stat.mode, stat.uid]);
+    }
+    let stat;
+    try { stat = lstatSync(path); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return missing(path); throw error; }
+    assert.ok(stat.isFile() && !stat.isSymbolicLink());
+    return { root: live.root, path, present: true, digest: managementDigest({ path, root: live.root, directories,
+      file: [stat.dev, stat.ino, stat.mode, stat.uid, stat.size, stat.mtimeMs, stat.ctimeMs, stat.nlink],
+      bytes: createHash('sha256').update(readFileSync(path)).digest('hex') }) };
+  };
+  const origin: LocalModelReadinessOrigin = { schemaVersion: 1, kind: 'team',
+    ownerDigest: managementDigest(live.binding.owner), contextId: 'TEST-context', commandId,
+    selectionDigest: managementDigest({ handleId: live.binding.handleId, scope: live.binding.scope, payload, liveRosterCapture: view }),
+    workspaces: [{ path: live.root, project: { selectedPath: join(live.root, 'opencode.json'), invalid: false,
+      providers: [{ providerId: 'test-provider', baseUrl: 'http://127.0.0.1:9/v1', preset: 'custom', hasConfiguredApiKey: false }],
+      sources: ['opencode.json', 'opencode.jsonc', '.opencode/opencode.json', '.opencode/opencode.jsonc'].map(name => reference(join(live.root, name))) },
+      global: { notConsulted: 'project-precedence' } }], approval: { notConsulted: 'no-private-target' } };
+  const remainingMs = deadline - Date.now();
+  const envelope = { commandId, liveRoster: { phase: 'continue', captureDigest: view.captureDigest, remainingMs },
+    localModelReadinessOrigin: { origin, remainingMs } };
+  const rejected = await live.rpc('team.roster.replace', payload, envelope);
+  assert.equal(preparations, 1, 'the original captured run must reach the closed model-probe boundary');
+  assert.equal(runs, 1); assert.equal(closes, 1);
+  assert.deepEqual(rejected, { ok: false, code: 'hold', outcome: 'rejected' });
+  const probes = [...new FileManagementCommandStore(live.root).list()];
+  assert.equal(probes.length, 1);
+  const probe = probes[0]!;
+  assert.equal(probe.kind, 'model.probe');
+  if (probe.kind !== 'model.probe') assert.fail();
+  assert.equal(probe.phase, 'held'); assert.equal(probe.ok, false); assert.equal(probe.resourceHeld, false);
+  assert.equal(probe.readiness, undefined, 'the failing boundary supplies no qualifying model evidence');
+  assert.deepEqual(probe.localModelReadinessOrigin, origin);
+  assert.equal(probe.readinessScope?.sourceRevision, view.captureDigest);
+  assert.deepEqual(await roster(), originalRoster);
+  assert.equal(live.opens(), 2, 'a failed model probe must not allocate the target Runtime');
+  for (const [index, original] of originals.entries()) {
+    assert.deepEqual(live.contexts[index]!.profile, original.profile);
+    assert.deepEqual(live.contexts[index]!.request, original.request);
+    assert.equal(new FileRuntimeStore(live.root).fenced(original.binding, tx => tx.get()?.phase), 'allocated');
+    assert.equal(live.sessions[index]!.closeCalls, 0);
+  }
+  assert.deepEqual(await live.rpc('team.roster.replace', payload, envelope), rejected);
+  assert.equal(preparations, 1); assert.equal(runs, 1); assert.equal(closes, 1);
 });
 
 test('NDJSON unknown native cleanup keeps the saved roster and its original grants bound', async (t) => {

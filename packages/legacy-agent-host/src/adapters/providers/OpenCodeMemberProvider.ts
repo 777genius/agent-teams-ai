@@ -209,7 +209,8 @@ export function createOpenCodeMemberProvider(
       throw new Error('Foreign OpenCode endpoint');
     const headers = new Headers(request.headers);
     headers.set('authorization', 'Basic ' + Buffer.from(`opencode:${password}`).toString('base64'));
-    headers.set('x-opencode-directory', profile.cwd);
+    // Native V1 decodes this header once, including literal percent and Unicode paths.
+    headers.set('x-opencode-directory', encodeURIComponent(profile.cwd));
     return (options.fetchImpl ?? fetch)(new Request(request, { headers, redirect: 'error' }));
   };
   const client = (signal: AbortSignal, deadline: number): OpenCodeClient =>

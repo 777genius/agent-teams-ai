@@ -14,6 +14,8 @@ import { captureLinuxNodeExecArtifact } from '../../src/main/utils/linuxNodeExec
 import { verifyLinuxChildExecInput } from '../../src/main/utils/linuxChildLaunchSelection.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { desktopV2SelectedKey } from './desktop-opencode-v2-management-model.ts';
+import { assertDesktopV2ManagementSourceHistory, bindDesktopV2ManagementReceipt,
+  captureDesktopV2ManagementAuthority, readDesktopV2ManagementCommands } from './desktop-opencode-v2-management-records.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
 import { compiledBundleHashes } from './desktop-backend-observations.ts';
 import { readDesktopNativeProviderArtifact } from './desktop-native-stop-fixture.ts';
@@ -80,7 +82,12 @@ export async function verifyDesktopV2ManagementReceipt(repo: string, temporary: 
   const sourceBefore = rows(receipt.selectedSourceHashesBeforeApp);
   assert.deepEqual(receipt.selectedSourceHashesAfterFlow, sourceBefore);
   const expectedSources = [...new Set([...desktopProofSources, 'scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts',
-    ...['fixture', 'model', 'process', 'smoke', 'ui'].map(name => `scripts/legacy-agent-host/desktop-opencode-v2-management-${name}.ts`)])];
+    'packages/legacy-agent-host/src/composition/applyOpenCodeRuntimeSource.ts',
+    'packages/legacy-agent-host/src/composition/openCodeV2ModelSelection.ts',
+    'packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts',
+    'src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor.ts',
+    'scripts/legacy-agent-host/fixtures/c226-opencode-v2-management.json',
+    ...['fixture', 'model', 'process', 'records', 'records.test', 'smoke', 'ui'].map(name => `scripts/legacy-agent-host/desktop-opencode-v2-management-${name}.ts`)])];
   assert.equal(new Set(sourceBefore.map(row => row.path)).size, sourceBefore.length);
   assert.deepEqual(sourceBefore.map(row => row.path).sort(), expectedSources.sort());
   for (const row of sourceBefore) assert.equal(await fileDigest(join(repo, text(row.path))), row.sha256);
@@ -100,16 +107,19 @@ export async function verifyDesktopV2ManagementReceipt(repo: string, temporary: 
   assert.deepEqual(await compiledBundleHashes(join(repo, 'dist-electron')), receipt.compiledBundleHashesAfterStartup);
   assert.equal(paths.profile, join(root, 'host-profile.json'));
   const profile = readTeamHostProfile(text(paths.profile), text(pins.profileSha256));
-  assert.equal(profile.runtime, undefined); assert.equal(profile.management?.length, 1);
+  assert.equal(profile.runtime, undefined); assert.equal(profile.management?.length, 2);
   const management = profile.management![0]!; assert.equal(management.provider, 'opencode');
   if (management.provider !== 'opencode') throw new Error('Only the original OpenCode management profile is admitted');
   assert.equal(management.nativeGeneration, 'v2'); assert.equal(management.protocolRevision, '2.1.4'); assert.ok(management.embedded);
   assert.equal(management.executable.path, bun.path); assert.equal(management.executable.sha256, bun.sha256);
   assert.equal(management.embedded.manifestSha256, engine.manifestSha256);
+  assert.deepEqual(profile.management![1], { ...management, profileId: 'TEST-v2-settings-management-other',
+    cwd: join(root, 'workspace-other') });
   await verifyOpenCodeV2EmbeddedGraph(management.embedded);
   const fixturePins = object(proof.fixturePins);
   assert.deepEqual(fixturePins, receipt.nativeV2Input); assert.deepEqual(fixturePins, receipt.nativeV2InputAfterCleanup);
   assert.equal(fixturePins.runtimeConfigured, false); assert.equal(fixturePins.managementConfigured, true);
+  assert.equal(fixturePins.managementProfiles, 2);
   assert.equal(fixturePins.codexOrClaudeExecutable, false); assert.equal(fixturePins.bunSha256, bun.sha256);
   assert.equal(fixturePins.manifestSha256, engine.manifestSha256);
   const linuxChildExec = verifyLinuxChildExecInput(input.linuxChildExec as Parameters<typeof verifyLinuxChildExecInput>[0]);
@@ -135,14 +145,21 @@ export async function verifyDesktopV2ManagementReceipt(repo: string, temporary: 
   assert.equal(probes.length, 5); assert.ok(children.length >= 5 && children.length <= 32);
   assert.equal(new Set(probes.map(row => `${row.pid}:${row.birth}`)).size, 5);
   const commandDirectory = join(root, 'hoststore/management-commands');
-  assert.deepEqual((await readdir(commandDirectory)).sort(), effects.map(row => managementDigest(row.commandId) + '.json').sort());
+  const commands = await readDesktopV2ManagementCommands(root);
+  assert.deepEqual((await readdir(commandDirectory)).sort(), commands.map(row => managementDigest(row.commandId) + '.json').sort());
+  assert.deepEqual(commands.filter(row => row.kind !== 'runtime.source').map(row => row.commandId).sort(), effects.map(row => row.commandId).sort());
+  const authority = captureDesktopV2ManagementAuthority(root, profile, await json(text(paths.descriptor)));
+  const sourceIndexPath = join(root, 'hoststore/runtime-sources/index.json');
+  assert.deepEqual(assertDesktopV2ManagementSourceHistory(authority, commands, await json(sourceIndexPath), true), proof.sourcePublications);
+  assert.equal(await fileDigest(sourceIndexPath), proof.sourceIndexSha256);
   for (let index = 0; index < expected.length; index++) {
     const [step, model] = expected[index]!, effect = effects[index]!, probe = probes[index]!;
     assert.equal(effect.step, step); assert.equal(effect.resourceHeld, false);
     const { digest, ...body } = await json(join(commandDirectory, managementDigest(effect.commandId) + '.json'));
     assert.equal(digest, managementDigest(body)); const command = storedManagementCommandSchema.parse(body);
-    assert.equal(command.commandId, effect.commandId); assert.equal(command.profileId, management.profileId);
-    assert.equal(command.configRevision, management.configRevision); assert.equal(command.providerId, 'test-local');
+    assert.equal(command.commandId, effect.commandId); assert.equal(command.providerId, 'test-local');
+    const selectedSource = bindDesktopV2ManagementReceipt(authority, commands, command, step);
+    assert.deepEqual(selectedSource.evidence, effect.source);
     assert.equal(command.resourceHeld, false); assert.equal(command.kind, effect.kind); assert.equal(command.phase, effect.phase);
     let nativeCommandId: string;
     if (index < 2) {
@@ -160,7 +177,7 @@ export async function verifyDesktopV2ManagementReceipt(repo: string, temporary: 
     const child = children.find(row => row.pid === probe.pid && row.birth === probe.birth); assert.ok(child);
     assert.equal(child.role, 'probe'); assert.equal(child.ppid, cleanup.hostPid); assert.equal(child.pgid, child.pid);
     assert.equal(child.executableSha256, bun.sha256); assert.equal(child.dataRoot, probe.dataRoot);
-    const nativeProfile = selectOpenCodeV2ManagementModel(management, { providerId: 'test-local', modelId: 'test-local/' + model });
+    const nativeProfile = selectOpenCodeV2ManagementModel(selectedSource.profile, { providerId: 'test-local', modelId: 'test-local/' + model });
     const prefix = 'agent-teams-v2-probe-' + managementDigest({ profile: nativeProfile, commandId: nativeCommandId }).slice(0, 16) + '-';
     assert.equal(dirname(text(probe.dataRoot)), management.environment.XDG_DATA_HOME); assert.ok(basename(text(probe.dataRoot)).startsWith(prefix));
   }

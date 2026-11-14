@@ -182,3 +182,33 @@ local Electron/vendor run, broad build, or dependency installation is planned
 without the parent's process-slot coordination. Report every result at its
 actual source head and scope; existing historical receipts do not qualify new
 source bytes.
+
+## Captured Launch effort control correction (2026-11-14)
+
+At `c226dc06d841c828d4e6cd8d56acaf4c5d9d22a5`, the selection and installer
+Electron journeys both stopped before the first Runtime launch with
+`UI read timed out: original captured effort; no mutation retry`:
+
+- Selection job `132583043136`, artifact `14132033448`, SHA-256
+  `cb46e679a49281c48fb9e0282e16f5eab48f3f5972d0590aebf4d6f61970617d`.
+- Installer job `132583043226`, artifact `14132201399`, SHA-256
+  `df04f9b65ebb4d725ee0d7a500b3685ad424fca8f1296b4128f1922baf3bb973`.
+
+The retained failure PNG and renderer DOM snapshot agree: Optional launch
+settings were expanded, the exact Codex `TEST-model` lead row was still
+collapsed, and no effort buttons were mounted. Current `LaunchTeamDialog`
+renders the shared `LeadModelRow` for Launch; its `#dialog-effort` control exists
+only in schedule mode. The test incorrectly waited for that schedule control.
+
+The shared selection/installer driver now opens the original captured Codex
+lead row once when its `#lead-effort` control is absent. It selects Low through
+that original control for A, and reads the same control to require saved High
+when B's Launch is reopened. No provider/model choice is made by expansion.
+All original capture, finite thread selection, saved settings, unchanged A,
+single-action, deadline, Stop and cleanup assertions remain.
+
+Pinned Node 24.21.0 validation: both existing renderer component suites
+(`LeadModelRow`, `EffortLevelSelector`) pass all 21 tests, and the complete
+Host Desktop scripts TypeScript project passes. This is a correction to the
+acceptance driver; these local checks do not qualify either Electron journey.
+Both full original CI journeys must pass on the new source bytes.

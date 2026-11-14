@@ -1,15 +1,16 @@
 import assert from 'node:assert/strict';
-import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
-import { storedManagementCommandSchema } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
-import { managementDigest } from '../../packages/legacy-agent-host/dist/management/identity.js';
+import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
 import { parseManagedPreferences } from '../../src/features/runtime-provider-management/core/domain/managedProviderPreferences.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { replace } from './desktop-mixed-dialog-settings.ts';
 import { verifyDesktopV2ManagementFixture } from './desktop-opencode-v2-management-fixture.ts';
 import { desktopV2ProviderId, desktopV2RejectedKey, desktopV2SelectedKey } from './desktop-opencode-v2-management-model.ts';
+import { assertDesktopV2ManagementSourceHistory, bindDesktopV2ManagementReceipt, captureDesktopV2ManagementAuthority,
+  readDesktopV2ManagementCommands, readDesktopV2ManagementJson } from './desktop-opencode-v2-management-records.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 
 import type { DesktopV2ManagementFixture } from './desktop-opencode-v2-management-fixture.ts';
@@ -40,6 +41,8 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
   observeNative(step?: DesktopV2ManagementStep): Promise<void>;
 }) {
   const { fixture, model } = options, root = fixture.root;
+  const authority = captureDesktopV2ManagementAuthority(root,
+    readTeamHostProfile(fixture.profilePath, fixture.pins.profileSha256), await privateJson(fixture.descriptorPath));
   const steps: Record<string, unknown>[] = [], effects: Record<string, unknown>[] = [];
   const proof: Record<string, unknown> = { status: 'INCOMPLETE', steps, effects,
     scope: 'Original Electron V2 API-key rejection/replacement, model test, global/project defaults, inheritance and renderer reload',
@@ -54,20 +57,7 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
     await writeFile(path, Buffer.from(captured.data as string, 'base64'), { mode: 0o600, flag: 'wx' });
     return { path, sha256: await fileDigest(path) };
   };
-  const commands = async () => {
-    const directory = join(root, 'hoststore/management-commands');
-    const names = await readdir(directory).catch((error: NodeJS.ErrnoException) => {
-      if (error.code === 'ENOENT') return []; throw error;
-    });
-    assert.ok(names.length <= 64);
-    return Promise.all(names.filter(name => /^[a-f0-9]{64}\.json$/u.test(name)).map(async name => {
-      const { digest, ...body } = (await privateJson(join(directory, name)))!;
-      assert.equal(digest, managementDigest(body));
-      const command = storedManagementCommandSchema.parse(body);
-      assert.equal(name, managementDigest(command.commandId) + '.json');
-      return command;
-    }));
-  };
+  const commands = () => readDesktopV2ManagementCommands(root);
   const preferencePaths = [join(root, 'preferences/global/global-runtime-preferences.json'),
     join(root, 'preferences/workspace/agent-teams-runtime-preferences.json'),
     join(root, 'preferences/workspace-other/agent-teams-runtime-preferences.json')];
@@ -89,7 +79,9 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
     let receipt: Awaited<ReturnType<typeof commands>>[number] | undefined;
     do {
       options.assertOwnedRenderer();
-      const current = (await commands()).filter(row => !before.has(row.commandId));
+      const observed = await commands();
+      assert.ok(observed.every(row => ['runtime.source', 'credential.set', 'model.probe'].includes(row.kind)));
+      const current = observed.filter(row => !before.has(row.commandId) && row.kind !== 'runtime.source');
       assert.ok(current.length <= 1, 'one original command per Settings intent');
       const selected = current[0];
       if (selected && !selected.resourceHeld && (selected.phase === 'completed' ||
@@ -99,8 +91,7 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
       await new Promise<void>(resolve => setTimeout(resolve, 100));
     } while (Date.now() < deadline);
     assert.ok(receipt, 'original V2 Settings command settled before its deadline');
-    assert.equal(receipt.profileId, fixture.v2Management.management.profileId);
-    assert.equal(receipt.configRevision, fixture.v2Management.management.configRevision);
+    const selectedSource = bindDesktopV2ManagementReceipt(authority, await commands(), receipt, step);
     assert.equal(receipt.providerId, desktopV2ProviderId);
     if (step === 'reject-key') {
       assert.equal(receipt.kind, 'credential.set'); assert.equal(receipt.phase, 'held');
@@ -120,7 +111,7 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
     }
     model.finish(step); await options.observeNative();
     effects.push({ step, commandId: receipt.commandId, kind: receipt.kind, phase: receipt.phase,
-      resourceHeld: receipt.resourceHeld });
+      resourceHeld: receipt.resourceHeld, source: selectedSource.evidence });
   };
   const dialog = '[role="dialog"]';
   const directoryRow = `${dialog} [data-testid="runtime-provider-directory-row-${desktopV2ProviderId}"]`;
@@ -210,7 +201,13 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
   model.assertComplete(); assert.deepEqual(await preferences(), finalPreferences);
   assert.equal(await fileDigest(fixture.v2Management.authPath), authSha256, 'passive settings reload never mutates credentials');
   const finalCommands = await commands();
-  assert.equal(finalCommands.length, 5); assert.ok(finalCommands.every(row => !row.resourceHeld));
+  const intents = finalCommands.filter(row => row.kind !== 'runtime.source');
+  assert.equal(intents.length, 5); assert.ok(finalCommands.every(row => !row.resourceHeld));
+  assert.deepEqual(intents.map(row => row.commandId).sort(), effects.map(row => row.commandId).sort());
+  const sourceIndexPath = join(root, 'hoststore/runtime-sources/index.json');
+  proof.sourcePublications = assertDesktopV2ManagementSourceHistory(authority, finalCommands,
+    await readDesktopV2ManagementJson(sourceIndexPath, 8 * 1024 * 1024), true);
+  proof.sourceIndexSha256 = await fileDigest(sourceIndexPath);
   proof.fixturePins = await verifyDesktopV2ManagementFixture(fixture);
   proof.modelRequests = model.requests;
   proof.preferences = finalPreferences.map((value, index) => ({ scope: ['global', 'project', 'other'][index], sha256: value?.sha256 ?? null,

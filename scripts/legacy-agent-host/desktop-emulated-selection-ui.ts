@@ -77,11 +77,19 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
       .filter(e=>e.textContent.includes('Optional launch settings')&&e.textContent.includes(${literal(selected.model)}));
       return rows.length===1?{id:rows[0].getAttribute('aria-controls'),expanded:rows[0].getAttribute('aria-expanded')}:null})()`, 'saved model hydrates original Launch'));
     if (settings.expanded !== 'true') await ui.click(`[role="dialog"] button[aria-controls=${literal(settings.id)}]`, 'expand original saved launch settings');
-    if (chooseLow) {
-      await ui.scrollTo('[role="dialog"] #dialog-effort', 'original captured effort');
-      await ui.click('[role="dialog"] div:has(> #dialog-effort) > button', 'select original Low effort', 'Low');
+    const lead = '[role="dialog"] [data-role="lead-row"]';
+    // Launch shares the expandable lead row with Create. #dialog-effort belongs
+    // to schedule mode; opening the original lead row does not change its choices.
+    if (!(await cdp.evaluate(`Boolean(document.querySelector('${lead} #lead-effort'))`))) {
+      const modelButton = `${lead} button[aria-label^="Codex provider,"]`;
+      await ui.scrollTo(modelButton, 'original captured lead model');
+      await ui.click(modelButton, 'expand original captured lead model');
     }
-    await ui.waitRead(`document.querySelector('[role="dialog"] #dialog-effort')?.textContent.trim()===${literal(selected.effort === 'low' ? 'Low' : 'High')}`, 'saved effort hydrates original Launch');
+    if (chooseLow) {
+      await ui.scrollTo(`${lead} #lead-effort`, 'original captured effort');
+      await ui.click(`${lead} div:has(> #lead-effort) > button`, 'select original Low effort', 'Low');
+    }
+    await ui.waitRead(`document.querySelector('${lead} #lead-effort')?.textContent.trim()===${literal(selected.effort === 'low' ? 'Low' : 'High')}`, 'saved effort hydrates original Launch');
     await fill('[role="dialog"] #dialog-prompt', 'TEST_UI_BOOT');
     assert.equal(await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'unchecked');
     await ui.scrollTo('[role="dialog"] button', 'original Launch team', 'Launch team');

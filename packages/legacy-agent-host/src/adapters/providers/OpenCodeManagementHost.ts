@@ -162,7 +162,8 @@ export class OpenCodeManagementHost {
           'authorization',
           'Basic ' + Buffer.from(`opencode:${this.password}`).toString('base64')
         );
-        headers.set('x-opencode-directory', this.profile.cwd);
+        // Native V1 decodes this header once, including literal percent and Unicode paths.
+        headers.set('x-opencode-directory', encodeURIComponent(this.profile.cwd));
         const deadline = this.coordination?.deadline ?? this.admittedDeadline;
         if (deadline !== undefined) assertCoordinationDeadline(deadline, this.abort.signal,
           this.coordination?.isCurrent ?? (() => this.authority.isCurrent()));

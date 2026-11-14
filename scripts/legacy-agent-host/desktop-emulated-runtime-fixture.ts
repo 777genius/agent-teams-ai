@@ -15,6 +15,12 @@ import { seedDesktopLegacySchedule } from './desktop-schedule-fixture.ts';
 import { prepareDesktopEmulatedCodexInstaller, readDesktopEmulatedCodexInstallation, verifyDesktopEmulatedCodexInstaller } from './desktop-emulated-codex-installer-fixture.ts';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 
+import {
+  prepareDesktopEmulatedCollaborationFixture, isDesktopEmulatedCollaborationFixture,
+  readDesktopEmulatedCollaborationEffects, verifyDesktopEmulatedCollaborationFixture,
+  observeDesktopEmulatedCollaborationChildren, observeDesktopEmulatedCollaborationCleanup,
+} from './desktop-emulated-collaboration-fixture.ts';
+
 type Row = Record<string, unknown>;
 const record = (value: unknown): Row => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Row;
@@ -25,13 +31,18 @@ export const desktopRuntimePeerSources = [
 ] as const;
 
 /** TEST executables implement a finite native protocol; the original Host and D remain unchanged. */
-export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection' | 'installer' | 'lifecycle') {
+export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection' | 'installer' | 'lifecycle' | 'collaboration') {
+  if (variant === 'collaboration') {
+    assert.equal(provider, 'claude'); return prepareDesktopEmulatedCollaborationFixture(repo, pnpmEntry);
+  }
   assert.ok(variant === undefined || (variant === 'selection' || variant === 'installer') && provider === 'codex' || variant === 'lifecycle' && provider === 'claude');
   if (variant === 'installer') {
     assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
   }
   const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true });
-  const selectedSources = provider === 'claude' ? ['tools/owned-process-broker/fixtures/claudeProviderPeer.mjs'] : desktopRuntimePeerSources;
+  const selectedSources = provider === 'claude' ? ['tools/owned-process-broker/fixtures/claudeProviderPeer.mjs'] :
+    [...desktopRuntimePeerSources, ...(provider === 'opencode'
+      ? ['packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js'] : [])];
   const sources = await Promise.all(selectedSources.map(async source => {
     const path = join(repo, source); assert.equal(await realpath(path), path);
     return { path, sha256: await fileDigest(path) };
@@ -61,9 +72,11 @@ ${provider === 'codex' ? `if(process.argv.length===3&&process.argv[2]==='--versi
       TEST_DESKTOP_PEER_WORKSPACE: join(fixture.root, 'workspace'),
       ...(variant === 'selection' || variant === 'installer' ? { TEST_DESKTOP_SELECTION: 'two-models-v1' } : {}),
       ...(provider !== 'claude' ? { TEST_PEER_HELPER_SHA256: sources[1]!.sha256 } : {}),
-      ...(provider === 'opencode' ? { OPENCODE_CONFIG_CONTENT: JSON.stringify({ autoupdate: false, share: 'disabled',
-        model: 'TEST-provider/TEST-model', small_model: 'TEST-provider/TEST-model', provider: { 'TEST-provider': {
-          npm: '@ai-sdk/openai-compatible', name: 'TEST provider', options: { baseURL: 'http://127.0.0.1:19999/TEST-no-network' },
+      ...(provider === 'opencode' ? { TEST_PEER_MCP_POLICY_SHA256: sources[2]!.sha256,
+        OPENCODE_CONFIG_CONTENT: JSON.stringify({ autoupdate: false, share: 'disabled',
+        model: 'test-provider/TEST-model', small_model: 'test-provider/TEST-model', provider: { 'test-provider': {
+          npm: '@ai-sdk/openai-compatible', name: 'TEST provider', options: {
+            baseURL: 'http://127.0.0.1:19999/TEST-no-network', apiKey: 'TEST-LOCALHOST-ONLY' },
           models: { 'TEST-model': { name: 'TEST model', limit: { context: 4096, output: 1024 },
             variants: { low: { reasoningEffort: 'low' }, high: { reasoningEffort: 'high' } } } } } },
         agent: { build: { mode: 'primary' } }, compaction: { auto: false } }),
@@ -72,6 +85,13 @@ ${provider === 'codex' ? `if(process.argv.length===3&&process.argv[2]==='--versi
     return { root, role, environment };
   }));
   const runtime = peers.find(peer => peer.role === 'runtime')!, management = peers.find(peer => peer.role === 'management')!;
+  let project: { path: string; sha256: string } | undefined;
+  if (provider === 'opencode') {
+    const config = record(JSON.parse(runtime.environment.OPENCODE_CONFIG_CONTENT!));
+    const path = join(fixture.root, 'workspace/opencode.json'), bytes = JSON.stringify({ provider: config.provider });
+    await writeFile(path, bytes, { mode: 0o600, flag: 'wx' });
+    project = { path, sha256: digest(bytes) };
+  }
   const versionSentinel = provider === 'opencode' ? await prepareDesktopOpenCodeVersionSentinel(fixture) : undefined;
   const endpoints = provider === 'opencode' ? { runtime: await reserveMixedOpenCodeEndpoint(), management: await reserveMixedOpenCodeEndpoint() } : undefined;
   if (endpoints) assert.notEqual(endpoints.runtime, endpoints.management);
@@ -82,7 +102,7 @@ ${provider === 'codex' ? `if(process.argv.length===3&&process.argv[2]==='--versi
   team.members[0]!.delivery = { ...team.binding, runId: team.scope.runId, memberId: 'alice-id', generation: '1' };
   team.grants.push({ principalId: 'alice-session', memberName: 'alice', permissions: ['read', 'task.write', 'message.write'] });
   const model = provider === 'claude' ? 'sonnet' : 'TEST-model';
-  const savedModel = provider === 'opencode' ? 'TEST-provider/' + model : model;
+  const savedModel = provider === 'opencode' ? 'test-provider/' + model : model;
   team.savedSettings = { cwd: join(fixture.root, 'workspace'), providerId: provider === 'claude' ? 'anthropic' : provider, model: savedModel,
     ...(provider === 'claude' ? { effort: 'low' as const, fastMode: 'off' as const } : {}),
     prompt: '', skipPermissions: false, syncModelsWithLead: true };
@@ -93,7 +113,7 @@ ${provider === 'codex' ? `if(process.argv.length===3&&process.argv[2]==='--versi
     ...(provider === 'claude' ? { configNamespace: 'custom-directory', nativeTools: ['Read', 'Write', 'AskUserQuestion'], autoAllowedTools: [],
       nativeOptions: { permissionMode: 'default', settingSources: [], effort: 'low', fastMode: false } }
       : provider === 'codex' ? { protocolRevision: codexProtocolRevision, nativeOptions: { approvalPolicy: 'on-request', sandbox: 'read-only' } }
-      : { protocolRevision: '1.19.4', endpoint: endpoints!.runtime, nativeOptions: { providerId: 'TEST-provider', agent: 'build', toolApprovalMode: 'manual' } }),
+      : { protocolRevision: '1.19.4', endpoint: endpoints!.runtime, nativeOptions: { providerId: 'test-provider', agent: 'build', toolApprovalMode: 'manual' } }),
     limits: { queuedInputs: 2, inputBytes: 65536, outputBytes: 1_000_000, outputEvents: 1500, pendingInteractions: 4, timeoutMs: 90_000 },
   });
   profile.runtime = { members: [member], providerTemplates: [structuredClone(member)] };
@@ -132,11 +152,12 @@ ${provider === 'codex' ? `if(process.argv.length===3&&process.argv[2]==='--versi
     await writeFile(join(fixture.root, 'ui-seed-receipt.json'), JSON.stringify(receipt, null, 2), { mode: 0o600, flag: 'wx' });
   } finally { lease.release(); }
   if (provider === 'claude') await seedDesktopLegacySchedule(fixture, { model, prompt: 'TEST_UI_STANDALONE_DONE' });
-  return { ...fixture, uiSeed, emulatedRuntime: { provider, sources, executable, peers, versionSentinel, savedModel, variant, installer,
+  return { ...fixture, uiSeed, emulatedRuntime: { provider, sources, executable, peers, versionSentinel, project, savedModel, variant, installer,
     observedPeerPids: [] as number[], commandPrefix: `${fixture.node} ${executable.path} ` } };
 }
 
 export async function readDesktopEmulatedRuntimeEffects(fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedRuntimeFixture>>) {
+  if (isDesktopEmulatedCollaborationFixture(fixture)) return readDesktopEmulatedCollaborationEffects(fixture);
   const rows: Row[] = [];
   for (const root of new Set(fixture.emulatedRuntime.peers.map(peer => peer.root))) {
     let text: string;
@@ -155,12 +176,17 @@ export async function readDesktopEmulatedRuntimeEffects(fixture: Awaited<ReturnT
 }
 
 export async function verifyDesktopEmulatedRuntimeFixture(fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedRuntimeFixture>>) {
+  if (isDesktopEmulatedCollaborationFixture(fixture)) return verifyDesktopEmulatedCollaborationFixture(fixture);
   const selected = fixture.emulatedRuntime;
   for (const source of [...selected.sources, selected.executable]) {
     assert.equal(await realpath(source.path), source.path); assert.equal(await fileDigest(source.path), source.sha256);
   }
   if (selected.versionSentinel) for (const path of selected.versionSentinel.versionPaths)
     assert.equal(await fileDigest(path), selected.versionSentinel.versionSha256);
+  if (selected.project) {
+    assert.equal(await realpath(selected.project.path), selected.project.path);
+    assert.equal(await fileDigest(selected.project.path), selected.project.sha256);
+  }
   assert.equal(await fileDigest(fixture.profilePath), fixture.pins.profileSha256);
   assert.equal(await fileDigest(fixture.descriptorPath), fixture.pins.descriptorSha256);
   const profile = readTeamHostProfile(fixture.profilePath, fixture.pins.profileSha256);
@@ -178,12 +204,14 @@ export async function verifyDesktopEmulatedRuntimeFixture(fixture: Awaited<Retur
     ...(selected.variant === 'lifecycle' ? { lifecycleVariant: 'cold-resume-active-quit-v1' } : {}),
     protocolRevision: member.provider === 'claude' ? 'sdk-0.3.305' : member.protocolRevision,
     ...(selected.versionSentinel ? { versionSentinelSha256: selected.versionSentinel.versionSha256 } : {}),
+    ...(selected.project ? { project: selected.project, localReadinessScope: 'declared-TEST-key-finite-peer' } : {}),
     runtimeConfigured: true, managementConfigured: true, vendorsAllowed: false };
 }
 
 /** Only direct children of the original Host, with immutable TEST entrypoints and original launch rows. */
 export async function observeDesktopEmulatedRuntimeChildren(group: number,
   fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedRuntimeFixture>>, phase: 'before-first-team-read' | 'after-team-read') {
+  if (isDesktopEmulatedCollaborationFixture(fixture)) return observeDesktopEmulatedCollaborationChildren(group, fixture, phase);
   assertOwnedCdpListener(group); await verifyDesktopEmulatedRuntimeFixture(fixture);
   const table = processTable(), hosts = table.filter(row => row.pgid === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   if (phase === 'before-first-team-read') assert.ok(hosts.length <= 1); else assert.equal(hosts.length, 1);
@@ -201,6 +229,7 @@ export async function observeDesktopEmulatedRuntimeChildren(group: number,
 
 /** PIDs are absence observations only; original Host custody performs all stopping. */
 export async function observeDesktopEmulatedRuntimeCleanup(fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedRuntimeFixture>>) {
+  if (isDesktopEmulatedCollaborationFixture(fixture)) return observeDesktopEmulatedCollaborationCleanup(fixture);
   const effects = await readDesktopEmulatedRuntimeEffects(fixture);
   const launches = effects.filter(row => row.event === 'launch').map(row => Number(row.pid));
   assert.ok(launches.length > 0);

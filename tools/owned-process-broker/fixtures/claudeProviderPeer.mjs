@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import { basename, dirname, isAbsolute, join, relative, sep } from 'node:path';
 import process from 'node:process';
 import { clearTimeout, setTimeout } from 'node:timers';
-import { URL } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
 // Resolve the declared, locked Host dependency; tools/ has no separate package or ambient SDK.
 const hostRequire = createRequire(new URL('../../../packages/legacy-agent-host/package.json', import.meta.url));
 const { Client } = hostRequire('@modelcontextprotocol/sdk/client/index.js');
@@ -18,6 +18,14 @@ assert.equal(process.env.TEST_PEER_SCENARIO, 'desktop-ui-v1', 'environment');
 assert.equal(process.env.TEST_PEER_PROVIDER, 'claude', 'environment');
 const role = process.env.TEST_PEER_ROLE;
 assert.ok(role === 'management' || role === 'runtime', 'environment');
+let collaboration;
+if (process.env.TEST_DESKTOP_COLLABORATION !== undefined) {
+  assert.equal(process.env.TEST_DESKTOP_COLLABORATION, 'mixed-v1', 'environment');
+  const source = new URL('./providerCollaboration.mjs', import.meta.url), path = fileURLToPath(source);
+  assert.equal(realpathSync(path), path, 'environment');
+  assert.equal(createHash('sha256').update(readFileSync(path)).digest('hex'), process.env.TEST_PEER_COLLABORATION_SHA256, 'environment');
+  collaboration = await import(source.href);
+}
 const root = process.env.TEST_DESKTOP_PEER_ROOT;
 assert.ok(root && isAbsolute(root) && basename(root).startsWith('TEST-'), 'environment');
 assert.equal(realpathSync(root), root, 'environment');
@@ -343,7 +351,10 @@ function input(frame) {
   assert.ok(uuid(frame.uuid) && !seenInputs.has(frame.uuid), 'input');
   assert.ok(frame.session_id === session && frame.parent_tool_use_id === null && frame.message?.role === 'user', 'input');
   const content = frame.message.content;
-  const raw = typeof content === 'string' ? content : Array.isArray(content) && content.length === 1 && content[0]?.type === 'text' ? content[0].text : undefined;
+  const attached = collaboration && Array.isArray(content) && content.some(row => row?.type === 'image' || row?.type === 'document');
+  const textBlocks = attached ? content.filter(row => row?.type === 'text') : undefined;
+  if (attached) assert.equal(textBlocks.length, 1, 'input');
+  const raw = attached ? textBlocks[0].text : typeof content === 'string' ? content : Array.isArray(content) && content.length === 1 && content[0]?.type === 'text' ? content[0].text : undefined;
   assert.ok(typeof raw === 'string' && Buffer.byteLength(raw) <= 65536, 'input');
   let text = raw === review ? '/review TEST_UI_REVIEW' : raw;
   if (teamRuntime && text !== '/review TEST_UI_REVIEW' && !text.startsWith('/')) {
@@ -359,8 +370,9 @@ function input(frame) {
   const allowed = finite ? [probe] : standalone ? ['TEST_UI_STANDALONE_DONE', 'TEST_UI_STANDALONE_HOLD']
     : ['TEST_UI_BOOT', 'TEST_UI_STREAM', 'TEST_UI_HOLD', 'TEST_UI_RESUME', 'TEST_UI_APPROVAL_ALLOW', 'TEST_UI_APPROVAL_DENY',
       'TEST_UI_QUESTION', 'TEST_UI_QUESTION_DECLINE', 'TEST_UI_SCHEDULE_DONE', 'TEST_UI_SCHEDULE_HOLD',
-      '/compact', '/cost', '/usage', '/test-desktop-skill', '/review TEST_UI_REVIEW'];
+      '/compact', '/cost', '/usage', '/test-desktop-skill', '/review TEST_UI_REVIEW', ...(collaboration?.collaborationMarkers ?? [])];
   assert.ok(allowed.includes(text), 'input');
+  if (attached) assert.equal(text, 'TEST_UI_COLLAB_ATTACH', 'input');
   if (text === 'TEST_UI_RESUME') assert.ok(teamRuntime && options.resume && resumedHistory?.bootRetained, 'resume');
   assert.ok(text !== '/review TEST_UI_REVIEW' || raw === review, 'input');
   if (standalone) assert.equal(inputCount, 1, 'input');
@@ -368,7 +380,11 @@ function input(frame) {
   const selected = active;
   remember('user', selected.id, raw);
   effect({ event: 'input', inputId: selected.id, marker: text === probe ? 'TEST_MODEL_PROBE' : text, sessionId: session, wrapped: raw !== text });
-  if (text === 'TEST_UI_STREAM') {
+  if (collaboration?.collaborationMarkers.includes(text)) void collaboration.runCollaboration({ marker: text, raw,
+    inputId: selected.id, mcp, tools: nativeTools, current: () => assert.equal(active, selected, 'authority'), effect,
+    ...(attached ? { attachments: collaboration.verifyCollaborationAttachments(content) } : {}) })
+    .then(reply => finish(selected, reply)).catch(fail);
+  else if (text === 'TEST_UI_STREAM') {
     partial(selected, 'TEST stream partial');
     const wait = () => {
       if (active !== selected || failed) return;

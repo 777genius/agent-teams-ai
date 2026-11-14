@@ -307,7 +307,7 @@ async function prepareModel(options: LiveRosterExecutionOptions, flight: Flight,
   const cutoff = Math.min(flight.cutoff, prepared.anchor.expiresAt);
   const current = () => { try { assertFlight(options, flight, true); return Date.now() < cutoff; }
     catch { return false; } };
-  const processOrigin = captureLiveRosterProcessOrigin(options.profile, flight.team,
+  const processOrigin = captureLiveRosterProcessOrigin(options.profile, flight.retained.team,
     captured.capture, captured.profile, options.sources);
   // Publish the exact group identity in this first flight before its original ModelProbeOwner call.
   flight.probe = { commandId, context };

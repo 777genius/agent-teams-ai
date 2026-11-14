@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
+import { PassThrough } from 'node:stream';
+
 import {
   execCli,
   killProcessTree,
@@ -7,14 +10,12 @@ import {
   quoteWindowsCmdArg,
   spawnCli,
 } from '@main/utils/childProcess';
-import * as child from 'child_process';
-import { PassThrough } from 'node:stream';
-import { createHash } from 'node:crypto';
 import {
   execFileWithLinuxChildLaunch, observeLinuxChildLaunchFailure, spawnSyncWithLinuxChildLaunch,
   spawnWithLinuxChildLaunch,
 } from '@main/utils/linuxChildLaunch';
 import * as launchSelection from '@main/utils/linuxChildLaunchSelection';
+import * as child from 'child_process';
 import { EventEmitter } from 'events';
 import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
@@ -844,9 +845,14 @@ describe('cli child process helpers', () => {
         }
       );
 
+      const argument = '\\'.repeat(50_000);
       await expect(
-        execCli('C:\\Users\\Алексей\\bin\\claude.exe', ['\\'.repeat(50_000)])
+        execCli('C:\\Users\\Алексей\\bin\\claude.exe', [argument])
       ).resolves.toMatchObject({ stdout: 'ok' });
+      expect(execFileMock).toHaveBeenCalledOnce();
+      expect(execFileMock.mock.calls[0][1].at(-1)).toBe(
+        '""C:\\Users\\Алексей\\bin\\claude.exe" ^"' + argument + argument + '^""'
+      );
     }, 2_000);
 
     it('keeps inline settings JSON as one argv-safe argument for Windows cmd launchers', async () => {

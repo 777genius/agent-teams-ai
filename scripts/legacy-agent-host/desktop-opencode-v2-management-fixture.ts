@@ -3,10 +3,12 @@ import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
 import { verifyOpenCodeV2EmbeddedGraph } from '../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeV2EmbeddedGraph.js';
+import { selectRuntimeSourceSeed } from '../../packages/legacy-agent-host/dist/composition/runtimeSourceGrantAuthority.js';
 import { digest, fileDigest, prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import { desktopOpenCodeV2ManagementProfile, prepareDesktopOpenCodeV2Recipe } from './desktop-opencode-v2-fixture.ts';
 import { reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
 import { desktopV2ProviderId } from './desktop-opencode-v2-management-model.ts';
+import { captureDesktopV2ManagementAuthority } from './desktop-opencode-v2-management-records.ts';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import type { DesktopV2ManagementModel } from './desktop-opencode-v2-management-model.ts';
 
@@ -25,7 +27,7 @@ export function assertDesktopV2ManagementEnvironment() {
   assert.match(process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256 ?? '', /^[a-f0-9]{64}$/u);
 }
 
-/** A single management-only native V2 recipe. Every legacy agent name remains a finite sentinel. */
+/** Two exact project management seeds share one private V2 account; no Runtime is configured. */
 export async function prepareDesktopV2ManagementFixture(repo: string, pnpmEntry: string, model: DesktopV2ManagementModel) {
   assertDesktopV2ManagementEnvironment();
   const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiTask: true, seedUiPreferences: true });
@@ -48,7 +50,9 @@ export async function prepareDesktopV2ManagementFixture(repo: string, pnpmEntry:
   assert.equal(member.nativeOptions.providerId, desktopV2ProviderId);
   assert.equal(member.embedded.manifestSha256, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
   const management = desktopOpenCodeV2ManagementProfile(member, selection.managementEndpoint, 'TEST-v2-settings-management');
-  profile.management = [management];
+  const otherManagement = { ...structuredClone(management), profileId: 'TEST-v2-settings-management-other',
+    cwd: join(fixture.root, 'workspace-other') };
+  profile.management = [management, otherManagement];
   for (const name of ['workspace', 'workspace-other']) {
     const cwd = join(fixture.root, name); await mkdir(cwd, { recursive: true, mode: 0o700 });
     const discovery = join(fixture.root, 'claude/projects', cwd.replace(/[/\\]/g, '-'));
@@ -67,14 +71,15 @@ export async function prepareDesktopV2ManagementFixture(repo: string, pnpmEntry:
   record(record(owner.profile).env).LEGACY_AGENT_HOST_PROFILE_SHA256 = fixture.pins.profileSha256;
   descriptor.management = [null, join(fixture.root, 'workspace'), join(fixture.root, 'workspace-other')].map(projectPath => ({
     runtimeId: 'opencode', owner: { ownerId: owner.ownerId, revision: owner.revision }, contextId: 'local', projectPath,
-    profileId: management.profileId, configRevision: management.configRevision,
+    profileId: projectPath === otherManagement.cwd ? otherManagement.profileId : management.profileId,
+    configRevision: management.configRevision,
     preferences: { globalRoot: join(fixture.root, 'preferences/global'),
       projectRoot: projectPath === null ? null : join(fixture.root, 'preferences', basename(projectPath)) },
   }));
   const descriptorBytes = JSON.stringify(descriptor); await writeFile(fixture.descriptorPath, descriptorBytes, { mode: 0o600 });
   fixture.pins.descriptorSha256 = digest(descriptorBytes);
   fixture.appEnvironment.AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256 = fixture.pins.descriptorSha256;
-  return { ...fixture, v2Management: { selection, management,
+  return { ...fixture, v2Management: { selection, management, otherManagement,
     childEntry: await realpath(join(repo, 'packages/legacy-agent-host/dist/adapters/providers/OpenCodeV2EmbeddedChild.js')),
     authPath: join(member.environment.XDG_DATA_HOME!, 'opencode/auth.json') } };
 }
@@ -86,11 +91,17 @@ export async function verifyDesktopV2ManagementFixture(fixture: DesktopV2Managem
   assert.equal(await fileDigest(fixture.profilePath), fixture.pins.profileSha256);
   assert.equal(await fileDigest(fixture.descriptorPath), fixture.pins.descriptorSha256);
   const profile = readTeamHostProfile(fixture.profilePath, fixture.pins.profileSha256);
-  assert.equal(profile.runtime, undefined); assert.deepEqual(profile.management, [selected.management]);
+  assert.equal(profile.runtime, undefined); assert.deepEqual(profile.management, [selected.management, selected.otherManagement]);
+  assert.deepEqual(selected.otherManagement, { ...selected.management,
+    profileId: 'TEST-v2-settings-management-other', cwd: join(fixture.root, 'workspace-other') });
+  const authority = captureDesktopV2ManagementAuthority(fixture.root, profile,
+    JSON.parse(await readFile(fixture.descriptorPath, 'utf8')));
+  assert.deepEqual(authority.grants.map(grant => selectRuntimeSourceSeed(profile, grant).profileId),
+    [selected.management.profileId, selected.management.profileId, selected.otherManagement.profileId]);
   assert.ok(selected.management.embedded); await verifyOpenCodeV2EmbeddedGraph(selected.management.embedded);
   assert.deepEqual(record(selected.management.embedded.providerConfiguration).settings, { baseURL: selected.selection.modelUrl + '/v1' });
   return { generation: 'v2', version: '2.1.4', bunSha256: selected.selection.bunSha256,
     manifestSha256: selected.management.embedded.manifestSha256, profileSha256: fixture.pins.profileSha256,
     descriptorSha256: fixture.pins.descriptorSha256, runtimeConfigured: false,
-    managementConfigured: true, codexOrClaudeExecutable: false };
+    managementConfigured: true, managementProfiles: 2, codexOrClaudeExecutable: false };
 }

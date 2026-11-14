@@ -968,3 +968,57 @@ ModelProbeOwner's NativeModelProbe interface, commandRecords' optional private c
 ### Existing tests and qualification
 
 Extend the already scoped existing model-probe and saved-team-model-probe cases to distinguish completed local readiness, exact scoped native ordinary, unscoped Settings ordinary, absent/foreign/structurally copied proof, unknown release and late result. Assert public omission, exact unchanged initial request/fingerprint/scope/cutoff, conditional preparationDigest commitment, after-close file drift, and actual future native scope mismatch before business allocation. Retain the complete frozen B2 duplicate/replay-cutoff and cleanup assertions. Existing configuration/credential cases retain R8/§3d/R9 branches. No new test suite, timer, HTTP request, inference or native lane is introduced by this composition amendment. Genuine native cases and their original request arithmetic remain those of R10.9. Source review and synthetic tests cannot qualify the actual engine or packaged application.
+
+
+## V2 Settings acceptance source provenance correction (2026-11-14)
+
+The original Electron attempt at `c226dc06d841c828d4e6cd8d56acaf4c5d9d22a5`
+stopped on the first rejected-key receipt: job `132583043246`, artifact
+`14132244497`, archive SHA-256
+`0bf8c381830ba401266d2702081e2a0a425e27838ead18b5bbedd34b14d94d44`.
+The driver required the seed profile `TEST-v2-settings-management`; the original
+Host had already published the configuration source and correctly used
+`runtime-source:b8f6d61925db80b67831f090b33414555515ab550bd85fa958ccd0c3a3d46c80`.
+The exact source publication, descriptor, seed profile, rejected-key receipt
+and observed native probe namespace are retained as an explicitly incomplete
+regression fixture. They are not a replacement PASS receipt.
+
+The read-only acceptance helper now uses the original Host
+`readOriginalRuntimeSourcePublication`, `selectRuntimeSourceSeed` and
+`validateRuntimeSourceHistory` contracts. Each action must join exactly one
+retained published revision and the exact original descriptor grant: owner,
+context, project scope, team authority, seed profile/config revision, executable,
+configuration and selected preferences remain bound. Native probe namespace
+verification uses the actual immutable derived profile through the existing
+`applyOpenCodeRuntimeSource` and model-selection code. Matching any arbitrary
+`runtime-source:*` identifier is insufficient.
+
+The driver and final verifier still require exactly five distinct original
+credential/model intents. Configuration publications are accounted for
+separately: every source command must be published and released, match an
+index record and its complete revision chain, and keep the pinned V2 executor,
+configuration paths and allowed TEST preferences. The final original index
+and its file hash are retained. Original native process birth/exit, five
+model requests, screenshots, credentials, defaults, inheritance, renderer
+reload, deadlines and cleanup requirements remain mandatory.
+
+A second fixture defect was confirmed through the original Host selector:
+`workspace-other` referenced the first seed whose cwd was `workspace`.
+`selectRuntimeSourceSeed` correctly rejects that mismatch. The fixture now
+supplies a second exact management seed with its own profile ID and actual
+other-project cwd, while preserving the same pinned Bun, embedded graph,
+private account and environment. Global/workspace actions keep the first
+seed; the second seed serves the existing other-project inheritance read.
+There are still no Runtime profiles or business inputs. The original
+inheritance step and the production cwd authority check are unchanged.
+
+Pinned Node 24.21.0 verification passes all five focused tests, the complete
+Desktop scripts TypeScript project and fast ESLint. The retained native
+namespace is reproduced exactly (`agent-teams-v2-probe-c66864101ac6d673-`).
+Negative cases reject foreign revisions, scopes, owners, engine versions,
+executables, rehashed foreign publications, missing/held publications and
+rewritten pointers. The original other-project selector rejects the old
+fixture and accepts only the corrected exact private-account seed.
+These are local source/retained-evidence checks, with no engine process
+launched. The full original Electron/V2 journey and five native probes must
+still pass on the newly published source head.

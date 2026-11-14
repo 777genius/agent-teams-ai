@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { captureInitialRuntimeModelAdmission } from '../../packages/legacy-agent-host/dist/composition/initialRuntimeModelAdmission.js';
 
 import type { SelectedHostProfile } from '../../src/features/agent-backend/main/infrastructure/selectedHostProfile';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
@@ -70,6 +71,9 @@ export async function prepareEmulatedProfile(sandbox: string, broker: string, ac
       grants: [{ principalId: 'human', memberName: 'user', permissions: ['read', 'task.write', 'message.write', 'admin'] },
         { principalId: 'alice-session', memberName: 'alice', permissions: ['read', 'task.write', 'message.write', 'process.write'] }] }],
     runtime: { members: [member] } };
+  if (provider === 'opencode') profile.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(profile, {
+    method: 'runtime.open', teamId: binding.teamId, commandId: 'TEST-open', payload: { memberId: 'alice-id' },
+  })];
   const source = join(root, 'TEST-profile.json'); writeFileSync(source, JSON.stringify(profile), { flag: 'wx' });
   const host: SelectedHostProfile = { profileId, nodeExecutable: node, nodeVersion: process.version,
     nodeSha256: profile.owner.nodeSha256, hostEntry: realpathSync.native(hostEntry), hostEntrySha256: profile.owner.hostEntrySha256,

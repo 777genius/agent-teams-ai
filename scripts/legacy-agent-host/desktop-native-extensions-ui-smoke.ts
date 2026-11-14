@@ -59,10 +59,18 @@ export async function runDesktopNativeExtensionsUiSmoke(
     ],
     steps,
   };
+  if (selected.execution === 'finite-protocol-peer') {
+    proof.scope = 'Existing Settings Advanced → Extensions; original Plugin and MCP mutations through the captured finite CLI protocol peer';
+    proof.execution = selected.execution;
+    proof.excluded = [...proof.excluded as string[], 'vendor CLI qualification', 'plugin download or execution', 'live MCP server connection'];
+    proof.publicNetwork = ['original Main official plugin catalog resolution; no vendor model or native CLI'];
+  }
   options.evidence[options.pluginPhase ? "nativeExtension" + (options.pluginPhase === "install" ? "Install" : "Uninstall") + "Ui" : "nativeExtensionsUi"] = proof;
   if (options.pluginPhase) proof.scope = "Original Plugins panel: one " + options.pluginPhase + " through the captured native CLI";
   const screenshots: string[] = [];
+  const screenshotHashes: Record<string, string> = {};
   proof.screenshots = screenshots;
+  if (selected.execution === 'finite-protocol-peer') proof.screenshotHashes = screenshotHashes;
   const screenshot = async (name: string) => {
     options.assertOwnedRenderer();
     const image = record(
@@ -78,6 +86,9 @@ export async function runDesktopNativeExtensionsUiSmoke(
       { mode: 0o600, flag: "wx" },
     );
     screenshots.push(name);
+    if (selected.execution === 'finite-protocol-peer') {
+      screenshotHashes[name] = await fileDigest(join(options.root, name));
+    }
   };
   const ui = createDesktopUiControls(cdp, {
     assertOwnedRenderer: options.assertOwnedRenderer,

@@ -75,7 +75,7 @@ const server = createServer((request, response) => {
   void (async () => {
     if (
       request.headers.authorization !== authHeader ||
-      request.headers['x-opencode-directory'] !== process.cwd()
+      request.headers['x-opencode-directory'] !== encodeURIComponent(process.cwd())
     ) {
       json(response, { error: 'TEST unauthorized' }, 401);
       return;

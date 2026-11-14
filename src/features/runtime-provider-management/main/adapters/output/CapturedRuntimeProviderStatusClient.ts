@@ -126,6 +126,7 @@ function projectOpenCodeCatalog(
     authMethod: null,
     verificationState: 'unknown',
     statusCheckOutcome: 'model_only',
+    statusCheckErrorCode: undefined,
     models: items.map((model) => model.id),
     modelCatalogRefreshState: 'ready',
     modelCatalog: {

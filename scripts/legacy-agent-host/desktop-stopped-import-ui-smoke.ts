@@ -26,6 +26,12 @@ const record = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 const json = async (path: string) => record(JSON.parse(await readFile(path, 'utf8')));
+export interface StoppedImportFiniteProof {
+  kind: 'legacy-format-test-archive';
+  observeModelChecks(
+    receipts: Record<string, unknown>[], selected: { model: unknown; effort?: unknown },
+  ): Promise<Record<string, unknown>[]>;
+}
 async function records(path: string): Promise<Record<string, unknown>[]> {
   const names = (await readdir(path)).filter((name) => /^[a-f0-9]{64}\.json$/.test(name));
   assert.ok(names.length <= 64);
@@ -71,16 +77,29 @@ export async function runDesktopStoppedImportUiSmoke(
   options: {
     fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
     evidence: Record<string, unknown>;
-    model: Awaited<ReturnType<typeof startNativeTeamModel>>;
     electron: string;
     assertOwnedRenderer(): void;
     observeOwnedHost(): void;
-  }
+  } & (
+    | { model: Awaited<ReturnType<typeof startNativeTeamModel>>; finiteProof?: never }
+    | { model?: never; finiteProof: StoppedImportFiniteProof }
+  )
 ): Promise<void> {
   const { fixture, model } = options;
+  assert.equal(model === undefined, options.finiteProof !== undefined);
   const seed = await readDesktopStoppedImportSeed(fixture.root);
   const launchContinuation = process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1';
   assert.equal(launchContinuation, seed.sourceKind !== undefined);
+  if (options.finiteProof) {
+    assert.equal(options.finiteProof.kind, 'legacy-format-test-archive');
+    assert.equal(launchContinuation, false, 'finite saved archive never claims a native source or launch continuation');
+  }
+  const observeModelChecks = async (receipts: Record<string, unknown>[]) => {
+    if (options.finiteProof) return options.finiteProof.observeModelChecks(receipts, seed.savedSettings);
+    assert.ok(model);
+    assertStoppedImportModelChecks(receipts, model, seed.savedSettings);
+    return model.probes;
+  };
   const steps: Record<string, unknown>[] = [];
   const step = (value: Record<string, unknown>) => {
     steps.push({ monotonicMs: Math.round(performance.now()), ...value });
@@ -114,6 +133,12 @@ export async function runDesktopStoppedImportUiSmoke(
     sourceBefore: seed.before,
     preflightObservations: [],
   };
+  if (options.finiteProof) {
+    proof.sourceKind = options.finiteProof.kind;
+    proof.execution = 'finite-protocol-peer';
+    proof.scope = 'Original legacy-format TEST archive Detail Launch → Main import → canonical Host dialog; exact saved records and attachment bytes, close without Submit, reload and same original import lookup';
+    proof.excluded = [...proof.excluded as string[], 'genuine old-frontend archive producer', 'vendor CLI qualification'];
+  }
   options.evidence.stoppedImportUiProof = proof;
   const ui = createDesktopUiControls(cdp, {
     assertOwnedRenderer: options.assertOwnedRenderer,
@@ -228,10 +253,10 @@ export async function runDesktopStoppedImportUiSmoke(
         60_000
       );
       const receipts = await records(join(fixture.root, 'hoststore/management-commands'));
-      assertStoppedImportModelChecks(receipts, model, seed.savedSettings);
+      const probes = await observeModelChecks(receipts);
       (proof.preflightObservations as unknown[]).push({
         receipts,
-        observedExactProbeRequests: model.probes.length,
+        observedExactProbeRequests: probes.length,
         dialogText: await cdp.evaluate(
           `document.querySelector('[role="dialog"]')?.innerText.slice(-6000)`
         ),
@@ -571,7 +596,7 @@ export async function runDesktopStoppedImportUiSmoke(
   if (seed.sourceKind === 'actual-current-native-solo')
     for (const path of seed.absentRoots) await assert.rejects(lstat(path), { code: 'ENOENT' });
   const probeReceipts = await records(join(fixture.root, 'hoststore/management-commands'));
-  assertStoppedImportModelChecks(probeReceipts, model, seed.savedSettings);
+  const probes = await observeModelChecks(probeReceipts);
   const sessions = await readDesktopNativeStopSessions(fixture.root).catch(
     (error: NodeJS.ErrnoException) => {
       if (
@@ -589,8 +614,9 @@ export async function runDesktopStoppedImportUiSmoke(
   proof.sourceAfter = after;
   proof.noLaunchSubmit = true;
   proof.sameOriginalImportAfterReload = true;
-  proof.probes = model.probes;
+  proof.probes = probes;
   if (launchContinuation) {
+    assert.ok(model);
     await runStoppedImportLaunchUi(cdp, {
       fixture,
       seed,

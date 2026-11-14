@@ -79,7 +79,7 @@ export async function runDesktopEmulatedManagementUi(
   const source = `${page} [data-testid="team-model-selector-provider-nav-local-models"]`;
   await ui.scrollTo(source, 'original configured local model sources');
   await ui.click(source, 'select original configured local model sources');
-  const model = `${page} [data-testid="team-model-selector-model-option"][aria-label^="TEST model"]`;
+  const model = `${page} [data-testid="team-model-selector-model-option"][aria-label^="TEST-model"]`;
   await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll(${desktopJsLiteral(model)})];return rows.length===1&&rows[0].getAttribute('aria-disabled')!=='true'})()`, 'one selectable captured TEST model');
   await ui.scrollTo(model, 'original TEST model option');
   await ui.click(model, 'select original TEST model option');

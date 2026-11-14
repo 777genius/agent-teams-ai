@@ -399,6 +399,15 @@ export async function cleanupCapturedDesktopApp(options: {
     // Yield for ChildProcess exit/reaping before inspecting a just-closed dev wrapper.
     await tick();
     const observationDeadline = Date.now() + 3000;
+    if (evidence.quitRequested === true) {
+      const initialExitCode = app.exitCode, initialSignalCode = app.signalCode;
+      // Spend the original observation budget on the exact requested Quit first.
+      // Synchronous ps reads can otherwise outrun this ChildProcess's exit event.
+      while (app.exitCode === null && app.signalCode === null && Date.now() < observationDeadline)
+        await tick();
+      evidence.originalRequestedQuitExit = { initialExitCode, initialSignalCode,
+        exitCode: app.exitCode, signalCode: app.signalCode };
+    }
     remaining = group > 0 ? await settledGroupMembers(group, observationDeadline) : [];
     evidence.beforeHarnessCleanup = remaining;
     if (hostPid === undefined) {

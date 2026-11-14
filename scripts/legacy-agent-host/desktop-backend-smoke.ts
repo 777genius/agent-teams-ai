@@ -3,6 +3,9 @@ import { prepareDesktopEmulatedManagementFixture, verifyDesktopEmulatedManagemen
 import { runDesktopEmulatedManagementUi } from './desktop-emulated-management-ui.ts';
 import { prepareDesktopEmulatedRuntimeFixture, verifyDesktopEmulatedRuntimeFixture, observeDesktopEmulatedRuntimeChildren, observeDesktopEmulatedRuntimeCleanup } from './desktop-emulated-runtime-fixture.ts';
 import { runDesktopEmulatedRuntimeUi } from './desktop-emulated-runtime-ui.ts';
+import { prepareDesktopEmulatedExtensionsFixture } from './desktop-emulated-extensions-fixture.ts';
+import { prepareDesktopEmulatedImportFixture } from './desktop-emulated-import-fixture.ts';
+import { runDesktopEmulatedImportUi } from './desktop-emulated-import-ui.ts';
 import { restartDesktopEmulatedRuntimeApp } from './desktop-emulated-lifecycle-boundary.ts';
 import { verifyDesktopEmulatedLifecycleQuit } from './desktop-emulated-lifecycle-ui.ts';
 import { runDesktopScheduleUiProof } from './desktop-schedule-ui-proof.ts';
@@ -12,7 +15,7 @@ import { connectCapturedDesktopApp, captureDesktopRendererFailure, restartCaptur
 import type { DesktopCdpPort as CdpPort, DesktopCdpLibrary as CdpLibrary } from './desktop-captured-app.ts';
 import { observeDesktopStartup, requestObservedDesktopClose } from './startup-passive-observer.ts';
 import { runDesktopNativeExtensionsUiSmoke } from './desktop-native-extensions-ui-smoke.ts';
-import { isSkillsMetadataRefusal } from './desktop-skills-fixture.ts';
+import { isSkillsMetadataRefusal, verifyDesktopSkillsFixture } from './desktop-skills-fixture.ts';
 import { readCapturedCandidateElectron } from './candidate-electron.ts';
 import { bounded } from './desktop-proof-bounds.ts';
 import { runDesktopCodexAccountProof, readDesktopCodexInitialAccount } from './desktop-codex-account-proof.ts';
@@ -109,7 +112,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   assertDesktopProofEnvironment(mode === 'process-cold-ui' || codexAccountMode);
   const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1';
   const emulatedManagementMode = ['emulated-management-ui', 'emulated-codex-login-ui'].includes(mode);
-  const emulatedRuntimeProvider = ['emulated-codex-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui'].includes(mode) ? 'codex' : ['emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui'].includes(mode) ? 'claude' : mode === 'emulated-opencode-runtime-ui' ? 'opencode' : undefined;
+  const emulatedRuntimeProvider = ['emulated-codex-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui'].includes(mode) ? 'codex' : ['emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui'].includes(mode) ? 'claude' : mode === 'emulated-opencode-runtime-ui' ? 'opencode' : undefined;
   const emulatedRuntimeMode = emulatedRuntimeProvider !== undefined;
   if (emulatedManagementMode || emulatedRuntimeMode) assert.equal(emulatedOnly, true, 'TEST providers require provider-emulation admission');
   assert.equal(
@@ -142,7 +145,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     : mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
   const emulatedManagementFixture = emulatedManagementMode ? await prepareDesktopEmulatedManagementFixture(repo, pnpm, mode === 'emulated-codex-login-ui' ? 'codex-login' : undefined) : undefined;
-  const emulatedRuntimeFixture = emulatedRuntimeProvider ? await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, emulatedRuntimeProvider, mode === 'emulated-claude-lifecycle-ui' ? 'lifecycle' : mode === 'emulated-selection-ui' ? 'selection' : mode === 'emulated-installer-ui' ? 'installer' : undefined) : undefined;
+  const emulatedRuntimeFixture = mode === 'emulated-extensions-ui' ? await prepareDesktopEmulatedExtensionsFixture(repo, pnpm)
+    : mode === 'emulated-import-ui' ? await prepareDesktopEmulatedImportFixture(repo, pnpm)
+    : emulatedRuntimeProvider ? await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, emulatedRuntimeProvider, mode === 'emulated-collaboration-ui' ? 'collaboration' : mode === 'emulated-claude-lifecycle-ui' ? 'lifecycle' : mode === 'emulated-selection-ui' ? 'selection' : mode === 'emulated-installer-ui' ? 'installer' : undefined) : undefined;
   const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = emulatedRuntimeFixture ?? emulatedManagementFixture ?? (questionUiMode ? await prepareDesktopBackendFixture(repo, {
     seedUiTask: true, pnpmEntry: pnpm, nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },
@@ -173,6 +178,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const descriptor = object(JSON.parse(await readFile(fixture.descriptorPath, 'utf8')));
     assert.equal(profile.runtime, undefined, 'offline UI cannot configure provider sessions');
     if (emulatedManagementFixture) await verifyDesktopEmulatedManagementFixture(emulatedManagementFixture);
+    else if (mode === 'skills-ui') await verifyDesktopSkillsFixture(fixture);
     else { assert.equal(profile.management, undefined, 'offline UI cannot configure provider management');
       assert.equal(descriptor.management, undefined, 'offline Desktop cannot select provider management'); }
   }
@@ -229,7 +235,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   if (checkpointUpgrade) evidence.claudeCheckpointUpgrade = checkpointUpgrade.proof;
   if (capturedMcpUiMode) evidence.scope = 'Original Launch member MCP policies, selected external server and app-only isolation, actual native permission and tool effect, all-member Stop and saved UI readback; finite localhost inference only';
   if (scheduleUiMode) evidence.scope = 'Original Schedule controls, actual finite Claude and task-first native Bash/MCP, Stop, history and reload; localhost inference only';
-  captureDesktopProofScope(evidence, { repo, mode, emulatedOnly, emulatedManagementMode, emulatedRuntimeMode });
+  captureDesktopProofScope(evidence, { repo, mode, emulatedOnly,
+    emulatedManagementMode: emulatedManagementMode || mode === 'skills-ui', emulatedRuntimeMode });
   if (donorSavedOnly) evidence.scope = 'Exact donor UI saves genuine settings/roster, ordinary Quit and absence, then current original import/dialog/reload; zero native business input';
   if (quitScenario === 'pending-open') {
     evidence.scope = 'Actual native provider open pending, zero inputs, guarded existing Quit API and physical cleanup; explicit TEST setup';
@@ -402,8 +409,20 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       hostPid = setup.hostPid;
     }
     if (emulatedRuntimeFixture) {
-      await runDesktopEmulatedRuntimeUi(cdp, { fixture: emulatedRuntimeFixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group),
+      if (mode === 'emulated-extensions-ui') await runDesktopNativeExtensionsUiSmoke(cdp, {
+        root: fixture.root, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+      else if (mode === 'emulated-import-ui') await runDesktopEmulatedImportUi(cdp, {
+        fixture: emulatedRuntimeFixture, evidence, electron, assertOwnedRenderer: () => assertOwnedCdpListener(group),
+        observeOwnedHost: () => {
+          const hosts = groupMembers(group).filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+          assert.equal(hosts.length, 1); hostPid = hosts[0]!.pid;
+          evidence.hostChildAfterImport = { ...hosts[0], command: `${fixture.node} ${fixture.hostEntry}`, observedBeforeShutdown: true };
+        } });
+      else await runDesktopEmulatedRuntimeUi(cdp, { fixture: emulatedRuntimeFixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group),
         ...(mode === 'emulated-claude-lifecycle-ui' ? { restartSameProfile: restartEmulatedSameProfile } : {}) });
+      if (mode === 'emulated-extensions-ui' || mode === 'emulated-import-ui')
+        object(evidence[mode === 'emulated-extensions-ui' ? 'nativeExtensionsUi' : 'stoppedImportUiProof'])
+          .fixturePins = await verifyDesktopEmulatedRuntimeFixture(emulatedRuntimeFixture);
     } else if (emulatedManagementFixture) {
       await runDesktopEmulatedManagementUi(cdp, { fixture: emulatedManagementFixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (questionUiMode) {

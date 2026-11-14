@@ -13,11 +13,10 @@ interface WorkerResult {
 
 const temporaryRoots: string[] = [];
 const workerPath = path.resolve('test/fixtures/reviewConflictRecoveryWorker.ts');
-const tsxPath = path.resolve('node_modules/tsx/dist/cli.mjs');
 
 function runWorker(mode: string, root: string): Promise<WorkerResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [tsxPath, workerPath, mode, root], {
+    const child = spawn(process.execPath, ['--import', 'tsx', workerPath, mode, root], {
       cwd: process.cwd(),
       env: { ...process.env, NODE_ENV: 'test' },
       stdio: ['ignore', 'pipe', 'pipe'],

@@ -6,6 +6,7 @@ import { test, type TestContext } from 'node:test';
 
 import { captureWindowsLauncher, capturedWindowsCommandLine, matchesCapturedWindowsLauncher,
   verifyCapturedWindowsLauncher } from '../dist/owned-process/capturedWindowsLauncher.js';
+import { buildWindowsShellFallbackCommand, quoteWindowsCmdArg } from '../dist/owned-process/windowsCliLauncher.js';
 
 import type { NativeProcessProfile } from '../dist/composition/nativeProcessProfile.js';
 
@@ -13,6 +14,22 @@ const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 const wrapper = 'C:\\TEST\\provider.cmd';
 const script = 'C:\\TEST\\cli.cjs';
 const interpreter = 'C:\\Captured\\node.exe';
+
+test('long Windows argument runs retain literal backslashes, quotes and the original time bound',
+  { timeout: 2_000 }, () => {
+    const slashes = '\\'.repeat(50_000), doubled = slashes + slashes;
+    const started = performance.now();
+    assert.equal(quoteWindowsCmdArg(slashes), '"' + doubled + '"');
+    assert.equal(quoteWindowsCmdArg(slashes + 'x'), '"' + slashes + 'x"');
+    assert.equal(quoteWindowsCmdArg(slashes + '"'), '"' + doubled + '\\""');
+    assert.equal(buildWindowsShellFallbackCommand(['TEST.exe', slashes]), 'TEST.exe ^"' + doubled + '^"');
+    assert.equal(buildWindowsShellFallbackCommand(['TEST.exe', slashes + 'x']), 'TEST.exe ^"' + slashes + 'x^"');
+    assert.equal(buildWindowsShellFallbackCommand(['TEST.exe', slashes + '"']), 'TEST.exe ^"' + doubled + '\\^"^"');
+    assert.equal(buildWindowsShellFallbackCommand(['TEST.cmd', slashes], {
+      reparsesArgs: true, usesPositionalArgs: false,
+    }), 'TEST.cmd ^^^"' + doubled + '^^^"');
+    assert.ok(performance.now() - started < 2_000, 'synchronous escaping cannot evade the original deadline');
+  });
 
 function fixture(t: TestContext, content: string) {
   const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;

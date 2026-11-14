@@ -58,7 +58,12 @@ async function main() {
       nativeV2Input: pins, finiteModel: { requests: model.requests, failures: model.failures },
       ...(fixture.linuxChildExec ? { linuxChildExecInput: fixture.linuxChildExec } : {}),
     });
-    const sources = [...new Set([...desktopProofSources, 'scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts', ...['fixture', 'model', 'process', 'smoke', 'ui']
+    const sources = [...new Set([...desktopProofSources, 'scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts',
+      'packages/legacy-agent-host/src/composition/applyOpenCodeRuntimeSource.ts',
+      'packages/legacy-agent-host/src/composition/openCodeV2ModelSelection.ts',
+      'packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts',
+      'src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor.ts',
+      'scripts/legacy-agent-host/fixtures/c226-opencode-v2-management.json', ...['fixture', 'model', 'process', 'records', 'records.test', 'smoke', 'ui']
       .map(name => `scripts/legacy-agent-host/desktop-opencode-v2-management-${name}.ts`)])];
     const sourceHashes = await captureDesktopSourceHashes(repo, sources);
     evidence.selectedSourceHashesBeforeApp = sourceHashes;
