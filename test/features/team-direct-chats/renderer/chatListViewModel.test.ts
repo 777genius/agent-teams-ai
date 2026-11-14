@@ -27,7 +27,10 @@ describe('buildChatListView preview attribution', () => {
 
     expect(rows[0]?.previewFrom).toBe('alice');
     expect(rows[0]?.previewText).toBe('nice, work, guys');
-    expect(rows.find((row) => row.displayName === 'alice')?.previewFrom).toBe('alice');
+    const aliceDm = rows.find((row) => row.displayName === 'alice');
+    // Direct chat already identifies Alice; the team feed alone needs "alice:".
+    expect(aliceDm?.previewFrom).toBeNull();
+    expect(aliceDm?.previewText).toBe('nice, work, guys');
   });
 
   it('shows latest activity time even when preview prefers an older to-user message', () => {
