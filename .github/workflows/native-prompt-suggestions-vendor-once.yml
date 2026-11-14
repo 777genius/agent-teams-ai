@@ -75,7 +75,7 @@ jobs:
           const file = 'packages/legacy-agent-host/package.json';
           const value = JSON.parse(fs.readFileSync(file, 'utf8'));
           const key = '@agent-teams/provider-implementations';
-          const expected = 'file:../../vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-implementations-0.0.0.tgz';
+          const expected = 'file:../../vendor/provider-migration/opencode-selected-file-key-421fee9/agent-teams-provider-implementations-0.0.0.tgz';
           if (value.dependencies?.[key] !== expected) {
             throw new Error('Existing provider archive selection has changed. Refusing an automatic overwrite.');
           }
