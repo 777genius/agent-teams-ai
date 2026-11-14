@@ -5144,3 +5144,57 @@ Use only the literal enums in original Runtime contracts `16b92ebb35f9d011689216
 Replace the same bounded observation in memory only; use the original final receipt save. No additional disk read/write, RPC, CDP, native/model operation, timestamp, timer, retry or accumulated ledger. If a later original read fails, its original exception still propagates and the prior observation remains explicitly historical. The exact session predicate, original 90000 ms wait, all source/custody checks, requests, four business markers, counters and cleanup remain unchanged. Other callers without this optional argument behave byte-for-byte as before.
 
 Freeze full blobs/diffs, verify all variants, unchanged predicate/read body and exact forward/inverse, then obtain independent source review. Root retains normal script/type/size gates and the next ordinary existing CI lane; no additional native campaign or retrospective qualification. Source remains zero until this appendix is published and root grants this exact two-file GO.
+
+## 104. Apply the original Main/UI-ready precondition to Codex Login
+
+### 104.1. Proven ordering omission and limits of the original evidence
+
+The original qualification Codex Login job `132458083695`, run `43594542099`, checked out `62a79f00fedee2c552819985a9496e7b08861a93`. Its original ZIP `14118647096` has now been read without execution: 524674 bytes and SHA256 `2a9c912aec36ea83bbe8583ca804227825985ddf72a023daa723bd072160c129` match. Receipt member `TEST-desktop-backend-z6QgT1/desktop-backend-receipt.json` contains the evidence object directly; its `failure` is the 429-character first More-menu target-read error. Actual retained facts `16e68111c06fa67856f59603fdd9d06f7c912d0e` show zero raw and positive-size target matches, a present but empty root, `uiInitialized: false`, a visible splash, and no splash error/slow class or React fallback shape. Zero input steps and zero login cases were recorded. Those facts place this refusal before ordinary UI mounting; they do not identify an eventual module, Main startup or UI-mount-admission failure.
+
+The source comparison and timing evidence are frozen in `3829377ca0379be702e1ba163ea804015a0725aa`. The omission is concrete: original `desktop-proof-mode.ts` `304c41eb492bdebf9b27cdc550682164d01863af` excludes Login from generic `uiMode` to protect its private authorization fields. In original smoke `efdd11ac15b84c43f10e8fabcdd468e0c0314e20`, that same flag also gates `attachRendererDiagnostics`. The latter owns the ordinary Main/UI-ready loop, so Login skips that precondition as well as the private collectors.
+
+Original `connectCapturedDesktopApp` `11915e0d9fd425620b8c975901bd4dc65e6b8f27` gives one owned main CDP target under the existing 180000 ms monotonic startup budget. `verifyCapturedDesktopBinding` establishes backend discovery/configuration ownership, not React mounting. Login's `observeInput` checks visibility. Its first `readPoint` then uses the original 30000 ms target poll with 100 ms passive repeats; it is not one instantaneous snapshot. None of those steps substitutes for accepted Main/UI readiness.
+
+The receipt records CDP-target discovery after 28445 ms. The job log spans prepared at 15:01:36.2634121 UTC to final INCOMPLETE at 15:02:44.3192922 UTC, a 68056 ms wall interval including startup and cleanup. It does not retain exact monotonic first-read/failure timestamps, Main startup status or renderer exception diagnostics. Do not infer an exact remaining cutoff, future successful mount or successful Login from that interval. The old run remains failed.
+
+### 104.2. Selected correction and exact scope
+
+Apply the existing Main/UI-ready precondition before the Login journey enters backend/account/UI work. Keep the original absolute startup cutoff and the original subsequent target poll. A diagnostic-only addition would leave the demonstrated admission omission; enabling generic `uiMode` would collect private Login DOM/screenshots. Neither is the selected change.
+
+Exactly three existing **qualification-only** write paths are authorized, freshly matched at `bd0c151102f682e3f548f29afb86df3eb84306f3`:
+
+| Path | Exact preimage | Current lines |
+| --- | --- | --- |
+| `scripts/legacy-agent-host/desktop-team-ui-smoke.ts` | `9aa43a43d6186c62bc92dae60dab4fe57cc63fe6` | 477 |
+| `scripts/legacy-agent-host/desktop-backend-smoke.ts` | `c467c98ffedeb971ec8a39341985a56c127f9d09` | 790 |
+| `scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts` | `8b5994997d475ca13f94c75f1a08dc68363ba018` | 756 |
+
+Parent/native source is unchanged by this cut. P09 plans can be synchronized normally. No product, preload, mode-selector, UI-control, workflow, package, source-roster or additional file is writable. Section 102's projector and section 103's independent same-read observers are preserved.
+
+### 104.3. Reuse the same loop under an absolute cutoff
+
+In the existing Team UI helper, expose one narrow TEST function, `waitForDesktopMainUiReadiness`, with the existing CDP port, captured renderer URL, a receipt-only startup evidence sink and `{ deadline: number; assertOwnedRenderer(): void }`. The deadline is an absolute `performance.now()` cutoff, not a new relative duration. This is an explicit internal TEST surface; it is not an existing public product capability, a new owner or a generic readiness framework.
+
+Move the existing Main/UI-ready block from `attachRendererDiagnostics` into that function without changing its expression, predicates, failure mapping or polling. The old diagnostics entry calls it with its already captured `deadline` and original `startupEvidence` sink. Keep the old Page/Runtime context checks, finite Log/Network observers and all earlier diagnostics behavior in that original entry. Its existing `startup.appReadiness` receipt layout remains unchanged.
+
+The moved loop retains the exact renderer-document/origin comparison, `mainReady === true`, `uiDidInit === true` and positive root-child count. It keeps the existing immediate startup-error refusal, original ownership callback before and after each awaited snapshot, remaining-time `bounded` call, at most 24 retained observations, original 100 ms passive ticks clipped to remaining time, and the final expired-budget refusal. A late positive snapshot after rejection cannot reach a continuation. No callback bypass, cached permission or deadline renewal is introduced.
+
+In qualification smoke, add only an `else if (mode === 'codex-login-ui')` beside the current `if (uiMode)` startup call. Before awaiting, attach a plain `evidence.codexLoginStartup` receipt sink. Invoke the shared function with the same captured `cdp` and target URL, `deadline: startupStarted + startupBudgetMs`, and the same original `assertOwnedCdpListener(group)` callback. This occurs before the unchanged `verifyCapturedDesktopBinding`, initial account read and Login UI journey. The ordinary `uiMode` call and every other mode retain their existing route.
+
+The Login path does not call `attachRendererDiagnostics`, enable Log/Network domains, install exception/console listeners, collect generic DOM/screenshot data, reload the page or ask for UI-mount admission itself. It reads only the same public Main startup snapshot and closed readiness facts. The receipt sink retains the existing loop's bounded status/observations, exact-document boolean, Main/UI readiness booleans, root-child count, store-presence boolean and original bounded startup phase. It contains no authorization URL/code, account/profile identity, clipboard, prompt or DOM text. These are observations of the precondition, not new authority.
+
+### 104.4. Preserve the actual Login proof and finite boundaries
+
+There is one original startup deadline of 180000 ms measured from `connectCapturedDesktopApp`'s original monotonic start. The Login branch receives that exact cutoff even after earlier work has consumed time. It may use the remaining existing startup allowance; it cannot reset that allowance, add a second startup epoch or increase a timeout. Once readiness is accepted, the original 30000 ms target poll, stability/hit/disabled checks and one physical click remain unchanged.
+
+Retain all original browser/device-code actions, native inputs/caps, account/currentness checks, source/custody witnesses, statuses and cleanup. A missing/failed/pending UI that does not satisfy the precondition by the original cutoff still fails before the first Login action. Readiness acceptance alone never grants authentication success, native process absence or a clean final result. The exact observed underlying bootstrap problem and eventual E2E result remain open until the next original execution.
+
+Use natural formatting and existing file ceilings. The qualification runner can add the single named import and this finite branch within its current 800-line limit; no line packing, guard deletion, cap increase or helper-file extraction is permitted. Freeze actual line counts rather than asserting an unexecuted size gate.
+
+### 104.5. Existing controlled cases and publication gates
+
+Extend only the two existing readiness/deadline cases in `desktop-team-ui-smoke.test.ts`, using the same existing deferred fixture and the two genuine entry paths. Retain all 14 literal test declarations, original assertions, 5000 ms case bounds, original 3000/500 ms controlled allowances and the remaining cases.
+
+The admission case must continue to show no continuation while Main is not ready or while UI initialization/root children are absent, and exactly one continuation after the existing accepted tuple. Apply that same observation sequence to the new readiness-only entry and make its fixture refuse diagnostic subscriptions and direct domain-enable/frame-discovery calls while permitting the original readiness evaluations. The original diagnostics path still proves DOCUMENT_READY precedes Main/UI acceptance. The deadline case exercises the same absolute cutoff for the readiness-only entry, then resolves the held snapshot late and proves that no continuation or renewed read occurs. These are two existing-case extensions, not a new matrix or test campaign.
+
+Before source publication, review the exact shared-loop extraction/inverse, original diagnostics prefix and receipt shape, Login caller cutoff/owner join, default-mode preservation and existing-case declaration/assertion retention. Root owns normal type/source checks and the focused existing file when available. No author execution or native rerun is authorized by this plan. The next original Login E2E must still prove its complete original UI/native/cleanup contract; the old failure cannot become PASS through this source correction. Source remains zero until the reviewed plan is published and root grants GO.
