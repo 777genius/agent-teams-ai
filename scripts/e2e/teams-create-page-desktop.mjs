@@ -356,24 +356,24 @@ class CdpClient {
     this.listeners.set(method, listeners);
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, timeoutMs = 30_000) {
     const id = ++this.nextId;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`CDP command timed out: ${method}`));
-      }, 30_000);
+      }, timeoutMs);
       this.pending.set(id, { resolve, reject, timer });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
   }
 
-  async evaluate(expression) {
+  async evaluate(expression, timeoutMs = 30_000) {
     const response = await this.send('Runtime.evaluate', {
       expression,
       awaitPromise: true,
       returnByValue: true,
-    });
+    }, timeoutMs);
     if (response.exceptionDetails) {
       throw new Error(
         response.exceptionDetails.exception?.description ?? 'Renderer evaluation failed'
@@ -391,7 +391,7 @@ class CdpClient {
         lastTransientError = null;
       } catch (error) {
         if (
-          !/execution context was destroyed|cannot find (?:default )?execution context/i.test(
+          !/execution context was destroyed|cannot find (?:default )?execution context|CDP command timed out: Runtime\.evaluate/i.test(
             String(error)
           )
         ) {
@@ -1084,6 +1084,125 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
   };
 }
 
+
+/**
+ * Windows-only native E2E: launch a disposable teammate-shaped process from
+ * the real Electron Main process while its BrowserWindow is visible.
+ * It spawns cmd/git/PowerShell without forcing windowsHide on the tool children.
+ * This verifies Main -> native process console inheritance, NOT actual provider
+ * inference or TeamProvisioningMemberLifecycle product launch.
+ */
+async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture, log) {
+  assert.equal(process.platform, 'win32');
+  const inspector = await CdpClient.connect(inspectorUrl);
+  const nodeBinary = await realpath(process.execPath);
+  const scriptPath = path.join(repoRoot, 'scripts/e2e/windows-teammate-console-native.mjs');
+  const fixtureMarker = 'native-custody-' + randomUUID();
+  try {
+    await inspector.send('Runtime.enable');
+    // The native IPC/store can hydrate before React finishes rendering Teams.
+    // A skeleton-only screenshot must never qualify as a usable GUI.
+    await client.waitFor(
+      "Array.from(document.querySelectorAll('.team-row-zebra-card')).some(card => " +
+        "card.textContent?.includes(" + JSON.stringify(fixture.teamName) + ") && " +
+        "card.getBoundingClientRect().width > 0 && card.getBoundingClientRect().height > 0)",
+      'actual seeded team card visibly rendered', 60_000
+    );
+    const rendererFocusedBefore = await client.evaluate('document.hasFocus()');
+    const expression = [
+      '(async () => {',
+      "  const req = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);",
+      "  if (!req) throw new Error('Electron main module require unavailable');",
+      "  const { spawn, spawnSync } = req('node:child_process');",
+      "  const { BrowserWindow } = req('electron');",
+      "  const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));",
+      "  if (!win) throw new Error('Real Electron test BrowserWindow missing');",
+      '  const mainFocusedBefore = win.isFocused();',
+      '  let mainBlurEvents = 0;',
+      '  const onMainBlur = () => { mainBlurEvents++; };',
+      "  win.on('blur', onMainBlur);",
+      '  const child = spawn(' + JSON.stringify(nodeBinary) + ', [' +
+        JSON.stringify(scriptPath) + ", '--teammate-fixture', " + JSON.stringify(fixtureMarker) + "], " +
+        "{ detached: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });",
+      '  return await new Promise((resolve, reject) => {',
+      '    let settled = false, ready = false, stderr = ""; const tools = [];',
+      '    const finish = (error, value) => {',
+      '      if (settled) return; settled = true; clearTimeout(deadline);',
+      "      win.off('blur', onMainBlur);",
+      "      if (error && child.pid && child.exitCode === null && child.signalCode === null) {",
+      '        // Terminate only the original marker-bound fixture process tree.',
+      '        const result = spawnSync(' + JSON.stringify(nodeBinary) + ', [' +
+        JSON.stringify(scriptPath) + ", '--kill-owned-fixture', String(child.pid), " +
+        JSON.stringify(fixtureMarker) +
+        "], { windowsHide: true, timeout: 30000, encoding: 'utf8' });",
+      '        if (result.error || result.status !== 0) {',
+      '          child.kill("SIGKILL");',
+      '          error = new Error("Verified fixture cleanup failed: " + (error?.message || String(error)));',
+      '        }',
+      '      }',
+      '      if (error) reject(error); else resolve(value);',
+      '    };',
+      "    const deadline = setTimeout(() => finish(new Error('Electron-owned native teammate timeout')), 25000);",
+      "    child.stderr?.on('data', b => { stderr = (stderr + b.toString()).slice(-2000); });",
+      "    child.on('message', msg => {",
+      "      if (msg?.type === 'tool') tools.push(msg);",
+      "      if (msg?.type === 'ready') {",
+      "        if (msg.pid !== child.pid) return finish(new Error('Native teammate PID mismatch'));",
+      "        ready = true; child.send({ type: 'stop' });",
+      '      }',
+      '    });',
+      "    child.once('error', err => finish(err));",
+      "    child.once('close', (code, signal) => {",
+      "      if (!ready || code !== 0) return finish(new Error('Native teammate failed: ' + (signal || code) + ' ' + stderr));",
+      "      finish(null, { mainElectronPid: process.pid, teammatePid: child.pid,",
+      "        detached: false, windowsHide: true, mainFocusedBefore, mainFocusedAfter: win.isFocused(), mainBlurEvents, tools });",
+      '    });',
+      '  });',
+      '})()',
+    ].join('\n');
+    // This one evaluation may spend 25s in the child, followed by 30s of
+    // marker-verified cleanup. Other CDP calls retain their 30s default.
+    const evidence = await inspector.evaluate(expression, 70_000);
+    assert.equal(evidence.detached, false);
+    assert.equal(evidence.windowsHide, true);
+    assert.ok(evidence.mainElectronPid > 0 && evidence.teammatePid > 0);
+    assert.deepEqual(evidence.tools.map(tool => tool.name), ['cmd', 'git', 'powershell']);
+    assert.ok(evidence.tools.every(tool => tool.exitCode === 0 && tool.pid > 0));
+    const powershell = evidence.tools.find(tool => tool.name === 'powershell');
+    assert.equal(powershell?.consoleWindowVisible, false,
+      'Real Electron-owned PowerShell unexpectedly had a visible console');
+    assert.ok(['none', 'hidden'].includes(powershell.consoleState),
+      'Real Electron-owned PowerShell console state was not verified');
+    const rendererFocusedAfter = await client.evaluate('document.hasFocus()');
+    const focusObservable = evidence.mainFocusedBefore === true && rendererFocusedBefore === true;
+    if (focusObservable) {
+      assert.equal(evidence.mainFocusedAfter, true, 'Electron app lost native focus during tool calls');
+      assert.equal(evidence.mainBlurEvents, 0, 'Electron app temporarily lost focus during tool calls');
+      assert.equal(rendererFocusedAfter, true, 'Electron renderer lost focus during tool calls');
+    }
+    await captureScreenshot(client, fixture, 'windows-electron-console');
+    const result = {
+      schemaVersion: 1, success: true, scope: 'real Electron Main -> fixture teammate -> native tool calls',
+      realElectronMainHosted: true, hydratedTeamCardVerified: true,
+      realProductTeammateLaunch: false,
+      realVendorRuntimeOrModel: false, actualConsoleWindowsEnumerated: false,
+      cmdGitWindowVisibilityUnknown: true, powershellConsoleNotVisibleVerified: true,
+      powershellConsoleState: powershell.consoleState,
+      nativeFocusObservable: focusObservable, rendererFocusedBefore, rendererFocusedAfter,
+      ...evidence, screenshot: 'teams-create-windows-electron-console.png',
+    };
+    const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
+    await mkdir(outDir, { recursive: true });
+    await writeFile(path.join(outDir, 'teams-create-windows-console-result.json'),
+      JSON.stringify(result, null, 2) + '\n');
+    log('Windows Electron Main native console fixture completed');
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    return result;
+  } finally {
+    inspector.close();
+  }
+}
+
 async function main() {
   const fixture = await seedFixture();
   const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
@@ -1106,6 +1225,10 @@ async function main() {
     let started = await startApp(fixture);
     cdp = await CdpClient.connect(started.renderer.webSocketDebuggerUrl);
     await initializeTeams(cdp, fixture);
+    if (process.argv.includes('--windows-console-only')) {
+      await exerciseWindowsElectronConsoleProbe(started.inspectorWebSocketDebuggerUrl, cdp, fixture, log);
+      return;
+    }
 
     log('click real Create Team button');
     await cdp.click(createButtonExpression('Create Team'));

@@ -18221,6 +18221,116 @@ describe('TeamProvisioningService', () => {
       expect(launchArgs).not.toContain('--strict-mcp-config');
     });
 
+    it.each([
+      ['win32', false],
+      ['linux', true],
+      ['darwin', true],
+    ] as const)(
+      'spawns direct process teammates on %s with detached=%s so Windows teammates keep a hidden console',
+      async (platform, expectedDetached) => {
+        const originalPlatform = process.platform;
+        Object.defineProperty(process, 'platform', { value: platform, configurable: true });
+        try {
+          const teamName = `process-detached-${platform}-team`;
+          const projectPath = path.join(tempProjectsBase, `process-detached-${platform}-project`);
+          fs.mkdirSync(projectPath, { recursive: true });
+
+          vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+          const child = Object.assign(new EventEmitter(), {
+            pid: 4568,
+            stdin: { on: vi.fn(), unref: vi.fn() },
+            stdout: { pipe: vi.fn(), unref: vi.fn() },
+            stderr: { pipe: vi.fn(), unref: vi.fn() },
+            unref: vi.fn(),
+          });
+          vi.mocked(spawnCli).mockReturnValue(child as any);
+
+          const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
+            writeConfigFile: vi.fn(async () => '/mock/mcp-config.json'),
+          } as any);
+          const run = createMemberSpawnRun({
+            teamName,
+            expectedMembers: ['atlas'],
+            memberSpawnStatuses: new Map(),
+          });
+          run.child = { pid: 111 };
+          run.request = { providerId: 'codex', skipPermissions: true };
+          run.detectedSessionId = 'lead-session-1';
+          const configuredMember = {
+            name: 'forge',
+            role: 'Developer',
+            providerId: 'codex',
+          } satisfies TeamProvisioningMemberInput;
+          const config = {
+            name: 'Process Detached Team',
+            projectPath,
+            leadSessionId: 'lead-session-1',
+            members: [{ name: 'team-lead', agentType: 'team-lead' }, configuredMember],
+          } satisfies TeamConfig;
+
+          vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(
+            async () => ({
+              env: { CODEX_API_KEY: 'test-openai-key' },
+              authSource: 'openai_api_key',
+              providerArgs: [],
+            })
+          );
+          (svc as any).resolveDirectMemberLaunchIdentity = vi.fn(async () => ({
+            providerId: 'codex',
+            providerBackendId: 'native',
+          }));
+          (svc as any).buildTeamRuntimeLaunchArgsPlan = vi.fn(async () => ({
+            fastModeArgs: [],
+            runtimeTurnSettledHookArgs: [],
+            providerArgs: [],
+            settingsArgs: [],
+            extraArgs: [],
+            inheritedProviderArgs: [],
+            appManagedSettingsPath: null,
+          }));
+          (svc as any).materializeDirectProcessNativeBootstrapContext = vi.fn(async () => ({}));
+          const hostSeams = memberLifecycleHostHarness(svc) as any;
+          stubMemberLifecycleHostOptionalSeam(
+            svc,
+            'updateDirectTmuxRestartMemberConfig',
+            vi.fn(async () => {})
+          );
+          stubMemberLifecycleHostOptionalSeam(svc, 'enqueueDirectRestartPrompt', vi.fn());
+          hostSeams.appendDirectProcessRuntimeEvent = vi.fn(async () => {});
+          const runState = svc as unknown as {
+            aliveRunByTeam: Map<string, string>;
+            runs: Map<string, typeof run>;
+          };
+          runState.aliveRunByTeam.set(teamName, run.runId);
+          runState.runs.set(run.runId, run);
+
+          await memberLifecycleControllerHarness(svc).launchDirectProcessMemberRestartInternal({
+            run,
+            teamName,
+            displayName: 'Process Detached Team',
+            leadName: 'team-lead',
+            memberName: 'forge',
+            config,
+            configuredMember,
+            persistedRuntimeMembers: [],
+            operation: 'member_added',
+          });
+
+          child.emit('close', 0, null);
+          await new Promise((resolve) => setTimeout(resolve, 25));
+
+          const spawnOptions = vi.mocked(spawnCli).mock.calls[0]?.[2];
+          expect(spawnOptions?.detached).toBe(expectedDetached);
+          expect(spawnOptions?.stdio).toEqual(['pipe', 'pipe', 'pipe']);
+        } finally {
+          Object.defineProperty(process, 'platform', {
+            value: originalPlatform,
+            configurable: true,
+          });
+        }
+      }
+    );
+
     it('stops a direct process teammate when post-spawn runtime event persistence fails', async () => {
       const teamName = 'process-event-failure-team';
       const projectPath = path.join(tempProjectsBase, 'process-event-failure-project');

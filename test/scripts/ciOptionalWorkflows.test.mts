@@ -43,6 +43,18 @@ for (const [name, job] of Object.entries(deferredJobs)) {
   });
 }
 
+test('Windows console Electron GUI stages pinned prerequisites before boot', () => {
+  const source = workflow('windows-teammate-console-native');
+  const nativeGui = source.split('\n  windows-electron-console:\n')[1];
+  assert.ok(nativeGui, 'Windows Electron E2E job missing');
+  const installer = nativeGui.indexOf('node ./scripts/ci/install-dependencies-with-retry.mjs');
+  const electron = nativeGui.indexOf('node ./scripts/ensure-electron-install.cjs --strict');
+  const terminal = nativeGui.indexOf('node ./scripts/ensure-terminal-platform-runtime.mjs');
+  const smoke = nativeGui.indexOf('node scripts/e2e/teams-create-page-desktop.mjs --windows-console-only');
+  assert.ok(installer >= 0 && electron > installer && terminal > electron && smoke > terminal);
+  assert.match(nativeGui, /AGENT_TEAMS_INSTALL_PROFILE: node-ci/);
+});
+
 test('native packaged dispatch guards remain intact', () => {
   const source = workflow('opencode-packaged-e2e');
   assert.match(
@@ -61,7 +73,7 @@ test('native packaged dispatch guards remain intact', () => {
 
 test('security schedules and main push triggers remain available', () => {
   assert.match(workflow('codeql'), /schedule:\n    - cron:/);
-  for (const name of ['codeql', 'codex-runtime-smoke', 'runtime-bootstrap-smoke']) {
+  for (const name of ['codeql', 'codex-runtime-smoke', 'runtime-bootstrap-smoke', 'windows-teammate-console-native']) {
     assert.match(workflow(name), /push:\n    branches: \[main\]/);
   }
 });
