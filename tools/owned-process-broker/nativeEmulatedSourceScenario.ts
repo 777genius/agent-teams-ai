@@ -195,8 +195,9 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
           assert.equal(job.origin.origin.projectPath, fixture.workspace);
         }
       } else if (job.origin.origin.kind === 'management') {
-        assert.equal(job.origin.origin.profileId, source.profileId);
-        assert.equal(job.origin.origin.configRevision, source.configRevision);
+        // Physical custody retains the original management namespace; the outer reference selects A/B.
+        assert.equal(job.origin.origin.profileId, selected.profileId);
+        assert.equal(job.origin.origin.configRevision, selected.configRevision);
       }
       assert.equal(jobEntry(job, 'peer').source, image);
     }
@@ -246,8 +247,20 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const before = first.jobs.length;
       await first.rpc(team, 'team.launch.start', `TEST-start-${image}`, { launchId, rosterRevision: selectedLaunch.rosterRevision });
       let view: Record<string, unknown> = {};
-      await poll(async () => { view = await first.rpc(team, 'runtime.read', `TEST-ready-${image}`, { memberId: 'alice-id' });
-        return view.nativeReady === true; }, 'Original source Team readiness');
+      const readiness = { source: sourceRef(source), image, launchId, readCount: 0, elapsedMs: 0,
+        lastRuntimeRead: null as Record<string, unknown> | null };
+      evidence.lastLaunchReadiness = readiness;
+      const readinessStarted = performance.now();
+      try {
+        await poll(async () => { view = await first.rpc(team, 'runtime.read', `TEST-ready-${image}`, { memberId: 'alice-id' });
+          Object.assign(readiness, { readCount: readiness.readCount + 1, elapsedMs: performance.now() - readinessStarted,
+            lastRuntimeRead: { memberId: view.memberId, generation: view.generation, phase: view.phase,
+              sealed: view.sealed, custody: view.custody, nativeReady: view.nativeReady, attached: view.attached,
+              ...(view.diagnostic === undefined ? {} : { diagnostic: view.diagnostic }) } });
+          return view.nativeReady === true; }, 'Original source Team readiness');
+      } finally {
+        console.log(JSON.stringify({ kind: 'TEST_SOURCE_READINESS', provider, ...readiness }));
+      }
       const jobs = first.jobs.slice(before);
       assertSourceJobs(jobs, source, image, 'runtime', fixture.profile.teams[team]!.binding.teamId);
       const live = jobs.filter(job => !job.released); assert.equal(live.length, 1);
