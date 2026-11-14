@@ -14,11 +14,8 @@ on:
     paths:
       - .github/workflows/native-prompt-suggestions-vendor-once.yml
 
-# Do not let two deliveries race to advance the same feature branch.
-concurrency:
-  group: native-prompt-suggestions-stage-${{ github.repository }}
-  cancel-in-progress: false
-
+# Source reproduction and native qualifications are read-only.
+# Serialize ONLY publication to the feature branch, not unrelated runner waits.
 permissions:
   contents: read
 
@@ -73,6 +70,9 @@ jobs:
 
   stage-exact-archive:
     needs: reproduce-source
+    concurrency:
+      group: native-prompt-suggestions-publish-${{ github.repository }}
+      cancel-in-progress: false
     outputs:
       pinned_sha: ${{ steps.publish.outputs.sha }}
     permissions:
