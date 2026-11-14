@@ -1,4 +1,6 @@
 // @vitest-environment node
+import * as os from 'node:os';
+
 import { mergeProviderCatalogFields } from '@main/services/runtime/providerCatalogAuthority';
 import {
   getProviderConnectionModeSummary,
@@ -7,7 +9,6 @@ import {
 } from '@renderer/components/runtime/providerConnectionUi';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { readFile as readFileFixture, writeFile } from 'fs/promises';
-import * as os from 'node:os';
 import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
