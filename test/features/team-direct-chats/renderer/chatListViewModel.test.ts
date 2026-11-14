@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { msg, toTestKey } from '../core/domain/fixtures';
 
 describe('buildChatListView preview attribution', () => {
-  it('keeps the group sender and omits redundant identity from Alice direct preview', () => {
+  it('keeps the sender on This team so the row can show alice: text', () => {
     const rows = buildChatListView({
       members: [
         { name: 'oscar', agentType: 'team-lead' },
@@ -27,9 +27,10 @@ describe('buildChatListView preview attribution', () => {
 
     expect(rows[0]?.previewFrom).toBe('alice');
     expect(rows[0]?.previewText).toBe('nice, work, guys');
-    const direct = rows.find((row) => row.displayName === 'alice');
-    expect(direct?.previewFrom).toBeNull();
-    expect(direct?.previewText).toBe('nice, work, guys');
+    const aliceDm = rows.find((row) => row.displayName === 'alice');
+    // Direct chat already identifies Alice; the team feed alone needs "alice:".
+    expect(aliceDm?.previewFrom).toBeNull();
+    expect(aliceDm?.previewText).toBe('nice, work, guys');
   });
 
   it('shows latest activity time even when preview prefers an older to-user message', () => {
