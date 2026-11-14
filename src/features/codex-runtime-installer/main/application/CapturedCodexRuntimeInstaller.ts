@@ -29,13 +29,13 @@ type NativeInstaller = Pick<
   CodexRuntimeInstallerService,
   'installCaptured' | 'readLatestVersion' | 'publishCapturedStatus'
 >;
-type Pending = {
+interface Pending {
   intent: string;
   original: string;
   resolver: string;
   status: CodexRuntimeStatus;
   result: Promise<CodexRuntimeStatus>;
-};
+}
 
 function sourceStatus(
   source: RuntimeSourceSummary,
