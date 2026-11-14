@@ -1187,9 +1187,20 @@ export class ProviderConnectionService {
       const orchestratorCatalog = isUsableCodexModelCatalog(withConnection.modelCatalog)
         ? withConnection.modelCatalog
         : null;
-      const catalog =
-        orchestratorCatalog ??
-        (this.codexModelCatalogFeature ? await this.codexModelCatalogFeature.getCatalog() : null);
+      // The runtime catalog describes model capabilities; config/read supplies the
+      // user's configured effort separately, without exposing the rest of the config.
+      const configuredCatalog =
+        options.hydrateModelCatalog !== false && this.codexModelCatalogFeature
+          ? await this.codexModelCatalogFeature.getCatalog()
+          : null;
+      const catalog = orchestratorCatalog
+        ? configuredCatalog?.configuredReasoningEffort
+          ? {
+              ...orchestratorCatalog,
+              configuredReasoningEffort: configuredCatalog.configuredReasoningEffort,
+            }
+          : orchestratorCatalog
+        : configuredCatalog;
       if (!isUsableCodexModelCatalog(catalog)) {
         return withConnection;
       }

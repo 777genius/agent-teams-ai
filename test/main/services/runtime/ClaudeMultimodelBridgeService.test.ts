@@ -14,6 +14,7 @@ import type { CliProviderId, CliProviderStatus } from '@shared/types';
 import type { PathLike } from 'fs';
 
 const execCliMock = vi.fn();
+const getCodexModelCatalogMock = vi.fn();
 const buildProviderAwareCliEnvMock = vi.fn();
 const buildPassiveProviderStatusCliEnvMock = vi.fn();
 const resolveInteractiveShellEnvMock = vi.fn<() => Promise<NodeJS.ProcessEnv>>();
@@ -119,6 +120,7 @@ vi.mock('fs', () => ({
 
 vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
   providerConnectionService: {
+    getCodexModelCatalog: (...args: unknown[]) => getCodexModelCatalogMock(...args),
     applyPassiveProviderStatusConnectionEnv: (
       ...args: Parameters<typeof applyPassiveProviderStatusConnectionEnvMock>
     ) => applyPassiveProviderStatusConnectionEnvMock(...args),
@@ -372,6 +374,7 @@ describe('ClaudeMultimodelBridgeService', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    getCodexModelCatalogMock.mockResolvedValue(null);
     isMissingDirectoryMock.mockResolvedValue(false);
     applyPassiveProviderStatusConnectionEnvMock.mockImplementation((env) => Promise.resolve(env));
     applyAnthropicCompatibleCatalogStatusConnectionEnvMock.mockImplementation((env) =>
@@ -507,6 +510,21 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
     expect(applyAnthropicCompatibleCatalogStatusConnectionEnvMock).toHaveBeenCalledTimes(1);
     expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
+  });
+
+  it('adds the configured Codex effort to the live model catalog', async () => {
+    getCodexModelCatalogMock.mockResolvedValue({ configuredReasoningEffort: 'xhigh' });
+    execCliMock.mockResolvedValue(statusReply('codex', fullStatusFixture('codex')));
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+    const provider = await service.getProviderStatus('/mock/runtime', 'codex', undefined, {
+      projectPath: '/tmp/status-hydration-test-project',
+    });
+    expect(provider.modelCatalog?.configuredReasoningEffort).toBe('xhigh');
+    expect(getCodexModelCatalogMock).toHaveBeenCalledWith({
+      cwd: '/tmp/status-hydration-test-project',
+    });
   });
 
   it('adds cached ChatGPT context to passive Codex runtime status without using the active env builder', async () => {

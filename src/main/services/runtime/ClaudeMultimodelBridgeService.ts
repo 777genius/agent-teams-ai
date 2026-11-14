@@ -1295,13 +1295,25 @@ export class ClaudeMultimodelBridgeService {
         if (providerId === 'anthropic' && options.summary !== true) {
           await providerConnectionService.applyAnthropicCompatibleCatalogStatusConnectionEnv(env);
         }
-        const status = await this.getProviderStatusFromRuntimeStatusCommand(
+        let status = await this.getProviderStatusFromRuntimeStatusCommand(
           binaryPath,
           providerId,
           env,
           connectionIssues,
           options
         );
+        if (providerId === 'codex' && options.summary !== true && status.modelCatalog) {
+          const configuredCatalog = await providerConnectionService.getCodexModelCatalog({
+            cwd: projectPath || null,
+          });
+          const configuredEffort = configuredCatalog?.configuredReasoningEffort;
+          if (configuredEffort) {
+            status = {
+              ...status,
+              modelCatalog: { ...status.modelCatalog, configuredReasoningEffort: configuredEffort },
+            };
+          }
+        }
         if (
           canReuseCompletedRead &&
           status.statusCheckOutcome === 'authoritative' &&
