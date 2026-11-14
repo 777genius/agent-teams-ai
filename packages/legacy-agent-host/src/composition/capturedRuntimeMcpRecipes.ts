@@ -13,12 +13,12 @@ import { runtimeMemberProfileSchema } from './runtimeProfile.js';
 import { nativeProfilePathSchema } from './nativeProcessProfile.js';
 import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { readCodexMcpCatalog } from '../adapters/providers/readCodexMcpCatalog.js';
+import { capturedNativeProcessFactory } from '../adapters/providers/capturedNativeProcessFactory.js';
 import { openCodeV2CapturedMcp } from '../adapters/providers/OpenCodeV2CapturedMcp.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
-import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
-import type { CodexMemberProfile, RuntimeMemberProfile } from './runtimeProfile.js';
+import type { RuntimeMemberProfile } from './runtimeProfile.js';
 import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
@@ -190,13 +190,7 @@ export async function prepareCapturedRuntimeMcpRecipes(options: {
   withAuthority<T>(action: () => T): T;
   retainedWindowsLaunch?: HostWindowsLaunch;
   processOrigin?(profile: RuntimeMemberProfile): RuntimeSourceProcessOrigin | undefined;
-  readCatalog?: (
-    profile: CodexMemberProfile,
-    assertCurrent: () => void,
-    signal?: AbortSignal,
-    retainedWindowsLaunch?: HostWindowsLaunch,
-    processOrigin?: RuntimeSourceProcessOrigin
-  ) => Promise<CodexConfiguredMcpCatalog>;
+  readCatalog?: typeof readCodexMcpCatalog;
   signal?: AbortSignal;
 }): Promise<CapturedRuntimeMcpReference[]> {
   id.parse(options.commandId);
@@ -242,8 +236,7 @@ export async function prepareCapturedRuntimeMcpRecipes(options: {
           selected,
           options.assertCurrent,
           options.signal,
-          options.retainedWindowsLaunch,
-          options.processOrigin?.(selected)
+          capturedNativeProcessFactory(options.retainedWindowsLaunch, options.processOrigin?.(selected))
         )
       );
     options.assertCurrent();

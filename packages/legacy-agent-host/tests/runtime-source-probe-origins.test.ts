@@ -25,7 +25,7 @@ function fixture(provider: ProviderManagementProfile['provider']) {
     executable: { path: join(root, 'TEST-never-launched'), sha256: 'a'.repeat(64) },
   };
   const profile: ProviderManagementProfile = provider === 'codex'
-    ? { ...common, provider, protocolRevision: '0.169.0',
+    ? { ...common, provider, protocolRevision: '0.162.0',
       environment: { HOME: join(root, 'home'), CODEX_HOME: join(root, 'config'), PATH: root } }
     : provider === 'claude'
       ? { ...common, provider, sdkRevision: '0.3.305', configNamespace: 'custom-directory',

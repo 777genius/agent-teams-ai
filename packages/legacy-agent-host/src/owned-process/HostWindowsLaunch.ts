@@ -52,6 +52,7 @@ export function windowsBrokerReference(
 function unavailable(): never {
   throw new Error('Original Main custody unavailable');
 }
+const DRAIN_REPLY_RESERVE_MS = 100;
 
 export interface RetainedWindowsLaunchPort extends OwnedLaunchPort {
   readonly registeredProcesses: WindowsRegisteredProcessPort;
@@ -87,7 +88,7 @@ export class HostWindowsLaunch {
   }
 
   async request(
-    operation: HostCustodyCall['operation'], build: () => HostCustodyCall, deadline?: number
+    operation: HostCustodyCall['operation'], build: (deadlineMs: number) => HostCustodyCall, deadline?: number
   ): Promise<HostCustodyResult> {
     const reply = await this.connected().requestWhenReady(operation, build, deadline);
     if (reply.status !== 'completed' || reply.value.operation !== operation) unavailable();
@@ -510,10 +511,12 @@ class RemotePending implements PreparedOwnedProcess {
   async drain(deadlineMs: number): Promise<TargetDrain> {
     if (!this.dispatched) return { kind: 'complete' };
     const value = await this.source.request(
-      'drain', () => ({
+      'drain', admittedDeadline => ({
         operation: 'drain',
         capability: this.key,
-        budgetMs: Math.max(0, Math.min(3000, Math.floor(deadlineMs - performance.now()))),
+        // Incomplete output still needs an ACK before the original Host deadline. Leave
+        // room for that reply after queueing and the client's own timeout clamp.
+        budgetMs: Math.max(0, Math.min(3000, Math.floor(admittedDeadline - performance.now()) - DRAIN_REPLY_RESERVE_MS)),
       }),
       deadlineMs
     );

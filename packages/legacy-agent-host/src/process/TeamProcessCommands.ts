@@ -245,6 +245,9 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
         enter('admin');
         const receipts = processReceipts();
         if (receipts.some(row => row.phase !== 'completed' && row.phase !== 'rejected')) return refuse('hold');
+        if (receipts.some(row => row.operation === 'terminate' && row.capture?.version === 5 &&
+            row.state.phase === 'completed' && row.state.native === 'observed-absent' &&
+            !row.nativeSettlementConfirmed)) return refuse('hold');
         const natural = new Set<string>();
         for (const receipt of receipts) if (receipt.nativeAbsence) {
           const key = digest(receipt.capture);

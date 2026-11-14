@@ -6,7 +6,8 @@ import { createProcessMcpTools } from '../dist/mcp/processTools.js';
 import type { WindowsServiceCapture, WindowsServiceOutcome } from '../dist/owned-process/retainedServiceContracts.js';
 import { createTeamProcessCommands } from '../dist/process/TeamProcessCommands.js';
 import { createTeamProcessMethods } from '../dist/process/createTeamProcessMethods.js';
-import { processReceiptFingerprint } from '../dist/process/validateProcessRecords.js';
+import { processReceiptFingerprint, validateProcessReceipt } from '../dist/process/validateProcessRecords.js';
+import { projectProcessReceipt } from '../dist/process/projectProcessViews.js';
 import type {
   ProcessCommandReceipt,
   ProcessRegisterInput,
@@ -390,6 +391,7 @@ function windowsFixture() {
   const replies = new Map<string, WindowsServiceOutcome>();
   let sequence = 0, captures = 0, stops = 0, settlements = 0, absent = false, loseCapture = false;
   let pause: 'run' | 'lookup' | 'query' | 'admission' | undefined;
+  let captureReply: WindowsServiceOutcome | undefined;
   let settlementReply: WindowsServiceOutcome | undefined, lastSettlement: string | undefined;
   let pending: { finish(value?: WindowsServiceOutcome): void } | undefined;
   const holdReply = (kind: 'run' | 'lookup' | 'query' | 'admission', value: WindowsServiceOutcome) => {
@@ -429,7 +431,7 @@ function windowsFixture() {
       if (intent.command.operation === 'capture') {
         captures++;
         assert.equal(receipt.originalRegistration?.policyRequested, false);
-        value = { state: 'captured', capture: structuredClone(capture) };
+        value = captureReply ?? { state: 'captured', capture: structuredClone(capture) };
       } else if (intent.command.operation === 'stop') {
         stops++; value = { state: 'unknown' };
       } else {
@@ -456,6 +458,7 @@ function windowsFixture() {
     deadline: () => performance.now() + 10000,
     captures: () => captures, stops: () => stops, settlements: () => settlements,
     loseCapture: () => { loseCapture = true; },
+    captureReply: (value: WindowsServiceOutcome) => { captureReply = structuredClone(value); },
     pause: (kind: 'run' | 'lookup' | 'query' | 'admission') => { pause = kind; },
     async atPause() {
       for (let turn = 0; turn < 32 && !pending; turn++) await Promise.resolve();
@@ -492,6 +495,57 @@ test('Windows lost capture ACK uses original receipt on cold lookup and async MC
   assert.equal(listed[0]!.observation, 'same-live'); assert.equal(listed[0]!.canTerminate, true);
   for (const privateField of ['mainEpoch', 'providerCapability', 'nativeIntent', 'operationRef', 'capturedNative'])
     assert.equal(JSON.stringify({ completed, listed }).includes(privateField), false);
+
+  const missing: WindowsServiceOutcome = { state: 'refused', reason: 2, nativeCode: 1168 };
+  const input = { pid: 1001, label: 'TEST missing original service' };
+  for (const lost of [false, true]) {
+    const refused = windowsFixture(); refused.captureReply(missing);
+    if (lost) refused.loseCapture();
+    const initial = await refused.commands.windows!.register('TEST-missing', input, refused.deadline());
+    const originalIntent = stable(initial.nativeIntent), originalInput = stable(initial.originalRegistration);
+    assert.equal(initial.phase, lost ? 'held' : 'rejected');
+    if (lost) assert.throws(() => refused.coldUnavailable().assertReleased(), /hold/);
+    const settled = await refused.cold().windows!.lookup('TEST-missing', refused.deadline());
+    assert.ok(settled); assert.equal(settled.phase, 'rejected');
+    assert.deepEqual(settled.state, { phase: 'refused', native: 'refused' });
+    assert.equal(stable(settled.nativeIntent), originalIntent);
+    assert.equal(stable(settled.originalRegistration), originalInput);
+    assert.equal(settled.requestDigest, digest(input)); assert.equal(settled.capture, undefined);
+    assert.equal(settled.originalRegistration?.policyRequested, false);
+    assert.deepEqual(await refused.commands.windows!.register('TEST-missing', input, refused.deadline()), settled);
+    assert.deepEqual(await refused.cold().windows!.lookup('TEST-missing', refused.deadline()), settled);
+    assert.equal(refused.captures(), 1); assert.equal(refused.policyRegistrations(), 0);
+    assert.equal(refused.rows().length, 0); assert.equal(refused.stops(), 0); assert.equal(refused.settlements(), 0);
+    refused.coldUnavailable().assertReleased(); // Only this rejected command's journal debt ended.
+  }
+  const uncertain: WindowsServiceOutcome[] = [
+    { state: 'unknown' }, { state: 'refused', reason: 2, nativeCode: 5 },
+    { state: 'refused', reason: 4, nativeCode: 1168 }, { state: 'refused', reason: 6, nativeCode: 1168 },
+  ];
+  for (const reply of uncertain) {
+    const held = windowsFixture(); held.captureReply(reply);
+    const receipt = await held.commands.windows!.register('TEST-uncertain', input, held.deadline());
+    assert.equal(receipt.phase, 'held');
+    assert.deepEqual(await held.cold().windows!.lookup('TEST-uncertain', held.deadline()), receipt);
+    assert.equal(held.captures(), 1); assert.equal(held.policyRegistrations(), 0);
+    assert.equal(held.rows().length, 0); assert.equal(held.stops(), 0); assert.equal(held.settlements(), 0);
+    assert.throws(() => held.coldUnavailable().assertReleased(), /hold/);
+  }
+  const notSent = windowsFixture(); notSent.captureReply({ state: 'not-dispatched', reason: 'admission' });
+  const notDispatched = await notSent.commands.windows!.register('TEST-not-sent', input, notSent.deadline());
+  assert.deepEqual(notDispatched.state, { phase: 'refused', native: 'not-requested' });
+  assert.equal(notSent.policyRegistrations(), 0); notSent.coldUnavailable().assertReleased();
+
+  const retained = windowsFixture();
+  const prior = await retained.commands.windows!.register('TEST-prior-capture', input, retained.deadline());
+  const priorRows = stable(retained.rows()); retained.captureReply(missing);
+  const rejected = await retained.commands.windows!.register('TEST-second-missing', input, retained.deadline());
+  assert.equal(rejected.phase, 'rejected');
+  assert.deepEqual(await retained.cold().windows!.lookup('TEST-prior-capture', retained.deadline()), prior);
+  assert.equal(stable(retained.rows()), priorRows);
+  assert.equal(retained.captures(), 2); assert.equal(retained.policyRegistrations(), 1);
+  assert.equal(retained.stops(), 0); assert.equal(retained.settlements(), 0);
+  assert.throws(() => retained.coldUnavailable().assertReleased(), /hold/);
 });
 
 test('Windows original input is checked outside Team fence after capture await and before any policy effect', async () => {
@@ -537,6 +591,11 @@ test('Windows uncertain original policy writes never register twice and only exa
     if (interruption === 'register') {
       assert.equal(f.rows()[0]!.capturedNative, undefined);
       assert.equal(f.rows()[0]!.capturedByCommand, undefined, 'Uncertain metadata is never attached by PID');
+      f.pause('lookup');
+      const contradictory = f.cold().windows!.lookup('TEST-policy-write', f.deadline());
+      f.release({ state: 'refused', reason: 2, nativeCode: 1168 });
+      assert.deepEqual(await contradictory, receipt, 'Missing cannot erase the saved capture or original policy debt');
+      assert.throws(() => f.coldUnavailable().assertReleased(), /hold/);
       assert.equal((await f.cold().windows!.lookup('TEST-policy-write', f.deadline()))!.phase, 'held');
       f.replace([{ ...f.rows()[0]!, capturedNative: { ...f.capture,
         target: { ...f.capture.target, birth: '0000000000000020' } } }]);
@@ -566,6 +625,43 @@ test('Windows Stop uncertainty survives metadata removal and replacement; cold a
   assert.equal(f.settlements(), 1, 'Settle replay reads the same original pending result');
   assert.equal(f.coldUnavailable().lookup('TEST-native-stop')!.state.native, 'observed-absent');
   assert.equal(f.captures(), 1, 'Neither Stop lookup nor a replacement PID can recapture');
+  for (const reason of ['capacity', 'deadline', 'unknown'] as const) {
+    const held = windowsFixture();
+    const registration = await held.commands.windows!.register('TEST-settle-register', { pid: 1001, label: 'TEST settlement' }, held.deadline());
+    const target = (await held.commands.windows!.list(held.deadline()))[0]!;
+    await held.commands.windows!.terminate('TEST-settle-stop', target.processRef, held.deadline());
+    held.absent(); held.settlementReply(reason === 'unknown' ? { state: 'unknown' } : { state: 'not-dispatched', reason });
+    const original = (await held.cold().windows!.lookup('TEST-settle-stop', held.deadline()))!;
+    assert.equal(held.settlements(), 1, 'No retry in the call which first observes no-dispatch');
+    assert.equal(original.nativeSettlementNotDispatched, reason === 'unknown' ? undefined : true);
+    assert.equal(JSON.stringify(projectProcessReceipt(original)).includes('nativeSettlement'), false);
+    if (reason === 'unknown') {
+      await held.cold().windows!.lookup('TEST-settle-stop', held.deadline());
+      assert.equal(held.settlements(), 1, 'Unknown permits only the original intent lookup');
+      held.settleLate();
+      assert.deepEqual((await held.cold().windows!.lookup('TEST-settle-stop', held.deadline()))!.nativeSettlement, original.nativeSettlement);
+      continue;
+    }
+    const legacy = structuredClone(original); delete legacy.nativeSettlementNotDispatched;
+    legacy.fingerprint = processReceiptFingerprint(legacy, digest);
+    assert.notEqual(legacy.fingerprint, original.fingerprint); validateProcessReceipt(legacy, digest);
+    for (const invalid of [Object.assign(structuredClone(original), { nativeSettlementNotDispatched: false }),
+      Object.assign(structuredClone(registration), { nativeSettlementNotDispatched: true })]) {
+      const malformed = invalid as unknown as ProcessCommandReceipt;
+      malformed.fingerprint = processReceiptFingerprint(malformed, digest);
+      assert.throws(() => validateProcessReceipt(malformed, digest), /hold/);
+    }
+    held.settlementReply(); held.pause('admission');
+    const retry = held.cold().windows!.lookup('TEST-settle-stop', held.deadline()); await held.atPause();
+    const concurrent = (await held.cold().windows!.lookup('TEST-settle-stop', held.deadline()))!;
+    assert.equal(concurrent.nativeSettlementNotDispatched, undefined); assert.equal(held.settlements(), 1);
+    assert.notDeepEqual(concurrent.nativeSettlement, original.nativeSettlement);
+    held.release(); const settled = (await retry)!;
+    assert.deepEqual(settled.nativeSettlement, concurrent.nativeSettlement);
+    await held.cold().windows!.lookup('TEST-settle-stop', held.deadline());
+    assert.equal(held.settlements(), 2); assert.equal(held.stops(), 1); assert.equal(held.captures(), 1);
+    assert.equal(original.nativeSettlementNotDispatched, true, 'Earlier no-dispatch receipt stays immutable');
+  }
 });
 
 test('Windows natural absence stays on one original register across principals and cold reads, without a Stop', async () => {
@@ -596,6 +692,66 @@ test('Windows natural absence stays on one original register across principals a
   assert.equal(f.settlements(), 1); assert.equal(f.stops(), 0); assert.equal(f.captures(), 2);
   assert.equal([...f.files.values()].some(value => (value as ProcessCommandReceipt).operation === 'terminate'), false);
   assert.throws(() => f.coldUnavailable().lookup('TEST-natural-a'), /forbidden/);
+});
+
+test('lifecycle settles the original completed Windows Stop before purge without repeating its signal', async t => {
+  for (const mode of ['before-prepare', 'unknown', 'not-dispatched'] as const) {
+    const f = windowsFixture(), principal = f.asPrincipal('TEST-original-admin');
+    await principal.windows!.register('TEST-maintenance-register', { pid: 1001, label: 'TEST original service' }, f.deadline());
+    const target = (await principal.windows!.list(f.deadline()))[0]!;
+    await principal.windows!.terminate('TEST-maintenance-stop', target.processRef, f.deadline());
+    f.absent();
+    if (mode === 'before-prepare') {
+      const write = t.mock.method(f.files, 'set', function (name: string, value: unknown) {
+        Map.prototype.set.call(f.files, name, value);
+        const receipt = value as ProcessCommandReceipt;
+        if (receipt.commandId === 'TEST-maintenance-stop' && receipt.state.phase === 'completed')
+          throw new Error('TEST crash after durable absence, before settlement preparation');
+        return f.files;
+      });
+      await assert.rejects(principal.windows!.lookup('TEST-maintenance-stop', f.deadline()), /TEST crash/);
+      write.mock.restore();
+      assert.equal(f.settlements(), 0);
+    } else {
+      f.settlementReply(mode === 'unknown' ? { state: 'unknown' } : { state: 'not-dispatched', reason: 'capacity' });
+      await principal.windows!.lookup('TEST-maintenance-stop', f.deadline());
+      assert.equal(f.settlements(), 1);
+    }
+    const original = f.files.get('commands/' + digest('TEST-maintenance-stop') + '.json') as ProcessCommandReceipt;
+    assert.equal(original.state.phase, 'completed'); assert.equal(original.nativeSettlementConfirmed, undefined);
+    principal.metadata('TEST-maintenance-unregister', 'unregister', { pid: 1001 });
+    assert.equal(f.rows().length, 0, 'Lifecycle recovery must retain the original after metadata removal');
+    assert.throws(() => f.coldUnavailable().assertReleased(), /hold/, 'Absence alone cannot erase unfinished settlement');
+    await assert.rejects(f.cold().windows!.lookup('TEST-maintenance-stop', f.deadline()), /forbidden/);
+    f.sourceChanged();
+    await assert.rejects(f.cold().windows!.reconcileNaturalAbsence(f.deadline()), /forbidden/);
+    f.restoreSource();
+    if (mode === 'unknown') {
+      await f.cold().windows!.reconcileNaturalAbsence(f.deadline());
+      assert.throws(() => f.coldUnavailable().assertReleased(), /hold/);
+      assert.equal(f.settlements(), 1, 'Unknown settlement has lookup authority only');
+      f.settleLate();
+    } else f.settlementReply();
+    await f.cold().windows!.reconcileNaturalAbsence(f.deadline());
+    const completed = f.files.get('commands/' + digest('TEST-maintenance-stop') + '.json') as ProcessCommandReceipt;
+    assert.equal(completed.principalId, original.principalId);
+    assert.equal(completed.nativeSettlementConfirmed, true);
+    assert.equal(completed.nativeSettlementNotDispatched, undefined);
+    assert.deepEqual(completed.nativeIntent, original.nativeIntent);
+    assert.deepEqual(completed.capture, original.capture);
+    if (mode === 'unknown') assert.deepEqual(completed.nativeSettlement, original.nativeSettlement);
+    if (mode === 'not-dispatched') assert.notDeepEqual(completed.nativeSettlement, original.nativeSettlement);
+    assert.equal(JSON.stringify(projectProcessReceipt(completed)).includes('nativeSettlement'), false);
+    f.coldUnavailable().assertReleased();
+    await assert.rejects(f.cold().windows!.lookup('TEST-maintenance-stop', f.deadline()), /forbidden/);
+    await f.cold().windows!.reconcileNaturalAbsence(f.deadline());
+    assert.equal(f.settlements(), mode === 'not-dispatched' ? 2 : 1);
+    assert.equal(f.stops(), 1); assert.equal(f.captures(), 1);
+    assert.equal(original.nativeSettlementConfirmed, undefined, 'Earlier receipt is immutable');
+    const invalid = { ...completed, nativeSettlementNotDispatched: true as const };
+    invalid.fingerprint = processReceiptFingerprint(invalid, digest);
+    assert.throws(() => validateProcessReceipt(invalid, digest), /hold/);
+  }
 });
 
 test('Windows natural settlement preserves pre-dispatch and lost-ACK uncertainty; only later proven no-dispatch may retry', async () => {

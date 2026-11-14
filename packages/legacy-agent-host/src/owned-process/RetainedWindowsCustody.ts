@@ -3,7 +3,7 @@ import { performance } from 'node:perf_hooks';
 
 import { decodeLaunch } from './codec.js';
 import { createWindowsOwnedLaunchPort } from './windowsBroker.js';
-import { HOST_CUSTODY_CHUNK_BYTES, hostCustodyCleanup } from './hostCustody.js';
+import { HOST_CUSTODY_CHUNK_BYTES, HOST_CUSTODY_MAX_ALLOCATIONS, hostCustodyCleanup } from './hostCustody.js';
 import { RetainedWindowsServices } from './RetainedWindowsServices.js';
 import { isHostServiceCall } from './retainedServiceContracts.js';
 
@@ -287,7 +287,7 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
         this.staging ||
         this.allocations.has(call.capability) ||
         [...this.allocations.values()].filter((value) => !value.released).length >= 256 ||
-        this.allocations.size >= 320
+        this.allocations.size >= HOST_CUSTODY_MAX_ALLOCATIONS
       )
         unavailable();
       const selection = Object.freeze({ ...this.options.selectBroker(call.brokerRef) });
@@ -490,13 +490,15 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
   /** Called by the original Main on Quit; independent of availability or identity of a replacement Host. */
   close(): Promise<boolean> {
     this.shuttingDown = true;
-    this.closing ??= Promise.all(
+    if (this.closing) return this.closing;
+    const attemptId = `main-owner-quit-${randomUUID()}`;
+    this.closing = Promise.all(
       [...this.allocations.values()].map(async (allocation) => {
         if (allocation.released) return true;
         try {
           const outcome = await allocation.pending.stop({
             expectedOwner: allocation.pending.owner,
-            attemptId: 'main-owner-quit',
+            attemptId,
             mode: 'force',
             deadlineMs: performance.now() + 10000,
           });
@@ -510,7 +512,11 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
           return false;
         }
       })
-    ).then((results) => results.every(Boolean));
+    ).then((results) => {
+      const released = results.every(Boolean);
+      if (!released) this.closing = undefined;
+      return released;
+    });
     return this.closing;
   }
 }

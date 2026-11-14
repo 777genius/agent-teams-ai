@@ -11,6 +11,7 @@ import { desktopActiveMetadata, desktopMetadataProcess, desktopMetadataProfileHa
 import type { DesktopNativeHostSnapshot } from './desktop-opencode-metadata-lineage.ts';
 import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import type { UiCdpPort } from './desktop-team-ui-smoke.ts';
+import type { ConfiguredOpenCodeLaunchPreparation } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model-probe.ts';
 export {
   readNativeProviderArtifact as readDesktopNativeProviderArtifact,
   verifyNativeProviderArtifact as verifyDesktopNativeStopArtifact,
@@ -27,12 +28,15 @@ export async function prepareDesktopNativeStop(options: {
   group: number;
   evidence: Record<string, unknown>;
   executable: string;
-  provider?: 'opencode';
+  openCode?: { model: { configuredLaunchPreparation?: ConfiguredOpenCodeLaunchPreparation;
+    probes: readonly { requestedModel?: string }[] } | undefined };
   manualPermissions?: boolean;
   returnAt?: 'opening';
 }) {
   const { cdp, fixture, group, evidence, executable } = options;
   assert.ok(executable);
+  const openCodeModel = options.openCode?.model, preparation = openCodeModel?.configuredLaunchPreparation;
+  if (options.openCode) assert.ok(preparation, 'the selected OpenCode setup requires its original preparation port');
   const invokeSetup = async (operation: string, commandId: string, payload: unknown) => {
     assertOwnedCdpListener(group);
     return object(
@@ -41,8 +45,8 @@ export async function prepareDesktopNativeStop(options: {
       )
     );
   };
-  if (options.provider === 'opencode') assert.ok(fixture.root);
-  const globalMetadata = options.provider === 'opencode'
+  if (options.openCode) assert.ok(fixture.root);
+  const globalMetadata = options.openCode
     ? await captureDesktopOpenCodeGlobalMetadata(cdp, { ...fixture, root: fixture.root! }, group,
       () => assertOwnedCdpListener(group)) : undefined;
   const read = await invokeSetup('team.launch.read', 'TEST-setup-read', {});
@@ -72,12 +76,12 @@ export async function prepareDesktopNativeStop(options: {
   const configuration = {
     members: memberIds.map((memberId) => ({
       memberId,
-      model: options.provider === 'opencode' ? 'test-local/TEST-model' : 'claude-opus-4-6',
-      ...(options.provider === 'opencode' ? {} : { effort: 'medium', fastMode: false, context: 'model-default' }),
+      model: options.openCode ? 'test-local/TEST-model' : 'claude-opus-4-6',
+      ...(options.openCode ? {} : { effort: 'medium', fastMode: false, context: 'model-default' }),
       permissions: options.manualPermissions ? 'manual' : 'bypass',
     })),
   };
-  if (options.provider === 'opencode') {
+  if (options.openCode) {
     assert.ok(fixture.root, 'the original Composer has an exact TEST workspace');
     assertOwnedCdpListener(group);
     const response = object(await cdp.evaluate(
@@ -122,14 +126,34 @@ export async function prepareDesktopNativeStop(options: {
     return { hostPid, nativeChildren: table.filter(row =>
       row.ppid === hostPid && command(row.pid).startsWith(executable)) };
   };
-  const readinessMs = options.provider === 'opencode' ? 180_000 : 45_000;
-  const start = await invokeSetup('team.launch.start', 'TEST-explicit-sandbox-setup-launch', {
-    launchId: selection.launchId,
-    rosterRevision: selection.rosterRevision,
-    configuration,
-  });
-  evidence.nativeLaunchResponse = start;
-  assert.equal(start.ok, true, `TEST configured launch response: ${JSON.stringify(start)}`);
+  const readinessMs = options.openCode ? 180_000 : 45_000;
+  const commandId = 'TEST-explicit-sandbox-setup-launch';
+  let disarm: (() => void) | undefined;
+  if (preparation) {
+    const { launchId, rosterRevision } = selection;
+    assert.ok(typeof launchId === 'string' && typeof rosterRevision === 'string');
+    assert.deepEqual(memberIds, ['alice-id']);
+    disarm = preparation.arm({ commandId, launchId,
+      rosterRevision, memberId, model: configuration.members[0]!.model });
+  }
+  let start: Record<string, unknown>;
+  try {
+    start = await invokeSetup('team.launch.start', commandId, {
+      launchId: selection.launchId,
+      rosterRevision: selection.rosterRevision,
+      configuration,
+    });
+    evidence.nativeLaunchResponse = start;
+    assert.equal(start.ok, true, `TEST configured launch response: ${JSON.stringify(start)}`);
+    if (preparation) {
+      assert.ok(openCodeModel);
+      assert.equal(preparation.consumed, 1);
+      assert.equal(openCodeModel.probes.length, 1);
+      assert.equal(openCodeModel.probes[0]!.requestedModel, 'TEST-model');
+      evidence.nativeConfiguredPreparation = { commandId, consumed: preparation.consumed,
+        probe: openCodeModel.probes[0] };
+    }
+  } finally { disarm?.(); }
   if (options.returnAt === 'opening') {
     assert.ok(fixture.root, 'exact TEST Runtime store for pending-open observation');
     const deadline = Date.now() + readinessMs;
@@ -199,9 +223,61 @@ export async function prepareDesktopNativeStop(options: {
   return { hostPid, nativeChildren };
 }
 
+/** Closed diagnostic projection of one already completed Runtime file read. */
+function runtimeReadObservation(sessions: Record<string, unknown>[], runId: string) {
+  const source = 'last-successful-runtime-file-read' as const;
+  try {
+    const row = (value: unknown): Record<string, unknown> | undefined =>
+      value && typeof value === 'object' && !Array.isArray(value)
+        ? value as Record<string, unknown> : undefined;
+    const choice = <T extends string>(value: unknown, allowed: readonly T[]): T | 'unavailable' =>
+      allowed.find(item => item === value) ?? 'unavailable';
+    const bool = (value: unknown) => typeof value === 'boolean' ? value : 'unavailable' as const;
+    const matching: Record<string, unknown>[] = [];
+    let unknownBindings = 0;
+    for (const session of sessions) {
+      const observedRun = row(session.binding)?.runId;
+      if (typeof observedRun !== 'string' || !observedRun) unknownBindings++;
+      else if (observedRun === runId) matching.push(session);
+    }
+    const selected = matching.length === 1 ? matching[0] : undefined;
+    const rawInputs = selected?.inputs;
+    const inputs: readonly unknown[] | undefined = Array.isArray(rawInputs) ? rawInputs : undefined;
+    return {
+      source,
+      status: 'observed' as const,
+      matchingRecords: matching.length,
+      unknownBindings,
+      session: selected ? {
+        phase: choice(selected.phase, ['unopened', 'opening', 'allocated', 'closing', 'closed', 'held'] as const),
+        custody: choice(selected.custody, ['owned', 'released', 'unknown'] as const),
+        nativeReady: bool(selected.nativeReady),
+        sealed: bool(selected.sealed),
+        diagnostic: selected.diagnostic === undefined ? null : choice(selected.diagnostic,
+          ['open-unknown', 'observe-ended', 'observe-failed', 'readiness-unavailable', 'close-unknown'] as const),
+        inputCount: inputs?.length ?? null,
+        inputs: inputs ? inputs.slice(0, 4).map(value => {
+          const input = row(value);
+          return {
+            phase: choice(input?.phase,
+              ['admitted', 'claimed', 'consumed', 'terminal', 'cancelled', 'rejected', 'not-sent', 'unknown'] as const),
+            terminal: input && input.terminal === undefined ? null :
+              choice(input?.terminal, ['succeeded', 'failed', 'cancelled'] as const),
+          };
+        }) : 'unavailable' as const,
+        inputOverflow: inputs ? inputs.length > 4 : null,
+      } : null,
+    };
+  } catch {
+    return { source, status: 'unavailable' as const, matchingRecords: null,
+      unknownBindings: null, session: null };
+  }
+}
+
 /** Read only the actual two-level Runtime store; no Host/RPC/native continuation. */
 export async function readDesktopNativeStopSessions(
-  root: string
+  root: string,
+  observation?: { runId: string; report(value: ReturnType<typeof runtimeReadObservation>): void }
 ): Promise<Record<string, unknown>[]> {
   const directory = join(root, 'hoststore/runtime-sessions');
   const namespaces = await readdir(directory, { withFileTypes: true });
@@ -231,6 +307,13 @@ export async function readDesktopNativeStopSessions(
     assert.deepEqual(unknown, [], 'Unexpected Runtime namespace entries');
     for (const file of files)
       sessions.push(object(JSON.parse(await readFile(join(selected, file.name), 'utf8'))));
+  }
+  if (observation) {
+    try {
+      observation.report(runtimeReadObservation(sessions, observation.runId));
+    } catch {
+      // A diagnostic observer cannot change the original read result.
+    }
   }
   return sessions;
 }

@@ -9,19 +9,18 @@ import { pathToFileURL } from 'node:url';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { DesktopBackendFeature } from '../../../src/features/agent-backend/main/composition/DesktopBackendFeature';
-import { CapturedOpenCodeRuntimeInstaller } from '../../../src/features/opencode-runtime-installer/main/application/CapturedOpenCodeRuntimeInstaller';
-import { captureOpenCodeNativeSelection } from '../../../src/features/opencode-runtime-installer/main/infrastructure/captureOpenCodeNativeSelection';
 import { CapturedCodexRuntimeInstaller } from '../../../src/features/codex-runtime-installer/main/application/CapturedCodexRuntimeInstaller';
 import { captureCodexNativeSelection } from '../../../src/features/codex-runtime-installer/main/infrastructure/captureCodexNativeSelection';
-import { registerCodexRuntimeInstallerIpc } from '../../../src/features/codex-runtime-installer/main/adapters/input/ipc/registerCodexRuntimeInstallerIpc';
-import { CODEX_RUNTIME_GET_STATUS, CODEX_RUNTIME_INSTALL } from '@features/codex-runtime-installer/contracts';
+import { CapturedOpenCodeRuntimeInstaller } from '../../../src/features/opencode-runtime-installer/main/application/CapturedOpenCodeRuntimeInstaller';
+import { captureOpenCodeNativeSelection } from '../../../src/features/opencode-runtime-installer/main/infrastructure/captureOpenCodeNativeSelection';
 
+import type { CapturedRuntimeSources } from '../../../src/features/agent-backend/main';
 import type { ProviderManagementOperation } from '../../../src/features/agent-backend/main/infrastructure/CapturedProviderManagement';
 import type { DesktopBackendDescriptor } from '../../../src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor';
+import type { CapturedCodexInstallRequest } from '../../../src/features/codex-runtime-installer/main/application/CapturedCodexRuntimeInstaller';
 import type { TeamHostProfile } from '@agent-teams/legacy-agent-host/team-host';
-import type { OpenCodeRuntimeStatus } from '@shared/types';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
-import type { IpcMain, IpcMainInvokeEvent } from 'electron';
+import type { OpenCodeRuntimeStatus } from '@shared/types';
 
 const roots: string[] = [],
   features: DesktopBackendFeature[] = [];
@@ -31,13 +30,21 @@ afterEach(async () => {
 });
 const digest = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
 
-async function fixture(runtimeId: 'claude' | 'codex' | 'opencode' = 'claude', withPreferences = false, aliases = 0,
-  interruptPrepared = false) {
+async function fixture(
+  runtimeId: 'claude' | 'opencode' | 'codex' = 'claude',
+  withPreferences = false,
+  aliases = 0,
+  interruptPrepared = false
+) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-desktop-sources-')));
   roots.push(root);
   await mkdir(join(root, '.claude'), { mode: 0o700 });
-  const preferencePaths = { projectRoot: join(root, 'preferences'), globalRoot: join(root, 'global-preferences') };
-  if (withPreferences) for (const path of Object.values(preferencePaths)) await mkdir(path, { mode: 0o700 });
+  const preferencePaths = {
+    projectRoot: join(root, 'preferences'),
+    globalRoot: join(root, 'global-preferences'),
+  };
+  if (withPreferences)
+    for (const path of Object.values(preferencePaths)) await mkdir(path, { mode: 0o700 });
   const nodeExecutable = await realpath(process.env.AGENT_BACKEND_TEST_NODE ?? process.execPath);
   const nodeSha256 = digest(await readFile(nodeExecutable));
   const hostEntry = join(root, 'TEST-host.mjs'),
@@ -46,24 +53,33 @@ async function fixture(runtimeId: 'claude' | 'codex' | 'opencode' = 'claude', wi
     join(process.cwd(), 'packages/legacy-agent-host/dist/composition/TeamHost.js')
   ).href;
   const commandStoreUrl = pathToFileURL(
-    join(process.cwd(), 'packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js')
+    join(
+      process.cwd(),
+      'packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js'
+    )
   ).href;
   const source = `import { readFileSync } from 'node:fs';
 import { createTeamHost } from ${JSON.stringify(hostUrl)};
-${interruptPrepared ? `import { FileManagementCommandStore } from ${JSON.stringify(commandStoreUrl)};
+${
+  interruptPrepared
+    ? `import { FileManagementCommandStore } from ${JSON.stringify(commandStoreUrl)};
 const originalWrite = FileManagementCommandStore.prototype.write;
 FileManagementCommandStore.prototype.write = function(record) {
   originalWrite.call(this, record);
   if (record.kind === 'runtime.source' && record.commandId === 'TEST-original-install' && record.phase === 'prepared')
     throw new Error('TEST interruption after original durable prepared intent');
-};` : ''}
+};`
+    : ''
+}
 const server = createTeamHost(JSON.parse(readFileSync(${JSON.stringify(profileFile)}, 'utf8')), { input: process.stdin, output: process.stdout });
 void server.closed.then(() => process.exit(0));`;
   await writeFile(hostEntry, source, { mode: 0o600 });
   const bytes =
     runtimeId === 'claude'
       ? '#!/bin/sh\nprintf "2.1.34 (Claude Code)\\n"\n'
-      : runtimeId === 'codex' ? '#!/bin/sh\nprintf "codex-cli 0.162.0\\n"\n' : '#!/bin/sh\nprintf "1.19.4\\n"\n';
+      : runtimeId === 'codex'
+        ? '#!/bin/sh\nprintf "codex-cli 0.162.0\\n"\n'
+        : '#!/bin/sh\nprintf "1.19.4\\n"\n';
   const original = { path: join(root, 'TEST-cli-seed'), sha256: digest(bytes) };
   const replacement = { path: join(root, 'TEST-cli-repaired'), sha256: digest(bytes) };
   for (const executable of [original, replacement])
@@ -91,13 +107,27 @@ void server.closed.then(() => process.exit(0));`;
       shutdownTimeoutMs: 3000,
     },
   };
-  const scope = { teamId: 'TEST-source-team', projectId: 'TEST-project', workspaceId: 'TEST-workspace',
-    runId: 'TEST-run', memberId: 'TEST-human', generation: '0' };
+  const scope = {
+    teamId: 'TEST-source-team',
+    projectId: 'TEST-project',
+    workspaceId: 'TEST-workspace',
+    runId: 'TEST-run',
+    memberId: 'TEST-human',
+    generation: '0',
+  };
   const profile: TeamHostProfile = {
     schemaVersion: 1,
     principalId: 'TEST-human',
-    teams: aliases ? [{ binding: { backendId: owner.ownerId, teamId: scope.teamId, teamName: 'source-team' },
-      scope, members: [{ memberId: 'lead', name: 'captain', role: 'lead' }], grants: [] }] : [],
+    teams: aliases
+      ? [
+          {
+            binding: { backendId: owner.ownerId, teamId: scope.teamId, teamName: 'source-team' },
+            scope,
+            members: [{ memberId: 'lead', name: 'captain', role: 'lead' }],
+            grants: [],
+          },
+        ]
+      : [],
     ...(withPreferences ? { creation: { contextIds: ['TEST-context'] } } : {}),
     owner: {
       ownerId: owner.ownerId,
@@ -139,11 +169,20 @@ void server.closed.then(() => process.exit(0));`;
         timeoutMs: 1000,
       },
     ];
-  if (runtimeId === 'codex') profile.management = [{
-    provider: 'codex', protocolRevision: '0.162.0', profileId: 'TEST-management', configRevision: 'TEST-config',
-    accountBinding: 'TEST-account', cwd: root, executable: original,
-    environment: { HOME: root, CODEX_HOME: root, PATH: '/usr/bin:/bin' }, timeoutMs: 1000,
-  }];
+  if (runtimeId === 'codex')
+    profile.management = [
+      {
+        provider: 'codex',
+        protocolRevision: '0.162.0',
+        profileId: 'TEST-management',
+        configRevision: 'TEST-config',
+        accountBinding: 'TEST-account',
+        cwd: root,
+        executable: original,
+        environment: { HOME: root, CODEX_HOME: root, PATH: '/usr/bin:/bin' },
+        timeoutMs: 1000,
+      },
+    ];
   await writeFile(profileFile, JSON.stringify(profile), { mode: 0o600 });
   const binding = {
     runtimeId,
@@ -158,10 +197,17 @@ void server.closed.then(() => process.exit(0));`;
     schemaVersion: 1,
     defaultOwner: binding.owner,
     owners: [owner],
-    handles: Array.from({ length: aliases }, (_, index) => ({ handleId: `TEST-source-alias-${index}`,
-      owner: binding.owner, contextId: binding.contextId, label: 'Source Team',
-      members: [{ memberId: 'lead', label: 'captain' }], scope })),
-    ...(withPreferences ? { creation: { owner: binding.owner, contextIds: ['TEST-context'] } } : {}),
+    handles: Array.from({ length: aliases }, (_, index) => ({
+      handleId: `TEST-source-alias-${index}`,
+      owner: binding.owner,
+      contextId: binding.contextId,
+      label: 'Source Team',
+      members: [{ memberId: 'lead', label: 'captain' }],
+      scope,
+    })),
+    ...(withPreferences
+      ? { creation: { owner: binding.owner, contextIds: ['TEST-context'] } }
+      : {}),
     management: [binding],
   };
   const descriptorPath = join(root, 'TEST-descriptor.json'),
@@ -179,17 +225,90 @@ void server.closed.then(() => process.exit(0));`;
   return { root, original, replacement, binding, owner, open, preferencePaths };
 }
 
+function codexRequest(
+  sources: CapturedRuntimeSources,
+  binaryPath: string,
+  current = () => true
+): CapturedCodexInstallRequest {
+  const check = () => {
+    if (!current()) throw new Error('TEST original context revoked');
+  };
+  return {
+    sources: Promise.resolve(sources),
+    resolver: {
+      fingerprint: digest(binaryPath),
+      assertAuthority: check,
+      assertCurrent: check,
+      acceptAcquired: () => {
+        throw new Error('TEST no package acquisition');
+      },
+      resolve: async () => {
+        const original = await captureCodexNativeSelection(binaryPath, check);
+        return {
+          selection: {
+            sourceKind: 'app-managed',
+            nativeCli: { executable: original.executable, version: '0.162.0' },
+          },
+          assertCurrent: original.assertCurrent,
+        };
+      },
+    },
+  };
+}
+
+function capturedCodexInstaller() {
+  const progress: CodexRuntimeStatus[] = [];
+  const acquire = vi.fn(async (): Promise<never> => {
+    throw new Error('TEST no new acquisition');
+  });
+  return {
+    progress,
+    acquire,
+    service: new CapturedCodexRuntimeInstaller({
+      installCaptured: acquire,
+      readLatestVersion: async () => '0.169.0',
+      publishCapturedStatus: (status) => {
+        progress.push(status);
+      },
+    }),
+  };
+}
+
 it('first launch preparation captures stored preferences through the real Main/Host source owner and restart keeps retained A', async () => {
-  const f = await fixture('opencode', true), desktop = f.open();
+  const f = await fixture('opencode', true),
+    desktop = f.open();
   const globalFile = join(f.preferencePaths.globalRoot, 'global-runtime-preferences.json');
   const projectFile = join(f.preferencePaths.projectRoot, 'agent-teams-runtime-preferences.json');
   const limits = { contextTokens: 32000, outputTokens: 1000 };
-  await writeFile(globalFile, JSON.stringify({ schemaVersion: 2, defaultModelId: 'TEST-local/global',
-    modelLimitOverrides: { 'TEST-local/global': limits }, unrelated: 'TEST-preserved-global' }), { mode: 0o600 });
-  await writeFile(projectFile, JSON.stringify({ schemaVersion: 2, defaultModelId: 'TEST-local/project',
-    modelLimitOverrides: { 'TEST-local/global': { ...limits, outputTokens: 500, updatedAt: 'TEST-time' } },
-    unrelated: 'TEST-not-a-native-field' }), { mode: 0o600 });
-  await desktop.refreshLaunchConfiguration('TEST-context', f.root, { isCurrent: () => true });
+  await writeFile(
+    globalFile,
+    JSON.stringify({
+      schemaVersion: 2,
+      defaultModelId: 'TEST-local/global',
+      modelLimitOverrides: { 'TEST-local/global': limits },
+      unrelated: 'TEST-preserved-global',
+    }),
+    { mode: 0o600 }
+  );
+  await writeFile(
+    projectFile,
+    JSON.stringify({
+      schemaVersion: 2,
+      defaultModelId: 'TEST-local/project',
+      modelLimitOverrides: {
+        'TEST-local/global': { ...limits, outputTokens: 500, updatedAt: 'TEST-time' },
+      },
+      unrelated: 'TEST-not-a-native-field',
+    }),
+    { mode: 0o600 }
+  );
+  const [firstCapture, parallelCapture] = await Promise.all([
+    desktop.captureProviderManagement('TEST-context', f.root),
+    desktop.captureProviderManagement('TEST-context', f.root),
+    desktop.refreshLaunchConfiguration('TEST-context', f.root, { isCurrent: () => true }),
+  ]);
+  expect(parallelCapture.profileId).toBe(firstCapture.profileId);
+  expect(parallelCapture.configRevision).toBe(firstCapture.configRevision);
   const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'opencode');
   const original = await sources.current();
   expect(original.preferencesDigest).toMatch(/^[a-f0-9]{64}$/);
@@ -197,13 +316,27 @@ it('first launch preparation captures stored preferences through the real Main/H
   const before = JSON.parse(await readFile(join(f.root, 'runtime-sources/index.json'), 'utf8'));
   expect(before.records).toHaveLength(1);
   expect(before.records[0].candidate.openCodePreferences).toEqual({
-    defaultModelId: 'TEST-local/project', modelLimitOverrides: { 'TEST-local/global': { ...limits, outputTokens: 500 } },
+    defaultModelId: 'TEST-local/project',
+    modelLimitOverrides: { 'TEST-local/global': { ...limits, outputTokens: 500 } },
   });
   expect(JSON.stringify(before)).not.toContain('TEST-not-a-native-field');
   expect(JSON.stringify(before)).not.toContain('TEST-time');
+  let staleCurrent = true;
+  const stale = desktop.captureProviderManagement('TEST-context', f.root, {
+    isCurrent: () => staleCurrent,
+  });
+  staleCurrent = false;
+  await expect(stale).rejects.toThrow();
+  expect((await desktop.captureProviderManagement('TEST-context', f.root)).profileId).toBe(
+    firstCapture.profileId
+  );
   await desktop.refreshLaunchConfiguration('TEST-context', f.root, { isCurrent: () => true });
   expect(await sources.current()).toEqual(original);
-  await writeFile(projectFile, JSON.stringify({ schemaVersion: 2, defaultModelId: null, modelLimitOverrides: {} }), { mode: 0o600 });
+  await writeFile(
+    projectFile,
+    JSON.stringify({ schemaVersion: 2, defaultModelId: null, modelLimitOverrides: {} }),
+    { mode: 0o600 }
+  );
   const next = await target.refreshConfiguration!();
   expect(next.profileId).not.toBe(target.profileId);
   expect(target.isCurrent()).toBe(true);
@@ -211,13 +344,18 @@ it('first launch preparation captures stored preferences through the real Main/H
   expect(published.preferencesDigest).not.toBe(original.preferencesDigest);
   const after = JSON.parse(await readFile(join(f.root, 'runtime-sources/index.json'), 'utf8'));
   expect(after.records[1].candidate.openCodePreferences).toEqual({
-    defaultModelId: 'TEST-local/global', modelLimitOverrides: { 'TEST-local/global': limits },
+    defaultModelId: 'TEST-local/global',
+    modelLimitOverrides: { 'TEST-local/global': limits },
   });
   await desktop.shutdown();
   const restarted = f.open();
-  expect((await restarted.restoreProviderManagement('TEST-context', target.targetId)).profileId).toBe(target.profileId);
+  expect(
+    (await restarted.restoreProviderManagement('TEST-context', target.targetId)).profileId
+  ).toBe(target.profileId);
   await restarted.refreshLaunchConfiguration('TEST-context', f.root, { isCurrent: () => true });
-  expect(await (await restarted.captureRuntimeSources('TEST-context', f.root, 'opencode')).current()).toEqual(published);
+  expect(
+    await (await restarted.captureRuntimeSources('TEST-context', f.root, 'opencode')).current()
+  ).toEqual(published);
 }, 20000);
 
 it('real Main/Host publication preserves legacy target bytes and restores every retained target after restart', async () => {
@@ -233,7 +371,9 @@ it('real Main/Host publication preserves legacy target bytes and restores every 
     expectedRevision: original.revision,
     candidate: { sourceKind: 'app-managed', executable: f.replacement },
   });
-  const sourceIndex = JSON.parse(await readFile(join(f.root, 'runtime-sources/index.json'), 'utf8'));
+  const sourceIndex = JSON.parse(
+    await readFile(join(f.root, 'runtime-sources/index.json'), 'utf8')
+  );
   expect(sourceIndex.records[0].grant.teamScopes).toEqual([
     { teamId: 'TEST-source-team', projectId: 'TEST-project', workspaceId: 'TEST-workspace' },
   ]);
@@ -347,88 +487,95 @@ it.skipIf(process.platform === 'win32')(
       (await (await restarted.captureRuntimeSources('TEST-context', f.root, 'opencode')).current())
         .revision
     ).toBe(status.sourceRevision);
+
+    const codex = await fixture('codex'),
+      codexDesktop = codex.open();
+    const codexSources = await codexDesktop.captureRuntimeSources(
+      'TEST-context',
+      codex.root,
+      'codex'
+    );
+    const before = await codexSources.current();
+    const priorTarget = await codexDesktop.captureProviderManagement(
+      'TEST-context',
+      codex.root,
+      undefined,
+      'codex'
+    );
+    const captured = capturedCodexInstaller();
+    expect(
+      await captured.service.getStatus(codexRequest(codexSources, codex.original.path))
+    ).toMatchObject({
+      state: 'ready',
+      source: 'captured-host',
+      version: '0.162.0',
+      sourceRevision: before.revision,
+      updateAvailable: true,
+    });
+    expect(await codexSources.recover()).toBeNull();
+    expect(
+      await captured.service.getStatus(codexRequest(codexSources, codex.replacement.path))
+    ).toMatchObject({
+      sourceRevision: before.revision,
+      installed: false,
+    });
+    expect(await codexSources.current()).toEqual(before);
+    const publish = vi.fn(codexSources.publish),
+      scoped = { ...codexSources, publish };
+    const next = await captured.service.selectInstalled(
+      codexRequest(scoped, codex.replacement.path)
+    );
+    expect(next).toMatchObject({ state: 'ready', version: '0.162.0', source: 'app-managed' });
+    expect(next.sourceRevision).not.toBe(before.revision);
+    expect(next.binaryPath).toBeUndefined();
+    expect(JSON.stringify(next)).not.toMatch(/nativeExecutableDigest|TEST-cli|sha256/);
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(
+      await captured.service.selectInstalled(codexRequest(scoped, codex.replacement.path))
+    ).toEqual(next);
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(
+      (await codexDesktop.restoreProviderManagement('TEST-context', priorTarget.targetId)).targetId
+    ).toBe(priorTarget.targetId);
+    expect(
+      (await codexDesktop.captureProviderManagement('TEST-context', codex.root, undefined, 'codex'))
+        .targetId
+    ).not.toBe(priorTarget.targetId);
+    const indexBytes = await readFile(join(codex.root, 'runtime-sources/index.json'), 'utf8');
+    expect(indexBytes).not.toContain('nativeExecutableDigest');
+    await codexDesktop.shutdown();
+    const coldCodex = codex.open(),
+      coldSources = await coldCodex.captureRuntimeSources('TEST-context', codex.root, 'codex');
+    const coldPublish = vi.fn(coldSources.publish),
+      coldInstaller = capturedCodexInstaller();
+    expect(
+      await coldInstaller.service.selectInstalled(
+        codexRequest({ ...coldSources, publish: coldPublish }, codex.replacement.path)
+      )
+    ).toEqual(next);
+    expect(coldPublish).not.toHaveBeenCalled();
+    expect(coldInstaller.acquire).not.toHaveBeenCalled();
+    expect(await readFile(join(codex.root, 'runtime-sources/index.json'), 'utf8')).toBe(indexBytes);
+    await expect(
+      coldCodex.captureRuntimeSources('TEST-foreign', codex.root, 'codex')
+    ).rejects.toThrow();
+    let foreground = true;
+    const staleSources = {
+      ...coldSources,
+      current: async () => {
+        const value = await coldSources.current();
+        foreground = false;
+        return value;
+      },
+    };
+    await expect(
+      coldInstaller.service.selectInstalled(
+        codexRequest(staleSources, codex.replacement.path, () => foreground)
+      )
+    ).rejects.toThrow('revoked');
   },
   20000
 );
-
-it.skipIf(process.platform === 'win32')('Codex installer IPC publishes verified 0.169 from a 0.162 seed, reconciles its ACK and retains old management after restart', async () => {
-  const f = await fixture('codex'), desktop = f.open();
-  const oldTarget = await desktop.captureProviderManagement('TEST-context', f.root, undefined, 'codex');
-  const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'codex');
-  const binaryPath = join(f.root, 'TEST-installed-codex'), marker = join(f.root, 'TEST-codex-version-reads');
-  await writeFile(binaryPath, `#!/bin/sh\nprintf "codex-cli 0.169.0\\n"\nprintf x >> '${marker}'\n`, { mode: 0o700 });
-  const physical: CodexRuntimeStatus = { installed: true, state: 'ready', source: 'app-managed',
-    version: 'codex-cli 0.169.0', latestVersion: '0.169.0', updateAvailable: false, binaryPath };
-  const install = vi.fn(async (accept: (status: CodexRuntimeStatus) => Promise<CodexRuntimeStatus>) => accept(physical));
-  const service = new CapturedCodexRuntimeInstaller({ native: { install, getReadinessStatus: async () => physical }, captureSelection: captureCodexNativeSelection });
-  let commandId = '';
-  const captured = { ...sources, publish: async (input: Parameters<typeof sources.publish>[0]) => {
-    commandId = input.commandId;
-    await sources.publish(input);
-    throw new Error('TEST original publication ACK lost');
-  } };
-  const handlers = new Map<string, (event: IpcMainInvokeEvent) => Promise<{ success: boolean; data?: CodexRuntimeStatus; error?: string }>>();
-  const event = {} as IpcMainInvokeEvent;
-  let authorized = true;
-  registerCodexRuntimeInstallerIpc({ handle: (channel: string, handler: Parameters<IpcMain['handle']>[1]) => handlers.set(channel, handler) } as unknown as IpcMain, {
-    getStatus: async () => physical,
-    install: selected => { expect(selected).toBeDefined(); return service.install(selected!); },
-    invalidateStatus: async selected => { expect(selected).toBeDefined(); await service.selectInstalled(selected!); },
-    setMainWindow() {},
-  }, () => { if (!authorized) throw new Error('TEST unauthorized original sender'); return Promise.resolve(captured); });
-  expect((await handlers.get(CODEX_RUNTIME_GET_STATUS)!(event)).data).toEqual(physical);
-  expect(commandId).toBe('');
-  expect(install).not.toHaveBeenCalled();
-  const reply = await handlers.get(CODEX_RUNTIME_INSTALL)!(event);
-  expect(reply.success).toBe(true);
-  const completed = reply.data!;
-  expect(completed).toMatchObject({ installed: true, state: 'ready', version: '0.169.0', progress: { phase: 'ready', percent: 100 } });
-  const published = (await sources.lookup(commandId))!;
-  expect(await sources.current()).toEqual(published.selection);
-  expect(published.selection?.cliVersion).toBe('0.169.0');
-  expect(await service.selectInstalled(sources)).toEqual(completed);
-  expect(install).toHaveBeenCalledTimes(1);
-  authorized = false;
-  expect(await handlers.get(CODEX_RUNTIME_INSTALL)!(event)).toMatchObject({ success: false, error: 'TEST unauthorized original sender' });
-  expect(install).toHaveBeenCalledTimes(1);
-  expect(await readFile(marker, 'utf8')).toBe('x');
-  expect((await desktop.captureProviderManagement('TEST-context', f.root, undefined, 'codex')).targetId).not.toBe(oldTarget.targetId);
-  const later = await sources.publish({ commandId: 'TEST-later-independent-selection', expectedRevision: published.selection!.revision,
-    nativeSelection: { sourceKind: 'path', nativeCli: { executable: f.original, version: '0.162.0' } } });
-  expect(await service.selectInstalled(sources)).toMatchObject({ installed: true, state: 'failed' });
-  expect(await sources.current()).toEqual(later.selection);
-  expect(await sources.lookup(commandId)).toEqual(published);
-  await desktop.shutdown();
-  const restarted = f.open();
-  expect((await restarted.restoreProviderManagement('TEST-context', oldTarget.targetId)).profileId).toBe(oldTarget.profileId);
-  expect(await (await restarted.captureRuntimeSources('TEST-context', f.root, 'codex')).current()).toEqual(later.selection);
-}, 20000);
-
-for (const refusal of ['foreground-changed', 'unqualified-version'] as const)
-  it.skipIf(process.platform === 'win32')(`Codex ${refusal} leaves the installed bytes visible without a ready publication`, async () => {
-    const f = await fixture('codex'), desktop = f.open();
-    let current = true;
-    const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'codex', { isCurrent: () => current });
-    const original = await sources.current();
-    const version = refusal === 'unqualified-version' ? '0.170.0' : '0.169.0';
-    const binaryPath = join(f.root, 'TEST-unselected-codex');
-    await writeFile(binaryPath, `#!/bin/sh\nprintf "codex-cli ${version}\\n"\n`, { mode: 0o700 });
-    const physical: CodexRuntimeStatus = { installed: true, state: 'ready', source: 'app-managed', version,
-      latestVersion: version, updateAvailable: false, binaryPath };
-    const service = new CapturedCodexRuntimeInstaller({ native: {
-      getReadinessStatus: async () => physical,
-      install: async accept => { if (refusal === 'foreground-changed') current = false; return accept(physical); },
-    }, captureSelection: captureCodexNativeSelection });
-    const status = await service.install(sources);
-    expect(status).toMatchObject({ installed: true, version, binaryPath, state: 'failed', progress: { phase: 'failed' } });
-    expect(status.error).toContain('Host selection was not confirmed');
-    current = true;
-    expect(await sources.current()).toEqual(original);
-    if (refusal === 'unqualified-version') {
-      expect(status.error).toContain('unqualified-version');
-      expect(await sources.recover()).toBeNull();
-    }
-  }, 20000);
 
 it.skipIf(process.platform === 'win32')(
   'installer lost ACK reports its original publication even when a later selection is current',
@@ -490,20 +637,37 @@ it.skipIf(process.platform === 'win32')(
     });
     expect((await sources.current()).cliVersion).toBe('1.19.6');
     expect(result.sourceRevision).not.toBe((await sources.current()).revision);
+
+    const codex = await fixture('codex'),
+      c = codex.open();
+    const cs = await c.captureRuntimeSources('TEST-context', codex.root, 'codex');
+    const retained = capturedCodexInstaller();
+    const publish = vi.fn(async (input: Parameters<typeof cs.publish>[0]) => {
+      await cs.publish(input);
+      throw new Error('TEST original Codex publication ACK lost');
+    });
+    const lookup = vi.fn(cs.lookup);
+    const codexResult = await retained.service.selectInstalled(
+      codexRequest({ ...cs, publish, lookup }, codex.replacement.path)
+    );
+    expect(codexResult).toMatchObject({ state: 'ready', version: '0.162.0' });
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(lookup).toHaveBeenCalledExactlyOnceWith(publish.mock.calls[0][0].commandId);
+    expect(retained.acquire).not.toHaveBeenCalled();
+    expect((await cs.current()).revision).toBe(codexResult.sourceRevision);
   },
   20000
 );
 
-for (const runtimeId of ['opencode', 'codex'] as const) it.skipIf(process.platform === 'win32')(
-  `restarted ${runtimeId} installer resumes the Host snapshot before any new acquisition`,
+it.skipIf(process.platform === 'win32')(
+  'restarted installer resumes the Host snapshot before any new acquisition',
   async () => {
-    const f = await fixture(runtimeId, false, 0, true),
+    const f = await fixture('opencode', false, 0, true),
       desktop = f.open();
-    const sources = await desktop.captureRuntimeSources('TEST-context', f.root, runtimeId);
+    const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'opencode');
     const original = await sources.current(),
       binaryPath = join(f.root, 'TEST-interrupted-selection');
-    const version = runtimeId === 'codex' ? '0.169.0' : '1.19.5';
-    const bytes = `#!/bin/sh\nprintf "${runtimeId === 'codex' ? 'codex-cli ' : ''}${version}\\n"\n`;
+    const bytes = '#!/bin/sh\nprintf "1.19.5\\n"\n';
     await writeFile(binaryPath, bytes, { mode: 0o700 });
     await expect(
       sources.publish({
@@ -513,33 +677,66 @@ for (const runtimeId of ['opencode', 'codex'] as const) it.skipIf(process.platfo
           sourceKind: 'app-managed',
           nativeCli: {
             executable: { path: binaryPath, sha256: digest(bytes) },
-            version,
-            ...(runtimeId === 'opencode' ? { generation: 'v1' as const } : {}),
+            version: '1.19.5',
+            generation: 'v1',
           },
         },
       })
     ).rejects.toThrow();
     expect((await sources.lookup('TEST-original-install'))?.phase).toBe('prepared');
     await desktop.shutdown();
-    const install = vi.fn(async (): Promise<never> => {
+    const install = vi.fn(async (): Promise<OpenCodeRuntimeStatus> => {
       throw new Error('New acquisition forbidden');
     });
-    const dependencies = {
+    const service = new CapturedOpenCodeRuntimeInstaller({
       native: { install, getReadinessStatus: install },
       captureSelection: async () => {
         throw new Error('Original candidate must come from Host');
       },
-    };
+    });
     const restartedSources = await f
       .open()
-      .captureRuntimeSources('TEST-context', f.root, runtimeId);
-    const status = runtimeId === 'codex'
-      ? await new CapturedCodexRuntimeInstaller(dependencies).install(restartedSources)
-      : await new CapturedOpenCodeRuntimeInstaller(dependencies).install(restartedSources, { generation: 'v1' });
-    expect(status).toMatchObject({ state: 'ready', version });
+      .captureRuntimeSources('TEST-context', f.root, 'opencode');
+    const status = await service.install(restartedSources, { generation: 'v1' });
+    expect(status).toMatchObject({ state: 'ready', version: '1.19.5' });
     expect(install).not.toHaveBeenCalled();
     expect((await restartedSources.lookup('TEST-original-install'))?.selection?.revision).toBe(
-      (await restartedSources.current()).revision
+      status.sourceRevision
+    );
+
+    const codex = await fixture('codex', false, 0, true),
+      c = codex.open();
+    const cs = await c.captureRuntimeSources('TEST-context', codex.root, 'codex');
+    const seed = await cs.current();
+    await expect(
+      cs.publish({
+        commandId: 'TEST-original-install',
+        expectedRevision: seed.revision,
+        nativeSelection: {
+          sourceKind: 'app-managed',
+          nativeCli: { executable: codex.replacement, version: '0.162.0' },
+        },
+      })
+    ).rejects.toThrow();
+    expect((await cs.lookup('TEST-original-install'))?.phase).toBe('prepared');
+    await c.shutdown();
+    const cold = codex.open(),
+      originalSources = await cold.captureRuntimeSources('TEST-context', codex.root, 'codex');
+    const recovered = capturedCodexInstaller();
+    const request = codexRequest(originalSources, codex.original.path);
+    request.resolver.resolve = vi.fn(async () => {
+      throw new Error("TEST recovery cannot resolve today's candidate");
+    });
+    const recoveredStatus = await recovered.service.install(request);
+    expect(recoveredStatus).toMatchObject({
+      state: 'ready',
+      source: 'app-managed',
+      version: '0.162.0',
+    });
+    expect(recovered.acquire).not.toHaveBeenCalled();
+    expect(request.resolver.resolve).not.toHaveBeenCalled();
+    expect((await originalSources.lookup('TEST-original-install'))?.selection?.revision).toBe(
+      recoveredStatus.sourceRevision
     );
   },
   20000

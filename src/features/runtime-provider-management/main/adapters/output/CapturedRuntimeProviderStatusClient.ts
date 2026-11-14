@@ -193,6 +193,7 @@ export function createCapturedRuntimeProviderStatusClient(
         throw new Error('Native runtime selection changed');
       const status: OpenCodeRuntimeStatus = {
         installed: true,
+        nativeGeneration: runtime.generation,
         source:
           selection && selection.sourceKind !== 'captured' && selection.sourceKind !== 'bundled'
             ? selection.sourceKind
@@ -224,7 +225,7 @@ export function createCapturedRuntimeProviderStatusClient(
       if (selection && (await sources!.current()).revision !== selection.revision)
         throw new Error('Native runtime selection changed');
       if (!target.isCurrent() || !current()) throw new Error('Native status context changed');
-      return runtime.generation === 'v1' && !cliVersion ? null : result;
+      return result;
     },
     async getProviderStatus(providerId, options = {}) {
       const current = deps.captureGuard?.() ?? (() => true);

@@ -17,6 +17,7 @@ export async function runDesktopCodexLoginUiProof(
   options: {
     fixture: { profilePath: string; root: string };
     evidence: Record<string, unknown>;
+    execution?: 'finite-protocol-peer';
     assertOwnedRenderer(): void;
   }
 ): Promise<void> {
@@ -25,7 +26,10 @@ export async function runDesktopCodexLoginUiProof(
   const cases: Record<string, unknown>[] = [];
   const proof: Record<string, unknown> = {
     status: 'INCOMPLETE', steps, cases,
-    nativeVersion: '0.162.0', platform: process.platform, architecture: process.arch,
+    ...(options.execution === 'finite-protocol-peer'
+      ? { execution: options.execution, protocolRevision: '0.162.0', vendorExecutable: false }
+      : { nativeVersion: '0.162.0' }),
+    platform: process.platform, architecture: process.arch,
     externalOpen: process.platform === 'linux'
       ? 'Actual Electron dispatch to a private TEST OS opener; only URL digest retained'
       : 'Button presence only; personal browser not opened',

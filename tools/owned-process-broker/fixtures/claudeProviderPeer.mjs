@@ -1,7 +1,7 @@
 /** TEST stream-JSON CLI peer for the real pinned Claude SDK. Never runs a vendor CLI or model. */
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { basename, dirname, isAbsolute, join, relative, sep } from 'node:path';
@@ -167,6 +167,7 @@ const pending = new Map(), seenInputs = new Set();
 const historyDirectory = join(configRoot, 'projects', 'TEST-desktop-peer');
 const history = join(historyDirectory, `${session}.jsonl`);
 const persist = options['no-session-persistence'] !== true;
+let resumedHistory;
 if (persist) {
   mkdirSync(historyDirectory, { recursive: true }); inside(historyDirectory);
   if (options.resume) {
@@ -175,6 +176,10 @@ if (persist) {
     const rows = readFileSync(history, 'utf8').trim().split('\n').map(line => record(JSON.parse(line)));
     assert.ok(rows.length > 0 && rows.every(row => row.sessionId === session && row.cwd === cwd && row.isSidechain === false), 'resume');
     for (const row of rows) if (row.type === 'user') seenInputs.add(row.uuid);
+    resumedHistory = { sha256: createHash('sha256').update(readFileSync(history)).digest('hex'),
+      rows: rows.length, userIds: rows.filter(row => row.type === 'user').map(row => row.uuid),
+      bootRetained: rows.some(row => row.type === 'user' && row.message.content.includes('TEST_UI_BOOT')) &&
+        rows.some(row => row.type === 'assistant' && row.message.content === 'TEST boot ready') };
   } else writeFileSync(history, '', { flag: 'wx', mode: 0o600 });
 }
 const remember = (type, id, text) => {
@@ -352,10 +357,11 @@ function input(frame) {
   }
   const probe = 'Reply only OK. Do not use tools, access files or run commands.';
   const allowed = finite ? [probe] : standalone ? ['TEST_UI_STANDALONE_DONE', 'TEST_UI_STANDALONE_HOLD']
-    : ['TEST_UI_BOOT', 'TEST_UI_STREAM', 'TEST_UI_HOLD', 'TEST_UI_APPROVAL_ALLOW', 'TEST_UI_APPROVAL_DENY',
+    : ['TEST_UI_BOOT', 'TEST_UI_STREAM', 'TEST_UI_HOLD', 'TEST_UI_RESUME', 'TEST_UI_APPROVAL_ALLOW', 'TEST_UI_APPROVAL_DENY',
       'TEST_UI_QUESTION', 'TEST_UI_QUESTION_DECLINE', 'TEST_UI_SCHEDULE_DONE', 'TEST_UI_SCHEDULE_HOLD',
       '/compact', '/cost', '/usage', '/test-desktop-skill', '/review TEST_UI_REVIEW'];
   assert.ok(allowed.includes(text), 'input');
+  if (text === 'TEST_UI_RESUME') assert.ok(teamRuntime && options.resume && resumedHistory?.bootRetained, 'resume');
   assert.ok(text !== '/review TEST_UI_REVIEW' || raw === review, 'input');
   if (standalone) assert.equal(inputCount, 1, 'input');
   seenInputs.add(frame.uuid); active = { id: frame.uuid, marker: text, messageId: randomUUID() };
@@ -383,7 +389,8 @@ function input(frame) {
     finish(selected, 'TEST cost input=' + resultCount * 42 + ' output=' + resultCount * 18 + ' total=$' + (resultCount * 0.0123).toFixed(4), { localCommand: 'usage' });
   else finish(selected, text === probe ? 'OK' : text === '/test-desktop-skill' ? 'TEST skill complete'
     : text === '/review TEST_UI_REVIEW' ? 'TEST review complete'
-      : text === 'TEST_UI_STANDALONE_DONE' ? 'TEST standalone complete' : 'TEST boot ready');
+      : text === 'TEST_UI_STANDALONE_DONE' ? 'TEST standalone complete'
+        : text === 'TEST_UI_RESUME' ? 'TEST resumed history retained' : 'TEST boot ready');
 }
 async function accept(frame) {
   record(frame);
@@ -405,7 +412,7 @@ async function accept(frame) {
   reply(frame.request_id, { still_queued: [] }); finish(active, 'TEST input interrupted', { interrupted: true });
 }
 effect({ event: 'launch', parentPid: process.ppid, sessionId: session, restored: Boolean(options.resume) });
-effect({ event: 'started', sessionId: session, restored: Boolean(options.resume) });
+effect({ event: 'started', sessionId: session, restored: Boolean(options.resume), ...(resumedHistory ? { resumedHistory } : {}) });
 let buffer = '', inputBytes = 0, chain = Promise.resolve();
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', chunk => {

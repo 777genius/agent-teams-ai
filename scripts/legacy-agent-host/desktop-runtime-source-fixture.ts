@@ -269,8 +269,10 @@ export function desktopBackendEnvironment(
     } : {}),
     ...(process.env.LEGACY_DESKTOP_COREPACK_HOME ? { COREPACK_HOME: process.env.LEGACY_DESKTOP_COREPACK_HOME } : {}),
     ...(process.platform === 'darwin' && process.arch === 'arm64' &&
-      process.env.LEGACY_PROCESS_COLD_UI_GO === '1' &&
-      process.env.LEGACY_DESKTOP_PROOF_MODE === 'process-cold-ui'
+      ((process.env.LEGACY_PROCESS_COLD_UI_GO === '1' &&
+        process.env.LEGACY_DESKTOP_PROOF_MODE === 'process-cold-ui') ||
+        (process.env.LEGACY_DESKTOP_BACKEND_GO === '1' &&
+          !process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH))
       ? { NODE_OPTIONS: '--max-old-space-size=8192' } : {}),
     NO_COLOR: '1',
     // A TEST HOME changes pnpm's store lookup. Report drift without installing

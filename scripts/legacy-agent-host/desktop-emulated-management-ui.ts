@@ -7,6 +7,8 @@ import { fileDigest } from './desktop-backend-fixture.ts';
 import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
 import { verifyDesktopEmulatedManagementFixture } from './desktop-emulated-management-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
+import { readDesktopCodexInitialAccount } from './desktop-codex-account-proof.ts';
+import { runDesktopCodexLoginUiProof } from './desktop-codex-login-ui-proof.ts';
 import type { prepareDesktopEmulatedManagementFixture } from './desktop-emulated-management-fixture.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 
@@ -26,13 +28,6 @@ export async function runDesktopEmulatedManagementUi(
   },
 ) {
   const { fixture } = options;
-  const steps: Record<string, unknown>[] = [];
-  const proof: Record<string, unknown> = { status: 'INCOMPLETE', steps,
-    scope: 'Original Create model and effort selection, save-only Host persistence, renderer reload and Settings credential controls using the pinned TEST HTTP peer',
-    excluded: ['native provider execution', 'vendor authentication', 'team launch', 'release qualification'] };
-  options.evidence.emulatedManagementUiProof = proof;
-  const ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer,
-    step: value => steps.push({ monotonicMs: Math.round(performance.now()), ...value }) });
   const screenshot = async (name: string) => {
     const capture = record(await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }));
     assert.equal(typeof capture.data, 'string');
@@ -40,6 +35,23 @@ export async function runDesktopEmulatedManagementUi(
     await writeFile(path, Buffer.from(String(capture.data), 'base64'), { mode: 0o600, flag: 'wx' });
     return { path, sha256: await fileDigest(path) };
   };
+  if (fixture.emulatedManagement.kind === 'codex-login') {
+    options.evidence.scope = 'Original Electron Codex Settings controls through preload/Main/Host/D and a pinned finite stdio peer: browser/device login, link/code copy, TEST opener, dialog reopen and original cancellation';
+    await readDesktopCodexInitialAccount(cdp, options);
+    await runDesktopCodexLoginUiProof(cdp, { ...options, execution: 'finite-protocol-peer' });
+    const proof = record(options.evidence.codexLoginUi);
+    proof.fixturePins = await verifyDesktopEmulatedManagementFixture(fixture);
+    proof.finalScreenshot = await screenshot('ui-emulated-codex-login-cancelled.png');
+    proof.visualReview = 'original signed-out screenshot retained for independent inspection';
+    return;
+  }
+  const steps: Record<string, unknown>[] = [];
+  const proof: Record<string, unknown> = { status: 'INCOMPLETE', steps,
+    scope: 'Original Create model and effort selection, save-only Host persistence, renderer reload and Settings credential controls using the pinned TEST HTTP peer',
+    excluded: ['native provider execution', 'vendor authentication', 'team launch', 'release qualification'] };
+  options.evidence.emulatedManagementUiProof = proof;
+  const ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer,
+    step: value => steps.push({ monotonicMs: Math.round(performance.now()), ...value }) });
   const peerLog = async () => (await readFile(join(fixture.emulatedManagement.peerRoot, 'native-effects.ndjson'), 'utf8'))
     .trim().split('\n').filter(Boolean).map(line => record(JSON.parse(line)));
   const teamName = 'test-emulated-model-effort';

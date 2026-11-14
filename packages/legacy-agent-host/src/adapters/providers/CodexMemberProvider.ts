@@ -1,6 +1,8 @@
 import { NATIVE_IMAGE_MIME_TYPES } from '../../attachments/mimeTypes.js';
 import { capturedMcpSourceCurrent } from '../../mcp-catalog/capturedSource.js';
+import { qualifiedCodexProtocolRevision } from '../../composition/runtimeSourceQualification.js';
 import { codexMcpPolicy } from './codexMcpPolicy.js';
+import { capturedNativeProcessFactory } from './capturedNativeProcessFactory.js';
 import { readCodexMcpCatalog } from './readCodexMcpCatalog.js';
 import { initialContextDigest } from '../../team-launch/context.js';
 import {
@@ -79,6 +81,7 @@ export function createCodexMemberProvider(
   const { profile } = context;
   const evidence = context.codexEvidence;
   if (profile.provider !== 'codex') throw new Error('Invalid Codex profile');
+  qualifiedCodexProtocolRevision(profile.protocolRevision);
   if (!capturedMcpSourceCurrent(profile)) throw new Error('Captured MCP source changed');
   const extraArgs = captureCodexExtraArgs(profile.extraArgs);
   const policy = codexMcpPolicy(
@@ -129,7 +132,7 @@ export function createCodexMemberProvider(
         profile,
         assertCurrent,
         signal,
-        context.retainedWindowsLaunch
+        capturedNativeProcessFactory(context.retainedWindowsLaunch, context.processOrigin)
       );
       assertCurrent();
       return actual.digest === policy.catalog.digest;

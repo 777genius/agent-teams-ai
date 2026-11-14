@@ -201,6 +201,97 @@ test('OpenCode inference oracle requires native context/catalog and scripts two 
       else assert.deepEqual(original.failures, []);
     } finally { await original.close(); }
   }
+
+  await assert.rejects(startOpenCodeModel({ configuredLaunchPreparation: true, memberName: 'alice' }));
+  await assert.rejects(startOpenCodeModel({ configuredLaunchPreparation: true,
+    nativeGeneration: 'v2', memberName: 'alice', allowModelProbes: true }));
+  for (const mode of ['pass', 'unarmed', 'duplicate', 'rearm', 'wrong-route', 'wrong-model', 'wrong-key',
+    'missing-suffix', 'wrong-suffix', 'business-before-probe', 'business-before-disarm', 'after-disarm-probe']) {
+    const original = await startOpenCodeModel({ nativeGeneration: 'v2', memberName: 'alice',
+      configuredLaunchPreparation: true });
+    const preparation = original.configuredLaunchPreparation;
+    assert.ok(preparation);
+    const scope = { commandId: 'TEST-explicit-sandbox-setup-launch' as const,
+      launchId: 'TEST-original-launch', rosterRevision: 'a'.repeat(64),
+      memberId: 'alice-id', model: 'test-local/TEST-model' };
+    const probe: unknown[] = [...ordinaryProbeMessages,
+      { role: 'assistant', content: OPENCODE_V2_PROBE_STEP_LIMIT }];
+    const business = [{ role: 'system', content: CONTEXT_MARKER },
+      { role: 'user', content: 'OPENCODE_TEAM_ONE' }];
+    const offered = tools.map(tool => ({ ...tool, function: { name:
+      tool.function.name === 'bash' ? 'shell' : tool.function.name.replace(/^team_/, 'agent-teams_') } }));
+    const post = async (messages: unknown[], input: {
+      path?: string; model?: string; key?: string; tools?: unknown[];
+    } = {}) => {
+      const response = await fetch(original.url + (input.path ?? '/v1/chat/completions'), {
+        method: 'POST', headers: { 'content-type': 'application/json',
+          authorization: 'Bearer ' + (input.key ?? 'TEST-LOCALHOST-ONLY') },
+        body: JSON.stringify({ model: input.model ?? 'TEST-model', messages, tools: input.tools ?? [] }),
+      });
+      return { status: response.status, wire: await response.text() };
+    };
+    const refused = (response: Awaited<ReturnType<typeof post>>) => {
+      assert.equal(response.status, 400, mode);
+      assert.match(response.wire, /fixture rejected/u);
+      assert.equal(original.failures.length, 1, mode);
+      assert.equal(original.observations.length, 0);
+    };
+    let disarm: (() => void) | undefined;
+    try {
+      if (mode === 'unarmed') {
+        refused(await post(probe));
+        assert.equal(preparation.consumed, 0);
+        continue;
+      }
+      disarm = preparation.arm(scope);
+      if (mode === 'wrong-route' || mode === 'wrong-model' || mode === 'wrong-key') {
+        refused(await post(probe, {
+          ...(mode === 'wrong-route' ? { path: '/foreign/v1/chat/completions' } : {}),
+          ...(mode === 'wrong-model' ? { model: 'TEST-other-model' } : {}),
+          ...(mode === 'wrong-key' ? { key: 'TEST-other-key' } : {}),
+        }));
+        assert.equal(original.probes.length, 0);
+        continue;
+      }
+      if (mode === 'missing-suffix' || mode === 'wrong-suffix') {
+        refused(await post(mode === 'missing-suffix' ? [...ordinaryProbeMessages] :
+          [...ordinaryProbeMessages, { role: 'assistant', content: 'TEST-unrelated assistant text' }]));
+        assert.equal(preparation.consumed, 0);
+        continue;
+      }
+      if (mode === 'business-before-probe') {
+        refused(await post(business, { tools: offered }));
+        assert.equal(original.probes.length, 0);
+        continue;
+      }
+      const accepted = await post(probe);
+      assert.equal(accepted.status, 200);
+      assert.match(accepted.wire, /"id":"TEST-opencode-probe-1"/u);
+      assert.match(accepted.wire, /"content":"OK"/u);
+      assert.ok(accepted.wire.endsWith('data: [DONE]\n\n'));
+      assert.equal(preparation.consumed, 1);
+      assert.deepEqual(original.probes, [{ requestedModel: 'TEST-model' }]);
+      if (mode === 'duplicate') { refused(await post(probe)); continue; }
+      if (mode === 'business-before-disarm') {
+        refused(await post(business, { tools: offered }));
+        continue;
+      }
+      disarm();
+      if (mode === 'rearm') {
+        assert.throws(() => preparation.arm(scope));
+        assert.deepEqual(original.failures, []);
+        continue;
+      }
+      if (mode === 'after-disarm-probe') { refused(await post(probe)); continue; }
+      assert.equal((await post(business, { tools: offered })).status, 200);
+      assert.equal(original.observations.length, 1);
+      assert.equal(original.probes.length, 1);
+      assert.deepEqual(original.failures, []);
+    } finally {
+      disarm?.();
+      await original.close();
+    }
+  }
 });
 
 test('OpenCode inference oracle seals on absent member context instead of returning fake work', async () => {

@@ -5,6 +5,8 @@ import { dirname, join } from 'node:path';
 import { digest, desktopNodeScriptHeader, fileDigest, prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import { reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
 import { processTable } from './desktop-backend-observations.ts';
+import { prepareDesktopEmulatedCodexLoginFixture, verifyDesktopEmulatedCodexLoginFixture,
+  observeDesktopEmulatedCodexLoginCleanup } from './desktop-emulated-codex-login-fixture.ts';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 
 export const emulatedManagementSource = 'packages/legacy-agent-host/tests/fixtures/management-opencode-process.ts';
@@ -26,8 +28,9 @@ process.stderr.write('TEST sentinel refuses native provider invocation\\n');proc
   return { versionPaths: paths, versionSha256: digest(source) };
 }
 
-/** The original HTTP protocol peer is the only provider-shaped executable in this TEST scope. */
-export async function prepareDesktopEmulatedManagementFixture(repo: string, pnpmEntry: string) {
+/** Capture one management peer; the default retains the original V1 HTTP proof scope. */
+export async function prepareDesktopEmulatedManagementFixture(repo: string, pnpmEntry: string, variant?: 'codex-login') {
+  if (variant === 'codex-login') return prepareDesktopEmulatedCodexLoginFixture(repo, pnpmEntry);
   const fixture = await prepareDesktopBackendFixture(repo, {
     pnpmEntry, seedUiTask: true, seedUiPreferences: true, creation: true,
   });
@@ -79,6 +82,7 @@ appendFileSync(${JSON.stringify(join(fixture.root, 'ui-emulated-external-open.nd
 `;
   await writeFile(openerPath, opener, { mode: 0o700, flag: 'wx' });
   return { ...fixture, emulatedManagement: {
+    kind: 'opencode-v1' as const,
     peerRoot, peer, sourcePath, sourceSha256: await fileDigest(sourcePath),
     ...versionSentinel, openerPath, openerSha256: digest(opener),
     command: `${fixture.node} ${peerPath} serve --hostname 127.0.0.1 --port ${new URL(endpoint).port}`,
@@ -90,6 +94,8 @@ appendFileSync(${JSON.stringify(join(fixture.root, 'ui-emulated-external-open.nd
 export async function observeDesktopEmulatedManagementCleanup(
   fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedManagementFixture>>,
 ) {
+  const selected = fixture.emulatedManagement;
+  if (selected.kind === 'codex-login') return observeDesktopEmulatedCodexLoginCleanup({ ...fixture, emulatedManagement: selected });
   const logPath = join(fixture.emulatedManagement.peerRoot, 'native-effects.ndjson');
   const bytes = await readFile(logPath, 'utf8');
   assert.ok(Buffer.byteLength(bytes) <= 1024 * 1024, 'bounded original TEST peer log');
@@ -107,6 +113,7 @@ export async function verifyDesktopEmulatedManagementFixture(
   fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedManagementFixture>>,
 ) {
   const selected = fixture.emulatedManagement;
+  if (selected.kind === 'codex-login') return verifyDesktopEmulatedCodexLoginFixture({ ...fixture, emulatedManagement: selected });
   assert.equal(await realpath(selected.peer.path), selected.peer.path);
   assert.equal(await fileDigest(selected.sourcePath), selected.sourceSha256);
   assert.equal(await fileDigest(selected.peer.path), selected.peer.sha256);

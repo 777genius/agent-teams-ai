@@ -1587,3 +1587,325 @@ The newly reachable existing production `action.prepare` issues one ordinary mod
 Extend only the existing Main IPC case `uses two lazily captured subprocess hosts and captured context grants for finite IPC operations`, retaining all eleven literal case declarations. In its existing subprocess fixture add a finite initial-launch response that owns null, plus a missing-field form and an expired non-null form. The meaningful positive contains two OpenCode workspaces, a per-member requested model override and a non-OpenCode peer: inspect the actual forwarded private origin/full payload and one original start, proving the complete target set, exact original selection digest and finite original remaining budget. A requested missing attachment must produce no start; an expired non-null capture must hold on the captured route without a fresh origin/start. Keep the existing invalid public-origin, owner/currentness and historical same-command no-preparation assertions. No exhaustive field-permutation matrix, new test case, fake model readiness success or changed native assertion is added.
 
 Freeze full sources and diffs; independently verify exact inverses, unchanged original case names/assertions, original source-selection body, same existing launch call/business sequence and line caps. Root runs the existing focused Main file plus canonical applicable type/lint/source guards. Source-only/controlled PASS does not qualify a native engine. The original retained V1/V2 Desktop job, with its unchanged physical owner/Stop/cold/cleanup acceptance and the explicit one-preparation extension above, remains mandatory on the next ordinary reviewed head. Do not rerun or advance currently active heads as part of this amendment.
+
+
+## 23. Keep the OpenCode lifetime authority safe inside the existing Runtime dispatch fence
+
+### 23.1 Original failure and source trace
+
+Current original packaged Darwin ARM jobs132415890718 (parent3a2882e1) and132415242935 (qualification0e88cb3d) reach the real embedded OpenCode2.1.4 ready/context-applied state. Their first original message is admitted, but remains admitted through the unchanged90000ms wait; the original localhost model receives zero requests. Both original Host exits and cleanup are confirmed, so this is a dispatch failure after successful Open. The Windows source-native job132409199642 also retains an admitted input with zero model requests, but reports an independent bootstrap-timeout; that startup outcome is not reclassified here. Original full logs and embedded failure receipts are frozen by root in the evidence record accompanying this appendix. No replay or native success is inferred.
+
+The exact current `RuntimeOwner.dispatchNext` holds its Runtime activity fence while invoking `canDispatch`. `RuntimeTeamCoordinator.canDispatch` calls `provider.isReady`; both OpenCode providers call the captured `isCurrent` callback. In `createRuntimeMemberProviderFactory`, that callback is currently `setupCurrent`, which unconditionally calls `options.readRuntime(entry.binding)` before checking whether the record is still opening. This re-enters the same Runtime store. V2 treats a failed lifetime callback as permanent lease revocation, while V1 cannot pass readiness. The existing `captureMemberProviderAuthority.isCurrent` deliberately performs no Runtime lookup and was designed for callbacks under Runtime/Team fences.
+
+Original evidence: `5c04ba3b619b7d21dbdf3d33c0b7f7529a6aa66a`; full original log bundle: `9ea7b1f48bda234585631d49751e892b2f5fbe86`.
+
+This source trace is the concrete candidate cause. The existing initial-V2 Host case currently covers Open, exact original admission, checkpoint, Stop and cold Restore, but never submits a message. Its controlled provider already calls the real context `isCurrent` from `isReady`, so one ordinary message in that same case can reproduce the boundary without a new mock or native experiment.
+
+### 23.2 Two existing writable paths and their exact variants
+
+| Path | Parent / qualification preimage | Native preimage |
+| --- | --- | --- |
+| `packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts` | `f5a5e5320409fb481b41b194aa11889d03e3bc14` | `4222f92b8e50368fb488d95ba5981e6051e7db09` |
+| `packages/legacy-agent-host/tests/runtime-team-host.test.ts` | `8fc799cb28f94726aac179eafdcf1f1380f0560b` | same |
+
+All other files, the native Windows retained-process variant, shared authority implementation, Runtime owner/fences, readiness consumers, provider implementation and native harness remain unchanged. Platform's separate W01 continuation must compose its future factory edit on this reviewed result.
+
+### 23.3 Minimal correction and allocation preservation
+
+Pass the original fence-safe `authority.isCurrent` as the provider lifetime `isCurrent` and `canCaptureRegisteredProcess` callbacks. Keep the existing `canAllocate` composition and its `setupCurrent`/`readiness.assertCurrent` checks unchanged. No new latch, owner, state field, readiness cache or timeout is needed.
+
+The initial model source is still attached and consumed once before allocation. `authority.canAllocate` still joins the exact original Runtime opening/allocated state; `setupCurrent` still checks the consumed readiness during opening. V1's captured process and startup loop explicitly use `context.canAllocate`. V2's embedded factory, native startup and server allocation retain the same explicit `canAllocate` callback; its SPI checks allocation before first readiness and retains the existing lifetime lease afterwards. Returning the lifetime callbacks to their existing owner does not create permission to allocate, dispatch a held Runtime, reuse an expired preparation or change provider/source/configuration.
+
+Registration remains subject to its original grant, member binding and physical process custody. Its general authority callback must also be safe under the existing owner fences; it must not re-enter Runtime simply to confirm that opening has ended.
+
+### 23.4 One critical existing-case extension and normal acceptance
+
+Extend only the existing `mixed Host boots V2 Session SPI profile without invoking V1 management registration` case. After its already-admitted initial Open, send one original `message.send` to that member through `team.execute`, retain its deliveryId, wait using the existing finite helper for exactly one controlled native submit, and verify its original content and input identity. Publish the existing controlled terminal event, confirm that the same Runtime input reaches terminal, then continue all original checkpoint/Stop/cold-Restore assertions unchanged. Do not introduce a dispatch RPC, a new case, a new fake owner or an increased wait.
+
+First run that amended case against the old factory and retain the actual failed dispatch result. Then apply the two callback corrections and run the same case plus the existing runtime-team-host/saved-team-model-probe files. This meaningful before/after check addresses the real Runtime-to-provider join; it is not a conditional-mirroring unit matrix. Root owns compilation and guards. No model request, deadline, launch/startup/cleanup assertion or native fixture is changed.
+
+Actual acceptance still requires the original packaged and source-native jobs on the next ordinary eligible head. Linux's separate initial-open refusal after its coordination fixture and any native startup failure remain separate investigations; neither is declared fixed by this source review.
+
+### 23.5 Review and publication
+
+R1 traced the original failure to the nested Runtime lookup and rejected a new mutable setup-complete latch in favor of the existing authority split. Independent review must verify every native allocation callsite still reaches `canAllocate`, the two factory variants preserve all unrelated bytes, and the same original case fails before and passes after the correction. Root publishes this exact appendix before source edits, commits and immediately pushes each reviewed cut, and leaves active live CI heads unchanged until their current runs finish.
+
+
+## 24. Compare the original OpenCode model with its single same-provider qualification
+
+### 24.1 Original Linux failure and exact source join
+
+Original Linux x64 job132409199617 executed qualification checkout `0e88cb3d18ac710148230bd2dfe5b5f45b22a248`, confirmed by checkout/git-log and SOURCE_HEAD. Its existing V2 coordination stage passed with the original four model requests, one metadata request and clean release. The immediately following original `runtime.open` returned hold/unknown in63ms, before any claim or business native allocation: launch remained not-started/claimed=false, business modelRequests=0, Host exit0 and cleanup=true. The original receipt was still before its retained expiry. This is separate from §23's post-Open dispatch failure and from other platform startup failures. Evidence `2e66f0b8c4b06dde6a041c81058ccc946f4ee2e0` retains the original embedded receipt and source/checkout references; its full log is the existing bundle `39d4101b6f14e8d3322b658b24c5c127535798b9`, key `batch3StaticLog132409199617`. No rerun or artifact-name inference is used.
+
+The unchanged producer `tests/fixtures/native-opencode-team/coordination-probe.ts` `691b2e24a5dd5242dabf8192c256ae77121e28fa` constructs the original ModelProbeInput with providerId=`TEST-local` and modelId=`TEST-local/TEST-model-B`. The exact member profile in native fixture `8a59626e2b0cedc31a1212009530c99e8f2c806c` retains model=`TEST-model-B` and variant=high. `ModelProbeOwner.ts` `b30cf0d7b41251d99933d66c0a0fc5185e9170d9` correctly stores the original input unchanged, including its fingerprint. `initialRuntimeModelAdmission.ts` `e709df02ff4ce926c6d1721b5549024f6c945949` validates the original initial action/scope and then calls `capturePreparedModelReference` before attaching that proof.
+
+The consumer currently accepts raw equality or constructs `original.providerId + '/' + original.modelId`. For this real input, its second comparison becomes `TEST-local/TEST-local/TEST-model-B` against `TEST-model-B`; both alternatives refuse. The same reversed comparison appears in `captureNativeRestartReadiness` for the already retained source. The account reader in this same module already removes at most one exact `providerId + '/'` prefix for its native model lookup. The correction belongs at these model comparisons, without rewriting the original probe or native producer.
+
+### 24.2 Two existing writable paths
+
+| Path | Parent, native and qualification preimage |
+| --- | --- |
+| `packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts` | `676d65fcbeb19def4b7bd6adb5509e7f03a551ca` |
+| `packages/legacy-agent-host/tests/saved-team-model-probe.test.ts` | `28fc6c648d5c68478c0190ffbb4edaf0f2e41fd8` |
+
+All six preimages were read at parent `00a9c75bf104224a1fe3cb681dcc1cd4f063091a`, native `4a6d28301cce364a55f071314e9da02d4fee5721` and qualification `2d8295fd7e76d388ad2aed8cc37186370fdc8f41`. They are byte-identical across the three branches. There is no shared write path with root's §23 factory/runtime-team-host correction. No native fixture, ModelProbeOwner/store/schema, source roster, public DTO, dependency, workflow or deadline is writable in this appendix.
+
+### 24.3 One exact prefix, unchanged proof
+
+Use a private comparison in the existing composition module which removes at most one leading `providerId + '/'` from each compared model identifier, then compares the remaining strings exactly. Its providerId is the already required exact original provider; it cannot be selected from an arbitrary model basename. Use that same rule in `capturePreparedModelReference` and `captureNativeRestartReadiness`. The existing account reader's identical one-prefix extraction may call the small private function so the three local uses share one spelling; its behavior must remain identical.
+
+Bare `model` and singly qualified `provider/model` under the same original provider are the two supported representations. Do not strip a foreign provider, repeatedly remove prefixes, split on the final slash, trim, lowercase, look up a default or select another model. In particular, an original foreign-provider string or `provider/provider/model` must not match the retained bare `model`. No model normalization is persisted: the original ModelProbeInput, stored modelId/fingerprint, scope/mechanism/selection digests, reference/preparation digest, consumer, account witness and original producer bytes remain exact.
+
+Keep all existing provider, effort, profile/mechanism, command/context, immutable initial provenance and initial-attempt CAS checks. Preserve the original source/approval/account/native-file witness inspections, same current target, original expiry/cutoff, completed/ok/clean-release requirements and exact source lineage. Fresh initial attachment still requires its original scoped receipt. Native Restart still reads source provenance for its separately authorized original action; this comparison cannot turn historical provenance into fresh readiness. The separate manual-key original-input assertion in `captureOpenCodeProbeAccount` is unchanged; this appendix does not broaden that credential contract.
+
+### 24.4 One meaningful existing-case regression
+
+Extend only the existing case `Team probe read rejects completed evidence after physical config-directory replacement while exact contextual cleanup remains addressable`. Its existing private-file/initial-admission sequence already uses the real ModelProbeOwner store, capturePreparedModelReference, cold reader, initial scope/attachment, consumed account assertion and captureNativeRestartReadiness. Preserve every original case declaration and all existing assertions, synthetic-native qualification label, modes, probe count and1000ms cutoffs.
+
+In its existing `initial` mode only, admit the original probe with the producer's singly qualified modelId while keeping the original member profile bare. Other existing modes retain their bare representation. Assert that the stored modelId, fingerprint/scope and receipt remain unchanged through capture, cold inspection, original initial attachment/replay, consumption and the existing native-Restart source inspection. This changes no probe count: nativeCalls must remain one.
+
+Using that same controlled completed record, temporarily substitute a foreign-provider model string and a twice-prefixed model string, one at a time, and require both capturePreparedModelReference and captureNativeRestartReadiness to refuse. Restore the exact original record in finally before proceeding. These are negative reads of the same existing controlled source, not new successful probes or fabricated native evidence. Keep the existing foreign scope, expired/held/unscoped, another actor, key drift and no replacement-native assertions.
+
+Root first runs this amended original case against the old helper and retains the actual refusal of the legitimate qualified input. After the correction, root runs the same case and the original saved-team-model-probe/runtime-team-host files on the coherent §23 source, with applicable build/types/source guards. No new test case, native experiment, wait, inference, polling, request ceiling or acceptance weakening is authorized.
+
+### 24.5 Review, publication and remaining native acceptance
+
+R1 traced the original producer/store/consumer mismatch and rejected changing the original native request or stripping arbitrary model basenames. R2 checks both consumers, the exact account-reader extraction, the complete original proof/currentness joins and the real existing-case path. Independent plan review precedes source GO. Freeze both full sources and exact forward/inverse diffs, preserving all three branch variants and the production800-line cap. Root commits and immediately pushes the reviewed plan/source and owns all execution gates.
+
+Controlled before/after PASS establishes this model-comparison correction only. The original Linux V2 job still must pass on the next ordinary eligible reviewed head with its existing four-request coordination proof, one metadata request, original business/Stop/cleanup sequence and unchanged assertions. Other platform failures remain separate until their actual causes and original results are checked.
+
+
+## 25. Correct §18 to keep each Create member's own original allocation deadline
+
+### 25.1 Exact original failure and the incorrect shared cutoff
+
+Original parent Host-suite job132411599883 executed merge checkout `9ca2fac456faf7cbc138b984f282df8f606ac659`, verified from its actual checkout and git-log. It reported1231 tests,1228 pass,1 fail and2 original skips. The failed existing Create receipt case reached its OpenCode worktree variant; four original probes were completed/ok/released, the first member was allocated and its preparation consumed, while the second member was still opening with its preparation pending. The original failure diagnostic was `Original Create allocation deadline expired`; later cleanup HOLD did not replace that preserved cause. Evidence `cddf0c59fcd7db4993ccbfe2c1b39138d94eb375` contains the exact retained clocks and source references; the original full log remains `0bbf557d3856d0510ec8c939674d085454a81a7c`, key `batch3HostSuiteLog`.
+
+The retained first attempt starts at1794654071022 and expires at1794654072022. The second starts at1794654071127 and expires at1794654072127. Each has its original1000ms allocation budget. The fixture's §18 waiter instead uses the minimum deadline for both members, removing105ms from the second attempt. The failure diagnostic was already emitted at11:01:12.074, before the second own deadline11:01:12.127. This does not prove that the second attempt would have completed within its own deadline; it proves that this failure cannot establish that its own deadline had already expired.
+
+The controlled fixture's provider never reads context.isCurrent or canCaptureRegisteredProcess: its isReady is literal false and checkReadiness only records the original allocation observation. Therefore §23's lifetime callback correction is not a direct correction of this fixture's timing. The factory still verifies the actual worktree before consuming preparation; no production check is removed or cached here.
+
+### 25.2 One existing TEST path
+
+The only writable path is `packages/legacy-agent-host/tests/team-create-launch.test.ts`, preimage `f13866ec45afa76a9c7af0b9996218a0ce25c769` in all three branches. Exact reads at parent `7ddda966020e4eba09526a3574041ecbc1475473`, native `3b81a4b6866aacaa003304b7ae34160fae2adcc5` and qualification `f9fd291d30ca88068f772c500da167f5ee4900af` match that preimage. Production source, native fixtures, Runtime/Team owners, probe clocks, source guards, CI workflows and every other existing test are unchanged.
+
+### 25.3 Replace only the §18 waiter deadline rule
+
+This appendix supersedes only §18 Review2's `max(0, min(original deadlines) - now)` timer rule and its corresponding shared timestamp comparison. Keep the same two unique member IDs and the same deadlines from the original returned launch summary. Fix the wait's sole outer cutoff once to `max(original deadlines)`; arm the existing one finite timer for `max(0, cutoff - now)` and clear it in the existing finally block. This outer wait is bounded by the last already admitted attempt, not a new action or a new duration.
+
+After the original two-member allocation signal resolves, require exactly the same two member IDs. Compare each retained observation timestamp strictly with that member's own original attempt.deadlineMs. A timestamp equal to or after its own cutoff still fails, even if the other member's cutoff is later. A missing, duplicate or foreign member observation still fails. No timestamp, deadline, proof or source record is rewritten. No fresh1000ms interval, timer rearm, polling, sleep, additional read/start/open/probe or retry is introduced.
+
+Both original per-member1000ms limits remain exact. Do not weaken allocation/currentness, native readiness, release/custody or the actual claimed deadline to make the fixture pass. The change removes a TEST-only accidental shared deadline; it does not authorize a late original allocation.
+
+### 25.4 Bounded verification and publication
+
+Preserve the existing callback, exact member set, strict inequality, original worktree-only use, all case declarations, probe/input counts, diagnostics, same-ID replay, expiry mutation and cold cleanup sequence. Change only the outer min-to-max selection and the per-member timestamp comparison in the existing waiter. No new case, synthetic timing delay, expanded fixture matrix or native operation is needed.
+
+R1 compared the actual two retained claim clocks and read the exact fixture/factory/worktree seams. Independent plan review must verify that the maximum is calculated only from the original finite deadlines and that each observation is still checked against its own earlier or later deadline. Root publishes this append-only correction before source GO, then reviews the exact one-file forward/inverse diff and runs the original team-create-launch file with the applicable existing type/source checks. Root alone executes and publishes, committing and immediately pushing each reviewed cut.
+
+A passing focused run establishes the corrected TEST deadline join only. The original full Host-suite CI remains required; neither the actual second member's unobserved timely completion nor native E2E success is inferred from this plan.
+
+
+## 26. Admit the pinned V2 no-tool MAX_STEPS message in the existing TEST oracle
+
+### 26.1 Original failure and the boundary of the evidence
+
+Original retained V1/V2 Desktop job132411599820 ran source head `3a2882e1e07cfc0c8f6f51be322b6244b7e6a179`. The original artifact `retained-opencode-132411599820.zip` is365774 bytes, SHA256 `21c681aba1caaad9be836f04dcd488e054a87c566e64adbe2449545c0ba20150`. Its receipt SHA256 is `eb63e742bf5cbe7ffb7640d685ffea36fbf98876aa08c2b8d0c8215cb104e8da`; the original short failure log SHA256 is `9e3c4b1205aa934b9ed4c115ed110d978b70ee7a19964cbab854331be796bfec`. The receipt records actual legacy V1 history and relaunch before the Host attempt, then the first model failure at the user/system-only role assertion, followed by nine requests refused by the existing sealed-fixture guard. It records no accepted Host model observation, cleanup=true and no cleanup failures. The original public start returned hold/unknown.
+
+The failed HTTP request body was not persisted: observations are appended only after the failing guard. Do not describe the expected message below as a captured body or claim that this source diagnosis qualifies native success. Evidence `64c6160b082dbb346029b8d19c15c68de7f3cf47` separates the actual receipt from the source-derived first-request shape, includes the exact delivery/source references and records that no new native invocation or support download was performed.
+
+### 26.2 Exact first-step and selected native wire chain
+
+The original F no-tool configuration `OpenCodeV2EmbeddedConfig.ts` blob `cdb6403f390b40bdc544af801adbc891f861e632` sets the model-probe agent's steps to1, denies tools, disables title/summary and supplies no user plugin. Original `OpenCodeV2ModelProbe.ts` `19c3108232562d6f5bd550cf0011a3bff7c5e22b` creates the fresh native session and submits the existing single prompt `Reply only OK. Do not use tools, access files or run commands.` through its original owned driver. No second user input is needed to reach the failing role check.
+
+Pinned upstream release is `anomalyco/opencode@68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`, whose commit is release v2.1.4 and whose core package declares2.1.4. The source chain is:
+
+| Original source | Exact blob | Relevant behavior |
+| --- | --- | --- |
+| `packages/core/src/session/runner/llm.ts` | `728a736531ff33f36a3197e434229bc9b55208c6` | A fresh drain starts at step1. Before primary preparation, step>=agent.steps appends one `Message.assistant(MAX_STEPS_PROMPT)` after the transcript and chooses no tools. |
+| `packages/core/src/session/runner/max-steps.ts` | `040584ab173877d12b821808489b6a7c80504954` | The exact literal is750 UTF-8 bytes,16 lines, no final newline; SHA256 `a22542c356f74bfe3f8edc3f2251f6d5b3ee2e21746040eb602fa57283397404`. |
+| `packages/ai/src/schema/messages.ts` | `a9359bef1d0c5d5d803fadae535fe116bddff70b` | `Message.assistant` makes that role with exactly one text part and no tool/native/reasoning metadata. |
+| `packages/core/src/session/model-request.ts` | `4bb8e47bae5d5692d2fa01eea38a4b08e8340b86` | Original primary preparation carries the transcript through bounded content handling; ordinary text remains text. |
+| `packages/core/src/aisdk-native.ts` and `packages/core/src/model.ts` | `9bbbbd66a463ece24411b61fda8579d76d99e15e`, `7a199b6c5d72184ca741d5d89fdad73f7b9f62ad` | The declared `aisdk:@ai-sdk/openai-compatible` is translated by the original engine to the builtin compatible provider. It is not evidence that the external AI SDK encoder is selected. |
+| `packages/ai/src/providers/openai-compatible.ts` and `packages/ai/src/protocols/openai-compatible-chat.ts` | `40fa5d50848f87a7fd874316be427cbfe5ac52fb`, `bef6848c101da0a436c7e22798ffe2d161039f91` | The builtin route uses the original OpenAIChat protocol at /chat/completions. |
+| `packages/ai/src/protocols/openai-chat.ts` | `b3ce1d3f66c93b2c5f2630d759b048bcc0e2c126` | Original ordered lowering preserves the final assistant. For this TEST-model/test-local/loopback text-only input with no reasoning/cache/tool metadata, it emits exactly `{role:'assistant', content: MAX_STEPS_PROMPT}`, with string content and no extra message fields. |
+
+F fixture `desktop-opencode-v2-fixture.ts` `8dd6113c9ebad0e9e9e428e322c979817f5c2669` selects that declared package with only the captured TEST baseURL/key and model definition. F `OpenCodeV2ConfiguredPackages.ts` `5f29eb242ae7dce6c96953214029c819bb992bc2` checks native rewriting and leaves the builtin declaration to the engine's full native translation; it does not select an ambient SDK. `OpenCodeV2EmbeddedGraph.ts` `91e35a9ba6a414bb143487632add356171d21b83` verifies the complete manifest and resolves the selected server/core/ai graph.
+
+The original input receipt and runtime lock `771bffacba378d277484712bc5cb7941223b6d2c` agree on runtime source `777genius/agent_teams_orchestrator@f5c69c2e9024ffc36a5db5eafe30f53539b52f62`, engine2.1.4, support archive SHA256 `85da4c67af05401ace01c1582e634af322ae5402430e270aee01eccacc605cf1`, manifest SHA256 `840d7cc145155e0ad97a407af87eb347da1a9cbf034d19c632897e1a5efbff9b` and Bun SHA256 `45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675`. Original preparation script `b6fef813e23b8f18d7f8ebae5b14f5c0a104a30c` verifies that complete delivered graph before the recorded READY result. The runtime package/lock pin server/core/ai2.1.4 and its staging copies selected package bytes. This supplies the recorded delivery/version join to the exact release source; it does not invent a per-file byte readback from an unavailable local support archive or the missing failed HTTP body.
+
+### 26.3 Exactly two existing writable TEST paths
+
+| Path | Current preimage in parent/native/qualification |
+| --- | --- |
+| `scripts/legacy-agent-host/desktop-retained-opencode-model.ts` | `cbe74d1c83eefc470928857fabb5bb9e1d5824d7` |
+| `scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts` | `481f1e791c5173c9784c50607fc8292da856dd28` |
+
+All six current source reads match. Add the finite private role helper and pinned literal inside the existing model file; no new helper file, public export, dependency, source-roster path, workflow or production code is required. The current files are171 and114 physical lines, so existing caps need no adjustment or layout compression.
+
+This appendix supersedes only §22.5's user/system-only role clause and the identical clause in the existing Host source-selection markerless no-tool preflight. Both already use the same native no-tool configuration. The source-selection failure is a source-established next dependency, not a second failure observed in this receipt. Its business/history logic remains unchanged.
+
+### 26.4 Closed optional suffix, original request admission
+
+Use one private assertion helper at those two original role-check positions. Preserve the baseline message list containing only user/system roles. Alternatively, permit exactly one assistant message, only at the final array index, whose complete JSON object is exactly `{role:'assistant', content: <the pinned750-byte literal>}`. Require string content with byte-for-byte equality: no trim, prefix match, substring, alternate text-array representation or normalization. Remove only that positively matched final suffix from the local role-validation view; every preceding message must still be user/system. Do not mutate the original request or count the suffix as a prior model response.
+
+An earlier or duplicate assistant, ordinary history reply, tool role, changed literal, extra message key, reasoning/tool-call field or non-final suffix fails. The helper confers no request authority. Both original callers still enforce exact Host route/owner, TEST-model, the original fixed prompt, exactly one user message and absent-or-empty tools. The coexistence branch additionally requires its original active one-shot `TEST-coexist-launch-once` window, consumed0, no disguised business marker and then consumed1 with the same attribution. The source-selection branch retains its original source-preflight admission and counters. Unarmed default Host input is still refused.
+
+Keep the original global32 ceiling, sealed-after-first-failure behavior, business marker uniqueness/owner separation, all legacy strict-launch/history behavior, responses and observation shapes. Preserve native action order, original Main/Host proof and release requirements, input/Stop/cold/cleanup assertions, deadlines and request budgets. No new inference, retry, timer, route, synthetic readiness receipt or counter reset is introduced.
+
+### 26.5 Critical coverage in the original model case
+
+Extend only the body of the existing `business replies stay owner-bound and duplicate input cannot become a strict proof` case. Preserve all three test declarations, their twelve current registrations and every original assertion/request sequence. Do not add a new test case or a field-permutation matrix.
+
+Keep the current user/system source preflight positive. Within finite fresh controlled fixture instances in that same case, prove the armed coexistence preparation still accepts its original user/system form; prove that the exact native trailing suffix is accepted once by the armed coexistence branch and by source-selection preflight. Check the same OK response, one appropriate observation, original consumed1/command attribution where applicable, no business marker and no fixture failure.
+
+Add only representative refusal inputs in that same case: changed assistant text, the exact assistant placed before the final user input, and an otherwise exact suffix carrying an unexpected tool-call field. They must fail before any accepted observation. These cover literal identity, position/history and the closed message shape; the common predicate also refuses duplicate assistants without a separate exhaustive permutation. Retain the existing unarmed/wrong-route/model/tools/first-failure sealing controls. Always disarm/close using the existing fixture lifetime; these controlled HTTP checks do not add native operations or reset a native journey.
+
+### 26.6 Review, original checks and remaining native gate
+
+Independent plan review and publication precede source GO. Freeze both full sources, exact forward/inverse diffs and own branch preimages; verify that only the two role assertions use the shared helper and that the complete old tests/default/business/cleanup code remains intact except the explicitly added controlled coverage. Root owns applicable original model-file/type/lint/source checks and publication. Where useful, retain the legitimate native-shaped controlled request's rejection against the old oracle before qualifying the exact corrected source.
+
+The actual original retained V1/V2 Desktop gate and source-selection gate must still complete on an ordinary eligible reviewed head with all original owner/history/Stop/custody/cleanup assertions. A controlled oracle PASS would establish this narrow request-shape correction, not native readiness or end-to-end success. Do not rerun, replace or advance active original runs as part of this appendix.
+
+
+## §27. Original mixed Settings Select control after native catalog discovery
+
+**PLAN / source0.** Preserve all previous scopes and acceptance. Parent `09fefda4c255fa172a52b89b2815d18085c79afc`, original run43594538508, jobs132446132946 (V1) and132446133129 (V2), reached actual Settings/project/global-default controls, then failed at desktop-mixed-provider-settings.ts:296 inside the original scrollTo: “select and verify original global default”. Raw logs are15ed36b801032c7744314673bf2acca7b93b3fc3 and045ec9a895aedd0fbfcb5bd91708c97e3423dcb4. Original artifacts14113283450/14113754165 have ZIP SHA2565684790ecf78b4bf18bfc399d67fad7c802b37336fccde52819950b53684ae96 and20b5cc5606c57a27f4440b067c5048b5b33b6ef2f2cd6d77844a6045d05011be.
+
+The existing TEST selector requires the complete aria-label “Select: TEST-model”. Actual ModelRow appends the model's explanatory unavailableTitle when its catalog route still needs verification. It separately exposes aria-pressed=false for this same Select control. The original V1 screenshot/DOM has the TEST-model row and Select button with its needs-test explanation; scrollTo only searches the exact selector and cannot find it. The V2 screenshot instead has the provider's Connect form; that separate reachability gap is NOT fixed or qualified by this selector correction. V1 generation unavailable/disabled controls and both original directory errors are also separate remaining findings.
+
+Change only `scripts/legacy-agent-host/desktop-mixed-provider-settings.ts`, common preimage522c99c88a9ddbb0dfa7a7397046188aa963402b. Within the same exact model row, select `button[aria-pressed="false"]` and require its visible text to equal the existing English “Select” through originalStep's existing text argument. Keep exact model/provider row identity, one original intent, original scroll/click custody and disabled/hit-test refusal. A selected=true button, missing/duplicate target, disabled control or wrong text still fails. No clicking a nearby Test/Connect control, DOM mutation, direct store/API invocation, retry, additional probe, new case or longer timer.
+
+Root checks exact one-call delta and inverse, normal scripts types and existing relevant model/controls cases. The original current-head V1/V2 Settings→Create lane must still pass every global/project/default/test/clear/inheritance/limits/source/cold/native/cleanup oracle. This is not a workaround for a failed provider state.
+
+## §28. Serialize first configuration preparation for one original Main source
+
+**PLAN / source0; observed symptom and inferred cause remain distinct.** The same two original artifacts contain one published initial global and one published initial project runtime.source record, no Settings model probe, and a visible “Unable to confirm provider state” directory error beside successfully loaded provider/model data. The original receipt does not retain the internal failed capture stack; it does not prove which concurrent call failed.
+
+The source nevertheless has a concrete concurrent-first-read hazard. `DesktopBackendFeature.captureCurrentManagementTarget` and `refreshLaunchConfiguration` each independently invoke `refreshCapturedRuntimeConfiguration`. The latter reads current, recovers the original intent, captures preferences, then publishes a new UUID against that original revision. Parallel status/view/directory calls for the same original descriptor selection can both observe the same seed. `RuntimeSourceIndex.refreshConfiguration/publishCandidate` correctly rejects the second different command's stale expectedRevision before creating its journal. Keep that Host conflict fence. Do not solve this by accepting a changed revision after failure, coalescing different preferences, mutating the Host journal or retrying a mutation.
+
+Use a small private queue in the existing configuration-preparation module, keyed solely by the original immutable Main descriptor selection object passed by the two existing callers. The key is coordination identity, not execution authority. Each caller retains its own CapturedRuntimeSources and its own foreground/owner checks. Begin that caller's original current/recover/preferences sequence only after the preceding same-selection preparation settles. Subsequent catalog/model work remains outside the queue. Separate descriptor selections, projects, owners and Main instances never share the queue. Do not cache a captured source/guard across callers.
+
+Bound the queue to32 admitted preparations per original key, matching the existing management bound; reject overflow before current/recover/native dispatch. Retain one tail/count record and remove it only after the last original admitted operation settles. A failed predecessor must not strand unrelated later reads, but each later operation still executes the unchanged original recover/fail-closed algorithm. A stale caller refuses under its existing guard when its own turn starts. No detached worker, generic semaphore framework, alternate Host/owner, extra native invocation, new timeout, widened deadline, source publication replay or default-selection fallback.
+
+Exact writable scope, all existing paths:
+
+| Path | Parent/qualification preimage | Native preimage |
+| --- | --- | --- |
+| src/features/agent-backend/main/application/refreshCapturedRuntimeConfiguration.ts | 6af55c63ae61637f3cf15274a4ab4f23c15894aa | same |
+| src/features/agent-backend/main/composition/DesktopBackendFeature.ts | 57026bef017457339a2d20f7cba0ee2ab4534b1d | 93a278da0cc48261c12daa20923b52b14ab53287 |
+| test/features/agent-backend/desktopRuntimeSources.test.ts | 8e5b5a1ee18bff50a7260853dbf5286c77fb3cd2 | same |
+
+The Main composition delta is exactly the two existing preparation calls passing their original selected object; preserve every Windows/native custody variant. Keep the original refresh body and its original command-only lost-ACK lookup intact inside the same module. Default standalone calls without an original selection retain their original independent behavior; product callers always supply the descriptor selection. Both modules are already in the original source-freeze closure; no new file or roster change is needed. Preserve800-line production limits and the existing TEST caps.
+
+Extend the first existing real Main/Host source test with concurrent initial management captures and Launch configuration preparation, requiring one original published revision and equal retained profile/config for the management captures. Preserve all original preference/limits/inheritance/retained-A/restart assertions and the original20s case deadline. In this same case exercise a failed/stale preparation followed by a fresh valid caller without replaying its failed action; no new named case or generic unit suite. Root first runs the strengthened existing case against the unchanged source to establish the precise RED, then the reviewed correction and the existing source suite/appropriate types/guards. If the original case does not reproduce the race, stop and refine the source diagnosis before publishing production bytes. Actual current-head Settings/native E2E remains mandatory; this controlled regression does not establish the cause or closure of every original UI error.
+
+## 29. Bind retained Launch preparation to its original product-roster publication
+
+### 29.1 Observed mismatch and finite scope
+
+Original batch4 V2 Resume job132446133130 and Review job132446133159 executed `09fefda4c255fa172a52b89b2815d18085c79afc`. Packet `b32566be77052151206877eb1d174ac118e94f9a` retains their original full logs, artifacts14114024098/14114049493 and exact source joins. Each has one successful released preparation and a successful original roster CAS, but no Runtime capture. The UI reports an unknown capture result. Both prepared selections identify a retained technical Launch revision, while the CAS expectedRevision identifies the original product roster; these hashes are intentionally computed from different data. For Resume the technical revision is8f377c7a… and product revision518f489e…; Review usesb180b60a… andc55f2dbc…. The exact current transfer helper compares those two domains directly before consuming the original receipt.
+
+Only three existing paths may change; each preimage is identical in parent/native/qualification:
+
+| Path | Exact preimage |
+| --- | --- |
+| `packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts` | `8f5a9b10521ed707df82ed1b90fc923aa5432274` |
+| `packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts` | `d51831e769c6dc1906e60eeffc3dc20178aee1c6` |
+| `packages/legacy-agent-host/tests/saved-team-model-probe.test.ts` | `245c797fceb1e4b96c09246f902a62540f2a1891` |
+
+Keep Main/Renderer transfer DTOs, RuntimeTeamCaptures, ModelProbeOwner and command-record schemas read-only. Do not introduce a new owner, journal, persistent field, public selector, inference, request, deadline or test case.
+
+### 29.2 Original admission commits both revision domains
+
+The source discriminant is the existing `captureTeamModelProbeSelection` retained-launch branch: `captureTeamModelProbe` is reached only after the current technical Launch and its existing Team authority/source selection are validated. Apply the new commitment only to an OpenCode prospective selection with `input.draft` present. The separate `captureSavedTeamModelProbe` / `saved-model-` branch keeps its original product-revision equality and digest. Non-draft actual-cwd children, Create, native preparation and other providers keep their existing shapes.
+
+Capture `team.connection.readRoster().revision` once as a private `productRosterRevision` during that original prospective admission, before any await or preparation. Include equality to this original value in that captured selection's existing currentness callback alongside the original technical Launch/revision, recipe, target and actor checks. Pass this private value only through the existing captured return; it grants nothing independently.
+
+Use the existing `readinessScope.actionDigest` commitment, with the exact ordered object `runtimeDigest({ commandId, context, productRosterRevision })`. Without the new private value, retain the exact old ordered object `runtimeDigest({ commandId, context })`. A small function in the existing teamLaunchModelProbe module may own these two literal hash shapes so producer and consumer cannot disagree. No schema or stored field is added: ModelProbeOwner already commits the whole scope in its original fingerprint and preparationDigest.
+
+Same-ID replay retains the original cutoff and never upgrades a historical scope. If the exact retained original scope has the old two-field digest, reproduce that old digest rather than adding a product witness. A newly committed scope recomputes its original current product join and conflicts on drift. Read, lookup, cold reconstruction and expiry cannot mint this commitment or reset a clock. Original legacy scopes may use only a previously valid direct-equality path; they cannot qualify the new cross-domain transfer.
+
+### 29.3 Exact original CAS bridge
+
+In `captureLaunchModelReadiness`, preserve the existing exact original full roster-intent lookup, command ID, returned publication revision, current roster, Team binding and current actor checks. Read the one explicit original probe through its existing command/Team/selection lookup and preserve the original technical sourceRevision, rosterRevision and destination joins.
+
+For a retained prospective OpenCode selection carrying the new commitment, require actionDigest to equal the same three-field hash using that original command, its retained context and `transfer.roster.expected.expectedRevision`. This proves the successful original full CAS was based on the product roster captured with the already validated technical selection. It does not rerun the obsolete pre-CAS selection callback after intentional publication. A foreign product revision, command, context, technical source, destination or changed full intent refuses before a capture record is created.
+
+The saved-model branch still requires input.rosterRevision to equal the expected product revision. Other legacy/non-draft paths retain that original direct equality only, without a new fallback. Missing or old-format proof cannot be treated as a newly witnessed cross-domain publication. Keep capturePreparedModelReference's original model/mechanism, effective account/file witness, policy-origin, freshness, native-readiness and released-custody checks, original remaining-budget minimum and every downstream allocation/actual-cwd consumer unchanged.
+
+### 29.4 Existing controlled regression and execution limits
+
+Extend the existing OpenCode/roster probe-journal case in saved-team-model-probe.test.ts with one bounded retained-source sub-scope, preserving all original declarations, assertions and loops. Reuse its real Team, Runtime selection and ModelProbeOwner with the existing controlled native boundary; a finite fixture setup may install the explicit original runtime recipe before coordinator construction. The new sub-scope performs one original prospective probe, confirms its actual completed/released receipt, performs one exact full roster CAS and calls the actual transfer helper. Assert technical and product revisions differ, transfer preserves the original command/context/reference/cutoff, and no member provider is allocated. This positive transfer assertion must fail with the old helper; no successful probe record may be inserted to bypass its producer.
+
+Within the same sub-scope, check same-ID replay does not run another probe and that old-format/mismatched publication commitment, altered selection/command and expired original proof cannot transfer; bounded negative record mutations must restore the exact original bytes. Existing account/source/revocation/cleanup assertions remain intact. Saved-model behavior, original scoped cleanup and cold non-replay stay covered by the unchanged surrounding cases. No Desktop/native request budget or named case is added.
+
+Freeze exact three-path variants and inverses, obtain independent review and root publication. Root owns the existing-case old-source RED, coherent GREEN, original Host build/test types and source guards, followed by the original Resume/Review Desktop lanes. Source review is not native acceptance. Claude Resume's earlier rejected Host operation, §95 setup/oracle joins and stopped/donor failures remain separate.
+
+## 30. Preserve strict allocation deadlines with explicit Host test-file scheduling
+
+### 30.1 Original evidence and bounded conclusion
+
+Batch4 parent and native `test (1/4)` fail only the existing worktree branch of `submit uses original registry/roster/capture/start receipts and recovers same-ID admission after proof expiry`: both original providers opened, all four probes completed successfully and released their resources, but an allocation observation failed the strict comparison with that member's own original 1000ms deadline. Parent reports 1228 pass / 1 fail / 2 original skips, native 1244 / 1 / 2, with no cancelled tests. Raw logs are `e9ba7c85845e08a72fb7a068be58eb21c53c0359` and `63ce25d44d0dfb70c9a7b6c408d1446f785a2f19`; actual checkouts are respectively `889325183907aa17e91c8fb992afa086cab9c621` and `d1829c9f1f0749fa725c5f6466c53f5827b159f1`.
+
+Both logs show the original workflow capturing Node 24.21.0 and placing its exact directory on PATH for the Host command. Earlier controller Node 26 warnings do not identify the Host interpreter. The Host script currently leaves file concurrency implicit. [Node 24.21 CLI documentation](https://nodejs.org/download/release/v24.21.0/docs/api/cli.html#--test-concurrency) specifies the process-isolated default as `os.availableParallelism() - 1`; its [execution model](https://nodejs.org/download/release/v24.21.0/docs/api/test.html#test-runner-execution-model) preserves a separate child process per file.
+
+Root's unchanged isolated case on the current composed build passed in 4.229558s (6.840s command wall time). Its existing CPU profile shows substantial Team journal/currentness/source work, including synchronous reads; this is neither a profile of the failed CI runs nor proof of safely removable production checks. CPU contention remains an inference, not an established unique cause or performance guarantee. Exact original observations, current preimages and profile-file digests are in evidence `00102ab54a98f35a6fe3c919b59628c1e32ed8d8`.
+
+### 30.2 Exact single-path change
+
+The only writable path is `packages/legacy-agent-host/package.json`. Its current preimage is `d7976e13a62c23caaa371a31b4aade20f3639fc0` in parent `6640102f46e63a24b9c72a303b0e00121aed87bc`, native `3ebdb74bdebe8d58aae0b2730b6a0518a716fb5c` and qualification `9ee232b9fa663baaf45fa53b2076af14db57824a`.
+
+Insert exactly `--test-concurrency=1` after `node --test` in the existing `scripts.test` value. Preserve the build and test-type prerequisites, every original file argument and its order, Node engine range, separate process isolation and all other script/package/dependency fields. This makes the complete Host suite admit one file worker at a time; the original tests still exercise their own concurrent operations.
+
+No test body, assertion, case, skip, production path, workflow, request counter, timeout, timer, clock, native script or source guard changes. In particular §§18/21/25 retain the single wait bounded by the maximum original deadline and each exact member's strict observation-before-its-own-deadline assertion. No production validation is cached or removed.
+
+### 30.3 Qualification and remaining risk
+
+Freeze the one-field diff, full inverse and all three preimages for independent review and root-controlled integration/publication. The two original failures are the existing failure evidence; no new stress case or retry collector is introduced.
+
+Root must run the unchanged complete Host suite through the amended script and retain its actual totals, original skips, failure/cleanup evidence and duration. The original ordinary CI gate on the published source remains required. Serial files can increase total suite wall time; no job or operation deadline is enlarged. An isolated PASS or source review cannot substitute for that full-suite result. Any remaining failure stays a failure and must be diagnosed without relaxing the allocation oracle. Source remains zero until explicit root GO.
+
+## 31. Reuse one freshly captured readiness-origin inspector inside the existing account inspection
+
+### 31.1. Concrete evidence and unchanged deadline
+
+The complete serialized Host script still failed its original OpenCode/worktree Create case: 1247 tests, 1244 pass, one fail, two original skips, zero cancelled, 353739.335068 ms. Root evidence `6132c39f101e8b5005189fdf4fc493da31ad02bc` preserves the unchanged 1000 ms per-attempt deadline and strict own-deadline inequality. Both controlled providers opened; all four probes completed and released. Scheduling alone did not resolve the failure.
+
+Root then ran the unchanged isolated case once with Node24 CPU profiling: it passed (case 4935.630272 ms). Profile SHA-256 `e745d3ea4eecc7b31f5675de4326510cd5d438bd2733e06e5406257816148acb` is diagnostic data with profiler overhead, not a measurement of the failed full run. Its sampled constructor stacks include about 180.7 ms under the separate outer origin inspection and 167.9 ms under the account-owned inspection, across that whole isolated run. Evidence and exact source/caller joins are `583dbd4b856921621669947f0088c1e95d5f5f17`. No CPU-load-only or Node-executable-hash cause is claimed, and no sufficient-speed guarantee follows.
+
+### 31.2. One existing production path
+
+The only writable source is `packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts`, common preimage `4c4436c7bae5fa5cb76e01ab6360ade53708c2be`, verified in parent/native/qualification source successors of §103. No fixture, test, scope schema, stored record, caller module, workflow or dependency change.
+
+Within one synchronous `captureReadinessReference` callback, `capturePreparedModelReference` constructs an origin inspector from the exact saved origin, candidate profile, saved provider ID and current-owner callback. Its account call immediately constructs another inspector from those same inputs. The account already owns that inspector and uses it for its policy/currentness checks. This is duplicated physical source inspection, not a need for a second owner or proof.
+
+Keep the exported `captureOpenCodeProbeAccount` five parameters, optional/default behavior, and returned account object shape unchanged. A private worker in the same module owns the existing account-inspection body and returns the unchanged account plus its freshly constructed origin inspector. The public function unwraps only the account. Only `capturePreparedModelReference` consumes the private pair; it uses that origin when the existing account branch is selected, and retains the original direct-origin capture when no account inspection supplies one. No caller can inject an inspector or override its authority. No inspector field escapes through the public account result, `observeAccount`, reference, journal or wire payload.
+
+### 31.3. Authority and source-currentness preservation
+
+Preserve the account worker's complete existing source, native-file witness, credential-scope, profile, selection, cutoff and deferred-manual logic. The private refactor may wrap its result and delegate the public entry, but must not bypass or reorder its internal validation. In particular, the no-original deferred return stays undefined.
+
+Reuse the inspector object, never a prior policy/currentness boolean. Every existing `policy.isCurrent()` and final `origin.isCurrent()` call remains at its original use boundary; each still executes a fresh `inspect()` with both original owner checks and actual source-file validation. Preserve the final origin check after `readinessTarget(candidate)`, account/current-owner checks, reference equality and existing failure ordering outside the removed duplicate constructor. The shared inspector is local to this synchronous callback: no cross-call cache, memoized green, lease, new admission, lifetime extension or transfer across an await. Standalone/preflight/initial and continuation consumers retain their original public helper contract.
+
+The original Runtime allocation timestamp is observed after allocated publication; this change does not reinterpret that observation. Keep all original claims, their 1000 ms limits, wait/timer, maximum original deadline, each member's strict own-deadline assertion, source/native inputs, request budgets and cleanup semantics.
+
+### 31.4. Review and original acceptance
+
+Freeze the one-file full source/diff and verify all three preimages, exact public signature/result shape, private-pair non-escape, worker-body inverse and unchanged currentness call sites. An independent peer must read the shared-policy freshness and post-target guard, including the existing deferred and file-backed branches.
+
+Root runs the unchanged original failing Create case/file and saved-team-model-probe negative guard cases, normal Host build/type/source gates, then the complete original serialized Host suite. Their source preimages remain `c24c405663019f72cbd09f66705971fcd04c4daa` and `ff791b368ffb6c753d89fc3f5778e57782d6a949`. No new case, weakened assertion, synthetic clock, timeout increase, additional probe or repeated-until-green native campaign is authorized. Passing the isolated case alone does not close the full-suite failure. Source remains zero until this appendix is published and root grants the exact one-path GO.
+
+## 32. Preserve original allocation timestamps in the existing Create failure diagnostic
+
+The ordinary serialized Host suite still has one original 1000 ms allocation failure after §31 (raw log `f303ddb8e80513399f8e5a2a319f3b19bcb69c84`). The single reviewed full diagnostic run passed and produced no failure-only timing rows; measured summary `da12af8ea47c1bb656004bb48fa8ea67a4393424` does not identify a late member or establish a fix.
+
+The sole writable path is `packages/legacy-agent-host/tests/team-create-launch.test.ts`, common preimage `c24c405663019f72cbd09f66705971fcd04c4daa` in the three checked §31 source heads. No production, workflow, profiler, dependency or other test path is added.
+
+The fixture already records each first allocation time in `allocatedMembers` from its original `checkReadiness` callback. Add a read accessor returning copied `{ memberId, allocatedAtMs }` rows from that existing map, without exposing the mutable map. Invoke it exactly once in the original failing case's existing first `t.diagnostic(JSON.stringify(...))` catch output, alongside provider/worktree and the original failure; never from the success path or allocation observer.
+
+The existing later launch snapshot already retains launch IDs, member IDs, current attempt IDs, `startedAtMs` and `deadlineMs`. Correlate the new rows by the original member ID; preserve an absent allocation as an absent row, never zero/current time or inferred success. No extra Runtime/filesystem read, clock observation, await, action, timer, observer, derived acceptance value or new diagnostic invocation is introduced. The snapshot fallback, original error rethrow and finally cleanup remain exact.
+
+Keep every original case declaration/assertion, the original maximum-deadline wait, strict timestamp-before-own-deadline checks, 1000 ms claims, inputs/counters and skips unchanged. This is failure evidence only; it does not change an outcome or close the intermittent Host failure.
+
+Freeze the minimal one-file diff/full inverse and obtain one independent source peer after plan publication and explicit root SOURCE GO. Root owns integration and ordinary CI; this appendix requires no new case, benchmark, profiler or repeated diagnostic/full-suite campaign. Source remains zero until that GO.

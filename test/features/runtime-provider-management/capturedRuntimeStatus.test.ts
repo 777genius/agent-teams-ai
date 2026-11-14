@@ -175,6 +175,7 @@ it('the original V2 catalog supplies engine availability without a CLI path or m
   const f = fixture({ generation: 'v2', version: '2.1.4' }, maintenance);
   expect(await f.port.readOpenCodeRuntimeStatus!()).toEqual({
     installed: true,
+    nativeGeneration: 'v2',
     source: 'captured-host',
     state: 'ready',
     version: '2.1.4',
@@ -200,6 +201,7 @@ it('the original V2 catalog supplies engine availability without a CLI path or m
   });
   expect(await seed.readOpenCodeRuntimeStatus!()).toEqual({
     installed: true,
+    nativeGeneration: 'v2',
     source: 'captured-host',
     state: 'ready',
     version: '2.1.4',
@@ -213,10 +215,15 @@ it('the original V2 catalog supplies engine availability without a CLI path or m
   expect(provider.capabilities.teamLaunch).toBe(false);
 });
 
-it('only the explicit successful native V1 catalog retains the separate installer status', async () => {
+it('the explicit successful native V1 catalog retains availability without inventing a CLI version', async () => {
   const resolveLatestOpenCodeVersion = vi.fn(async () => '1.19.5');
   const f = fixture({ generation: 'v1' }, { resolveLatestOpenCodeVersion });
-  expect(await f.port.readOpenCodeRuntimeStatus!()).toBeNull();
+  expect(await f.port.readOpenCodeRuntimeStatus!()).toEqual({
+    installed: true,
+    nativeGeneration: 'v1',
+    source: 'captured-host',
+    state: 'ready',
+  });
   expect(f.request).toHaveBeenCalledExactlyOnceWith('catalog', {});
   expect(resolveLatestOpenCodeVersion).not.toHaveBeenCalled();
 });
@@ -253,6 +260,7 @@ it('current source status accepts its first captured configuration and fences a 
   const status = await port.readOpenCodeRuntimeStatus!();
   expect(status).toEqual({
     installed: true,
+    nativeGeneration: 'v2',
     state: 'ready',
     source: 'app-managed',
     version: '2.0.21',
@@ -328,6 +336,7 @@ it('a published V1 selection supplies its original CLI version without an ambien
   });
   const ready = {
     installed: true,
+    nativeGeneration: 'v1',
     state: 'ready',
     source: 'path',
     version: '1.19.4',

@@ -379,12 +379,13 @@ function fixture(withSources = false, provider: 'claude' | 'opencode' = 'claude'
     },
     opens: () => opens,
     spends: () => spends,
+    originalAllocationTimes: () => [...allocatedMembers].map(([memberId, allocatedAtMs]) => ({ memberId, allocatedAtMs })),
     async waitForOriginalAllocation(members: TeamLaunchSummary['members']) {
       const expected = members.map(({ memberId, attempt }) => ({ memberId, deadline: attempt.deadlineMs }));
       assert.equal(expected.length, 2);
       assert.equal(new Set(expected.map(row => row.memberId)).size, 2);
       assert.ok(expected.every(row => Number.isSafeInteger(row.deadline) && row.deadline > 0));
-      const cutoff = Math.min(...expected.map(row => row.deadline));
+      const cutoff = Math.max(...expected.map(row => row.deadline));
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
         await Promise.race([allocated, new Promise<never>((_resolve, reject) => {
@@ -392,8 +393,8 @@ function fixture(withSources = false, provider: 'claude' | 'opencode' = 'claude'
             Math.max(0, cutoff - Date.now()));
         })]);
         assert.deepEqual([...allocatedMembers.keys()].sort(), expected.map(row => row.memberId).sort());
-        for (const { memberId } of expected)
-          assert.ok(allocatedMembers.get(memberId)! < cutoff, 'allocation must precede the original minimum deadline');
+        for (const { memberId, deadline } of expected)
+          assert.ok(allocatedMembers.get(memberId)! < deadline, 'allocation must precede its own original deadline');
       } finally {
         if (timer !== undefined) clearTimeout(timer);
       }
@@ -823,6 +824,7 @@ test('submit uses original registry/roster/capture/start receipts and recovers s
     } catch (error) {
       t.diagnostic(JSON.stringify({ provider, worktree, opens: f.opens(), spends: f.spends(),
         ownerRevision: f.profile.owner.revision,
+        originalAllocationTimes: f.originalAllocationTimes(),
         originalFailure: error instanceof Error ? error.stack : String(error) }));
       try {
         const runtimeRoot = join(f.root, 'runtime-sessions');

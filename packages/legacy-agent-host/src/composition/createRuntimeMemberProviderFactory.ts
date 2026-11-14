@@ -259,11 +259,11 @@ export function createRuntimeMemberProviderFactory(options: {
           ...evidence,
           attachments: attachmentDelivery.port,
           ...(subagents ? { subagents } : {}),
-          isCurrent: readiness ? setupCurrent : authority.isCurrent,
+          isCurrent: authority.isCurrent,
           canAllocate: readiness ? canAllocate : authority.canAllocate,
           ...(readiness?.kind === 'preparation' && readiness.assertReadinessCredential
             ? { assertReadinessCredential: readiness.assertReadinessCredential } : {}),
-          canCaptureRegisteredProcess: readiness ? setupCurrent : authority.isCurrent,
+          canCaptureRegisteredProcess: authority.isCurrent,
           readCheckpoint: options.readCheckpoint,
           ...(entry.profile.provider === 'claude' && request.checkpointRef !== undefined ? {
             readCheckpointSource: createClaudeCheckpointSource({

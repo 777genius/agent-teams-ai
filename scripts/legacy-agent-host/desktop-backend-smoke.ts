@@ -3,10 +3,12 @@ import { prepareDesktopEmulatedManagementFixture, verifyDesktopEmulatedManagemen
 import { runDesktopEmulatedManagementUi } from './desktop-emulated-management-ui.ts';
 import { prepareDesktopEmulatedRuntimeFixture, verifyDesktopEmulatedRuntimeFixture, observeDesktopEmulatedRuntimeChildren, observeDesktopEmulatedRuntimeCleanup } from './desktop-emulated-runtime-fixture.ts';
 import { runDesktopEmulatedRuntimeUi } from './desktop-emulated-runtime-ui.ts';
+import { restartDesktopEmulatedRuntimeApp } from './desktop-emulated-lifecycle-boundary.ts';
+import { verifyDesktopEmulatedLifecycleQuit } from './desktop-emulated-lifecycle-ui.ts';
 import { runDesktopScheduleUiProof } from './desktop-schedule-ui-proof.ts';
 import type { DesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
 import { verifyNativeProcessReadbackSource } from './desktop-native-process-readback.ts';
-import { connectCapturedDesktopApp, restartCapturedDesktopApp, observePackedAppRelaunch, verifyCapturedDesktopBinding, cleanupCapturedDesktopApp } from './desktop-captured-app.ts';
+import { connectCapturedDesktopApp, captureDesktopRendererFailure, restartCapturedDesktopApp, observePackedAppRelaunch, verifyCapturedDesktopBinding, cleanupCapturedDesktopApp } from './desktop-captured-app.ts';
 import type { DesktopCdpPort as CdpPort, DesktopCdpLibrary as CdpLibrary } from './desktop-captured-app.ts';
 import { observeDesktopStartup, requestObservedDesktopClose } from './startup-passive-observer.ts';
 import { runDesktopNativeExtensionsUiSmoke } from './desktop-native-extensions-ui-smoke.ts';
@@ -63,7 +65,6 @@ import { dirname, join, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import {
   attachRendererDiagnostics,
-  readRendererFailureSnapshot,
   runDesktopTeamUiSmoke,
 } from './desktop-team-ui-smoke.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -107,8 +108,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const codexAccountMode = ['codex-account-read', 'codex-account-auth', 'codex-login-ui'].includes(mode);
   assertDesktopProofEnvironment(mode === 'process-cold-ui' || codexAccountMode);
   const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1';
-  const emulatedManagementMode = mode === 'emulated-management-ui';
-  const emulatedRuntimeProvider = ['emulated-codex-runtime-ui', 'emulated-selection-ui'].includes(mode) ? 'codex' : mode === 'emulated-claude-runtime-ui' ? 'claude' : mode === 'emulated-opencode-runtime-ui' ? 'opencode' : undefined;
+  const emulatedManagementMode = ['emulated-management-ui', 'emulated-codex-login-ui'].includes(mode);
+  const emulatedRuntimeProvider = ['emulated-codex-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui'].includes(mode) ? 'codex' : ['emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui'].includes(mode) ? 'claude' : mode === 'emulated-opencode-runtime-ui' ? 'opencode' : undefined;
   const emulatedRuntimeMode = emulatedRuntimeProvider !== undefined;
   if (emulatedManagementMode || emulatedRuntimeMode) assert.equal(emulatedOnly, true, 'TEST providers require provider-emulation admission');
   assert.equal(
@@ -140,8 +141,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const nativeInputs = codexAccountMode ? await captureDesktopCodexAccountInput(process.env.LEGACY_DESKTOP_CODEX_PATH!)
     : mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
-  const emulatedManagementFixture = emulatedManagementMode ? await prepareDesktopEmulatedManagementFixture(repo, pnpm) : undefined;
-  const emulatedRuntimeFixture = emulatedRuntimeProvider ? await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, emulatedRuntimeProvider, mode === 'emulated-selection-ui' ? 'selection' : undefined) : undefined;
+  const emulatedManagementFixture = emulatedManagementMode ? await prepareDesktopEmulatedManagementFixture(repo, pnpm, mode === 'emulated-codex-login-ui' ? 'codex-login' : undefined) : undefined;
+  const emulatedRuntimeFixture = emulatedRuntimeProvider ? await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, emulatedRuntimeProvider, mode === 'emulated-claude-lifecycle-ui' ? 'lifecycle' : mode === 'emulated-selection-ui' ? 'selection' : mode === 'emulated-installer-ui' ? 'installer' : undefined) : undefined;
   const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = emulatedRuntimeFixture ?? emulatedManagementFixture ?? (questionUiMode ? await prepareDesktopBackendFixture(repo, {
     seedUiTask: true, pnpmEntry: pnpm, nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },
@@ -303,32 +304,40 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   let hostPid: number | undefined;
   let quitRequested = false;
   let finishMixedSettings: (() => Promise<void>) | undefined;
+  const spawnNextDesktopEpoch = (nextFixture: typeof fixture) => {
+    if (nextFixture !== fixture) {
+      assert.ok(checkpointUpgrade && fixture === checkpointUpgrade.original &&
+        nextFixture === checkpointUpgrade.successor);
+      fixture = nextFixture;
+    }
+    app = spawn(invocation[0]!, invocation.slice(1), { cwd: repo, env: fixture.appEnvironment,
+      stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+    appEpochHandles.push(app); group = app.pid ?? 0; spawnError = false; appIdentity = '';
+    hostPid = undefined; quitRequested = false;
+    app.once('error', () => { spawnError = true; });
+    app.stdout.pipe(log, { end: false }); app.stderr.pipe(log, { end: false });
+    assert.ok(group > 0);
+    appIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='],
+      { encoding: 'utf8', timeout: 3000 }).trim();
+    return { app, group, identity: appIdentity, invocation, spawnError: () => spawnError };
+  };
   const restartSameProfile = async (selection: Pick<Parameters<typeof restartCapturedDesktopApp>[0],
-    'model' | 'provider' | 'boundary' | 'createdHandleId' | 'afterOriginalSettingsQuit' | 'afterOriginalMembershipQuit'>) => {
+    'model' | 'provider' | 'boundary' | 'createdHandleId' | 'afterOriginalSettingsQuit' | 'afterOriginalMembershipQuit'> & { codexSourceSelectionRestart?: typeof restartCapturedDesktopApp }) => {
     assert.ok(cdp && !packed && selection.model);
-    return restartCapturedDesktopApp({
+    return (selection.codexSourceSelectionRestart ?? restartCapturedDesktopApp)({
       app, cdp, group, fixture, repo, mode, evidence, cdpLibrary, ...selection,
       ...(checkpointUpgrade ? { checkpointUpgrade } : {}),
       markQuitRequested: () => { quitRequested = true; },
       adoptRenderer: (next, nextHostPid) => { cdp = next; if (nextHostPid !== undefined) hostPid = nextHostPid; },
-      spawnNext: (nextFixture) => {
-        if (nextFixture !== fixture) {
-          assert.ok(checkpointUpgrade && fixture === checkpointUpgrade.original &&
-            nextFixture === checkpointUpgrade.successor);
-          fixture = nextFixture;
-        }
-        app = spawn(invocation[0]!, invocation.slice(1), { cwd: repo, env: fixture.appEnvironment,
-          stdio: ['ignore', 'pipe', 'pipe'], detached: true });
-        appEpochHandles.push(app); group = app.pid ?? 0; spawnError = false; appIdentity = '';
-        hostPid = undefined; quitRequested = false;
-        app.once('error', () => { spawnError = true; });
-        app.stdout.pipe(log, { end: false }); app.stderr.pipe(log, { end: false });
-        assert.ok(group > 0);
-        appIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='],
-          { encoding: 'utf8', timeout: 3000 }).trim();
-        return { app, group, identity: appIdentity, invocation, spawnError: () => spawnError };
-      },
+      spawnNext: spawnNextDesktopEpoch,
     });
+  };
+  const restartEmulatedSameProfile = async () => {
+    assert.ok(cdp && !packed && emulatedRuntimeFixture);
+    return restartDesktopEmulatedRuntimeApp({ app, cdp, group, fixture: emulatedRuntimeFixture, repo, mode, evidence, cdpLibrary,
+      markQuitRequested: () => { quitRequested = true; },
+      adoptRenderer: (next, nextHostPid) => { cdp = next; if (nextHostPid !== undefined) hostPid = nextHostPid; },
+      spawnNext: spawnNextDesktopEpoch });
   };
   try {
     assert.ok(group > 0, 'captured invocation has a process identity');
@@ -385,7 +394,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         group,
         evidence,
         executable: openCodeLifecycleMode ? process.env.OPENCODE_V2_EMBEDDED_BUN! : process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
-        ...(openCodeLifecycleMode ? { provider: 'opencode' as const } : {}),
+        ...(openCodeLifecycleMode ? { openCode: { model: openCodeLifecycleModel } } : {}),
         manualPermissions: approvalUiMode,
         ...(quitScenario === 'pending-open' ? { returnAt: 'opening' as const } : {}),
       });
@@ -393,7 +402,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       hostPid = setup.hostPid;
     }
     if (emulatedRuntimeFixture) {
-      await runDesktopEmulatedRuntimeUi(cdp, { fixture: emulatedRuntimeFixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+      await runDesktopEmulatedRuntimeUi(cdp, { fixture: emulatedRuntimeFixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group),
+        ...(mode === 'emulated-claude-lifecycle-ui' ? { restartSameProfile: restartEmulatedSameProfile } : {}) });
     } else if (emulatedManagementFixture) {
       await runDesktopEmulatedManagementUi(cdp, { fixture: emulatedManagementFixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (questionUiMode) {
@@ -485,10 +495,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         ...(openCodeLifecycleModel ? { openCodeModel: openCodeLifecycleModel } : {}),
         capturedGroup: () => group,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
-        ...(mode === 'native-resume-ui' || extensionsUiMode ? { restartSameProfile: () =>
+        ...(mode === 'native-resume-ui' || extensionsUiMode ? { restartSameProfile: (codexSourceSelectionRestart) =>
           restartSameProfile({ model: openCodeLifecycleModel ?? codexResumeModel ?? conversationModel!,
             provider: openCodeLifecycleMode ? 'opencode' : codexResumeMode ? 'codex' : 'claude',
-            boundary: extensionsUiMode ? 'extensions-before-launch' : 'resume-after-stop' }) } : {}),
+            boundary: extensionsUiMode ? 'extensions-before-launch' : 'resume-after-stop', ...(codexSourceSelectionRestart ? { codexSourceSelectionRestart } : {}) }) } : {}),
       });
     } else if (readbackMode) {
       assert.ok(fixture.uiSeed);
@@ -601,6 +611,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     assertCapturedDesktopMetadataAbsent(evidence);
     await verifyDesktopNativeQuitAfterShutdown(mode, fixture.root, evidence, nativeChildren, openCodeLifecycleModel ?? conversationModel, group);
     if (activitySource) await finalizeDesktopActivityReadback(evidence, activitySource, () => assert.equal(processTable().some(row => row.pid === hostPid), false));
+    if (mode === 'emulated-claude-lifecycle-ui') await verifyDesktopEmulatedLifecycleQuit(emulatedRuntimeFixture!, evidence);
     if (finishMixedSettings) await finishMixedSettings();
     if (checkpointUpgrade) await checkpointUpgrade.finish();
     evidence.status = 'PASS';
@@ -621,42 +632,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       error instanceof Error ? error.message.slice(0, 4000) : 'unclassified harness failure';
     const metadataFailure = readDesktopMetadataLineageFailure(error);
     if (metadataFailure) evidence.metadataObservationFailure = metadataFailure;
-    if (uiMode && cdp) {
-      try {
-        assertOwnedCdpListener(group);
-        try {
-          evidence.rendererFailureSnapshot = await bounded(
-            readRendererFailureSnapshot(cdp),
-            4000,
-            'read renderer startup snapshot'
-          );
-        } catch {
-          evidence.rendererFailureSnapshot = { unavailable: true };
-        }
-        const screenshot = object(
-          await bounded(
-            cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }),
-            5000,
-            'failure screenshot'
-          )
-        );
-        assert.equal(typeof screenshot.data, 'string');
-        const screenshotPath = join(
-          fixture.root,
-          artifacts.failureScreenshot
-        );
-        await writeFile(screenshotPath, Buffer.from(String(screenshot.data), 'base64'), {
-          mode: 0o600,
-        });
-        evidence.failureScreenshot = {
-          path: screenshotPath,
-          sha256: await fileDigest(screenshotPath),
-        };
-      } catch (captureError) {
-        evidence.failureScreenshotUnavailable =
-          captureError instanceof Error ? captureError.message.slice(0, 1000) : 'unavailable';
-      }
-    }
+    if (uiMode && cdp) await captureDesktopRendererFailure(cdp, { group, root: fixture.root, screenshotName: artifacts.failureScreenshot, evidence });
     if ((nativeStopMode || questionUiMode) && evidence.nativeSetup) {
       try {
         evidence.nativeBeforeFailureQuit = captureDesktopNativeStopPresence(evidence.nativeSetup);
@@ -685,7 +661,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const { remaining, cleanupFailure, capturedHostAbsent, hostPid: cleanedHostPid } =
       await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity, hostPid, packedRelaunchMode });
     hostPid = cleanedHostPid;
-    const coldBoundary = evidence.coldResumeBoundary ?? evidence.coldExtensionBoundary ?? evidence.coldSettingsBoundary ?? evidence.coldMembershipBoundary;
+    const coldBoundary = evidence.coldResumeBoundary ?? evidence.coldExtensionBoundary ?? evidence.coldSettingsBoundary ?? evidence.coldMembershipBoundary ?? evidence.emulatedColdResumeBoundary;
     if (coldBoundary && object(coldBoundary).secondEpoch) object(coldBoundary).secondCleanup = {
       processGroup: group, remaining, appExitCode: app.exitCode, appSignalCode: app.signalCode, capturedHostAbsent,
       ...(cleanupFailure ? { cleanupFailure } : {}),

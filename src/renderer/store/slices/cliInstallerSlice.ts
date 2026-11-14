@@ -864,7 +864,7 @@ export interface CliInstallerSlice {
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
   applyOpenCodeRuntimeProgress: (status: OpenCodeRuntimeStatus) => void;
   installOpenCodeRuntime: (options?: OpenCodeRuntimeInstallOptions) => Promise<void>;
-  invalidateOpenCodeRuntimeStatus: () => Promise<void>;
+  invalidateOpenCodeRuntimeStatus: (mode?: 'cache-only') => Promise<void>;
   fetchCodexRuntimeStatus: () => Promise<void>;
   installCodexRuntime: () => Promise<void>;
   invalidateCodexRuntimeStatus: () => Promise<void>;

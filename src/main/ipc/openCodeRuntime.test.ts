@@ -1,6 +1,7 @@
 import {
   OPENCODE_RUNTIME_GET_STATUS,
   OPENCODE_RUNTIME_INSTALL,
+  OPENCODE_RUNTIME_INVALIDATE_STATUS,
 } from '@preload/constants/ipcChannels';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,22 +21,26 @@ const selected = vi.hoisted(() => ({
     | undefined,
   current: (() => true) as (() => boolean) | null,
   sources: undefined as CapturedRuntimeSources | undefined,
+  sourceCaptures: vi.fn(),
 }));
 vi.mock('./agentBackend', () => ({
   getDesktopProviderStatusPort: () => selected.native,
   captureDesktopStatusRequest: () => selected.current,
-  captureDesktopRuntimeSources: () =>
-    selected.sources ? Promise.resolve(selected.sources) : undefined,
+  captureDesktopRuntimeSources: () => {
+    selected.sourceCaptures();
+    return selected.sources ? Promise.resolve(selected.sources) : undefined;
+  },
 }));
 afterEach(() => {
   selected.native = undefined;
   selected.current = () => true;
   selected.sources = undefined;
+  selected.sourceCaptures.mockClear();
   vi.restoreAllMocks();
 });
 
 function statusFixture() {
-  const handlers = new Map<string, (event: IpcMainInvokeEvent) => unknown>();
+  const handlers = new Map<string, (event: IpcMainInvokeEvent, mode?: unknown) => unknown>();
   const legacy: OpenCodeRuntimeStatus = {
     installed: false,
     source: 'path',
@@ -45,19 +50,23 @@ function statusFixture() {
   const getStatus = vi.fn(async () => legacy);
   const getReadinessStatus = vi.fn(async (): Promise<OpenCodeRuntimeStatus> => legacy);
   const install = vi.fn();
+  const invalidateStatusCache = vi.fn();
   initializeOpenCodeRuntimeHandlers({
-    getStatus, getReadinessStatus, install,
+    getStatus, getReadinessStatus, install, invalidateStatusCache,
   } as unknown as OpenCodeRuntimeInstallerService);
   registerOpenCodeRuntimeHandlers({
-    handle: (name: string, handler: (event: IpcMainInvokeEvent) => unknown) =>
+    handle: (name: string, handler: (event: IpcMainInvokeEvent, mode?: unknown) => unknown) =>
       handlers.set(name, handler),
   } as unknown as IpcMain);
   return {
     getStatus,
     getReadinessStatus,
     install,
+    invalidateStatusCache,
     legacy,
     invoke: () => handlers.get(OPENCODE_RUNTIME_GET_STATUS)!({} as IpcMainInvokeEvent),
+    invalidate: (mode?: unknown) =>
+      handlers.get(OPENCODE_RUNTIME_INVALIDATE_STATUS)!({} as IpcMainInvokeEvent, mode),
   };
 }
 
@@ -113,14 +122,56 @@ it('selected Host V2 status cannot be replaced by a global CLI sentinel', async 
   await expect(f.invoke()).resolves.toEqual({ success: true, data: ready });
   expect(readOpenCodeRuntimeStatus).toHaveBeenCalledOnce();
   expect(f.getStatus).not.toHaveBeenCalled();
+
+  const s = sourceFixture();
+  await expect(f.invalidate('cache-only')).resolves.toEqual({ success: true, data: undefined });
+  expect(f.invalidateStatusCache).toHaveBeenCalledTimes(1);
+  expect(selected.sourceCaptures).not.toHaveBeenCalled();
+  expect(s.sources.current).not.toHaveBeenCalled();
+  expect(f.getReadinessStatus).not.toHaveBeenCalled();
+  expect(f.install).not.toHaveBeenCalled();
+  expectNoSourceMutation(s.sources);
+
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  await expect(f.invalidate('refresh')).resolves.toMatchObject({ success: false });
+  selected.current = () => false;
+  await expect(f.invalidate('cache-only')).resolves.toMatchObject({ success: false });
+  expect(f.invalidateStatusCache).toHaveBeenCalledTimes(1);
+  expect(selected.sourceCaptures).not.toHaveBeenCalled();
+  selected.current = () => true;
+  await expect(f.invalidate()).resolves.toEqual({
+    success: false,
+    error: 'OpenCode installation could not be confirmed.',
+  });
+  expect(f.invalidateStatusCache).toHaveBeenCalledTimes(2);
+  expect(selected.sourceCaptures).toHaveBeenCalledTimes(1);
+  expect(s.sources.current).toHaveBeenCalledTimes(1);
+  expect(s.sources.recover).toHaveBeenCalledTimes(1);
+  expect(f.getReadinessStatus).toHaveBeenCalledTimes(1);
+  expect(f.install).not.toHaveBeenCalled();
+  expect(s.sources.publish).not.toHaveBeenCalled();
+  expect(s.sources.refreshConfiguration).not.toHaveBeenCalled();
+  expect(s.sources.lookup).not.toHaveBeenCalled();
+  expect(f.getStatus).not.toHaveBeenCalled();
 });
 
-it('unselected Host and explicit native V1 preserve the existing installer status source', async () => {
+it('unselected Host preserves installer status while selected native V1 requires its own evidence', async () => {
   const f = statusFixture();
   await expect(f.invoke()).resolves.toEqual({ success: true, data: f.legacy });
   selected.native = { readOpenCodeRuntimeStatus: async () => null };
-  await expect(f.invoke()).resolves.toEqual({ success: true, data: f.legacy });
-  expect(f.getStatus).toHaveBeenCalledTimes(2);
+  await expect(f.invoke()).resolves.toEqual({
+    success: false,
+    error: 'Native runtime status could not be confirmed',
+  });
+  const captured: OpenCodeRuntimeStatus = {
+    installed: true,
+    source: 'captured-host',
+    state: 'ready',
+    nativeGeneration: 'v1',
+  };
+  selected.native = { readOpenCodeRuntimeStatus: async () => captured };
+  await expect(f.invoke()).resolves.toEqual({ success: true, data: captured });
+  expect(f.getStatus).toHaveBeenCalledTimes(1);
 });
 
 it('failed or absent native runtime evidence never falls back to a global CLI', async () => {
@@ -154,16 +205,18 @@ it('native runtime status requires the original sender and rejects a changed con
   expect(f.getStatus).not.toHaveBeenCalled();
 });
 
-it('the V1 installer response is also discarded if the captured context changes while it is read', async () => {
+it('the V1 native response is also discarded if the captured context changes while it is read', async () => {
   const f = statusFixture();
   let current = true;
   selected.current = () => current;
-  selected.native = { readOpenCodeRuntimeStatus: async () => null };
-  f.getStatus.mockImplementationOnce(async () => {
-    current = false;
-    return f.legacy;
-  });
+  selected.native = {
+    readOpenCodeRuntimeStatus: async () => {
+      current = false;
+      return { installed: true, source: 'captured-host', state: 'ready', nativeGeneration: 'v1' };
+    },
+  };
   await expect(f.invoke()).resolves.toMatchObject({ success: false });
+  expect(f.getStatus).not.toHaveBeenCalled();
 });
 
 it('adds only qualified CLI maintenance beside the original selected engine', async () => {

@@ -93,7 +93,7 @@ export function createScheduledRunProvider(context: ScheduledRunProviderContext)
       if (!policy) return current();
       const assertCurrent = () => { if (!current()) throw new Error('Scheduled source changed'); };
       try {
-        const observed = await readCodexMcpCatalog(profile, assertCurrent, signal, context.retainedWindowsLaunch, context.processOrigin);
+        const observed = await readCodexMcpCatalog(profile, assertCurrent, signal, capturedNativeProcessFactory(context.retainedWindowsLaunch, context.processOrigin));
         return current() && observed.digest === policy.catalog.digest;
       } catch { return false; }
     };

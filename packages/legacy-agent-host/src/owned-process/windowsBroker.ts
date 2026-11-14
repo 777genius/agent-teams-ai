@@ -303,7 +303,8 @@ class WindowsCapability implements PreparedOwnedProcess {
     payload: Buffer,
     deadline: number,
     received?: (frame: Frame) => void,
-    service?: { admitted(id: bigint): void }
+    service?: { admitted(id: bigint): void },
+    admitted?: () => void
   ): Promise<Frame> {
     if (
       !this.control ||
@@ -349,6 +350,7 @@ class WindowsCapability implements PreparedOwnedProcess {
           if (!settled) reject(error);
         },
       });
+      admitted?.();
       service?.admitted(id); // Original service operation retained before its first native write.
       const bytes = encodeFrame({
         opcode,
@@ -569,7 +571,9 @@ class WindowsCapability implements PreparedOwnedProcess {
         const payload = Buffer.alloc(5);
         payload.writeUInt32LE(remaining(request.deadlineMs));
         payload[4] = 1;
-        void this.request(Op.stop, Op.stopped, payload, performance.now() + 60000, received).then(
+        let admitted = false;
+        void this.request(Op.stop, Op.stopped, payload, performance.now() + 60000, received,
+          undefined, () => { admitted = true; }).then(
           (frame) => {
             let result: StopFacts | undefined;
             try {
@@ -582,7 +586,8 @@ class WindowsCapability implements PreparedOwnedProcess {
             if (this.stopOperation === operation) this.stopOperation = undefined;
           },
           () => {
-            acknowledge(false); // A deadline/error is not a reply; keep the original wire debt.
+            if (!admitted && this.stopWireReply === wireReply) this.stopWireReply = undefined;
+            acknowledge(false); // Admitted work keeps its original debt until a real reply.
             clearTimeout(operation.timer);
             operation.settle(undefined);
             if (this.stopOperation === operation) this.stopOperation = undefined;

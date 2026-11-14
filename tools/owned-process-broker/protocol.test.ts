@@ -634,6 +634,45 @@ describe('bounded owned process protocol', () => {
       for (const operation of held) expect(operation.snapshot().result).toEqual({ state: 'unknown' });
     } finally { pending.abandonControl(owner); vi.restoreAllMocks(); vi.useRealTimers(); }
   });
+  it('a Stop rejected before wire admission can retry after original request slots drain', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    vi.spyOn(performance, 'now').mockReturnValue(1000);
+    const peer = wirePeer();
+    const port = createWindowsOwnedLaunchPort(
+      'C:\\sandbox\\owned-process-broker.exe', 'job-membership', peer.factory, 'service-scopes-v1');
+    const pending = port.allocate(owner);
+    try {
+      const preparation = await port.prepare(pending, spec);
+      if (preparation.kind !== 'prepared') throw new Error(preparation.reason);
+      const services = preparation.process.services;
+      if (!services) throw new Error('Expected explicit scoped capability');
+      const resuming = preparation.process.resume(owner, () => Promise.resolve());
+      await Promise.resolve(); // Resume retains the fourth wire slot until its original ACK.
+      const identity = { key: '0000000000000001', birth: '0000000000004567' };
+      const queries = [0, 1, 2].map(() => services.query(identity, 2000));
+      const held = peer.requests.filter(frame => frame.opcode === Op.serviceQuery);
+      expect(held).toHaveLength(3);
+      const request = { expectedOwner: owner, attemptId: 'before-wire-admission',
+        mode: 'force' as const, deadlineMs: 2000 };
+      const denied = pending.stop(request);
+      expect((await denied).kind).toBe('unknown');
+      expect(peer.requests.filter(frame => frame.opcode === Op.stop)).toHaveLength(0);
+      peer.resumed(); await resuming;
+      for (const frame of held) peer.serviceFacts(frame);
+      expect((await Promise.all(queries)).every(result => result.state === 'observed')).toBe(true);
+      const retry = pending.stop({ ...request, attemptId: 'after-wire-capacity' });
+      expect(peer.requests.filter(frame => frame.opcode === Op.stop)).toHaveLength(1);
+      peer.stopped();
+      const outcome = await retry;
+      if (outcome.kind !== 'confirmed') throw new Error('Expected original synthetic whole-Job receipt');
+      expect(pending.stop(request)).toBe(denied);
+      expect((await denied).kind).toBe('unknown');
+      preparation.process.stdout.resume(); preparation.process.stderr.resume();
+      peer.stdout.end(); peer.stderr.end();
+      expect((await pending.drain(2000)).kind).toBe('complete');
+      await pending.release(outcome.receipt, 'job-membership');
+    } finally { pending.abandonControl(owner); vi.restoreAllMocks(); vi.useRealTimers(); }
+  });
   it('a failed native dispatch stays unknown despite a valid root witness and zero membership', async () => {
     const peer = wirePeer();
     const port = createWindowsOwnedLaunchPort(

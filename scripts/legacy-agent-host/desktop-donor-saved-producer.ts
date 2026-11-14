@@ -401,17 +401,26 @@ export async function produceDesktopDonorSavedTeam(options: {
     // Donor's existing model check owns a 60s timeout; observe its original completion,
     // never start another check or signal a detached child from this TEST harness.
     const probeDeadline = Date.now() + 60_000;
-    observeOriginalNative();
-    while (selectedRuntime().length && Date.now() < probeDeadline) {
-      await tick();
+    let closingSelected: ReturnType<typeof selectedRuntime>;
+    let closingCaptured: ReturnType<typeof remainingNative>;
+    for (;;) {
       observeOriginalNative();
+      while (selectedRuntime().length && Date.now() < probeDeadline) {
+        await tick();
+        observeOriginalNative();
+      }
+      closingSelected = selectedRuntime();
+      closingCaptured = remainingNative();
+      if ((!closingSelected.length && !closingCaptured.length) || Date.now() >= probeDeadline)
+        break;
+      await tick();
     }
     assert.deepEqual(
-      selectedRuntime(),
+      closingSelected,
       [],
       'original donor metadata/probe processes settle before Quit'
     );
-    assert.deepEqual(remainingNative(), []);
+    assert.deepEqual(closingCaptured, []);
     const beforeQuit = groupMembers(group);
     proof.beforeQuit = beforeQuit;
     assert.ok(

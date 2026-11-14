@@ -6,6 +6,35 @@ export const SOURCE_SELECTION_MARKERS = [
 ] as const;
 type SourceMarker = (typeof SOURCE_SELECTION_MARKERS)[number];
 
+// Pinned OpenCode 2.1.4 runner/max-steps.ts, blob 040584ab173877d12b821808489b6a7c80504954.
+const PINNED_V2_MAX_STEPS_PROMPT = `CRITICAL - MAXIMUM STEPS REACHED
+
+The maximum number of steps allowed for this task has been reached. Tools are disabled until next user input. Respond with text only.
+
+STRICT REQUIREMENTS:
+1. Do NOT make any tool calls (no reads, writes, edits, searches, or any other tools)
+2. MUST provide a text response summarizing work done so far
+3. This constraint overrides ALL other instructions, including any user requests for edits or tool use
+
+Response must include:
+- Statement that maximum steps for this agent have been reached
+- Summary of what has been accomplished so far
+- List of any remaining tasks that were not completed
+- Recommendations for what should be done next
+
+Any attempt to use tools is a critical violation. Respond with text ONLY.`;
+
+function assertNoToolMessageRoles(messages: readonly { role: string; content: unknown }[]): void {
+  const suffix = messages.at(-1);
+  let originalRoles = messages;
+  if (suffix?.role === 'assistant') {
+    assert.deepEqual(suffix, { role: 'assistant', content: PINNED_V2_MAX_STEPS_PROMPT },
+      'only the exact closed native V2 maximum-steps suffix');
+    originalRoles = messages.slice(0, -1);
+  }
+  assert.ok(originalRoles.every(message => message.role === 'user' || message.role === 'system'));
+}
+
 /** A finite inference oracle. Only the genuine selected engines execute tools or write history. */
 export async function startRetainedOpenCodeModel(options: { sourceSelection?: true } = {}) {
   const observations: { owner: 'legacy' | 'host'; marker: string | null; tools: string[];
@@ -76,7 +105,7 @@ export async function startRetainedOpenCodeModel(options: { sourceSelection?: tr
             lastUserContent[0]?.type === 'text' ? lastUserContent[0].text : undefined;
           assert.equal(prompt, 'Reply only OK. Do not use tools, access files or run commands.');
           assert.equal(messages.filter(message => message.role === 'user').length, 1);
-          assert.ok(messages.every(message => message.role === 'user' || message.role === 'system'));
+          assertNoToolMessageRoles(messages);
           sourcePreflight = true;
         }
       } else {
@@ -100,7 +129,7 @@ export async function startRetainedOpenCodeModel(options: { sourceSelection?: tr
             lastUserContent[0]?.type === 'text' ? lastUserContent[0].text : undefined;
           assert.equal(prompt, 'Reply only OK. Do not use tools, access files or run commands.');
           assert.equal(messages.filter(message => message.role === 'user').length, 1);
-          assert.ok(messages.every(message => message.role === 'user' || message.role === 'system'));
+          assertNoToolMessageRoles(messages);
           hostPreparation.consumed = 1;
           // TEST window attribution only; the native request does not echo this command.
           preparationCommandId = 'TEST-coexist-launch-once';

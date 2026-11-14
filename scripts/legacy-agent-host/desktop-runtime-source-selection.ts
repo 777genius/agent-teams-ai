@@ -518,7 +518,8 @@ export async function runDesktopRuntimeSourceSelection(input: {
       const launchRecord = (name: string, launchId: string) =>
         readJson(join(root, 'hoststore/teams', name, '.host-owner/launches', runtimeDigest(launchId) + '.json'));
       const session = async (launchId: string, expectedInputs: number, stopped = false) => {
-        const values = await poll(() => readDesktopNativeStopSessions(root),
+        const values = await poll(() => readDesktopNativeStopSessions(root,
+          { runId: launchId, report: value => { phase.runtimeRead = value; } }),
           value => value.filter(row => record(row.binding).runId === launchId).length === 1 &&
             value.filter(row => record(row.binding).runId === launchId).every(row =>
               rows(row.inputs).length === expectedInputs && rows(row.inputs).every(item =>

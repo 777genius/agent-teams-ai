@@ -27,7 +27,12 @@ export const desktopProofProcessSources = [
 
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
 export const desktopProofSupplementarySources = [
+  'scripts/legacy-agent-host/desktop-emulated-codex-login-fixture.ts',
+  'packages/legacy-agent-host/tests/fixtures/codex-metadata-peer.ts',
   'scripts/legacy-agent-host/desktop-emulated-selection-ui.ts',
+  'scripts/legacy-agent-host/desktop-emulated-lifecycle-boundary.ts',
+  'scripts/legacy-agent-host/desktop-emulated-lifecycle-records.ts',
+  'scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts',
   'src/renderer/components/team/review/CodeMirrorDiffView.tsx',
   'src/renderer/components/team/review/CodeMirrorDiffUtils.ts',
   'test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx',

@@ -2249,6 +2249,48 @@ jobs:
           console.log(JSON.stringify({ status: r.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
             scope: 'Original per-member MCP controls, actual V2 inventory and permission, once native effect, Team replies, Stop and readback' }));
           NODE
+      - name: Verify retained Codex A through real Update and fresh B Launch
+        if: ${{ success() && matrix.variant == 'native-codex-resume-ui' }}
+        env:
+          LEGACY_DESKTOP_CODEX_SOURCE_SELECTION: '1'
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          export LEGACY_CODEX_CANDIDATE_INPUTS="$STAGE1_INPUTS/codex-0.169.0/input-pins.json"
+          test -f "$LEGACY_CODEX_CANDIDATE_INPUTS"
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-codex-source-selection.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-codex-source-selection.log'), 'utf8');
+          assert.ok(Buffer.byteLength(log) <= 8 * 1024 * 1024);
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original source-selection invocation');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(receipt.mode, 'native-resume-ui');
+          assert.equal(receipt.resumeProvider, 'codex');
+          assert.equal(receipt.status, 'PASS', 'INCOMPLETE remains a failed source-selection proof');
+          assert.equal(receipt.codexSourceSelectionProof?.status, 'PASS');
+          assert.equal(receipt.model.observations.length, 11);
+          assert.equal(receipt.model.probes.length, 2);
+          assert.deepEqual(receipt.model.failures, []);
+          assert.deepEqual(receipt.cleanup.remaining, []);
+          assert.equal(receipt.cleanup.appExitCode, 0);
+          assert.equal(receipt.cleanup.appSignalCode, null);
+          assert.equal(receipt.cleanup.capturedHostObserved, true);
+          assert.equal(receipt.cleanup.capturedHostAbsent, true);
+          assert.equal(receipt.cleanup.cleanupFailure, undefined);
+          assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+          assert.deepEqual(receipt.selectedNativeInputHashesAfterCleanup, receipt.selectedNativeInputHashesBeforeApp);
+          console.log(JSON.stringify({ status: receipt.status, receipt: path,
+            sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD, scope: 'Retained A, real Codex Update, fresh B Launch and cold history' }));
+          NODE
       - name: Verify current native mixed history restore after Codex Desktop acceptance
         if: ${{ success() && matrix.resume_provider == 'codex' }}
         env:
@@ -2317,6 +2359,7 @@ jobs:
             ${{ runner.temp }}/stage1-native-restore.log
             ${{ runner.temp }}/stage1-native-restore-inputs.json
             ${{ runner.temp }}/stage1-codex-0169-candidate.log
+            ${{ runner.temp }}/stage1-codex-source-selection.log
             ${{ runner.temp }}/stage1-codex-0169-candidate-inputs.json
             /private/tmp/TEST-stage1-inputs-*/codex-0.169.0/input-pins.json
             /private/tmp/TEST-native-codex-team-*/receipt.json

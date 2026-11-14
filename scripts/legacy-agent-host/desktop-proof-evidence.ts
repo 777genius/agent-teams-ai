@@ -445,7 +445,7 @@ export function projectDesktopProofReceiptSummary(evidence: Record<string, unkno
   return { status: evidence.status, receipt: receiptPath,
     ...(evidence.status !== 'PASS' && evidence.failureSource
       ? { failureSource: evidence.failureSource } : {}),
-    ...(mode === 'codex-login-ui' && evidence.status !== 'PASS'
+    ...(['codex-login-ui', 'emulated-codex-login-ui'].includes(mode) && evidence.status !== 'PASS'
       ? { loginFailure: projectDesktopCodexLoginFailure(evidence) } : {}),
     ...(mixedMode && evidence.status !== 'PASS'
       ? { mixedSettingsFailure: projectDesktopMixedSettingsFailure(evidence) } : {}),

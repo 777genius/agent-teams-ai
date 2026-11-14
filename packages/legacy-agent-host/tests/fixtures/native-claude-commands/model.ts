@@ -51,6 +51,12 @@ export function nativeCommandUiScript(
         'claude-opus-4-6',
         'native commands retain the model selected by the real Launch dialog'
       );
+      const contents = (role: 'user' | 'assistant') =>
+        (Array.isArray(body.messages) ? body.messages : []).map(record)
+          .filter((message) => message.role === role)
+          .flatMap((message) => typeof message.content === 'string'
+            ? [{ type: 'text', text: message.content }]
+            : (Array.isArray(message.content) ? message.content : []).map(record));
       let block: Row;
       if (phase === 'compact') {
         assert.equal(compact++, 0, 'one original native compact request');
@@ -58,10 +64,29 @@ export function nativeCommandUiScript(
           serialized.includes(COMPACT_AUTHORIZATION),
           'native summary receives exact Composer args'
         );
-        assert.ok(
-          serialized.includes('DONE_NATIVE_TEAM_ONE'),
-          'native summary receives the actual prior Launch history'
+        const users = contents('user');
+        assert.equal(
+          users.filter((value) => value.type === 'text' && value.text === 'NATIVE_TEAM_ONE').length,
+          1,
+          'native summary receives the original Launch input'
         );
+        const calls = contents('assistant').filter(
+          (value) => value.type === 'tool_use' && value.id === 'native_NATIVE_TEAM_ONE_6'
+        );
+        assert.equal(calls.length, 1, 'one original Launch reply tool in the summarized prefix');
+        assert.equal(calls[0]!.name, 'mcp__team__message_send');
+        assert.deepEqual(record(calls[0]!.input), {
+          commandId: 'native-reply-one', to: 'user', text: 'REPLY_NATIVE_ONE',
+        });
+        const results = users.filter(
+          (value) => value.type === 'tool_result' && value.tool_use_id === calls[0]!.id
+        );
+        assert.equal(results.length, 1, 'one original successful Launch reply result');
+        assert.notEqual(results[0]!.is_error, true);
+        const receipt = readReceipt(results[0]!.content);
+        assert.equal(receipt.commandId, 'native-reply-one');
+        assert.equal(receipt.phase, 'completed');
+        assert.equal(record(record(receipt.result).message).text, 'REPLY_NATIVE_ONE');
         block = {
           type: 'text',
           text: 'TEST_P03_UI_NATIVE_SUMMARY: The original Launch completed its task and visible reply. Preserve the captured Team instructions for the next explicit command.',
@@ -70,6 +95,14 @@ export function nativeCommandUiScript(
         assert.equal(compact, 1);
         const count = phase === 'review' ? review++ : project++;
         assert.ok(count < 2, 'no duplicate native command request');
+        if (phase === 'project-command' && count === 0)
+          assert.equal(
+            contents('assistant').filter(
+              (value) => value.type === 'text' && value.text === 'DONE_NATIVE_TEAM_ONE'
+            ).length,
+            1,
+            'native post-compact request retains the original last assistant reply'
+          );
         if (phase === 'review') {
           assert.equal(project, 2);
           assertLegacyInlineReviewExpansion(body);

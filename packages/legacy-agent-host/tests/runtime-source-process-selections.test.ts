@@ -20,6 +20,7 @@ import { providerManagementProfileSchema } from '../dist/management/profile.js';
 import { readPreparedRuntimeSourcePublication, readRetainedRuntimeSourceSelections,
   readRuntimeSourceConfigurationVersion, runtimeSourceProcessContextSchema } from '../dist/owned-process/runtimeSourceSelections.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
+import { liveRuntimeCaptureSchema } from '../dist/composition/liveRuntimeCaptureSchema.js';
 
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { PublishRuntimeSource, RuntimeSourceCandidate, RuntimeSourceGrant } from '../dist/composition/runtimeSourceContracts.js';
@@ -243,17 +244,23 @@ test('live member retains its own original source and rejects a capture from ano
   const sourceReference = { sourceId: f.grant.targetId, revision: first.selection!.revision };
   const baseProfile = { ...f.owner.resolveRecipe(sourceReference, f.scope, f.root, seed),
     cwd: join(f.root, 'TEST-selected-worktree') };
-  const capture = { schemaVersion: 1, commandId: 'TEST-live-capture', requestDigest: '1'.repeat(64),
+  const capture = liveRuntimeCaptureSchema.parse({ schemaVersion: 1, commandId: 'TEST-live-capture', requestDigest: '1'.repeat(64),
     sourceCaptureDigest: runtimeDigest(initialCapture), expectedRevision: '2'.repeat(64),
     launchId: f.scope.runId, sourceCwd: f.root, savedSettings: { cwd: f.root }, leadProvider: 'codex',
     member: { memberId: seed.memberId, name: 'live-member', role: 'member', settings: { providerId: 'codex' } },
     sourceReference, templateDigest: runtimeDigest(seed), previous: null,
     workspace: baseProfile.cwd, mcpRecipeReference: { memberId: seed.memberId, digest: '3'.repeat(64) },
-    recipeDigest: runtimeDigest(seed), configurationDigest: runtimeDigest(baseProfile), runtimeGeneration: 1 };
+    recipeDigest: runtimeDigest(seed), configurationDigest: runtimeDigest(baseProfile), runtimeGeneration: 1 });
   // Only private origin selection is exercised; this metadata cannot admit a Runtime allocation.
-  const entry = { profile: baseProfile, baseProfile,
-    team: { ...f.team, capture: initialCapture, launchId: f.scope.runId }, liveRosterCapture: capture,
-  } as Parameters<typeof captureMemberProcessOrigin>[1];
+  const entry: Parameters<typeof captureMemberProcessOrigin>[1] = { profile: baseProfile, baseProfile,
+    team: { ...f.team, capture: JSON.parse(JSON.stringify(initialCapture)), launchId: f.scope.runId,
+      get owner(): never { throw new Error('origin capture must not allocate Team owner'); },
+      get connection(): never { throw new Error('origin capture must not allocate Team connection'); },
+    }, liveRosterCapture: capture,
+    get delivery(): never { throw new Error('origin capture must not allocate delivery'); },
+    get binding(): never { throw new Error('origin capture must not allocate Runtime binding'); },
+    get config(): never { throw new Error('origin capture must not allocate Runtime config'); },
+  };
   assert.equal(initialCapture.recipeSources!.some(row => row.memberId === seed.memberId), false);
   const original = captureMemberProcessOrigin(f.profile, entry, f.owner)!;
   assert.equal(original.revision, first.selection!.revision);

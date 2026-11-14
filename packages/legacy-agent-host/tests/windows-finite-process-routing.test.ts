@@ -1,3 +1,4 @@
+import { capturedNativeProcessFactory } from '../dist/adapters/providers/capturedNativeProcessFactory.js';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
@@ -27,7 +28,7 @@ function fixture(provider: ProviderManagementProfile['provider']) {
     windowsBroker: { path: 'C:\\TEST\\broker.exe', sha256: 'b'.repeat(64), arch: 'x64' as const,
       protocol: 1 as const, capability: 'service-scopes-v1' as const } };
   const profile: ProviderManagementProfile = provider === 'codex'
-    ? { ...common, provider, protocolRevision: '0.169.0' }
+    ? { ...common, provider, protocolRevision: '0.162.0' }
     : provider === 'claude'
       ? { ...common, provider, sdkRevision: '0.3.305', configNamespace: 'custom-directory' }
       : { ...common, provider, endpoint: 'http://127.0.0.1:19281' };
@@ -89,7 +90,7 @@ for (const provider of ['claude', 'codex'] as const) test(`${provider} schedule 
       pendingInteractions: 2, timeoutMs: 1000 } };
   const profile: RuntimeMemberProfile = provider === 'claude' ? { ...common, provider,
     configNamespace: 'custom-directory', nativeTools: [], autoAllowedTools: [] }
-    : { ...common, provider, protocolRevision: '0.169.0', nativeOptions: { approvalPolicy: 'never', sandbox: 'read-only' } };
+    : { ...common, provider, protocolRevision: '0.162.0', nativeOptions: { approvalPolicy: 'never', sandbox: 'read-only' } };
   try {
     assert.throws(() => createScheduledRunProvider({ profile, retainedWindowsLaunch: retained,
       request: { tenantId: 'TEST-tenant', projectId: 'TEST-project', sessionId: 'TEST-session',
@@ -111,12 +112,12 @@ test('Codex MCP read receives its original finite Main port before metadata exec
     throw marker;
   });
   try {
-    await assert.rejects(readCodexMcpCatalog({ ...f.profile, provider: 'codex', protocolRevision: '0.169.0',
+    await assert.rejects(readCodexMcpCatalog({ ...f.profile, provider: 'codex', protocolRevision: '0.162.0',
       teamId: 'TEST-team', memberId: 'TEST-member', principalId: 'TEST-principal', sessionId: 'TEST-session',
       generation: 1, model: 'TEST-model', nativeOptions: { approvalPolicy: 'never', sandbox: 'read-only' },
       limits: { queuedInputs: 1, inputBytes: 4096,
         outputEvents: 128, outputBytes: 8192, pendingInteractions: 2, timeoutMs: 1000 } },
-    () => {}, undefined, retained), error => error === marker);
+    () => {}, undefined, capturedNativeProcessFactory(retained)), error => error === marker);
     assert.equal(calls, 1);
   } finally { rmSync(f.root, { recursive: true, force: true }); }
 });
@@ -152,7 +153,7 @@ test('source-version composition uses the same original Main port with only filt
   try {
     const before = composition.sources!.current({ grant });
     const result = await composition.sources!.publish({ grant, commandId: 'TEST-version', expectedRevision: before.revision,
-      candidate: { sourceKind: 'app-managed', executable: candidate, nativeCli: { executable: candidate, version: '0.169.0' } } },
+      candidate: { sourceKind: 'app-managed', executable: candidate, nativeCli: { executable: candidate, version: '0.162.0' } } },
     () => assert.fail('A refused native version cannot publish'));
     assert.equal(calls, 1); assert.equal(result.phase, 'held');
     assert.equal(result.reason, 'native-outcome-unknown');

@@ -272,7 +272,7 @@
     "build": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
     "typecheck": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json --noEmit",
     "typecheck:test": "node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json",
-    "test": "pnpm build && pnpm typecheck:test && node --test tests/*.test.ts tests/fixtures/native-claude-team/model.test.ts tests/fixtures/native-opencode-team/model.test.ts tests/fixtures/native-codex-team/model.test.ts",
+    "test": "pnpm build && pnpm typecheck:test && node --test --test-concurrency=1 tests/*.test.ts tests/fixtures/native-claude-team/model.test.ts tests/fixtures/native-opencode-team/model.test.ts tests/fixtures/native-codex-team/model.test.ts",
     "test:native:claude": "node --test tests/native-claude-team.native.ts",
     "prebuild": "pnpm --filter @agent-teams/task-change-ledger build"
   },

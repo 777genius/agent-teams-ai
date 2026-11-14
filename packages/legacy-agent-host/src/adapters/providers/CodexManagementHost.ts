@@ -6,6 +6,7 @@ import { CapturedProcess } from './CapturedProcess.js';
 import { codexByteTransport } from './codexByteTransport.js';
 import { ManagementCommandError } from '../../management/commandRecords.js';
 import { codexManagementProfileSchema } from '../../management/profile.js';
+import { qualifiedCodexProtocolRevision } from '../../composition/runtimeSourceQualification.js';
 
 import type { CapturedProcessPort } from './CapturedProcess.js';
 import type { CodexManagementProfile } from '../../management/profile.js';
@@ -32,6 +33,7 @@ export class CodexManagementHost {
   ) {
     const parsed = codexManagementProfileSchema.safeParse(profile);
     if (!parsed.success) throw new ManagementCommandError('invalid');
+    qualifiedCodexProtocolRevision(parsed.data.protocolRevision);
     this.profile = structuredClone(parsed.data);
     for (const root of [
       this.profile.cwd,

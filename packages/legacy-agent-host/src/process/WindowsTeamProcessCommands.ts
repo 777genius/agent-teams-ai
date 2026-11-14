@@ -1,5 +1,7 @@
 import { performance } from 'node:perf_hooks';
 
+import { ServiceRefusal } from '../owned-process/codec.js';
+
 import { serviceSource } from '../owned-process/retainedServiceContracts.js';
 import type { WindowsServiceCapture, WindowsServiceIntent, WindowsServiceOutcome } from '../owned-process/retainedServiceContracts.js';
 import type { ProcessTeamOwnerContext } from './TeamProcessCommands.js';
@@ -31,6 +33,7 @@ const refuse = (code: 'hold' | 'conflict' | 'forbidden' | 'invalid'): never => {
   throw new Error('process:' + code);
 };
 const unknown: WindowsServiceOutcome = Object.freeze({ state: 'unknown' });
+const ERROR_NOT_FOUND = 1168; // Windows WinError.h: the original capture's keyed record is missing.
 
 /** Native awaits always leave the Team fence; re-entry validates the same stored command. */
 export function createWindowsTeamProcessCommands(context: WindowsProcessJournal) {
@@ -44,9 +47,15 @@ export function createWindowsTeamProcessCommands(context: WindowsProcessJournal)
   const same = (left: unknown, right: unknown) => left === undefined || right === undefined
     ? left === right : digest(left) === digest(right);
   const frozenReceipt = (receipt: ProcessCommandReceipt) => structuredClone(receipt);
-  const storedOriginal = (original: ProcessCommandReceipt) => {
-    const receipt = context.readReceipt(original.commandId);
+  const storedOriginal = (original: ProcessCommandReceipt, maintenance = false) => {
+    // Public lookup remains principal-bound. Only the existing admin lifecycle can finish
+    // another principal's original cleanup, without disclosing or replacing its command.
+    if (maintenance) context.enter('admin');
+    const receipt = maintenance
+      ? context.processReceipts().find(row => row.commandId === original.commandId)
+      : context.readReceipt(original.commandId);
     if (!receipt || receipt.operation !== original.operation ||
+        receipt.principalId !== original.principalId ||
         receipt.requestDigest !== original.requestDigest ||
         receipt.authorityRevision !== original.authorityRevision ||
         !same(receipt.nativeIntent, original.nativeIntent) ||
@@ -57,7 +66,7 @@ export function createWindowsTeamProcessCommands(context: WindowsProcessJournal)
           receipt.originalRegistration.memberName !== original.originalRegistration.memberName ||
           (original.originalRegistration.policyRequested && !receipt.originalRegistration.policyRequested))))
       return refuse('conflict');
-    return receipt;
+    return maintenance ? frozenReceipt(receipt) : receipt;
   };
   function registerInput(input: ProcessRegisterInput): ProcessRegisterInput {
     if (!input || !Number.isSafeInteger(input.pid) || input.pid <= 1 || input.pid > 0x7fffffff ||
@@ -121,6 +130,13 @@ export function createWindowsTeamProcessCommands(context: WindowsProcessJournal)
       if (intent.command.operation !== 'capture') return refuse('hold');
       if (result.state === 'not-dispatched' && !receipt.capture && !registration.policyRequested) {
         receipt.state = { phase: 'refused', native: 'not-requested' };
+        context.persist(receipt);
+        options.invalidate();
+        return frozenReceipt(receipt);
+      }
+      if (result.state === 'refused' && result.reason === ServiceRefusal.missing &&
+          result.nativeCode === ERROR_NOT_FOUND && !receipt.capture && !registration.policyRequested) {
+        receipt.state = { phase: 'refused', native: 'refused' };
         context.persist(receipt);
         options.invalidate();
         return frozenReceipt(receipt);
@@ -214,32 +230,46 @@ export function createWindowsTeamProcessCommands(context: WindowsProcessJournal)
       return frozenReceipt(completed);
     });
   }
-  async function settle(original: ProcessCommandReceipt, deadline: number): Promise<ProcessCommandReceipt> {
+  async function settle(original: ProcessCommandReceipt, deadline: number, maintenance = false): Promise<ProcessCommandReceipt> {
     options.assertAsyncCurrent?.();
+    const retryNoDispatch = original.nativeSettlementNotDispatched ? original.nativeSettlement : undefined;
     let first: WindowsServiceIntent | undefined;
     const selected = store.fenced(() => {
       context.enter('read');
-      const receipt = storedOriginal(original), capture = receipt.capture;
+      const receipt = storedOriginal(original, maintenance), capture = receipt.capture;
       if (receipt.operation !== 'terminate' || receipt.state.phase !== 'completed' ||
           receipt.state.native !== 'observed-absent' || !capture || capture.version !== 5 ||
-          !aliveBudget(deadline)) return receipt;
+          receipt.nativeSettlementConfirmed || !aliveBudget(deadline)) return receipt;
       context.enter('admin');
       if (context.processReceipts().some(value => value.operation === 'terminate' &&
           value.state.phase === 'requested' && same(value.capture, capture))) return receipt;
-      if (!receipt.nativeSettlement) {
+      if (!receipt.nativeSettlement || (receipt.nativeSettlementNotDispatched && retryNoDispatch &&
+          same(retryNoDispatch, receipt.nativeSettlement))) {
         first = native.prepareControl(capture, 'settle');
         receipt.nativeSettlement = structuredClone(first);
+        delete receipt.nativeSettlementNotDispatched;
         context.persist(receipt); // Same completed receipt, before the original settle await.
       }
       return frozenReceipt(receipt);
     });
-    if (!selected.nativeSettlement) return frozenReceipt(selected);
+    if (!selected.nativeSettlement || selected.nativeSettlementConfirmed) return frozenReceipt(selected);
     // A serialized intent has lookup authority only. Natural exit never mints a Stop receipt.
-    await outcome(first ?? selected.nativeSettlement, deadline, !!first);
+    const result = await outcome(first ?? selected.nativeSettlement, deadline, !!first);
     options.assertAsyncCurrent?.();
     return store.fenced(() => {
       context.enter('read'); options.assertCurrent();
-      return frozenReceipt(storedOriginal(selected));
+      const receipt = storedOriginal(selected, maintenance);
+      if (result.state === 'settled' && aliveBudget(deadline) && same(result.capture, receipt.capture)) {
+        context.enter('admin');
+        receipt.nativeSettlementConfirmed = true;
+        delete receipt.nativeSettlementNotDispatched;
+        context.persist(receipt); options.invalidate();
+      } else if (result.state === 'not-dispatched' && !receipt.nativeSettlementNotDispatched && !receipt.nativeSettlementConfirmed) {
+        context.enter('admin');
+        receipt.nativeSettlementNotDispatched = true;
+        context.persist(receipt); options.invalidate();
+      }
+      return frozenReceipt(receipt);
     });
   }
 
@@ -295,7 +325,7 @@ export function createWindowsTeamProcessCommands(context: WindowsProcessJournal)
       }
       return frozenReceipt(receipt);
     });
-    if (!selected?.nativeSettlement || !aliveBudget(deadline)) return;
+    if (!selected?.nativeSettlement) return;
     const result = await outcome(first ?? selected.nativeSettlement, deadline, !!first);
     options.assertAsyncCurrent?.();
     store.fenced(() => {
@@ -305,7 +335,8 @@ export function createWindowsTeamProcessCommands(context: WindowsProcessJournal)
       assertNaturalOriginal(selected, receipt);
       if (!receipt.nativeAbsence) return refuse('hold');
       if (!same(receipt.nativeSettlement, selected.nativeSettlement) ||
-          receipt.nativeAbsence.settlement === 'settled' || !aliveBudget(deadline)) return;
+          receipt.nativeAbsence.settlement === 'settled' ||
+          (!aliveBudget(deadline) && result.state !== 'not-dispatched')) return;
       if (result.state === 'settled' && same(result.capture, capture)) {
         receipt.nativeAbsence = { ...receipt.nativeAbsence, settlement: 'settled' };
       } else if (result.state === 'not-dispatched' && receipt.nativeAbsence.settlement === 'requested') {
@@ -316,6 +347,15 @@ export function createWindowsTeamProcessCommands(context: WindowsProcessJournal)
   }
   async function reconcileNatural(capture: WindowsServiceCapture, deadline: number): Promise<void> {
     options.assertAsyncCurrent?.();
+    const stopped = store.fenced(() => {
+      context.enter('admin');
+      const receipts = context.processReceipts().filter(receipt => receipt.operation === 'terminate' &&
+        receipt.state.phase === 'completed' && receipt.state.native === 'observed-absent' &&
+        same(receipt.capture, capture));
+      if (receipts.length > 1) return refuse('hold');
+      return receipts[0] && frozenReceipt(receipts[0]);
+    });
+    if (stopped) { await settle(stopped, deadline, true); return; }
     let original: ProcessCommandReceipt | undefined = store.fenced(() => {
       context.enter('admin');
       return aliveBudget(deadline) ? naturalOriginal(capture) : undefined;

@@ -429,9 +429,13 @@ test('Codex profile enforces native 1 MiB ceiling before allocation and preserve
 });
 
 for (const protocolRevision of ['0.162.0', '0.169.0'] as const) test(
-  `real public Codex ${protocolRevision} D uses selected config, same-thread tools, two attributed inputs and exact interrupt`,
+  `Codex ${protocolRevision} enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt`,
   { timeout: 5000 },
   async () => {
+    if (protocolRevision === '0.169.0' && !(process.platform === 'darwin' && process.arch === 'arm64')) {
+      assert.throws(() => fixture({ protocolRevision }), { reason: 'unqualified-version' });
+      return;
+    }
     const f = fixture({ protocolRevision });
     const { driver, capabilities } = await f.provider.factory.open(f.context.request);
     const events: Event[] = [];
@@ -753,9 +757,13 @@ const policyCatalog: CodexConfiguredMcpCatalog = {
 };
 for (const protocolRevision of ['0.162.0', '0.169.0'] as const) for (const mode of ['appOnly', 'inherited'] as const)
   test(
-    `managed Codex ${protocolRevision} ${mode} cold restore keeps its original thread across Host endpoint rotation`,
+    `managed Codex ${protocolRevision} ${mode} enforces tuple eligibility and retained-thread restore across Host endpoint rotation`,
     { timeout: 5000 },
     async () => {
+      if (protocolRevision === '0.169.0' && !(process.platform === 'darwin' && process.arch === 'arm64')) {
+        assert.throws(() => fixture({ protocolRevision }), { reason: 'unqualified-version' });
+        return;
+      }
       const catalog: CodexConfiguredMcpCatalog = {
         ...policyCatalog,
         servers: [
@@ -883,6 +891,11 @@ for (const protocolRevision of ['0.162.0', '0.169.0'] as const) for (const mode 
         assert.ok(foreign.cleanupCalls() > 0);
       }
       if (protocolRevision === '0.162.0' && mode === 'appOnly') {
+        if (!(process.platform === 'darwin' && process.arch === 'arm64')) {
+          assert.throws(() => fixture({ ...options, protocolRevision: '0.169.0', generation: 2, checkpointData: checkpoint }),
+            { reason: 'unqualified-version' });
+          return;
+        }
         const relabeled = fixture({ ...options, protocolRevision: '0.169.0', generation: 2, checkpointData: checkpoint });
         await assert.rejects(relabeled.provider.factory.open(relabeled.context.request), /Codex member unavailable/u);
         assert.equal(relabeled.child.frames.some(frame => frame.method === 'thread/resume' || frame.method === 'thread/start'), false);

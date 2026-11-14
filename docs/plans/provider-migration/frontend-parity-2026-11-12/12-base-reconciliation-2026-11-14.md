@@ -308,3 +308,93 @@ finite Update A-to-B UI, automatic cron occurrence, and cold lifecycle proof.
 These remain separate unfinished slices; the nine lanes do not silently stand
 in for them. The previously open Darwin same-inode qualification retains its
 independent original scope described by P09 sections 47/75.
+
+
+## 2026-11-14 login and lifecycle integration
+
+- Import the independently reviewed finite Codex browser/device login proof and the
+  Claude same-profile cold Resume/active-Quit proof onto the reconciled parent3a.
+  The three existing runtime lanes retain Run now and additionally require one
+  real six-field wall-clock cron occurrence, an exact linked task/effect, and Pause.
+- The original app epoch spawn callback is shared without changing its invocation,
+  identity, captured group, original checkpoint-upgrade guard or cleanup authority.
+  The original bounded failure snapshot/screenshot block moves unchanged in
+  behavior to `desktop-captured-app.ts`; this gives the composition file room
+  without changing the800-line cap or adding a legacy exception.
+- The lifecycle lane calls its final active/queued verifier after ordinary app Quit
+  and before fallback cleanup. Receipts require original unknown/cancelled input
+  outcomes, no queued delivery, two app/Host epochs absent, writer-lock release,
+  exact peer-written history, identical compiled bundles and no cold prompt replay.
+- Existing native restart and genuine vendor qualification scopes remain separate.
+  New workflow receipts and screenshot hashes are mandatory. These integrations
+  are implementation candidates until their actual Electron jobs finish; no
+  static/source review is recorded as an executed GUI PASS.
+
+## 2026-11-14 handoff reconciliation with parent def734
+
+The published completion branch remained at
+`d0710ecb6cc12499433bce985a29f723119fc85c`, while #1186 advanced to
+`def734338f13bcc3209e78079a0cedbc48f05a5b`. The preserved local login
+(`a7270d7cd3bc16519c2b6b8340d52f92fec375ef`) and lifecycle
+(`ee01531f23f7d205663b86c0d8fd19bacca122fe`) changes and the eight staged
+integration files were carried into a separate worktree. They were not lost,
+replaced with an older worktree, or treated as already published evidence.
+The next published integration retains d071 and def734 as its two parents.
+
+Six installer conflicts use the parent's newer captured acquisition API.
+The incremental production correction rechecks the original captured source
+inside the atomic manifest writer's `beforeCommit`, after temporary-file sync
+and immediately before rename. Its regression failed before the correction
+and passed after it. Unknown Host publication cannot produce a Ready result
+or discard the previously retained A/B packages.
+
+The Host MCP catalog retains the parent's process-factory interface. Member,
+scheduled and captured-management composition all pass the original Windows
+launch and source origin through that factory. Team model probes retain both
+the process origin and product-roster revision. Codex 0.169 eligibility remains
+Darwin ARM64 only; Linux finite peers use qualified 0.162. The negative tests
+assert refusal before allocation on other tuples. No native eligibility guard
+is removed to make a protocol test pass.
+
+The original selection journey now has a separate Darwin ARM64 installer
+variant. A finite, checksum-pinned registry supplies one package containing
+TEST executables. The existing model-picker Update dialog drives the stock
+metadata, download, integrity, extraction, staged version validation,
+immutable package, atomic manifest and Host source publication. A stays live
+on 0.162 while B is published and subsequently launched on 0.169. Original
+Settings Providers and Codex Manage then read the healthy B source without
+another acquisition or source write. This is renderer reload and live source
+selection evidence; it does not claim a separate cold installer restart or
+an actual vendor binary.
+
+OpenCode V2 Settings has its own Linux lane and its own strict receipt verifier.
+It stages the checked Bun/engine graph without running the bundled legacy CLI.
+Original controls exercise rejected API key, explicit replacement, model test,
+global default, project override, independent-project inheritance, clearing the
+override and renderer reload. Five finite localhost requests and their original
+native probe identities are required. Stock Quit must precede harness cleanup;
+model shutdown and original-process absence must be recorded before a PASS
+receipt is persisted. This lane does not inherit the finite-peer-only flag or
+qualify unsupported native OAuth/forget, vendor inference, or another platform.
+
+Windows recovery reuses the applicable f544 fixes for definitive no-dispatch
+and missing-capture settlement. Further corrections retain output hints during
+pending calls, make incomplete retained shutdown retryable with a fresh attempt,
+avoid retaining rejected Stop replies, and complete persisted lifecycle
+settlement after original metadata has been unregistered. Genuine original
+Stop receipts remain mandatory; unknown lookup-only cases never issue a new
+native Stop. Native drain work leaves a bounded reply reserve inside the
+original admitted deadline rather than extending it.
+
+The expanded workflow declares eleven existing Linux lanes, the finite Darwin
+installer lane and the OpenCode-only V2 lane. It checks the actual runner tuple,
+keeps Linux process inputs conditional on Linux, and preserves exact source,
+receipt, screenshot and physical cleanup checks. #1192 remains Draft. No real
+Claude/Codex executable, main merge, release, default switch or Stage2 is allowed.
+
+Local constituent build, contract, installer, process and input-admission checks
+are recorded separately from Electron acceptance. Full local application typing
+and typed lint again ended with exit137; they remain required CI gates, not
+successes. New UI assertions are implementation candidates until the original
+Electron jobs finish on the published integration commit and their screenshots
+and cleanup evidence are reviewed.

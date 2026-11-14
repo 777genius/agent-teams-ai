@@ -5025,3 +5025,473 @@ Keep `tsconfig.legacy-agent-host-scripts.json`, every other config, NodeNext, st
 Source stays zero until independent review and root publication of this exact plan. After source GO, stage only these two deltas, freeze full before/after hashes and exact inverse proof for all three variants, and verify the runtime suffix from `export const isProcessRef` through end-of-file byte-for-byte. Independently verify the type export name/shape and that no import edge remains from the contracts leaf to shared Team types.
 
 Root owns canonical validation: repeat the originally failing scripts typecheck on the composed source, then the existing Main/renderer typechecks needed to verify both unchanged consumer names, plus the existing source/lint gates for these paths. Reuse already scheduled canonical checks where they cover the same composed source. No new unit case or new native campaign is justified for this erased two-field relocation; existing §89 tests retain their own prior result and actual future ordinary CI retains its original acceptance role. This appendix does not claim that the compiler has passed, that a native failure is fixed, or that any workflow has been rerun.
+
+
+## 92. Use the existing source-build heap allowance at the captured Darwin Desktop TEST boundary
+
+### 92.1 Actual new failure and its limited scope
+
+Status: PLAN ONLY / source0. This appendix preserves the entire current P09 `67e83c640af6ec32c82b6e3841d4016c9cdc1503` as its exact prefix. It refines §88's TEST environment scope using a new actual failure; it does not change production memory policy, source/Runtime authority or any acceptance result.
+
+Parent Main run43582225377, job132409194247, uses PR head `3a2882e1e07cfc0c8f6f51be322b6244b7e6a179` and executed merge `9ca2fac456faf7cbc138b984f282df8f606ac659`. The original Create-with-native-launch source Desktop attempt fails before Electron/CDP/Host entry. Full job log is `fa73a4965659c1cbf463e2c3bd5cf5e54da717f5`. Official artifact14109011693 is207203 bytes, ZIP SHA256 `12eef0ce5505214203e728dd13f4a9a02590fc48fb4e6440d35c4f03ddc24320`; only its original small logs/receipt were read, with no rerun.
+
+The original `desktop-app.log` blob `e579692e604f5a60797c755c27348ad9ff0b7df1` shows the pinned Node24.21.0 dev build transform3964 modules and enter SSR rendering, then fail at about2034 MiB with `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory`. The unchanged `electron-vite dev` child terminates with SIGABRT and its original `dev:mcp` leader exits1. `connectCapturedDesktopApp` reports the downstream original “captured app exited during startup” assertion. The180000ms startup deadline did not expire.
+
+Original receipt blob `e1993278524211d7e3a649669e9ba41b4ad5e646` is INCOMPLETE/native-create-ui with operations[], no occupied CDP listener and capturedHostObserved=false. Cleanup has remaining[]; capturedHostAbsent remains null because that Host was never observed. Source hashes before/after match. The only sentinel row is the original allowed `claude-multimodel --version`, blob `6364a862f901e4ca8d4ecccb4d90cdd842a44162`. The earlier genuine Claude commands proof and original47 script cases passed in this job; those independent results do not qualify the unstarted Create flow. Evidence packet `e9a559d4d0ff0bc4840230df9461f1a8c6e046c8` retains complete hashes and source joins. No free-RAM measurement or runner-capacity guarantee is inferred.
+
+One subsequent read of five other terminal original jobs and their small artifacts confirms the same app-log sequence in every row:3964 modules, SSR rendering, V8 heap-limit OOM and electron-vite SIGABRT. These are observed failures, not deductions from the common outer assertion:
+
+| Original job | Existing variant | Original app-log blob |
+| --- | --- | --- |
+|132409194267|native-mixed-v2-create-launch-ui|`0aa80559f33b5f02d715ccae148965dd4952e1ab`|
+|132409194287|stopped-import-ui|`41af570b194e5c06523a050d0c127f78c04672e3`|
+|132409194289|stopped-import-native-launch, actual current-source producer|`b512127fc25c8f370c225c6acf586d945bd6c9a9`|
+|132409194324|native-quit-pending-open-readback|`e84672380ee88b26d1f0adcbae29292a57c52520`|
+|132409194356|native-create-member|`3f96b979534d502fe7b3c65294c4668fd427bc75`|
+
+Bulk evidence `1a47eb9b2a09c602a41c8c58bc78211e6a474be0` retains all five complete job-log blobs, verified archive IDs/lengths/SHA256, exact original receipt-member hashes and extracted observations. Receipts are INCOMPLETE with operations[], preserved source freeze and empty cleanup. The stopped-import-native-launch producer also explicitly records phase=connect and zero catalog/model/business/native-child counts. Its outer Stop/Quit assertion is downstream of the same failed builder, not an observed Stop defect. No other job result or model behavior is inferred from this set.
+
+Root separately verified original P7 job132409194111 SUCCESS on the same Darwin ARM merge/Node24.21, evidence `399be4f7807eeaa9cc689ec3cf15e376483fa6af` and cold oracle `d808ee395c2616e1b5d882b4ca8ecaf2f2cfcfa3`, artifact14109036894. Its existing8192 cold arm reached the original source/packed launch-stop and separate cold Host/UI child-stop/physical-absence boundaries. This agent did not download that artifact again. That positive result supports retaining the old arm exactly; it does not qualify the newly included source modes or SDK cold survival.
+
+### 92.2 Existing shared source-build entry, without a second mode registry
+
+The current `desktop-backend-smoke.ts` `e890e4ecacd577e74bd3a900203c9971071a427f` requires `LEGACY_DESKTOP_BACKEND_GO === '1'` at its original entry before preparing the fixture. Its existing mode handling and `prepareDesktopProofMode` `df626ac0ed3a335699c556601bab859b5b82d829` retain the finite known-mode and additional original native/controlled grants. No new list of modes, public flag, selector or helper is required.
+
+The common workflow `ci.yml` `b992f42311f62005ee24d51df71a2e83a4268a1f` already sets that explicit BACKEND_GO in the captured source Desktop setup at1028. The original cold qualifier `fc655e33538c3bed7b35b80d34b871890c03b5fc` also sets BACKEND_GO='1', its original PROCESS_COLD_UI_GO and mode in one closed child environment at110. Thus its supported source invocation satisfies the common entry predicate; its own existing8192 literal remains unchanged.
+
+The same smoke module selects a packed invocation only from its original truthy `LEGACY_DESKTOP_PACKED_CAPTURE_PATH`, validated by `readCapturedCandidateElectron` before fixture creation. At its original spawn, a packed process receives a copy of the same fixture environment. Exclude that existing packed branch from the new common arm by using the identical source-versus-packed discriminator; do not newly send a Node option into packaged Electron. Preserve the complete pre-existing cold arm independently, including its prior behavior for low-level flag combinations outside the normal qualifier. The source branch continues through the unchanged selected Node/pinned pnpm `dev:mcp` invocation.
+
+The actual environment helper `desktop-runtime-source-fixture.ts` currently supplies the8192 literal only to §88's Darwin/arm64 process-cold conjunction. Therefore native-create-ui reaches the original source builder without it. The production launcher `dev-with-runtime.mjs` `9cc8140d2a88207312580450aa9db0c8abc63b0a` copies its original environment and calls unchanged `ensureMinimumNodeOldSpaceEnv`; `node-options.mjs` `423d10be677fa86cc12a56cf433a378e4a0639e5` leaves an absent value absent and preserves8192. The existing package/CI source build already uses8192 as recorded in §88. Make that same allowance explicit at the one shared authorized source TEST environment construction rather than add mode-specific heap branches after each failure.
+
+### 92.3 One existing write path, two exact variants
+
+| Existing TEST path | Exact full preimage | Bounded change |
+| --- | --- | --- |
+| `scripts/legacy-agent-host/desktop-runtime-source-fixture.ts` | Parent `6a7d279caf2d2254ab0cae2bd87103069d87ba67` (298 lines); native and qualification `46054fc75555c65df9d099efb08a01f80353bfe6` (303 lines) | Keep the outer Darwin + arm64 tuple and the complete existing cold conjunction; add only OR (BACKEND_GO='1' + original source branch, falsy PACKED_CAPTURE_PATH). Retain the exact fixed `NODE_OPTIONS: '--max-old-space-size=8192'` field and the empty-object alternative. |
+
+These three preimages were read from exact current heads `3a2882e1e07cfc0c8f6f51be322b6244b7e6a179`, `0e88cb3d18ac710148230bd2dfe5b5f45b22a248` and `ad17fbbd267851291abdca9b565638c774262834`. Preserve each full child variant, including Linux input handling. Do not change the qualifier, smoke, package/lock, workflow, production dev helper, dependencies, source caps or any assertion.
+
+The exact selected predicate is:
+
+```ts
+process.platform === 'darwin' && process.arch === 'arm64' &&
+((process.env.LEGACY_PROCESS_COLD_UI_GO === '1' &&
+  process.env.LEGACY_DESKTOP_PROOF_MODE === 'process-cold-ui') ||
+ (process.env.LEGACY_DESKTOP_BACKEND_GO === '1' &&
+  !process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH))
+```
+
+This field is constructed once in the existing fixture environment, before the original app capture/spawn. It must not read, concatenate or forward arbitrary parent NODE_OPTIONS. The old cold conjunction remains sufficient exactly as before; it is not made dependent on the new GO/source conjunction. The new arm requires the positive tuple, BACKEND_GO and the original non-packed branch. If neither arm applies, add no field, including no undefined property. Existing Linux and unselected/default branches stay unchanged; existing packed behavior changes nowhere because only the new arm excludes packed, while the old cold arm is preserved verbatim. This explicitly supersedes only §88's narrower other-source-mode exclusion for the common authorized Darwin source builder.
+
+Disclose unchanged environment sharing: the source fixture environment is passed to its original selected Node/pnpm/dev descendants, and the controlled-process fixture can pass it to its original TEST root as already recorded in §88. This is not claimed to be a Vite-only value. Native provider recipes, their fixed flags/environment, original authority and model operations are not rewritten by this amendment. All180000ms startup and original per-job/case/action deadlines, request/model limits, process-group ownership, actual Stop/Quit and physical cleanup oracles remain unchanged.
+
+The helper is already explicitly pinned in `desktop-proof-sources.ts` at633 and the unchanged node-options dependency in `desktop-proof-supplementary-sources.ts` at10. No source-roster edit or new file is required.
+
+### 92.4 Review and normal verification
+
+Root publishes this exact appendix before source GO. Independent review must confirm the common positive source entry, exact preservation of the original cold arm, packed exclusion from only the new arm and full variant inverse. Freeze only the one-path/two-distinct-blob predicate delta after GO; every other byte remains unchanged. No new unit test that merely mirrors the conditional or new diagnostic collector is needed.
+
+Root owns existing script types, scoped lint/source-size/source-freeze checks and the ordinary next exact-head source Desktop gates. The actual original Create journey must then reach its real UI/native result with its unchanged assertions, and each other existing mode retains its own independent CI qualification. The new common source scope does not infer failures beyond the six actual original logs above, or claim that larger permitted heap alone guarantees successful compilation. Do not retry the failed attempt, reset a running build, extend a timeout, skip a platform, loosen the original exit assertion or claim this source review as E2E PASS.
+
+
+### 92.5 Exact executed-checkout clarification
+
+This is a provenance-only correction to §92.1 and evidence packets `e9a559d4d0ff0bc4840230df9461f1a8c6e046c8` / `1a47eb9b2a09c602a41c8c58bc78211e6a474be0`; their original log, receipt and archive bytes are unchanged. Each already retained full log for jobs132409194247,132409194267,132409194287,132409194289,132409194324 and132409194356 explicitly checks out and reports `git log -1 --format=%H` as `3a2882e1e07cfc0c8f6f51be322b6244b7e6a179`, also the original SOURCE_HEAD assertion. That is their executed checkout. `9ca2fac456faf7cbc138b984f282df8f606ac659` is their workflow/artifact-name merge identity, not the checkout. Thus §92.1's wording “executed merge” is superseded for these six jobs only. Exact original excerpts and line references are retained in `1a2177ca17ce94f894fe87de206ed715b3132872`; no CI log was fetched again or job repeated.
+
+P7 job132409194111 separately executed `9ca2fac456faf7cbc138b984f282df8f606ac659`, as root verified from its own original evidence `399be4f7807eeaa9cc689ec3cf15e376483fa6af`; do not call it the same executed checkout as the six failed source builds. All six observed V8 heap failures, the existing cold-arm positive result within its own exact input, §92's one-file/two-variant scope and fixed-heap predicate are unchanged. This clarification adds no source or acceptance action and transfers no qualification between the two commits.
+
+## 93. Preserve the process-stop alias through the existing public contracts entrypoint
+
+### 93.1 Original failure and exact scope
+
+The original parent run43582225377, Main lint job132411599809, checked out and reported `git log -1 --format=%H` as merge `9ca2fac456faf7cbc138b984f282df8f606ac659`. Its unchanged command `pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main` finished with **3311 problems: one error and3310 warnings**. The sole error is `no-restricted-imports` at `src/shared/types/team.ts:806:1`: the §91 alias imports `@features/agent-backend/contracts/processes` instead of a feature public entrypoint. Full original UTF8 log `a83273263055b0f7b32f0dbddf9b9c42adee1c50` (1325687 bytes) and facts/steps bundle `b26a8b7a6935de82a958cd029b86de5ac948bde8` have complete matching readbacks. This is a concrete new architecture-lint error; it is separate from previously repaired type and features-lint failures.
+
+The existing rule in `eslint.config.js` blob `7ca4b71fe3a357c00c110c9b75d3034e06e4b22c`, `feature-public-entrypoints-only`, applies to shared code and rejects `@features/*/contracts/*`. The already existing `@features/agent-backend/contracts` public entrypoint is the correct boundary. Keep the rule, compiler configuration, canonical interface and parser unchanged.
+
+### 93.2 Exactly two existing source paths
+
+| Existing path | Exact full preimage in parent, native and qualification | Minimal change |
+| --- | --- | --- |
+| `src/features/agent-backend/contracts/index.ts` | `62b03f3b8019162cfb6a154919503aec2c654088` | Add only `export type { ProcessStopSelection } from './processes';` beside the existing alphabetic contract exports. |
+| `src/shared/types/team.ts` | `55e75e63dc6221a49d2c04ece6980e0ff7b1e091` | Change only the existing `CapturedTeamProcessStop` type re-export source from `@features/agent-backend/contracts/processes` to `@features/agent-backend/contracts`. |
+
+All six current working-branch file reads match these preimages. The shared file is also byte-identical at the original failing merge. The underlying `src/features/agent-backend/contracts/processes.ts` blob `596444a7ef545c17f455bf00363c0d643bb13913` remains outside the write scope. It continues to own the unchanged canonical interface:
+
+```ts
+export interface ProcessStopSelection {
+  processRef: string;
+  originalCommandId?: string;
+}
+```
+
+The public barrel exports only this existing type by name; do not re-export process runtime functions or duplicate the interface. The shared public name `CapturedTeamProcessStop` remains an alias of that same interface. This preserves both fields, their optionality and existing consumer semantics. Both added/repointed exports are type-only and add no runtime import or effect. All process operations, receipt/currentness guards, strict parser, Stop behavior and emitted runtime logic remain unchanged. No test, configuration, new file, source-cap, provider, native or workflow change belongs to this correction.
+
+### 93.3 Publication and bounded verification
+
+Root publishes this exact appendix on P09 prefix `14a1646a1747f3be034c4edba7e892115d954076` before source GO. Freeze the exact two-file delta and complete readbacks; inverse checks must restore both full preimages, and the canonical process interface/parser must remain byte-identical. Preserve every other barrel export and every other shared type byte.
+
+Root owns the existing Main lint and relevant strict type gates on the composed source. No new unit case or native campaign is required for this type-only entrypoint correction. The unavailable executor leaves the interrupted local Main check unknown; neither source review nor the earlier checked Host results substitute for the next ordinary original CI type/lint result. The retained V1/V2 Desktop job132411599820 has a separate actual `team.launch.start` HOLD/unknown and unread artifact14111966683; this correction makes no claim about that failure or any native qualification.
+
+## 94. Retain closed startup facts in the original Codex Login target read
+
+### 94.1 Original failure and limited conclusion
+
+Original qualification run 43582227542 / job 132422928717 executed checkout `0e88cb3d18ac710148230bd2dfe5b5f45b22a248`. Original evidence `e9affc1249051a9cf897f18b070e6f7f88acf82a` and triage `c235cfafa2900ce843457a63bc6bb755cd6ac481` retain zero visible matches for `button[aria-label="More actions"]`, zero UI steps/cases and no authorization attempt. The failure precedes the first hover or click.
+
+Causal audit `1b580b61029af781929a3d446c3a544e0f1251bf` reads the exact Main/Renderer chain. Independent backend/account handlers precede legacy service readiness; Renderer waits for startup-ready before mounting App. The harness catches its unavailable `config:getClaudeRootInfo` request separately. Its failure does not establish a React exception. Startup failure/pending state, hidden or differently labelled target, and render failure remain unproven alternatives because this artifact lacks the relevant same-read DOM facts.
+
+### 94.2 One existing TEST path
+
+Only `scripts/legacy-agent-host/desktop-ui-controls.ts` may change, from exact parent/native/qualification preimage `15703898ff4639a442745f93c6083688b1c04ff4`; all three current reads match. Within `clickExpression`, enrich only the first `readPoint(label)` for the existing exact More-actions selector and `open existing More menu` label. Subsequent hover/stability reads and every other control retain their original expressions. Existing NativeExtensions caller blob `f4de929a00bc1be8330e8530be116b1c19cc04e7` reuses that selector/label, so its same first unavailable read receives these passive facts too; no caller change or observed failure is claimed for that flow.
+
+The same existing evaluation executes its original target expression once. Only an unavailable result gains closed facts: raw selector count capped at 256, existing visible count, root presence/child count capped at 16, existing UI-initialized flag, splash presence/positive-size visibility/error/slow classes, document-complete and English/empty-language booleans, and a boolean matching the existing ErrorBoundary fallback's sole full-screen child/heading/alert-icon shape. That last field reports shape, not component ownership or an exception. Diagnostics never participate in target eligibility.
+
+Retain only booleans and bounded integers in the existing failure-facts object. Preserve the original failure and cause. Do not collect text, HTML, attribute values, URLs, account data, authentication material or console messages. Add no CDP/IPC call, startup query, listener, click, reload, retry, timer, case or budget. Keep original ownership guards, 30-second deadline, 100ms passive cadence and successful point result unchanged.
+
+### 94.3 Review and unchanged boundaries
+
+Read-only inspection of existing `desktop-team-ui-smoke.test.ts` blob `7fdae995de965243dea7f3deda3496f0a3da5259` confirms its four control cases use other selectors/labels; two require byte-identical owner/hover expressions. Preserve those checks and all original input counts. No test write is authorized; any necessary test delta needs its own declared scope.
+
+Freeze/inverse-check the one source delta; root owns existing script/control gates and the next original Desktop qualification. Source review cannot establish the missing-menu cause or E2E success. The acknowledged Quit left the previously observed esbuild process after its leader exited; the receipt does not prove survival for the full three-second cleanup window. This cut neither repairs that debt nor permits signaling or claims cleanup success.
+
+## 98. Keep the Codex resolver TEST type import at the existing public feature boundary
+
+Plan before source. Original native CI run43594548748, job132449753971, headc04761a8b45e31ff0c08e69fe5c628b9d555f528 failed on one `no-restricted-imports` error in `src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.test.ts:11`. Original full log is blob97ed83387918eb23ab45197efa3481afee3a82eb. This is a TEST type import diagnostic, not a native provider or product resolver failure. Existing warnings remain warnings.
+
+The sole writable file has exact preimage37aadfb9c291f5ddb0803e50b664c5b48dc58066 on parent, native and qualification repairs. Replace only the source string of `import type { CapturedCodexManagedManifest }` with `@features/codex-runtime-installer/main`. The existing public entry already exports this identical type. Preserve the partial runtime mock's original private `importActual` target, every fixture, case, assertion, timeout and production source byte. Do not widen a lint exception, export a new API, change strict options or alter tests to accept a different result.
+
+Root and an independent peer first verify the public export and this one-line write scope, then publish this appendix. After SOURCE GO, freeze the exact one-line forward/inverse diff and run the original `lint:ci:files` configuration against this original TEST file. No new unit test is needed: the change erases at runtime and the existing execution assertions are byte-identical. Keep the ordinary full Main lint and compiler CI gates mandatory; a bounded local lint result is not whole-repository or native qualification. Commit and immediately push each reviewed repair ref; do not advance live PR heads while original CI is active.
+
+## 95. Connect the original configured Quit/Composer Launch to its exact fixture role and one OpenCode preparation
+
+### 95.1 Original evidence and unchanged production authority
+
+Read-only packet `b32566be77052151206877eb1d174ac118e94f9a` retains the original batch4 jobs, full logs, artifact hashes and source joins. They executed `09fefda4c255fa172a52b89b2815d18085c79afc`; `889325183907aa17e91c8fb992afa086cab9c621` is the artifact merge label only. Claude active/pending Quit jobs132446133176/132446133267 and V2 active/pending jobs132446133073/132446133211 stop at the existing configured Launch response: the fixture contains only Alice with role member, while the mandatory Main configuration projection requires one lead. No model request or native allocation is accepted at that failure.
+
+PNG Composer job132446133228 already has Alice as lead. It reaches a rejected model request, with the oracle failure “native request retains deliberate TEST business input”; no business/probe observation is accepted. The exact Main `CapturedLocalModelReadiness` aggregate branch (blob `7d916d7e2b1edfe07d814184b1fbcf6b5bb553b3`) and Host `prepareTeamModelReadiness` (`d51831e769c6dc1906e60eeffc3dc20178aee1c6`) require one ordinary preparation for this original configured OpenCode Launch. The current lifecycle oracle enables ordinary probes only for Resume. The rejected HTTP body is not retained; this is a source-backed connected diagnosis, not a reconstructed wire observation.
+
+Repair the two TEST joins together. Keep the production one-lead projector, Main origin/currentness, exact action/target/account/source, original Host receipt/released cleanup and allocation guards unchanged. Do not activate resumeMode, introduce a native bootstrap exemption, seed a successful proof or call another preparation owner.
+
+### 95.2 Finite existing scope and sequential preimages
+
+Only these nine existing TEST paths may change. No workflow, production file, new helper path, dependency, native case, timeout or source-size baseline is added. The mode and runner preimages are the already frozen C10 successors; root publishes/composes that cut first. All other rows were read from the current three source variants. Preserve W01 native-only behavior and every unrelated qualification/native delta.
+
+| Existing path | Parent | Native | Qualification |
+| --- | --- | --- | --- |
+| `scripts/legacy-agent-host/desktop-backend-fixture.ts` | `2455282769cf3f129ae539ef034f9ed37964c3cc` | `2845e09bd38161818d358f7648a0b870a4f92bb5` | `3ae0c010b11c554996d825f6cef3b4b73ef2d121` |
+| `scripts/legacy-agent-host/desktop-proof-fixture.ts` | `235639b475ebb8688756f0380df5d87d398e5bbf` | `998652fcaf71261cb838af38014278e0c02650a0` | `a9733fc656085a2dd478e04aad1c989e29e01987` |
+| `scripts/legacy-agent-host/desktop-proof-mode.ts` | `9969cd67757a5ece3d4a2ede60fabe1006738b27` | `9969cd67757a5ece3d4a2ede60fabe1006738b27` | `b51acd4dda16537f460bc3ae9aef4f1f3d1c57e1` |
+| `scripts/legacy-agent-host/desktop-backend-smoke.ts` | `ac98687de5b410d9eca287e91ce492eb1fe42675` | `6f58f8e2ae8675489e67d5b1d62b55ef7a6b90d3` | `0a40bfbf284e2f4a94e9cf564b89b951559bf16f` |
+| `scripts/legacy-agent-host/desktop-native-stop-fixture.ts` | `0b4a8973310038dc7a13750b9583c6d8a215bd83` | `0b4a8973310038dc7a13750b9583c6d8a215bd83` | `0b4a8973310038dc7a13750b9583c6d8a215bd83` |
+| `packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts` | `3204ac6ac5ead2ba6b1621f9ad7d30b041bd1902` | `f49a5b22f1cb58c7a23e560061019b5fa8fd0940` | `3204ac6ac5ead2ba6b1621f9ad7d30b041bd1902` |
+| `packages/legacy-agent-host/tests/fixtures/native-opencode-team/model-probe.ts` | `90e2b904d8cedeb9e63becbd7e81ed71e7382c26` | `90e2b904d8cedeb9e63becbd7e81ed71e7382c26` | `90e2b904d8cedeb9e63becbd7e81ed71e7382c26` |
+| `packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.test.ts` | `e09e08f1a57a3213d3bb43d46f7fd3d32c17cdb7` | `e09e08f1a57a3213d3bb43d46f7fd3d32c17cdb7` | `e09e08f1a57a3213d3bb43d46f7fd3d32c17cdb7` |
+| `scripts/legacy-agent-host/desktop-opencode-v2-fixture.test.ts` | `e7dd31bff029300b478be3086b960764908ee088` | `e7dd31bff029300b478be3086b960764908ee088` | `e7dd31bff029300b478be3086b960764908ee088` |
+
+The existing source rosters already include model, model-probe, fixture and stop helper; no dangling or new roster entry is needed. Existing `desktop-launch-ui-smoke.ts` C10 successor `f22c23b06e7701cbfccb527d1ccf594a5fa8379d` is read-only.
+
+### 95.3 Genuine fixture topology and one original Main action
+
+Add one private TEST setup option to `prepareDesktopBackendFixture`, passed only from the already selected `nativeStopMode` in `desktop-proof-fixture`. It marks the existing Alice row as lead before profile serialization/hash/descriptor pinning. Preserve Alice/member IDs, existing principals/grants, generations, executable/configuration, role-context marker, saved fields, child recipes and any Bob member. This does not enable launchDialog or change its defaults/management/creation branches. The original group/attachment lead remains lead; unrelated fixture modes retain their exact old role expression.
+
+The V2 lifecycle mode adds an explicit configured-launch-preparation option only when it will call the existing `prepareDesktopNativeStop` setup. Resume and other oracle options retain their old values. Replace that helper's private provider-only OpenCode argument with a finite OpenCode model port on the same existing caller expression, so the selected provider and its preparation window are connected. Missing model/port for the positive OpenCode arm refuses before the original action; it cannot silently select Claude.
+
+The setup still performs the same original launch read, native global/project catalog reads and exact configuration. Immediately around its sole `team.launch.start` / `TEST-explicit-sandbox-setup-launch`, arm the returned `configuredLaunchPreparation` for that literal original command and unchanged selected launch/roster/member/model. The command ID attributes the TEST window; the native HTTP request is not claimed to echo it. Preserve the existing response evidence and assert `start.ok` first; on success additionally require one consumed preparation and the same model probe ledger entry. A finally disarm has no timer/effect and must not mask an original failure. No new Main IPC, separate probe.start, polling loop, retry or setup replay is introduced.
+
+### 95.4 Existing no-tools protocol owner and closed oracle window
+
+The existing `native-opencode-team/model-probe.ts` already owns exact ordinary-probe recognition, including the single pinned V2 trailing MAX_STEPS message. Extend this same protocol owner with the finite configured-launch window and its existing ordinary SSE reply. Move only the current ordinary reply block from model.ts into a typed reply function here: preserve request model/fallback, probe-count response ID, created timestamp, both exact chunks, status/content type and DONE/end order. Mechanical inverse must reconstruct the original reply body, accounting only for its explicit body/response/probe-count parameters. Coordination, W01 and business response codecs remain in their current branches. This cohesive classification/window/reply boundary owns the new preparation behavior; it is not a layout-only extraction.
+
+The positive configured option is V2 only and cannot combine with allowModelProbes, Settings, live-membership, coordination, shared-session, retained-process or other specialized probe modes. Preserve the ordinary lifecycle's original member/principal, image and held-response options. The closed window starts idle, arms once for the exact original setup command, and accepts exactly one original no-tools prompt at the existing route with TEST-model and the original TEST Bearer key, only while probes=0 and business=0. Wrong shape/route/model/key, unarmed, duplicate, rearmed, business-before-preparation or post-disarm probe fails through the existing sealed failure path. The exact V2 suffix rule is reused, not widened to arbitrary assistant text. After successful consumption and disarm, the existing business oracle handles the deliberate input unchanged. Neither cold reads nor a later action can rearm this window.
+
+Keep the global ordinary probe ceiling8 and business ceiling16. Preserve the native model's complete W01 branch and file cap800 through the semantic protocol extraction; no line packing or baseline increase is permitted.
+
+### 95.5 Explicit request arithmetic and original clocks
+
+| Original lane | Preparation HTTP requests | Business HTTP requests | Required total |
+| --- | --- | --- | --- |
+| Claude active Quit | unchanged0 | unchanged1 held original request; second Runtime input stays queued | 1 |
+| Claude pending-open Quit | unchanged0 | unchanged0 | 0 |
+| V2 active-input Quit | exactly1 (delta+1 against previously allowed0) | unchanged1 held; second Runtime input stays queued | 2 |
+| V2 pending-open Quit | exactly1 (delta+1) | unchanged0 | 1 |
+| V2 PNG Composer | exactly1 (delta+1) | unchanged original ONE8 plus TWO3 | 12 |
+
+Metadata reads add no inference. This is one already-required production preparation, not an extra business input. Keep the model HTTP15000ms, provider/management120000ms, selected V2 client180000ms and original Main budget `min(100000, selected requestTimeoutMs)`; Host preparation remains bounded by that remaining original Main cutoff and its captured modelProbeTimeoutMs. Keep the existing post-Start readiness waits (V2180000/Claude45000), input/Quit/Stop/cold deadlines and process observations unchanged. The TEST window adds no clock, renewal or capacity. Cold acceptance retains the same exact business/probe counts and zero automatic input; its original assertions are not waived.
+
+### 95.6 Existing-case verification and freeze
+
+Extend only the existing first model-oracle case with finite synthetic subscopes for the exact V2 configured preparation and refusal boundaries (unarmed/duplicate/rearm/wrong model/key/suffix, business before completion); preserve all original names, assertions and request loops. A passing single preparation uses the original SSE codec and does not add a native campaign. In the existing V2 descriptor composition case, construct the explicit file-only setup fixture and check the genuine lead plus unchanged member/management/descriptor identity and pins; its original launchDialog fixture assertions remain. No Corepack/Electron/model native process is added by that test.
+
+Freeze all three variants and exact inverse checks, including the moved reply body and all C10/W01 preimages. Independent peer and root publication precede source. Root owns the existing controlled cases, strict script/Host types and source-size gates, then ordinary original Desktop jobs. Source review alone does not qualify Quit, PNG, native custody or cold readback. The separate Resume/Review saved-roster transfer, prior-run heap and donor drain findings remain outside this cut.
+
+## 96. Preserve the captured Darwin ARM source build heap in the current stopped-import producer
+
+Original batch4 job132446133160 executed `09fefda4c255fa172a52b89b2815d18085c79afc`. Its retained packet `b32566be77052151206877eb1d174ac118e94f9a`, raw job log `38ffdf47737da97c4f73b57174cc82e6e9c860fb` and artifact14114885541 identify a failure in `desktop-current-stopped-app.log`: the current source App builder reaches approximately2053MiB and terminates with V8 heap exhaustion/SIGABRT before App startup, the original native turn or import. The artifact ZIP is98776bytes, SHA256 `f0d9b8842434e500e029db93a0b80b960ee728b32a1ba0613d7c9c52dd7beac8`. Native observations and input/metadata counters are empty, and cleanup reports no remaining process; neither the native journey nor import is qualified by this failed run.
+
+The §92 common builder correction does not reach this path. `produceDesktopCurrentStoppedTeam` constructs a separate literal child environment rather than inheriting the common source fixture environment. Its original `captureCurrentStoppedSourceInputs` already positively asserts Darwin, arm64 and Node24.21.0, validates the current frozen source and selected runtime, and returns before that child environment is assembled. The producer additionally requires the original stopped-import-launch mode and rejects donor-saved-only. This is the same bounded current-source build boundary, not the historical donor producer or a general runtime setting.
+
+The sole writable path is `scripts/legacy-agent-host/desktop-stopped-import-prior-run.ts`, preimage `41270638b4c552e5f535ff966506fbfaa1e6b13a` in parent, native and qualification. Add exactly `NODE_OPTIONS: '--max-old-space-size=8192'` to that existing literal environment after its original tuple/source admission. The unconditional literal is scoped by the already mandatory Darwin ARM assertions; do not create a second platform selector or copy an ambient NODE_OPTIONS value. Read-only source witness `scripts/legacy-agent-host/desktop-stopped-import-fixture.ts` is `b69f6132475fd33ab6d9c6d6b7d7ff4acf97e881`.
+
+Preserve every other environment field, original Node→Corepack→dev:mcp invocation, source/runtime hash, executable selector, no-Host-descriptor assertion, existing UI/native sequence, sentinel census and cleanup. Do not modify the common builder, old donor, workflow, dependencies, test cases, process/HTTP counts, deadlines, source-size baseline or acceptance assertions. The fixed8192 value matches the already reviewed common builder; this cut does not retry allocation with progressively larger heaps.
+
+Freeze the one source hunk with an exact inverse for all three variants, then obtain independent source review and root publication. Root runs the existing script/type/source guards and the original stopped-import Desktop lane; no new case or native campaign is added. Static review establishes only the connected environment correction. Actual source build, one original native turn, original Stop/Quit, import and cold acceptance remain required. The saved-donor drain observation and §95/§29 failures are separate and are not claimed fixed.
+
+## 99. Prepare the original V1 native fixture configuration directory before its source freeze
+
+### 99.1 Original failure and controlled boundary
+
+Batch4 Codex Resume job132446133227 fails in its existing native mixed-team Restore prerequisite, before the Desktop Codex scenario. It executed09fefda4c255fa172a52b89b2815d18085c79afc. Original log e0fe7ce2996b6b31f61c00b28b717db01d4ac42d and artifact14115158301 (38988449bytes; SHA25692267bd0ddd8d3b6ccd6fb654e308edd7f892f2a4c04d53df26df4e3ebab425c) retain Alice/Claude and Bob/Codex ready, while Carol/OpenCode1.19.4 goes from opening to unresolved custody in3.866seconds. This is earlier than the original45second opening deadline. No business request or Restore selection is accepted; the V1 database has no session/message/part row. Host close exits1 and masks the original private opening exception, so that exception is not reconstructed.
+
+The original producer creates Carol's XDG config root but leaves its opencode directory absent. The pinned native engine creates that directory and ordinary auxiliary files; the original artifact contains them. The unchanged OpenCodeConfigurationSource records the first missing ancestor for every configuration source. Once the native engine creates the missing directory, the original frozen reference is stale even if no opencode.json or opencode.jsonc was written. The original initialModelAdmission currentness check therefore cannot remain valid through this transition.
+
+A controlled read-only-source filesystem reproduction using the current built capture function confirmed all three boundaries: capture before namespace creation becomes stale after mkdir; namespace created before capture remains current after ordinary .gitignore and node_modules creation; subsequently creating an actual configuration file still invalidates the capture. This is a deterministic source-boundary reproduction, not a native execution or proof of the masked exception. Pinned upstream1.19.4 configuration sources retain the global config directory and create its auxiliary files; no runtime flag or dependency change is justified.
+
+### 99.2 One existing TEST producer change
+
+The sole writable path is packages/legacy-agent-host/tests/native-mixed-host.native.ts, exact preimage58cd0322d2fdcb7f4122dd47113c072d9d102ede in all three repair variants. Add the single literal carol/config/opencode to the existing ordered directory list after all member roots. The existing mode0700 mkdir loop prepares it before any profile serialization, source capture or Host process. Retain the existing private root, XDG path, native binary and all profile fields. Do not create a config file, copy donor state or perform native initialization outside the original Host action.
+
+Production capture/currentness, source identities, private initial admission, allocation and custody checks remain unchanged. Preserve every original script flag, command, input, model/probe counter, runtime receipt, Restore assertion, deadline, cleanup and executable pin. No retries, extra native actions, new helper, source-size exemption or oracle relaxation is permitted. Other fixture producers and product first-use flows require their own connected evidence and are not silently changed by this TEST correction.
+
+### 99.3 Review and acceptance
+
+Freeze the one-line source diff and its full inverse for all three identical variants. Independent plan review and publication precede source; independent source review precedes publication. Root runs the existing Host test compiler and source guard with the coherent cut, then the same original native mixed Restore prerequisite and Desktop Codex job through ordinary CI. No new named test or native campaign is added. Passing the controlled boundary alone does not qualify native startup, Host cleanup, Restore or Desktop Resume; all remain required on the final CI head.
+
+
+
+## 100. Preserve the original Linux V2 credential close failure evidence
+
+### 100.1 Observed failure and limit of the diagnosis
+
+This is a TEST-only visibility correction, not a credential or cleanup correction. Original parent run `43594538500`, job `132446132528`, on `09fefda4c255fa172a52b89b2815d18085c79afc` reaches the fourth, deliberately unanswered model request. The original `TEST-unverified-connect` returns a held receipt without confirmed rejection. The test then passes its original child census and process-group absence checks, but the third Host exits with code 1 during the original `stop()`. The finalizer repeats its already-existing close and reports the same mandatory exit-zero failure. The 240000 ms test limit did not fire.
+
+Full log `7703a17279d11010da7b7c2f104f2537f2c73966`, verified original artifact `14115199237` (11764 bytes; SHA256 `1768a6098f92f365e9cd66c64561c1c7a1c9208c7e2d132b36d02fae7250f73a`), credential receipt `948acc38ad3f6c037e067b6e7d0000f15d183808`, and read-only assessment `c1bec38070ae751ec8e5bc472661bf1c91eaa28b` are the evidence. The receipt is INCOMPLETE with cleanup false. It retains only the two earlier successful Hosts because both existing `hosts.push(host.facts())` calls follow successful `await host.close()`.
+
+The existing native-host fixture retains PID, exit code, signal, stdout validity, diagnostic byte count and method-only frame facts. It does not retain a stderr tail. Production CLI/server disposal does not emit the private failing cleanup substage. No raw stderr tail or precise SDK/body/namespace cause can therefore be reconstructed from this artifact. Physical process absence does not prove release of a request lease, credential resource or logical cleanup owner.
+
+Keep unrelated results separate: the same parent Linux artifact's ordinary embedded V2 case passed with 11 model requests and cleanup true. Original native Darwin ARM64 and x64 jobs `132446162489` and `132446162538` also contain preceding embedded V2 PASS receipts with 11 requests and cleanup true; their later executable-custody failures are the distinct POSIX qualification boundary described in the assessment and §75. None of those passes completes the failed Linux credential case.
+
+### 100.2 Exact source scope
+
+Write exactly one existing TEST file, identically on the three repair variants:
+
+| Path | Reviewed preimage |
+| --- | --- |
+| `packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts` | `77f172ba115dfb147a271fda91c6f466f2e397e5` |
+
+The current native repair `e9a82919ccf752fab6e140b273103ec292b09e3d` still has that exact 621-line file. Root verifies the identical parent/qualification preimages before publication. No common fixture or production path is writable. Read-only source anchors are `tests/fixtures/native-host.ts` at `429d9dbcfe93733647aacd4da6973e3f2f07631b`, `FileManagementCommandStore.ts` at `2d6031ae7c0c0aad5d637581f5242714536ac215`, `commandRecords.ts` at `9cd092f5d78e9a80cb922d65a29be5f2b7b96976`, `openCodeV2CredentialRecord.ts` at `46ee236586413b223d97168979b7eadffe8504b2`, and management `identity.ts` at `d4e5631330f08ccc4138353f6e2b5f49f7cac01f`.
+
+### 100.3 Finite failure observation in the original producer
+
+Preserve both original close calls and all control flow deciding cleanup, including their original errors. In the existing finalizer's failed close branch, retain the facts of that exact original Host and its existing epoch in a separate failure-only receipt field. Project only epoch/PID, exitCode, signalCode, stdoutValid and diagnosticBytes. The successful `hosts` field and its existing assertions retain their meaning. This is an observation after the same close attempt, not another close, wait, signal or native request.
+
+For the original timeout-intent branch only, retain the non-secret original command matching tuple locally before its existing credential RPC: commandId, profileId, configRevision, providerId and the existing management fingerprint. Never serialize that tuple's fingerprint or a key. If this branch was reached and the failed original Host has positively exited, the existing finalizer may make one bounded read of that exact command's already-existing journal file before the original removal/receipt write. Derive its filename with the existing `managementDigest(commandId)` rule; do not list/search records or choose a newer intent.
+
+Use a single read-only, no-follow descriptor, a regular-file check, the existing 64 KiB ordinary-record limit, bounded bytes and before/after identity/size checks; close this descriptor in finally. Validate the stored digest with the existing management digest, parse with the existing stored credential schema, and compare the full retained input tuple. This is a TEST observation, never a new store instance, writer, recovery or admission. A missing, malformed, mismatched, oversized, changing or unreadable record produces an explicit unavailable diagnostic; a not-reached original intent or nonterminal Host permits no journal read. Diagnostic failure must not replace the original test/cleanup error.
+
+The successful observation emits only the closed credential phase, resourceHeld boolean, nullable original V2 progress phase, verification-present boolean and nullable verification outcome. No record body, command/profile identifiers, paths, fingerprints, resource digests, credential IDs, keys, arbitrary error strings or stderr content is emitted. The observation can establish whether that exact original command still records retained resource debt and its last durable stage. It cannot prove which SDK/request/native cleanup sub-operation failed, nor turn an absent or false debt bit into cleanup success.
+
+The existing status remains PASS only after the original whole scenario and cleanup succeed. Keep cleanup errors, exit-zero/signal/stdout checks, physical PID/group absence, metadata lineage, source integrity, all four model requests, four original Host epochs, cold exact-intent assertions and receipt secret-exclusion checks unchanged. No production change, new owner, RPC, model/native action, timer, wait, retry, test case, workflow, relaxed oracle or larger budget is authorized.
+
+### 100.4 Review and acceptance
+
+Freeze the single-file diff, full source and exact inverse; retain the original case declaration and all original assertions, with normal source-size limits. Independent plan review/publication precedes source; independent source review precedes publication. Root runs the existing Host test and script type gates for the coherent cut. The next ordinary original Linux V2 credential job remains the actual acceptance: a continuing failure must include the failing Host facts and an honest bounded original-record observation. A richer INCOMPLETE receipt is diagnostic progress only, not credential, native cleanup or release qualification.
+
+## 97. Keep the original donor drain open when its fresh closing census is still positive
+
+### 97.1 Actual failure and narrow conclusion
+
+Original parent run `43594538508`, job `132446133162`, executed checkout `09fefda4c255fa172a52b89b2815d18085c79afc` failed after genuine old-frontend Save, in the donor producer's pre-Quit drain. The original assertion at producer line 409 observed selected runtime PID 14634, PPID 13169, PGID 14634. Its expected value was empty. The earlier stopped-import subflow is separate; this failure is not an OOM diagnosis.
+
+Original log `28fc1f0388e85f1147a98140eea7206b79ca88e5`, artifact `14114242108` and the bounded assessment `55245567eca580409c4a2a4257e3253c1bc67ded` retain the evidence. The exact 30503-byte producer receipt has SHA256 `10950a275e6691233eb1633e2f859b2827ca83e3952b866dda9abb5759843767`. The original command began at 12:47:22.844917 UTC; the post-cleanup failure observation was at 12:48:06.235986, under 44 seconds later. The drain's existing 60-second cutoff starts later, after Save/screenshot. That supports an early closing-observation rejection rather than exhaustion of this cutoff. The current source separately samples the loop condition and the final assertion. The precise intervening census/birth timeline was not recorded, so the new-child race is a source-backed inference. Final cleanup reported no remaining captured or unmatched children; it does not complete ordinary donor Quit or immutable-corpus acceptance.
+
+### 97.2 Exact one-file source scope
+
+| Writable existing TEST path | Parent / native / qualification preimage |
+| --- | --- |
+| `scripts/legacy-agent-host/desktop-donor-saved-producer.ts` | `0bb1a59115077756f889dc4362625be3343f7f8f` |
+
+All three current repair heads were read and match. The original process witness in `desktop-captured-app.ts`, SHA `11915e0d9fd425620b8c975901bd4dc65e6b8f27`, is read-only. No production, common witness, model, workflow, test-case, source-roster or dependency path is added to scope.
+
+### 97.3 Same wait, fresh closing witness
+
+Retain the original single `probeDeadline = Date.now() + 60_000`, original captured-native observer, inner selected-runtime drain and existing 100 ms tick. Enclose the original drain and its closing observations in one bounded continuation inside this function. After every exit from the inner drain, take the original fresh selected-runtime census and an exact captured-birth remaining census. Keep these closing samples in local variables only.
+
+If either closing sample is positive while the original deadline still has time, await the existing tick and continue this same observation block. Do not start another check, renew the cutoff, signal a child or request a UI action. When both closing samples are empty, retain those actual final samples for the original assertions. A positive closing sample at the cutoff reaches the same assertion failure. An unknown, throwing or unowned process observation remains an error; it never becomes an empty array. An earlier empty loop sample cannot replace the fresh closing witness. This adds no quiet window or requirement for an invented duration of absence.
+
+Preserve the original error text, both physical-absence assertions, subsequent single ordinary Quit and its separate 20-second limit. Keep all post-Quit PID/group/listener/captured/unmatched absence checks, immutable source/corpus checks, whole sentinel-log oracle and original model/catalog/probe/request budgets unchanged. Cleanup cannot turn the failed original epoch into PASS.
+
+### 97.4 Review and acceptance
+
+Plan/source review and root publication remain sequential; source is zero at this freeze. Require exact whole-file forward/inverse verification and unchanged surrounding producer control flow, then root's existing script/type/source-size gates. The ordinary original donor-saved Desktop lane remains the actual acceptance, including genuine Save, original drain, ordinary Quit, physical absence and immutable corpus before current consumer startup. No new case, rerun collector, timeout increase or native-success claim is introduced.
+
+## 101. Retain the original failed Claude Launch submission as bounded diagnostic evidence
+
+### 101.1 Established boundary
+
+Original parent job `132446133266` at checkout `09fefda4c255fa172a52b89b2815d18085c79afc` successfully clicked the original Launch control after three completed Claude model probes, then timed out waiting for the same dialog to close. The visible result was `Host team operation invalid (rejected)`; no business request, roster receipt, or Runtime capture was retained. Original artifact `14114099666` does not establish the exact submitted IPC payload or rejecting Host issue. The previous disabled-button/wait explanation is withdrawn.
+
+Original evidence is `e832c885abf734a93adc0853bd272c71ac4983f6`; bounded follow-up evidence is `4ae6f36374d679211586129092ea37cd7524a076`. Root's controlled result `f88c0eb43e4605523cbe7e48301e75cb3a1586a7` accepted the source-derived visible settings through the actual Main/Host parsers and original Team owner until the deliberate Runtime-authority boundary. It performed no native/model request, authorized no mutation, and left original state/config unchanged. This was not the actual submitted wire or reproduction of the refusal.
+
+The exact original roster handler returns before generic command parsing. Its internal `TeamRosterTransitions.validate(next)` uses `safeParse` and `hold`; Runtime read failures likewise map to `hold` in that handler. Actual envelope/input rejection remains unlocalized. No product/schema/authority correction follows from this evidence.
+
+### 101.2 One existing TEST path
+
+Only `scripts/legacy-agent-host/desktop-launch-ui-smoke.ts` is writable; all three current preimages are `f22c23b06e7701cbfccb527d1ccf594a5fa8379d`. Parent `6640102f46e63a24b9c72a303b0e00121aed87bc`, native `3ebdb74bdebe8d58aae0b2730b6a0518a716fb5c`, and qualification `9ee232b9fa663baaf45fa53b2076af14db57824a` were independently read. This is a failure-only TEST diagnostic, with no new file, product field, logger, journal, RPC, mutation, model/native call, or retry.
+
+The existing `captureReadiness` call already has a fixed 3000ms observation bound, one CDP evaluation, original renderer-owner assertion, exact mounted Launch dialog/current React root selection, 256 ancestor / 4096 tree-node / 1024 hook bounds, and explicit unavailable results. Keep these bounds and ownership checks. Move the unchanged original 60000ms dialog-close wait inside the same existing submit try/catch, so its failure invokes the existing single `original-submit-failed` callback just as a click failure does. Keep the before-submit callback, physical click, wait predicate, original rethrow, all success assertions and cleanup unchanged. No second diagnostic call is added to an individual failure path.
+
+Only in that failure phase, extend the same hook traversal to inspect the original `useLaunchDialogRosterSubmission` submitted ref. Require exactly one bounded own-data candidate with the original `roster:` command, a JSON signature no larger than 256 KiB, matching request team selection, and matching metadata command/idempotency key. Its shape is the already retained `{commandId, signature, intent, relaunch?}`; never call a hook, setter, action, provider, or bridge. Missing, ambiguous, malformed, over-limit, replaced, or detached form state is explicitly unavailable. Do not guess a different component or synthesize a replacement request.
+
+### 101.3 Closed projection, with no wire claim
+
+Read the original signature only into transient TEST memory. Remove this private raw field before appending to the existing evidence array. Preserve a closed projection: original bounded command ID, signature/payload SHA-256, expected-revision digest, member count, known configured-field presence/types, admitted provider/backend enum values, and whether runtimeSelectionVersion is absent, exactly 1, or another type/value. Hash member identifiers/text if needed; never persist the raw signature/request, prompt, workspace, extra arguments, unknown key names, credentials, or arbitrary values.
+
+For a useful closed issue locator, apply the existing Host `replaceRosterSchema.safeParse` to the payload reconstructed from this submitted renderer metadata using the existing `createHostTeamRoster` mapping. This is a pure diagnostic schema evaluation, never dispatch. Reuse the existing schema; do not copy or weaken it. Record acceptance or at most eight issue codes/paths, at most eight segments per path; only known schema field names and bounded array indices may be emitted, with other segments replaced by a fixed `other-field` label. Omit error messages and received values. Mark this field explicitly `rendererSourceSchemaCheck`, not the actual Host failure or wire validation. Main normalization and the private Host envelope are not attested by this snapshot.
+
+The relevant readonly source anchors are submitted-ref producer `e1cbbb05ee2fbaf67cf63006ea5326d7ac66452b`, Renderer roster mapping `aaba7f488153b6b6a004c6d3a3f0b61a3254364f`, Host schema `cf6bafacbda97630009c6011049daebdd99adbe3`, and original Host handler `aeb48a5573d50c266115867875667cbaa853ccca`. These paths and the helper are already in the existing source roster; no roster extension is needed. Use Node's existing crypto implementation for hashes. The diagnostic never alters readiness, counts, ownership, error classification, or qualification.
+
+### 101.4 Review and qualification
+
+Freeze the one-file diff/full inverse and all three preimages for independent review before root integration. Root owns the existing scripts type check and source-cap gate. No new test suite, case, native execution, timeout adjustment, or permutation matrix is requested. The next original ordinary UI run retains its existing PASS/failure/cleanup result; diagnostic availability cannot turn failure into success.
+
+If the exact submitted source passes this schema check while the original Host still rejects it, the Host envelope/internal issue remains open. A later minimal Host diagnostic would need its own reviewed scope; this section does not silently add that surface. Source remains zero until the plan is published and root grants GO.
+
+## 102. Expose the already retained first Codex Login target facts in the existing failure summary
+
+### 102.1. Original evidence and the unresolved question
+
+The original Codex Login job `132458083695` in run `43594542099` checked out `62a79f00fedee2c552819985a9496e7b08861a93`. Full log `ba119bb96c44c6915081b59db48be389ad4ff127` records an INCOMPLETE result, the initial account snapshot and original proof/error as recorded, zero input steps and zero login cases. Its original failure frames are `desktop-ui-controls.ts:257/261` and `desktop-codex-login-ui-proof.ts:57`: the first read of the existing More actions button failed before its first mouseMoved or mouseClick step. The earlier original focus/emulation and passive input observation had already run. The later generic incomplete-proof assertion does not identify the original cause.
+
+Artifact `14118647096` was uploaded as 524674 bytes with ZIP SHA256 `2a9c912aec36ea83bbe8583ca804227825985ddf72a023daa723bd072160c129`. Its receipt remains the appropriate original evidence. This investigation has not read that ZIP: the executor is unavailable and the connector's artifact result is a file reference, while its ordinary UTF-8 fetch rejects binary ZIPs. Do not infer the retained flag values or a renderer, timing, click, authentication or cleanup cause from that access limitation. The actual Login cause remains unknown.
+
+Read-only evidence `250f7e40b110866197916c62d3898966764f8a3d` records the exact source/log comparison. Login helper `101a569636180d2110af2d01fc65d98b6c4b195f` and UI controls `3af62c431d5b26e9ba4310af98efb27c4d8fd717` are identical in the original checkout and the inspected current source. Actual smoke `efdd11ac15b84c43f10e8fabcdd468e0c0314e20` versus current qualification smoke `c467c98ffedeb971ec8a39341985a56c127f9d09` changes only unrelated C10/OpenCode joins (full comparison `375c147602216e571ac519c88230e1cbf03dead8`). Login dispatch, error retention, cleanup, receipt writing, summary invocation and final assertions remain byte-identical.
+
+### 102.2. Existing collection and the single missing projection
+
+The existing controls collect an `unavailableTarget` sample inside the same original passive read/deadline. The first More-menu phase also collects bounded bootstrap flags in that same evaluation. At controls line 257, an error is wrapped with a fixed phase and JSON facts only if a sample was retained. The exact frame therefore establishes a retained sample, without revealing its values or proving that the eventual cause was a timeout.
+
+The existing smoke catch saves the original message with `.slice(0, 4000)` into `evidence.failure`. The existing `projectDesktopCodexLoginFailure` summary only reports whether that string exists. The complete original log contains none of the target/bootstrap field names or original target-read message, although it already prints the summary. No new observer, receipt field, UI request, screenshot, Host call or retry is needed. Expose a closed projection of those already retained facts through that existing summary for the next ordinary CI execution.
+
+### 102.3. Exact source scope and branch boundary
+
+The sole writable path is `scripts/legacy-agent-host/desktop-codex-login-ui-proof.ts`, preimage `101a569636180d2110af2d01fc65d98b6c4b195f`, and only its existing `projectDesktopCodexLoginFailure` function changes.
+
+This is an existing **qualification-only** helper. Fresh read at qualification `791367894b39c55c919771bf7ea2bf82ce6412e3` returns that exact blob. Parent `d78269cde649fc3cc6f930685928622996b8c8c1` and native `fe92dc9f1ec0928ed56524a0d033b8a131b2e93c` have no such path, confirmed by both Contents 404 and their complete original helper-directory listings. Do not add the file, propagate the Login mode or invent common preimages on those branches. The P09 plan can be synchronized normally.
+
+UI controls, all smoke variants, workflows, source rosters, product files and tests are read-only for this cut. The original Login action/case code preceding the projector remains byte-identical. No new helper file, generic diagnostic framework or test declaration is authorized.
+
+### 102.4. Fixed input recognition and output allowlist
+
+Add one `initialUnavailableTarget` property to the existing failure projection. It describes the **last retained unavailable sample from the initial More-menu read**, not a diagnosis or fresh observation. Its state is a fixed enum:
+
+- `not-recorded`: no string with the exact existing prefix is present;
+- `unavailable`: the exact prefix is present but its bounded JSON record cannot be validated;
+- `retained`: the original closed facts validate and the property contains their safe projection.
+
+Recognize only the literal prefix `UI target read failed: open existing More menu; facts=` in the existing error string. Require the original total input limit of 4000 characters before parsing its suffix as one JSON object. No search through nested causes, arbitrary labels, regular-expression scraping, secondary error field or alternate phase is admitted. A malformed, oversized, array or unexpected-key record yields only the new property's `unavailable` state; it must not suppress the old summary fields or escape the diagnostic boundary.
+
+The exact 18 permitted facts are:
+
+| Fields | Permitted retained value |
+| --- | --- |
+| `matches`, `rawMatches` | Safe integer from 0 through 256 |
+| `rootChildren` | Safe integer from 0 through 16 |
+| `disabled`, `ariaDisabled`, `pointerEventsNone`, `centerInViewport`, `hitPresent` | Boolean |
+| `rootPresent`, `uiInitialized`, `splashPresent`, `splashPositiveSize`, `splashError`, `splashSlow`, `documentComplete`, `languageEnglish`, `languageEmpty`, `rootFallbackShape` | Boolean |
+
+The existing collector always supplies `matches` and the five target booleans; require those six own fields with the exact types/ranges. The twelve bootstrap fields are optional in the collector. Validate every present optional value and emit null for absence, preserving unknown rather than converting it to false. Reject any other own key; never spread parsed input directly into the output. Emit only the explicitly listed numbers/booleans/nulls and the fixed state enum. JSON parsing failure stays local to this new projection.
+
+The original collector already caps counts, so 256 or 16 must not be interpreted as an uncapped exact underlying population. When there is no unique positive-size target, the collector normalizes absent target booleans to false; those flags cannot establish that an actual element was enabled or unobstructed. An unavailable sample may precede a later CDP/currentness error, so no timeout, causal reason, fresh liveness or permission result is synthesized. `capturedHostObserved: false` remains distinct from confirmed Host absence.
+
+### 102.5. Preserved gates and bounded verification
+
+Preserve every original summary field, source frame, original error, proof status, cleanup fact and final assertion. Keep the existing maximum serialized summary size of **4096 bytes** and its existing unavailable fallback. No raw error string, DOM text/HTML/attribute, profile/account name, URL, path, key, token or secret may be added to the summary. Do not change how the original receipt records its evidence.
+
+The existing original controls retain their 30000 ms initial read, passive evaluations, hover/stability checks, one-click rule and owner/currentness checks. Browser/device-code action counts, native/case budgets, deadline, source/custody and cleanup oracles remain unchanged. This is a projection of retained data, with no new I/O, timer, polling, retry, service, public contract or successful outcome.
+
+Freeze the one-file full blob and exact before/after diff; independently check the explicit input/output allowlist, malformed-record isolation, original function-prefix preservation and full forward/inverse match. Root retains normal source/type/lint gates and the next ordinary CI run; no additional test file, new case, native execution or test campaign is requested. The current review is source-only. Reading the old receipt later remains useful and does not require a rerun; this projection does not retroactively recover its values or qualify the failed Login. Source remains zero until this plan is published and root grants the exact one-path GO.
+
+## 103. Retain the last existing Runtime read for the unresolved V1 source-selection timeout
+
+### 103.1. Evidence and limit
+
+Original job `132452611815`, run `43594538508`, executed checkout `09fefda4c255fa172a52b89b2815d18085c79afc`. Artifact `14118661087` is 487023 bytes, SHA-256 `ca2429b1cf4c737c9e169b491a4ebd901cd32790e9bf8d17e41e2e0b41ddabb2`. Read-only evidence is frozen at `483ac7a3c9f24141cfe03b61cf93006d9a9def03`.
+
+The first missing/install-B branch published OpenCode V1 1.19.5 and displayed ready. Create closed and the original capture/settings checks passed; its existing session wait then timed out. The receipt records one no-tools Host source-preflight request, zero business requests, no model failures, and successful final cleanup. All 15 archive entries were inspected: no Runtime/launch store was uploaded. The app log supplies no OpenCode/Runtime failure stack. Earlier coexistence passed, and later V2 source-selection did not execute. Neither a namespace/source-currentness defect nor a dispatch defect is proved. This cut adds diagnostic evidence only.
+
+### 103.2. Exact two-file TEST scope
+
+| Existing path | Common parent/native/qualification preimage |
+| --- | --- |
+| `scripts/legacy-agent-host/desktop-native-stop-fixture.ts` | `343d0cd3a45a4c16b5c7c45966373e164879b403` |
+| `scripts/legacy-agent-host/desktop-runtime-source-selection.ts` | `aa5fdb795c3037a42c27fe8bde79c8dbf5707c44` |
+
+All six preimages match current parent `1d7df37736ff80d0810e085edf07608ec4a6fec5`, native `a1a982bc3a777948bc62a9bc17f6090bf9da1de9`, and qualification `73f0a441a1aaca8abe8275b83e0f77af0f7dada3`. No new file, production path, test case, roster or workflow change.
+
+Extend the existing `readDesktopNativeStopSessions` with one optional TEST observation argument `{ runId, report }`. After its existing successful two-level read, derive a closed projection from that very returned array and call the optional observer. Preserve the complete read/validation body, errors, return value and object identities. Catch only diagnostic projection/observer failures; they must not mask or replace an original result or exception. No catch may surround or weaken the original file read, polling predicate or acceptance assertions.
+
+The original session caller passes its already selected launch ID and a callback that replaces `phase.runtimeRead`. Use two natural call lines, taking the 799-line driver to at most 800; no packing, cap change or extraction of unrelated code. The existing reader owns the projection because it owns the exact snapshot; it creates no polling/registry/authority abstraction.
+
+### 103.3. Closed observation and unchanged acceptance
+
+Label the observation explicitly as the **last successful Runtime file read**, not current authority or absence proof. Retain only the exact requested-run match count and unknown-binding count. For exactly one match, retain phase, custody, nativeReady, sealed, existing diagnostic, input count, and at most four input phase/terminal pairs with an explicit overflow flag. Multiple/zero matches retain counts, not invented selected state.
+
+Use only the literal enums in original Runtime contracts `16b92ebb35f9d011689216e82cfdd24a4a2da635`: six session phases, three custody states, eight input phases, three terminal outcomes, and five stored diagnostics (`open-unknown`, `observe-ended`, `observe-failed`, `readiness-unavailable`, `close-unknown`). Booleans remain booleans; malformed/missing required values are explicitly unavailable, and an absent optional terminal/diagnostic is null. Invalid binding/input shape cannot become an empty successful observation. Projection failure is unavailable; an observer failure has no effect on the original read. No raw error message, identifier, intent/content, config, credential, path, checkpoint or other stored field is copied.
+
+Replace the same bounded observation in memory only; use the original final receipt save. No additional disk read/write, RPC, CDP, native/model operation, timestamp, timer, retry or accumulated ledger. If a later original read fails, its original exception still propagates and the prior observation remains explicitly historical. The exact session predicate, original 90000 ms wait, all source/custody checks, requests, four business markers, counters and cleanup remain unchanged. Other callers without this optional argument behave byte-for-byte as before.
+
+Freeze full blobs/diffs, verify all variants, unchanged predicate/read body and exact forward/inverse, then obtain independent source review. Root retains normal script/type/size gates and the next ordinary existing CI lane; no additional native campaign or retrospective qualification. Source remains zero until this appendix is published and root grants this exact two-file GO.
+
+## 104. Apply the original Main/UI-ready precondition to Codex Login
+
+### 104.1. Proven ordering omission and limits of the original evidence
+
+The original qualification Codex Login job `132458083695`, run `43594542099`, checked out `62a79f00fedee2c552819985a9496e7b08861a93`. Its original ZIP `14118647096` has now been read without execution: 524674 bytes and SHA256 `2a9c912aec36ea83bbe8583ca804227825985ddf72a023daa723bd072160c129` match. Receipt member `TEST-desktop-backend-z6QgT1/desktop-backend-receipt.json` contains the evidence object directly; its `failure` is the 429-character first More-menu target-read error. Actual retained facts `16e68111c06fa67856f59603fdd9d06f7c912d0e` show zero raw and positive-size target matches, a present but empty root, `uiInitialized: false`, a visible splash, and no splash error/slow class or React fallback shape. Zero input steps and zero login cases were recorded. Those facts place this refusal before ordinary UI mounting; they do not identify an eventual module, Main startup or UI-mount-admission failure.
+
+The source comparison and timing evidence are frozen in `3829377ca0379be702e1ba163ea804015a0725aa`. The omission is concrete: original `desktop-proof-mode.ts` `304c41eb492bdebf9b27cdc550682164d01863af` excludes Login from generic `uiMode` to protect its private authorization fields. In original smoke `efdd11ac15b84c43f10e8fabcdd468e0c0314e20`, that same flag also gates `attachRendererDiagnostics`. The latter owns the ordinary Main/UI-ready loop, so Login skips that precondition as well as the private collectors.
+
+Original `connectCapturedDesktopApp` `11915e0d9fd425620b8c975901bd4dc65e6b8f27` gives one owned main CDP target under the existing 180000 ms monotonic startup budget. `verifyCapturedDesktopBinding` establishes backend discovery/configuration ownership, not React mounting. Login's `observeInput` checks visibility. Its first `readPoint` then uses the original 30000 ms target poll with 100 ms passive repeats; it is not one instantaneous snapshot. None of those steps substitutes for accepted Main/UI readiness.
+
+The receipt records CDP-target discovery after 28445 ms. The job log spans prepared at 15:01:36.2634121 UTC to final INCOMPLETE at 15:02:44.3192922 UTC, a 68056 ms wall interval including startup and cleanup. It does not retain exact monotonic first-read/failure timestamps, Main startup status or renderer exception diagnostics. Do not infer an exact remaining cutoff, future successful mount or successful Login from that interval. The old run remains failed.
+
+### 104.2. Selected correction and exact scope
+
+Apply the existing Main/UI-ready precondition before the Login journey enters backend/account/UI work. Keep the original absolute startup cutoff and the original subsequent target poll. A diagnostic-only addition would leave the demonstrated admission omission; enabling generic `uiMode` would collect private Login DOM/screenshots. Neither is the selected change.
+
+Exactly three existing **qualification-only** write paths are authorized, freshly matched at `bd0c151102f682e3f548f29afb86df3eb84306f3`:
+
+| Path | Exact preimage | Current lines |
+| --- | --- | --- |
+| `scripts/legacy-agent-host/desktop-team-ui-smoke.ts` | `9aa43a43d6186c62bc92dae60dab4fe57cc63fe6` | 477 |
+| `scripts/legacy-agent-host/desktop-backend-smoke.ts` | `c467c98ffedeb971ec8a39341985a56c127f9d09` | 790 |
+| `scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts` | `8b5994997d475ca13f94c75f1a08dc68363ba018` | 756 |
+
+Parent/native source is unchanged by this cut. P09 plans can be synchronized normally. No product, preload, mode-selector, UI-control, workflow, package, source-roster or additional file is writable. Section 102's projector and section 103's independent same-read observers are preserved.
+
+### 104.3. Reuse the same loop under an absolute cutoff
+
+In the existing Team UI helper, expose one narrow TEST function, `waitForDesktopMainUiReadiness`, with the existing CDP port, captured renderer URL, a receipt-only startup evidence sink and `{ deadline: number; assertOwnedRenderer(): void }`. The deadline is an absolute `performance.now()` cutoff, not a new relative duration. This is an explicit internal TEST surface; it is not an existing public product capability, a new owner or a generic readiness framework.
+
+Move the existing Main/UI-ready block from `attachRendererDiagnostics` into that function without changing its expression, predicates, failure mapping or polling. The old diagnostics entry calls it with its already captured `deadline` and original `startupEvidence` sink. Keep the old Page/Runtime context checks, finite Log/Network observers and all earlier diagnostics behavior in that original entry. Its existing `startup.appReadiness` receipt layout remains unchanged.
+
+The moved loop retains the exact renderer-document/origin comparison, `mainReady === true`, `uiDidInit === true` and positive root-child count. It keeps the existing immediate startup-error refusal, original ownership callback before and after each awaited snapshot, remaining-time `bounded` call, at most 24 retained observations, original 100 ms passive ticks clipped to remaining time, and the final expired-budget refusal. A late positive snapshot after rejection cannot reach a continuation. No callback bypass, cached permission or deadline renewal is introduced.
+
+In qualification smoke, add only an `else if (mode === 'codex-login-ui')` beside the current `if (uiMode)` startup call. Before awaiting, attach a plain `evidence.codexLoginStartup` receipt sink. Invoke the shared function with the same captured `cdp` and target URL, `deadline: startupStarted + startupBudgetMs`, and the same original `assertOwnedCdpListener(group)` callback. This occurs before the unchanged `verifyCapturedDesktopBinding`, initial account read and Login UI journey. The ordinary `uiMode` call and every other mode retain their existing route.
+
+The Login path does not call `attachRendererDiagnostics`, enable Log/Network domains, install exception/console listeners, collect generic DOM/screenshot data, reload the page or ask for UI-mount admission itself. It reads only the same public Main startup snapshot and closed readiness facts. The receipt sink retains the existing loop's bounded status/observations, exact-document boolean, Main/UI readiness booleans, root-child count, store-presence boolean and original bounded startup phase. It contains no authorization URL/code, account/profile identity, clipboard, prompt or DOM text. These are observations of the precondition, not new authority.
+
+### 104.4. Preserve the actual Login proof and finite boundaries
+
+There is one original startup deadline of 180000 ms measured from `connectCapturedDesktopApp`'s original monotonic start. The Login branch receives that exact cutoff even after earlier work has consumed time. It may use the remaining existing startup allowance; it cannot reset that allowance, add a second startup epoch or increase a timeout. Once readiness is accepted, the original 30000 ms target poll, stability/hit/disabled checks and one physical click remain unchanged.
+
+Retain all original browser/device-code actions, native inputs/caps, account/currentness checks, source/custody witnesses, statuses and cleanup. A missing/failed/pending UI that does not satisfy the precondition by the original cutoff still fails before the first Login action. Readiness acceptance alone never grants authentication success, native process absence or a clean final result. The exact observed underlying bootstrap problem and eventual E2E result remain open until the next original execution.
+
+Use natural formatting and existing file ceilings. The qualification runner can add the single named import and this finite branch within its current 800-line limit; no line packing, guard deletion, cap increase or helper-file extraction is permitted. Freeze actual line counts rather than asserting an unexecuted size gate.
+
+### 104.5. Existing controlled cases and publication gates
+
+Extend only the two existing readiness/deadline cases in `desktop-team-ui-smoke.test.ts`, using the same existing deferred fixture and the two genuine entry paths. Retain all 14 literal test declarations, original assertions, 5000 ms case bounds, original 3000/500 ms controlled allowances and the remaining cases.
+
+The admission case must continue to show no continuation while Main is not ready or while UI initialization/root children are absent, and exactly one continuation after the existing accepted tuple. Apply that same observation sequence to the new readiness-only entry and make its fixture refuse diagnostic subscriptions and direct domain-enable/frame-discovery calls while permitting the original readiness evaluations. The original diagnostics path still proves DOCUMENT_READY precedes Main/UI acceptance. The deadline case exercises the same absolute cutoff for the readiness-only entry, then resolves the held snapshot late and proves that no continuation or renewed read occurs. These are two existing-case extensions, not a new matrix or test campaign.
+
+Before source publication, review the exact shared-loop extraction/inverse, original diagnostics prefix and receipt shape, Login caller cutoff/owner join, default-mode preservation and existing-case declaration/assertion retention. Root owns normal type/source checks and the focused existing file when available. No author execution or native rerun is authorized by this plan. The next original Login E2E must still prove its complete original UI/native/cleanup contract; the old failure cannot become PASS through this source correction. Source remains zero until the reviewed plan is published and root grants GO.

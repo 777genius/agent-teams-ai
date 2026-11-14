@@ -12,6 +12,7 @@ import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { EDITED_SCHEDULE_LABEL, LEGACY_SCHEDULE_ID, LEGACY_SCHEDULE_LABEL } from './desktop-schedule-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
 import { runDesktopEmulatedSelectionUi } from './desktop-emulated-selection-ui.ts';
+import { runDesktopEmulatedLifecycleUi } from './desktop-emulated-lifecycle-ui.ts';
 import type { prepareDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 
@@ -23,8 +24,13 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedRuntimeFixture>>;
   evidence: Row;
   assertOwnedRenderer(): void;
+  restartSameProfile?(): Promise<UiCdpPort>;
 }) {
-  if (options.fixture.emulatedRuntime.variant === 'selection') return runDesktopEmulatedSelectionUi(cdp, options);
+  if (options.fixture.emulatedRuntime.variant === 'selection' || options.fixture.emulatedRuntime.variant === 'installer') return runDesktopEmulatedSelectionUi(cdp, options);
+  if (options.fixture.emulatedRuntime.variant === 'lifecycle') {
+    assert.ok(options.restartSameProfile);
+    return runDesktopEmulatedLifecycleUi(cdp, { ...options, restartSameProfile: options.restartSameProfile });
+  }
   const { fixture } = options, steps: Row[] = [], commands: Row[] = [], provider = fixture.emulatedRuntime.provider;
   const proof: Row = { status: 'INCOMPLETE', provider, steps, commands,
     scope: 'Original Launch, Composer stream, permission/question controls, cost/Stats, schedules, renderer reload and Team Stop through original Host/D and finite TEST protocol peers',
@@ -357,10 +363,60 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   assert.equal((await effects()).filter(row => row.event === 'input' && row.marker === 'TEST_UI_BOOT').length, 1);
   proof.scheduleScreenshot = await screenshot('schedule'); proof.schedule = { scheduleId, runId: runs[0]!.id, taskId, status: runs[0]!.status,
     savedPromptAcknowledged: true, savedPromptNotReplayed: true };
+  // A real wall-clock occurrence, selected through the original Edit dialog. No
+  // private tick, clock replacement or second Run now can satisfy this witness.
+  const scheduledAt = Math.ceil((Date.now() + 60_000) / 1000) * 1000;
+  const timezone = String(created[0]!.timezone);
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hourCycle: 'h23',
+    month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }).formatToParts(scheduledAt);
+  const part = (name: string) => {
+    const selected = parts.filter(row => row.type === name); assert.equal(selected.length, 1);
+    return String(Number(selected[0]!.value));
+  };
+  const cronExpression = `${part('second')} ${part('minute')} ${part('hour')} ${part('day')} ${part('month')} *`;
+  await menu(edited, 'Edit');
+  await fill('[role="dialog"] input[placeholder="0 9 * * 1-5"]', cronExpression);
+  await ui.scrollTo('[role="dialog"] button', 'original automatic schedule Save Changes', 'Save Changes');
+  await ui.click('[role="dialog"] button', 'save original real cron occurrence once', 'Save Changes');
+  await ui.waitRead(`!document.querySelector('[role="dialog"]')`, 'automatic schedule edit closes');
+  const armed = (await schedules()).find(row => row.id === scheduleId)!;
+  assert.equal(armed.status, 'active'); assert.equal(armed.cronExpression, cronExpression);
+  assert.equal(armed.timezone, timezone); assert.equal(Date.parse(String(armed.nextRunAt)), scheduledAt);
+  assert.ok(scheduledAt - Date.now() >= 10_000, 'the real cron occurrence is armed before its wall-clock deadline');
+  assert.deepEqual(await history(scheduleId), runs, 'editing the cron does not create an occurrence');
+  const armedAt = new Date().toISOString();
+  const automaticRuns = await poll(() => history(scheduleId), values => values.length === 2 &&
+    values.some(row => row.id !== runs[0]!.id && row.status === 'dispatched'), 'real automatic cron dispatch without Run now');
+  const automaticRun = automaticRuns.find(row => row.id !== runs[0]!.id)!;
+  assert.equal(automaticRun.scheduleId, scheduleId);
+  const occurrenceTime = Date.parse(String(automaticRun.scheduledFor));
+  assert.ok(occurrenceTime >= scheduledAt && occurrenceTime < scheduledAt + 15_000);
+  assert.equal(automaticRun.startedAt, automaticRun.scheduledFor);
+  assert.notEqual(automaticRun.linkedTaskId, taskId);
+  const automaticTaskId = String(automaticRun.linkedTaskId);
+  const automaticTasks = await poll(() => rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend')),
+    values => values.some(row => row.id === automaticTaskId && row.status === 'completed'), 'automatic original MCP task completion');
+  assert.equal(automaticTasks.length, beforeTasks.length + 2);
+  assert.equal(automaticTasks.find(row => row.id === automaticTaskId)?.owner, 'alice');
+  assert.equal((await effects()).filter(row => row.event === 'input' && row.marker === 'TEST_UI_SCHEDULE_DONE').length, 2);
+  const automaticEffects = (await effects()).filter(row => ['scheduled', 'scheduled-effect'].includes(String(row.event)) && row.taskId === automaticTaskId);
+  assert.equal(automaticEffects.length, 1, 'one peer effect joined to the automatic occurrence task');
+  assert.equal((await effects()).filter(row => row.event === 'input' && row.marker === 'TEST_UI_BOOT').length, 1);
+  assert.equal(record((await ownerState()).savedSettings).prompt, 'TEST_UI_BOOT');
+  await menu(edited, 'Pause');
+  await poll(schedules, values => values.find(row => row.id === scheduleId)?.status === 'paused', 'pause after automatic occurrence');
+  assert.equal((await history(scheduleId)).length, 2);
+  proof.automaticSchedule = { scheduleId, runId: automaticRun.id, taskId: automaticTaskId,
+    cronExpression, timezone, armedAt, selectedNextRunAt: armed.nextRunAt,
+    scheduledFor: automaticRun.scheduledFor, startedAt: automaticRun.startedAt,
+    status: automaticRun.status, trigger: 'real-cron-tick', runNowClicks: 0, taskCompleted: true,
+    savedPromptNotReplayed: true, peerEffect: automaticEffects[0], paused: true,
+    screenshot: await screenshot('schedule-automatic') };
   await menu(edited, 'Delete');
   await ui.click('[role="alertdialog"] button, [role="dialog"] button', 'confirm original schedule deletion', 'Delete');
   await poll(schedules, rows => rows.length === 0, 'schedule removed');
   assert.equal((await rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend'))).find(row => row.id === taskId)?.status, 'completed');
+  assert.equal((await rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend'))).find(row => row.id === automaticTaskId)?.status, 'completed');
 
   await ui.scrollTo('button[aria-label^="alice,"]', 'original lead chat before stop');
   await ui.click('button[aria-label^="alice,"]', 'open original lead chat before stop');

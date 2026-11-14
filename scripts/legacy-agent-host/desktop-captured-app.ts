@@ -9,7 +9,7 @@ import { basename, dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { isDeepStrictEqual } from 'node:util';
 import { checkpoint } from './desktop-resume-records.ts';
-import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
+import { attachRendererDiagnostics, readRendererFailureSnapshot } from './desktop-team-ui-smoke.ts';
 import { assertFirstResumeMetadataAbsent, observeDesktopMetadataClose } from './desktop-opencode-v2-cold-metadata.ts';
 import { bounded } from './desktop-proof-bounds.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -34,6 +34,30 @@ const object = (value: unknown): Evidence => {
   return value as Evidence;
 };
 const tick = () => new Promise<void>(done => setTimeout(done, 100));
+
+/** Retain the original bounded failure observations without changing cleanup authority. */
+export async function captureDesktopRendererFailure(cdp: DesktopCdpPort, options: {
+  group: number; root: string; screenshotName: string; evidence: Evidence;
+}): Promise<void> {
+  const { group, root, screenshotName, evidence } = options;
+  try {
+    assertOwnedCdpListener(group);
+    try {
+      evidence.rendererFailureSnapshot = await bounded(readRendererFailureSnapshot(cdp), 4000, 'read renderer startup snapshot');
+    } catch {
+      evidence.rendererFailureSnapshot = { unavailable: true };
+    }
+    const screenshot = object(await bounded(
+      cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }), 5000, 'failure screenshot'
+    ));
+    assert.equal(typeof screenshot.data, 'string');
+    const screenshotPath = join(root, screenshotName);
+    await writeFile(screenshotPath, Buffer.from(String(screenshot.data), 'base64'), { mode: 0o600 });
+    evidence.failureScreenshot = { path: screenshotPath, sha256: await fileDigest(screenshotPath) };
+  } catch (captureError) {
+    evidence.failureScreenshotUnavailable = captureError instanceof Error ? captureError.message.slice(0, 1000) : 'unavailable';
+  }
+}
 
 /** Read-only census of one explicitly selected TEST executable; paths confer no signal authority. */
 export function selectedDesktopRuntime(executable: string): ProcessIdentity[] {

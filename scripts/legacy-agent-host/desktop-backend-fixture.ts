@@ -82,6 +82,7 @@ export async function prepareDesktopBackendFixture(
     seedCodexApiKey?: boolean;
     observeCodexLoginOpen?: boolean;
     launchDialog?: boolean;
+    configuredLaunchSetup?: true;
     creation?: boolean;
     reviewUi?: boolean;
     nativeReviewUi?: boolean;
@@ -117,7 +118,7 @@ export async function prepareDesktopBackendFixture(
   const linuxChildExec = readDesktopLinuxChildExecInput();
   const node =
     options.candidateRuntime?.nodeExecutable ??
-    (await realpath(options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection || process.platform === 'linux' ? process.execPath :
+    (await realpath(options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection || process.platform === 'linux' || process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1' ? process.execPath :
       join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
   const hostEntry =
     options.candidateRuntime?.hostEntry ??
@@ -246,7 +247,7 @@ export async function prepareDesktopBackendFixture(
           {
             memberId: 'alice-id',
             name: 'alice',
-            role: options.nativeChatAttachments || options.nativeGroupChats ? 'lead' : 'member',
+            role: options.configuredLaunchSetup || options.nativeChatAttachments || options.nativeGroupChats ? 'lead' : 'member',
           },
         ],
         grants: [

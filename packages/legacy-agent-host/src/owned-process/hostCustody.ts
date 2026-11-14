@@ -16,6 +16,8 @@ export const HOST_CUSTODY_SHUTDOWN_METHOD = 'host.native-custody.prepare-shutdow
 export const HOST_CUSTODY_CAPABILITY = 'transport.native-custody-v1';
 export const HOST_CUSTODY_CHUNK_BYTES = 16 * 1024;
 export const HOST_CUSTODY_FRAME_BYTES = 32 * 1024;
+/** Main retains at most this many allocations, each with state/stdout/stderr readiness. */
+export const HOST_CUSTODY_MAX_ALLOCATIONS = 320;
 const MAX_SEQUENCE = (1n << 64n) - 1n;
 const ref = z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/);
 const stream = z.enum(['stdout', 'stderr']);
@@ -210,7 +212,7 @@ export function validateHostCustodyResult(
 
 interface NativeAdmission {
   readonly operation: HostCustodyCall['operation'];
-  readonly build: () => HostCustodyCall;
+  readonly build: (deadlineMs: number) => HostCustodyCall;
   readonly deadline: number;
   readonly timer: ReturnType<typeof setTimeout>;
   finish(reply: HostCustodyReply): void;
@@ -284,10 +286,10 @@ export class HostCustodyClient {
       : Promise.resolve({ status: 'refused' });
   }
 
-  /** Only references wait here. Payloads and wire IDs are created once at actual admission. */
+  /** Only references wait here. The builder receives the fixed deadline after queueing and timeout clamping. */
   requestWhenReady(
     operation: HostCustodyCall['operation'],
-    build: () => HostCustodyCall,
+    build: (deadlineMs: number) => HostCustodyCall,
     deadlineMs?: number
   ): Promise<HostCustodyReply> {
     const now = performance.now();
@@ -339,7 +341,7 @@ export class HostCustodyClient {
         lane.shift();
         clearTimeout(admission.timer);
         let parsed: ReturnType<typeof callSchema.safeParse>;
-        try { parsed = callSchema.safeParse(admission.build()); }
+        try { parsed = callSchema.safeParse(admission.build(admission.deadline)); }
         catch { admission.finish({ status: 'refused' }); continue; }
         if (!parsed.success || parsed.data.operation !== admission.operation) {
           admission.finish({ status: 'refused' }); continue;
@@ -380,8 +382,11 @@ export class HostCustodyClient {
         if (!pending) return;
         clearTimeout(pending.timer);
         this.pending.delete(id);
-        if (reply.status === 'completed' && hintKey && this.hints.get(hintKey) === admittedHint)
-          this.hints.delete(hintKey);
+        if (reply.status === 'completed' && hintKey) {
+          const current = this.hints.get(hintKey);
+          if (current === admittedHint) this.hints.delete(hintKey);
+          else if (current) for (const observer of this.observers) observer(current);
+        }
         if (reply.status === 'completed' && reply.value.operation === 'release' && reply.value.state === 'released')
           for (const key of this.hints.keys()) if (key.startsWith(`${call.capability}:`)) this.hints.delete(key);
         settle(reply);
@@ -422,7 +427,7 @@ export class HostCustodyClient {
         const key = `${hint.capability}:${hint.stream}`;
         const previous = this.hints.get(key);
         if (!previous) {
-          if (this.hints.size >= this.options.limits.maxPendingRequests)
+          if (this.hints.size >= HOST_CUSTODY_MAX_ALLOCATIONS * 3)
             throw new Error('Private custody readiness capacity');
         }
         // A pending read can acknowledge only the marker it actually observed.

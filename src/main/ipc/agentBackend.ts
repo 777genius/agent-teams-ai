@@ -575,7 +575,8 @@ export function getDesktopProviderStatusPort() {
 /** Private installer authority comes from the original desktop descriptor, never an IPC path. */
 export function captureDesktopRuntimeSources(
   event: IpcMainInvokeEvent,
-  runtimeId: 'opencode' | 'codex'
+  runtimeId: 'opencode' | 'codex',
+  captureGuard?: (isCurrent: () => boolean) => void
 ): Promise<CapturedRuntimeSources> | undefined {
   const original = active;
   if (!original?.selected) return undefined;
@@ -585,6 +586,7 @@ export function captureDesktopRuntimeSources(
     throw new Error('Runtime installation sender is unavailable');
   const isCurrent = createCapturedSenderGuard(original, event, contextId, context);
   if (!isCurrent()) throw new Error('Runtime installation context changed');
+  captureGuard?.(isCurrent);
   return original.feature.captureRuntimeSources(contextId, null, runtimeId, { isCurrent });
 }
 

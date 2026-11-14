@@ -6,6 +6,8 @@ import { fileDigest } from './desktop-backend-fixture.ts';
 import { processTable } from './desktop-backend-observations.ts';
 import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
 import { readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
+import { readDesktopEmulatedCodexInstallerLog, readDesktopEmulatedCodexInstallation } from './desktop-emulated-codex-installer-fixture.ts';
+import { readDesktopEmulatedCodexInstallerSettingsUi, runDesktopEmulatedCodexInstallerUi } from './desktop-emulated-codex-installer-ui.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { json, jsonDigest, record, rows } from './desktop-resume-records.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
@@ -23,9 +25,11 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
 }) {
   const { fixture } = options, steps: Row[] = [], observations: Row[] = [];
   assert.equal(fixture.emulatedRuntime.provider, 'codex');
-  assert.equal(fixture.emulatedRuntime.variant, 'selection');
+  assert.ok(fixture.emulatedRuntime.variant === 'selection' || fixture.emulatedRuntime.variant === 'installer');
+  const installer = fixture.emulatedRuntime.installer;
+  assert.equal(Boolean(installer), fixture.emulatedRuntime.variant === 'installer');
   const proof: Row = { status: 'INCOMPLETE', steps, observations,
-    scope: 'Original save-only model/effort selection, renderer reload, next launch and scoped Team Stop while the prior captured runtime remains alive',
+    scope: `${installer ? 'Original stock Codex Update, ' : ''}save-only model/effort selection, renderer reload, next launch and scoped Team Stop while the prior captured runtime remains alive`,
     excluded: ['vendor model compatibility', 'native provider qualification', 'replacement of existing provider conversation journeys'] };
   options.evidence.emulatedSelectionUiProof = proof;
   const ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
@@ -94,11 +98,15 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
     const source = record(definition.capture), settings = record(source.savedSettings), members = array(source.members);
     assert.equal(members.length, 1); assert.equal(members[0]!.role, 'lead');
     assert.equal(settings.providerId, 'codex'); assert.equal(settings.model, selected.model); assert.equal(settings.effort, selected.effort);
-    const session = async () => {
+    const pendingSession = async () => {
       const all = (await readDesktopNativeStopSessions(fixture.root)).filter(row => record(row.binding).runId === capture.launchId);
-      assert.equal(all.length, 1); assert.equal(record(all[0]!.binding).memberId, members[0]!.memberId); return all[0]!;
+      assert.ok(all.length <= 1, 'one session per original launch');
+      if (all.length === 0) return undefined;
+      assert.equal(record(all[0]!.binding).memberId, members[0]!.memberId); return all[0]!;
     };
-    const initial = await poll(session, value => array(value.inputs).length === 1 && array(value.inputs)[0]!.terminal === 'succeeded', 'original BOOT completes once');
+    const initial = await poll(pendingSession, value => value !== undefined && array(value.inputs).length === 1 && array(value.inputs)[0]!.terminal === 'succeeded', 'original BOOT completes once');
+    assert.ok(initial);
+    const session = async () => { const value = await pendingSession(); assert.ok(value, 'original live session is retained'); return value; };
     const native = (await effects()).filter(row => row.event === 'thread-selection' && row.runtimeMcp === true && row.model === selected.model);
     assert.equal(native.length, 1); const thread = native[0]!;
     assert.equal(thread.effort, selected.effort); assert.equal(thread.role, 'runtime');
@@ -142,6 +150,11 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
   await openLaunch(a, true); const liveA = await launch(a);
   await openChat(liveA); await visible('TEST boot ready');
   proof.aLaunchScreenshot = await screenshot('a-launch'); proof.a = { capture: liveA.capture, definition: liveA.definition, thread: liveA.thread };
+  if (installer) {
+    const originalInvocation = (await readDesktopEmulatedCodexInstallerLog(installer.invocationLog)).filter(row => row.pid === liveA.thread.pid && row.kind === 'app-server');
+    assert.equal(originalInvocation.length, 1); assert.equal(originalInvocation[0]!.executable, installer.executable.path);
+    assert.equal(originalInvocation[0]!.version, installer.binaryVersionA); proof.aInvocation = originalInvocation[0];
+  }
   await assertSameLive(liveA, 'before-create', true);
 
   const bName = 'test-selection-next-team', page = '[data-testid="create-team-page"]';
@@ -154,6 +167,9 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
   await ui.click(`${page} button[aria-label*=" provider,"]`, 'open original lead model selector');
   await ui.scrollTo(`${page} [data-testid="team-model-selector-provider-nav-codex"]`, 'original Codex catalog');
   await ui.click(`${page} [data-testid="team-model-selector-provider-nav-codex"]`, 'select original Codex provider');
+  if (installer) proof.installer = await runDesktopEmulatedCodexInstallerUi(cdp, { fixture, ui,
+    assertOwnedRenderer: options.assertOwnedRenderer,
+    assertPriorRuntime: async phase => { await assertSameLive(liveA, phase, true); } });
   const model = `${page} [data-testid="team-model-selector-model-option"][aria-label^="TEST next model"]`;
   await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll(${literal(model)})];return rows.length===1&&rows[0].getAttribute('aria-disabled')!=='true'})()`, 'one selectable second TEST model');
   await ui.scrollTo(model, 'original second model'); await ui.click(model, 'select original second model');
@@ -180,9 +196,22 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
   assert.deepEqual(await b.owner(), bSaved); await assertSameLive(liveA, 'after-reload-before-next-launch', true);
   proof.reloadedScreenshot = await screenshot('reloaded'); proof.selectionRetainedAfterReload = true;
   const liveB = await launch(b); assert.notEqual(liveB.thread.pid, liveA.thread.pid); assert.notEqual(liveB.thread.threadId, liveA.thread.threadId);
+  if (installer) {
+    const installed = await readDesktopEmulatedCodexInstallation(installer); assert.ok(installed);
+    const nextInvocation = (await readDesktopEmulatedCodexInstallerLog(installer.invocationLog)).filter(row => row.pid === liveB.thread.pid && row.kind === 'app-server');
+    assert.equal(nextInvocation.length, 1); assert.equal(nextInvocation[0]!.executable, installed.executable.path);
+    assert.equal(nextInvocation[0]!.version, installer.binaryVersionB);
+    const nextSources = array(record(liveB.definition.capture).recipeSources);
+    assert.equal(nextSources.length, 1); assert.equal(nextSources[0]!.revision, record(record(proof.installer).publication).revision);
+    assert.equal(nextSources[0]!.memberId, record(liveB.initial.binding).memberId);
+    proof.bInvocation = nextInvocation[0]; proof.bSource = nextSources[0];
+  }
   await openChat(liveB); await visible('TEST boot ready');
   proof.bLaunchScreenshot = await screenshot('b-launch'); proof.b = { capture: liveB.capture, definition: liveB.definition, thread: liveB.thread };
   await assertSameLive(liveA, 'after-next-launch', true);
+  if (installer) record(proof.installer).settings = await readDesktopEmulatedCodexInstallerSettingsUi(cdp, { fixture, ui,
+    assertOwnedRenderer: options.assertOwnedRenderer, expectedStatus: record(record(proof.installer).installedStatus),
+    assertPriorRuntime: async phase => { await assertSameLive(liveA, phase, true); await assertSameLive(liveB, phase, true); } });
 
   await openTeam(a); await openChat(liveA);
   const before = new Set((await a.commands()).map(row => row.commandId));
