@@ -10,6 +10,7 @@ import type { BackendOwnerRouter } from '../../../src/features/agent-backend/mai
 import type { BackendTeamSnapshot } from '../../../src/features/agent-backend/contracts/teamSnapshot';
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
 import type { TeamsAPI } from '../../../src/shared/types/api';
+import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
 const handle = { handleId: 'TEST-original-page-owner' };
 const key = hostTeamSelectionKey(handle.handleId);
@@ -82,15 +83,15 @@ describe('captured Host message pages never require the oversized complete snaps
   });
 
   it('refuses malformed conversation metadata on either original read operation', async () => {
-    const metadata = [
+    const metadata: JsonValue[] = [
       null, { revision: 'invalid', gaps: [] }, { revision: hash, gaps: ['unknown'] },
       { revision: hash, gaps: ['retention', 'retention'] },
-      { revision: hash, gaps: Array(1) },
+      { revision: hash, gaps: Array<JsonValue>(1) },
       { revision: hash, gaps: [], privateRoot: 'PRIVATE' },
     ];
     for (const conversation of metadata) {
       const router = {
-        request: vi.fn<BackendOwnerRouter['request']>(async (_handle, command) => ({
+        request: vi.fn<BackendOwnerRouter['request']>(async (_handle, command): Promise<JsonValue> => ({
           ok: true,
           value: command.method === 'team.messages.page' ? {
             teamName: 'TEST-team', revision: hash, hasMore: false, nextCursor: null,
