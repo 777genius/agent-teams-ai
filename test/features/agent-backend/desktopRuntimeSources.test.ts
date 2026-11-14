@@ -302,7 +302,13 @@ it('first launch preparation captures stored preferences through the real Main/H
     }),
     { mode: 0o600 }
   );
-  await desktop.refreshLaunchConfiguration('TEST-context', f.root, { isCurrent: () => true });
+  const [firstCapture, parallelCapture] = await Promise.all([
+    desktop.captureProviderManagement('TEST-context', f.root),
+    desktop.captureProviderManagement('TEST-context', f.root),
+    desktop.refreshLaunchConfiguration('TEST-context', f.root, { isCurrent: () => true }),
+  ]);
+  expect(parallelCapture.profileId).toBe(firstCapture.profileId);
+  expect(parallelCapture.configRevision).toBe(firstCapture.configRevision);
   const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'opencode');
   const original = await sources.current();
   expect(original.preferencesDigest).toMatch(/^[a-f0-9]{64}$/);
@@ -315,6 +321,15 @@ it('first launch preparation captures stored preferences through the real Main/H
   });
   expect(JSON.stringify(before)).not.toContain('TEST-not-a-native-field');
   expect(JSON.stringify(before)).not.toContain('TEST-time');
+  let staleCurrent = true;
+  const stale = desktop.captureProviderManagement('TEST-context', f.root, {
+    isCurrent: () => staleCurrent,
+  });
+  staleCurrent = false;
+  await expect(stale).rejects.toThrow();
+  expect((await desktop.captureProviderManagement('TEST-context', f.root)).profileId).toBe(
+    firstCapture.profileId
+  );
   await desktop.refreshLaunchConfiguration('TEST-context', f.root, { isCurrent: () => true });
   expect(await sources.current()).toEqual(original);
   await writeFile(

@@ -4,11 +4,35 @@ import { openCodeManagedPreferencesDigest } from '@agent-teams/legacy-agent-host
 
 import { CapturedRuntimeSourceError } from '../infrastructure/CapturedRuntimeSources';
 
+import { BackendRoutingError } from './backendBinding';
+
 import type { CapturedRuntimeSources } from '../infrastructure/CapturedRuntimeSources';
 import type { RuntimeSourcePublication } from '@agent-teams/legacy-agent-host/runtime-sources';
 
+const preparations = new WeakMap<object, { tail: Promise<unknown>; pending: number }>();
+
 /** Existing management Save/Refresh keeps one original source owner and its durable publication. */
-export async function refreshCapturedRuntimeConfiguration(sources: CapturedRuntimeSources) {
+export async function refreshCapturedRuntimeConfiguration(
+  sources: CapturedRuntimeSources,
+  selection?: object
+) {
+  if (!selection) return refreshConfiguration(sources);
+  const queue = preparations.get(selection) ?? { tail: Promise.resolve(), pending: 0 };
+  if (queue.pending >= 32) throw new BackendRoutingError('hold', 'not-dispatched');
+  // Serialize preparation only. Every caller keeps its own original source and guard.
+  const pending = queue.tail.catch(() => {}).then(() => refreshConfiguration(sources));
+  queue.tail = pending;
+  queue.pending++;
+  preparations.set(selection, queue);
+  try {
+    return await pending;
+  } finally {
+    if (--queue.pending === 0 && preparations.get(selection) === queue)
+      preparations.delete(selection);
+  }
+}
+
+async function refreshConfiguration(sources: CapturedRuntimeSources) {
   let current = await sources.current();
   if (current.configurationCurrent === undefined && !sources.capturePreferences) return current;
   const recovered = await sources.recover();
