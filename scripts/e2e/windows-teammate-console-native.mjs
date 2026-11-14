@@ -339,12 +339,98 @@ async function runCustodyProbe() {
   }
 }
 
+// Exercise the same marker-gated cleanup command used by Electron Main when
+// a disposable teammate hangs. No real vendor, model or user project is used.
+async function runOwnedFixtureCleanupProbe() {
+  assert.equal(process.platform, 'win32');
+  const marker = 'native-custody-' + randomUUID();
+  const wrongMarker = 'native-custody-' + randomUUID();
+  const child = spawn(process.execPath, [file, '--custody-teammate', marker],
+    withCliProcessDefaults({ detached: false, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] }));
+  let teammatePid;
+  let toolPid;
+  try {
+    const ready = await new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (error, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (error) reject(error);
+        else resolve(value);
+      };
+      const timeout = setTimeout(() => finish(new Error('Owned fixture startup timeout')), 30_000);
+      child.once('error', (error) => finish(error));
+      child.once('close', (code) => finish(new Error('Owned fixture closed early: ' + code)));
+      child.on('message', (msg) => {
+        if (msg?.type !== 'custody-ready') return;
+        if (msg.teammatePid !== child.pid || msg.marker !== marker ||
+            !Number.isSafeInteger(msg.toolPid) || msg.toolPid <= 0) {
+          finish(new Error('Owned fixture reported an unrelated process'));
+          return;
+        }
+        finish(null, msg);
+      });
+    });
+    teammatePid = ready.teammatePid;
+    toolPid = ready.toolPid;
+    assert.equal(originalProcessAlive(teammatePid, marker), true);
+    assert.equal(originalProcessAlive(toolPid, marker), true);
+
+    // A valid UUID belonging to another fixture must not authorize taskkill.
+    const rejected = spawnSync(process.execPath,
+      [file, '--kill-owned-fixture', String(teammatePid), wrongMarker],
+      { windowsHide: true, encoding: 'utf8', timeout: 35_000 });
+    assert.equal(rejected.status, 0, 'Wrong-marker lookup must fail safely without killing');
+    assert.equal(originalProcessAlive(teammatePid, marker), true,
+      'Unrelated marker terminated the original teammate');
+    assert.equal(originalProcessAlive(toolPid, marker), true,
+      'Unrelated marker terminated the original tool descendant');
+
+    const accepted = spawnSync(process.execPath,
+      [file, '--kill-owned-fixture', String(teammatePid), marker],
+      { windowsHide: true, encoding: 'utf8', timeout: 35_000 });
+    assert.equal(accepted.status, 0, 'Verified fixture teardown failed: ' +
+      String(accepted.error || accepted.stderr).slice(0, 500));
+    let teammateAlive = true;
+    let toolAlive = true;
+    const deadline = Date.now() + 12_000;
+    do {
+      teammateAlive = originalProcessAlive(teammatePid, marker);
+      toolAlive = originalProcessAlive(toolPid, marker);
+      if (!teammateAlive && !toolAlive) break;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    } while (Date.now() < deadline);
+    assert.equal(teammateAlive, false, 'Verified teammate still alive after tree cleanup');
+    assert.equal(toolAlive, false, 'Verified tool still alive after teammate tree cleanup');
+    const receipt = {
+      schemaVersion: 1, kind: 'original-marker-tree-cleanup', platform: process.platform,
+      teammatePid, toolPid, wrongMarkerDidNotKill: true,
+      teammateAliveAfterOwnedKill: teammateAlive, toolAliveAfterOwnedKill: toolAlive,
+      productTeammateExecuted: false, status: 'passed',
+    };
+    const receiptPath = path.join(process.env.RUNNER_TEMP || os.tmpdir(),
+      'windows-console-native-owned-cleanup-' + randomUUID() + '.json');
+    await fs.writeFile(receiptPath, JSON.stringify(receipt, null, 2) + '\n', { flag: 'wx' });
+    process.stdout.write(JSON.stringify({ receiptPath, ...receipt }) + '\n');
+  } finally {
+    const errors = [];
+    try { terminateOwnedTree(child, marker); } catch (error) { errors.push(error); }
+    for (const pid of [teammatePid, toolPid]) {
+      if (!pid) continue;
+      try { killVerifiedOriginal(pid, marker); } catch (error) { errors.push(error); }
+    }
+    if (errors.length) throw new AggregateError(errors, 'Owned fixture cleanup failed');
+  }
+}
 if (process.argv.includes('--custody-teammate')) {
   await runCustodyTeammate();
 } else if (process.argv.includes('--custody-app')) {
   await runCustodyApp();
 } else if (process.argv.includes('--custody-probe')) {
   await runCustodyProbe();
+} else if (process.argv.includes('--verify-owned-fixture-kill')) {
+  await runOwnedFixtureCleanupProbe();
 } else if (process.argv.includes('--kill-owned-fixture')) {
   assert.equal(process.platform, 'win32');
   const index = process.argv.indexOf('--kill-owned-fixture');

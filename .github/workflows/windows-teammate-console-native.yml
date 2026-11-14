@@ -43,6 +43,8 @@ jobs:
         run: node scripts/e2e/windows-teammate-console-native.mjs
       - name: Observe original process custody after simulated app force-kill
         run: node scripts/e2e/windows-teammate-console-native.mjs --custody-probe
+      - name: Verify original Windows PID marker guard and native descendant tree cleanup
+        run: node scripts/e2e/windows-teammate-console-native.mjs --verify-owned-fixture-kill
       - name: Preserve native subprocess receipts
         if: always()
         uses: actions/upload-artifact@v4
