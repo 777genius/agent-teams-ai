@@ -194,9 +194,12 @@ export function createRuntimeMemberProviderFactory(options: {
       });
       entry.endpoint = endpoint;
       try {
-        authority.assertCurrent();
-        assertAllocation();
-        readiness?.assertCurrent();
+        if (readiness) {
+          readiness.assertCurrent();
+        } else {
+          authority.assertCurrent();
+          assertAllocation();
+        }
         const selected = entry.team.definition.members.find(
           (candidate) => candidate.memberId === binding.memberId
         );
