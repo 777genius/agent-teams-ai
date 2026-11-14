@@ -195,9 +195,36 @@ export function createDesktopUiControls(
     // Reuse the original passive reads and deadline. Retain only closed facts,
     // never DOM text, attributes, HTML or another request after a failed click.
     const readPoint = async (phase: string): Promise<Record<string, unknown>> => {
+      const bootstrapRead = phase === label && label === 'open existing More menu' &&
+        selector === 'button[aria-label="More actions"]';
+      const readExpression = bootstrapRead
+        ? `(() => {
+            const point = ${expression};
+            if (!point || point.unavailableTarget !== true) return point;
+            try {
+              const root = document.getElementById('root'), splash = document.getElementById('splash');
+              const bounds = splash?.getBoundingClientRect(), child = root?.firstElementChild;
+              return { ...point, bootstrapFacts: {
+                rawMatches: Math.min(document.querySelectorAll(${desktopJsLiteral(selector)}).length, 256),
+                rootPresent: root !== null, rootChildren: Math.min(root?.childElementCount ?? 0, 16),
+                uiInitialized: window.__claudeTeamsUiDidInit === true,
+                splashPresent: splash !== null, splashPositiveSize: Boolean(bounds && bounds.width > 0 && bounds.height > 0),
+                splashError: splash?.classList.contains('splash-status-error') === true,
+                splashSlow: splash?.classList.contains('splash-status-slow') === true,
+                documentComplete: document.readyState === 'complete',
+                languageEnglish: document.documentElement.lang === 'en',
+                languageEmpty: document.documentElement.lang === '',
+                rootFallbackShape: Boolean(root?.childElementCount === 1 &&
+                  child?.matches('div.flex.h-screen.flex-col.items-center.justify-center') &&
+                  child.querySelector(':scope > div > h1.text-2xl.font-semibold') &&
+                  child.querySelector(':scope > div > svg.size-10.text-red-500'))
+              } };
+            } catch { return point; }
+          })()`
+        : expression;
       let facts: Record<string, boolean | number> | undefined;
       try {
-        return record(await waitRead(expression, phase, 30_000, value => {
+        return record(await waitRead(readExpression, phase, 30_000, value => {
           if (value && typeof value === 'object' && !Array.isArray(value)) {
             const row = value as Record<string, unknown>;
             if (row.unavailableTarget === true) {
@@ -208,6 +235,19 @@ export function createDesktopUiControls(
                 pointerEventsNone: row.pointerEventsNone === true,
                 centerInViewport: row.centerInViewport === true, hitPresent: row.hitPresent === true,
               };
+              if (bootstrapRead && row.bootstrapFacts && typeof row.bootstrapFacts === 'object' &&
+                  !Array.isArray(row.bootstrapFacts)) {
+                const bootstrap = row.bootstrapFacts as Record<string, unknown>;
+                for (const key of ['rootPresent', 'uiInitialized', 'splashPresent', 'splashPositiveSize',
+                  'splashError', 'splashSlow', 'documentComplete', 'languageEnglish', 'languageEmpty',
+                  'rootFallbackShape']) {
+                  if (typeof bootstrap[key] === 'boolean') facts[key] = bootstrap[key];
+                }
+                for (const [key, limit] of [['rawMatches', 256], ['rootChildren', 16]] as const) {
+                  if (Number.isSafeInteger(bootstrap[key]) && Number(bootstrap[key]) >= 0)
+                    facts[key] = Math.min(Number(bootstrap[key]), limit);
+                }
+              }
               return false;
             }
           }
