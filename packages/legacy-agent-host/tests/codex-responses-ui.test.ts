@@ -19,8 +19,8 @@ const completed = (value: unknown) => [
   { type: 'input_text', text: 'Script completed\nWall time 0.1 seconds\nOutput:\n' },
   { type: 'input_text', text: JSON.stringify(value) },
 ];
-const receipt = (effects: Row = {}) => {
-  const value = { phase: 'completed', principalId: 'TEST-captured-Alice', effects };
+const receipt = (effects: Row = {}, principalId = 'TEST-captured-Alice') => {
+  const value = { phase: 'completed', principalId, effects };
   return { content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: { result: value }, isError: false };
 };
 const command = (code: 0 | 7) => ({ chunk_id: 'TEST-original-chunk', exit_code: code,
@@ -28,12 +28,16 @@ const command = (code: 0 | 7) => ({ chunk_id: 'TEST-original-chunk', exit_code: 
 const eventItem = (text: string) => object(text.split('\n').filter(line => line.startsWith('data: '))
   .map(line => object(JSON.parse(line.slice(6)))).find(event => event.type === 'response.output_item.done')!.item);
 
-test('actual Lite palette scripts the same ONE/TWO actions through one exec each, preserving8+3 and linked cold history', async t => {
+for (const candidate of [false, true])
+test(`${candidate ? 'candidate169' : 'UI'} actual Lite palette scripts the same ONE/TWO actions through one exec each, preserving8+3 and linked cold history`, async t => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-desktop-backend-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  const model = await startCodexModel({ memberName: 'alice', uiGeneratedMessageIds: true,
+  const selectedModel = 'TEST-actual-selected-model';
+  const model = await startCodexModel(candidate ? { candidate169: { selectedModel: () => selectedModel } } :
+    { memberName: 'alice', uiGeneratedMessageIds: true,
     captureHistoryMarkers: true, principalId: () => 'TEST-captured-Alice', requestEvidenceDirectory: () => root });
-  t.after(() => model.close());
+  const abort = new AbortController();
+  t.after(async () => { abort.abort(); await model.close(); });
   const input: Row[] = [declaration(), { role: 'developer', content: CONTEXT_MARKER },
     { role: 'user', content: 'CODEX_TEAM_ONE' }];
   const calls: { name: string; input: Row }[] = [];
@@ -41,7 +45,8 @@ test('actual Lite palette scripts the same ONE/TWO actions through one exec each
   const tools: Record<string, (args: Row) => Promise<unknown>> = Object.fromEntries(['task_create', 'task_set_owner', 'task_start', 'task_add_comment',
     'task_complete', 'message_send'].map(name => [`mcp__team__${name}`, async (args: Row) => {
       calls.push({ name, input: args });
-      return receipt(name === 'task_create' ? { taskId: canonicalTask } : {});
+      return receipt(name === 'task_create' ? { taskId: canonicalTask } : {},
+        candidate ? 'bob-session' : 'TEST-captured-Alice');
     }]));
   tools.exec_command = async (args: Row) => {
     calls.push({ name: 'exec_command', input: args }); return command(String(args.cmd).includes('exit 7') ? 7 : 0);
@@ -50,11 +55,25 @@ test('actual Lite palette scripts the same ONE/TWO actions through one exec each
     const response = await fetch(model.url + '/v1/responses', { method: 'POST', headers: {
       'content-type': 'application/json', 'x-openai-internal-codex-responses-lite': 'true',
       authorization: 'TEST-HEADER-NOT-RETAINED',
-    }, body: JSON.stringify({ model: 'TEST-actual-selected-model', reasoning: { effort: 'medium' }, input }) });
+    }, signal: abort.signal, body: JSON.stringify({ model: selectedModel, reasoning: { effort: 'medium' }, input }) });
     const text = await response.text(); assert.equal(response.status, 200, text); return eventItem(text);
   };
   const run = async (turn: string, actions: number) => {
     for (let i = 0; i <= actions; i++) {
+      if (candidate && turn === 'CODEX_TEAM_TWO' && i === actions) {
+        let settled = false;
+        const held = post().finally(() => { settled = true; });
+        void held.catch(() => {});
+        const deadline = Date.now() + 1000;
+        while (!model.candidateFinalHeld() && Date.now() < deadline)
+          await new Promise<void>(resolve => setTimeout(resolve, 5));
+        assert.equal(model.candidateFinalHeld(), true);
+        assert.equal(settled, false, 'original final response remains held without synthetic headers or terminal');
+        assert.equal(model.observations.length, 11);
+        abort.abort();
+        await assert.rejects(held, { name: 'AbortError' });
+        continue;
+      }
       const item = await post();
       if (i === actions) {
         assert.equal(item.type, 'message'); assert.ok(JSON.stringify(item).includes(`DONE_${turn}`));
@@ -84,8 +103,22 @@ test('actual Lite palette scripts the same ONE/TWO actions through one exec each
   for (const call of calls.filter(call => ['task_set_owner', 'task_start', 'task_add_comment', 'task_complete'].includes(call.name)))
     assert.equal(call.input.taskId, canonicalTask, 'canonical create result is handed to subsequent real actions');
   assert.equal(model.observations.length, 11); assert.equal(model.observations[4]!.toolResultError, true);
-  assert.ok(model.observations.slice(8).every(row => !row.toolResultError && row.visibleReplyContract));
+  assert.ok(model.observations.slice(8).every(row => !row.toolResultError));
+  if (!candidate) assert.ok(model.observations.slice(8).every(row => row.visibleReplyContract));
   assert.deepEqual(model.observations[10]!.priorNativeToolIds, ids); assert.deepEqual(model.failures, []);
+  if (candidate) {
+    assert.ok(model.observations.every(row => row.requestedModel === selectedModel));
+    assert.ok(model.observations.slice(8).every(row => row.priorTurn && row.priorNativeToolIds?.length === 7));
+    const shell = calls.filter(call => call.name === 'exec_command');
+    assert.equal(shell.length, 2);
+    assert.equal(shell[0]!.input.cmd, "printf 'ONE\\n' >> native-effect.txt; exit 7");
+    assert.equal(shell[0]!.input.sandbox_permissions, 'require_escalated');
+    assert.equal(shell[0]!.input.justification, 'TEST one-shot original command approval before the ONE effect');
+    assert.equal(shell[1]!.input.cmd, "printf 'TWO\\n' >> native-effect.txt");
+    assert.equal(shell[1]!.input.sandbox_permissions, undefined);
+    assert.equal(model.candidateFinalHeld(), true);
+    return;
+  }
   assert.equal(model.requests?.length, 11);
   const raw = readFileSync(join(root, 'codex-native-request-01.json'), 'utf8');
   const census = readFileSync(join(root, 'codex-native-request-01-census.json'), 'utf8');
