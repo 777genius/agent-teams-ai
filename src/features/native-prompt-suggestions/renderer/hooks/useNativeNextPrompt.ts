@@ -22,6 +22,8 @@ export function useNativeNextPrompt(input: {
   onInsert(text: string): boolean | void;
 }) {
   const [candidate, setCandidate] = useState<NativeNextPromptCandidate | null>(null);
+  const candidateRef = useRef(candidate);
+  candidateRef.current = candidate;
   const latestInputRef = useRef(input);
   latestInputRef.current = input;
   const validationEpochRef = useRef(0);
@@ -57,11 +59,17 @@ export function useNativeNextPrompt(input: {
 
   useEffect(() => {
     if (!input.editable) {
-      if (input.latestDirectMessageId)
-        invalidatedMessageIdRef.current = input.latestDirectMessageId;
+      // Temporary loading/restoring is not a human edit. Do not invalidate
+      // an unseen offer for this message; it may arrive before hydration.
+      // A previously displayed offer is dismissed for the exact operation,
+      // so Stop/Restart cannot resurrect that visible row.
+      validationEpochRef.current++;
+      acceptingRef.current = false;
+      if (candidateRef.current)
+        dismissedOperationRef.current = candidateRef.current.operationRef;
       setCandidate(null);
     }
-  }, [input.editable, input.latestDirectMessageId]);
+  }, [input.editable]);
 
   useEffect(() => {
     const unsubscribe = api.nativePromptSuggestions?.onUpdated((value) => {

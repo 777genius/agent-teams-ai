@@ -56,7 +56,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-function fixture() {
+function fixture(initialEditable = true) {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   const host = document.createElement('div');
   document.body.append(host);
@@ -68,7 +68,7 @@ function fixture() {
     recipient: 'alice',
     memberId: origin.memberId,
     latestDirectMessageId: origin.messageId as string | null,
-    editable: true,
+    editable: initialEditable,
     draftText: '',
     hasAttachments: false,
     hasChips: false,
@@ -241,6 +241,16 @@ describe('native next prompt UX in the actual feature hook + row', () => {
     };
     x.emit(next);
     expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).not.toBeNull();
+  });
+
+  it('retains an offer arriving during transient draft hydration, without user invalidation', () => {
+    const x = fixture(false);
+    x.emit(origin);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+    x.input.editable = true;
+    x.render();
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).not.toBeNull();
+    expect(x.onInsert).not.toHaveBeenCalled();
   });
 
   it('does not resurrect an old suggestion after teammate stops and restarts', () => {
