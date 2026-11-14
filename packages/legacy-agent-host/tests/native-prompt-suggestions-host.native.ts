@@ -152,6 +152,12 @@ test('original captured Host forwards native Claude follow-up for the exact huma
       await tick();
     }
     assert.equal(ready,true,'native original Claude readiness');
+    const beforeSend=await host.rpc('runtime.read',envelope('TEST-before-send',{memberId:'alice-id'}));
+    assert.equal(beforeSend.ok,true);
+    const baseline=(scalar(beforeSend.value).inputs as unknown[]|undefined)?.map(scalar)??[];
+    assert.ok(baseline.every(row=>typeof row.inputId==='string'),'native Runtime input IDs are projected');
+    const baselineIds=new Set(baseline.map(row=>String(row.inputId)));
+    assert.equal(baselineIds.size,baseline.length,'original Runtime inputs are unique');
     const messageId='TEST-human-message-'+namespace;
     const sent=await host.rpc('team.execute',envelope('TEST-send',{
       operation:'message.send',payload:{
@@ -160,6 +166,9 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     }));
     assert.equal(sent.ok,true,'canonical Team accepted the single human direct user input');
     assert.equal(scalar(sent.value).phase,'completed');
+    const deliveryId=scalar(scalar(sent.value).effects).deliveryId;
+    assert.ok(typeof deliveryId==='string'&&deliveryId.length>0,
+      'original saved human delivery has an input identity');
     const deadline=Date.now()+55_000;
     let terminal=false;
     let latestGeneration: unknown;
@@ -173,6 +182,15 @@ test('original captured Host forwards native Claude follow-up for the exact huma
       await tick();
     }
     assert.equal(terminal,true,'original Runtime persisted terminal success');
+    const afterSend=await host.rpc('runtime.read',envelope('TEST-after-send',{memberId:'alice-id'}));
+    assert.equal(afterSend.ok,true);
+    const rows=(scalar(afterSend.value).inputs as unknown[]|undefined)?.map(scalar)??[];
+    assert.ok(rows.every(row=>typeof row.inputId==='string'),'bounded durable Runtime input list');
+    const newInputs=rows.filter(row=>!baselineIds.has(String(row.inputId)));
+    assert.equal(newInputs.length,1,'one new durable input; auxiliary sampling never starts another source turn');
+    assert.equal(newInputs[0]?.inputId,deliveryId,'completed original human input');
+    assert.equal(newInputs[0]?.phase,'terminal');
+    assert.equal(newInputs[0]?.terminal,'succeeded');
     assert.equal(received.length,1,'one provider candidate reaches original captured Host notification');
     const event=received[0]!;
     assert.equal(event.provider,'claude');
@@ -181,6 +199,7 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     assert.equal(event.memberId,'alice-id');
     assert.equal(event.memberName,'alice');
     assert.equal(event.messageId,messageId);
+    assert.equal(event.inputId,deliveryId);
     assert.equal(event.completedTurnRef,event.operationRef);
     assert.ok(typeof event.text==='string'&&event.text.length>0);
     assert.ok(bodies.length>=2,'SDK generated an additional native suggestion inference');
