@@ -1930,6 +1930,11 @@
       "voiceToText": "Voice to text",
       "send": "Send",
       "sendingUnavailableLaunching": "Sending unavailable while team is launching"
+    },
+    "suggestions": {
+      "insert": "Insert",
+      "dismiss": "Dismiss suggestion",
+      "tab": "Tab"
     }
   },
   "claudeLogs": {
