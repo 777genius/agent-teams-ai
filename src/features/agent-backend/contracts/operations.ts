@@ -208,7 +208,12 @@ export interface BackendOperationPayloads
   };
   'command.lookup': Record<string, never>;
   'runtime.open': { memberId: string; expectedGeneration?: string };
-  'runtime.read': { memberId: string; expectedGeneration?: string };
+  'runtime.read': {
+    memberId: string;
+    expectedGeneration?: string;
+    /** Optional read-only Host proof of the original native suggestion input. */
+    nativePromptProof?: { inputId: string; operationRef: string };
+  };
   'runtime.activity.snapshot': { memberId: string; expectedGeneration?: string };
   'runtime.activity.feed': { memberId: string; cursor: string; expectedGeneration?: string };
   'runtime.dispatch': { memberId: string; expectedGeneration?: string };
