@@ -63,6 +63,8 @@ for (const prefix of ['opencode-full-team-', 'opencode-mixed-team-']) {
 function passingProof() {
   return {
     status: 'passed', cleanupConfirmed: true, model: 'selected/model',
+    leadAssignedTask: { id: 'lead-created-task', createdBy: 'team-lead', owner: 'alice', completed: true, ownerCommentConfirmed: true },
+    peerSettlement: { settled: true, unavailable: false, checks: [0, 1, 2, 3].map(index => ({ messageId: `peer-${index}`, inboxRead: true, readCommitted: true })) },
     finalStopConfirmed: true, initialStopConfirmed: true, independentAssertionsPassed: true,
     runId: 'initial-run', initialSessions: { alice: 'session-a', bob: 'session-b' },
     tasks: ['alice', 'bob'].map((owner) => ({ owner, id: `initial-${owner}`, status: 'completed' })),
@@ -234,7 +236,7 @@ test('isolates auth/home/config and retains cleanup-confirmed proof after succes
         assert.equal(path.basename(args[args.indexOf('--config') + 1]), 'vitest.opencode-proof.config.ts');
         assert.equal(options.env.OPENCODE_E2E_FULL_TEAM, '1');
         assert.equal(options.stdio, 'pipe');
-        assert.equal(options.timeout, 30 * 60_000);
+        assert.equal(options.timeout, 40 * 60_000);
         fs.writeFileSync(
           path.join(options.env.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'),
           JSON.stringify(passingProof())
@@ -363,6 +365,11 @@ test('incomplete full proof cannot authorize state deletion', async () => {
   try {
     for (const mutate of [
       (proof) => { delete proof.finalStopConfirmed; },
+      (proof) => { delete proof.leadAssignedTask; },
+      (proof) => { proof.leadAssignedTask.createdBy = 'user'; },
+      (proof) => { delete proof.peerSettlement; },
+      (proof) => { proof.peerSettlement.checks[0].readCommitted = false; },
+      (proof) => { proof.peerSettlement.checks[1] = proof.peerSettlement.checks[0]; },
       (proof) => { delete proof.independentAssertionsPassed; },
       (proof) => { proof.tasks[1] = proof.tasks[0]; },
       (proof) => { proof.initialSessions.bob = proof.initialSessions.alice; },

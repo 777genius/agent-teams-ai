@@ -238,11 +238,9 @@ function extractArchive(archivePath, extractDir, archiveKind) {
 
   if (archiveKind === 'zip') {
     if (process.platform === 'win32') {
-      runOrThrow('powershell', [
-        '-NoProfile',
-        '-Command',
-        `Expand-Archive -LiteralPath '${archivePath.replace(/'/g, "''")}' -DestinationPath '${extractDir.replace(/'/g, "''")}' -Force`,
-      ]);
+      // Windows ships bsdtar with ZIP support. Avoid Expand-Archive, whose
+      // ZipFileExtensions overload can fail under the runner PowerShell host.
+      runOrThrow('tar.exe', ['-xf', archivePath, '-C', extractDir]);
       return;
     }
 

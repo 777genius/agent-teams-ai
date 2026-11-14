@@ -278,8 +278,8 @@ vi.mock('@tanstack/react-virtual', () => ({
 }));
 
 import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
-import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { OpenCodeSourceDirectoryContext } from '@renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider';
+import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
 import {
   getCliProviderStatusScopeKey,
   MULTIMODEL_PROVIDER_IDS,
@@ -1908,7 +1908,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     ).toContain('minimax-m3-free');
   });
 
-  it('labels, sorts, and filters OpenCode models with real Agent Teams E2E recommendations', async () => {
+  it('keeps recommendation badges and filters while sorting free models first', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -2008,10 +2008,10 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(recommendedIndex).toBeGreaterThanOrEqual(0);
     expect(currentMiniMaxIndex).toBeGreaterThanOrEqual(0);
     expect(testedIndex).toBeGreaterThanOrEqual(0);
-    expect(currentMiniMaxIndex).toBeGreaterThan(recommendedIndex);
+    expect(currentMiniMaxIndex).toBeLessThan(recommendedIndex);
     expect(testedIndex).toBeGreaterThan(recommendedIndex);
     expect(unavailableIndex).toBeGreaterThan(currentMiniMaxIndex);
-    expect(notRecommendedIndex).toBeGreaterThan(unavailableIndex);
+    expect(notRecommendedIndex).toBeLessThan(unavailableIndex);
 
     expect(host.textContent).toContain('Recommended only');
     expect(host.textContent).toContain('Free only');

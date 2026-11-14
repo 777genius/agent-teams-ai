@@ -236,6 +236,13 @@ export function isCompleteSmokeProof(proof, kind, models) {
   if (!nonempty(proof.runId)) return false;
   if (kind === 'FULL') {
     return proof.model === models[0] && proof.initialStopConfirmed === true &&
+      proof.leadAssignedTask?.createdBy === 'team-lead' && proof.leadAssignedTask?.owner === 'alice' &&
+      nonempty(proof.leadAssignedTask?.id) && proof.leadAssignedTask?.completed === true &&
+      proof.leadAssignedTask?.ownerCommentConfirmed === true &&
+      proof.peerSettlement?.settled === true && proof.peerSettlement?.unavailable === false &&
+      Array.isArray(proof.peerSettlement?.checks) && proof.peerSettlement.checks.length === 4 &&
+      new Set(proof.peerSettlement.checks.map(row => row.messageId)).size === 4 &&
+      proof.peerSettlement.checks.every(row => nonempty(row.messageId) && row.inboxRead === true && row.readCommitted === true) &&
       nonempty(proof.relaunch?.runId) && proof.relaunch.runId !== proof.runId &&
       names.every((name) => nonempty(proof.initialSessions?.[name])) &&
       new Set(names.map((name) => proof.initialSessions[name])).size === names.length &&
@@ -471,7 +478,9 @@ export async function runFullTeamSmoke({
         stdio: 'pipe',
         encoding: 'utf8',
         maxBuffer: 8 * 1024 * 1024,
-        timeout: 30 * 60_000,
+        // Vitest allows 35 minutes including owned-host cleanup; the outer
+        // process needs a separate five-minute startup/teardown reserve.
+        timeout: 40 * 60_000,
         killSignal: 'SIGTERM',
       }
     );
