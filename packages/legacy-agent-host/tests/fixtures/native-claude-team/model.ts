@@ -807,7 +807,7 @@ export async function startNativeTeamModel(
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   assert.ok(address && typeof address !== 'string');
-  return {
+  const model = {
     url: `http://127.0.0.1:${address.port}`,
     crossTeamRequests: crossTeam?.requests ?? [],
     ordinaryRequests: ordinary?.requests ?? [],
@@ -828,9 +828,7 @@ export async function startNativeTeamModel(
       ? {
           currentLegacyTurns,
           currentLegacyProbes,
-          get currentLegacyCatalogRequests() {
-            return currentLegacyCatalogRequests;
-          },
+          currentLegacyCatalogRequests,
           finishCurrentLegacySource: async () => {
             assert.ok(currentLegacyOpen, 'close the original current-legacy epoch once');
             currentLegacyOpen = false;
@@ -876,4 +874,12 @@ export async function startNativeTeamModel(
         server.close(() => resolve());
       }),
   };
+  if (options.currentLegacySource) {
+    Object.defineProperty(model, 'currentLegacyCatalogRequests', {
+      enumerable: true,
+      configurable: true,
+      get: () => currentLegacyCatalogRequests,
+    });
+  }
+  return model;
 }

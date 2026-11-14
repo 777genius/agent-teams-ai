@@ -1,12 +1,15 @@
+import { captureOpenCodeReadinessOrigin } from './OpenCodeReadinessOrigin.js';
 import { captureOpenCodeConfigurationSource } from './OpenCodeConfigurationSource.js';
 import { OpenCodeV2CredentialScope } from './OpenCodeV2CredentialScope.js';
+import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
+import { AcceptedOpenCodeV2FileKey } from './OpenCodeV2SelectedFileKey.js';
 import { closeCoordinationByDeadline } from './OpenCodeCoordinationEndpoint.js';
 import { ManagementCommandError, nativeLocalReadinessEvidenceSchema } from '../../management/commandRecords.js';
 import { managementDigest } from '../../management/identity.js';
 
 import type { NativeCoordinationObservation } from './OpenCodeCoordinationProbe.js';
 import type { ModelProbeInput, NativeModelProbe } from '../../management/ModelProbeOwner.js';
-import type { NativeLocalReadinessEvidence } from '../../management/commandRecords.js';
+import type { LocalModelReadinessOrigin, NativeLocalReadinessEvidence } from '../../management/commandRecords.js';
 import type { OpenCodeManagementProfile } from '../../management/profile.js';
 
 type Row = Record<string, unknown>;
@@ -79,13 +82,15 @@ export function createOpenCodeLocalModelReadiness(
   input: ModelProbeInput,
   ownerCurrent: () => boolean,
   adapters: {
-    ordinary(observeProvider: (provider: unknown) => boolean, isCurrent: () => boolean): NativeModelProbe;
+    ordinary(observeProvider: (provider: unknown, fileProof?: AcceptedOpenCodeV2FileKey) => boolean, isCurrent: () => boolean): NativeModelProbe;
     coordination(provider: Row, key: string | undefined, isCurrent: () => boolean): NativeReadinessCoordination | undefined;
     fetchImpl?: typeof fetch;
-  }
-): NativeModelProbe {
+  },
+  origin?: LocalModelReadinessOrigin
+): NativeModelProbe & { nativeFileKeyWitness(): AcceptedOpenCodeV2FileKey | undefined } {
   const source = captureOpenCodeConfigurationSource(profile,
     profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent);
+  const policyOrigin = origin ? captureOpenCodeReadinessOrigin(origin, profile, input.providerId, ownerCurrent) : undefined;
   const raw = source.read(), providers = object(raw.provider) ? raw.provider : {};
   const candidate = providers[input.providerId];
   const configured = object(candidate) ? candidate : undefined;
@@ -101,42 +106,98 @@ export function createOpenCodeLocalModelReadiness(
       });
   };
   const compatible = configured?.npm === '@ai-sdk/openai-compatible';
-  const selectedUrl = compatible ? baseUrl(resolveString(options.baseURL)) : undefined;
-  const configuredKey = resolveString(options.apiKey);
+  const selectedUrl = policyOrigin ? baseUrl(policyOrigin.policy?.baseUrl)
+    : compatible ? baseUrl(resolveString(options.baseURL)) : undefined;
+  const requirePrivateApproval = (value: unknown) => {
+    if (!policyOrigin || typeof value !== 'string') return;
+    let destination: URL;
+    try { destination = new URL(value.trim()); } catch { return; }
+    if (!network(destination.hostname).privateNetwork) return;
+    const actual = baseUrl(value);
+    if (!actual || !selectedUrl || !policyOrigin.policy || !policyOrigin.privateNetworkApproved ||
+        actual.toString() !== selectedUrl.toString()) held();
+  };
+  // Original native configuration is already captured; a selector refusal is never private approval.
+  requirePrivateApproval(resolveString(options.baseURL));
+  // V1 keeps native substitution. A V2 token is qualified by the exact native source capture below.
+  const configuredKey = (policyOrigin || profile.nativeGeneration === 'v2') &&
+    typeof options.apiKey === 'string' && options.apiKey.includes('{file:')
+    ? options.apiKey : resolveString(options.apiKey);
+  const hasConfiguredKey = policyOrigin?.policy?.hasConfiguredApiKey ??
+    (typeof configuredKey === 'string' && Boolean(configuredKey.trim()));
   const selectedModel = input.modelId.startsWith(input.providerId + '/')
     ? input.modelId.slice(input.providerId.length + 1) : input.modelId;
   if (!selectedModel || selectedModel.length > 256) invalid();
-  const knownMissing = configuredIds.has(input.providerId) && (!compatible || !selectedUrl);
-  // B1 cannot synthesize the still-unconnected original Main private-network approval witness.
-  // This purpose stays inactive as allocation authority until that B2 amendment is connected.
-  if (selectedUrl && network(selectedUrl.hostname).privateNetwork) held();
+  const knownMissing = configuredIds.has(input.providerId) &&
+    (policyOrigin ? !policyOrigin.policy : !compatible || !selectedUrl);
+  if (policyOrigin?.invalid && (policyOrigin.policy || configuredIds.has(input.providerId))) held();
+  if (selectedUrl && network(selectedUrl.hostname).privateNetwork && !policyOrigin?.privateNetworkApproved) held();
   const localCandidate = Boolean(selectedUrl && network(selectedUrl.hostname).loopback &&
-    !(typeof configuredKey === 'string' && configuredKey.trim()));
-  const key = localCandidate
-    ? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture() : undefined;
+    !hasConfiguredKey);
+  const nativeConfiguration = profile.nativeGeneration === 'v2' && profile.embedded?.configurationSource
+    ? captureOpenCodeV2Configuration(profile, { providerId: input.providerId, modelId: selectedModel },
+      ownerCurrent, 'model', { source, config: raw }) : undefined;
+  const selectedFile = nativeConfiguration?.selectedFile;
+  const key = !selectedFile && (localCandidate || profile.nativeGeneration === 'v2')
+    ? nativeConfiguration?.key ?? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture()
+    : undefined;
+  const baseline = profile.nativeGeneration === 'v2' && profile.nativeModel?.providerId === input.providerId
+    ? profile.embedded?.providerConfiguration : undefined;
+  const baselineSettings = object(baseline?.settings) ? baseline.settings : undefined;
+  const baselineKey = typeof baselineSettings?.apiKey === 'string' && baselineSettings.apiKey
+    ? baselineSettings.apiKey : undefined;
   // V2 uses the captured credential; V1 observes the native SDK's resolved key below.
-  let applicable = localCandidate && (profile.nativeGeneration !== 'v2' || key?.present !== true);
+  let applicable = localCandidate && !selectedFile && (profile.nativeGeneration !== 'v2' || key?.present !== true);
+  const presetId = policyOrigin?.policy?.preset;
   let preset: Metadata['provider'] = !applicable ? 'custom'
-    : input.providerId === 'ollama' ? 'ollama'
-      : input.providerId === 'lmstudio' ? 'lmstudio'
-        : input.providerId === 'llama.cpp' ? 'llamacpp' : 'custom';
+    : (presetId ?? input.providerId) === 'ollama' ? 'ollama'
+      : (presetId ?? input.providerId) === (presetId ? 'lm-studio' : 'lmstudio') ? 'lmstudio'
+        : (presetId ?? input.providerId) === 'llama.cpp' ? 'llamacpp' : 'custom';
   const metadata: Metadata = { provider: preset, tools: null, modelListed: null,
     contextTokens: null, parameterCount: null, configuredContextTokens: null, trainedContextTokens: null,
     contextSource: 'unknown' };
   const reasons = new Set<Reason>();
   let effective: Row | undefined, effectiveDigest: string | undefined;
+  let fileProof: AcceptedOpenCodeV2FileKey | undefined;
   let closed = false;
-  const current = () => !closed && ownerCurrent() && source.isCurrent() && (key?.isCurrent() ?? true);
-  const observeProvider = (value: unknown) => {
+  let released = false;
+  const current = () => !closed && ownerCurrent() && source.isCurrent() &&
+    (policyOrigin?.isCurrent() ?? true) && (key?.isCurrent() ?? true) &&
+    (selectedFile?.isCurrent() ?? true) && (fileProof?.filesCurrent() ?? true);
+  const observeProvider = (value: unknown, nativeFileProof?: AcceptedOpenCodeV2FileKey) => {
     if (!current()) held();
     if (!object(value) || Buffer.byteLength(JSON.stringify(value)) > 256 * 1024) return held();
     const next = structuredClone(value), nextOptions = object(next.options) ? next.options : {};
     if (nextOptions.apiKey !== undefined && typeof nextOptions.apiKey !== 'string') held();
-    if (compatible) {
-      const actualUrl = baseUrl(nextOptions.baseURL);
+    requirePrivateApproval(nextOptions.baseURL);
+    const actualUrl = baseUrl(nextOptions.baseURL);
+    if (policyOrigin?.invalid && !policyOrigin.policy && !actualUrl) held();
+    if (policyOrigin && actualUrl && network(actualUrl.hostname).privateNetwork &&
+        (!policyOrigin.privateNetworkApproved || actualUrl.toString() !== selectedUrl?.toString())) held();
+    if (compatible && !policyOrigin || policyOrigin?.policy) {
       if (next.npm !== '@ai-sdk/openai-compatible' || !actualUrl || !selectedUrl ||
           actualUrl.toString() !== selectedUrl.toString()) held();
     }
+    const v2 = profile.nativeGeneration === 'v2';
+    const baselineKeyMatched = v2 && key?.present === false && baselineKey !== undefined &&
+      nextOptions.apiKey === baselineKey;
+    if (v2) {
+      const observed = Object.hasOwn(next, 'credentialScopeDigest');
+      if (selectedFile) {
+        if (!AcceptedOpenCodeV2FileKey.matches(nativeFileProof, selectedFile) ||
+            !nativeFileProof.filesCurrent() || !observed || next.credentialScopeDigest !== nativeFileProof.scopeDigest ||
+            fileProof !== undefined && fileProof.scopeDigest !== nativeFileProof.scopeDigest) return held();
+        fileProof = nativeFileProof;
+      } else if (nativeFileProof !== undefined) return held();
+      else if (key?.present) {
+        if (!observed || typeof next.credentialScopeDigest !== 'string' ||
+            !/^[a-f0-9]{64}$/.test(next.credentialScopeDigest) || next.credentialScopeDigest !== key.digest) held();
+      } else if (observed || typeof nextOptions.apiKey === 'string' && nextOptions.apiKey && !baselineKeyMatched) held();
+    }
+    if (policyOrigin?.policy?.hasConfiguredApiKey && (v2
+      ? !(fileProof || key?.present || baselineKeyMatched)
+      : typeof nextOptions.apiKey !== 'string' || !nextOptions.apiKey)) held();
+    if (!current()) held();
     const digest = managementDigest(next);
     if (effectiveDigest !== undefined && digest !== effectiveDigest) held();
     if (typeof nextOptions.apiKey === 'string' && nextOptions.apiKey.length > 0) {
@@ -260,6 +321,7 @@ export function createOpenCodeLocalModelReadiness(
     }
   };
   const finish = (ordinaryConfirmed: boolean, result: Evidence['coordination']): boolean => {
+    if (policyOrigin && !current()) held();
     if (!ordinaryConfirmed) reasons.add('ordinary-unconfirmed');
     if (metadata.tools === false) reasons.add('tools-unsupported');
     if (metadata.contextTokens !== null && metadata.contextTokens < 16384) reasons.add('context-too-small');
@@ -277,8 +339,9 @@ export function createOpenCodeLocalModelReadiness(
       decision: block ? 'block' : 'allow', reasons: [...reasons],
       routeDigest: managementDigest({ providerId: input.providerId, modelId: selectedModel,
         baseUrl: selectedUrl?.toString() ?? null, effort: input.effort ?? null, limits: input.limits ?? null }),
-      configurationDigest: managementDigest({ source: source.digest, effective: effectiveDigest ?? null }),
-      accountDigest: managementDigest({ binding: profile.accountBinding, key: key?.digest ?? null,
+      configurationDigest: managementDigest({ source: source.digest, effective: effectiveDigest ?? null,
+        ...(policyOrigin ? { origin: policyOrigin.digest } : {}) }),
+      accountDigest: managementDigest({ binding: profile.accountBinding, key: fileProof?.scopeDigest ?? key?.digest ?? null,
         configuredKey: typeof configuredKey === 'string' ? configuredKey : null }), metadata,
     });
     return !block;
@@ -321,6 +384,7 @@ export function createOpenCodeLocalModelReadiness(
     timeoutMs,
     run: (signal, originalDeadline) => running ??= run(signal, originalDeadline),
     readiness: () => evidence === undefined ? undefined : structuredClone(evidence),
+    nativeFileKeyWitness: () => released && ordinaryClean && evidence?.decision === 'allow' ? fileProof : undefined,
     close: originalDeadline => {
       closed = true; abort.abort();
       const work = async () => {
@@ -331,7 +395,8 @@ export function createOpenCodeLocalModelReadiness(
         ]);
         return clean.every(Boolean);
       };
-      return closing ??= closeCoordinationByDeadline(work(), originalDeadline ?? deadline);
+      return closing ??= closeCoordinationByDeadline(work(), originalDeadline ?? deadline)
+        .then(clean => { released = clean; return clean; });
     },
   };
 }

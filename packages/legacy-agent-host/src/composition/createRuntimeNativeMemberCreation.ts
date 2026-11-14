@@ -1,3 +1,5 @@
+import { attachMemberModelReadiness } from './prepareTeamModelReadiness.js';
+import type { ModelReadinessReference } from '../management/commandRecords.js';
 import { createHash } from 'node:crypto';
 import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { TeamOwnerError } from '../team/contracts.js';
@@ -38,8 +40,9 @@ export type NativeMemberModelPreflight = (options: {
   profile: RuntimeMemberProfile;
   source: NativeMemberCreationAuthority;
   input: NativeMemberCreationInput;
+  teamBindingDigest: string;
   assertCurrent(): void;
-}) => Promise<void>;
+}) => Promise<ModelReadinessReference | void>;
 
 /** Composition callback only; the host's existing management owner retains all one-off probe resources. */
 export function createRuntimeNativeMemberCreation(options: {
@@ -173,13 +176,21 @@ export function createRuntimeNativeMemberCreation(options: {
             owner.withConfigured(captured.source, captured.input, () => {});
           };
           guard();
-          await options.preflight!({
+          const readiness = await options.preflight!({
             profile: captured.profile,
             source: captured.source,
             input: captured.input,
             assertCurrent: guard,
+            teamBindingDigest: runtimeDigest(team.definition.binding),
           });
           guard();
+          if (captured.profile.provider === 'opencode') {
+            if (!readiness) throw new TeamOwnerError('hold');
+            attachMemberModelReadiness({ launch: retained.launch, entry: captured.entry!, reference: readiness,
+              commandId: captured.input.commandId, actorDigest: captured.source.fingerprint,
+              inputDigest: runtimeDigest(captured.input), cutoff: readiness.expiresAt,
+              authorized: operation => owner.withConfigured(captured.source, captured.input, operation) });
+          }
           const key = runtimeDigest(captured.entry!.binding);
           if (options.entries.has(key)) throw new TeamOwnerError('conflict');
           // The launch callbacks close over this SAME array. Existing peer entries never change.

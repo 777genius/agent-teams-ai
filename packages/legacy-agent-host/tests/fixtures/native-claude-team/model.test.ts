@@ -110,15 +110,18 @@ test('current legacy source has one text turn and closes before ordinary Host pr
     'You are "team-lead", the team lead.\n- Your team is "test-legacy".\n\nUser instructions:\n' +
     source.prompt;
   try {
+    assert.equal(model.currentLegacyCatalogRequests, 0);
     const warmed = await preconnect();
     assert.equal(warmed.status, 204);
     assert.equal(await warmed.text(), '');
     const listed = await catalog();
     assert.equal(listed.status, 200);
+    assert.equal(model.currentLegacyCatalogRequests, 1);
     const listing = await listed.json() as { data: { id: string }[]; has_more: boolean };
     assert.deepEqual(listing.data.map(row => row.id), ['claude-sonnet-4-6', 'claude-opus-4-6']);
     assert.equal(listing.has_more, false);
     assert.equal((await catalog('?limit=1000')).status, 200);
+    assert.equal(model.currentLegacyCatalogRequests, 2);
     assert.equal((await post('Output only the single word PONG.', [{ name: 'Bash' }])).status, 200);
     const response = await post(prompt, [{ name: 'Bash' }]);
     assert.equal(response.status, 200);
@@ -144,14 +147,43 @@ test('current legacy source has one text turn and closes before ordinary Host pr
       'the old source cannot submit after the consumer boundary'
     );
     assert.equal((await catalog()).status, 400, 'closed/failed source never reopens for a catalog read');
+    assert.equal(model.currentLegacyCatalogRequests, 2);
     assert.deepEqual(model.currentLegacyTurns, frozen.turns);
   } finally {
     await model.close();
   }
+  const capped = await startNativeTeamModel({ currentLegacySource: source });
+  try {
+    assert.equal(capped.currentLegacyCatalogRequests, 0);
+    const readCatalog = () => fetch(capped.url + '/v1/models?limit=1000', {
+      headers: { 'x-api-key': 'TEST-current-legacy-only-key' },
+    });
+    for (let count = 1; count <= 8; count++) {
+      const accepted = await readCatalog();
+      assert.equal(accepted.status, 200);
+      await accepted.text();
+      assert.equal(capped.currentLegacyCatalogRequests, count);
+    }
+    assert.deepEqual(capped.failures, []);
+    const ninth = await readCatalog();
+    assert.equal(ninth.status, 400); await ninth.text();
+    assert.equal(capped.currentLegacyCatalogRequests, 9);
+    assert.deepEqual(capped.failures, ['bounded original legacy catalog reads']);
+    const sealed = await readCatalog();
+    assert.equal(sealed.status, 400); await sealed.text();
+    assert.equal(capped.currentLegacyCatalogRequests, 9, 'sealed reads never increment the original counter');
+    assert.equal(capped.failures.length, 2);
+    assert.equal(capped.failures[0], 'bounded original legacy catalog reads');
+    assert.match(capped.failures[1]!, /oracle is sealed after its first protocol failure/);
+    assert.deepEqual(capped.observations, []); assert.deepEqual(capped.probes, []);
+    assert.deepEqual(capped.currentLegacyTurns, []); assert.deepEqual(capped.currentLegacyProbes, []);
+  } finally { await capped.close(); }
   for (const mode of ['path', 'body', 'auth', 'overflow', 'ordinary', 'closed-donor', 'closed'] as const) {
     const refused = await startNativeTeamModel(mode === 'ordinary' ? {}
       : mode === 'closed-donor' ? { donorSavedProbes: true } : { currentLegacySource: source });
     try {
+      if (mode === 'ordinary' || mode === 'closed-donor')
+        assert.equal(Object.hasOwn(refused, 'currentLegacyCatalogRequests'), false);
       if (mode === 'closed-donor') assert.deepEqual(await refused.finishDonorSavedProbes!(), []);
       if (mode === 'closed') {
         const original = await fetch(refused.url + '/v1/messages', {

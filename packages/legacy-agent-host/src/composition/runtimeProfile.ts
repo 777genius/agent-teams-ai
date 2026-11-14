@@ -9,6 +9,7 @@ import { isCanonicalOpenCodeV2Directory } from './openCodeV2StaticPreflight.js';
 import { openCodeV2EmbeddedProfileSchema } from './openCodeV2EmbeddedProfile.js';
 import { capturedMcpServersSchema } from '../mcp-catalog/capturedServer.js';
 import { openCodeManagedPreferencesSchema } from './openCodeManagedPreferences.js';
+import { initialRuntimeModelAdmissionSchema } from './initialRuntimeModelAdmission.js';
 
 const id = z.string().min(1).max(256);
 const path = nativeProfilePathSchema;
@@ -216,8 +217,16 @@ export const runtimeProfileSchema = z
     members: z.array(runtimeMemberProfileSchema).max(256),
     /** Explicit trusted defaults for fresh members/provider changes, never inferred from members. */
     providerTemplates: z.array(runtimeMemberProfileSchema).max(3).optional(),
+    /** Original native bootstrap intent, captured before this private profile is hashed. */
+    initialModelAdmissions: z.array(z.lazy(() => initialRuntimeModelAdmissionSchema)).max(256).optional(),
   })
   .strict()
+  .refine(value => {
+    const keys = value.initialModelAdmissions?.flatMap(row => row.targets.map(target =>
+      JSON.stringify([row.action.method, row.action.commandId, row.action.teamId, target.memberId]))) ?? [];
+    return new Set(keys).size === keys.length &&
+      Buffer.byteLength(JSON.stringify(value.initialModelAdmissions ?? [])) <= 256 * 1024;
+  }, 'Initial native admissions must be finite and unique')
   .refine((value) => value.members.length + (value.providerTemplates?.length ?? 0) > 0)
   .refine(
     (value) =>

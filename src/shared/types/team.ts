@@ -791,10 +791,9 @@ export interface OpenCodeRuntimeDeliveryUserVisibleImpact {
   observedAt?: string;
   nextReviewAt?: string;
 }
-export interface CapturedTeamProcessStop {
-  processRef: string;
-  originalCommandId?: string;
-}
+export type {
+  ProcessStopSelection as CapturedTeamProcessStop,
+} from '@features/agent-backend/contracts';
 export interface TeamProcess {
   processRef?: string;
   observation?: 'same-live' | 'absent' | 'stale' | 'unknown' | 'metadata-stopped';
@@ -909,6 +908,7 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
   /** One existing-dialog launch intent, including its confirmed saved-roster operation. */
   command?: ApplicationCommandRequestIdentity;
   savedRosterCommandId?: string;
+  modelPreparation?: TeamProvisioningTypes.CapturedTeamModelPreparation;
   cwd: string;
   prompt?: string;
   /** Explicit opt-in: start the configured runtime without replaying saved one-time work. */
@@ -1468,18 +1468,8 @@ export interface TeamProvisioningSupportDiagnostic {
   createdAt: string;
 }
 
-/** A current observation from one captured Team preparation, never global provider authority. */
-export interface CapturedTeamReadiness {
-  handleId: string;
-  preparationId: string;
-  launchId: string;
-  rosterRevision: string;
-  selectionSignature: string;
-  expiresAt: number;
-}
-
 export interface TeamProvisioningPrepareResult {
-  capturedTeamReadiness?: CapturedTeamReadiness;
+  capturedTeamReadiness?: TeamProvisioningTypes.CapturedTeamReadiness;
   createdTeamReadiness?: CreatedTeamReadiness;
   ready: boolean;
   message: string;

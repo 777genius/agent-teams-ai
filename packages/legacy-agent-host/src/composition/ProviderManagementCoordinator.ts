@@ -1,3 +1,5 @@
+import { captureOpenCodeReadinessOrigin } from '../adapters/providers/OpenCodeReadinessOrigin.js';
+import type { LocalModelReadinessOrigin } from '../management/commandRecords.js';
 import { SkillCoordinator } from '../skills/SkillCoordinator.js';
 import { NativeExtensionCoordinator } from '../extensions/NativeExtensionCoordinator.js';
 import { ClaudeAuthenticationCoordinator } from './ClaudeAuthenticationCoordinator.js';
@@ -211,12 +213,17 @@ export class ProviderManagementCoordinator {
       fence,
       assertWriter: () => this.assertWriter(),
       select: (profileId, configRevision) => this.target(profileId, configRevision),
-      prepare: (input, isCurrent, purpose) => this.prepareProbe(input, isCurrent, purpose),
+      prepare: (input, isCurrent, purpose, origin) => this.prepareProbe(input, isCurrent, purpose, undefined, origin),
+      readinessOriginCurrent: (origin, input, current = () => true) => {
+        try { captureOpenCodeReadinessOrigin(origin, this.select(input.profileId, input.configRevision), input.providerId,
+          () => { this.assertCurrent(); return current(); }); return true; } catch { return false; }
+      },
     });
   }
 
   private prepareProbe(input: ModelProbeInput, isCurrent: () => boolean,
-    purpose?: NativeModelProbePurpose, selection?: ProcessSelection): NativeModelProbe {
+    purpose?: NativeModelProbePurpose, selection?: ProcessSelection,
+    origin?: LocalModelReadinessOrigin): NativeModelProbe {
     if (purpose && !this.profiles.has(input.profileId)) throw new ManagementCommandError('invalid');
     if (this.claude.has(input.profileId)) return this.claude.prepareProbe(input, isCurrent, selection?.createProcess);
     if (this.codex.has(input.profileId)) return this.codex.prepareProbe(input, isCurrent, selection?.createProcess);
@@ -252,7 +259,7 @@ export class ProviderManagementCoordinator {
       beginReplacement: () => { this.replacing.add(profile.profileId); },
       publishHost: host => { this.hosts.set(profile.profileId, host); },
       endReplacement: () => { this.replacing.delete(profile.profileId); },
-    }, purpose);
+    }, purpose, undefined, origin);
   }
 
   /** Private composition only: ordinary management RPCs cannot request this purpose. */
@@ -261,9 +268,10 @@ export class ProviderManagementCoordinator {
     return this.probes.startNativeCoordination(input, isCurrent);
   }
 
-  startNativeReadiness(input: unknown, isCurrent: () => boolean) {
+  startNativeReadiness(input: unknown, isCurrent: () => boolean,
+    scope?: import('../management/commandRecords.js').ModelReadinessProbeScope) {
     this.assertCurrent();
-    return this.probes.startNativeReadiness(input, isCurrent);
+    return this.probes.startNativeReadiness(input, isCurrent, scope);
   }
 
   private assertCurrent(): void {
@@ -275,12 +283,12 @@ export class ProviderManagementCoordinator {
   prepareTeamProbe(raw: ProviderManagementProfile, source?: RuntimeSourceProcessOrigin): ModelProbePreparation {
     const profile = providerManagementProfileSchema.parse(structuredClone(raw));
     const origin = source === undefined ? undefined : runtimeSourceProcessOriginSchema.parse(structuredClone(source));
-    return (input, current, purpose) => {
+    return (input, current, purpose, readinessOrigin) => {
       if (input.profileId !== profile.profileId || input.configRevision !== profile.configRevision)
         throw new ManagementCommandError('conflict');
       // Recheck the complete admitted bytes before any sanctioned model/server overlay.
       this.admitTeamProbeProfile(profile);
-      return this.prepareProbe(input, current, purpose, this.selectProcess(profile, origin));
+      return this.prepareProbe(input, current, purpose, this.selectProcess(profile, origin), readinessOrigin);
     };
   }
 
@@ -356,6 +364,14 @@ export class ProviderManagementCoordinator {
       selectionDigest: managementDigest({ profile, directories }),
       resourceId: managementDigest(directories.XDG_DATA_HOME),
     };
+  }
+
+  /** Readonly target comparison after an explicitly validated product publication. */
+  readinessTarget(raw: OpenCodeManagementProfile): CredentialTarget {
+    this.assertCurrent();
+    const profile = providerManagementProfileSchema.parse(raw);
+    if (profile.provider !== 'opencode') throw new ManagementCommandError('invalid');
+    return this.credentialTarget(profile);
   }
 
   private async performCredential(

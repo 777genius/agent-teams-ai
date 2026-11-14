@@ -96,7 +96,7 @@ export interface TeamOwnerOptions {
 export class TeamOwner {
   /** Trusted composition only; never exposed on connect/MCP. */
   readonly contextReminders: TeamContextReminders;
-  readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent'>;
+  readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent' | 'liveMembership'>;
   readonly hasRetainedRuntime = () => this.runtimeRegistration.hasRetained();
   private readonly commandAccess: ReturnType<typeof createTeamCommandAccess>;
   private readonly productChanges = new TeamProductChanges();
@@ -401,11 +401,9 @@ export class TeamOwner {
   }
 
   authorizeRuntimeAccess(
-    principalId: string,
-    binding: RuntimeMemberBinding,
-    action: 'read' | 'control'
+    ...args: Parameters<ReturnType<typeof createTeamDeliveryAuthority>['runtimeAccess']>
   ): boolean {
-    return this.deliveryAuthority.runtimeAccess(principalId, binding, action);
+    return this.deliveryAuthority.runtimeAccess(...args);
   }
   authorizeMemberBinding(
     binding: RuntimeMemberBinding,

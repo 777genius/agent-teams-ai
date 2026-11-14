@@ -576,7 +576,12 @@ jobs:
             assert.deepEqual(r.modelFailures, []);
             assert.equal(r.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
             assert.equal(r.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
+            const coordination = process.platform === 'linux' && process.arch === 'x64';
+            if (coordination) {
+              assert.equal(r.coordination.status, 'PASS'); assert.equal(r.coordination.cleanup, true);
+            }
             assert.deepEqual(r.steps, [
+              ...(coordination ? ['original_native_coordination_and_cleanup_before_business_host'] : []),
               'original_host_embedded_native_and_mcp_ready',
               'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',
               'changed_project_config_did_not_retarget_running_native_session',

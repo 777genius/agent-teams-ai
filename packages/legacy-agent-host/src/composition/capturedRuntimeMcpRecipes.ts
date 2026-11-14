@@ -1,3 +1,7 @@
+import { capturedRuntimeMcpReferencesSchema } from './capturedRuntimeMcpReferences.js';
+import type { CapturedRuntimeMcpReference } from './capturedRuntimeMcpReferences.js';
+export { capturedRuntimeMcpReferencesSchema } from './capturedRuntimeMcpReferences.js';
+export type { CapturedRuntimeMcpReference } from './capturedRuntimeMcpReferences.js';
 import { z } from 'zod';
 import { join } from 'node:path';
 import { lstatSync } from 'node:fs';
@@ -24,13 +28,6 @@ const id = z
   .min(1)
   .max(256)
   .refine((value) => !value.includes('\0'));
-export const capturedRuntimeMcpReferencesSchema = z
-  .array(z.object({ memberId: id, digest: hash }).strict())
-  .max(256)
-  .refine((rows) => new Set(rows.map((row) => row.memberId)).size === rows.length);
-export type CapturedRuntimeMcpReference = z.infer<
-  typeof capturedRuntimeMcpReferencesSchema
->[number];
 const overlaySchema = z
   .object({
     capturedMcpServers: capturedMcpServersSchema,

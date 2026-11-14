@@ -23,8 +23,9 @@ import assert from 'node:assert/strict';
 import { runDesktopNativeQuitMode, verifyDesktopNativeQuitAfterShutdown, capturePendingDesktopNativeQuit } from './desktop-native-quit-ui-smoke.ts';
 import { prepareDesktopMixedNativeFixture, reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
 import { runDesktopMixedCreateLaunchUiSmoke } from './desktop-mixed-create-launch-ui-smoke.ts';
+import { runDesktopLiveMembershipUiSmoke } from './desktop-live-membership-ui-smoke.ts';
 import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
-import { desktopProofEvidence, captureDesktopProofScope, projectDesktopProofReceiptSummary, verifyDesktopProofInputsAfterCleanup } from './desktop-proof-evidence.ts';
+import { desktopProofEvidence, captureDesktopProofScope, projectDesktopProofReceiptSummary, verifyDesktopProofInputsAfterCleanup, assertDesktopProofCompleted } from './desktop-proof-evidence.ts';
 import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
 import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-readback-fixture.ts';
 import { assertCapturedDesktopMetadataAbsent, observeDesktopMetadataClose, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
@@ -303,7 +304,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   let quitRequested = false;
   let finishMixedSettings: (() => Promise<void>) | undefined;
   const restartSameProfile = async (selection: Pick<Parameters<typeof restartCapturedDesktopApp>[0],
-    'model' | 'provider' | 'boundary' | 'createdHandleId' | 'afterOriginalSettingsQuit'>) => {
+    'model' | 'provider' | 'boundary' | 'createdHandleId' | 'afterOriginalSettingsQuit' | 'afterOriginalMembershipQuit'>) => {
     assert.ok(cdp && !packed && selection.model);
     return restartCapturedDesktopApp({
       app, cdp, group, fixture, repo, mode, evidence, cdpLibrary, ...selection,
@@ -405,7 +406,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       await runDesktopActivityUiSmoke(cdp, {root:fixture.root, source:activitySource, teamName:activitySource.teamName, memberName:activitySource.memberName, memberId:activitySource.memberId, handleId:fixture.handleId, evidence, assertOwnedRenderer:()=>assertOwnedCdpListener(group), assertNoNativeChildren:phase=>assertNoNativeHostChildren(group,fixture,phase)});
     } else if (processUiMode || controlledProcessMode) {
       hostPid = await qualifyColdProcessUi(cdp, { fixture, evidence, group, processReadbackMode, processReadbackSource,
-        controlledSource: controlledProcess?.source, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+        ...(packed ? { packedRendererUrl: packed.rendererUrl } : {}), controlledSource: controlledProcess?.source, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (await runDesktopNativeQuitMode(cdp, {mode, root: fixture.root, seed: fixture.uiSeed, evidence, model: openCodeLifecycleModel ?? conversationModel, coldMetadata, assertOwnedRenderer: () => assertOwnedCdpListener(group)})) {
       // Exact Quit/readback witnesses are finalized below before fallback cleanup.
     } else if (nativeReviewMode) {
@@ -453,12 +454,15 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       });
     } else if (mixedMode) {
       assert.ok(mixedModels);
-      const mixed = await runDesktopMixedCreateLaunchUiSmoke(cdp, {
+      const mixed = await (mixedModels.membership ? runDesktopLiveMembershipUiSmoke : runDesktopMixedCreateLaunchUiSmoke)(cdp, {
         fixture, models: mixedModels, capturedGroup: () => group, evidence,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
-        restartSameProfile: (createdHandleId, afterOriginalSettingsQuit) => restartSameProfile({
+        restartSameProfile: (createdHandleId, afterOriginalQuit) => restartSameProfile(mixedModels!.membership ? {
+          model: mixedModels!.opencode, provider: 'opencode', boundary: 'live-membership-after-stop',
+          createdHandleId, afterOriginalMembershipQuit: afterOriginalQuit,
+        } : {
           model: mixedModels!.claude, provider: 'claude', boundary: 'settings-saved-before-launch',
-          createdHandleId, afterOriginalSettingsQuit,
+          createdHandleId, afterOriginalSettingsQuit: afterOriginalQuit,
         }),
       });
       finishMixedSettings = mixed.finishSettings;
@@ -681,7 +685,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const { remaining, cleanupFailure, capturedHostAbsent, hostPid: cleanedHostPid } =
       await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity, hostPid, packedRelaunchMode });
     hostPid = cleanedHostPid;
-    const coldBoundary = evidence.coldResumeBoundary ?? evidence.coldExtensionBoundary ?? evidence.coldSettingsBoundary;
+    const coldBoundary = evidence.coldResumeBoundary ?? evidence.coldExtensionBoundary ?? evidence.coldSettingsBoundary ?? evidence.coldMembershipBoundary;
     if (coldBoundary && object(coldBoundary).secondEpoch) object(coldBoundary).secondCleanup = {
       processGroup: group, remaining, appExitCode: app.exitCode, appSignalCode: app.signalCode, capturedHostAbsent,
       ...(cleanupFailure ? { cleanupFailure } : {}),
@@ -768,16 +772,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     await verifyDesktopProofInputsAfterCleanup(nativeInputs, fixture, evidence);
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
     console.log(JSON.stringify(projectDesktopProofReceiptSummary(evidence, { receiptPath, mode, mixedMode })));
-    if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
-    if (emulatedOnly) assert.equal(evidence.status, 'PASS', 'provider-emulation UI proof incomplete; original receipt retained');
-    if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
-    if (mode === 'codex-login-ui') assert.equal(evidence.status, 'PASS', 'Codex login UI proof incomplete; inspect its retained finite receipt');
-    if (scheduleUiMode) assert.equal(evidence.status, 'PASS', 'original schedule UI proof incomplete; inspect its retained receipt');
-    if (capturedMcpUiMode) assert.equal(evidence.status, 'PASS', 'original MCP UI proof incomplete; inspect its retained receipt');
-    assert.ok(
-      !cleanupFailure && remaining !== null && remaining.length === 0,
-      'captured group cleanup unconfirmed; receipt retains debt and no further signal is authorized'
-    );
+    assertDesktopProofCompleted(evidence, { packed: Boolean(packed), emulatedOnly, controlledProcessMode,
+      mode, scheduleUiMode, capturedMcpUiMode, cleanupFailure, remaining });
   }
   if (mode === 'task-board-cross-team-ui') {
     assert.equal(evidence.status, 'PASS', 'original Taskboard proof and cleanup must finish before owner continuation');

@@ -223,3 +223,88 @@ The reviewed diff changes only those six import blocks. Canonical fast
 lint then passed with zero errors and the same 212 warnings. Its log
 SHA256 is
 `622305785d18c473574ae6be489b4b8fe15a1e54490ad75a92849e81abe2c982`.
+
+## Current-parent integration: 3a2882e and preserved conversation repairs
+
+The continuation recovered the exact prepared local tree `a4726750` and
+published its original source/evidence commits to the existing Draft #1192.
+It then compiled the complete application TypeScript command successfully
+at local `c1828376` / published `d9ea2a96`, after correcting the Codex installer
+callback's absent-source value and two narrow test type annotations. That
+compiler result precedes this merge and is not an acceptance result for it.
+
+The parent advanced from `0543d437` to `3a2882e1e07cfc0c8f6f51be322b6244b7e6a179`:
+95 commits, 193 changed files and 55 overlapping paths. This integration
+preserves both sides of 22 actual conflicts. It retains the checked provider
+archive from source `421fee918811b8a0b0c73d0ff3e761b9a1c5ecb0`, original runtime
+source authority, local/file-key readiness, retained Windows custody and
+live membership together with the conversation, Review and Plan16 repairs.
+
+### Resolution and review boundaries
+
+- The probe/launch group combines `startPrepared` readiness scope and origin
+  with the per-operation captured process preparation. Preparation remains
+  after original durable admission and replay checks. Model readiness for
+  restart/resume must also carry the original selected process authority;
+  a derived `team-probe-*` identifier cannot borrow a runtime-source grant.
+- The Runtime group combines live selected member histories with required
+  original conversation records and Resume lineage. Source readiness witnesses
+  remain attached to their actual predecessor attempt, never copied from the
+  current target. The original Team fence rechecks remain intact.
+- The three existing read views move together into a stateless composition
+  helper with explicit dependencies to keep the coordinator within its original
+  800-line cap. Its availability, writer and sealed checks retain their order;
+  all Desktop source inventories include the exact new helper.
+- The UI/process group preserves the union of original source rosters, Linux
+  launch helper pins, the no-provider cold Processes scenario and new public
+  process-read validation. Original startup barriers, deadlines, cleanup and
+  failure receipts remain unchanged.
+- The shared process-stop type is exported through the existing public feature
+  contract, eliminating the parent's forbidden deep import without a rule
+  exception or a second schema.
+
+R1 compared the original parent trees and identified coupled readiness and
+Windows preparation contracts. R2 assigned independent reviews to the Runtime,
+probe/launch and UI groups; the cross-group review found the Windows action
+readiness gap and the lost `desktop-readback-fixture.ts` source inventory entry.
+Both are repaired in the merged composition. R3 checks the compiled contracts,
+original behavior suites and immutable CI source before accepting the result.
+
+Incremental merge glue estimate: 150–320 production lines and 0–50 test lines,
+excluding changes already authored in either parent and preserved evidence.
+Complexity 6/10; expected reliability 8/10; confidence before executed merged
+acceptance 7/10. These estimates are planning judgments, not test outcomes.
+
+### Required executed acceptance
+
+Run the canonical workspace compiler, the original typed-lint scopes and
+architecture/source-size guards, followed by the original affected Host/Main
+suites. Then publish the reviewed merge with an expected-head lease and retain
+Draft status. The nine fixed offline Electron lanes, Windows finite source
+fixtures and permitted OpenCode native/platform lanes must report their own
+current-source results. Review original screenshots and physical cleanup.
+Queued, cancelled, skipped, diagnostic-only and historical results remain
+separate from PASS. No real Codex or Claude executable, main merge, release,
+default activation or Stage2 change is authorized by this integration.
+
+### Executed local integration gates
+
+The pinned Host build passed. The first twelve affected Host suites reported
+157 passed cases plus two module-load failures; an ESM import cycle was then
+removed by extracting the original MCP-reference and live-capture schemas
+into data-only modules. Old exports and full validation remain intact. The
+two affected original suites passed 20/20 with zero skips after the correction.
+Independent review confirmed the new dependency direction and source inventory.
+
+The source-size and provisioning guards pass without higher limits or new
+exceptions. Fast lint passes with zero errors and 213 warnings. Full pinned
+workspace typing exited 137 in the application compiler and is still required
+in CI. The original logs, including failures, are retained in
+`../evidence/e2e-integration-3a-2026-11-14/` and cannot be promoted to GUI proof.
+
+Source/functional audit also found remaining in-scope work: visible emulated
+Codex login, observational captured installer status/invalidation and actual
+finite Update A-to-B UI, automatic cron occurrence, and cold lifecycle proof.
+These remain separate unfinished slices; the nine lanes do not silently stand
+in for them. The previously open Darwin same-inode qualification retains its
+independent original scope described by P09 sections 47/75.

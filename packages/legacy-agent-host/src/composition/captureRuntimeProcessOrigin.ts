@@ -1,6 +1,8 @@
 import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
 import { resolveRuntimeRecipe } from './runtimeRecipe.js';
 import { runtimeCaptureCwd, runtimeCaptureSourceSchema } from './runtimeCaptureSource.js';
+import { liveRuntimeCaptureSchema } from './liveRuntimeCaptureSchema.js';
+import { runtimeDigest } from '../runtime/identity.js';
 
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { TeamHostProfile } from './TeamHost.js';
@@ -45,10 +47,26 @@ export function captureRuntimeSourceProcessOrigin(profile: TeamHostProfile,
 
 export function captureMemberProcessOrigin(profile: TeamHostProfile, entry: MemberEntry,
   sources?: RuntimeRecipeSources): RuntimeSourceProcessOrigin | undefined {
-  if (!entry.profile.windowsBroker || entry.team.capture === undefined) return undefined;
+  if (!entry.profile.windowsBroker) return undefined;
+  if (entry.liveRosterCapture) return captureLiveRosterProcessOrigin(profile, entry.team,
+    entry.liveRosterCapture, entry.baseProfile, sources);
+  if (entry.team.capture === undefined) return undefined;
   return captureRuntimeSourceProcessOrigin(profile, entry.team.definition.scope,
     entry.team.definition.binding.teamId, runtimeCaptureSourceSchema.parse(entry.team.capture),
     entry.profile, sources);
+}
+
+/** A live member retains its own original source, outside the initial run's recipe list. */
+export function captureLiveRosterProcessOrigin(profile: TeamHostProfile, team: HostedTeam,
+  raw: unknown, baseProfile: RuntimeMemberProfile, sources?: RuntimeRecipeSources): RuntimeSourceProcessOrigin | undefined {
+  const capture = liveRuntimeCaptureSchema.parse(raw);
+  if (capture.member.memberId !== baseProfile.memberId ||
+      capture.launchId !== (team.launchId ?? team.definition.scope.runId) ||
+      capture.sourceCaptureDigest !== runtimeDigest(team.capture ?? null) ||
+      capture.configurationDigest !== runtimeDigest(baseProfile)) throw new RuntimeSourceUnavailable();
+  return captureRecipeProcessOrigin({ runtime: profile.runtime, sources, reference: capture.sourceReference,
+    scope: team.definition.scope, projectPath: capture.sourceCwd, teamId: team.definition.binding.teamId,
+    memberId: baseProfile.memberId, provider: baseProfile.provider });
 }
 
 export function captureScheduledProcessOrigin(profile: TeamHostProfile, team: HostedTeam,

@@ -10,6 +10,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
+import { readBackendProcesses } from '../../src/features/agent-backend/contracts/processes.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertProcessFixture, probeProcessService, readProcessServices } from './desktop-native-process-fixture.ts';
 import { PROCESS_LABEL } from './desktop-native-process-model.ts';
@@ -45,6 +46,43 @@ export function desktopProcessOwnerExpression(selection: string, id: string, ref
   })()`;
 }
 
+type PackedProcessRead = Readonly<{ rendererUrl: string; bindingJson: string }>;
+/** Same canonical process read; the packaged app has no source-server module URL. */
+export async function readDesktopProcessData(
+  cdp: Pick<UiCdpPort, 'evaluate'>,
+  selection: string,
+  packed?: PackedProcessRead
+): Promise<Record<string, unknown>> {
+  if (!packed) return row(await cdp.evaluate(
+    `(async()=>{const {api}=await import('/api/index.ts');return await api.teams.getData(${desktopJsLiteral(selection)});})()`
+  ));
+  const binding = row(JSON.parse(packed.bindingJson)), handle = row(binding.handle);
+  assert.ok(typeof handle.handleId === 'string');
+  assert.equal(hostTeamSelectionKey(handle.handleId), selection);
+  const processes = readBackendProcesses(await cdp.evaluate(`(async()=>{
+    const expected=${desktopJsLiteral(binding)}, expectedUrl=${desktopJsLiteral(packed.rendererUrl)};
+    const preload=window.electronAPI, backend=preload?.agentBackend;
+    const current=()=>{
+      if(window.electronAPI!==preload||preload?.agentBackend!==backend||
+         typeof backend?.getConnections!=='function'||typeof backend?.invoke!=='function'||
+         String(location.href).split(/[?#]/u)[0]!==expectedUrl)
+        throw new Error('TEST packed process read renderer changed');
+    };
+    const connections=async()=>{
+      current();const snapshot=await backend.getConnections();current();
+      if(snapshot?.state!=='ready'||!Array.isArray(snapshot.bindings)||snapshot.bindings.length!==1||
+         JSON.stringify(snapshot.bindings[0])!==JSON.stringify(expected))
+        throw new Error('TEST packed process read binding changed');
+    };
+    await connections();current();
+    const reply=await backend.invoke({handle:expected.handle,commandId:crypto.randomUUID(),operation:'process.list',payload:{}});
+    current();await connections();
+    if(reply?.ok!==true)throw new Error('TEST packed process read refused');
+    return reply.value;
+  })()`));
+  return { processes, readRoute: 'packaged-public-process-list' };
+}
+
 /** Cold owner UI read and one original Stop. No DOM handlers, store mutations, or native replay. */
 export async function qualifyColdProcessUi(
   cdp: UiCdpPort,
@@ -56,6 +94,7 @@ export async function qualifyColdProcessUi(
     processReadbackMode?: boolean;
     processReadbackSource?: Awaited<ReturnType<typeof verifyNativeProcessReadbackSource>>;
     controlledSource?: ControlledProcessUiSource;
+    packedRendererUrl?: string;
   }
 ) {
   const controlled = options.controlledSource;
@@ -76,6 +115,17 @@ export async function qualifyColdProcessUi(
     processRef = String(original.processRef),
     id = String(original.id);
   const selection = hostTeamSelectionKey(fixture.handleId);
+  let packedRead: PackedProcessRead | undefined;
+  if (options.packedRendererUrl !== undefined) {
+    assert.ok(controlled && process.platform === 'linux' && process.arch === 'x64', 'captured packed Linux cold-process scope');
+    const discovery = row(options.evidence.discovery);
+    assert.equal(discovery.state, 'ready');
+    assert.ok(Array.isArray(discovery.bindings));
+    assert.equal(discovery.bindings.length, 1);
+    const binding = row(discovery.bindings[0]);
+    assert.deepEqual(binding.handle, { handleId: fixture.handleId });
+    packedRead = Object.freeze({ rendererUrl: options.packedRendererUrl, bindingJson: JSON.stringify(binding) });
+  }
   const services = await readProcessServices(fixture.root);
   assert.deepEqual(await stopReceipts(fixture.root), []);
   const steps: Record<string, unknown>[] = [];
@@ -155,12 +205,8 @@ export async function qualifyColdProcessUi(
   assert.equal(processRow.pendingStop, undefined);
   proof.coldOwnerProps = owner;
   if (controlled) assert.equal(processRow.observation, 'same-live', 'controlled positive Stop refuses expired/stale/unknown originals');
-  // Actual unified renderer read, never a monkeypatch or alternate mutation path.
-  const data = row(
-    await cdp.evaluate(
-      `(async()=>{const {api}=await import('/api/index.ts');return await api.teams.getData(${desktopJsLiteral(selection)});})()`
-    )
-  );
+  // Source uses the unified renderer; packed uses its same canonical public process read.
+  const data = await readDesktopProcessData(cdp, selection, packedRead);
   const inventory = (data.processes as unknown[]).map(row);
   assert.equal(inventory.filter((p) => p.processRef === processRef).length, 1);
   const originalRead = inventory.find((p) => p.processRef === processRef)!;
@@ -363,7 +409,7 @@ export async function qualifyColdProcessUi(
     const stoppedRow = row(stoppedOwner.process);
     assert.equal(stoppedRow.id, id); assert.equal(stoppedRow.pid, services.primary.pid);
     assert.equal(stoppedRow.label, PROCESS_LABEL);
-    const stoppedData = row(await cdp.evaluate(`(async()=>{const {api}=await import('/api/index.ts');return await api.teams.getData(${desktopJsLiteral(selection)});})()`));
+    const stoppedData = await readDesktopProcessData(cdp, selection, packedRead);
     const stoppedRead = (stoppedData.processes as unknown[]).map(row).filter(value => value.id === id);
     assert.equal(stoppedRead.length, 1); assert.deepEqual(stoppedRead[0], stoppedRow);
     const stoppedRendered = row(await ui.waitRead(`(() => {const r=(${renderedRowExpression});return r&&r.killCount===0&&r.stoppedStyle&&r.stoppedIndicator?r:null;})()`, 'visible stopped original row with no Kill action'));

@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
+import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { NativeCoordinationFixture } from './fixtures/native-opencode-team/coordination-probe.ts';
 import { record } from './fixtures/native-claude-team/model.ts';
@@ -202,6 +203,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         executable: { path: bun, sha256: digests.bun },
         environment: {
           ...environment,
+          USERPROFILE: join(root, 'home'),
           XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: join(root, 'data'),
           XDG_CACHE_HOME: join(root, 'cache'), NO_COLOR: '1',
         },
@@ -231,8 +233,14 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       } },
     }), { mode: 0o600 });
     const projectPath = join(root, 'workspace/opencode.jsonc');
+    let manualKey: string | undefined;
+    if (!qualifyCoordination) {
+      manualKey = join(root, 'workspace/TEST-manual-runtime.key');
+      await writeFile(manualKey, 'TEST-LOCALHOST-ONLY', { mode: 0o600 });
+    }
     const projectConfig = (scope: string) => JSON.stringify({
-      model: 'TEST-local/TEST-model', provider: { 'TEST-local': { models: {
+      model: 'TEST-local/TEST-model', provider: { 'TEST-local': {
+        ...(qualifyCoordination ? {} : { options: { apiKey: '{file:' + manualKey + '}' } }), models: {
         'TEST-model-B': { body: { test_config_scope: scope }, headers: { 'x-test-config-scope': scope } },
       } } },
     });
@@ -240,7 +248,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     await writeFile(projectPath, originalProjectConfig, { mode: 0o600 });
     await mkdir(join(root, 'data/opencode'), { mode: 0o700 });
     await writeFile(join(root, 'data/opencode/auth.json'), JSON.stringify(qualifyCoordination ? {} : {
-      'TEST-local': { type: 'api', key: 'TEST-LOCALHOST-ONLY' },
+      'TEST-local': { type: 'api', key: 'TEST-DIFFERENT-PRIMARY-ONLY' },
     }), { mode: 0o600 });
     const member = profile.runtime!.members[0]!;
     assert(member.provider === 'opencode' && member.embedded);
@@ -254,6 +262,11 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       const { captureNativeCoordinationFixture } = await import('./fixtures/native-opencode-team/coordination-probe.ts');
       coordination = captureNativeCoordinationFixture(profile);
     }
+    const initialOpen = { commandId: 'TEST-open', payload: { memberId: 'carol-id' } };
+    profile.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(profile, {
+      method: 'runtime.open', teamId: scope.teamId, ...initialOpen,
+      ...(coordination ? { prepared: [coordination.initialReadiness] } : {}),
+    })];
     const profilePath = join(root, 'profile.json');
     const bytes = JSON.stringify(profile);
     await writeFile(profilePath, bytes, { mode: 0o600 });
@@ -280,7 +293,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     await host.rpc('host.handshake', { protocolVersion: 1 });
     // Observe the existing 120-second embedded startup plus MCP readiness; never retry the intent.
     const originalOpenStartedAt = performance.now();
-    const opened = await host.rpc('runtime.open', envelope('TEST-open', { memberId: 'carol-id' }), 180_000)
+    const opened = await host.rpc('runtime.open', envelope(initialOpen.commandId, initialOpen.payload), 180_000)
       .finally(() => { originalOpenElapsedMs = Math.round(performance.now() - originalOpenStartedAt); });
     // This read cannot open/retry a member. Keep its original attempt even when nativeReady is false.
     try {

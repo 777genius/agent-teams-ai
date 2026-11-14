@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { verifyLinuxChildExecInput } from '../../src/main/utils/linuxChildLaunchSelection.ts';
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, realpath } from 'node:fs/promises';
+import { lstat, mkdir, open, readFile, realpath } from 'node:fs/promises';
 import { basename, dirname, join, sep } from 'node:path';
 import { runtimeProfileSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
 import { openCodeManagementProfileSchema } from '../../packages/legacy-agent-host/dist/management/profile.js';
@@ -56,6 +56,7 @@ export async function prepareDesktopRuntimeProfile(input: {
     const member = selection.v2
       ? await sourceV2Recipe(repo, root, node, selection, scope.teamId)
       : await sourceRecipe(root, node, selection, scope.teamId);
+    await sourceProjectConfiguration(root, selection, member);
     // The sidebar seed is saved-only. A template does not assign Runtime delivery to it.
     profile.runtime = { members: [], providerTemplates: [member] };
     profile.management = [selection.v2
@@ -68,6 +69,56 @@ export async function prepareDesktopRuntimeProfile(input: {
       timeoutMs: 15000, modelProbeTimeoutMs: 30000,
     })];
   }
+}
+
+/** The existing Local models inventory reads this original TEST project before any owner starts. */
+async function sourceProjectConfiguration(root: string, selection: DesktopOpenCodeSourceSelection,
+  member: OpenCodeMemberProfile) {
+  const record = (value: unknown): Record<string, unknown> => {
+    assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+    return value as Record<string, unknown>;
+  };
+  assert.equal(member.cwd, join(root, 'workspace'));
+  assert.equal(await realpath(member.cwd), member.cwd);
+  assert.equal(member.nativeOptions.providerId, 'test-local'); assert.equal(member.model, 'TEST-model');
+  let provider: Record<string, unknown>;
+  if (selection.v2) {
+    assert.equal(member.nativeGeneration, 'v2');
+    const original = record(member.embedded?.providerConfiguration);
+    assert.equal(original.package, 'aisdk:@ai-sdk/openai-compatible');
+    provider = { npm: '@ai-sdk/openai-compatible', options: original.settings, models: original.models };
+  } else {
+    const inline: unknown = JSON.parse(member.environment.OPENCODE_CONFIG_CONTENT!);
+    provider = record(record(record(inline).provider)['test-local']);
+  }
+  assert.equal(provider.npm, '@ai-sdk/openai-compatible');
+  const options = record(provider.options), models = record(provider.models);
+  assert.equal(options.baseURL, selection.modelUrl + '/host/v1');
+  assert.ok(options.apiKey === 'TEST-LOCALHOST-ONLY', 'original TEST-only configured key');
+  assert.deepEqual(Object.keys(models), ['TEST-model']);
+  assert.equal(record(models['TEST-model']).name, 'TEST-model');
+  const bytes = Buffer.from(JSON.stringify({ provider: { 'test-local': provider } }) + '\n');
+  assert.ok(bytes.length <= 64 * 1024, 'bounded original project configuration');
+  const path = join(member.cwd, 'opencode.json'), file = await open(path, 'wx+', 0o600);
+  try {
+    await file.writeFile(bytes);
+    const stat = await file.stat();
+    assert.ok(stat.isFile() && stat.nlink === 1 && stat.size === bytes.length);
+    assert.equal(stat.mode & 0o777, 0o600);
+    const actual = Buffer.alloc(bytes.length + 1);
+    let offset = 0;
+    while (offset < actual.length) {
+      const { bytesRead } = await file.read(actual, offset, actual.length - offset, offset);
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    assert.ok(offset === bytes.length && actual.subarray(0, offset).equals(bytes),
+      'original project configuration readback matches');
+    const after = await lstat(path);
+    assert.ok(after.isFile() && !after.isSymbolicLink() && after.dev === stat.dev && after.ino === stat.ino &&
+      after.nlink === 1 && after.size === bytes.length && (after.mode & 0o777) === 0o600);
+    assert.equal(await realpath(path), path);
+  } finally { await file.close(); }
 }
 
 async function sourceV2Recipe(repo: string, root: string, node: string,
@@ -217,6 +268,10 @@ export function desktopBackendEnvironment(
       ...(process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1' ? { LEGACY_DESKTOP_TEST_CHILD_TRACE: '1' } : {}),
     } : {}),
     ...(process.env.LEGACY_DESKTOP_COREPACK_HOME ? { COREPACK_HOME: process.env.LEGACY_DESKTOP_COREPACK_HOME } : {}),
+    ...(process.platform === 'darwin' && process.arch === 'arm64' &&
+      process.env.LEGACY_PROCESS_COLD_UI_GO === '1' &&
+      process.env.LEGACY_DESKTOP_PROOF_MODE === 'process-cold-ui'
+      ? { NODE_OPTIONS: '--max-old-space-size=8192' } : {}),
     NO_COLOR: '1',
     // A TEST HOME changes pnpm's store lookup. Report drift without installing
     // into the frozen worktree; the harness verifies its selected archive bytes.

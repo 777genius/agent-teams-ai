@@ -11,7 +11,11 @@ export function runtimeLaunchMembers(team: HostedTeam, entries: readonly MemberE
     const member = entry.team.definition.members.find(
       (row) => row.memberId === entry.binding.memberId
     );
-    if (member && !members.some((row) => row.memberId === member.memberId)) members.push(member);
+    if (member) {
+      const index = members.findIndex(row => row.memberId === member.memberId);
+      if (index < 0) members.push(member);
+      else if (entry.liveRosterCapture) members[index] = member;
+    }
   }
   return members;
 }

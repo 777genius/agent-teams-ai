@@ -49,6 +49,21 @@ export interface OpenCodeConfigTarget {
   readonly mode?: number;
 }
 
+interface OpenCodeConfigCapture {
+  current(): void;
+  read(path: string): Promise<string>;
+}
+
+function captureCall<T>(capture: OpenCodeConfigCapture | undefined, work: () => Promise<T>): Promise<T> {
+  if (!capture) return work();
+  return (async () => {
+    capture.current();
+    const value = await work();
+    capture.current();
+    return value;
+  })();
+}
+
 interface ReadOpenCodeConfigTargetInput {
   readonly scope: RuntimeLocalProviderScopeDto;
   readonly projectPath?: string | null;
@@ -56,6 +71,8 @@ interface ReadOpenCodeConfigTargetInput {
   readonly getEnvironment: () => NodeJS.ProcessEnv;
   readonly ensureGlobalDirectory?: boolean;
   readonly inlineContext?: OpenCodeInlineConfigWriteContext;
+  /** Private source capture only; existing callers retain their original reads. */
+  readonly captureRead?: OpenCodeConfigCapture;
 }
 
 export function createOpenCodeGlobalConfigEnvironmentResolver(
@@ -69,7 +86,8 @@ export function createOpenCodeGlobalConfigEnvironmentResolver(
 
 export async function getOpenCodeGlobalConfigOverrideConflict(
   environment: NodeJS.ProcessEnv,
-  homePath: string
+  homePath: string,
+  captureRead?: OpenCodeConfigCapture
 ): Promise<LocalProviderOperationError | null> {
   const canonicalConfigDirectory = path.resolve(homePath, '.config', 'opencode');
   const canonicalConfigPaths = new Set(
@@ -86,7 +104,7 @@ export async function getOpenCodeGlobalConfigOverrideConflict(
   }
   if (
     configuredPath &&
-    !canonicalConfigPaths.has(await resolveComparableConfigPath(configuredPath, homePath))
+    !canonicalConfigPaths.has(await resolveComparableConfigPath(configuredPath, homePath, captureRead))
   ) {
     return new LocalProviderOperationError(
       'config-conflict',
@@ -103,7 +121,7 @@ export async function getOpenCodeGlobalConfigOverrideConflict(
   }
   if (
     xdgConfigHome &&
-    (await resolveComparableConfigPath(xdgConfigHome, homePath)) !==
+    (await resolveComparableConfigPath(xdgConfigHome, homePath, captureRead)) !==
       path.resolve(homePath, '.config')
   ) {
     return new LocalProviderOperationError(
@@ -160,14 +178,16 @@ export function assertOpenCodeInlineConfigOverrideSafe(
 export function readOpenCodeConfigTarget(
   input: ReadOpenCodeConfigTargetInput
 ): Promise<OpenCodeConfigTarget> {
+  input.captureRead?.current();
   assertOpenCodeInlineConfigOverrideSafe(input.getEnvironment(), input.inlineContext);
   return input.scope === 'global'
     ? readOpenCodeGlobalConfigTarget(
         input.homePath,
         input.getEnvironment,
-        input.ensureGlobalDirectory ?? false
+        input.ensureGlobalDirectory ?? false,
+        input.captureRead
       )
-    : readOpenCodeProjectConfigTarget(input.projectPath);
+    : readOpenCodeProjectConfigTarget(input.projectPath, input.captureRead);
 }
 
 function readNonEmptyEnvironmentValue(
@@ -209,13 +229,16 @@ function resolveEnvironmentConfigPath(value: string, homePath: string): string {
   return path.resolve(expanded);
 }
 
-async function resolveComparableConfigPath(value: string, homePath: string): Promise<string> {
+async function resolveComparableConfigPath(
+  value: string, homePath: string, captureRead?: OpenCodeConfigCapture
+): Promise<string> {
   let candidate = resolveEnvironmentConfigPath(value, homePath);
   const unresolvedSuffix: string[] = [];
   while (true) {
     try {
-      return path.join(await fs.realpath(candidate), ...unresolvedSuffix);
+      return path.join(await captureCall(captureRead, () => fs.realpath(candidate)), ...unresolvedSuffix);
     } catch (error) {
+      captureRead?.current();
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         return candidate;
       }
@@ -232,13 +255,14 @@ async function resolveComparableConfigPath(value: string, homePath: string): Pro
 async function readOpenCodeGlobalConfigTarget(
   homePath: string,
   getEnvironment: () => NodeJS.ProcessEnv,
-  ensureDirectory: boolean
+  ensureDirectory: boolean,
+  captureRead?: OpenCodeConfigCapture
 ): Promise<OpenCodeConfigTarget> {
   let realHomePath: string;
   try {
-    const homeStat = await fs.stat(homePath);
+    const homeStat = await captureCall(captureRead, () => fs.stat(homePath));
     if (!homeStat.isDirectory()) throw new Error('not-directory');
-    realHomePath = await fs.realpath(homePath);
+    realHomePath = await captureCall(captureRead, () => fs.realpath(homePath));
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     throw new LocalProviderOperationError(
@@ -251,7 +275,8 @@ async function readOpenCodeGlobalConfigTarget(
 
   const overrideConflict = await getOpenCodeGlobalConfigOverrideConflict(
     getEnvironment(),
-    realHomePath
+    realHomePath,
+    captureRead
   );
   if (overrideConflict) throw overrideConflict;
 
@@ -259,7 +284,7 @@ async function readOpenCodeGlobalConfigTarget(
   for (const segment of ['.config', 'opencode']) {
     configDirectory = path.join(configDirectory, segment);
     try {
-      const stat = await fs.lstat(configDirectory);
+      const stat = await captureCall(captureRead, () => fs.lstat(configDirectory));
       if (stat.isSymbolicLink()) {
         throw new LocalProviderOperationError(
           'config-conflict',
@@ -287,11 +312,11 @@ async function readOpenCodeGlobalConfigTarget(
           raw: null,
         };
       }
-      await fs.mkdir(configDirectory, { mode: 0o700 });
+      await captureCall(captureRead, () => fs.mkdir(configDirectory, { mode: 0o700 }));
     }
   }
 
-  const realConfigDirectory = await fs.realpath(configDirectory);
+  const realConfigDirectory = await captureCall(captureRead, () => fs.realpath(configDirectory));
   if (!isPathInside(realHomePath, realConfigDirectory)) {
     throw new LocalProviderOperationError(
       'config-conflict',
@@ -303,7 +328,7 @@ async function readOpenCodeGlobalConfigTarget(
   for (const filename of OPENCODE_GLOBAL_CONFIG_FILENAMES) {
     const candidate = path.join(realConfigDirectory, filename);
     try {
-      const stat = await fs.lstat(candidate);
+      const stat = await captureCall(captureRead, () => fs.lstat(candidate));
       if (stat.isSymbolicLink()) {
         throw new LocalProviderOperationError(
           'config-conflict',
@@ -334,13 +359,16 @@ async function readOpenCodeGlobalConfigTarget(
   return {
     scope: 'global',
     configPath,
-    raw: existingConfig ? await fs.readFile(configPath, 'utf8') : null,
+    raw: existingConfig
+      ? await (captureRead ? captureCall(captureRead, () => captureRead.read(configPath)) : fs.readFile(configPath, 'utf8'))
+      : null,
     mode: existingConfig?.mode,
   };
 }
 
 async function readOpenCodeProjectConfigTarget(
-  projectPathInput: string | null | undefined
+  projectPathInput: string | null | undefined,
+  captureRead?: OpenCodeConfigCapture
 ): Promise<OpenCodeConfigTarget> {
   const projectPath = projectPathInput?.trim();
   if (!projectPath) {
@@ -351,9 +379,9 @@ async function readOpenCodeProjectConfigTarget(
   }
   let realProjectPath: string;
   try {
-    const stat = await fs.stat(projectPath);
+    const stat = await captureCall(captureRead, () => fs.stat(projectPath));
     if (!stat.isDirectory()) throw new Error('not-directory');
-    realProjectPath = await fs.realpath(projectPath);
+    realProjectPath = await captureCall(captureRead, () => fs.realpath(projectPath));
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     throw new LocalProviderOperationError(
@@ -368,7 +396,7 @@ async function readOpenCodeProjectConfigTarget(
   for (const relativePath of OPENCODE_PROJECT_CONFIG_CANDIDATES) {
     const candidate = path.join(realProjectPath, relativePath);
     try {
-      const stat = await fs.lstat(candidate);
+      const stat = await captureCall(captureRead, () => fs.lstat(candidate));
       if (stat.isSymbolicLink()) {
         throw new LocalProviderOperationError(
           'config-conflict',
@@ -376,7 +404,7 @@ async function readOpenCodeProjectConfigTarget(
         );
       }
       if (stat.isFile()) {
-        const realConfigPath = await fs.realpath(candidate);
+        const realConfigPath = await captureCall(captureRead, () => fs.realpath(candidate));
         if (!isPathInside(realProjectPath, realConfigPath)) {
           throw new LocalProviderOperationError(
             'config-conflict',
@@ -407,7 +435,9 @@ async function readOpenCodeProjectConfigTarget(
     scope: 'project',
     projectPath: realProjectPath,
     configPath,
-    raw: existingConfig ? await fs.readFile(configPath, 'utf8') : null,
+    raw: existingConfig
+      ? await (captureRead ? captureCall(captureRead, () => captureRead.read(configPath)) : fs.readFile(configPath, 'utf8'))
+      : null,
     mode: existingConfig?.mode,
   };
 }

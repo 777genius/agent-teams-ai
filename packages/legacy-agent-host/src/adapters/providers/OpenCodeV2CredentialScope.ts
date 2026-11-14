@@ -1,13 +1,17 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   closeSync, constants, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync,
   readSync, realpathSync, renameSync, unlinkSync, writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
+import { selectOpenCodeV2ConfigurationKey } from '../../composition/openCodeSelectedProviderConfiguration.js';
 import { ManagementCommandError } from '../../management/commandRecords.js';
 import { managementDigest } from '../../management/identity.js';
+import { DeferredOpenCodeV2FileKey, isOpenCodeV2ManagedFileSpelling } from './OpenCodeV2SelectedFileKey.js';
 import type { OpenCodeManagementProfile } from '../../management/profile.js';
+import type { BigIntStats } from 'node:fs';
+import type { captureOpenCodeConfigurationSource, OpenCodeConfigurationKeyOrigin } from './OpenCodeConfigurationSource.js';
 
 type Identity = { dev: number; ino: number };
 type AuthStore = Record<string, unknown>;
@@ -31,6 +35,48 @@ export interface CapturedOpenCodeV2Key {
   isCurrent(): boolean;
   readKey(): string | undefined;
 }
+
+type KeyProfile = Pick<OpenCodeManagementProfile, 'environment' | 'accountBinding'>;
+const namespace = (profile: KeyProfile, providerId: string) => managementDigest({
+  accountBinding: profile.accountBinding, providerId,
+  home: profile.environment.HOME, data: profile.environment.XDG_DATA_HOME,
+});
+
+/** In-memory provenance only. A JSON/object copy cannot manufacture a selected-key handoff. */
+class CapturedKey implements CapturedOpenCodeV2Key {
+  readonly #namespace: string;
+  readonly #configurationOwner: (() => boolean) | undefined;
+  readonly isCurrent: () => boolean;
+  readonly readKey: () => string | undefined;
+  constructor(authority: string, readonly digest: string, readonly present: boolean,
+    current: () => boolean, read: () => string | undefined, configurationOwner?: () => boolean) {
+    this.#namespace = authority;
+    this.#configurationOwner = configurationOwner;
+    this.isCurrent = current;
+    this.readKey = () => { if (!current()) held(); return read(); };
+    Object.freeze(this);
+  }
+  static bind(value: CapturedOpenCodeV2Key, owner: () => boolean): CapturedOpenCodeV2Key {
+    if (!(value instanceof CapturedKey) || !(#namespace in value)) held();
+    return new CapturedKey(value.#namespace, value.digest, value.present, owner, value.readKey, owner);
+  }
+  static accepts(value: unknown, profile: KeyProfile, providerId: string, owner: () => boolean): boolean {
+    return value instanceof CapturedKey && #namespace in value &&
+      value.#namespace === namespace(profile, providerId) && value.#configurationOwner === owner;
+  }
+}
+
+export const bindOpenCodeV2ConfigurationKey = (key: CapturedOpenCodeV2Key, owner: () => boolean) =>
+  CapturedKey.bind(key, owner);
+export const isOpenCodeV2ConfigurationKey = (
+  key: unknown, profile: KeyProfile, providerId: string, owner: () => boolean,
+) => CapturedKey.accepts(key, profile, providerId, owner);
+export const isOpenCodeV2DeferredConfigurationKey = (
+  key: unknown, profile: KeyProfile, providerId: string, owner: () => boolean,
+) => DeferredOpenCodeV2FileKey.accepts(key, namespace(profile, providerId), owner);
+
+const statIdentity = (stat: BigIntStats) => [stat.dev, stat.ino, stat.mode, stat.uid, stat.nlink,
+  stat.size, stat.mtimeNs, stat.ctimeNs].map(value => value.toString());
 
 /** The existing native auth.json in an already captured account namespace, not a new key store. */
 export class OpenCodeV2CredentialScope {
@@ -144,10 +190,118 @@ export class OpenCodeV2CredentialScope {
       try { return this.selected().digest === original.digest; }
       catch { return false; }
     };
-    return Object.freeze({
-      digest: original.digest, present: original.key !== undefined, isCurrent,
-      readKey: () => { if (!isCurrent()) held(); return original.key; },
-    });
+    return new CapturedKey(namespace(this.profile, this.providerId), original.digest,
+      original.key !== undefined, isCurrent, () => original.key);
+  }
+
+  /** Manual files are resolved by the same native owner later, never by this parent capture. */
+  captureDeferredConfiguration(source: ReturnType<typeof captureOpenCodeConfigurationSource>,
+    modelId: string, cwd: string): DeferredOpenCodeV2FileKey | undefined {
+    if (!source.isCurrent()) held();
+    const origin = source.selectedKeyOrigin(this.providerId);
+    if (!origin || typeof origin.value !== 'string' || !origin.value.includes('{file:') ||
+        isOpenCodeV2ManagedFileSpelling(origin.value, this.home)) return undefined;
+    const auth = this.capture();
+    const home = process.platform === 'win32' ? this.profile.environment.USERPROFILE : this.home;
+    if (!home || !isAbsolute(home) || !source.isCurrent()) held();
+    return DeferredOpenCodeV2FileKey.capture({ sourceDigest: source.digest,
+      namespaceDigest: namespace(this.profile, this.providerId), authDigest: auth.digest,
+      origin, providerId: this.providerId, modelId, cwd, home, environment: this.profile.environment,
+      isCurrent: auth.isCurrent });
+  }
+
+  /** Exact selected config key, without publishing or replacing any auth.json entry. */
+  captureConfiguration(source: ReturnType<typeof captureOpenCodeConfigurationSource>): CapturedOpenCodeV2Key {
+    if (!source.isCurrent()) held();
+    const origin = source.selectedKeyOrigin(this.providerId);
+    if (!origin) held();
+    const selected = selectOpenCodeV2ConfigurationKey(origin.value, this.profile.environment);
+    if (selected.apiKey === undefined && selected.apiKeyFile === undefined) held();
+    const auth = this.capture();
+    if (selected.apiKey !== undefined && auth.present && auth.readKey() === selected.apiKey) {
+      if (!source.isCurrent()) held();
+      return auth; // Preserve the original historical matching-key digest exactly.
+    }
+    const file = selected.apiKeyFile === undefined ? undefined : this.managedFile(origin, selected.apiKeyFile);
+    const key = file?.key ?? selected.apiKey;
+    if (!keyValue(key)) held();
+    const { value: _rawValue, ...sourceOrigin } = origin;
+    const digest = managementDigest({ kind: 'selected-config-key-v1',
+      auth: auth.digest, configuration: source.digest, origin: sourceOrigin,
+      ...(file ? { file: file.digest } : {}), key });
+    if (!source.isCurrent() || !auth.isCurrent()) held();
+    const isCurrent = () => {
+      try {
+        if (!auth.isCurrent()) return false;
+        if (file && (selected.apiKeyFile === undefined ||
+            this.managedFile(origin, selected.apiKeyFile).digest !== file.digest)) return false;
+        return auth.isCurrent();
+      } catch { return false; }
+    };
+    return new CapturedKey(namespace(this.profile, this.providerId), digest, true, isCurrent, () => key);
+  }
+
+  private managedFile(origin: OpenCodeConfigurationKeyOrigin, reference: string) {
+    this.check();
+    if (origin.kind !== 'file' || origin.value !== reference || !isAbsolute(origin.path)) held();
+    const directory = join(this.home, '.config', 'opencode', 'agent-teams-credentials');
+    const legacy = '{file:~/.config/opencode/agent-teams-credentials/';
+    const legacyName = reference.startsWith(legacy) ? reference.slice(legacy.length, -1) : undefined;
+    if (legacyName !== undefined && (!/^[a-z0-9][a-z0-9._-]{0,190}\.key$/iu.test(legacyName) ||
+        basename(legacyName) !== legacyName)) held();
+    const raw = reference.startsWith(legacy)
+      ? join(directory, legacyName!)
+      : reference.slice('{file:'.length, -1);
+    if (!reference.endsWith('}') || !isAbsolute(raw) || raw !== resolve(raw) || dirname(raw) !== directory) held();
+    const scope = this.providerId + '-' + createHash('sha256').update(resolve(origin.path)).digest('hex').slice(0, 16);
+    const filename = basename(raw), prefix = scope + '-';
+    if (!/^[a-z0-9][a-z0-9._-]{0,190}\.key$/iu.test(filename)) held();
+    const rotated = filename.startsWith(prefix) && filename.endsWith('.key')
+      ? filename.slice(prefix.length, -4) : '';
+    if (filename !== scope + '.key' &&
+        !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu.test(rotated)) held();
+    const locate = () => {
+      this.checkRoots();
+      let path = this.home;
+      const directories: string[][] = [];
+      for (const part of ['.config', 'opencode', 'agent-teams-credentials']) {
+        path = join(path, part);
+        const stat = lstatSync(path, { bigint: true });
+        if (!stat.isDirectory() || stat.isSymbolicLink() || realpathSync(path) !== path) held();
+        if (path === directory && process.platform !== 'win32' &&
+            (Number(stat.uid) !== process.getuid?.() || (Number(stat.mode) & 0o077) !== 0)) held();
+        directories.push([path, stat.dev.toString(), stat.ino.toString(), stat.mode.toString(), stat.uid.toString()]);
+      }
+      const stat = lstatSync(raw, { bigint: true });
+      if (!stat.isFile() || stat.isSymbolicLink() || realpathSync(raw) !== raw || stat.nlink !== 1n ||
+          stat.size > 64n * 1024n || process.platform !== 'win32' &&
+          (Number(stat.uid) !== process.getuid?.() || (Number(stat.mode) & 0o077) !== 0)) held();
+      return { directories, stat, identity: managementDigest({ directories, path: raw, file: statIdentity(stat) }) };
+    };
+    let fd: number | undefined;
+    try {
+      const original = locate();
+      fd = openSync(raw, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      const before = fstatSync(fd, { bigint: true });
+      if (!before.isFile() || managementDigest(statIdentity(before)) !== managementDigest(statIdentity(original.stat))) held();
+      const bytes = Buffer.alloc(64 * 1024 + 1);
+      let length = 0;
+      while (length < bytes.length) {
+        const count = readSync(fd, bytes, length, bytes.length - length, length);
+        if (!count) break;
+        length += count;
+      }
+      const after = fstatSync(fd, { bigint: true }), current = locate();
+      if (length > 64 * 1024 || BigInt(length) !== before.size ||
+          managementDigest(statIdentity(before)) !== managementDigest(statIdentity(after)) ||
+          current.identity !== original.identity) held();
+      const data = bytes.subarray(0, length), key = new TextDecoder('utf-8', { fatal: true }).decode(data).trim();
+      if (!keyValue(key)) held();
+      this.check();
+      return { key, digest: managementDigest({ identity: original.identity,
+        bytes: createHash('sha256').update(data).digest('hex') }) };
+    } catch { return held(); }
+    finally { if (fd !== undefined) closeSync(fd); }
   }
 
   /** Inventory of existing plain-key sources only; neither key bytes nor connection evidence. */

@@ -19,6 +19,13 @@ import type { JsonValue } from '../contracts.js';
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
+import { attachMemberModelReadiness, captureActionModelReadiness,
+  capturePreparedModelReference, prepareCapturedLaunchReadiness } from './prepareTeamModelReadiness.js';
+import type { CaptureModelReadinessTransfer, LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
+import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
+import { applyLaunchConfiguration, launchConfigurationSchema } from './launchConfiguration.js';
+import { attachInitialRuntimeModelAdmission } from './initialRuntimeModelAdmission.js';
+import { captureMemberProcessOrigin } from './captureRuntimeProcessOrigin.js';
 
 export type RuntimeLaunchAsyncOperation = 'capture' | 'start' | 'retry';
 export type RuntimeLaunchSyncOperation =
@@ -30,6 +37,7 @@ export type RuntimeLaunchSyncOperation =
 export type RuntimeLaunchOperation = RuntimeLaunchAsyncOperation | RuntimeLaunchSyncOperation;
 interface LaunchComposition {
   profile: TeamHostProfile;
+  hostIncarnation: string;
   sources?: RuntimeRecipeSources;
   teams: ReadonlyMap<string, HostedTeam>;
   capturedTeams: ReadonlyMap<string, HostedTeam>;
@@ -37,7 +45,8 @@ interface LaunchComposition {
   retainedLaunches: ReadonlyMap<string, { team: HostedTeam; launch: TeamLaunchOwner; entries?: MemberEntry[] }>;
   entries: ReadonlyMap<string, MemberEntry>;
   runtime: RuntimeOwner;
-  capture(teamId: string, commandId: string, raw: unknown): Promise<string>;
+  modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget' | 'admitTeamProbeProfile'>;
+  capture(teamId: string, commandId: string, raw: unknown, transfer?: CaptureModelReadinessTransfer): Promise<string>;
   hasCurrentCapture(teamId: string): boolean;
   isSealed(): boolean;
   assertCurrent(): void;
@@ -49,24 +58,30 @@ export function executeRuntimeLaunch(
   teamId: string,
   operation: RuntimeLaunchSyncOperation,
   commandId: string,
-  raw: unknown
+  raw: unknown,
+  readiness?: CaptureModelReadinessTransfer | LocalModelReadinessAction
 ): JsonValue;
 export function executeRuntimeLaunch(
   options: LaunchComposition,
   teamId: string,
   operation: RuntimeLaunchOperation,
   commandId: string,
-  raw: unknown
+  raw: unknown,
+  readiness?: CaptureModelReadinessTransfer | LocalModelReadinessAction
 ): JsonValue | Promise<JsonValue>;
 export function executeRuntimeLaunch(
   options: LaunchComposition,
   teamId: string,
   operation: RuntimeLaunchOperation,
   commandId: string,
-  raw: unknown
+  raw: unknown,
+  readiness?: CaptureModelReadinessTransfer | LocalModelReadinessAction
 ): JsonValue | Promise<JsonValue> {
   if (options.isSealed()) throw new TeamLaunchError('hold', 'sealed');
   options.assertCurrent();
+  if (readiness && (operation === 'capture' ? 'preparation' in readiness :
+      operation !== 'start' || !('preparation' in readiness)))
+    throw new TeamLaunchError('invalid', 'launch-readiness-operation');
   if (operation === 'model.configuration.read') {
     z.object({}).strict().parse(raw);
     const prospective = () => isUnstartedCaptureEditable({
@@ -94,7 +109,7 @@ export function executeRuntimeLaunch(
   }
   if (operation === 'capture') {
     return options
-      .capture(teamId, commandId, raw)
+      .capture(teamId, commandId, raw, readiness as CaptureModelReadinessTransfer | undefined)
       .then((launchId) =>
         executeRuntimeLaunch(options, teamId, 'configuration.read', commandId, { launchId })
       );
@@ -135,6 +150,52 @@ export function executeRuntimeLaunch(
     assertCapturedRosterCurrent(team, options.profile.principalId);
     team.owner.assertExecutionAllowed(options.profile.principalId);
   }
+  const originalRevision = operation === 'start'
+    ? team.owner.withLaunchAuthority(options.profile.principalId, 'control', revision => revision)
+    : undefined;
+  const assertStartCurrent = () => {
+    options.assertCurrent();
+    if (options.isSealed()) throw new TeamLaunchError('hold', 'sealed');
+    assertCapturedRosterCurrent(team, options.profile.principalId);
+    team.owner.withLaunchAuthority(options.profile.principalId, 'control', revision => {
+      if (revision !== originalRevision) throw new TeamLaunchError('forbidden', 'launch-authority');
+    });
+    team.owner.assertExecutionAllowed(options.profile.principalId);
+  };
+  const isStartCurrent = () => { try { assertStartCurrent(); return true; } catch { return false; } };
+  let action: ReturnType<typeof captureActionModelReadiness> | undefined;
+  let initialAdmission = false;
+  const actorDigest = runtimeDigest({ principalId: options.profile.principalId, revision: originalRevision });
+  const pendingOpenCode = operation === 'start' ? (() => {
+    const summary = launch.read();
+    const eligible = new Set(launch.readModelProbeSelection('read').memberIds);
+    return launchEntries.filter(entry => eligible.has(entry.profile.memberId) && entry.profile.provider === 'opencode' &&
+      summary.members.some(row => row.memberId === entry.profile.memberId &&
+        runtimeDigest(row.binding) === runtimeDigest(entry.binding) &&
+        row.attempt.status !== 'skipped' && !row.attempt.claimed));
+  })() : [];
+  if (pendingOpenCode.length && readiness && 'preparation' in readiness) {
+    if (!options.modelReadiness) throw new TeamLaunchError('hold', 'launch-readiness-required');
+    const configuration = raw && typeof raw === 'object' && 'configuration' in raw && raw.configuration !== undefined
+      ? launchConfigurationSchema.parse(raw.configuration) : undefined;
+    const targets = pendingOpenCode.map(entry => {
+      const selected = configuration?.members.find(row => row.memberId === entry.profile.memberId);
+      const profile = selected ? applyLaunchConfiguration(entry.baseProfile,
+        Object.fromEntries(Object.entries(selected).filter(([name]) => name !== 'memberId'))) : structuredClone(entry.profile);
+      profile.generation = entry.profile.generation;
+      return { entry, profile, binding: entry.binding };
+    });
+    action = captureActionModelReadiness({ management: options.modelReadiness, launch, targets,
+      captureProcessOrigin: entry => captureMemberProcessOrigin(options.profile, entry, options.sources),
+      commandId, payload: raw, actorDigest, readiness, assertCurrent: assertStartCurrent });
+  } else if (pendingOpenCode.length && !readiness && pendingOpenCode.every(entry =>
+      entry.initialModelAdmission !== undefined && entry.selection === undefined)) {
+    attachInitialRuntimeModelAdmission({ launch, entries: pendingOpenCode, method: 'team.launch.start',
+      teamId, commandId, payload: raw, actorDigest, hostIncarnation: options.hostIncarnation,
+      captureReference: capturePreparedModelReference,
+      ...(options.modelReadiness ? { management: options.modelReadiness } : {}), assertCurrent: assertStartCurrent });
+    initialAdmission = true;
+  }
   const retryMembers =
     operation === 'retry'
       ? z
@@ -160,6 +221,24 @@ export function executeRuntimeLaunch(
       entries: launchEntries,
       operation,
       commandId,
+      ...(pendingOpenCode.length ? { beforeStart: async () => {
+        assertStartCurrent();
+        if (initialAdmission) return;
+        if (!options.modelReadiness) throw new TeamLaunchError('hold', 'launch-readiness-required');
+        if (action) {
+          const references = await action.prepare();
+          assertStartCurrent();
+          for (const entry of pendingOpenCode) {
+            const reference = references.get(entry.profile.memberId);
+            if (!reference) throw new TeamLaunchError('hold', 'launch-readiness-required');
+            attachMemberModelReadiness({ launch, entry, reference, commandId, actorDigest,
+              inputDigest: action.inputDigest, cutoff: action.cutoff });
+          }
+        } else await prepareCapturedLaunchReadiness({ management: options.modelReadiness, launch,
+          entries: pendingOpenCode, commandId, payload: raw, principalId: options.profile.principalId,
+          isCurrent: isStartCurrent });
+        assertStartCurrent();
+      } } : {}),
       ...(operation === 'start' &&
       team.configurationRevision &&
       typeof initialPrompt === 'string' && initialPrompt.trim()

@@ -1,4 +1,5 @@
 import { ManagementCommandError } from '../management/commandRecords.js';
+import type { LocalModelReadinessOrigin } from '../management/commandRecords.js';
 import { nativeLocalReadinessPurpose } from '../management/ModelProbeOwner.js';
 import type { ModelProbeInput, NativeModelProbe, NativeModelProbePurpose } from '../management/ModelProbeOwner.js';
 import type { OpenCodeManagementProfile } from '../management/profile.js';
@@ -13,6 +14,7 @@ import type { OpenCodeV1Coordination } from '../adapters/providers/OpenCodeCoord
 import { createOpenCodeLocalModelReadiness } from '../adapters/providers/OpenCodeLocalModelReadiness.js';
 import type { NativeReadinessCoordination } from '../adapters/providers/OpenCodeLocalModelReadiness.js';
 import { closeCoordinationByDeadline } from '../adapters/providers/OpenCodeCoordinationEndpoint.js';
+import type { AcceptedOpenCodeV2FileKey } from '../adapters/providers/OpenCodeV2SelectedFileKey.js';
 
 interface ProviderModelProbePreparationPorts {
   processCustody: RegisteredProcessRootSource | undefined;
@@ -30,7 +32,9 @@ interface ProviderModelProbePreparationPorts {
 /** Preparation only. The Coordinator retains the admitted process selection, queue and cache. */
 export function prepareOpenCodeModelProbe(profile: OpenCodeManagementProfile, input: ModelProbeInput,
   isCurrent: () => boolean, ports: ProviderModelProbePreparationPorts,
-  purpose?: NativeModelProbePurpose, observeProvider?: (provider: unknown) => boolean): NativeModelProbe {
+  purpose?: NativeModelProbePurpose,
+  observeProvider?: (provider: unknown, fileProof?: AcceptedOpenCodeV2FileKey) => boolean,
+  origin?: LocalModelReadinessOrigin): NativeModelProbe {
   if (purpose === nativeLocalReadinessPurpose) {
     const model = input.modelId.startsWith(input.providerId + '/') ? input.modelId : input.providerId + '/' + input.modelId;
     const limits = profile.nativeGeneration === 'v2' ? undefined
@@ -43,7 +47,7 @@ export function prepareOpenCodeModelProbe(profile: OpenCodeManagementProfile, in
           ...(ports.processCustody ? { processCustody: ports.processCustody } : {}),
           coordination: true, readiness: { expectedProvider: provider } })
         : prepareCoordination(profile, selected, current, ports, { provider, ...(key === undefined ? {} : { key }) }),
-    });
+    }, origin);
   }
   if (profile.nativeGeneration === 'v2') {
     return createOpenCodeV2ModelProbe(profile, input, ports.captureTargetCurrent(isCurrent), { ...(ports.processCustody ? { processCustody: ports.processCustody } : {}),

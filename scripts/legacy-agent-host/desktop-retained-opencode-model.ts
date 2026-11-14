@@ -9,10 +9,12 @@ type SourceMarker = (typeof SOURCE_SELECTION_MARKERS)[number];
 /** A finite inference oracle. Only the genuine selected engines execute tools or write history. */
 export async function startRetainedOpenCodeModel(options: { sourceSelection?: true } = {}) {
   const observations: { owner: 'legacy' | 'host'; marker: string | null; tools: string[];
-    strictLaunch?: { model: string; challenge: string }; sourcePreflight?: true }[] = [];
+    strictLaunch?: { model: string; challenge: string }; sourcePreflight?: true;
+    preparationCommandId?: 'TEST-coexist-launch-once' }[] = [];
   const failures: string[] = [];
   const markers = new Set<string>();
   let expectedSource: SourceMarker | undefined;
+  let hostPreparation: { active: boolean; consumed: number } | undefined;
   const server = createServer((request, response) => {
     void (async () => {
       assert.equal(failures.length, 0, 'seal after the first model contract failure');
@@ -42,6 +44,7 @@ export async function startRetainedOpenCodeModel(options: { sourceSelection?: tr
       let marker: string | null = null, tools: string[] = [];
       let strictLaunch: { model: string; challenge: string } | undefined;
       let sourcePreflight: true | undefined;
+      let preparationCommandId: 'TEST-coexist-launch-once' | undefined;
       if (options.sourceSelection) {
         assert.equal(owner, 'host', 'source-selection inputs belong to the original Host');
         assert.equal(JSON.stringify(messages).includes('TEST_RETAINED_V1_'), false);
@@ -83,8 +86,24 @@ export async function startRetainedOpenCodeModel(options: { sourceSelection?: tr
           'no business input or history crosses the original owner boundary');
         marker = [...lastUser?.matchAll(/TEST_(?:RETAINED_V1|OWNED_V2)_(?:HISTORY|FIRST|AFTER_STOP)/g) ?? []].at(-1)?.[0] ?? null;
         if (marker) {
+          assert.ok(owner !== 'host' || !hostPreparation?.active, 'Host business input cannot replace preparation');
           assert.ok(marker.startsWith(ownPrefix));
           assert.equal(markers.has(marker), false, 'no repeated business inference'); markers.add(marker);
+        } else if (owner === 'host' && hostPreparation?.active) {
+          assert.equal(hostPreparation.consumed, 0, 'one original Host preparation only');
+          assert.equal(/TEST_(?:RETAINED_V1|OWNED_V2|SOURCE)_/.test(JSON.stringify(messages)), false,
+            'business markers cannot be disguised as preparation');
+          assert.ok(body.tools === undefined || Array.isArray(body.tools) && body.tools.length === 0,
+            'original Host preparation advertises no tools');
+          const prompt = typeof lastUserContent === 'string' ? lastUserContent :
+            Array.isArray(lastUserContent) && lastUserContent.length === 1 &&
+            lastUserContent[0]?.type === 'text' ? lastUserContent[0].text : undefined;
+          assert.equal(prompt, 'Reply only OK. Do not use tools, access files or run commands.');
+          assert.equal(messages.filter(message => message.role === 'user').length, 1);
+          assert.ok(messages.every(message => message.role === 'user' || message.role === 'system'));
+          hostPreparation.consumed = 1;
+          // TEST window attribution only; the native request does not echo this command.
+          preparationCommandId = 'TEST-coexist-launch-once';
         } else assert.equal(owner, 'legacy', 'new Host receives no unrequested inference');
         tools = Array.isArray(body.tools) ? body.tools.map(value => {
           const tool = value as { function?: { name?: unknown } };
@@ -104,8 +123,8 @@ export async function startRetainedOpenCodeModel(options: { sourceSelection?: tr
         }
       }
       observations.push({ owner, marker, tools, ...(strictLaunch ? { strictLaunch } : {}),
-        ...(sourcePreflight ? { sourcePreflight } : {}) });
-      const content = marker ? `REPLY_${marker}` : sourcePreflight ? 'OK' : strictLaunch?.challenge ?? 'PONG';
+        ...(sourcePreflight ? { sourcePreflight } : {}), ...(preparationCommandId ? { preparationCommandId } : {}) });
+      const content = marker ? `REPLY_${marker}` : sourcePreflight || preparationCommandId ? 'OK' : strictLaunch?.challenge ?? 'PONG';
       if (body.stream === true) {
         response.writeHead(200, { 'content-type': 'text/event-stream' });
         for (const [delta, finish_reason] of [[{ role: 'assistant', content }, null], [{}, 'stop']] as const)
@@ -128,6 +147,16 @@ export async function startRetainedOpenCodeModel(options: { sourceSelection?: tr
   });
   const address = server.address(); assert.ok(address && typeof address !== 'string');
   return { url: `http://127.0.0.1:${address.port}`, observations, failures, markers,
+    armHostPreparation(commandId: 'TEST-coexist-launch-once') {
+      assert.equal(options.sourceSelection, undefined, 'initial preparation is unavailable in source-selection mode');
+      assert.equal(commandId, 'TEST-coexist-launch-once');
+      assert.equal(hostPreparation, undefined, 'the original preparation window cannot be rearmed');
+      assert.equal(failures.length, 0);
+      assert.equal(observations.some(row => row.preparationCommandId !== undefined), false);
+      const original = { active: true, consumed: 0 };
+      hostPreparation = original;
+      return { get consumed() { return original.consumed; }, disarm() { original.active = false; } };
+    },
     expectSourceInput(marker: SourceMarker) {
       assert.equal(options.sourceSelection, true); assert.equal(expectedSource, undefined);
       assert.equal(failures.length, 0); assert.equal(markers.has(marker), false);

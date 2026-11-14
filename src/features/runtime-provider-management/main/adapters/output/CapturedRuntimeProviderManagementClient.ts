@@ -160,6 +160,10 @@ export function createCapturedRuntimeProviderManagementClient(
         fallbackModel: resolved.fallbackModel,
         ...(preferences.store
           ? {
+              configuredModels: preferenceModelRows(
+                current.providers.filter((provider) => provider.configured || provider.connected).flatMap(models),
+                resolved
+              ),
               projectDefaultModel: resolved.projectDefaultModel,
               allProjectsDefaultModel: resolved.allProjectsDefaultModel,
               defaultModelSource: resolved.defaultModelSource,

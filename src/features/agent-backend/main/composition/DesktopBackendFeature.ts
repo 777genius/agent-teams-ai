@@ -17,8 +17,10 @@ import { BackendOwnerRouter } from '../application/BackendOwnerRouter';
 import { createCapturedHostBackup } from '../application/createCapturedHostBackup';
 import { prepareCreatedHostTeam } from '../application/createdHostTeam';
 import { ForegroundModelChecks } from '../application/ForegroundModelChecks';
+import { prepareCapturedTeamModels } from '../application/prepareCapturedTeamModels';
 import { refreshCapturedRuntimeConfiguration } from '../application/refreshCapturedRuntimeConfiguration';
 import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
+import { captureCreatedTeamConversation, requestWithLocalModelReadiness } from '../infrastructure/CapturedLocalModelReadiness';
 import { captureProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import { CapturedRosterCommands } from '../infrastructure/CapturedRosterCommands';
 import { capturedRuntimeSourceGrant } from '../infrastructure/capturedRuntimeSourceGrant';
@@ -41,6 +43,8 @@ import type {
   HandleBindingStore,
 } from '../application/backendBinding';
 import type { CapturedBackendOwner } from '../application/BackendOwnerRouter';
+import type { CapturedTeamModelRequest } from '../application/prepareCapturedTeamModels';
+import type { TeamModelProbeIntents } from '../application/TeamModelProbeIntents';
 import type { CapturedProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import type {
   DesktopBackendDescriptor,
@@ -51,7 +55,6 @@ import type {
   CreateTeamRegistryPayload,
   TeamRegistryRecord,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
-import type { CreateTeamLaunchPreparationInput } from '@agent-teams/legacy-agent-host/team-registry/create-launch-contracts';
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';
 import type { TeamCreateRequest } from '@shared/types/team';
 
@@ -75,6 +78,7 @@ export interface DesktopBackendFeatureOptions {
   bindings?: HandleBindingStore;
   /** Existing durable Main ledger is supplied before renderer work admission. */
   commandRunner?: () => ApplicationCommandRunner | null;
+  modelIntents?: TeamModelProbeIntents;
 }
 
 export class DesktopBackendFeature {
@@ -116,10 +120,16 @@ export class DesktopBackendFeature {
       assertBackendRequestGuard(guard);
       return this.router;
     };
+    const rosterCommands = options.commandRunner ? new CapturedRosterCommands(options.commandRunner) : undefined;
     this.facade = new BackendOperationsFacade(
       {
-        request: async (handle, command) =>
-          (await target(handle, command.guard)).request(handle, command),
+        request: (handle, command) => {
+          const definition = this.handleDefinitions().find(row => row.handleId === handle.handleId);
+          return requestWithLocalModelReadiness(() => target(handle, command.guard), handle, command, definition, {
+            requestTimeoutMs: definition ? this.clients.get(ownerKey(definition.owner))?.client.profile.requestTimeoutMs : undefined,
+            intents: this.options.modelIntents, rosterCommands,
+          });
+        },
         requestPair: async (source, destination, command) => {
           const router = await target(source, command.guard);
           const original = this.handleDefinitions().find(
@@ -132,7 +142,7 @@ export class DesktopBackendFeature {
         lookup: async (handle, commandId, method, guard) =>
           (await target(handle, guard)).lookup(handle, commandId, method, guard),
       },
-      options.commandRunner ? new CapturedRosterCommands(options.commandRunner) : undefined
+      rosterCommands
     );
   }
 
@@ -392,33 +402,19 @@ export class DesktopBackendFeature {
   /** Captures one creation owner for preparation, polling and original cleanup. */
   async captureTeamCreation(contextId: string, guard: BackendRequestGuard) {
     const target = await this.registry(contextId, guard);
-    let preparedSources: Promise<void> | undefined;
-    return {
-      prepare: async (
-        action: 'prepare' | 'probe.read' | 'probe.cancel',
-        input: CreateTeamLaunchPreparationInput
-      ) => {
-        if (input.draft.contextId !== contextId) throw new BackendRoutingError('forbidden');
-        if (action === 'prepare' && (input.draft.savedSettings.providerId === 'opencode' ||
-            input.draft.members.some(row => row.memberSettings.providerId === 'opencode'))) {
-          preparedSources ??= this.refreshLaunchConfiguration(contextId, input.draft.savedSettings.cwd, guard);
-          await preparedSources;
-        }
-        return target.client.prepareCreation(
-          action,
-          input,
-          action === 'probe.cancel' ? undefined : guard
-        );
-      },
-      submit: async (commandId: string, input: CreateTeamLaunchPreparationInput) => {
-        if (input.draft.contextId !== contextId) throw new BackendRoutingError('forbidden');
-        const result = await target.client.submitCreation(commandId, input, guard);
-        if (result.creation.commandId !== commandId || result.creation.phase !== 'published')
-          throw new BackendRoutingError('hold', 'unknown');
-        await this.registerDynamic(result.creation.record, target.owner, contextId, guard);
-        return result;
-      },
-    };
+    const captured = this.clients.get(ownerKey(target.owner));
+    if (!this.router || !captured) throw new BackendRoutingError('unavailable');
+    return captureCreatedTeamConversation({
+      ...target, router: this.router, contextId, guard, requestTimeoutMs: captured.client.profile.requestTimeoutMs,
+      refreshSources: cwd => this.refreshLaunchConfiguration(contextId, cwd, guard),
+      register: record => this.registerDynamic(record, target.owner, contextId, guard),
+    });
+  }
+
+  prepareCapturedModels(handle: BackendHandle, request: CapturedTeamModelRequest, guard: BackendRequestGuard) {
+    return prepareCapturedTeamModels({ handle, request, isCurrent: () => guard.isCurrent(), intents: this.options.modelIntents,
+      backend: { invoke: (input, readiness) => this.facade.invoke(input,
+        input.operation === 'team.launch.probe.cancel' ? undefined : guard, readiness) } });
   }
 
   prepareCreatedTeam(

@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
+import { captureReadinessPreparation, originalReadinessSubset } from '../adapters/providers/OpenCodeReadinessOrigin.js';
+import type { LocalModelReadinessPreparation } from '../management/commandRecords.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
+import { actualCaptureReadinessCommandId, modelReadinessMechanismDigest } from '../team-launch/launchReadiness.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { isNativeProfilePath } from './nativeProcessProfile.js';
 import { captureTeamProbePreparation } from './captureTeamProbePreparation.js';
@@ -223,6 +226,11 @@ export function captureTeamModelProbe(options: {
   return {
     profile: teamModelProbeProfile(profile.provider === 'claude' ? selected : profile),
     ...(processOrigin ? { processOrigin } : {}),
+    provenance: { teamBindingDigest: runtimeDigest(options.team.definition.binding),
+      selectionDigest: runtimeDigest(input), sourceRevision: input.launchId, rosterRevision: input.rosterRevision,
+      destinationKeys: [runtimeDigest(input.draft?.target ?? { launchId: input.launchId, memberId: input.memberId })] },
+    readinessCapture: !input.draft && profile.provider === 'opencode' ? launch.readModelReadinessAdmission() : undefined,
+    assertReadinessCapture: () => launch.assertModelReadinessCapture(input.memberId),
     context: input.draft
       ? teamModelProbeContext(options.team.definition.binding.teamId, input)
       : runtimeDigest({
@@ -251,7 +259,9 @@ export async function executeTeamModelProbe(options: {
   action: 'start' | 'read' | 'cancel';
   commandId: string;
   payload: unknown;
+  readiness?: { preparation: LocalModelReadinessPreparation; owner: unknown; handleId: string; scope: unknown };
 }) {
+  const admittedAt = Date.now();
   const input = teamModelProbeSelectionSchema.parse(options.payload);
   const captured = options.runtime.captureLaunchModelProbe(options.teamId, input, options.action);
   const owner = options.management.probes;
@@ -280,9 +290,44 @@ export async function executeTeamModelProbe(options: {
     profileId: captured.profile.profileId,
     configRevision: captured.profile.configRevision,
   };
+  const retained = captured.profile.provider === 'opencode' && options.action === 'start' && owner.read(identity)
+    ? owner.readRetainedProbe(options.commandId, captured.context) : undefined;
+  const prepared = options.action === 'start' && options.readiness ? captureReadinessPreparation(
+    options.readiness.preparation, {
+      kind: 'team', owner: options.readiness.owner,
+      // Main's context ID is trusted composition provenance; scope is independently Host-authorized.
+      contextId: options.readiness.preparation.origin.contextId, commandId: options.commandId,
+      selection: { handleId: options.readiness.handleId, scope: options.readiness.scope, payload: input },
+      workspaces: [captured.profile.cwd], anchorCommandId: options.commandId,
+      targets: [{ workspace: captured.profile.cwd, providerId: captured.providerId }],
+      original: owner.readPreparation(options.commandId), admittedAt,
+    }
+  ) : undefined;
+  if (prepared && captured.profile.provider !== 'opencode') throw new TeamLaunchError('invalid', 'probe-origin');
+  const capture = captured.readinessCapture;
+  const parent = capture && options.commandId ===
+    actualCaptureReadinessCommandId(capture.preparationId, capture.commandId, input.memberId) ? capture : undefined;
+  if (parent && options.action === 'start') {
+    const target = parent.targets.find(row => row.memberId === input.memberId);
+    if (!prepared || parent.phase !== 'captured' || !target || target.retired || target.originalWorkspace === captured.profile.cwd ||
+        options.commandId !== actualCaptureReadinessCommandId(parent.preparationId, parent.commandId, input.memberId) ||
+        Date.now() >= parent.cutoff)
+      throw new TeamLaunchError('hold', 'probe-capture-continuation');
+    if (!captured.assertReadinessCapture) throw new TeamLaunchError('hold', 'probe-capture-continuation');
+    captured.assertReadinessCapture();
+    prepared.anchor.expiresAt = Math.min(prepared.anchor.expiresAt, parent.cutoff);
+  }
+  const origin = prepared ? originalReadinessSubset(prepared.origin, captured.profile.cwd, captured.providerId) : undefined;
+  const privateScope = captured.profile.provider === 'opencode' && (!retained || retained.readinessScope) ? {
+    schemaVersion: 1 as const, kind: 'team' as const, ...captured.provenance,
+    actionDigest: runtimeDigest({ commandId: options.commandId, context: captured.context }),
+    mechanismDigest: modelReadinessMechanismDigest(captured.profile), workspace: captured.profile.cwd,
+    cutoff: retained?.readinessScope?.cutoff ?? Math.min(prepared?.anchor.expiresAt ?? admittedAt + (captured.profile.modelProbeTimeoutMs ?? 90000),
+      parent?.cutoff ?? Infinity),
+  } : undefined;
   const value =
     options.action === 'start'
-      ? owner.start(
+      ? owner.startPrepared(
           {
             ...identity,
             providerId: captured.providerId,
@@ -291,7 +336,12 @@ export async function executeTeamModelProbe(options: {
             ...(captured.modelContext === undefined ? {} : { modelContext: captured.modelContext }),
             context: captured.context,
           },
-          captured.isCurrent,
+          () => {
+            if (parent) captured.assertReadinessCapture!();
+            return captured.isCurrent();
+          },
+          prepared && origin ? { anchor: prepared.anchor, origin } : undefined,
+          privateScope,
           captureTeamProbePreparation(options.management, captured.profile, captured.processOrigin)
         )
       : options.action === 'cancel'

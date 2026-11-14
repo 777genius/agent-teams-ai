@@ -24,18 +24,23 @@ export function readEntryActivitySources(
     teamId: entry.binding.teamId, launchId: entry.binding.runId,
   }));
   if (!retained) return [{ binding: entry.binding, team: entry.team, costScope: currentKey }];
-  if (!retained.entries.includes(entry) ||
-      retained.team.definition.binding.backendId !== entry.binding.backendId ||
+  if (retained.team.definition.binding.backendId !== entry.binding.backendId ||
       retained.team.definition.binding.teamId !== entry.binding.teamId) fail();
   const selected = retained.launch.readActivityLineage(entry.binding.memberId);
+  const liveSelections = selected.liveSelections;
+  const member = runtimeDigest(selected.member.binding) === currentKey ? selected.member
+    : liveSelections.find(row => runtimeDigest(row.source.binding) === currentKey)?.source;
+  if (!member || !retained.entries.includes(entry) &&
+      !liveSelections.some(row => runtimeDigest(row.source.binding) === currentKey)) fail();
   if (selected.launchId !== entry.binding.runId ||
-      runtimeDigest(selected.member.binding) !== currentKey ||
-      selected.member.configurationDigest !== runtimeDigest(entry.profile) ||
-      selected.member.baseConfigurationDigest !== runtimeDigest(entry.baseProfile) ||
-      selected.member.runtimeGeneration !== entry.profile.generation ||
-      selected.member.configRevision !== entry.config.configRevision) fail();
-  if (selected.restorations.length > 64 || selected.actions.length > 64) fail();
-  const required = new Set<string>(selected.recordRequired ? [currentKey] : []);
+      runtimeDigest(member.binding) !== currentKey ||
+      member.configurationDigest !== runtimeDigest(entry.profile) ||
+      member.baseConfigurationDigest !== runtimeDigest(entry.baseProfile) ||
+      member.runtimeGeneration !== entry.profile.generation ||
+      member.configRevision !== entry.config.configRevision) fail();
+  if (selected.restorations.length > 64 || selected.actions.length > 64 || liveSelections.length > 64) fail();
+  const required = new Set<string>(selected.recordRequired && selected.member.binding
+    ? [runtimeDigest(selected.member.binding)] : []);
   const predecessors = new Map<string, { source: RuntimeBinding; resume: boolean }>();
   const add = (source: RuntimeBinding, target: RuntimeBinding, resume: boolean) => {
     source = normalizeBinding(source); target = normalizeBinding(target);
@@ -59,6 +64,12 @@ export function readEntryActivitySources(
     if (row.phase !== 'selected' || row.input.action !== 'restart') continue;
     if (!row.source.binding || !row.selected.binding) fail();
     add(row.source.binding, row.selected.binding, false);
+  }
+  for (const row of liveSelections) {
+    if (!row.member.binding) fail();
+    if (!row.source.binding) continue; // Original unconfigured Skip has no historical Runtime.
+    add(row.source.binding, row.member.binding, false);
+    if (row.sourceRecordRequired) required.add(runtimeDigest(row.source.binding));
   }
   const reverse = [{ binding: entry.binding, resumed: false }];
   const seen = new Set<string>([currentKey]);

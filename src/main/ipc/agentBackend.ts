@@ -16,7 +16,6 @@ import {
   FileTeamModelProbeIntents,
   ForegroundModelChecks,
   importStoppedLegacyTeam,
-  prepareCapturedTeamModels,
   prepareHostNotification,
   registerAgentBackendIpc,
   registerBackendConnectionsIpc,
@@ -403,24 +402,7 @@ export async function prepareDesktopCapturedTeam(
           ...(capturedRequest.selectedModelChecks ?? []).map(row => row.providerId)];
         if (capturedRequest.cwd && requestedProviders.includes('opencode'))
           await original.feature.refreshLaunchConfiguration(contextId, capturedRequest.cwd, { isCurrent }, connection.handle);
-        return await prepareCapturedTeamModels({
-          handle: connection.handle,
-          request: capturedRequest,
-          isCurrent,
-          intents: new FileTeamModelProbeIntents(
-            join(original.userDataPath, 'agent-backend', 'team-model-intents'),
-            original.userDataPath
-          ),
-          backend: {
-            invoke: (input) =>
-              original.feature.facade.invoke(
-                input,
-                // Only cleanup may outlive foreground authority; it still addresses
-                // the original authorized descriptor/handle and original probe ID.
-                input.operation === 'team.launch.probe.cancel' ? undefined : { isCurrent }
-              ),
-          },
-        });
+        return await original.feature.prepareCapturedModels(connection.handle, capturedRequest, { isCurrent });
       }
     );
   } catch {
@@ -620,6 +602,7 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
     // Partial/invalid configuration must fail closed, not select another backend.
     descriptor: path || sha256 ? { path: path ?? '', sha256: sha256 ?? '' } : null,
     bindingDirectory: join(options.userDataPath, 'agent-backend', 'bindings'),
+    modelIntents: new FileTeamModelProbeIntents(join(options.userDataPath, 'agent-backend', 'team-model-intents'), options.userDataPath),
     commandRunner: () => desktopCommandRunner,
     onInitializationFailure: (phase, code) =>
       createLogger('IPC:AgentBackend').warn('Captured backend initialization held', {

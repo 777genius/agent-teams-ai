@@ -51,6 +51,32 @@ export function captureDesktopProofScope(evidence: Record<string, unknown>, opti
     evidence.excluded = ['authenticated vendor login completion', 'vendor inference', 'personal browser navigation', 'other OS tuples', 'Desktop team launch', 'full Stage1/release/default activation'];
   }
 }
+
+/** Final assertions run only after the original receipt has been written and reported. */
+export function assertDesktopProofCompleted(evidence: Record<string, unknown>, options: {
+  packed: boolean;
+  emulatedOnly: boolean;
+  controlledProcessMode: boolean;
+  mode: string;
+  scheduleUiMode: boolean;
+  capturedMcpUiMode: boolean;
+  cleanupFailure: unknown;
+  remaining: readonly unknown[] | null;
+}): void {
+  const { packed, emulatedOnly, controlledProcessMode, mode, scheduleUiMode, capturedMcpUiMode,
+    cleanupFailure, remaining } = options;
+  if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
+  if (emulatedOnly) assert.equal(evidence.status, 'PASS', 'provider-emulation UI proof incomplete; original receipt retained');
+  if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
+  if (mode === 'codex-login-ui') assert.equal(evidence.status, 'PASS', 'Codex login UI proof incomplete; inspect its retained finite receipt');
+  if (scheduleUiMode) assert.equal(evidence.status, 'PASS', 'original schedule UI proof incomplete; inspect its retained receipt');
+  if (capturedMcpUiMode) assert.equal(evidence.status, 'PASS', 'original MCP UI proof incomplete; inspect its retained receipt');
+  assert.ok(
+    !cleanupFailure && remaining !== null && remaining.length === 0,
+    'captured group cleanup unconfirmed; receipt retains debt and no further signal is authorized'
+  );
+}
+
 export async function desktopProofEvidence(options: {
   mode: string;
   fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>;

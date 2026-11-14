@@ -12,7 +12,7 @@ import { ProviderManagementCoordinator } from '../dist/composition/ProviderManag
 
 import type { CapturedNativeProcessFactory } from '../dist/adapters/providers/capturedNativeProcessFactory.js';
 import type { RuntimeSourceProcessOrigin } from '../dist/composition/runtimeSourceProcessOrigin.js';
-import type { ModelProbeInput } from '../dist/management/ModelProbeOwner.js';
+import type { ModelProbeInput, ModelProbePreparation } from '../dist/management/ModelProbeOwner.js';
 import type { ProviderManagementProfile } from '../dist/management/profile.js';
 
 function fixture(provider: ProviderManagementProfile['provider']) {
@@ -73,8 +73,11 @@ async function finished(owner: ProviderManagementCoordinator, input: ModelProbeI
   assert.fail('The original controlled model operation did not settle');
 }
 
-for (const provider of ['codex', 'claude'] as const)
-  test(`${provider} equal-profile probe origins survive the original metadata wait without retargeting`, { timeout: 10000 }, async t => {
+for (const [provider, route] of [
+  ['codex', 'ordinary'], ['codex', 'prepared'],
+  ['claude', 'ordinary'], ['claude', 'prepared'],
+] as const)
+  test(`${provider} ${route} equal-profile probe origins survive the original metadata wait without retargeting`, { timeout: 10000 }, async t => {
     const f = fixture(provider), events: string[] = [], captured: RuntimeSourceProcessOrigin[] = [];
     const profileBytes = JSON.stringify(f.profile);
     const entered = Promise.withResolvers<void>(), release = Promise.withResolvers<void>();
@@ -93,6 +96,9 @@ for (const provider of ['codex', 'claude'] as const)
         return refusingProcess(origin.revision[0]!, events);
       },
     });
+    const start = (input: ModelProbeInput, prepare: ModelProbePreparation) => route === 'prepared'
+      ? owner.probes.startPrepared(input, () => true, undefined, undefined, prepare)
+      : owner.probes.start(input, () => true, prepare);
     const a = f.input('TEST-original-A'), b = f.input('TEST-original-B');
     const originA = f.origin('1'), originB = f.origin('2'), expectedA = structuredClone(originA);
     const rawA = structuredClone(f.profile);
@@ -103,10 +109,10 @@ for (const provider of ['codex', 'claude'] as const)
     const metadataRejected = assert.rejects(metadata, error => error === metadataFailure);
     try {
       await entered.promise;
-      assert.equal(owner.probes.start(a, () => true, prepareA).phase, 'running');
+      assert.equal(start(a, prepareA).phase, 'running');
       const prepareB = owner.prepareTeamProbe(structuredClone(f.profile), originB);
       originB.revision = '4'.repeat(64);
-      assert.throws(() => owner.probes.start(b, () => true, prepareB), /busy/);
+      assert.throws(() => start(b, prepareB), /busy/);
       assert.deepEqual(captured, [expectedA], 'busy admission cannot prepare or replace the queued origin');
       assert.deepEqual(events.filter(value => value.startsWith('create:')), ['create:metadata']);
       const store = new FileManagementCommandStore(f.storage);
@@ -115,11 +121,13 @@ for (const provider of ['codex', 'claude'] as const)
       release.resolve(); await metadataRejected;
       assert.equal((await finished(owner, a)).ok, true);
       assert.ok(events.indexOf('stopped:metadata') < events.indexOf('create:1'));
-      assert.equal(owner.probes.start(b, () => true, prepareB).phase, 'running');
+      assert.equal(start(b, prepareB).phase, 'running');
       assert.equal((await finished(owner, b)).ok, true);
       assert.deepEqual(captured, [expectedA, f.origin('2')]);
       assert.deepEqual(events.filter(value => value.startsWith('create:')), ['create:metadata', 'create:1', 'create:2']);
       assert.ok(events.indexOf('stopped:1') < events.indexOf('create:2'));
+      assert.equal(start(a, prepareB).phase, 'completed', 'same-ID replay cannot capture the later origin');
+      assert.deepEqual(captured, [expectedA, f.origin('2')]);
       assert.equal(nativeProbes, 2);
       assert.equal(JSON.stringify(f.profile), profileBytes);
       const savedA = store.read(a.commandId)!, savedB = store.read(b.commandId)!;

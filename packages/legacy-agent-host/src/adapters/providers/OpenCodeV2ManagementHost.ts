@@ -114,8 +114,8 @@ export class OpenCodeV2ManagementHost {
     this.configuration = captureOpenCodeV2Configuration(this.profile,
       { providerId: this.configuredProviderId, modelId: this.profile.nativeModel!.modelId },
       () => this.selectionCurrent(), 'catalog');
-    if (this.options.catalogProviderId) this.catalogCredential = captureOpenCodeV2SessionCredential(
-      this.profile, this.options.catalogProviderId, this.configuration.isCurrent);
+    if (this.options.catalogProviderId && !this.configuration.selectedFile) this.catalogCredential = captureOpenCodeV2SessionCredential(
+      this.profile, this.options.catalogProviderId, this.configuration.isCurrent, this.configuration.key);
   }
 
   private selectionCurrent(): boolean {
@@ -170,6 +170,7 @@ export class OpenCodeV2ManagementHost {
       canAllocate: () => this.current(),
       startupTimeoutMs: Math.min(this.profile.timeoutMs, 180_000),
       ...(this.processCustody ? { processCustody: this.processCustody } : {}),
+      ...(this.configuration.selectedFile ? { selectedFile: { source: this.configuration.selectedFile, mode: 'catalog' as const } } : {}),
     });
     this.ready = await this.server.start(signal);
     this.metadataDiagnostic?.ready(this.ready);
@@ -266,7 +267,7 @@ export class OpenCodeV2ManagementHost {
             const integration = integrations.get(provider?.integrationId === undefined ? id : provider.integrationId);
             const models = catalog.models.filter(model => model.providerId === id && model.enabled);
             const configuration = id === this.configuredProviderId ? this.configuration.configuration : undefined;
-            const configuredAuthless = !!configuration && isConfiguredAuthless({ id,
+            const configuredAuthless = !!configuration && !this.configuration.selectedFile && isConfiguredAuthless({ id,
               npm: ['aisdk:@ai-sdk/openai-compatible', '@opencode/ai/providers/openai-compatible']
                 .includes(String(configuration.package)) ? '@ai-sdk/openai-compatible' : undefined,
               options: configuration.settings,

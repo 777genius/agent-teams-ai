@@ -68,7 +68,7 @@ const startup = Object.freeze({
 let original: Reference | null | undefined;
 let originalDescriptor: Reference | null | undefined;
 let selected: Selection | null | undefined;
-let initializationFailure: unknown;
+let initializationFailure: Error | undefined;
 
 function identity(info: BigIntStats): FileIdentity {
   return Object.freeze({ dev: info.dev, ino: info.ino, size: info.size, mode: info.mode,
@@ -157,7 +157,7 @@ function inspect(pin: Reference): Selection {
       row.binary !== 'linux-child-exec' || typeof row.buildKernelRelease !== 'string' ||
       row.buildKernelRelease.length < 1 || row.buildKernelRelease.length > 256 ||
       ['binarySha256', 'sourceSha256', 'compilerSha256', 'inspectorSha256'].some(
-        key => typeof row[key] !== 'string' || !hashPattern.test(row[key] as string)) ||
+        key => typeof row[key] !== 'string' || !hashPattern.test(row[key])) ||
       !Array.isArray(row.linkInputs) || row.linkInputs.length < 1 || row.linkInputs.length > 64)
     throw linuxChildLaunchFailure('selection');
   const names = new Set<string>();
@@ -202,7 +202,8 @@ export function initializeLinuxChildLaunch(
     originalDescriptor = descriptor;
     selected = pin ? inspect(pin) : null;
   } catch (error) {
-    initializationFailure = isLinuxChildLaunchFailure(error) ? error : linuxChildLaunchFailure('selection');
+    initializationFailure = isLinuxChildLaunchFailure(error) && error instanceof Error
+      ? error : linuxChildLaunchFailure('selection');
     throw initializationFailure;
   }
 }

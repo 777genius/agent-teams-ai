@@ -1,4 +1,5 @@
 import { nativeRosterSuccessor } from './nativeRosterSuccessor.js';
+import { TeamLiveRosterMembership, validateLiveRosterMembership } from './liveRosterMembership.js';
 import { TeamNativeMemberCreation } from './TeamNativeMemberCreation.js';
 import { validateNativeMemberCreationRecords } from './validateNativeMemberCreation.js';
 import { assertTeamExecutionAllowed } from './teamLifecycleAdmission.js';
@@ -90,6 +91,14 @@ export class TeamRosterTransitions {
       project: controllerProjection, recover: state => this.recover(state) });
   }
 
+  /** Private admin membership use case; shares this exact state, policy and publication owner. */
+  liveMembership(): TeamLiveRosterMembership {
+    return new TeamLiveRosterMembership({ ...this.options,
+      validate: state => this.validate(state), members: (state, input) => this.members(state, input),
+      assertNoPending: commandId => this.assertNoPendingCommands(commandId),
+      project: controllerProjection, recover: state => this.recover(state) });
+  }
+
   /** Resume only this already-decided config projection; never rerun membership policy. */
   recover(state: OwnerState): void {
     if (!state.rosterProjection) return;
@@ -163,6 +172,8 @@ export class TeamRosterTransitions {
         )
           throw new TeamOwnerError('conflict');
       }
+      if (receipt?.liveMembership && receipt.liveMembership.phase !== 'completed')
+        throw new TeamOwnerError(receipt.liveMembership.rejection ?? 'hold');
       return receipt ? { commandId: receipt.commandId, revision: receipt.revision } : undefined;
     });
   }
@@ -293,6 +304,8 @@ export class TeamRosterTransitions {
     if (!prior) return undefined;
     if (prior.principalId !== principalId || prior.fingerprint !== fingerprint)
       throw new TeamOwnerError('conflict');
+    if (prior.liveMembership && prior.liveMembership.phase !== 'completed')
+      throw new TeamOwnerError(prior.liveMembership.rejection ?? 'hold');
     return { commandId, revision: prior.revision };
   }
 
@@ -331,7 +344,10 @@ export class TeamRosterTransitions {
     ];
   }
 
-  private assertNoPendingCommands(): void {
+  private assertNoPendingCommands(originalLiveCommandId?: string): void {
+    if (this.options.state().rosterCommands?.some(row => row.liveMembership &&
+        !['completed', 'rejected'].includes(row.liveMembership.phase) && row.commandId !== originalLiveCommandId))
+      throw new TeamOwnerError('hold');
     if (this.options.state().rosterCommands?.some(row => row.nativeCreation && !['completed', 'held'].includes(row.nativeCreation.phase))) throw new TeamOwnerError('hold');
     const pending = listTeamCommandEntries(this.options.store).some(
       (receipt) => !['completed', 'rejected'].includes(receipt.phase)
@@ -348,6 +364,7 @@ export class TeamRosterTransitions {
 
   private validate(state: OwnerState): void {
     validateNativeMemberCreationRecords(state);
+    validateLiveRosterMembership(state);
     if (
       !Number.isSafeInteger(state.rosterVersion ?? 0) ||
       (state.rosterVersion ?? 0) < 0 ||

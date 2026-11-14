@@ -19,6 +19,7 @@ import type {
   BackendLaunchConfiguration,
   BackendLaunchConfigurationView,
   BackendLaunchModelConfigurationView,
+  BackendLaunchModelPreparation,
   BackendLaunchModelProbe,
   BackendLaunchModelSelection,
   BackendLaunchSnapshot,
@@ -182,7 +183,7 @@ export interface BackendOperationPayloads
   'team.roster.read': Record<string, never>;
   'team.roster.lookup': { expected?: BackendRosterReplacement };
   'team.roster.replace': BackendRosterReplacement;
-  'team.launch.capture': { rosterCommandId: string };
+  'team.launch.capture': { rosterCommandId: string; modelPreparation?: BackendLaunchModelPreparation };
   'team.launch.read': { launchId?: string };
   'team.launch.configuration.read': { launchId?: string };
   'team.launch.model.configuration.read': Record<string, never>;
@@ -194,6 +195,7 @@ export interface BackendOperationPayloads
   'team.launch.start': {
     launchId: string;
     rosterRevision: string;
+    modelPreparation?: BackendLaunchModelPreparation;
     configuration?: BackendLaunchConfiguration;
     /** Omitted uses the saved prompt; null is a bootstrap-only launch. */
     initialPrompt?: string | null;

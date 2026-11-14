@@ -53,12 +53,14 @@ export type SettingsModelProbe = {
   model: 'TEST-model' | 'TEST-project-model';
   outputTokens?: number;
 };
+export type LiveMembershipModelPhase = 'idle' | 'add' | 'add-ready' | 'remove' | 'restore' | 'restore-ready' | 'stopped';
 
 export async function startOpenCodeModel(
   options: {
     nativeGeneration?: 'v2';
     coordinationProof?: true;
     localReadinessProof?: true;
+    liveMembershipPhase?: () => LiveMembershipModelPhase;
     sharedSessionProbe?: boolean;
     nativeMessageImage?: boolean;
     mixedGroups?: boolean;
@@ -79,6 +81,11 @@ export async function startOpenCodeModel(
   } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate));
+  if (options.liveMembershipPhase) assert.ok(options.allowModelProbes && options.uiGeneratedMessageIds &&
+    options.principalId && !options.coordinationProof && !options.localReadinessProof && !options.sharedSessionProbe &&
+    !options.mixedGroups && !options.mixedTaskNotifications && !options.peerMessaging && !options.captureFileUpdate &&
+    !options.settingsProbe && !options.holdInitialTurnResponse, 'one explicit live membership oracle');
+  const livePrincipals = new Map<string, string>();
   if (options.sharedSessionProbe)
     assert.ok(
       !options.mixedGroups &&
@@ -182,6 +189,10 @@ export async function startOpenCodeModel(
         chunks.push(chunk);
       }
       const body = record(JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown);
+      if (options.liveMembershipPhase) {
+        assert.equal(request.headers.authorization, 'Bearer TEST-LOCALHOST-ONLY');
+        assert.equal(body.model, 'TEST-model');
+      }
       const settingsProbe = options.settingsProbe?.();
       if (options.selectedModel && !settingsProbe) {
         assert.equal(body.model, options.selectedModel.id, 'actual native request uses the selected model');
@@ -288,6 +299,11 @@ export async function startOpenCodeModel(
         options.allowModelProbes &&
         isOpenCodeModelProbe(body, options.nativeGeneration ?? 'v1')
       ) {
+        if (options.liveMembershipPhase) {
+          const expected = options.liveMembershipPhase() === 'add' ? 0 : options.liveMembershipPhase() === 'restore' ? 1 : -1;
+          assert.ok(expected >= 0, 'only the original Add or Restore may prepare a model');
+          assert.equal(probes.length, expected); assert.equal(observations.length, expected * 2);
+        }
         assert.notEqual(settingsProbe, 'idle', 'no unrequested Settings model probe');
         if (settingsProbe && settingsProbe !== 'idle') {
           assert.equal(settingsSteps.has(settingsProbe.step), false, 'one original Settings action');
@@ -394,6 +410,12 @@ export async function startOpenCodeModel(
         const capture =
           options.captureFileUpdate && JSON.stringify(message.content).includes(CAPTURE_TURN);
         const match = /OPENCODE_TEAM_(ONE|TWO)/.exec(JSON.stringify(message.content));
+        const live = options.liveMembershipPhase
+          ? /TEST_LIVE_MEMBERSHIP_(ADD|RESTORE)/.exec(mixedNativeText(message.content)) : undefined;
+        if (options.liveMembershipPhase) {
+          if (!mixedSemanticText(message.content)) continue;
+          assert.ok(live, 'no historical fallback for a foreign current membership input');
+        }
         const peer = options.peerMessaging
           ? nativePeerTurn(JSON.stringify(message.content), 'carol')
           : undefined;
@@ -410,11 +432,11 @@ export async function startOpenCodeModel(
             'unrecognized CURRENT mixed input; no historical fallback'
           );
         }
-        if (group || capture || peer || match) {
+        if (group || capture || peer || match || live) {
           turnText = mixedNativeText(message.content);
           mixedGroup = group;
           turn =
-            group?.turn ??
+            live?.[0] ?? group?.turn ??
             (capture
               ? options.captureFileUpdate!.phase() === 'assignment'
                 ? CAPTURE_ASSIGNMENT
@@ -475,6 +497,37 @@ export async function startOpenCodeModel(
       const tools = (Array.isArray(body.tools) ? body.tools : [])
         .map(record)
         .map((tool) => String(record(tool.function).name));
+      const liveActions = options.liveMembershipPhase ? [{ name: 'message_send', input: {
+        commandId: 'TEST-live-reply-' + (turn.endsWith('_ADD') ? 'add' : 'restore'), to: 'user', text: 'REPLY_' + turn,
+      } }] : undefined;
+      if (liveActions) {
+        const restoring = turn === 'TEST_LIVE_MEMBERSHIP_RESTORE', phase = restoring ? 'restore-ready' : 'add-ready';
+        assert.equal(options.liveMembershipPhase!(), phase); assert.ok(step < 2, 'one tool and one terminal, no replay');
+        assert.equal(probes.length, restoring ? 2 : 1); assert.equal(observations.length, (restoring ? 2 : 0) + step);
+        assert.equal(counts.get(restoring ? 'TEST_LIVE_MEMBERSHIP_ADD' : 'TEST_LIVE_MEMBERSHIP_RESTORE') ?? 0, restoring ? 2 : 0);
+        const principal = options.principalId!(); assert.ok(principal);
+        if (step === 0) {
+          assert.equal(livePrincipals.has(turn), false);
+          if (restoring) assert.notEqual(principal, livePrincipals.get('TEST_LIVE_MEMBERSHIP_ADD'));
+          livePrincipals.set(turn, principal);
+        }
+        assert.equal(livePrincipals.get(turn), principal, 'the native tool result retains this exact current member');
+        const calls = messages.filter(row => row.role === 'assistant').flatMap(row =>
+          Array.isArray(row.tool_calls) ? row.tool_calls.map(record) : []), results = messages.filter(row => row.role === 'tool');
+        assert.equal(calls.length, step); assert.equal(results.length, step);
+        for (const name of REQUIRED_TOOLS) assert.ok(tools.some(tool => options.nativeGeneration === 'v2'
+          ? [`agent-teams_${name}`, `mcp__agent-teams__${name}`].includes(tool) : tool === `team_${name}`));
+        if (step === 1) {
+          const call = calls[0]!, result = results[0]!, operation = record(call.function);
+          assert.equal(call.id, `TEST_${turn}_0`); assert.equal(result.tool_call_id, call.id);
+          assert.ok(tools.includes(String(operation.name)) && String(operation.name).endsWith('message_send'));
+          assert.deepEqual(JSON.parse(String(operation.arguments)), liveActions[0]!.input);
+          const receipt = nativeToolReceipt(result.content);
+          assert.equal(receipt.phase, 'completed'); assert.equal(receipt.principalId, principal);
+          assert.equal(receipt.operation, 'message.send'); assert.equal(receipt.commandId, liveActions[0]!.input.commandId);
+          assert.ok(typeof record(receipt.effects).messageId === 'string' && record(receipt.effects).messageId);
+        }
+      }
       if (mixedGroup && step > 0) {
         const last = messages.filter((item) => item.role === 'tool').at(-1);
         assertMixedGroupReceipt(mixedGroup, step, last?.content, nativeToolReceipt);
@@ -526,6 +579,7 @@ export async function startOpenCodeModel(
         })() : {}),
         tools,
       };
+      if (liveActions) assert.equal(observation.visibleReplyContract, true, 'actual original UI message envelope');
       if (notice) notificationObservations.push({ ...observation, notice });
       else observations.push(observation);
       if (options.holdInitialTurnResponse) {
@@ -621,7 +675,7 @@ export async function startOpenCodeModel(
         : undefined;
       const action = notice
         ? undefined
-        : (groupActions ??
+        : (liveActions ?? groupActions ??
             captureActions ??
             peerActions ??
             (turn === 'OPENCODE_TEAM_ONE' ? first : second))[step];

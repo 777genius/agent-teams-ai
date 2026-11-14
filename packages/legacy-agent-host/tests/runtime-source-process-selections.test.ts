@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import { FileRuntimeSourceIndex } from '../dist/adapters/profile/FileRuntimeSourceIndex.js';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { RuntimeSourceIndex } from '../dist/composition/RuntimeSourceIndex.js';
-import { captureRuntimeSourceProcessOrigin } from '../dist/composition/captureRuntimeProcessOrigin.js';
+import { captureMemberProcessOrigin, captureRuntimeSourceProcessOrigin } from '../dist/composition/captureRuntimeProcessOrigin.js';
 import { captureRuntimeSource, compileRuntimeCapture } from '../dist/composition/runtimeCaptureSource.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
 import { runtimeSourceProcessOriginSchema, runtimeSourceRecipeIdentity } from '../dist/composition/runtimeSourceProcessOrigin.js';
@@ -230,6 +230,44 @@ test('complete original Team scopes and member references produce private exact 
   assert.deepEqual(new FileManagementCommandStore(f.root).read('TEST-origin-A'), receiptA);
   assert.equal('processOrigin' in captureA, false); assert.equal('processOrigin' in profileA, false);
   assert.equal(probeA.profileId, 'team-probe-' + runtimeDigest(profileA));
+});
+
+test('live member retains its own original source and rejects a capture from another configuration', async t => {
+  const f = runtimeFixture(t, 'main'), candidate = f.candidate('TEST-live-source.exe');
+  const first = await f.owner.publish({ grant: f.grant, commandId: 'TEST-live-origin-A',
+    expectedRevision: f.owner.current({ grant: f.grant }).revision, candidate }, () => {});
+  const initialCapture = f.capture();
+  const seed = runtimeMemberProfileSchema.parse({ ...f.seed, memberId: 'TEST-live-member',
+    principalId: 'TEST-live-agent', sessionId: 'TEST-live-session', configRevision: 'TEST-live-config' });
+  f.profile.runtime!.members.push(seed);
+  const sourceReference = { sourceId: f.grant.targetId, revision: first.selection!.revision };
+  const baseProfile = { ...f.owner.resolveRecipe(sourceReference, f.scope, f.root, seed),
+    cwd: join(f.root, 'TEST-selected-worktree') };
+  const capture = { schemaVersion: 1, commandId: 'TEST-live-capture', requestDigest: '1'.repeat(64),
+    sourceCaptureDigest: runtimeDigest(initialCapture), expectedRevision: '2'.repeat(64),
+    launchId: f.scope.runId, sourceCwd: f.root, savedSettings: { cwd: f.root }, leadProvider: 'codex',
+    member: { memberId: seed.memberId, name: 'live-member', role: 'member', settings: { providerId: 'codex' } },
+    sourceReference, templateDigest: runtimeDigest(seed), previous: null,
+    workspace: baseProfile.cwd, mcpRecipeReference: { memberId: seed.memberId, digest: '3'.repeat(64) },
+    recipeDigest: runtimeDigest(seed), configurationDigest: runtimeDigest(baseProfile), runtimeGeneration: 1 };
+  // Only private origin selection is exercised; this metadata cannot admit a Runtime allocation.
+  const entry = { profile: baseProfile, baseProfile,
+    team: { ...f.team, capture: initialCapture, launchId: f.scope.runId }, liveRosterCapture: capture,
+  } as Parameters<typeof captureMemberProcessOrigin>[1];
+  assert.equal(initialCapture.recipeSources!.some(row => row.memberId === seed.memberId), false);
+  const original = captureMemberProcessOrigin(f.profile, entry, f.owner)!;
+  assert.equal(original.revision, first.selection!.revision);
+  assert.equal(original.origin.kind, 'runtime');
+  if (original.origin.kind === 'runtime') {
+    assert.equal(original.origin.memberId, seed.memberId);
+    assert.equal(original.origin.projectPath, f.root, 'the original source cwd survives the worktree overlay');
+  }
+  await f.owner.publish({ grant: f.grant, commandId: 'TEST-live-origin-B',
+    expectedRevision: first.selection!.revision, candidate }, () => {});
+  assert.deepEqual(captureMemberProcessOrigin(f.profile, entry, f.owner), original);
+  entry.liveRosterCapture = { ...entry.liveRosterCapture!, configurationDigest: '4'.repeat(64) };
+  assert.throws(() => captureMemberProcessOrigin(f.profile, entry, f.owner), { code: 'held' });
+  assert.equal(f.reads(), 2, 'origin reads and rejection perform no new native version checks');
 });
 
 for (const custody of ['whole-job', 'main', 'scoped-without-main'] as const)

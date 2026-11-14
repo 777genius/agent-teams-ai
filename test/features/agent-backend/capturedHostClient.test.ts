@@ -770,12 +770,24 @@ describe('captured legacy host client over real subprocess stdio', () => {
   });
 
   it('request timeout retains unknown outcome while independent control remains available', async () => {
-    const transport = client({ ...(await fixture()), requestTimeoutMs: 80 });
+    const selected = { ...(await fixture()), requestTimeoutMs: 80 };
+    const transport = client(selected);
     await transport.start();
+    for (const remaining of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      await expect(transport.request('failure', undefined, { remainingMs: () => remaining }))
+        .rejects.toMatchObject({ code: 'request-timeout', outcome: 'not-dispatched' });
+    }
+    await expect(readFile(join(selected.cwd, 'effects'))).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(transport.request('hold')).rejects.toMatchObject({
       code: 'request-timeout',
       outcome: 'unknown',
     });
+    const timers = vi.spyOn(globalThis, 'setTimeout');
+    try {
+      await expect(transport.request('hold', undefined, { remainingMs: () => 20 }))
+        .rejects.toMatchObject({ code: 'request-timeout', outcome: 'unknown' });
+      expect(timers.mock.calls.some(([, delay]) => delay === 20)).toBe(true);
+    } finally { timers.mockRestore(); }
     expect(await transport.request('control', undefined, { control: true })).toBe(
       'control-progress'
     );

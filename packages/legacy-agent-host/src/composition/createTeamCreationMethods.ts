@@ -5,14 +5,19 @@ import { TeamLaunchError } from '../team-launch/contracts.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
+import type { LocalModelReadinessPreparation } from '../management/commandRecords.js';
+import type { LocalModelReadinessCapture } from '../team-launch/launchReadiness.js';
 import type { HostMethod } from '../index.js';
 import type { JsonValue } from '../contracts.js';
 import type { CreateTeamLaunchCoordinator } from './CreateTeamLaunchCoordinator.js';
 
 type CreationSelection = {
-  coordinator: Pick<CreateTeamLaunchCoordinator, 'prepare' | 'submit' | 'lookup'>;
+  coordinator: Pick<CreateTeamLaunchCoordinator, 'prepare' | 'capture' | 'submit' | 'lookup'>;
   commandId: string;
   payload: unknown;
+  localModelReadinessOrigin?: LocalModelReadinessPreparation;
+  localModelReadinessRemainingMs?: number;
+  localModelReadinessCapture?: LocalModelReadinessCapture;
 };
 
 function json(value: unknown): JsonValue {
@@ -21,10 +26,10 @@ function json(value: unknown): JsonValue {
 
 /** Finite creation routes keep the Host's captured-envelope admission and original coordinator. */
 export function createTeamCreationMethods(options: {
-  select(raw: unknown): CreationSelection;
+  select(raw: unknown, method: string): CreationSelection;
 }): Record<string, HostMethod> {
   const methods: Record<string, HostMethod> = {};
-  for (const operation of ['prepare', 'probe.read', 'probe.cancel', 'submit', 'lookup'] as const) {
+  for (const operation of ['prepare', 'probe.read', 'probe.cancel', 'capture', 'submit', 'lookup'] as const) {
     methods[`team.creation.${operation}`] = {
       lane:
         operation === 'probe.read' || operation === 'probe.cancel' || operation === 'lookup'
@@ -32,10 +37,13 @@ export function createTeamCreationMethods(options: {
           : 'work',
       async handle(raw): Promise<JsonValue> {
         try {
-          const { coordinator, commandId, payload } = options.select(raw);
+          const { coordinator, commandId, payload, localModelReadinessOrigin,
+            localModelReadinessRemainingMs, localModelReadinessCapture } = options.select(raw, `team.creation.${operation}`);
           const value =
             operation === 'submit'
-              ? await coordinator.submit(commandId, payload)
+              ? await coordinator.submit(commandId, payload, localModelReadinessCapture)
+              : operation === 'capture'
+                ? await coordinator.capture(commandId, payload, localModelReadinessRemainingMs ?? 0)
               : operation === 'lookup'
                 ? coordinator.lookup(commandId, payload)
                 : await coordinator.prepare(
@@ -44,7 +52,8 @@ export function createTeamCreationMethods(options: {
                       : operation === 'probe.read'
                         ? 'read'
                         : 'cancel',
-                    payload
+                    payload,
+                    localModelReadinessOrigin
                   );
           return { ok: true, value: json(value) };
         } catch (error) {
