@@ -1306,11 +1306,13 @@ export class ClaudeMultimodelBridgeService {
           const configuredCatalog = await providerConnectionService.getCodexModelCatalog({
             cwd: projectPath || null,
           });
-          const configuredEffort = configuredCatalog?.configuredReasoningEffort;
-          if (configuredEffort) {
+          if (configuredCatalog?.diagnostics?.configReadState === 'ready') {
             status = {
               ...status,
-              modelCatalog: { ...status.modelCatalog, configuredReasoningEffort: configuredEffort },
+              modelCatalog: {
+                ...status.modelCatalog,
+                configuredReasoningEffort: configuredCatalog.configuredReasoningEffort ?? null,
+              },
             };
           }
         }

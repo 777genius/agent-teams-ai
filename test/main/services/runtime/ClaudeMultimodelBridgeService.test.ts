@@ -535,7 +535,10 @@ describe('ClaudeMultimodelBridgeService', () => {
   });
 
   it('adds the configured Codex effort to the live model catalog', async () => {
-    getCodexModelCatalogMock.mockResolvedValue({ configuredReasoningEffort: 'xhigh' });
+    getCodexModelCatalogMock.mockResolvedValue({
+      configuredReasoningEffort: 'xhigh',
+      diagnostics: { configReadState: 'ready' },
+    });
     execCliMock.mockResolvedValue(statusReply('codex', fullStatusFixture('codex')));
     const { ClaudeMultimodelBridgeService } =
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
@@ -548,6 +551,26 @@ describe('ClaudeMultimodelBridgeService', () => {
       cwd: '/tmp/status-hydration-test-project',
     });
   });
+
+  it.each(['ready', 'failed'] as const)(
+    'handles a cleared Codex effort according to config read state %s',
+    async (configReadState) => {
+      getCodexModelCatalogMock.mockResolvedValue({
+        configuredReasoningEffort: null,
+        diagnostics: { configReadState },
+      });
+      execCliMock.mockResolvedValue(statusReply('codex', fullStatusFixture('codex')));
+      const { ClaudeMultimodelBridgeService } =
+        await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+      const service = new ClaudeMultimodelBridgeService();
+      const provider = await service.getProviderStatus('/mock/runtime', 'codex', undefined, {
+        projectPath: '/tmp/status-hydration-test-project',
+      });
+      expect(provider.modelCatalog?.configuredReasoningEffort).toBe(
+        configReadState === 'ready' ? null : undefined
+      );
+    }
+  );
 
   it('adds cached ChatGPT context to passive Codex runtime status without using the active env builder', async () => {
     applyPassiveProviderStatusConnectionEnvMock.mockImplementation(async (env, providerId) => ({

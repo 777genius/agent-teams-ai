@@ -16,7 +16,7 @@ export async function resolveCodexDisplayCatalog(
     }
   }
   if (!runtimeCatalog) return configured;
-  return configured?.configuredReasoningEffort
-    ? { ...runtimeCatalog, configuredReasoningEffort: configured.configuredReasoningEffort }
+  return configured?.diagnostics?.configReadState === 'ready'
+    ? { ...runtimeCatalog, configuredReasoningEffort: configured.configuredReasoningEffort ?? null }
     : runtimeCatalog;
 }
