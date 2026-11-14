@@ -76,7 +76,7 @@ function selectedProcess(pid = 901) {
   });
   return { process, status, child: process as unknown as child.ChildProcess };
 }
-function execStatus(errno = 2): Buffer {
+function execStatus(errno = 2) {
   const frame = Buffer.alloc(12);
   frame.writeUInt32BE(0x41544c58, 0); frame[4] = 1; frame[5] = 3; frame.writeUInt32LE(errno, 8);
   return frame;

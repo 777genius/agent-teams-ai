@@ -95,7 +95,7 @@ export function projectDesktopMixedSettingsFailure(value: unknown) {
       'submit original mixed Launch once with successful captured readiness': 'launch-submit',
       'original whole Team Stop once': 'team-stop',
     };
-    const mixed = own(value, 'mixedCreateLaunchProof'), settings = own(value, 'providerSettings');
+    const mixed = own(value, 'mixedCreateLaunchProof'), settings = own(mixed, 'providerSettings');
     const cold = own(value, 'coldSettingsBoundary'), steps = own(mixed, 'steps');
     const total = length(steps, 0xffffffff), count = total !== null && total <= 1024 ? total : null;
     const last: { stage: string; action: string | null; attempted: boolean | null }[] | null = count === null ? null : [];
