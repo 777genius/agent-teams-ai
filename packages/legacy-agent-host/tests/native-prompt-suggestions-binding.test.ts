@@ -113,10 +113,10 @@ test('Codex requires a real bounded native turn and every provider output is bou
 
   const claude = harness();
   claude.terminal();
-  claude.source.offer({ ...candidate, nativeSessionRef: 'TEST-\\u0000-invalid' });
+  claude.source.offer({ ...candidate, nativeSessionRef: 'TEST-\u0000-invalid' });
   claude.source.offer({ ...candidate, text: 'X'.repeat(513) });
   claude.source.offer({ ...candidate, text: 'é'.repeat(257) });
-  claude.source.offer({ ...candidate, text: 'TEST\\nmultiple lines' });
+  claude.source.offer({ ...candidate, text: 'TEST\nmultiple lines' });
   assert.equal(claude.notices.length, 0, 'reject native controls and over-budget UTF-8 before RPC publication');
   claude.source.offer(candidate);
   assert.equal(claude.notices.length, 1, 'valid Claude post-result candidate still publishes');
