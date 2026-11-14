@@ -194,10 +194,10 @@ export function execFileWithLinuxChildLaunch(command: string, args: readonly str
     // Start the original tree owner's cleanup before any immediate-child signal.
     // The ordinary callback still waits for this same child's real close.
     if (onAllocatedFailure) {
-      let cleanup: Promise<void>;
-      try { cleanup = onAllocatedFailure(child, error); }
-      catch { kill(); return; }
-      void cleanup.catch(() => kill());
+      void (async () => {
+        try { await onAllocatedFailure(child, error); }
+        catch { kill(); }
+      })();
     } else kill();
   });
   if (timeout !== undefined) timer = setTimeout(kill, Math.max(0, deadline! - performance.now()));

@@ -5,6 +5,8 @@ import { assertBackendRequestGuard, BackendRoutingError } from './backendBinding
 import type { BackendOperationRequest } from '../../contracts/operations';
 import type { DesktopBackendFeature } from '../composition/DesktopBackendFeature';
 import type { BackendRequestGuard } from './backendBinding';
+import type { CapturedTeamModelRequest } from './prepareCapturedTeamModels';
+import type { CapturedRuntimeReadinessTarget } from '../infrastructure/CapturedLocalModelReadiness';
 import type { HostScheduleTarget } from '@shared/types/schedule';
 
 /** Captures only an already authorized team; schedules do not create another owner registry. */
@@ -51,9 +53,13 @@ export async function restoreHostScheduleTarget(
   return Object.freeze({
     target,
     isCurrent: sameBinding,
-    async invoke(request: Omit<BackendOperationRequest, 'handle'>) {
+    async invoke(request: Omit<BackendOperationRequest, 'handle'>, readinessTarget?: CapturedRuntimeReadinessTarget) {
       return feature.facade.invoke({ ...request, handle: { handleId: target.handleId } },
-        { isCurrent: sameBinding });
+        { isCurrent: sameBinding }, undefined, readinessTarget);
+    },
+    prepareModels(request: CapturedTeamModelRequest) {
+      assertBackendRequestGuard({ isCurrent: sameBinding });
+      return feature.prepareCapturedModels({ handleId: target.handleId }, request, { isCurrent: sameBinding });
     },
   });
 }

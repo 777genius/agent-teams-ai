@@ -12,6 +12,7 @@ import { __resetTeamSliceModuleStateForTests } from '@renderer/store/slices/team
 import {
   acceptTaskDetailLiveTeamSnapshot,
   captureTaskDetailReadScope,
+  invalidateTeamTaskFullResource,
 } from '@renderer/store/team/taskDetailReadAuthority';
 import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -250,10 +251,11 @@ describe('task session surface and origin integration', () => {
       [identity.teamName, 'full tail A'],
       [other.teamName, 'full tail B'],
     ]);
-    apiMock.teams.getTask.mockImplementation(async (teamName: string) => ({
-      ...task,
-      description: tails.get(teamName),
-    }));
+    let fullRefresh: Promise<void> | undefined;
+    apiMock.teams.getTask.mockImplementation(async (teamName: string) => {
+      if (teamName === identity.teamName && fullRefresh) await fullRefresh;
+      return { ...task, needsClarification: 'user', description: tails.get(teamName) };
+    });
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -269,12 +271,42 @@ describe('task session surface and origin integration', () => {
     expect(useStore.getState().taskDetailById[key].full?.description).toBe('full tail A');
     expect(useStore.getState().taskDetailById[otherKey].full?.description).toBe('full tail B');
 
+    let controller!: TaskDetailSessionController;
+    await act(async () => {
+      mount('duplicate-dialog', value => { controller = value; });
+    });
+    const mutation = vi.fn(async () => {});
+    let finishMetadata!: () => void, finishFull!: () => void;
+    const metadata = new Promise<void>(resolve => { finishMetadata = resolve; });
+    fullRefresh = new Promise<void>(resolve => { finishFull = resolve; });
+    useStore.setState({
+      setTaskNeedsClarification: mutation,
+      refreshTeamData: vi.fn(async (teamName: string) => {
+        if (teamName === identity.teamName) await metadata;
+        acceptLiveTeamSnapshotFixture(teamName);
+      }),
+    });
     tails.set(identity.teamName, 'changed tail A');
     tails.set(other.teamName, 'changed tail B');
     await act(async () => {
       useStore.getState().invalidateTaskDetailTeamSource('local', identity.teamName, '1');
       useStore.getState().invalidateTaskDetailTeamSource('local', other.teamName, '1');
     });
+    expect(controller.canEditNow()).toBe(false);
+    expect(controller.canResolveClarification).toBe(true);
+    await act(async () => {
+      controller.resolveClarification();
+      controller.resolveClarification();
+    });
+    expect(mutation).not.toHaveBeenCalled();
+    expect(controller.canResolveClarification).toBe(false);
+    await act(async () => { finishMetadata(); });
+    expect(controller.canEditNow()).toBe(true);
+    expect(useStore.getState().taskDetailById[key].loading).toBe(true);
+    expect(mutation).not.toHaveBeenCalled();
+    await act(async () => { finishFull(); });
+    expect(mutation).toHaveBeenCalledTimes(1);
+    expect(mutation).toHaveBeenCalledWith(identity.teamName, identity.taskId, null);
     expect(apiMock.teams.getTask).toHaveBeenCalledTimes(4);
     expect(useStore.getState().taskDetailById[key].full?.description).toBe('changed tail A');
     expect(useStore.getState().taskDetailById[otherKey].full?.description).toBe('changed tail B');
@@ -599,6 +631,126 @@ describe('task session surface and origin integration', () => {
     });
     expect(controller.session.commentText).toBe('TEST preserved deletion draft');
     expect(canEditAfterDeleteAcceptance).toBe(false);
+
+    await act(async () => {
+      for (const mounted of roots.splice(0)) mounted.unmount();
+    });
+    for (const cause of [
+      'deletion', 'owner', 'context', 'team-epoch', 'invalidation', 'successor',
+      'failure', 'clarification', 'disabled', 'unmount',
+    ] as const) {
+      __resetTeamSliceModuleStateForTests();
+      const clarified: TeamTaskWithKanban = { ...task, needsClarification: 'user' };
+      const mutation = vi.fn(async () => {});
+      apiMock.teams.getTask.mockReset().mockResolvedValue(clarified);
+      useStore.setState({
+        ...initial, activeContextId: identity.contextId, isContextSwitching: false,
+        taskDetailById: {}, taskDetailSessionById: {}, taskDetailSurfaceInterests: {},
+        teamByName: { [identity.teamName]: teamSummary },
+        teamDataCacheByName: { [identity.teamName]: teamSnapshot },
+        setTaskNeedsClarification: mutation,
+        refreshTeamData: vi.fn(async (teamName: string) => { acceptLiveTeamSnapshotFixture(teamName); }),
+      }, true);
+      acceptLiveTeamSnapshotFixture(identity.teamName);
+      await act(async () => { await useStore.getState().ensureTaskDetail(identity); });
+      let current!: TaskDetailSessionController;
+      let enabled = true;
+      const View = () => {
+        const value = useTaskDetailSession({ identity, surfaceId: 'TEST-clarification', currentTask: clarified, enabled });
+        useEffect(() => { current = value; }, [value]);
+        return null;
+      };
+      const host = document.createElement('div'); document.body.appendChild(host);
+      const activeRoot = createRoot(host); roots.push(activeRoot);
+      let finish!: (value: TeamTaskWithKanban) => void, fail!: (error: Error) => void;
+      const pendingRead = new Promise<TeamTaskWithKanban>((resolve, reject) => { finish = resolve; fail = reject; });
+      let reading: Promise<void> | undefined, successor: Promise<void> | undefined;
+      try {
+        await act(async () => { activeRoot.render(React.createElement(View)); });
+        apiMock.teams.getTask.mockReturnValueOnce(pendingRead);
+        await act(async () => {
+          useStore.getState().invalidateTaskDetailSource(identity);
+          reading = useStore.getState().ensureTaskDetail(identity);
+        });
+        expect(current.canResolveClarification, cause).toBe(true);
+        const originalResolve = current.resolveClarification;
+        await act(async () => {
+          current.resolveClarification();
+          current.resolveClarification();
+        });
+        expect(mutation, cause).not.toHaveBeenCalled();
+        expect(current.canResolveClarification, cause).toBe(false);
+        await act(async () => {
+          const state = useStore.getState();
+          if (cause === 'deletion') state.setTaskDetailDeletionIntent(identity, 'deleting',
+            captureTaskDetailReadScope(identity.teamName, identity.contextId));
+          if (cause === 'owner') state.transferTaskDetailOwner(identity, 'TEST-clarification',
+            'TEST-successor', current.session.ownerRevision);
+          if (cause === 'context') {
+            invalidateContextScopedRequestEpoch();
+            useStore.setState({ activeContextId: 'TEST-other-context' });
+          }
+          if (cause === 'team-epoch') state.clearDeletedTeamLocalState(identity.teamName);
+          if (cause === 'invalidation') state.invalidateTaskDetailSource(identity);
+          if (cause === 'successor') {
+            invalidateTeamTaskFullResource(identity);
+            successor = state.ensureTaskDetail(identity);
+          }
+          if (cause === 'clarification') useStore.setState(currentState => ({
+            taskDetailById: { ...currentState.taskDetailById,
+              [key]: { ...currentState.taskDetailById[key], full: { ...clarified, needsClarification: 'lead' } } },
+          }));
+          if (cause === 'disabled') {
+            enabled = false; activeRoot.render(React.createElement(View));
+          }
+          if (cause === 'unmount') {
+            activeRoot.unmount(); roots.splice(roots.indexOf(activeRoot), 1);
+          }
+        });
+        await act(async () => {
+          if (cause === 'failure') fail(new Error('TEST clarification read failure'));
+          else finish(clarified);
+          await reading; await successor;
+        });
+        expect(mutation, cause).not.toHaveBeenCalled();
+        if (cause === 'failure') {
+          expect(console.error).toHaveBeenCalledTimes(1);
+          expect(vi.mocked(console.error).mock.calls.flat().join(' ')).toContain('TEST clarification read failure');
+          vi.mocked(console.error).mockClear();
+        }
+        // A later ordinary ready read cannot revive the cancelled user intent.
+        await act(async () => {
+          if (cause === 'context') invalidateContextScopedRequestEpoch();
+          useStore.setState({
+            activeContextId: identity.contextId, isContextSwitching: false,
+            teamByName: { [identity.teamName]: teamSummary },
+            teamDataCacheByName: { [identity.teamName]: teamSnapshot },
+          });
+          acceptLiveTeamSnapshotFixture(identity.teamName);
+          const state = useStore.getState();
+          state.setTaskDetailDeletionIntent(identity, null,
+            captureTaskDetailReadScope(identity.teamName, identity.contextId));
+          if (cause === 'owner') state.transferTaskDetailOwner(identity, 'TEST-successor',
+            'TEST-clarification', state.taskDetailSessionById[key].ownerRevision);
+          if (cause === 'disabled') {
+            enabled = true; activeRoot.render(React.createElement(View));
+          }
+          await state.ensureTaskDetail(identity);
+        });
+        expect(useStore.getState().taskDetailById[key].phase, cause).toBe('ready');
+        if (cause === 'disabled' || cause === 'unmount') await act(async () => { originalResolve(); });
+        expect(apiMock.teams.getTask, cause).toHaveBeenCalledTimes(cause === 'successor' ? 4 : 3);
+        expect(mutation, cause).not.toHaveBeenCalled();
+      } finally {
+        await act(async () => {
+          if (roots.includes(activeRoot)) {
+            activeRoot.unmount(); roots.splice(roots.indexOf(activeRoot), 1);
+          }
+          finish(clarified);
+          await reading; await successor;
+        });
+      }
+    }
   });
 
   it('finishes a selected file in its own draft across context changes and honors removal', async () => {

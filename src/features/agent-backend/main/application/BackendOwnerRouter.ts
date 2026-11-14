@@ -18,7 +18,7 @@ import type {
   CapturedHostClient,
   CapturedHostShutdown,
 } from '../infrastructure/CapturedHostClient';
-import type { CapturedReadinessOrigin, LocalModelReadinessContext } from '../infrastructure/CapturedLocalModelReadiness';
+import type { CapturedReadinessOrigin, CapturedRuntimeReadinessTarget, LocalModelReadinessContext } from '../infrastructure/CapturedLocalModelReadiness';
 import type {
   BackendHandle,
   BackendOwnerBinding,
@@ -29,6 +29,7 @@ import type {
   StoredBackendBinding,
 } from './backendBinding';
 import type { HostHandshake, JsonValue } from '@agent-teams/legacy-agent-host/contracts';
+import type { LocalModelReadinessCapture, LocalModelReadinessTransfer, LiveRosterPrivateInput } from '@agent-teams/legacy-agent-host/team-host';
 
 interface RegisteredOwner {
   readonly binding: BackendOwnerBinding;
@@ -49,7 +50,12 @@ export interface BoundBackendCommand {
   readonly control?: boolean;
   readonly guard?: BackendRequestGuard;
   readonly localModelReadinessContext?: LocalModelReadinessContext;
+  readonly localModelReadinessTarget?: CapturedRuntimeReadinessTarget;
   readonly localModelReadinessOrigin?: CapturedReadinessOrigin;
+  readonly requestBudget?: LocalModelReadinessContext;
+  readonly localModelReadinessTransfer?: Omit<LocalModelReadinessTransfer, 'remainingMs'>;
+  readonly localModelReadinessCapture?: LocalModelReadinessCapture;
+  readonly liveRoster?: LiveRosterPrivateInput;
 }
 
 /** Routing is independent of Team policy and never owns command outcomes or retries. */
@@ -149,23 +155,40 @@ export class BackendOwnerRouter {
       origin: structuredClone(command.localModelReadinessOrigin.origin),
       budget: command.localModelReadinessOrigin.budget,
     } : undefined;
-    if (readiness && method !== 'team.launch.probe.start') throw new BackendRoutingError('invalid-binding');
+    const transfer = command.localModelReadinessTransfer ? structuredClone(command.localModelReadinessTransfer) : undefined;
+    const capture = command.localModelReadinessCapture ? structuredClone(command.localModelReadinessCapture) : undefined;
+    const liveRoster = command.liveRoster ? structuredClone(command.liveRoster) : undefined;
+    const budget = command.requestBudget ?? readiness?.budget;
+    if (readiness && !['team.launch.probe.start', 'team.launch.start', 'runtime.open',
+      'team.member.action.execute', 'team.roster.replace'].includes(method) ||
+      transfer && (method !== 'team.launch.capture' || !budget) ||
+      capture && method !== 'team.launch.configuration.read' ||
+      liveRoster && (liveRoster.phase === 'read' ? method !== 'team.roster.lookup'
+        : method !== 'team.roster.replace' || !budget) ||
+      readiness && liveRoster && liveRoster.phase !== 'continue')
+      throw new BackendRoutingError('invalid-binding');
     const binding = await this.readBinding(handle.handleId);
     if (!binding) throw new BackendRoutingError('hold');
     // Recheck after every asynchronous boundary; shutdown cannot be bypassed by a late read.
     const owner = this.resolveOwner(binding);
-    const origin = readiness ? readinessPreparationWire(readiness) : undefined;
+    const remainingMs = budget ? readinessRemaining(budget) : undefined;
+    const origin = readiness ? { ...readinessPreparationWire(readiness), remainingMs: remainingMs! } : undefined;
+    const privateRoster = liveRoster?.phase === 'read' ? liveRoster : liveRoster
+      ? { ...liveRoster, remainingMs: remainingMs! } : undefined;
     // No await may separate this guard from the captured client's synchronous wire send.
     assertBackendRequestGuard(guard);
     try {
       const response = await owner.client.request(
         method,
         { commandId, binding: binding as unknown as JsonValue, payload,
-          ...(origin ? { localModelReadinessOrigin: origin as unknown as JsonValue } : {}) },
-        { control }
+          ...(origin ? { localModelReadinessOrigin: origin as unknown as JsonValue } : {}),
+          ...(transfer ? { localModelReadinessTransfer: { ...transfer, remainingMs: remainingMs! } as unknown as JsonValue } : {}),
+          ...(capture ? { localModelReadinessCapture: capture as unknown as JsonValue } : {}),
+          ...(privateRoster ? { liveRoster: privateRoster as unknown as JsonValue } : {}) },
+        { control, ...(budget ? { remainingMs: budget.remainingMs.bind(budget) } : {}) }
       );
       assertBackendRequestGuard(guard, 'unknown');
-      if (readiness) readinessRemaining(readiness.budget, 'unknown');
+      if (budget) readinessRemaining(budget, 'unknown');
       return response;
     } catch (error) {
       assertBackendRequestGuard(guard, 'unknown');

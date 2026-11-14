@@ -1153,6 +1153,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     sourceCliStatus,
     providerStatus: passiveRuntimeProviderStatus,
     codexSnapshotPending,
+    scopesAnthropic,
   } = useTeamModelProviderStatus(effectiveProviderId, openCodeCatalogScopeKey, true);
   const { providerStatus: openCodePassiveProviderStatus } = useEffectiveCliProviderStatus(
     'opencode',
@@ -1687,6 +1688,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   useEffect(() => {
     if (
       effectiveProviderId === 'opencode' ||
+      (scopesAnthropic && openCodeCatalogScopeKey) ||
       !multimodelAvailable ||
       effectiveCliStatus?.flavor !== 'agent_teams_orchestrator' ||
       providerModelCatalogLoading ||
@@ -1707,7 +1709,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     effectiveProviderId,
     fetchCliProviderStatus,
     multimodelAvailable,
+    openCodeCatalogScopeKey,
     providerModelCatalogLoading,
+    scopesAnthropic,
     shouldHydrateRuntimeModelCatalog,
   ]);
 

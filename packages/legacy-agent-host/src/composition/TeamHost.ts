@@ -5,7 +5,7 @@ import { createProviderManagementMethods } from './createProviderManagementMetho
 import { createHostProviderManagementComposition } from './createHostProviderManagementComposition.js';
 import { createRuntimeSourceMethods } from './createRuntimeSourceMethods.js';
 import { createHostScheduledRunComposition } from './createHostScheduledRunComposition.js';
-import { envelopeSchema, parsePreparationEnvelope, parseCreationEnvelope, equalFields, hostOwnerSchema, json } from './teamHostEnvelope.js';
+import { envelopeSchema, parsePreparationEnvelope, parseCreationEnvelope, equalFields, hostOwnerSchema, json, selectBoundHostTeam } from './teamHostEnvelope.js';
 import { join } from 'node:path';
 import { createHostTeamLifecycleComposition } from './createHostTeamLifecycleComposition.js';
 import { createHostWorkSyncComposition } from './createHostWorkSyncComposition.js';
@@ -268,6 +268,7 @@ export function createTeamHost(
         workSync,
         ...(management
           ? {
+              modelReadiness: management,
               nativeMemberModelPreflight: (input) =>
                 preflightNativeMemberModel({ ...input, management: management! }),
             }
@@ -317,14 +318,16 @@ export function createTeamHost(
         try {
           if (sealed) throw new TeamOwnerError('hold');
           lease.assertCurrent();
-          const input = envelopeSchema.parse(raw);
-          const selected = teams.get(input.binding.scope.teamId);
-          if (
-            !selected ||
-            !equalFields(input.binding.owner, profile.owner) ||
-            !equalFields(input.binding.scope, selected.definition.scope)
-          )
-            throw new TeamOwnerError('forbidden');
+          const input = parsePreparationEnvelope(raw, `team.${operation}`);
+          const selected = selectBoundHostTeam(input, profile.owner, teams);
+          if (!selected) throw new TeamOwnerError('forbidden');
+          if (input.liveRoster) {
+            if (runtime) return json(await runtime.executeLiveRoster({ teamId: selected.definition.binding.teamId,
+              method: `team.${operation}` as 'team.roster.replace' | 'team.roster.lookup', commandId: input.commandId,
+              payload: input.payload, binding: input.binding, conversation: input.liveRoster,
+              ...(input.localModelReadinessOrigin ? { localModelReadinessOrigin: input.localModelReadinessOrigin } : {}) }));
+            if (input.liveRoster.phase === 'continue') throw new TeamOwnerError('hold');
+          }
           const connection = selected.connection;
           if (operation === 'roster.read' || operation === 'roster.lookup') {
             if (operation === 'roster.read') {
@@ -465,10 +468,10 @@ export function createTeamHost(
     });
 
     const creationMethods = createTeamCreationMethods({
-      select(raw, preparation) {
+      select(raw, operation) {
         if (sealed) throw new TeamLaunchError('hold', 'sealed');
         lease.assertCurrent();
-        const input = parseCreationEnvelope(raw, preparation);
+        const input = parseCreationEnvelope(raw, operation);
         if (!creationLaunch || !equalFields(input.owner, profile.owner))
           throw new TeamLaunchError('forbidden', 'creation-owner');
         return {
@@ -476,6 +479,8 @@ export function createTeamHost(
           commandId: input.commandId,
           payload: input.payload,
           ...(input.localModelReadinessOrigin ? { localModelReadinessOrigin: input.localModelReadinessOrigin } : {}),
+          ...(input.localModelReadinessRemainingMs === undefined ? {} : { localModelReadinessRemainingMs: input.localModelReadinessRemainingMs }),
+          ...(input.localModelReadinessCapture ? { localModelReadinessCapture: input.localModelReadinessCapture } : {}),
         };
       },
     });
@@ -504,14 +509,9 @@ export function createTeamHost(
           try {
             if (sealed) throw new TeamLaunchError('hold', 'sealed');
             lease.assertCurrent();
-            const input = envelopeSchema.parse(raw),
-              selected = teams.get(input.binding.scope.teamId);
-            if (
-              !selected ||
-              !equalFields(input.binding.owner, profile.owner) ||
-              !equalFields(input.binding.scope, selected.definition.scope)
-            )
-              throw new TeamLaunchError('forbidden', 'binding');
+            const input = parsePreparationEnvelope(raw, `team.launch.${operation}`),
+              selected = selectBoundHostTeam(input, profile.owner, teams);
+            if (!selected) throw new TeamLaunchError('forbidden', 'binding');
             if (operation === 'model.configuration.read' && runtime)
               return {
                 ok: true,
@@ -547,8 +547,14 @@ export function createTeamHost(
                 selected.definition.binding.teamId,
                 operation,
                 input.commandId,
-                input.payload
+                input.payload,
+                input.localModelReadinessTransfer ?? (input.localModelReadinessOrigin ? {
+                  preparation: input.localModelReadinessOrigin, owner: profile.owner,
+                  handleId: input.binding.handleId, scope: input.binding.scope,
+                } : undefined)
               ),
+              ...(input.localModelReadinessCapture ? { localModelReadinessCapture: json(
+                runtime.readModelReadinessCapture(selected.definition.binding.teamId, input.localModelReadinessCapture)) } : {}),
             };
           } catch (error) {
             const code =
@@ -578,14 +584,9 @@ export function createTeamHost(
             try {
               if (sealed) throw new TeamLaunchError('hold', 'sealed');
               lease.assertCurrent();
-              const input = parsePreparationEnvelope(raw, action === 'start'),
-                selected = teams.get(input.binding.scope.teamId);
-              if (
-                !selected ||
-                !equalFields(input.binding.owner, profile.owner) ||
-                !equalFields(input.binding.scope, selected.definition.scope)
-              )
-                throw new TeamLaunchError('forbidden', 'binding');
+              const input = parsePreparationEnvelope(raw, `team.launch.probe.${action}`),
+                selected = selectBoundHostTeam(input, profile.owner, teams);
+              if (!selected) throw new TeamLaunchError('forbidden', 'binding');
               return {
                 ok: true,
                 value: json(
@@ -623,21 +624,15 @@ export function createTeamHost(
     const runtimeMethods = runtime
       ? createRuntimeHostMethods({
           runtime,
-          parse(raw) {
+          parse(raw, method) {
             if (sealed) throw new RuntimeOwnerError('hold');
             lease.assertCurrent();
-            const input = envelopeSchema.parse(raw);
-            const selected = teams.get(input.binding.scope.teamId);
-            if (
-              !selected ||
-              !equalFields(input.binding.owner, profile.owner) ||
-              !equalFields(input.binding.scope, selected.definition.scope)
-            )
-              throw new RuntimeOwnerError('forbidden');
-            return {
-              teamId: selected.definition.binding.teamId,
-              commandId: input.commandId,
-              payload: input.payload,
+            const input = parsePreparationEnvelope(raw, method);
+            const selected = selectBoundHostTeam(input, profile.owner, teams);
+            if (!selected) throw new RuntimeOwnerError('forbidden');
+            return { teamId: selected.definition.binding.teamId, commandId: input.commandId, payload: input.payload,
+              ...(input.localModelReadinessOrigin ? { readiness: { preparation: input.localModelReadinessOrigin,
+                owner: profile.owner, handleId: input.binding.handleId, scope: input.binding.scope } } : {}),
             };
           },
         })
@@ -649,14 +644,8 @@ export function createTeamHost(
       profile,
       assertCurrent,
       select(raw) {
-        const input = envelopeSchema.parse(raw),
-          team = teams.get(input.binding.scope.teamId);
-        if (
-          !team ||
-          !equalFields(input.binding.owner, profile.owner) ||
-          !equalFields(input.binding.scope, team.definition.scope)
-        )
-          throw new TeamOwnerError('forbidden');
+        const input = envelopeSchema.parse(raw), team = selectBoundHostTeam(input, profile.owner, teams);
+        if (!team) throw new TeamOwnerError('forbidden');
         team.connection.readRoster();
         return { commandId: input.commandId, payload: input.payload, team };
       },
@@ -783,3 +772,9 @@ export function createTeamHost(
 }
 
 export type { LocalModelReadinessOrigin, LocalModelReadinessPreparation, ReadinessSourceReference } from '../management/commandRecords.js';
+export { localModelReadinessTransferSchema } from './prepareTeamModelReadiness.js';
+export type { LocalModelReadinessTransfer } from './prepareTeamModelReadiness.js';
+export { actualCaptureReadinessCommandId, localModelReadinessCaptureSchema, localModelReadinessCaptureViewSchema } from '../team-launch/launchReadiness.js';
+export type { LocalModelReadinessCapture, LocalModelReadinessCaptureView } from '../team-launch/launchReadiness.js';
+export { parseLiveRosterResponse } from '../team/liveRosterMembership.js';
+export type { LiveRosterPrivateInput } from '../team/liveRosterMembership.js';

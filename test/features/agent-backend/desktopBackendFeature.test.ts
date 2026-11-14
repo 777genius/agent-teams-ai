@@ -35,8 +35,8 @@ import type {
   HandleBindingStore,
   SelectedHostProfile,
 } from '../../../src/features/agent-backend/main';
-import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 import type { LocalModelReadinessContext } from '../../../src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness';
+import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const roots: string[] = [];
 const features: DesktopBackendFeature[] = [];
@@ -90,6 +90,11 @@ async function fixture(blockStartup = false): Promise<{
       if (${blockStartup}) await new Promise(resolve=>{
         const timer=setInterval(()=>{if(existsSync(${JSON.stringify(join(storageRoot, 'release-startup'))})){clearInterval(timer);resolve();}},10);
       });
+      const historicalLaunch = {launchId:'historical-launch',rosterRevision:'roster-1',
+        status:'pending',ready:0,expected:1,retryCapability:'same-binding-no-allocation-only',
+        admission:{commandId:'historical-start',sourceRosterRevision:'roster-1'},
+        members:[{memberId:'member-1',binding:null,attempt:{attemptId:'attempt-1',status:'not-started',
+          nativeReady:false,usable:false,controlAvailable:false,noAllocation:true,reason:'not-started'}}]};
       const server = createHostServer({ input: process.stdin, output: process.stdout, buildId:'TEST-desktop-v1', methods: {
         'team.execute': { lane:'work', handle: (request) => {
           appendFileSync(${JSON.stringify(join(storageRoot, 'effects'))}, request.commandId+'\\n');
@@ -104,6 +109,10 @@ async function fixture(blockStartup = false): Promise<{
         'team.lifecycle.retired.read': { lane:'control', handle: () => ({ok:true,value:{teamIds:[]}}) },
         'team.launch.configuration.read': { lane:'control', handle: (request) => {
           appendFileSync(${JSON.stringify(join(storageRoot, 'launch-reads'))}, request.commandId+'\\n');
+          if (request.payload.launchId === 'historical-launch') return {ok:true,
+            localModelReadinessCapture:null,value:{launch:historicalLaunch,
+              members:[{memberId:'member-1',label:'Worker',role:'lead',selected:{provider:'opencode',
+                workspace:${JSON.stringify(storageRoot)},model:'home-server/TEST-model',capabilities:['model']}}]}};
           return {ok:true,value:{launch:{launchId:request.payload.launchId,rosterRevision:'roster-1',
             status:'pending',ready:0,expected:1,retryCapability:'same-binding-no-allocation-only',
             members:[{memberId:'member-1',binding:null,attempt:{attemptId:'attempt-1',status:'not-started',
@@ -115,6 +124,10 @@ async function fixture(blockStartup = false): Promise<{
           appendFileSync(${JSON.stringify(join(storageRoot, 'probe-requests'))}, JSON.stringify(request)+'\\n');
           return {ok:true,value:{...request.payload,commandId:request.commandId,phase:'completed',ok:true,
             expiresAt:Date.now()+90000}};
+        }},
+        'team.launch.start': { lane:'work', handle: request => {
+          appendFileSync(${JSON.stringify(join(storageRoot, 'launch-starts'))}, JSON.stringify(request)+'\\n');
+          return {ok:true,value:historicalLaunch};
         }},
         'team.creation.prepare': { lane:'work', handle: (request) => ({ok:true,value:{
           preparationId:request.payload.preparationId,draftDigest:'a'.repeat(64),ready:true,
@@ -441,6 +454,9 @@ it('uses two lazily captured subprocess hosts and captured context grants for fi
     await new JsonLocalProviderPrivateNetworkApprovalStore().approve({
       configPath, providerId: 'home-server', baseUrl: 'http://192.168.1.20:8080/v1',
     });
+    const unusedGlobal = join(home, '.config', 'opencode', 'opencode.json');
+    await mkdir(join(home, '.config', 'opencode'), { recursive: true });
+    await writeFile(unusedGlobal, Buffer.alloc(1024 * 1024 + 1));
     const probe: BackendOperationRequest = {
       handle: { handleId: 'opaque-A' }, commandId: 'original-probe', operation: 'team.launch.probe.start',
       payload: { launchId: 'launch-1', rosterRevision: 'roster-1', memberId: 'member-1',
@@ -460,8 +476,8 @@ it('uses two lazily captured subprocess hosts and captured context grants for fi
     const wire = JSON.parse(raw) as { binding: { scope: { projectId: string } };
       localModelReadinessOrigin: { remainingMs: number; origin: { contextId: string;
         workspaces: { path: string; project: { selectedPath: string; sources: unknown[];
-          providers: { hasConfiguredApiKey: boolean }[] }; global: { sources: unknown[] } }[];
-        approval: { approved: unknown[] } } } };
+          providers: { hasConfiguredApiKey: boolean }[] }; global: { notConsulted: string } }[];
+        approval: { source: { path: string }; approved: unknown[] } } } };
     expect(wire.binding.scope.projectId).toBe('project-1');
     expect(wire.localModelReadinessOrigin.origin.contextId).toBe('context-A');
     expect(wire.localModelReadinessOrigin.remainingMs).toBeGreaterThan(0);
@@ -471,13 +487,16 @@ it('uses two lazily captured subprocess hosts and captured context grants for fi
         providers: [{ hasConfiguredApiKey: true }] },
     }]);
     expect(wire.localModelReadinessOrigin.origin.workspaces[0].project.sources).toHaveLength(4);
-    expect(wire.localModelReadinessOrigin.origin.workspaces[0].global.sources).toHaveLength(2);
+    expect(wire.localModelReadinessOrigin.origin.workspaces[0].global)
+      .toEqual({ notConsulted: 'project-precedence' });
     expect(wire.localModelReadinessOrigin.origin.approval.approved).toEqual([{
       configPath, providerId: 'home-server', baseUrl: 'http://192.168.1.20:8080/v1',
     }]);
     expect(raw).not.toContain('{file:');
     expect(raw).not.toContain('TEST-secret-token');
-    expect(await readFile(join(workspace, 'launch-reads'), 'utf8')).toBe('original-probe:origin\n');
+    const originalReads = await readFile(join(workspace, 'launch-reads'), 'utf8');
+    expect(originalReads.trim().split('\n')).toHaveLength(1);
+    await rm(unusedGlobal);
 
     const view: NonNullable<LocalModelReadinessContext['view']> = {
       launch: { launchId: 'launch-1', rosterRevision: 'roster-1' },
@@ -486,16 +505,52 @@ it('uses two lazily captured subprocess hosts and captured context grants for fi
       } }],
     };
     vi.stubEnv('XDG_CONFIG_HOME', join(home, 'different-original-config-root'));
-    const saved = desktop.facade.invoke({ ...probe, commandId: 'saved-probe' }, undefined,
+    const saved = desktop.facade.invoke({ ...probe, commandId: 'saved-probe',
+      payload: { ...probe.payload, model: 'public-cloud/TEST-model' } }, undefined,
       { view, remainingMs: () => deadline - performance.now() });
     view.members[0].selected!.workspace = join(home, 'changed-after-capture');
     expect(await saved).toMatchObject({ ok: true, value: { commandId: 'saved-probe', ok: true } });
-    expect(await readFile(join(workspace, 'launch-reads'), 'utf8')).toBe('original-probe:origin\n');
+    expect(await readFile(join(workspace, 'launch-reads'), 'utf8')).toBe(originalReads);
     const savedWire = JSON.parse((await readFile(join(workspace, 'probe-requests'), 'utf8'))
       .trim().split('\n')[1]);
     expect(savedWire.localModelReadinessOrigin.origin.workspaces[0].global).toMatchObject({
       selectedPath: null, selectorFailure: 'config-conflict', invalid: true, providers: [],
     });
+    expect(savedWire.localModelReadinessOrigin.origin.workspaces[0].global.sources).toHaveLength(2);
+
+    const declaration = JSON.parse(await readFile(configPath, 'utf8'));
+    declaration.provider['public-cloud'] = { npm: '@ai-sdk/openai-compatible', options: {
+      baseURL: 'https://api.example.test/v1', apiKey: 'TEST-public-key',
+    } };
+    await writeFile(configPath, JSON.stringify(declaration));
+    const approvalPath = wire.localModelReadinessOrigin.origin.approval.source.path;
+    await writeFile(approvalPath, Buffer.alloc(131073));
+    const unavailableHome = join(home, 'TEST-unused-missing-home');
+    vi.stubEnv('HOME', unavailableHome);
+    vi.stubEnv('USERPROFILE', unavailableHome);
+    clearShellEnvCache();
+    view.members[0].selected!.workspace = workspace;
+    const publicRequest = { ...probe, commandId: 'unused-dependencies',
+      payload: { ...probe.payload, model: 'public-cloud/TEST-model' } };
+    expect(await desktop.facade.invoke(publicRequest, undefined,
+      { view, remainingMs: () => deadline - performance.now() })).toMatchObject({ ok: true });
+    const dispatched = await readFile(join(workspace, 'probe-requests'), 'utf8');
+    const publicWire = JSON.parse(dispatched.trim().split('\n').at(-1)!);
+    expect(publicWire.localModelReadinessOrigin.origin.workspaces[0].global)
+      .toEqual({ notConsulted: 'project-precedence' });
+    expect(publicWire.localModelReadinessOrigin.origin.approval)
+      .toEqual({ notConsulted: 'no-private-target' });
+    expect((await readFile(approvalPath)).byteLength).toBe(131073);
+    for (const [commandId, model] of [
+      ['required-private-approval', 'home-server/TEST-model'],
+      ['required-global', 'missing-provider/TEST-model'],
+      ['unknown-default-source', '__provider_default__'],
+    ] as const) {
+      expect(await desktop.facade.invoke({ ...probe, commandId,
+        payload: { ...probe.payload, model } }, undefined,
+      { view, remainingMs: () => deadline - performance.now() })).toMatchObject({ ok: false });
+      expect(await readFile(join(workspace, 'probe-requests'), 'utf8')).toBe(dispatched);
+    }
     const approvalCapture = vi.spyOn(JsonLocalProviderPrivateNetworkApprovalStore.prototype, 'capture');
     try {
       view.members[0].selected!.provider = 'claude';
@@ -506,6 +561,14 @@ it('uses two lazily captured subprocess hosts and captured context grants for fi
       expect(await creation.prepare('prepare', { preparationId: 'claude-create', draft: {
         contextId: 'context-A', teamName: 'TEST-team', savedSettings: { cwd: workspace, providerId: 'anthropic' }, members: [],
       } })).toMatchObject({ preparationId: 'claude-create', ready: true });
+      const beforeHistorical = await readFile(join(workspace, 'probe-requests'), 'utf8');
+      expect(await desktop.facade.invoke({ handle: { handleId: 'opaque-A' }, commandId: 'historical-start',
+        operation: 'team.launch.start', payload: { launchId: 'historical-launch', rosterRevision: 'roster-1' } }))
+        .toMatchObject({ ok: true, value: { admission: { commandId: 'historical-start' } } });
+      expect(await readFile(join(workspace, 'probe-requests'), 'utf8')).toBe(beforeHistorical);
+      const historicalWire = JSON.parse(await readFile(join(workspace, 'launch-starts'), 'utf8'));
+      expect(historicalWire.localModelReadinessOrigin).toBeUndefined();
+      expect(historicalWire.localModelReadinessTransfer).toBeUndefined();
       expect(approvalCapture).not.toHaveBeenCalled();
     } finally { approvalCapture.mockRestore(); }
   } finally {

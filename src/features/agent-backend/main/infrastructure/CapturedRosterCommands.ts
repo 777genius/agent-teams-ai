@@ -8,13 +8,20 @@ import {
 import { KeyedMutex } from '@features/internal-storage/main';
 
 import { parseBackendOperation } from '../adapters/input/validateBackendOperation';
-import { assertBackendRequestGuard, BackendRoutingError } from '../application/backendBinding';
+import {
+  assertBackendRequestGuard,
+  assertIdentity,
+  BackendRoutingError,
+} from '../application/backendBinding';
 
 import type { BackendOperationRequest, BackendOperationResult } from '../../contracts/operations';
 import type { BackendRequestGuard } from '../application/backendBinding';
 
 type Replacement = Extract<BackendOperationRequest, { operation: 'team.roster.replace' }>;
 type Dispatch = (request: BackendOperationRequest) => Promise<BackendOperationResult>;
+type SettledRosterResult = { commandId: string; revision: string } | {
+  rejected: Extract<BackendOperationResult, { ok: false }> & { outcome: 'rejected' };
+};
 const namespace = 'captured-team-roster';
 const uncertain = () => new BackendRoutingError('hold', 'unknown');
 const json = (value: unknown): ApplicationCommandJsonValue => JSON.parse(JSON.stringify(value));
@@ -29,6 +36,25 @@ export class CapturedRosterCommands {
   private readonly fence = new KeyedMutex();
 
   constructor(private readonly getRunner: () => ApplicationCommandRunner | null) {}
+
+  /** Reads the retained intent only; the original Host still owns its outcome and authority. */
+  async readOriginalIntent(
+    handleId: string,
+    commandId: string,
+    guard?: BackendRequestGuard
+  ): Promise<Replacement> {
+    const current = () => assertBackendRequestGuard(guard, 'unknown');
+    current();
+    assertIdentity(handleId);
+    assertIdentity(commandId);
+    const runner = this.getRunner();
+    if (!runner) throw new BackendRoutingError('unavailable');
+    const records = await runner.readScope(namespace, handleId);
+    current();
+    const retained = records.filter((record) => record.commandId === commandId);
+    if (retained.length !== 1) throw uncertain();
+    return this.original(retained[0]!, handleId);
+  }
 
   invoke(
     request: BackendOperationRequest,
@@ -92,9 +118,16 @@ export class CapturedRosterCommands {
     current: () => void,
     dispatch: Dispatch
   ): Promise<BackendOperationResult> {
-    const receipt = (result: BackendOperationResult) => {
+    const receipt = (result: BackendOperationResult): SettledRosterResult => {
       current();
-      if (!result.ok) throw new RosterRefusal(result);
+      if (!result.ok) {
+        // A confirmed domain rejection settles this original intent. The ledger's applied
+        // reconciliation means its result is known; it does not assert a roster mutation.
+        if (result.outcome === 'rejected') return { rejected: {
+          ok: false as const, code: result.code, outcome: 'rejected' as const,
+        } };
+        throw new RosterRefusal(result);
+      }
       const value = result.value;
       if (
         !value ||
@@ -159,7 +192,7 @@ export class CapturedRosterCommands {
       );
       current();
       if (!confirmed) throw uncertain();
-      return { ok: true, value: confirmed };
+      return 'rejected' in confirmed ? confirmed.rejected : { ok: true, value: confirmed };
     } catch (error) {
       current();
       if (error instanceof RosterRefusal && error.result.outcome !== 'unknown') return error.result;

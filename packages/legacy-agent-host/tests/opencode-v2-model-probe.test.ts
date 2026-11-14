@@ -227,12 +227,17 @@ test(
   'V2 model probe preparation is effect-free and revoked run cannot allocate or replay',
   { skip: !supported },
   async (t) => {
-    for (const change of ['owner', 'auth', 'configuration'] as const) {
+    for (const change of ['owner', 'auth', 'configuration', 'manual-owner', 'manual-configuration'] as const) {
       const f = fixture();
       t.after(f.cleanup);
-      if (change === 'configuration') {
+      const manual = change.startsWith('manual-');
+      if (manual) f.management.environment.USERPROFILE = f.root;
+      if (change === 'configuration' || manual) {
         writeFileSync(join(f.root, 'opencode.json'), JSON.stringify({
           model: 'TEST-provider/TEST-model',
+          ...(manual ? { provider: { 'TEST-provider': { npm: '@ai-sdk/openai-compatible',
+            options: { baseURL: 'http://127.0.0.1:9/v1', apiKey: '{file:TEST-missing-manual.key}' },
+            models: { 'TEST-model': { name: 'TEST-model' } } } } } : {}),
         }), { mode: 0o600 });
         f.management.embedded!.configurationSource =
           captureOpenCodeConfigurationSource(f.management).reference;
@@ -243,8 +248,9 @@ test(
       const before = readdirSync(f.root);
       let current = true;
       const probe = createOpenCodeV2ModelProbe(f.management, f.input, () => current);
+      assert.equal(probe.nativeFileKeyWitness?.(), undefined, 'preparation cannot issue a native file witness');
       assert.deepEqual(readdirSync(f.root), before, 'preparation is allocation-free');
-      if (change === 'owner') current = false;
+      if (change === 'owner' || change === 'manual-owner') current = false;
       else if (change === 'auth') {
         mkdirSync(join(f.root, 'opencode'));
         writeFileSync(join(f.root, 'opencode/auth.json'), JSON.stringify({

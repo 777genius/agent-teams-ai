@@ -12,8 +12,14 @@ import { projectLaunchRestorations } from './projectLaunchRestorations.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { canFinalizeWorktreeLaunch, finalizedWorktreeCapture } from './worktreePreparation.js';
 import { validateLaunchRecord } from './validateLaunchRecord.js';
-import { launchPreparationFingerprint, validateLaunchPreparation } from './launchPreparation.js';
+import { publishLaunchPreparation } from './launchPreparation.js';
+import { createLiveRosterLaunch, liveRosterValidationRecord, liveRosterMemberBlocked,
+  liveRosterStartAllowed, liveRosterHistoryFull } from './liveRosterMembership.js';
 import { TeamLaunchError } from './contracts.js';
+import { readReadinessCapture, selectedReadiness, attachLaunchReadiness, consumeLaunchReadiness,
+  retireLaunchReadiness, finishReadinessCapture, canFinalizeReadinessCapture,
+  assertLiveReadinessCapture, readFreshMemberSource, selectedReadinessSource } from './launchReadiness.js';
+import type { LocalModelReadinessCapture, LaunchReadinessCaptureAdmission, LiveReadinessCapture } from './launchReadiness.js';
 import { prepareResume, requestResumeMember, refuseResumeMember } from './launchResume.js';
 import type {
   ResumeJournal,
@@ -40,6 +46,7 @@ export class TeamLaunchOwner {
   private readonly active = new Map<string, Promise<void>>();
   private readonly deadlines = new Map<string, ReturnType<typeof setTimeout>>();
   private sealed = false;
+  private liveReadinessCapture: LiveReadinessCapture | undefined;
   constructor(private readonly options: TeamLaunchOptions) {
     options.definition = structuredClone(options.definition);
     const definition = options.definition;
@@ -66,12 +73,16 @@ export class TeamLaunchOwner {
     options.store.fenced(() => {
       const prior = options.store.read<TeamLaunchRecord>(this.path);
       const finalizing = prior && canFinalizeWorktreeLaunch(prior, definition);
-      if (prior && !finalizing) {
+      const finalizingReadiness = prior && canFinalizeReadinessCapture(prior, definition, options.hostIncarnation);
+      if (prior?.readiness?.capture && (finalizing || finalizingReadiness) &&
+          prior.readiness.capture.hostIncarnation !== options.hostIncarnation)
+        throw new TeamLaunchError('hold', 'capture-readiness-continuation-lost');
+      if (prior && !finalizing && !finalizingReadiness) {
         this.validate(prior);
         return;
       }
       const record: TeamLaunchRecord = {
-        ...(finalizing ? finalizedWorktreeCapture(prior, definition) : {}),
+        ...(finalizing ? finalizedWorktreeCapture(prior, definition) : finalizingReadiness ? prior : {}),
         schemaVersion: 1,
         definition: structuredClone(definition),
         fingerprint: this.fingerprint,
@@ -85,7 +96,7 @@ export class TeamLaunchOwner {
         }),
         retries: [],
       };
-      this.write(record); // Entire expected roster/bindings precede the first possible native effect.
+      this.write(record.readiness?.capture ? finishReadinessCapture(record) : record);
     });
   }
   /** Private native-add admission; actual original Team authority is supplied by its receipt owner. */
@@ -95,17 +106,66 @@ export class TeamLaunchOwner {
       const result = appendNativeLaunchMember({ record: this.load(), input,
         initial: (member, attemptId) => this.initial(member, attemptId) });
       if (!result.fresh) return false;
-      this.write(result.record); // Expected target precedes the first provider factory allocation.
-      this.options.definition = structuredClone(result.record.definition);
-      this.fingerprint = result.record.fingerprint;
+      this.publishSelection(result.record); // Expected target precedes the first provider factory allocation.
       return true;
     });
   }
 
   seal(): void {
     this.sealed = true;
+    this.liveReadinessCapture = undefined;
+    this.options.store.fenced(() => {
+      const record = this.load();
+      if (record.readiness) this.write(retireLaunchReadiness(record));
+    });
     for (const timer of this.deadlines.values()) clearTimeout(timer);
     this.deadlines.clear();
+  }
+
+  readModelReadinessCapture(input: LocalModelReadinessCapture) {
+    return this.options.authorized('read', () => readReadinessCapture(this.load(), input, this.now()));
+  }
+  readModelReadinessAdmission(): LaunchReadinessCaptureAdmission | undefined {
+    return this.options.authorized('read', () => structuredClone(this.load().readiness?.capture));
+  }
+  /** Only the original capture invocation installs this ephemeral continuation fence. */
+  admitModelReadinessCapture(input: LiveReadinessCapture): void {
+    if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
+    this.options.authorized('control', () => {
+      assertLiveReadinessCapture(this.load(), input, this.options.hostIncarnation);
+      this.liveReadinessCapture = structuredClone(input);
+    });
+  }
+  assertModelReadinessCapture(memberId?: string): void {
+    if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
+    this.options.authorized('control', () =>
+      assertLiveReadinessCapture(this.load(), this.liveReadinessCapture, this.options.hostIncarnation, memberId));
+  }
+  readModelReadinessGroup(commandId: string) {
+    return this.options.authorized('read', () => structuredClone(
+      this.load().readiness?.groups.find(row => row.commandId === commandId)));
+  }
+  readModelReadinessAction(actionId: string, memberId: string) {
+    return this.options.store.fenced(() => structuredClone(this.load().readiness?.consumers
+      .find(row => row.actionId === actionId && row.memberId === memberId)));
+  }
+  attachModelReadiness(input: Parameters<typeof attachLaunchReadiness>[1],
+    authorized: <T>(operation: () => T) => T = operation => this.options.authorized('control', operation)): void {
+    if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
+    authorized(() => this.write(attachLaunchReadiness(this.load(), input)));
+  }
+  readModelReadiness(input: Parameters<typeof selectedReadiness>[1]) {
+    return this.options.store.fenced(() => selectedReadiness(this.load(), input));
+  }
+  readModelReadinessSource(input: Parameters<typeof selectedReadinessSource>[1]) {
+    return this.options.store.fenced(() => selectedReadinessSource(this.load(), input));
+  }
+  consumeModelReadiness(consumerId: string): void {
+    if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
+    this.options.store.fenced(() => this.write(consumeLaunchReadiness(this.load(), consumerId)));
+  }
+  retireModelReadiness(memberId?: string): void {
+    this.options.store.fenced(() => this.write(retireLaunchReadiness(this.load(), memberId)));
   }
   start(
     commandId: string,
@@ -118,7 +178,7 @@ export class TeamLaunchOwner {
     if (initialPrompt !== undefined && initialPrompt !== null &&
       (typeof initialPrompt !== 'string' || !initialPrompt.trim() || initialPrompt.includes('\0') || initialPrompt.length > 100_000))
       throw new TeamLaunchError('invalid', 'launch-prompt');
-    this.options.authorized('control', () => {
+    const members = this.options.authorized('control', () => {
       const record = this.load();
       if (record.preparation?.fingerprint !== preparationFingerprint)
         throw new TeamLaunchError('conflict', 'launch-configuration');
@@ -135,9 +195,10 @@ export class TeamLaunchOwner {
         if (initialPrompt !== undefined) record.initialPrompt = initialPrompt;
         this.write(record);
       }
+      return record.members.filter(row => !liveRosterMemberBlocked(record, row.memberId)).map(row => row.memberId);
     });
     beforeOpen?.();
-    for (const member of this.options.definition.members) this.startMember(member.memberId);
+    for (const memberId of members) this.startMember(memberId);
     return this.read();
   }
 
@@ -145,73 +206,8 @@ export class TeamLaunchOwner {
   prepare(input: Omit<LaunchPreparation, 'fingerprint'>): boolean {
     if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
     this.id(input.commandId);
-    const preparation = structuredClone({
-      ...input,
-      fingerprint: launchPreparationFingerprint(input),
-    });
-    const replay = () => {
-      const record = this.load();
-      if (!record.preparation) return false;
-      if (
-        record.preparation.commandId !== input.commandId ||
-        record.preparation.fingerprint !== preparation.fingerprint
-      )
-        throw new TeamLaunchError('conflict', 'launch-configuration');
-      return true;
-    };
-    if (this.options.authorized('control', replay)) return false;
-    // Runtime has its own fence. Observe outside Team's lock; the synchronous
-    // publication below also rejects every claimed launch/open attempt.
-    for (const member of input.members) {
-      const observed = this.options.runtime.read(member.memberId);
-      const source = observed.record;
-      if (
-        observed.attached ||
-        (source &&
-          (source.phase !== 'unopened' ||
-            source.custody !== 'released' ||
-            source.config !== null ||
-            source.openFingerprint !== null ||
-            source.sealed))
-      )
-        throw new TeamLaunchError('conflict', 'launch-already-allocated');
-    }
-    return this.options.authorized('control', () => {
-      if (replay()) return false;
-      const record = this.load();
-      if (
-        input.sourceRosterRevision !== record.definition.rosterRevision ||
-        record.startCommandId ||
-        record.members.some((member) => member.attempts.some((attempt) => attempt.claimed))
-      )
-        throw new TeamLaunchError('conflict', 'launch-scope');
-      if (preparation.members.some((m) => memberActionBlocksSelection(record, m.memberId)))
-        throw new TeamLaunchError('hold', 'member-action-unresolved');
-      for (const member of preparation.members) {
-        const selected = record.definition.members.find(
-          (item) => item.memberId === member.memberId
-        );
-        if (
-          !selected?.binding ||
-          selected.skipped ||
-          selected.baseConfigurationDigest !== member.baseConfigurationDigest
-        )
-          throw new TeamLaunchError('conflict', 'launch-member');
-        selected.configurationDigest = member.configurationDigest;
-        selected.configRevision = member.configRevision;
-      }
-      record.preparation = preparation;
-      validateLaunchPreparation(record);
-      record.definition.rosterRevision = runtimeDigest({
-        scope: record.definition.rosterScope ?? record.definition.launchId,
-        members: record.definition.members,
-      });
-      record.fingerprint = runtimeDigest(record.definition);
-      this.write(record);
-      this.options.definition = structuredClone(record.definition);
-      this.fingerprint = record.fingerprint;
-      return true;
-    });
+    return publishLaunchPreparation({ input, authorized: this.options.authorized,
+      runtime: this.options.runtime, load: () => this.load(), commit: record => this.publishSelection(record) });
   }
   restoreSelection(
     commandId: string,
@@ -233,6 +229,11 @@ export class TeamLaunchOwner {
     return this.options.authorized('read', () => projectLaunchRestorations(this.load()));
   }
 
+  liveMembership(authorized: <T>(operation: () => T) => T) {
+    return createLiveRosterLaunch({ authorized, read: () => this.load(),
+      write: record => this.publishSelection(record), initial: (member, id) => this.initial(member, id) });
+  }
+
   memberActions(authority?: MemberActionAuthority) {
     return createLaunchMemberActions({
       authorized: (action, callback) => {
@@ -247,11 +248,7 @@ export class TeamLaunchOwner {
         if (!this.options.captureActor) throw new TeamLaunchError('hold', 'member-action-actor');
         return this.options.captureActor();
       },
-      write: (record) => {
-        this.write(record);
-        this.options.definition = structuredClone(record.definition);
-        this.fingerprint = record.fingerprint;
-      },
+      write: (record) => this.publishSelection(record),
       initial: (member, attemptId) => this.initial(member, attemptId),
     });
   }
@@ -333,7 +330,7 @@ export class TeamLaunchOwner {
           (source.baseConfigurationDigest ?? source.configurationDigest) ||
         !Number.isSafeInteger(next.runtimeGeneration) ||
         next.runtimeGeneration! <= (source.runtimeGeneration ?? -1) ||
-        (record.restorations?.length ?? 0) >= 64 ||
+        (record.restorations?.length ?? 0) >= 64 || liveRosterHistoryFull(record) ||
         member.attempts.length >= 65
       )
         throw new TeamLaunchError('conflict', 'restore-binding');
@@ -354,28 +351,14 @@ export class TeamLaunchOwner {
         fingerprint,
         member: published,
       });
-      this.write(record); // Durable selection precedes Runtime opening/native allocation.
-      this.options.definition = structuredClone(record.definition);
-      this.fingerprint = record.fingerprint;
+      this.publishSelection(record); // Durable selection precedes Runtime opening/native allocation.
       return structuredClone(published);
     });
   }
 
   /** Private immutable source lookup; caller still supplies current effect authority. No RPC/MCP method. */
   readFreshMemberSource(binding: import('../runtime/contracts.js').RuntimeBinding) {
-    return this.options.store.fenced(() => {
-      const record = this.load(),
-        member = record.definition.members.find((m) => m.memberId === binding.memberId);
-      if (!member || runtimeDigest(member.binding) !== runtimeDigest(binding))
-        throw new TeamLaunchError('hold', 'member-action-source');
-      const row = record.memberActions?.find(
-        (a) =>
-          a.phase === 'selected' &&
-          a.input.action === 'restart' &&
-          runtimeDigest(a.selected.binding) === runtimeDigest(binding)
-      );
-      return row ? structuredClone(row.source.binding!) : undefined;
-    });
+    return this.options.store.fenced(() => readFreshMemberSource(this.load(), binding));
   }
 
   /** Trusted individual runtime.open also records its attempt before allocation; no whole-team launch. */
@@ -389,6 +372,8 @@ export class TeamLaunchOwner {
     if (!selected) throw new TeamLaunchError('invalid', 'member');
     if (selected.binding) assertAuthority ??= this.options.runtime.captureAuthority?.(memberId);
     assertAuthority?.();
+    const before = this.options.store.fenced(() => this.current(this.load().members.find(row => row.memberId === memberId)!));
+    if (!selected.skipped && !before.claimed) this.options.runtime.assertModelReadiness?.(memberId);
     const claimed = this.options.store.fenced(() => {
       const record = this.load(),
         member = record.members.find((item) => item.memberId === memberId)!,
@@ -411,6 +396,8 @@ export class TeamLaunchOwner {
         throw new TeamLaunchError('hold', 'member-action-original-required');
       if (memberActionBlocksStart(record, memberId))
         throw new TeamLaunchError('hold', 'member-action-unresolved');
+      if (!liveRosterStartAllowed(record, memberId, memberActionCommandId, !!assertAuthority))
+        throw new TeamLaunchError('hold', 'live-roster-original-required');
       if (selected.skipped || (attempt.status === 'failed' && !selected.restore)) return undefined;
       if (
         attempt.claimed &&
@@ -471,7 +458,7 @@ export class TeamLaunchOwner {
       return {
         launchId: record.definition.launchId,
         rosterRevision: record.definition.rosterRevision,
-        memberIds: record.members.map(({ memberId }) => memberId),
+        memberIds: record.members.filter(row => !liveRosterMemberBlocked(record, row.memberId)).map(({ memberId }) => memberId),
       };
     });
   }
@@ -507,8 +494,8 @@ export class TeamLaunchOwner {
   }
   canWork(memberId: string, proof?: NativeContextEvidence): boolean {
     return this.options.store.fenced(() => {
-      const member = this.load().members.find((item) => item.memberId === memberId);
-      if (!member) return false;
+      const record = this.load(), member = record.members.find((item) => item.memberId === memberId);
+      if (!member || liveRosterMemberBlocked(record, memberId)) return false;
       const attempt = this.current(member);
       const expected = this.options.definition.members.find((item) => item.memberId === memberId)!;
       return (
@@ -535,6 +522,8 @@ export class TeamLaunchOwner {
         initial: (member, id) => this.initial(member, id),
         start: (member, authority) => this.startMember(member, authority),
         summary: (record) => this.summary(record),
+        ...(this.options.runtime.assertModelReadiness
+          ? { assertModelReadiness: this.options.runtime.assertModelReadiness } : {}),
       },
       input,
       native
@@ -779,8 +768,13 @@ export class TeamLaunchOwner {
     return record;
   }
   private validate(record: TeamLaunchRecord): void {
-    validateLaunchRecord(record, this.fingerprint, this.options.definition.members.length);
+    validateLaunchRecord(liveRosterValidationRecord(record), this.fingerprint, this.options.definition.members.length);
     validateNativeLaunchAdditions(record);
+  }
+  private publishSelection(record: TeamLaunchRecord): void {
+    this.write(record);
+    this.options.definition = structuredClone(record.definition);
+    this.fingerprint = record.fingerprint;
   }
   private write(record: TeamLaunchRecord): void {
     if (Buffer.byteLength(JSON.stringify(record)) > 1024 * 1024)
