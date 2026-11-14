@@ -133,7 +133,7 @@ export function createOpenCodeV2ModelProbe(
   let config: Record<string, unknown> = noTool.config;
   let selection: OpenCodeV2OwnedSessionSelection = noTool.selection;
   const credential = captureOpenCodeV2SessionCredential(profile, input.providerId,
-    configuration.isCurrent);
+    configuration.isCurrent, configuration.key);
   const current = coordinationSource
     ? () => credential.isCurrent() && coordinationSource.isCurrent() : credential.isCurrent;
   let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];

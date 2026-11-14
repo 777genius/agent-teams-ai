@@ -1,7 +1,8 @@
 import { createOpenCodeV2CredentialClient } from '@agent-teams/provider-implementations/opencode';
 
 import { ManagementCommandError } from '../../management/commandRecords.js';
-import { OpenCodeV2CredentialScope } from './OpenCodeV2CredentialScope.js';
+import { isOpenCodeV2ConfigurationKey, OpenCodeV2CredentialScope } from './OpenCodeV2CredentialScope.js';
+import type { CapturedOpenCodeV2Key } from './OpenCodeV2CredentialScope.js';
 
 import type {
   createOpenCodeV2OwnedSessionClient,
@@ -20,8 +21,10 @@ export function captureOpenCodeV2SessionCredential(
   profile: Pick<OpenCodeManagementProfile, 'environment' | 'accountBinding'>,
   providerId: string,
   isCurrent: () => boolean,
+  selectedKey?: CapturedOpenCodeV2Key,
 ) {
-  const captured = new OpenCodeV2CredentialScope(profile, providerId, isCurrent).capture();
+  if (selectedKey !== undefined && !isOpenCodeV2ConfigurationKey(selectedKey, profile, providerId, isCurrent)) held();
+  const captured = selectedKey ?? new OpenCodeV2CredentialScope(profile, providerId, isCurrent).capture();
   let prepared: Promise<Witness> | undefined;
   const current = captured.isCurrent;
   const check = () => { if (!current()) held(); };

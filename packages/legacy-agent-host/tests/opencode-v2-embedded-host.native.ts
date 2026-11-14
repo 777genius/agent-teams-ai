@@ -231,8 +231,17 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       } },
     }), { mode: 0o600 });
     const projectPath = join(root, 'workspace/opencode.jsonc');
+    let managedKey: string | undefined;
+    if (!qualifyCoordination) {
+      const directory = join(globalDirectory, 'agent-teams-credentials');
+      await mkdir(directory, { mode: 0o700 });
+      managedKey = join(directory, 'TEST-local-' + createHash('sha256').update(projectPath).digest('hex').slice(0, 16) +
+        '-12345678-1234-4123-8123-123456789abc.key');
+      await writeFile(managedKey, 'TEST-LOCALHOST-ONLY', { mode: 0o600 });
+    }
     const projectConfig = (scope: string) => JSON.stringify({
-      model: 'TEST-local/TEST-model', provider: { 'TEST-local': { models: {
+      model: 'TEST-local/TEST-model', provider: { 'TEST-local': {
+        ...(qualifyCoordination ? {} : { options: { apiKey: '{file:' + managedKey + '}' } }), models: {
         'TEST-model-B': { body: { test_config_scope: scope }, headers: { 'x-test-config-scope': scope } },
       } } },
     });
@@ -240,7 +249,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     await writeFile(projectPath, originalProjectConfig, { mode: 0o600 });
     await mkdir(join(root, 'data/opencode'), { mode: 0o700 });
     await writeFile(join(root, 'data/opencode/auth.json'), JSON.stringify(qualifyCoordination ? {} : {
-      'TEST-local': { type: 'api', key: 'TEST-LOCALHOST-ONLY' },
+      'TEST-local': { type: 'api', key: 'TEST-DIFFERENT-PRIMARY-ONLY' },
     }), { mode: 0o600 });
     const member = profile.runtime!.members[0]!;
     assert(member.provider === 'opencode' && member.embedded);

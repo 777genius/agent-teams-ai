@@ -1,6 +1,7 @@
 import { captureOpenCodeReadinessOrigin } from './OpenCodeReadinessOrigin.js';
 import { captureOpenCodeConfigurationSource } from './OpenCodeConfigurationSource.js';
 import { OpenCodeV2CredentialScope } from './OpenCodeV2CredentialScope.js';
+import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
 import { closeCoordinationByDeadline } from './OpenCodeCoordinationEndpoint.js';
 import { ManagementCommandError, nativeLocalReadinessEvidenceSchema } from '../../management/commandRecords.js';
 import { managementDigest } from '../../management/identity.js';
@@ -117,8 +118,8 @@ export function createOpenCodeLocalModelReadiness(
   };
   // Original native configuration is already captured; a selector refusal is never private approval.
   requirePrivateApproval(resolveString(options.baseURL));
-  // The original V1 native owner resolves a file token; this reader never opens the referenced secret.
-  const configuredKey = policyOrigin && profile.nativeGeneration !== 'v2' &&
+  // V1 keeps native substitution. A V2 token is qualified by the exact native source capture below.
+  const configuredKey = (policyOrigin || profile.nativeGeneration === 'v2') &&
     typeof options.apiKey === 'string' && options.apiKey.includes('{file:')
     ? options.apiKey : resolveString(options.apiKey);
   const hasConfiguredKey = policyOrigin?.policy?.hasConfiguredApiKey ??
@@ -132,8 +133,12 @@ export function createOpenCodeLocalModelReadiness(
   if (selectedUrl && network(selectedUrl.hostname).privateNetwork && !policyOrigin?.privateNetworkApproved) held();
   const localCandidate = Boolean(selectedUrl && network(selectedUrl.hostname).loopback &&
     !hasConfiguredKey);
+  const nativeConfiguration = profile.nativeGeneration === 'v2' && profile.embedded?.configurationSource
+    ? captureOpenCodeV2Configuration(profile, { providerId: input.providerId, modelId: selectedModel },
+      ownerCurrent, 'model', { source, config: raw }) : undefined;
   const key = localCandidate || profile.nativeGeneration === 'v2'
-    ? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture() : undefined;
+    ? nativeConfiguration?.key ?? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture()
+    : undefined;
   const baseline = profile.nativeGeneration === 'v2' && profile.nativeModel?.providerId === input.providerId
     ? profile.embedded?.providerConfiguration : undefined;
   const baselineSettings = object(baseline?.settings) ? baseline.settings : undefined;

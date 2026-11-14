@@ -1,5 +1,6 @@
 /** TEST-only native model probe through the existing Host management journal. */
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { mkdir, mkdtemp, readFile, realpath, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -204,15 +205,21 @@ test(
         } },
       }), { mode: 0o600 });
       await symlink(globalConfig, join(globalDirectory, 'opencode.json'));
-      await writeFile(join(root, 'workspace/opencode.jsonc'), JSON.stringify({
-        model: 'TEST-local/TEST-model-B#high', provider: { 'TEST-local': { models: {
+      const projectConfig = join(root, 'workspace/opencode.jsonc');
+      const credentialDirectory = join(globalDirectory, 'agent-teams-credentials');
+      await mkdir(credentialDirectory, { mode: 0o700 });
+      const filename = 'TEST-local-' + createHash('sha256').update(projectConfig).digest('hex').slice(0, 16) + '.key';
+      await writeFile(join(credentialDirectory, filename), 'TEST-LOCALHOST-ONLY', { mode: 0o600 });
+      await writeFile(projectConfig, JSON.stringify({
+        model: 'TEST-local/TEST-model-B#high', provider: { 'TEST-local': {
+          options: { apiKey: '{file:~/.config/opencode/agent-teams-credentials/' + filename + '}' }, models: {
           'TEST-model-B': { limit: { context: 64000, output: 96 },
             headers: { 'x-test-config-scope': 'project' }, body: { test_config_scope: 'project' } },
         } } },
       }), { mode: 0o600 });
       await mkdir(join(root, 'data/opencode'), { mode: 0o700 });
       await writeFile(join(root, 'data/opencode/auth.json'), JSON.stringify({
-        'TEST-local': { type: 'api', key: 'TEST-LOCALHOST-ONLY' },
+        'TEST-unrelated': { type: 'api', key: 'TEST-UNSELECTED-ONLY' },
       }), { mode: 0o600 });
       const profilePath = join(root, 'profile.json');
       await writeFile(profilePath, JSON.stringify(profile), { mode: 0o600 });
