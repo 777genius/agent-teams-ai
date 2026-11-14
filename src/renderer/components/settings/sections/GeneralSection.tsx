@@ -315,6 +315,7 @@ export const GeneralSection = ({
           >
             <SettingsToggle
               enabled={safeConfig.general.nativeNextPromptSuggestionsEnabled}
+              ariaLabel={t('general.nativeNextPrompt.label')}
               onChange={value => onGeneralToggle('nativeNextPromptSuggestionsEnabled', value)}
               disabled={saving}
             />

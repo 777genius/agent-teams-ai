@@ -7,12 +7,14 @@ interface SettingsToggleProps {
   readonly enabled: boolean;
   readonly onChange: (value: boolean) => void;
   readonly disabled?: boolean;
+  readonly ariaLabel?: string;
 }
 
 export const SettingsToggle = ({
   enabled,
   onChange,
   disabled = false,
+  ariaLabel,
 }: SettingsToggleProps): React.JSX.Element => {
   const handleClick = (): void => {
     if (!disabled) {
@@ -24,6 +26,7 @@ export const SettingsToggle = ({
     <button
       type="button"
       role="switch"
+      aria-label={ariaLabel}
       aria-checked={enabled}
       disabled={disabled}
       onClick={handleClick}

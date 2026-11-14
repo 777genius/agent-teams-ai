@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useNativeNextPrompt } from '../../../src/features/native-prompt-suggestions/renderer/hooks/useNativeNextPrompt';
 import { NativeNextPromptRow } from '../../../src/features/native-prompt-suggestions/renderer/ui/NativeNextPromptRow';
+import { SettingsToggle } from '../../../src/renderer/components/settings/components/SettingsToggle';
 
 import type { NativeNextPromptCandidate } from '../../../src/features/native-prompt-suggestions/contracts';
 
@@ -83,6 +84,27 @@ function fixture() {
   render();
   return { host, input, render, emit, onInsert, getHook: () => hook };
 }
+
+describe('native next-prompt setting accessibility', () => {
+  it('exposes an accessible switch name and changes only on user activation', () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const onChange = vi.fn();
+    act(() => root.render(
+      <SettingsToggle enabled={false} ariaLabel="Native next-prompt suggestions" onChange={onChange} />
+    ));
+    const control = host.querySelector<HTMLButtonElement>('[role="switch"]');
+    expect(control?.getAttribute('aria-label')).toBe('Native next-prompt suggestions');
+    expect(control?.getAttribute('aria-checked')).toBe('false');
+    expect(onChange).not.toHaveBeenCalled();
+    act(() => control?.click());
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+});
 
 describe('native next prompt UX in the actual feature hook + row', () => {
   it('accepts exact human direct suggestion as editable draft, never auto-sends', () => {
