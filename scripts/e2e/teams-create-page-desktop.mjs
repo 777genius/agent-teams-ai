@@ -1095,6 +1095,14 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
   const scriptPath = path.join(repoRoot, 'scripts/e2e/windows-teammate-console-native.mjs');
   try {
     await inspector.send('Runtime.enable');
+    // The native IPC/store can hydrate before React finishes rendering Teams.
+    // A skeleton-only screenshot must never qualify as a usable GUI.
+    await client.waitFor(
+      "Array.from(document.querySelectorAll('.team-row-zebra-card')).some(card => " +
+        "card.textContent?.includes(" + JSON.stringify(fixture.teamName) + ") && " +
+        "card.getBoundingClientRect().width > 0 && card.getBoundingClientRect().height > 0)",
+      'actual seeded team card visibly rendered', 60_000
+    );
     const rendererFocusedBefore = await client.evaluate('document.hasFocus()');
     const expression = [
       '(async () => {',
@@ -1160,7 +1168,8 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
     await captureScreenshot(client, fixture, 'windows-electron-console');
     const result = {
       schemaVersion: 1, success: true, scope: 'real Electron Main -> fixture teammate -> native tool calls',
-      realElectronMainHosted: true, realProductTeammateLaunch: false,
+      realElectronMainHosted: true, hydratedTeamCardVerified: true,
+      realProductTeammateLaunch: false,
       realVendorRuntimeOrModel: false, actualConsoleWindowsEnumerated: false,
       cmdGitWindowVisibilityUnknown: true, powershellConsoleNotVisibleVerified: true,
       powershellConsoleState: powershell.consoleState,
