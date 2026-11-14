@@ -4834,3 +4834,25 @@ The public barrel exports only this existing type by name; do not re-export proc
 Root publishes this exact appendix on P09 prefix `14a1646a1747f3be034c4edba7e892115d954076` before source GO. Freeze the exact two-file delta and complete readbacks; inverse checks must restore both full preimages, and the canonical process interface/parser must remain byte-identical. Preserve every other barrel export and every other shared type byte.
 
 Root owns the existing Main lint and relevant strict type gates on the composed source. No new unit case or native campaign is required for this type-only entrypoint correction. The unavailable executor leaves the interrupted local Main check unknown; neither source review nor the earlier checked Host results substitute for the next ordinary original CI type/lint result. The retained V1/V2 Desktop job132411599820 has a separate actual `team.launch.start` HOLD/unknown and unread artifact14111966683; this correction makes no claim about that failure or any native qualification.
+
+## 94. Retain closed startup facts in the original Codex Login target read
+
+### 94.1 Original failure and limited conclusion
+
+Original qualification run 43582227542 / job 132422928717 executed checkout `0e88cb3d18ac710148230bd2dfe5b5f45b22a248`. Original evidence `e9affc1249051a9cf897f18b070e6f7f88acf82a` and triage `c235cfafa2900ce843457a63bc6bb755cd6ac481` retain zero visible matches for `button[aria-label="More actions"]`, zero UI steps/cases and no authorization attempt. The failure precedes the first hover or click.
+
+Causal audit `1b580b61029af781929a3d446c3a544e0f1251bf` reads the exact Main/Renderer chain. Independent backend/account handlers precede legacy service readiness; Renderer waits for startup-ready before mounting App. The harness catches its unavailable `config:getClaudeRootInfo` request separately. Its failure does not establish a React exception. Startup failure/pending state, hidden or differently labelled target, and render failure remain unproven alternatives because this artifact lacks the relevant same-read DOM facts.
+
+### 94.2 One existing TEST path
+
+Only `scripts/legacy-agent-host/desktop-ui-controls.ts` may change, from exact parent/native/qualification preimage `15703898ff4639a442745f93c6083688b1c04ff4`; all three current reads match. Within `clickExpression`, enrich only the first `readPoint(label)` for the existing exact More-actions selector and `open existing More menu` label. Subsequent hover/stability reads and every other control retain their original expressions. Existing NativeExtensions caller blob `f4de929a00bc1be8330e8530be116b1c19cc04e7` reuses that selector/label, so its same first unavailable read receives these passive facts too; no caller change or observed failure is claimed for that flow.
+
+The same existing evaluation executes its original target expression once. Only an unavailable result gains closed facts: raw selector count capped at 256, existing visible count, root presence/child count capped at 16, existing UI-initialized flag, splash presence/positive-size visibility/error/slow classes, document-complete and English/empty-language booleans, and a boolean matching the existing ErrorBoundary fallback's sole full-screen child/heading/alert-icon shape. That last field reports shape, not component ownership or an exception. Diagnostics never participate in target eligibility.
+
+Retain only booleans and bounded integers in the existing failure-facts object. Preserve the original failure and cause. Do not collect text, HTML, attribute values, URLs, account data, authentication material or console messages. Add no CDP/IPC call, startup query, listener, click, reload, retry, timer, case or budget. Keep original ownership guards, 30-second deadline, 100ms passive cadence and successful point result unchanged.
+
+### 94.3 Review and unchanged boundaries
+
+Read-only inspection of existing `desktop-team-ui-smoke.test.ts` blob `7fdae995de965243dea7f3deda3496f0a3da5259` confirms its four control cases use other selectors/labels; two require byte-identical owner/hover expressions. Preserve those checks and all original input counts. No test write is authorized; any necessary test delta needs its own declared scope.
+
+Freeze/inverse-check the one source delta; root owns existing script/control gates and the next original Desktop qualification. Source review cannot establish the missing-menu cause or E2E success. The acknowledged Quit left the previously observed esbuild process after its leader exited; the receipt does not prove survival for the full three-second cleanup window. This cut neither repairs that debt nor permits signaling or claims cleanup success.
