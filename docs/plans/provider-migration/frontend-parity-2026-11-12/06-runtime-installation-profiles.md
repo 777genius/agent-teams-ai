@@ -2673,3 +2673,59 @@ These checks protect compatibility and refusal behavior. They are not a claimed 
 ### 30.4. Explicit security-review disposition
 
 Disposition is **accepted finding; narrowly planned fix**, with no suppression or dismissal. Independent plan review and root publication precede SOURCE GO. Freeze both final sources, exact forward/inverse diffs, unchanged-case evidence and current variant preimages for independent source review. After publication and actual checks, root records the corrective source/validation evidence against the original review/security finding; an open thread or unobserved CodeQL result must not be silently reported resolved. Source/unit results do not substitute for the separate original Windows native qualification.
+
+
+## 31. Donor saved-only Codex absence with exact TEST sentinel restoration
+
+### 31.1. Actual failure and bounded correction
+
+Original parent job `132530121926` at `def734338f13bcc3209e78079a0cedbc48f05a5b` first fails the existing whole-log assertion in `desktop-backend-smoke.ts:576`: no agent invocation through legacy sentinels. Artifact `14125946813` (SHA-256 `f84f96fbce5627c3b93eec771fb6aa8493a35ef4d9464f0487fba9a56597163a`) already records the refused `codex app-server` row in the six-row donor snapshot taken **before current Main**. The donor saved-only journey itself recorded ordinary Quit, empty original app/captured/unmatched native census, frozen source, zero business inputs and two existing donor probes. Full source/evidence joins and the original log are retained in evidence `d9e62bff5e6cbfe94e3b630598788fec17daaf73`.
+
+The actual donor is `4a0e06277fe216d9f82dbbede362668fe46622ee`, with captured runtime `0.0.160`. Its published runtime resolver `c064a3ab3631e1f2ce0bca1d7c707a71e1b4b90d` uses `Bun.which('codex')` without requiring successful `--version`; catalog `b990459289e433c4d8077e38bbe870fe4a4edc8f` starts `app-server` when that path exists. Existing donor status hydration and PATH enrichment can reach the TEST vendor sentinel even though it exits 78 on version. The current prelude explicitly accepts that candidate as `pinned-refusal`, which does not establish absence for this resolver. No raw parent argv or private native stack was captured: this is a source-backed mechanism and an actual pre-consumer refused invocation, not a captured stack claim.
+
+Correct only the TEST donor environment: make both existing Codex sentinel paths genuinely absent while the old application runs, then restore their exact original bytes and permission modes before returning to the current consumer. Do not change the historical donor/runtime, advertise a fake unavailable CLI, permit `app-server`, remove any sentinel log row, or broaden the final allowed-invocation oracle.
+
+### 31.2. Exactly two existing TEST paths and variant preservation
+
+Current source preimages were read at parent `f7a1cf9fe148100a0b3417231c3090351f06887b`, native `5c79dca8fbffb6ca8d3549bd89ac342a363f159b` and qualification `f98923e0054405832e2341cbafaf511c90f38445`.
+
+| Writable path | Parent / qualification preimage | Native preimage | Current lines |
+| --- | --- | --- | --- |
+| `scripts/legacy-agent-host/desktop-donor-saved-producer.ts` | `5d8cb080e63039bdf566cdf3df924cec258db151` | same | 595 |
+| `scripts/legacy-agent-host/candidate-runtime-paths.test.ts` | `b9f3086f3325b4d968b07f3f909cfc5c2ac1226b` | `0189b83725c505c29622e5e88cfe33f0d2e3c6ae` | 373 / 377 |
+
+No production path, fixture generator, historical checkout, runtime input, source roster, workflow, new module or native helper is writable. Preserve both original test declarations, existing assertions and the distinct original platform guards: native Linux x64 or Darwin ARM; parent/qualification Darwin ARM. The producer retains its existing 800-line ceiling; no compression or extraction solely to meet it.
+
+### 31.3. Finite two-file parking inside the existing helper
+
+Extend only the existing `prepareDonorSavedPackageManager` result with local finite park/restore operations for these two literal paths under the original fixture root: `bin/codex` and `claude/local/node_modules/.bin/codex`. This is bookkeeping for two TEST files, not a new process owner, provider abstraction or discovery mechanism. Preparing the copied package-manager wrapper must leave both original sentinels present; parking occurs immediately before the original donor spawn inside covered producer error/cleanup handling.
+
+Before either file moves, verify both complete original records: bounded regular non-symlink single-link files, exact canonical paths, original fixture sentinel digest, original permission mode and stable file identity across the bounded read. Keep both originals in one newly created private 0700 directory under the same fixture root, outside all actual PATH/common/home/vendor resolver directories. Held basenames are not `codex`. Moving into that fresh private location must preserve the original contents and mode, and verify the held file identity and both original-path absences. Any partial move remains explicitly tracked.
+
+Restoration must never overwrite an existing replacement at an original path. Use an exclusive filesystem restoration operation, such as linking the verified held inode into an absent original name and then removing the held name; verify exact bytes, original mode, identity and final single-link regular-file shape before reporting restoration. A foreign/replaced path or changed held file fails closed and is preserved for diagnosis. The temporary two-link stage of that exclusive restoration is internal, checked, and not a settled original state. No copy or sentinel execution is used as absence evidence.
+
+### 31.4. Keep the original actual prelude and require genuine candidate absence
+
+The copied pnpm wrapper still executes its existing Node prelude once, with the same original cwd, Node, argv and untouched original shell exec body afterward. Keep all current environment bindings, metadata-only SHELL pin, absent `CODEX_CLI_PATH`, absent managed selector, finite actual PATH/home/common/system/vendor census, 128-candidate limit, receipt bound and exclusive receipt creation.
+
+The prelude now validates the two parked originals against their retained expected bytes/modes, requires both original paths absent, and requires **every** actual resolver candidate absent. Remove only the `pinned-refusal` exception; it must not skip a candidate because it is a known sentinel. Retain the real fixed system paths. An ambient or newly introduced Codex candidate is an explicit failed precondition and is never invoked. No fake empty PATH, alternative HOME, new override, shell evaluation, version probe, native process or discovery retry is added.
+
+Keep the availability receipt's existing invocation/cwd/pins and actual candidate observations; add only bounded parking/restoration facts needed to show what happened to the two original TEST files. The source, lock, selected runtime, copied original pnpm and product corpus freeze mechanisms remain unchanged.
+
+### 31.5. Original custody and fail-closed restoration order
+
+Cover parking and the existing spawn setup with the producer's bounded error/cleanup ownership. Preserve the original spawn executable/argv/cwd/env, captured ChildProcess/group identity, native birth census, ordinary UI Quit, original cleanup implementation and all existing deadlines. Record whether the original spawn has been attempted; absence is not inferred from a caught spawn/setup error.
+
+Before the spawn is attempted, a parking/setup error may roll back only the verified files actually moved, and must verify both original paths restored. After any spawn attempt, restoration is permitted only after the retained original ChildProcess is positively reaped and the **existing** cleanup result has no failure and an empty original group, with both already-read captured and unmatched donor native censuses empty. Successful ordinary Quit and listener absence remain mandatory for the original PASS journey. A cleanup exception, missing/ambiguous observation, live child, native debt or unknown spawn outcome leaves the originals parked, marks the producer incomplete and forbids current Main startup; it does not schedule another cleanup, signal, launch or wait.
+
+Perform and verify restoration before the final producer receipt/acceptance and before returning its seed. The current smoke caller already awaits this producer before spawning current Main. A seed file written earlier is not permission to bypass that await. Record bounded restoration/held state even on failure; preserve the first original failure when secondary restoration/logging fails. Cleanup-only or restoration-only failures still fail the existing producer acceptance. Close the original log writer on prelaunch failure as needed. No consumer starts unless the original journey and the two-file restoration both succeed.
+
+The existing whole sentinel log, native/business/probe counts, Create-without-Launch flow, saved corpus, ordinary Quit, source freezes and final consumer assertion remain intact. Successful parking can remove donor Codex metadata invocations; it does not grant additional calls or change an upper bound.
+
+### 31.6. Extend only the existing emitted-source case
+
+Keep the original sentinel version/app-server refusal assertions before parking; preserve their actual outputs and log rows. In the same existing packed-path case, exercise the real helper and emitted prelude with actual temporary files. Check both original candidate names are absent during the donor phase, held bytes/modes match, every availability observation is absent, and the copied original pnpm body receives exactly its original argv/cwd once.
+
+Preserve the existing foreign candidate, changed pin, explicit override, managed selector and duplicate-receipt refusals with no unknown executable effect or original pnpm call. The changed-pin branch now corrupts the held original, rather than inventing an executable in a candidate path. Add bounded restoration assertions for both original bytes/modes and refusal to overwrite a foreign original-path replacement. Retain the original two declarations and complete unrelated test suffix; do not add a matrix, new timing budget, native qualification or tests that fake the producer's physical cleanup proof.
+
+Root owns the original focused case, script/types/source gates and next ordinary donor/current UI acceptance. Freeze exact full sources, per-variant diffs and inverses before publication. The separate job `132530121934` catalog-count failure (9 against the unchanged limit 8) remains independently unresolved; no correction or allowance increase for it is included. Source remains zero until this exact plan is independently reviewed, published and root grants GO.
