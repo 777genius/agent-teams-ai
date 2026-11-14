@@ -202,6 +202,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         executable: { path: bun, sha256: digests.bun },
         environment: {
           ...environment,
+          USERPROFILE: join(root, 'home'),
           XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: join(root, 'data'),
           XDG_CACHE_HOME: join(root, 'cache'), NO_COLOR: '1',
         },
@@ -231,17 +232,14 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       } },
     }), { mode: 0o600 });
     const projectPath = join(root, 'workspace/opencode.jsonc');
-    let managedKey: string | undefined;
+    let manualKey: string | undefined;
     if (!qualifyCoordination) {
-      const directory = join(globalDirectory, 'agent-teams-credentials');
-      await mkdir(directory, { mode: 0o700 });
-      managedKey = join(directory, 'TEST-local-' + createHash('sha256').update(projectPath).digest('hex').slice(0, 16) +
-        '-12345678-1234-4123-8123-123456789abc.key');
-      await writeFile(managedKey, 'TEST-LOCALHOST-ONLY', { mode: 0o600 });
+      manualKey = join(root, 'workspace/TEST-manual-runtime.key');
+      await writeFile(manualKey, 'TEST-LOCALHOST-ONLY', { mode: 0o600 });
     }
     const projectConfig = (scope: string) => JSON.stringify({
       model: 'TEST-local/TEST-model', provider: { 'TEST-local': {
-        ...(qualifyCoordination ? {} : { options: { apiKey: '{file:' + managedKey + '}' } }), models: {
+        ...(qualifyCoordination ? {} : { options: { apiKey: '{file:' + manualKey + '}' } }), models: {
         'TEST-model-B': { body: { test_config_scope: scope }, headers: { 'x-test-config-scope': scope } },
       } } },
     });

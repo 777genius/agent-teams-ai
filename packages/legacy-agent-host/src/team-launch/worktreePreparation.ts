@@ -1,6 +1,7 @@
 import { runtimeDigest } from '../runtime/identity.js';
 import { capturedWorktreesSchema, launchWorktreeReceiptSchema } from './worktreeSchema.js';
 import { TeamLaunchError } from './contracts.js';
+import { isReadinessCapturePlaceholder } from './launchReadiness.js';
 import type { JsonValue } from '../contracts.js';
 import type { TeamStore } from '../team/ports.js';
 import type { TeamLaunchDefinition, TeamLaunchRecord } from './contracts.js';
@@ -12,7 +13,8 @@ export function prepareWorktreeLaunch(
 ): TeamLaunchRecord {
   const path = `launches/${runtimeDigest(input.launchId)}.json`;
   const prior = store.read<TeamLaunchRecord>(path);
-  if (prior) {
+  const readinessOnly = prior && isReadinessCapturePlaceholder(prior);
+  if (prior && !readinessOnly) {
     if (
       !prior.worktreePreparation ||
       prior.worktreePreparation.admission !== input.admission ||
@@ -21,6 +23,16 @@ export function prepareWorktreeLaunch(
       throw new TeamLaunchError('hold', 'worktree-preparation-changed');
     return prior;
   }
+  if (readinessOnly) {
+    const original = prior.definition.capture, selected = input.intent, capture = prior.readiness!.capture!;
+    if (capture.admission !== input.admission || capture.cutoff <= Date.now() ||
+        prior.definition.launchId !== input.launchId || prior.definition.rosterRevision !== input.rosterRevision ||
+        !original || typeof original !== 'object' || Array.isArray(original) ||
+        !selected || typeof selected !== 'object' || Array.isArray(selected) ||
+        runtimeDigest(capturedChoices(original)) !== runtimeDigest(capturedChoices(selected)) ||
+        runtimeDigest(original.recipeSources ?? []) !== runtimeDigest(selected.recipeSources ?? []))
+      throw new TeamLaunchError('hold', 'worktree-preparation-changed');
+  }
   const definition: TeamLaunchDefinition = {
     launchId: input.launchId,
     rosterRevision: input.rosterRevision,
@@ -28,6 +40,7 @@ export function prepareWorktreeLaunch(
     members: [],
   };
   const record: TeamLaunchRecord = {
+    ...(readinessOnly ? { readiness: prior.readiness } : {}),
     schemaVersion: 1,
     definition,
     fingerprint: runtimeDigest(definition),

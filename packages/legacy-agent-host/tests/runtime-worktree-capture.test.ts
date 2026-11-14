@@ -32,6 +32,15 @@ import type { TeamLaunchRecord } from '../dist/team-launch/contracts.js';
 import type { Session } from '@agent-teams/provider-session-contracts';
 import { canFinalizeWorktreeLaunch } from '../dist/team-launch/worktreePreparation.js';
 import { capturedMcpSourceCurrent } from '../dist/mcp-catalog/capturedSource.js';
+import { compileLiveRosterMember, liveRosterTargetTeam, liveRuntimeCaptureSchema } from '../dist/composition/captureLiveRosterMember.js';
+import { createPreparedMemberEntry } from '../dist/composition/createMemberEntry.js';
+import { assertRuntimeWorktree } from '../dist/composition/runtimeWorktreeCapture.js';
+import { createLiveRosterLaunch } from '../dist/team-launch/liveRosterMembership.js';
+import { applyUnconfiguredMemberSelections } from '../dist/team-launch/applyUnconfiguredMemberSelections.js';
+import { validateRestoreJournal } from '../dist/team-launch/validateRestoreJournal.js';
+import type { LiveRosterPrivateInput } from '../dist/team/liveRosterMembership.js';
+import type { LiveLaunchRecord } from '../dist/team-launch/liveRosterMembership.js';
+import type { ExpectedLaunchMember } from '../dist/team-launch/contracts.js';
 
 function git(cwd: string, ...args: string[]): string {
   return execFileSync('git', ['-C', cwd, ...args], {
@@ -357,6 +366,75 @@ test('actual capture persists worktree intent before Git, then captures real tar
     'response loss retains original final source and workspace receipts'
   );
   assert.equal(f.observed.length, opens);
+
+  const live = fixture(t), liveCommand = 'TEST-live-capture', baseCommand = 'TEST-live-base';
+  await live.capture(baseCommand);
+  await live.runtime().execute(live.team.definition.binding.teamId, 'open', { memberId: 'lead' });
+  const original = structuredClone(live.record(baseCommand));
+  const roster = live.connection.readRoster(), settings = {
+    isolation: 'worktree' as const, providerId: 'anthropic' as const, providerBackendId: 'adapter' as const,
+    model: 'TEST-member-model', effort: 'high' as const, fastMode: 'on' as const,
+    role: 'TEST reviewer', workflow: 'TEST exact workflow',
+  };
+  const payload = { expectedRevision: roster.revision,
+    members: [...roster.members.filter(member => member.role !== 'lead').map(member =>
+      ({ name: member.name, ...member.settings })), { name: 'charlie', ...settings }] };
+  const invoke = (conversation: LiveRosterPrivateInput) => live.runtime().executeLiveRoster({
+    teamId: live.team.definition.binding.teamId, commandId: liveCommand,
+    payload: conversation.phase === 'read' ? { expected: payload } : payload, conversation,
+    method: conversation.phase === 'read' ? 'team.roster.lookup' : 'team.roster.replace',
+    binding: { schemaVersion: 1, handleId: 'TEST-live-handle', owner: live.profile.owner,
+      scope: live.team.definition.scope },
+  });
+  const response = await invoke({ phase: 'capture', remainingMs: 100_000 });
+  assert.ok(response.ok && 'liveRosterCapture' in response);
+  const view = response.liveRosterCapture, captured = live.record(baseCommand), row = captured.liveMembership![0]!;
+  assert.equal(row.phase, 'captured');
+  const capture = liveRuntimeCaptureSchema.parse(row.capture);
+  assert.deepEqual(capture.member.settings, settings);
+  assert.equal(view.target.workspace, capture.workspace);
+  assert.equal(view.target.configurationDigest, capture.configurationDigest);
+  assert.notEqual(capture.workspace, live.repo);
+  assert.notEqual(capture.workspace, original.worktrees![0]!.target.path);
+  assert.equal(capture.worktree!.binding.target.path, capture.workspace);
+  assert.ok(lstatSync(capture.workspace).isDirectory());
+  const capturedTeam = { ...live.team, launchId: original.definition.launchId, capture: original.definition.capture };
+  const target = compileLiveRosterMember(live.profile, capturedTeam, row.capture);
+  assert.equal(target.profile.cwd, view.target.workspace);
+  assert.equal(target.profile.model, settings.model);
+  assert.equal(target.profile.provider, 'claude');
+  if (target.profile.provider !== 'claude') throw new Error('TEST provider mismatch');
+  assert.match(target.profile.nativeOptions!.projectInstructions!.append!, /TEST exact workflow/);
+  assert.ok(target.profile.capturedMcpServers?.['TEST-project-tool']);
+  assert.deepEqual(target.profile.extraArgs, ['--max-turns', '3']);
+  assert.deepEqual(captured.definition, original.definition, 'private capture does not publish a target');
+  assert.deepEqual(captured.members, original.members, 'private capture does not claim a target');
+  assert.deepEqual(captured.worktrees!.slice(0, original.worktrees!.length), original.worktrees);
+  assert.deepEqual(live.connection.readRoster(), roster);
+  assert.equal(live.observed.length, 1, 'only the original lead has an allocated provider');
+  const pending = await invoke({ phase: 'capture', remainingMs: 100_000 });
+  assert.ok(pending.ok && 'liveRosterPending' in pending);
+  const wrong = await invoke({ phase: 'continue', captureDigest: 'f'.repeat(64), remainingMs: 100_000 });
+  assert.deepEqual(wrong, pending);
+  assert.equal(live.observed.length, 1);
+  const retainedWorkspace = { inode: lstatSync(capture.workspace).ino, head: git(capture.workspace, 'rev-parse', 'HEAD') };
+  await live.restart();
+  assert.deepEqual(await invoke({ phase: 'read' }), pending);
+  assert.deepEqual(await invoke({ phase: 'continue', captureDigest: view.captureDigest, remainingMs: 100_000 }), pending);
+  assert.equal(live.observed.length, 1, 'cold lookup cannot recreate the first continuation');
+  assert.equal(lstatSync(capture.workspace).ino, retainedWorkspace.inode);
+  assert.equal(git(capture.workspace, 'rev-parse', 'HEAD'), retainedWorkspace.head);
+  assert.deepEqual(live.record(baseCommand).liveMembership, captured.liveMembership);
+  const metadata = createPreparedMemberEntry({ ownerId: live.profile.owner.ownerId,
+    team: liveRosterTargetTeam(capturedTeam, target, roster.revision), baseProfile: target.profile });
+  metadata.liveRosterCapture = structuredClone(target.capture);
+  await assertRuntimeWorktree(metadata);
+  git(live.repo, 'worktree', 'move', capture.workspace, `${capture.workspace}-TEST-retained`);
+  mkdirSync(capture.workspace);
+  writeFileSync(join(capture.workspace, 'foreign.txt'), 'TEST foreign live workspace');
+  await assert.rejects(assertRuntimeWorktree(metadata), { reason: 'owned-worktree-identity-changed' });
+  assert.equal(live.observed.length, 1, 'the target worktree boundary allocates no provider');
+  assert.equal(readFileSync(join(capture.workspace, 'foreign.txt'), 'utf8'), 'TEST foreign live workspace');
 });
 
 test('fresh capture after cold relaunch reuses exact owned named/member paths and keeps progress bytes', async (t) => {
@@ -394,6 +472,55 @@ test('fresh capture after cold relaunch reuses exact owned named/member paths an
       row.plan.proof.head,
       before.find((item) => item.path === row.plan.targetPath)!.head
     );
+
+  // Controlled journal boundary: the old unconfigured Skip has no historical Runtime binding.
+  const unconfigured: ExpectedLaunchMember = { memberId: 'TEST-unconfigured', binding: null,
+    configurationDigest: null, contextDigest: null, configRevision: null, skipped: false, timeoutMs: 30_000 };
+  const initial = { ...structuredClone(fresh.definition), members: [unconfigured] };
+  initial.rosterRevision = runtimeDigest({ scope: initial.rosterScope ?? initial.launchId, members: initial.members });
+  const skipped = { ...unconfigured, skipped: true }, skipCommand = 'TEST-old-unconfigured-skip';
+  const skipAtom = { input: { commandId: skipCommand, launchId: initial.launchId,
+      rosterRevision: initial.rosterRevision, memberId: unconfigured.memberId,
+      expectedGeneration: null, action: 'skip' as const },
+    actor: { principalId: 'human', authorityRevision: 1 }, noAllocation: true,
+    sourceAttemptId: `initial-${runtimeDigest({ launchId: initial.launchId, memberId: unconfigured.memberId })}`,
+    source: unconfigured, selected: skipped };
+  const skip = { ...skipAtom, fingerprint: runtimeDigest(skipAtom), phase: 'selected' as const };
+  const definition = { ...initial, members: [skipped] };
+  definition.rosterRevision = runtimeDigest({ scope: definition.rosterScope ?? definition.launchId, members: definition.members });
+  const originalAttempt = { ...structuredClone(fresh.members[0]!.attempts[0]!),
+    attemptId: `action-${runtimeDigest(skipCommand)}`, status: 'skipped' as const };
+  let journal: LiveLaunchRecord = { ...structuredClone(fresh), definition,
+    fingerprint: runtimeDigest(definition), memberActions: [skip], restorations: [],
+    members: [{ memberId: unconfigured.memberId, currentAttemptId: originalAttempt.attemptId, attempts: [originalAttempt] }] };
+  const launch = createLiveRosterLaunch({ authorized: callback => callback(), read: () => journal,
+    write: next => { journal = next; },
+    initial: (_member, attemptId) => ({ ...originalAttempt, attemptId, status: 'not-started' }) });
+  const identity = { requestDigest: '1'.repeat(64), originalFingerprint: '2'.repeat(64), authorityRevision: 1,
+    principalId: 'human', launchId: initial.launchId, sourceCaptureDigest: runtimeDigest(initial.capture),
+    expectedRevision: '3'.repeat(64), hostIncarnation: 'TEST-original-host', cutoff: Date.now() + 100_000,
+    memberId: unconfigured.memberId, source: skipped, previous: skipped };
+  assert.equal(launch.begin({ ...identity, commandId: 'TEST-live-remove', kind: 'remove' }), true);
+  launch.publish('TEST-live-remove', '4'.repeat(64));
+  const restoreCommand = 'TEST-live-restore';
+  assert.equal(launch.begin({ ...identity, commandId: restoreCommand, kind: 'restore' }), true);
+  launch.seed(restoreCommand, { test: 'original immutable capture source' });
+  const selected: ExpectedLaunchMember = { ...structuredClone(fresh.definition.members[0]!),
+    memberId: unconfigured.memberId, binding: { ...fresh.definition.members[0]!.binding!,
+      memberId: unconfigured.memberId, generation: `live-${runtimeDigest({ commandId: restoreCommand,
+        requestDigest: identity.requestDigest, previous: null })}` },
+    runtimeGeneration: 2, configurationDigest: '5'.repeat(64), baseConfigurationDigest: '5'.repeat(64), skipped: false };
+  launch.capture(restoreCommand, { test: 'fresh configured selection' }, selected);
+  launch.publish(restoreCommand, '6'.repeat(64));
+  validateRestoreJournal(journal);
+  assert.deepEqual(applyUnconfiguredMemberSelections(initial, journal).members, [skipped]);
+  assert.deepEqual(journal.memberActions, [skip], 'cold projection cannot rewrite the old Skip atom');
+  assert.deepEqual(journal.definition.members, [selected], 'fresh current selection remains separate');
+  const altered = structuredClone(journal), changed = altered.memberActions![0]!;
+  changed.source.timeoutMs++; changed.selected.timeoutMs++;
+  const { fingerprint: _fingerprint, phase: _phase, ...changedAtom } = changed;
+  changed.fingerprint = runtimeDigest(changedAtom);
+  assert.throws(() => applyUnconfiguredMemberSelections(initial, altered), { code: 'hold' });
 });
 
 test('stale operator admission refuses before Git and does not mint a launch record', async (t) => {

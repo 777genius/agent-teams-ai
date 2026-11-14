@@ -171,6 +171,7 @@ test(
             nativeModel: { providerId: 'TEST-local', modelId: 'TEST-model' },
             environment: {
               HOME: join(root, 'home'),
+              USERPROFILE: join(root, 'home'),
               TMPDIR: join(root, 'tmp'),
               XDG_CONFIG_HOME: join(root, 'config'),
               XDG_DATA_HOME: join(root, 'data'),
@@ -192,10 +193,15 @@ test(
       const globalDirectory = join(root, 'home/.config/opencode');
       await mkdir(globalDirectory, { recursive: true, mode: 0o700 });
       const globalConfig = join(root, 'TEST-global-native-config.json');
+      const absoluteKey = join(root, 'TEST-manual-absolute.key');
+      await writeFile(absoluteKey, 'TEST-', { mode: 0o600 });
+      await writeFile(join(root, 'home/TEST-manual-home.key'), 'LOCALHOST-', { mode: 0o600 });
+      await writeFile(join(globalDirectory, 'TEST-manual-relative.key'), 'ONLY', { mode: 0o600 });
       await writeFile(globalConfig, JSON.stringify({
         model: 'TEST-local/TEST-model', provider: { 'TEST-local': {
           npm: '@ai-sdk/openai-compatible',
-          options: { baseURL: `http://127.0.0.1:${address.port}/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
+          options: { baseURL: `http://127.0.0.1:${address.port}/v1`,
+            apiKey: '{file:' + absoluteKey + '}{file:~/TEST-manual-home.key}{file:TEST-manual-relative.key}' },
           models: Object.fromEntries(['TEST-model', 'TEST-model-B'].map(id => [id, {
             name: id, limit: { context: 200000, output: 128 },
             capabilities: { tools: true, input: ['text'], output: ['text'] },

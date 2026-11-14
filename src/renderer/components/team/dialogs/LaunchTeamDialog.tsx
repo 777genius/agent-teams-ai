@@ -2281,7 +2281,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             () =>
               submitTeam(
                 props,
-                launchSubmission.request,
+                capturedReadiness.captureForSubmit(launchSubmission.request),
                 launchSubmission.members,
                 effectiveSelectedModel,
                 api.teams.replaceMembers,

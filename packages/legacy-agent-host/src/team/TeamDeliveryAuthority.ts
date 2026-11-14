@@ -32,12 +32,15 @@ export function createTeamDeliveryAuthority(options: {
   function runtimeAccess(
     principalId: string,
     binding: RuntimeMemberBinding,
-    action: 'read' | 'control' | 'provider'
+    action: 'read' | 'control' | 'provider',
+    beforeProviderAccess?: () => void
   ): boolean {
+    if (beforeProviderAccess !== undefined && action !== 'provider') return false;
     if (action === 'provider') {
-      return options.store.fenced(() =>
-        memberAuthorized(binding, 'admit') && runtimeAccess(principalId, binding, 'control')
-      );
+      return options.store.fenced(() => {
+        beforeProviderAccess?.();
+        return memberAuthorized(binding, 'admit') && runtimeAccess(principalId, binding, 'control');
+      });
     }
     return options.store.fenced(() => {
       try {

@@ -17,10 +17,11 @@ import {
 import { BackendOwnerRouter } from '../application/BackendOwnerRouter';
 import { createCapturedHostBackup } from '../application/createCapturedHostBackup';
 import { prepareCreatedHostTeam } from '../application/createdHostTeam';
+import { prepareCapturedTeamModels } from '../application/prepareCapturedTeamModels';
 import { ForegroundModelChecks } from '../application/ForegroundModelChecks';
 import { refreshCapturedRuntimeConfiguration } from '../application/refreshCapturedRuntimeConfiguration';
 import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
-import { capturedCreateReadiness, createReadinessPreparation, requestWithLocalModelReadiness } from '../infrastructure/CapturedLocalModelReadiness';
+import { captureCreatedTeamConversation, requestWithLocalModelReadiness } from '../infrastructure/CapturedLocalModelReadiness';
 import { captureProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import { CapturedRosterCommands } from '../infrastructure/CapturedRosterCommands';
 import { captureRuntimeSources } from '../infrastructure/CapturedRuntimeSources';
@@ -39,7 +40,8 @@ import type {
   HandleBindingStore,
 } from '../application/backendBinding';
 import type { CapturedBackendOwner } from '../application/BackendOwnerRouter';
-import type { LocalModelReadinessContext } from '../infrastructure/CapturedLocalModelReadiness';
+import type { TeamModelProbeIntents } from '../application/TeamModelProbeIntents';
+import type { CapturedTeamModelRequest } from '../application/prepareCapturedTeamModels';
 import type { CapturedProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import type {
   DesktopBackendDescriptor,
@@ -50,7 +52,6 @@ import type {
   CreateTeamRegistryPayload,
   TeamRegistryRecord,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
-import type { CreateTeamLaunchPreparationInput } from '@agent-teams/legacy-agent-host/team-registry/create-launch-contracts';
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';
 import type { TeamCreateRequest } from '@shared/types/team';
 
@@ -74,6 +75,7 @@ export interface DesktopBackendFeatureOptions {
   bindings?: HandleBindingStore;
   /** Existing durable Main ledger is supplied before renderer work admission. */
   commandRunner?: () => ApplicationCommandRunner | null;
+  modelIntents?: TeamModelProbeIntents;
 }
 
 export class DesktopBackendFeature {
@@ -115,11 +117,16 @@ export class DesktopBackendFeature {
       assertBackendRequestGuard(guard);
       return this.router;
     };
+    const rosterCommands = options.commandRunner ? new CapturedRosterCommands(options.commandRunner) : undefined;
     this.facade = new BackendOperationsFacade(
       {
-        request: (handle, command) => requestWithLocalModelReadiness(
-          () => target(handle, command.guard), handle, command,
-          this.handleDefinitions().find(row => row.handleId === handle.handleId)),
+        request: (handle, command) => {
+          const definition = this.handleDefinitions().find(row => row.handleId === handle.handleId);
+          return requestWithLocalModelReadiness(() => target(handle, command.guard), handle, command, definition, {
+            requestTimeoutMs: definition ? this.clients.get(ownerKey(definition.owner))?.client.profile.requestTimeoutMs : undefined,
+            intents: this.options.modelIntents, rosterCommands,
+          });
+        },
         requestPair: async (source, destination, command) => {
           const router = await target(source, command.guard);
           const original = this.handleDefinitions().find(
@@ -132,7 +139,7 @@ export class DesktopBackendFeature {
         lookup: async (handle, commandId, method, guard) =>
           (await target(handle, guard)).lookup(handle, commandId, method, guard),
       },
-      options.commandRunner ? new CapturedRosterCommands(options.commandRunner) : undefined
+      rosterCommands
     );
   }
 
@@ -387,40 +394,19 @@ export class DesktopBackendFeature {
   /** Captures one creation owner for preparation, polling and original cleanup. */
   async captureTeamCreation(contextId: string, guard: BackendRequestGuard) {
     const target = await this.registry(contextId, guard);
-    let preparedSources: Promise<void> | undefined;
-    let captureOrigin: ReturnType<typeof capturedCreateReadiness> | undefined;
-    return {
-      prepare: async (
-        action: 'prepare' | 'probe.read' | 'probe.cancel',
-        input: CreateTeamLaunchPreparationInput, readiness?: LocalModelReadinessContext
-      ) => {
-        if (input.draft.contextId !== contextId) throw new BackendRoutingError('forbidden');
-        const captured = structuredClone(input);
-        let origin;
-        if (action === 'prepare' && (input.draft.savedSettings.providerId === 'opencode' ||
-            input.draft.members.some(row => row.memberSettings.providerId === 'opencode'))) {
-          if (!readiness) throw new BackendRoutingError('hold');
-          const budget = { remainingMs: readiness.remainingMs.bind(readiness) };
-          captureOrigin ??= capturedCreateReadiness(this.router!, target.owner, () => assertBackendRequestGuard(guard));
-          preparedSources ??= this.refreshLaunchConfiguration(contextId, input.draft.savedSettings.cwd, guard);
-          await preparedSources;
-          origin = createReadinessPreparation(await captureOrigin(captured, budget), budget);
-        }
-        return target.client.prepareCreation(
-          action,
-          captured,
-          action === 'probe.cancel' ? undefined : guard, origin
-        );
-      },
-      submit: async (commandId: string, input: CreateTeamLaunchPreparationInput) => {
-        if (input.draft.contextId !== contextId) throw new BackendRoutingError('forbidden');
-        const result = await target.client.submitCreation(commandId, input, guard);
-        if (result.creation.commandId !== commandId || result.creation.phase !== 'published')
-          throw new BackendRoutingError('hold', 'unknown');
-        await this.registerDynamic(result.creation.record, target.owner, contextId, guard);
-        return result;
-      },
-    };
+    const captured = this.clients.get(ownerKey(target.owner));
+    if (!this.router || !captured) throw new BackendRoutingError('unavailable');
+    return captureCreatedTeamConversation({
+      ...target, router: this.router, contextId, guard, requestTimeoutMs: captured.client.profile.requestTimeoutMs,
+      refreshSources: cwd => this.refreshLaunchConfiguration(contextId, cwd, guard),
+      register: record => this.registerDynamic(record, target.owner, contextId, guard),
+    });
+  }
+
+  prepareCapturedModels(handle: BackendHandle, request: CapturedTeamModelRequest, guard: BackendRequestGuard) {
+    return prepareCapturedTeamModels({ handle, request, isCurrent: () => guard.isCurrent(), intents: this.options.modelIntents,
+      backend: { invoke: (input, readiness) => this.facade.invoke(input,
+        input.operation === 'team.launch.probe.cancel' ? undefined : guard, readiness) } });
   }
 
   prepareCreatedTeam(

@@ -28,6 +28,8 @@ export interface MemberProviderContext {
   opencodeEvidence?: OpenCodeEvidenceCapture;
   isCurrent(): boolean;
   canAllocate(): boolean;
+  /** Exact consumed preparation's private credential commitment; checkpoint continuation uses its original scope. */
+  assertReadinessCredential?(scopeDigest: string): void;
   /** Team-fenced physical capture; original Runtime input is checked by the outer MCP wrapper. */
   canCaptureRegisteredProcess?(): boolean;
   readCheckpoint(reference: string, request: OpenConfig): Promise<unknown>;
