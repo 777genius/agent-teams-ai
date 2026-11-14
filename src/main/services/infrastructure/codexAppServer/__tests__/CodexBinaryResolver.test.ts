@@ -226,7 +226,8 @@ describe('CodexBinaryResolver', () => {
       });
       await fs.writeFile(
         shim,
-        '@ECHO off\n"%_prog%" "%dp0%\\node_modules\\@openai\\codex\\bin\\codex.js" %*\n'
+        '@ECHO off\n"%_prog%" "%dp0%\\node_modules\\@openai\\codex\\bin\\codex.js" %*\n',
+        { mode: 0o700 }
       );
       process.env.CODEX_CLI_PATH = shim;
       buildEnrichedEnvMock.mockImplementation(() => ({ PATH: f.root }));
