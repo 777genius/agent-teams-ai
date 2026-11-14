@@ -31,15 +31,23 @@ export function checkCapturedPromptOperation(input: {
       projection.phase !== 'allocated' || projection.sealed !== false ||
       projection.custody !== 'owned' ||
       record.hostIncarnation !== hostIncarnation ||
-      record.sessionRef !== entry.profile.sessionId ||
+      !record.sessionRef || record.sessionRef !== entry.profile.sessionId ||
+      !record.config ||
+      record.config.tenantId !== entry.config.tenantId ||
+      record.config.projectId !== entry.config.projectId ||
+      record.config.sessionId !== entry.config.sessionId ||
+      record.config.generation !== entry.config.generation ||
       record.phase !== 'allocated' || record.sealed || !record.nativeReady ||
-      record.custody !== 'owned' ||
+      record.custody !== 'owned' || record.control !== undefined ||
+      record.closeClaimed === true ||
       runtimeDigest(record.binding) !== runtimeDigest(entry.binding) ||
       record.inputs.length > 2048) return false;
   const matches = record.inputs.flatMap((row, index) =>
     row.intent.inputId === proof.inputId && row.operationRef === proof.operationRef
       ? [index] : []);
-  if (matches.length !== 1) return false;
+  if (matches.length !== 1 ||
+      record.inputs.filter((row) => row.intent.inputId === proof.inputId).length !== 1)
+    return false;
   const index = matches[0]!;
   const original = record.inputs[index]!;
   if (original.phase !== 'terminal' || original.terminal !== 'succeeded' ||
