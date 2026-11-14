@@ -10,7 +10,8 @@ const maximum = 256;
 const maximumTraceBytes = 64 * 1024, maximumLineBytes = 512, reservedLineBytes = maximumLineBytes + 1;
 const events = ['child-spawn', 'child-ready', 'child-failed', 'child-exit', 'child-output-limit',
   'child-input-ended', 'host-input-ended', 'request', 'request-send-headers', 'request-body-sent',
-  'response', 'response-end', 'request-error', 'read-cut-failed', 'metadata-read-failed', 'trace-limit'] as const;
+  'response', 'response-end', 'request-error', 'read-cut-failed', 'metadata-read-failed',
+  'model-probe-close-failed', 'trace-limit'] as const;
 const routes = ['info', 'session-create', 'session-read', 'instructions', 'permissions', 'plugins',
   'mcp', 'log', 'prompt', 'provider-catalog', 'model-catalog', 'model-default', 'integration-read',
   'integration-connect', 'credential-remove', 'other-api'] as const;
@@ -46,6 +47,30 @@ function projectReadCutFailure(value: unknown) {
     if (!stage || !reason || elapsedMs === null || typeof deadlineExpired !== 'boolean' || typeof aborted !== 'boolean')
       return undefined;
     return { stage, reason, elapsedMs, deadlineExpired, aborted };
+  } catch { return undefined; }
+}
+
+const closeStages = ['absent', 'pending', 'confirmed', 'unknown', 'threw'] as const;
+const closeNamespaceStages = ['not-reached', 'pending', 'confirmed', 'identity-mismatch', 'threw'] as const;
+
+/** Only facts from the original false close; getters and native error details are refused. */
+function projectProbeCloseFailure(value: unknown) {
+  try {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const own = (key: string): unknown => {
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      return field && 'value' in field ? field.value as unknown : undefined;
+    };
+    const workCompleted = own('workCompleted'), requestDrain = own('requestDrain');
+    const ownerCleanupUnknown = own('ownerCleanupUnknown');
+    const driver = choice(own('driver'), closeStages), server = choice(own('server'), closeStages);
+    const coordination = choice(own('coordination'), closeStages);
+    const namespace = choice(own('namespace'), closeNamespaceStages);
+    if (typeof workCompleted !== 'boolean' ||
+        !(requestDrain === null || typeof requestDrain === 'boolean') ||
+        !(ownerCleanupUnknown === null || typeof ownerCleanupUnknown === 'boolean') ||
+        !driver || !server || !coordination || !namespace) return undefined;
+    return { workCompleted, requestDrain, ownerCleanupUnknown, driver, server, coordination, namespace };
   } catch { return undefined; }
 }
 
@@ -92,7 +117,9 @@ export function createPassiveNativeDiagnosticCapture() {
           if (!event || atMs === null) continue;
           const failedCut = event === 'read-cut-failed' ? projectReadCutFailure(value) : undefined;
           const failedMetadata = event === 'metadata-read-failed' ? projectMetadataReadFailure(value) : undefined;
-          if (event === 'read-cut-failed' && !failedCut || event === 'metadata-read-failed' && !failedMetadata) continue;
+          const failedClose = event === 'model-probe-close-failed' ? projectProbeCloseFailure(value) : undefined;
+          if (event === 'read-cut-failed' && !failedCut || event === 'metadata-read-failed' && !failedMetadata ||
+              event === 'model-probe-close-failed' && !failedClose) continue;
           const failure = failedMetadata ?? failedCut;
           const entry = { epoch, event, atMs, child: integer(value.child, 5), request: integer(value.request, 4096),
             route: choice(value.route, routes), method: choice(value.method, ['GET', 'POST', 'PUT', 'DELETE']),
@@ -100,7 +127,8 @@ export function createPassiveNativeDiagnosticCapture() {
             contentEncoding: choice(value.contentEncoding, contentEncodings),
             stage: failure?.stage ?? choice(value.stage, stages), code: failure?.reason ?? choice(value.code, codes),
             exitCode: integer(value.exitCode, 255), signal: choice(value.signal, signals),
-            ...(failure ? { deadlineExpired: failure.deadlineExpired, aborted: failure.aborted } : {}) };
+            ...(failure ? { deadlineExpired: failure.deadlineExpired, aborted: failure.aborted } : {}),
+            ...(failedClose ? { close: failedClose } : {}) };
           const size = Buffer.byteLength(JSON.stringify(entry)) + 1;
           if (size > reservedLineBytes) continue;
           if (failedMetadata) {
@@ -392,6 +420,15 @@ function observeOriginalHost(): void {
       if (failure) emit({ event: 'metadata-read-failed', ...failure });
     } catch { /* A passive TEST subscriber cannot replace original metadata failure/cleanup. */ }
   });
+  if (new URL(import.meta.url).search === '?credential-failures=1') {
+    channel('agent-teams:opencode-v2:model-probe-close-failed').subscribe(message => {
+      try {
+        const failure = projectProbeCloseFailure(message);
+        if (failure) emit({ event: 'model-probe-close-failed', ...failure });
+      } catch { /* Passive close observation cannot change the original cleanup result. */ }
+    });
+    return;
+  }
   const childEntry = fileURLToPath(new URL('../../../dist/adapters/providers/OpenCodeV2EmbeddedChild.js', import.meta.url));
   channel('child_process').subscribe(message => {
     const child = record(message).process as ChildProcess | undefined;

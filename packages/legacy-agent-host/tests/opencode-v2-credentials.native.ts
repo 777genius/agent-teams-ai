@@ -10,6 +10,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 
 import { fileHash, startHost, tick } from './fixtures/native-host.ts';
+import { createPassiveNativeDiagnosticCapture } from './fixtures/native-opencode-team/passive-diagnostics.ts';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 import { applyOpenCodeRuntimeSource } from '../dist/composition/applyOpenCodeRuntimeSource.js';
 import { selectOpenCodeV2ManagementModel } from '../dist/composition/openCodeV2ModelSelection.js';
@@ -91,6 +92,8 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
   const steps: string[] = [], failures: string[] = [];
   const requests: { authorizationMatched: boolean; tools: number; promptMatched: boolean; outcome: string }[] = [];
   const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
+  const passive = createPassiveNativeDiagnosticCapture();
+  let passiveUnavailable = false;
   const nativePids = new Set<number>();
   let host: ReturnType<typeof startHost> | undefined, originalFailure: unknown;
   let failedHost: ReturnType<ReturnType<typeof startHost>['facts']> | undefined;
@@ -443,7 +446,11 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
       assert.ok(!host && epochs.length < 4, 'TEST original Host epochs only');
       const original: HostEpoch = { id: epochs.length + 1, pid: 0, line: '', discarded: false };
       host = startHost({ node, entry, root, profile: profilePath, profileHash,
-        onDiagnostic: chunk => diagnostic(original, chunk) });
+        testImports: [new URL('./fixtures/native-opencode-team/passive-diagnostics.ts?credential-failures=1', import.meta.url).href],
+        onDiagnostic: chunk => {
+          diagnostic(original, chunk);
+          try { passive.accept(chunk, original.id); } catch { passiveUnavailable = true; }
+        } });
       original.pid = host.facts().pid ?? 0;
       epoch = original; epochs.push(original);
       assert.ok(original.pid > 1, 'TEST original Host PID');
@@ -663,6 +670,9 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
         ...(failedHost ? { closeFailure: { epoch: epoch?.id ?? null, pid: failedHost.pid ?? null,
           exitCode: failedHost.exitCode, signalCode: failedHost.signalCode,
           stdoutValid: failedHost.stdoutValid, diagnosticBytes: failedHost.diagnosticBytes }, timeoutJournal } : {}),
+        ...(!passed || !cleanup || originalFailure ? { passiveNativeDiagnostics: passive.entries,
+          passiveNativeDiagnosticsState: passiveUnavailable ? 'unavailable' : passive.limited ? 'truncated' : 'bounded',
+          passiveNativeDiagnosticsLimited: passive.limited } : {}),
         vendorAuthQualified: false, desktopQualified: false, releaseQualified: false }, null, 2) + '\n', { mode: 0o600 });
     } catch (error) { cleanupErrors.push(error); }
   }
