@@ -27,16 +27,18 @@ const original = (phase: string, operationRef = candidate.operationRef) => ({
 function harness(provider: 'claude' | 'codex' = 'claude') {
   let active = true, human = true, attached = true;
   const rows: Array<ReturnType<typeof original>> = [original('consumed')];
+  const config = { tenantId: 'TEST-tenant-A', projectId: 'TEST-project-A',
+    sessionId: candidate.sessionRef, generation: binding.generation };
   const snapshot = {
     attached,
     record: {
       nativeReady: true, sealed: false, phase: 'allocated',
-      sessionRef: candidate.sessionRef, binding, inputs: rows,
+      sessionRef: candidate.sessionRef, binding, config: { ...config }, inputs: rows,
     },
   };
   const notices: CapturedPromptSuggestionNotice[] = [];
   const entry = {
-    binding,
+    binding, config,
     profile: { provider, sessionId: candidate.sessionRef },
     team: {
       definition: { members: [{ memberId: binding.memberId, name: 'alice', role: 'member' }] },
@@ -189,11 +191,23 @@ test('private captured Runtime proof refuses substituted operation, revoked cust
   record.hostIncarnation = 'TEST-other-host';
   assert.equal(matches(), false, 'a restarted Host cannot validate an old operation');
   record.hostIncarnation = 'TEST-host-incarnation';
+  record.config.projectId = 'TEST-other-project';
+  assert.equal(matches(), false, 'same member name or input under another project is not authoritative');
+  record.config.projectId = 'TEST-project-A';
+  record.config.tenantId = 'TEST-other-tenant';
+  assert.equal(matches(), false, 'foreign tenant cannot vouch for an original direct message');
+  record.config.tenantId = 'TEST-tenant-A';
+  record.control = { inputId: candidate.inputId, operationRef: candidate.operationRef, phase: 'pending' };
+  assert.equal(matches(), false, 'an in-flight native interrupt revokes old insertion authority');
+  delete (record as {control?: unknown}).control;
   x.setHuman(false);
   assert.equal(matches(), false, 'revoked canonical human DM provenance fails closed');
   x.setHuman(true);
   x.next('admitted');
   assert.equal(matches(), true, 'never-executed queue does not supersede original native turn');
+  x.rows.push({ ...original('admitted', 'TEST-duplicate-operation') });
+  assert.equal(matches(), false, 'duplicate input IDs with different operations cannot launder provenance');
+  x.rows.pop();
   x.next('claimed');
   assert.equal(matches(), false, 'a newer executed native input revokes the earlier candidate');
   projected.nativeReady = false;
