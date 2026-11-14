@@ -159,7 +159,7 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     const baselineIds=new Set(baseline.map(row=>String(row.inputId)));
     assert.equal(baselineIds.size,baseline.length,'original Runtime inputs are unique');
     const messageId='TEST-human-message-'+namespace;
-    const sent=await host.rpc('team.execute',envelope('TEST-send',{
+    const sent=await host.rpc('team.execute',envelope(messageId,{
       operation:'message.send',payload:{
         to:'alice',text:prompt,summary:'TEST native human direct',messageId,actionMode:'do',
       },
