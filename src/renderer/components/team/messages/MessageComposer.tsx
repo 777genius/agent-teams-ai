@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { useDirectMessageQueue } from '@features/manual-message-queue/renderer';
 import { normalizeConversationParticipant } from '@features/team-direct-chats/renderer';
+import { NativeNextPromptRow, useNativeNextPrompt } from '@features/native-prompt-suggestions/renderer';
 import { api } from '@renderer/api';
 import { AttachmentCatalogRefresh } from '@renderer/components/team/attachments/AttachmentCatalogRefresh';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
@@ -626,6 +627,45 @@ const MemberMessageComposer = ({
     disabled: isContextSwitching || sending || isLaunchBlocking,
     isCrossTeam,
   });
+  const conversationMessages = useStore(state =>
+    state.selectedTeamName === teamName ? state.selectedTeamData?.messages : undefined
+  );
+  const latestDirectMessageId = useMemo(() => {
+    const to = normalizeConversationParticipant(effectiveRecipient);
+    let latest: { messageId?: string; timestamp: string } | undefined;
+    for (const message of conversationMessages ?? []) {
+      if (message.from !== 'user' ||
+          normalizeConversationParticipant(message.to) !== to ||
+          !message.messageId || message.groupChatId || message.groupMessageId) continue;
+      if (!latest || message.timestamp >= latest.timestamp) latest = message;
+    }
+    return latest?.messageId ?? null;
+  }, [conversationMessages, effectiveRecipient]);
+  const selectedProviderId =
+    normalizeOptionalTeamProviderId(selectedMember?.laneOwnerProviderId ?? selectedMember?.providerId) ??
+    inferTeamProviderIdFromModel(selectedMember?.model);
+  const suggestionProvider = selectedProviderId === 'anthropic' ? 'claude'
+    : selectedProviderId === 'codex' ? 'codex' : 'unsupported';
+  const insertNativeSuggestion = useCallback((text: string) => {
+    draft.setText(text);
+    focusComposerTextarea();
+  }, [draft.setText, focusComposerTextarea]);
+  const nativeSuggestion = useNativeNextPrompt({
+    teamName,
+    recipient: effectiveRecipient,
+    memberId: selectedMember?.runtimeOwner === 'captured-host' ? selectedMember.hostMemberId : undefined,
+    provider: suggestionProvider,
+    latestDirectMessageId,
+    editable: draft.address.target.kind === 'direct' && !groupChatSelected &&
+      !isCrossTeam && !!isTeamAlive && !sending && !isContextSwitching &&
+      !isLaunchBlocking && draft.isLoaded && !draft.isRestoring,
+    draftText: draft.text,
+    hasAttachments: draft.attachments.length > 0,
+    hasChips: draft.chips.length > 0,
+    editingQueueOrRevision: activeRevision !== null || revisionPreparation != null ||
+      draft.snapshot().restoredOrigin != null,
+    onInsert: insertNativeSuggestion,
+  });
   const handleCycleActionMode = useCallback(() => {
     if (sending) return;
     const modes: ActionMode[] = canDelegate ? ['do', 'ask', 'delegate'] : ['do', 'ask'];
@@ -656,6 +696,7 @@ const MemberMessageComposer = ({
     if (!canSend) return;
     if (!validatePayloads(draft.attachments)) return;
     dismissMentionsRef.current?.();
+    nativeSuggestion.invalidate();
     onSubmitIntent?.();
     const attemptId = createPendingSendId();
     const submissionAddressKey = draft.addressKey;
@@ -762,6 +803,7 @@ const MemberMessageComposer = ({
     focusComposerTextarea,
     onRevisionComplete,
     onSubmitIntent,
+    nativeSuggestion,
     submissionFeedback,
     taskSuggestions,
     teamName,
@@ -1095,6 +1137,17 @@ const MemberMessageComposer = ({
         }}
       />
       {manualQueue.list}
+      {nativeSuggestion.candidate ? (
+        <NativeNextPromptRow
+          text={nativeSuggestion.candidate.text}
+          compact={isCompactLayout}
+          insertLabel={t('messageComposer.suggestions.insert')}
+          dismissLabel={t('messageComposer.suggestions.dismiss')}
+          shortcutLabel={t('messageComposer.suggestions.tab')}
+          onInsert={() => { nativeSuggestion.insert(); }}
+          onDismiss={nativeSuggestion.dismiss}
+        />
+      ) : null}
       <div className="relative">
         <DropZoneOverlay
           active={isDragOver}
@@ -1129,6 +1182,11 @@ const MemberMessageComposer = ({
           projectPath={projectPath}
           onFileChipInsert={draft.addChip}
           onShiftTab={handleCycleActionMode}
+          onNativeNextPromptTab={nativeSuggestion.visible ? nativeSuggestion.onTab : undefined}
+          onNativeNextPromptEscape={nativeSuggestion.visible ? () => {
+            nativeSuggestion.dismiss();
+            return true;
+          } : undefined}
           dismissMentionsRef={dismissMentionsRef}
           extraTips={[t('messageComposer.input.slashTip')]}
           minRows={isCompactLayout ? 1 : 2}
