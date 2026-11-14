@@ -6,7 +6,8 @@ import { createProcessMcpTools } from '../dist/mcp/processTools.js';
 import type { WindowsServiceCapture, WindowsServiceOutcome } from '../dist/owned-process/retainedServiceContracts.js';
 import { createTeamProcessCommands } from '../dist/process/TeamProcessCommands.js';
 import { createTeamProcessMethods } from '../dist/process/createTeamProcessMethods.js';
-import { processReceiptFingerprint } from '../dist/process/validateProcessRecords.js';
+import { processReceiptFingerprint, validateProcessReceipt } from '../dist/process/validateProcessRecords.js';
+import { projectProcessReceipt } from '../dist/process/projectProcessViews.js';
 import type {
   ProcessCommandReceipt,
   ProcessRegisterInput,
@@ -624,6 +625,43 @@ test('Windows Stop uncertainty survives metadata removal and replacement; cold a
   assert.equal(f.settlements(), 1, 'Settle replay reads the same original pending result');
   assert.equal(f.coldUnavailable().lookup('TEST-native-stop')!.state.native, 'observed-absent');
   assert.equal(f.captures(), 1, 'Neither Stop lookup nor a replacement PID can recapture');
+  for (const reason of ['capacity', 'deadline', 'unknown'] as const) {
+    const held = windowsFixture();
+    const registration = await held.commands.windows!.register('TEST-settle-register', { pid: 1001, label: 'TEST settlement' }, held.deadline());
+    const target = (await held.commands.windows!.list(held.deadline()))[0]!;
+    await held.commands.windows!.terminate('TEST-settle-stop', target.processRef, held.deadline());
+    held.absent(); held.settlementReply(reason === 'unknown' ? { state: 'unknown' } : { state: 'not-dispatched', reason });
+    const original = (await held.cold().windows!.lookup('TEST-settle-stop', held.deadline()))!;
+    assert.equal(held.settlements(), 1, 'No retry in the call which first observes no-dispatch');
+    assert.equal(original.nativeSettlementNotDispatched, reason === 'unknown' ? undefined : true);
+    assert.equal(JSON.stringify(projectProcessReceipt(original)).includes('nativeSettlement'), false);
+    if (reason === 'unknown') {
+      await held.cold().windows!.lookup('TEST-settle-stop', held.deadline());
+      assert.equal(held.settlements(), 1, 'Unknown permits only the original intent lookup');
+      held.settleLate();
+      assert.deepEqual((await held.cold().windows!.lookup('TEST-settle-stop', held.deadline()))!.nativeSettlement, original.nativeSettlement);
+      continue;
+    }
+    const legacy = structuredClone(original); delete legacy.nativeSettlementNotDispatched;
+    legacy.fingerprint = processReceiptFingerprint(legacy, digest);
+    assert.notEqual(legacy.fingerprint, original.fingerprint); validateProcessReceipt(legacy, digest);
+    for (const invalid of [Object.assign(structuredClone(original), { nativeSettlementNotDispatched: false }),
+      Object.assign(structuredClone(registration), { nativeSettlementNotDispatched: true })]) {
+      const malformed = invalid as unknown as ProcessCommandReceipt;
+      malformed.fingerprint = processReceiptFingerprint(malformed, digest);
+      assert.throws(() => validateProcessReceipt(malformed, digest), /hold/);
+    }
+    held.settlementReply(); held.pause('admission');
+    const retry = held.cold().windows!.lookup('TEST-settle-stop', held.deadline()); await held.atPause();
+    const concurrent = (await held.cold().windows!.lookup('TEST-settle-stop', held.deadline()))!;
+    assert.equal(concurrent.nativeSettlementNotDispatched, undefined); assert.equal(held.settlements(), 1);
+    assert.notDeepEqual(concurrent.nativeSettlement, original.nativeSettlement);
+    held.release(); const settled = (await retry)!;
+    assert.deepEqual(settled.nativeSettlement, concurrent.nativeSettlement);
+    await held.cold().windows!.lookup('TEST-settle-stop', held.deadline());
+    assert.equal(held.settlements(), 2); assert.equal(held.stops(), 1); assert.equal(held.captures(), 1);
+    assert.equal(original.nativeSettlementNotDispatched, true, 'Earlier no-dispatch receipt stays immutable');
+  }
 });
 
 test('Windows natural absence stays on one original register across principals and cold reads, without a Stop', async () => {
