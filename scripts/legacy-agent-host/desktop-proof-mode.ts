@@ -311,6 +311,7 @@ export async function prepareDesktopProofMode(
     nativeGeneration: 'v2', memberName: 'alice', uiGeneratedMessageIds: true,
     nativeMessageImage: conversationMode && chatAttachments,
     captureHistoryMarkers: resumeMode, allowModelProbes: resumeMode,
+    ...(nativeStopMode ? { configuredLaunchPreparation: true as const } : {}),
     holdInitialTurnResponse: mode === 'native-quit-ui',
     principalId: () => {
       if (!resumeMode) return 'alice-session';

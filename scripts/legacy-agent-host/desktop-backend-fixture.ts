@@ -79,6 +79,7 @@ export async function prepareDesktopBackendFixture(
     seedUiPreferences?: boolean;
     seedCodexApiKey?: boolean;
     launchDialog?: boolean;
+    configuredLaunchSetup?: true;
     creation?: boolean;
     reviewUi?: boolean;
     nativeReviewUi?: boolean;
@@ -241,7 +242,7 @@ export async function prepareDesktopBackendFixture(
           {
             memberId: 'alice-id',
             name: 'alice',
-            role: options.nativeChatAttachments || options.nativeGroupChats ? 'lead' : 'member',
+            role: options.configuredLaunchSetup || options.nativeChatAttachments || options.nativeGroupChats ? 'lead' : 'member',
           },
         ],
         grants: [
