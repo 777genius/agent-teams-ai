@@ -60,6 +60,8 @@ jobs:
           echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $root/agent-teams-provider-implementations-0.0.0.tgz" | sha256sum --check
           echo "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db  $root/agent-teams-provider-session-contracts-0.0.0.tgz" | sha256sum --check
           tar -tzf "$root/agent-teams-provider-implementations-0.0.0.tgz" | grep -Fx 'package/dist/prompt-suggestions.js' >/dev/null
+          mkdir -p validated-provider-archive
+          cp "$root/agent-teams-provider-implementations-0.0.0.tgz" validated-provider-archive/
 
       - name: Transfer only the SHA-verified archive to a separate write job
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -67,7 +69,7 @@ jobs:
           name: native-prompt-suggestions-source-74991c21
           retention-days: 1
           if-no-files-found: error
-          path: .provider-native-74991c21/.checked/agent-teams-provider-implementations-0.0.0.tgz
+          path: validated-provider-archive/agent-teams-provider-implementations-0.0.0.tgz
 
   stage-exact-archive:
     needs: reproduce-source
