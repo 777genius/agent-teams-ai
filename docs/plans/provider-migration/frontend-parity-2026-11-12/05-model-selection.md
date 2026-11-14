@@ -1834,3 +1834,17 @@ The original Runtime allocation timestamp is observed after allocated publicatio
 Freeze the one-file full source/diff and verify all three preimages, exact public signature/result shape, private-pair non-escape, worker-body inverse and unchanged currentness call sites. An independent peer must read the shared-policy freshness and post-target guard, including the existing deferred and file-backed branches.
 
 Root runs the unchanged original failing Create case/file and saved-team-model-probe negative guard cases, normal Host build/type/source gates, then the complete original serialized Host suite. Their source preimages remain `c24c405663019f72cbd09f66705971fcd04c4daa` and `ff791b368ffb6c753d89fc3f5778e57782d6a949`. No new case, weakened assertion, synthetic clock, timeout increase, additional probe or repeated-until-green native campaign is authorized. Passing the isolated case alone does not close the full-suite failure. Source remains zero until this appendix is published and root grants the exact one-path GO.
+
+## 32. Preserve original allocation timestamps in the existing Create failure diagnostic
+
+The ordinary serialized Host suite still has one original 1000 ms allocation failure after §31 (raw log `f303ddb8e80513399f8e5a2a319f3b19bcb69c84`). The single reviewed full diagnostic run passed and produced no failure-only timing rows; measured summary `da12af8ea47c1bb656004bb48fa8ea67a4393424` does not identify a late member or establish a fix.
+
+The sole writable path is `packages/legacy-agent-host/tests/team-create-launch.test.ts`, common preimage `c24c405663019f72cbd09f66705971fcd04c4daa` in the three checked §31 source heads. No production, workflow, profiler, dependency or other test path is added.
+
+The fixture already records each first allocation time in `allocatedMembers` from its original `checkReadiness` callback. Add a read accessor returning copied `{ memberId, allocatedAtMs }` rows from that existing map, without exposing the mutable map. Invoke it exactly once in the original failing case's existing first `t.diagnostic(JSON.stringify(...))` catch output, alongside provider/worktree and the original failure; never from the success path or allocation observer.
+
+The existing later launch snapshot already retains launch IDs, member IDs, current attempt IDs, `startedAtMs` and `deadlineMs`. Correlate the new rows by the original member ID; preserve an absent allocation as an absent row, never zero/current time or inferred success. No extra Runtime/filesystem read, clock observation, await, action, timer, observer, derived acceptance value or new diagnostic invocation is introduced. The snapshot fallback, original error rethrow and finally cleanup remain exact.
+
+Keep every original case declaration/assertion, the original maximum-deadline wait, strict timestamp-before-own-deadline checks, 1000 ms claims, inputs/counters and skips unchanged. This is failure evidence only; it does not change an outcome or close the intermittent Host failure.
+
+Freeze the minimal one-file diff/full inverse and obtain one independent source peer after plan publication and explicit root SOURCE GO. Root owns integration and ordinary CI; this appendix requires no new case, benchmark, profiler or repeated diagnostic/full-suite campaign. Source remains zero until that GO.
