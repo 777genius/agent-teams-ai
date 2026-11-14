@@ -256,6 +256,9 @@ function runtime(value: unknown, request: BackendOperationRequest): BackendRunti
       };
     }),
   };
+  if (request.operation === 'runtime.read' && request.payload.nativePromptProof !== undefined)
+    result.nativePromptCurrent = boolean(source.nativePromptCurrent);
+  // Ordinary Runtime reads must never project private suggestion provenance.
   if (source.sessionCommands !== undefined)
     result.sessionCommands = projectNativeSessionCommands(source.sessionCommands, result);
   if (source.attachmentCapabilities !== undefined) {

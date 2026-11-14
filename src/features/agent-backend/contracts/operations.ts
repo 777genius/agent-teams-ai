@@ -340,6 +340,8 @@ export interface BackendRuntimeSnapshot {
   custody: 'owned' | 'released' | 'unknown';
   nativeReady: boolean;
   attached: boolean;
+  /** Only present for an explicitly requested read-only original operation proof. */
+  nativePromptCurrent?: boolean;
   inputs: { inputId: string; phase: string; terminal?: 'succeeded' | 'failed' | 'cancelled' }[];
   interactions: {
     interactionRef: string;
