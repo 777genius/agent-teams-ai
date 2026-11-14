@@ -387,7 +387,7 @@ class CdpClient {
         lastTransientError = null;
       } catch (error) {
         if (
-          !/execution context was destroyed|cannot find (?:default )?execution context/i.test(
+          !/execution context was destroyed|cannot find (?:default )?execution context|CDP command timed out: Runtime\\.evaluate/i.test(
             String(error)
           )
         ) {
