@@ -179,6 +179,7 @@ export class TeamOwner {
     this.deliveryAuthority = createTeamDeliveryAuthority({
       binding: this.binding,
       store: this.store,
+      readInbox: (memberName) => this.policy.readInbox(memberName),
       state: () => this.state(),
       authorize: (principal, permission) => this.authorize(principal, permission),
       runtimeBindings: this.runtimeBindings,
@@ -408,6 +409,11 @@ export class TeamOwner {
     action: 'read' | 'admit' | 'dispatch' | 'control' = 'admit'
   ): boolean {
     return this.deliveryAuthority.authorizeIntent(raw, action);
+  }
+
+  /** Host-only. Original Team message, sender, grants and native delivery must all match. */
+  isOriginalHumanDirectDelivery(raw: ImmutableDelivery): boolean {
+    return this.deliveryAuthority.isOriginalHumanDirect(raw);
   }
 
   private finishBootstrap(state: OwnerState): void {
