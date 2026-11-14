@@ -4959,3 +4959,42 @@ Production capture/currentness, source identities, private initial admission, al
 
 Freeze the one-line source diff and its full inverse for all three identical variants. Independent plan review and publication precede source; independent source review precedes publication. Root runs the existing Host test compiler and source guard with the coherent cut, then the same original native mixed Restore prerequisite and Desktop Codex job through ordinary CI. No new named test or native campaign is added. Passing the controlled boundary alone does not qualify native startup, Host cleanup, Restore or Desktop Resume; all remain required on the final CI head.
 
+
+
+## 100. Preserve the original Linux V2 credential close failure evidence
+
+### 100.1 Observed failure and limit of the diagnosis
+
+This is a TEST-only visibility correction, not a credential or cleanup correction. Original parent run `43594538500`, job `132446132528`, on `09fefda4c255fa172a52b89b2815d18085c79afc` reaches the fourth, deliberately unanswered model request. The original `TEST-unverified-connect` returns a held receipt without confirmed rejection. The test then passes its original child census and process-group absence checks, but the third Host exits with code 1 during the original `stop()`. The finalizer repeats its already-existing close and reports the same mandatory exit-zero failure. The 240000 ms test limit did not fire.
+
+Full log `7703a17279d11010da7b7c2f104f2537f2c73966`, verified original artifact `14115199237` (11764 bytes; SHA256 `1768a6098f92f365e9cd66c64561c1c7a1c9208c7e2d132b36d02fae7250f73a`), credential receipt `948acc38ad3f6c037e067b6e7d0000f15d183808`, and read-only assessment `c1bec38070ae751ec8e5bc472661bf1c91eaa28b` are the evidence. The receipt is INCOMPLETE with cleanup false. It retains only the two earlier successful Hosts because both existing `hosts.push(host.facts())` calls follow successful `await host.close()`.
+
+The existing native-host fixture retains PID, exit code, signal, stdout validity, diagnostic byte count and method-only frame facts. It does not retain a stderr tail. Production CLI/server disposal does not emit the private failing cleanup substage. No raw stderr tail or precise SDK/body/namespace cause can therefore be reconstructed from this artifact. Physical process absence does not prove release of a request lease, credential resource or logical cleanup owner.
+
+Keep unrelated results separate: the same parent Linux artifact's ordinary embedded V2 case passed with 11 model requests and cleanup true. Original native Darwin ARM64 and x64 jobs `132446162489` and `132446162538` also contain preceding embedded V2 PASS receipts with 11 requests and cleanup true; their later executable-custody failures are the distinct POSIX qualification boundary described in the assessment and §75. None of those passes completes the failed Linux credential case.
+
+### 100.2 Exact source scope
+
+Write exactly one existing TEST file, identically on the three repair variants:
+
+| Path | Reviewed preimage |
+| --- | --- |
+| `packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts` | `77f172ba115dfb147a271fda91c6f466f2e397e5` |
+
+The current native repair `e9a82919ccf752fab6e140b273103ec292b09e3d` still has that exact 621-line file. Root verifies the identical parent/qualification preimages before publication. No common fixture or production path is writable. Read-only source anchors are `tests/fixtures/native-host.ts` at `429d9dbcfe93733647aacd4da6973e3f2f07631b`, `FileManagementCommandStore.ts` at `2d6031ae7c0c0aad5d637581f5242714536ac215`, `commandRecords.ts` at `9cd092f5d78e9a80cb922d65a29be5f2b7b96976`, `openCodeV2CredentialRecord.ts` at `46ee236586413b223d97168979b7eadffe8504b2`, and management `identity.ts` at `d4e5631330f08ccc4138353f6e2b5f49f7cac01f`.
+
+### 100.3 Finite failure observation in the original producer
+
+Preserve both original close calls and all control flow deciding cleanup, including their original errors. In the existing finalizer's failed close branch, retain the facts of that exact original Host and its existing epoch in a separate failure-only receipt field. Project only epoch/PID, exitCode, signalCode, stdoutValid and diagnosticBytes. The successful `hosts` field and its existing assertions retain their meaning. This is an observation after the same close attempt, not another close, wait, signal or native request.
+
+For the original timeout-intent branch only, retain the non-secret original command matching tuple locally before its existing credential RPC: commandId, profileId, configRevision, providerId and the existing management fingerprint. Never serialize that tuple's fingerprint or a key. If this branch was reached and the failed original Host has positively exited, the existing finalizer may make one bounded read of that exact command's already-existing journal file before the original removal/receipt write. Derive its filename with the existing `managementDigest(commandId)` rule; do not list/search records or choose a newer intent.
+
+Use a single read-only, no-follow descriptor, a regular-file check, the existing 64 KiB ordinary-record limit, bounded bytes and before/after identity/size checks; close this descriptor in finally. Validate the stored digest with the existing management digest, parse with the existing stored credential schema, and compare the full retained input tuple. This is a TEST observation, never a new store instance, writer, recovery or admission. A missing, malformed, mismatched, oversized, changing or unreadable record produces an explicit unavailable diagnostic; a not-reached original intent or nonterminal Host permits no journal read. Diagnostic failure must not replace the original test/cleanup error.
+
+The successful observation emits only the closed credential phase, resourceHeld boolean, nullable original V2 progress phase, verification-present boolean and nullable verification outcome. No record body, command/profile identifiers, paths, fingerprints, resource digests, credential IDs, keys, arbitrary error strings or stderr content is emitted. The observation can establish whether that exact original command still records retained resource debt and its last durable stage. It cannot prove which SDK/request/native cleanup sub-operation failed, nor turn an absent or false debt bit into cleanup success.
+
+The existing status remains PASS only after the original whole scenario and cleanup succeed. Keep cleanup errors, exit-zero/signal/stdout checks, physical PID/group absence, metadata lineage, source integrity, all four model requests, four original Host epochs, cold exact-intent assertions and receipt secret-exclusion checks unchanged. No production change, new owner, RPC, model/native action, timer, wait, retry, test case, workflow, relaxed oracle or larger budget is authorized.
+
+### 100.4 Review and acceptance
+
+Freeze the single-file diff, full source and exact inverse; retain the original case declaration and all original assertions, with normal source-size limits. Independent plan review/publication precedes source; independent source review precedes publication. Root runs the existing Host test and script type gates for the coherent cut. The next ordinary original Linux V2 credential job remains the actual acceptance: a continuing failure must include the failing Host facts and an honest bounded original-record observation. A richer INCOMPLETE receipt is diagnostic progress only, not credential, native cleanup or release qualification.
