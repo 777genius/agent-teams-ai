@@ -79,6 +79,8 @@ interface BackendShellOptions {
   env: Readonly<Record<string, string | undefined>>;
   /** Existing trusted-local HTTP/SSE publisher, no second transport. */
   publishHttpNativePromptSuggestion?: (candidate: NativeNextPromptCandidate) => void;
+  /** Global opt-in captured from trusted Main config before first Host spawn. */
+  nativeNextPromptEnabled?: boolean;
 }
 
 function withoutHash(value: string): string | null {
@@ -611,6 +613,7 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
     bindingDirectory: join(options.userDataPath, 'agent-backend', 'bindings'),
     modelIntents: new FileTeamModelProbeIntents(join(options.userDataPath, 'agent-backend', 'team-model-intents'), options.userDataPath),
     commandRunner: () => desktopCommandRunner,
+    nativeNextPromptEnabled: options.nativeNextPromptEnabled === true,
     onNativePromptSuggestion(candidate) {
       // UI selection is resolved from the captured descriptor, not renderer data.
       const current = options.captureActiveSelection();
