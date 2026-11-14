@@ -5,6 +5,7 @@ import { storedExtensionCommandSchema } from '../extensions/extensionRecords.js'
 import { modelProbeLimitsSchema } from './modelLimits.js';
 import { runtimeSourceRefusalSchema } from './runtimeSourceVerification.js';
 import { openCodeV2CredentialProgressSchema } from './openCodeV2CredentialRecord.js';
+import { openCodeV2NativeFileWitnessSchema } from '../adapters/providers/OpenCodeV2SelectedFileKey.js';
 
 const id = z.string().min(1).max(256);
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -104,21 +105,31 @@ const readinessPolicyScopeSchema = z.union([
 ]).refine(value => new Set(value.sources.map(row => row.path)).size === value.sources.length &&
   new Set(value.providers.map(row => row.providerId)).size === value.providers.length &&
   (!value.invalid || value.providers.length === 0));
-export const localModelReadinessOriginSchema = z.object({
-  schemaVersion: z.literal(1), kind: z.enum(['create', 'team']),
-  ownerDigest: hash, contextId: id, commandId: id, selectionDigest: hash,
-  workspaces: z.array(z.object({
-    path: originPath, project: readinessPolicyScopeSchema, global: readinessPolicyScopeSchema,
-  }).strict()).min(1).max(256),
-  approval: z.object({
+const readinessGlobalPolicyScopeSchema = z.union([
+  readinessPolicyScopeSchema,
+  z.object({ notConsulted: z.literal('project-precedence') }).strict(),
+]);
+const readinessApprovalSchema = z.union([
+  z.object({
     source: readinessSourceReferenceSchema,
     approved: z.array(z.object({
       configPath: originPath, providerId: id, baseUrl: z.string().min(1).max(2048),
     }).strict()).max(256),
   }).strict(),
+  z.object({ notConsulted: z.literal('no-private-target') }).strict(),
+]);
+export const localModelReadinessOriginSchema = z.object({
+  schemaVersion: z.literal(1), kind: z.enum(['create', 'team']),
+  ownerDigest: hash, contextId: id, commandId: id, selectionDigest: hash,
+  workspaces: z.array(z.object({
+    path: originPath, project: readinessPolicyScopeSchema, global: readinessGlobalPolicyScopeSchema,
+  }).strict()).min(1).max(256),
+  approval: readinessApprovalSchema,
 }).strict().refine(value => new Set(value.workspaces.map(row => row.path)).size === value.workspaces.length &&
-  value.workspaces.every(row => row.project.sources.length === 4 && row.global.sources.length === 2) &&
-  value.workspaces.reduce((count, row) => count + row.project.providers.length + row.global.providers.length, 0) <= 256 &&
+  value.workspaces.every(row => row.project.sources.length === 4 &&
+    ('notConsulted' in row.global || row.global.sources.length === 2)) &&
+  value.workspaces.reduce((count, row) => count + row.project.providers.length +
+    ('notConsulted' in row.global ? 0 : row.global.providers.length), 0) <= 256 &&
   Buffer.byteLength(JSON.stringify(value)) <= 256 * 1024);
 export type LocalModelReadinessOrigin = z.infer<typeof localModelReadinessOriginSchema>;
 export type ReadinessSourceReference = z.infer<typeof readinessSourceReferenceSchema>;
@@ -168,6 +179,35 @@ export const nativeLocalReadinessEvidenceSchema = z.object({
     !value.reasons.includes('model-missing') &&
     (value.metadata.contextTokens === null || value.metadata.contextTokens >= 16384)));
 export type NativeLocalReadinessEvidence = z.infer<typeof nativeLocalReadinessEvidenceSchema>;
+
+/** Original preparation provenance and exact cleanup scope; never a public selection. */
+export const modelReadinessProbeScopeSchema = z.object({
+  schemaVersion: z.literal(1),
+  kind: z.enum(['create', 'team', 'native']),
+  teamBindingDigest: hash.optional(),
+  actionDigest: hash,
+  selectionDigest: hash,
+  sourceRevision: id,
+  rosterRevision: id,
+  mechanismDigest: hash,
+  workspace: originPath,
+  accountDigest: hash.optional(),
+  cutoff: z.number().int().positive().safe(),
+  destinationKeys: z.array(id).min(1).max(256),
+}).strict().refine(value => new Set(value.destinationKeys).size === value.destinationKeys.length &&
+  (value.kind === 'create' || value.teamBindingDigest !== undefined));
+export type ModelReadinessProbeScope = z.infer<typeof modelReadinessProbeScopeSchema>;
+
+/** A private reference to one immutable released management receipt, not a cached outcome. */
+export const modelReadinessReferenceSchema = z.object({
+  commandId: id, profileId: id, configRevision: id, context: hash,
+  fingerprint: hash, selectionDigest: hash, resourceId: hash,
+  purpose: z.enum(['ordinary', 'native-local-readiness-v1']),
+  expiresAt: z.number().int().positive().safe(),
+  preparationDigest: hash, mechanismDigest: hash,
+}).strict();
+export type ModelReadinessReference = z.infer<typeof modelReadinessReferenceSchema>;
+
 const storedLocalReadinessSchema = z.object({
   context: hash, selectionDigest: hash, evidence: nativeLocalReadinessEvidenceSchema,
 }).strict();
@@ -180,6 +220,9 @@ export const storedModelProbeSchema = z
     readiness: storedLocalReadinessSchema.optional(),
     localModelReadinessOrigin: localModelReadinessOriginSchema.optional(),
     localModelReadinessPreparation: readinessPreparationAnchorSchema.optional(),
+    readinessScope: modelReadinessProbeScopeSchema.optional(),
+    nativeFileKeyWitness: openCodeV2NativeFileWitnessSchema.optional(),
+    readinessRetired: z.literal(true).optional(),
     modelId: id,
     effort: z
       .enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'])
@@ -192,6 +235,12 @@ export const storedModelProbeSchema = z
     ok: z.boolean(),
   })
   .strict()
+  .refine(value => value.readinessScope === undefined || value.context !== undefined)
+  .refine(value => value.nativeFileKeyWitness === undefined || value.phase === 'completed' && value.ok &&
+    !value.resourceHeld && value.context !== undefined &&
+    (value.purpose === 'native-local-readiness-v1' && value.readiness?.evidence.ordinary === 'confirmed' &&
+      value.readiness.evidence.decision === 'allow' ||
+      value.purpose === undefined && value.readinessScope?.kind === 'native'))
   .refine((value) => value.purpose === undefined || value.context !== undefined)
   .refine(value => value.localModelReadinessOrigin === undefined ||
     value.purpose === 'native-local-readiness-v1' && value.localModelReadinessPreparation !== undefined &&

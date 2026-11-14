@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import {
   mkdirSync,
+  lstatSync,
   writeFileSync,
   mkdtempSync,
   readFileSync,
@@ -11,7 +12,7 @@ import {
   rmSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, parse as parsePath, sep } from 'node:path';
 import { test } from 'node:test';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
@@ -20,11 +21,24 @@ import { RuntimeTeamCoordinator } from '../dist/composition/RuntimeTeamCoordinat
 import { executeTeamModelProbe, teamModelProbeProfile } from '../dist/composition/teamLaunchModelProbe.js';
 import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
 import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
+import { storedModelProbeSchema } from '../dist/management/commandRecords.js';
+import { managementDigest } from '../dist/management/identity.js';
+import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
+import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
+import { captureOpenCodeReadinessOrigin, captureReadinessPreparation } from '../dist/adapters/providers/OpenCodeReadinessOrigin.js';
+import { AcceptedOpenCodeV2FileKey, DeferredOpenCodeV2FileKey, createOpenCodeV2FileMaterialization,
+  openCodeV2SelectedSourceReference, selectedFilePaths } from '../dist/adapters/providers/OpenCodeV2SelectedFileKey.js';
+import { captureOpenCodeProbeAccount, capturePreparedModelReference, captureNativeRestartReadiness,
+  attachMemberModelReadiness, consumeMemberModelReadiness } from '../dist/composition/prepareTeamModelReadiness.js';
+import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
+import { TeamLaunchOwner } from '../dist/team-launch/TeamLaunchOwner.js';
+import { modelReadinessMechanismDigest } from '../dist/team-launch/launchReadiness.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
 import { resolveTeamModelProbeRecipe, applyTeamModelProbeSelection } from '../dist/composition/teamModelProbeRecipe.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import { runtimeSourceSelectionFixture } from './fixtures/runtime-source-selection.ts';
-import type { HostedTeam } from '../dist/composition/MemberEntry.js';
+import type { HostedTeam, MemberEntry } from '../dist/composition/MemberEntry.js';
+import type { LocalModelReadinessOrigin, ReadinessSourceReference, NativeLocalReadinessEvidence } from '../dist/management/commandRecords.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ProviderManagementProfile } from '../dist/management/profile.js';
 import type { TeamModelProbeSelection } from '../dist/composition/teamLaunchModelProbe.js';
@@ -412,8 +426,25 @@ for (const provider of ['claude', 'codex', 'opencode'] as const)
         'running'
       );
       assert.equal(runs, 1);
+      const first = store.read(request.commandId);
       await executeTeamModelProbe({ ...request, action: 'start' });
       assert.equal(runs, 1);
+      if (provider === 'opencode') {
+        const original = store.read(request.commandId);
+        assert.equal(original?.kind, 'model.probe');
+        if (original?.kind !== 'model.probe') assert.fail('expected original TEST probe');
+        assert.equal(original.readinessScope?.teamBindingDigest, runtimeDigest(f.team.definition.binding));
+        assert.equal(original.readinessScope?.selectionDigest, runtimeDigest(payload));
+        assert.deepEqual(original.readinessScope?.destinationKeys,
+          [runtimeDigest({ launchId: payload.launchId, memberId: payload.memberId })]);
+        assert.equal(first?.kind, 'model.probe');
+        if (first?.kind !== 'model.probe') assert.fail('expected first TEST probe');
+        assert.equal(original.readinessScope?.cutoff, first.readinessScope?.cutoff,
+          'same-ID replay retains the first cutoff');
+        assert.ok(original.expiresAt <= original.readinessScope!.cutoff);
+        await probes.cancelTeamPreparations(runtimeDigest({ ...f.team.definition.binding, teamId: 'TEST-other-team' }));
+        assert.equal(closes, 0, 'cleanup cannot select another Team by member name');
+      }
       if (change === 'roster') {
         const roster = f.team.connection.readRoster();
         f.team.connection.replaceRoster({
@@ -465,6 +496,17 @@ for (const provider of ['claude', 'codex', 'opencode'] as const)
       );
       assert.equal(closes, 1);
       assert.equal(runs, 1);
+      if (provider === 'opencode') {
+        probes.seal();
+        await probes.cancelTeamPreparations(runtimeDigest(f.team.definition.binding));
+        const retired = store.read(request.commandId);
+        assert.equal(retired?.kind, 'model.probe');
+        if (retired?.kind !== 'model.probe') assert.fail('expected retained TEST probe');
+        assert.equal(retired.readinessRetired, true, 'original cleanup survives seal and grant/source changes');
+        assert.equal(retired.resourceHeld, false);
+        assert.equal(retired.ok, false, 'late positive completion cannot revive retired evidence');
+        assert.equal(closes, 1);
+      }
       if (change === 'revoke') assert.throws(f.view, { code: 'forbidden' });
       else assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
       const cold = make();
@@ -545,6 +587,201 @@ test('Team probe read rejects completed evidence after physical config-directory
     'completed'
   );
   assert.equal(runs, 1);
+
+  // Real source/record/launch readers with an explicitly synthetic native issuer, not native qualification.
+  for (const mode of ['native', 'local', 'settings', 'missing', 'copied', 'foreign', 'unclean', 'late'] as const) {
+    const own = fixture(t), providerId = 'test-local', modelId = 'TEST-model';
+    const home = join(own.root, 'file-home'), data = join(own.root, 'file-data');
+    mkdirSync(home); mkdirSync(data);
+    const file = join(own.root, 'TEST-selected.key'), config = join(own.root, 'opencode.json');
+    writeFileSync(file, 'TEST-original-private-key', { mode: 0o600 });
+    writeFileSync(config, JSON.stringify({ provider: { [providerId]: { npm: '@ai-sdk/openai-compatible',
+      options: { baseURL: 'http://127.0.0.1:9/v1', apiKey: '{file:TEST-selected.key}' },
+      models: { [modelId]: { name: 'TEST-model' } } } } }), { mode: 0o600 });
+    const member = runtimeMemberProfileSchema.parse({ provider: 'opencode', nativeGeneration: 'v2',
+      protocolRevision: '2.1.4', teamId: own.team.definition.binding.teamId, memberId: 'team-lead',
+      principalId: 'TEST-agent', sessionId: 'TEST-file-session', generation: 1,
+      configRevision: 'TEST-file-config', accountBinding: 'TEST-file-account', model: modelId, cwd: own.root,
+      executable: { path: join(own.root, 'TEST-bun'), sha256: 'a'.repeat(64) }, endpoint: 'http://127.0.0.1:9',
+      environment: { HOME: home, USERPROFILE: home, XDG_CONFIG_HOME: home, XDG_DATA_HOME: data, XDG_CACHE_HOME: home },
+      embedded: { directory: join(own.root, 'engine'), manifestSha256: 'b'.repeat(64), version: '2.1.4',
+        platform: process.platform, arch: process.arch, externalDirectory: 'deny' },
+      nativeOptions: { providerId, agent: 'build' },
+      limits: { queuedInputs: 1, inputBytes: 4096, outputBytes: 8192, outputEvents: 128,
+        pendingInteractions: 1, timeoutMs: 1000 },
+    });
+    assert.equal(member.provider, 'opencode'); if (member.provider !== 'opencode') assert.fail();
+    member.embedded!.configurationSource = captureOpenCodeConfigurationSource(member).reference;
+    const management = teamModelProbeProfile(member);
+    assert.equal(management.provider, 'opencode'); if (management.provider !== 'opencode') assert.fail();
+    const configuration = captureOpenCodeV2Configuration(management, { providerId, modelId }, () => true);
+    const deferred = configuration.selectedFile; assert.ok(deferred);
+    const request = { commandId: 'TEST-file-' + mode, profileId: management.profileId,
+      configRevision: management.configRevision, providerId, modelId, context: runtimeDigest({ mode }) };
+    const target = { profileId: management.profileId, configRevision: management.configRevision,
+      selectionDigest: runtimeDigest(management), resourceId: runtimeDigest({ account: management.accountBinding, mode }) };
+    const recordStore = new FileManagementCommandStore(own.root);
+    let closed = false, nativeCalls = 0, witnessReads = 0;
+    let complete!: (ok: boolean) => void;
+    let accepted: AcceptedOpenCodeV2FileKey | undefined;
+    const evidence = (): NativeLocalReadinessEvidence => ({ schemaVersion: 1, ordinary: 'confirmed',
+      coordination: 'not-applicable', decision: 'allow', reasons: ['not-applicable'],
+      routeDigest: 'a'.repeat(64), configurationDigest: 'b'.repeat(64),
+      accountDigest: managementDigest({ binding: management.accountBinding, key: accepted?.scopeDigest ?? null,
+        configuredKey: '{file:TEST-selected.key}' }),
+      metadata: { provider: 'custom', tools: null, modelListed: null, contextTokens: null,
+        parameterCount: null, configuredContextTokens: null, trainedContextTokens: null, contextSource: 'unknown' } });
+    const ownerOptions = { store: recordStore, fence: new ManagementResourceFence(recordStore.list()),
+      assertWriter() {}, select: () => target,
+      readinessOriginCurrent: (origin: LocalModelReadinessOrigin) =>
+        captureOpenCodeReadinessOrigin(origin, management, providerId, () => true).isCurrent(),
+      prepare: () => ({ timeoutMs: 1000,
+        run: () => {
+          nativeCalls++;
+          if (mode !== 'missing') {
+            const descriptor = deferred.descriptor, selected = mode === 'foreign'
+              ? DeferredOpenCodeV2FileKey.capture({ ...descriptor, origin: {
+                ...descriptor.origin, value: descriptor.rawKey }, providerId: 'test-foreign',
+                environment: management.environment, isCurrent: () => true }) : deferred;
+            const materializer = createOpenCodeV2FileMaterialization(selected.descriptor, () => {});
+            const actual = selectedFilePaths(selected.descriptor).map(path => materializer.readFileString(path).trim()).join('');
+            const nonce = 'c'.repeat(64), integrationId = selected.descriptor.providerId;
+            const issuer = { nonce, pid: process.pid, integrationId,
+              reference: openCodeV2SelectedSourceReference(selected.descriptor, nonce, integrationId, 'fresh') };
+            accepted = AcceptedOpenCodeV2FileKey.accept(selected, materializer.issue(actual, issuer), issuer, () => true);
+          }
+          return new Promise<boolean>(resolve => { complete = resolve; });
+        },
+        readiness: evidence,
+        nativeFileKeyWitness: () => {
+          assert.equal(closed, true, 'the original owner must close before reading proof'); witnessReads++;
+          return mode === 'copied' ? { ...accepted } : accepted;
+        },
+        close: async () => { closed = true; return mode !== 'unclean'; },
+      }) };
+    const original = new ModelProbeOwner(ownerOptions);
+    try {
+      const admittedAt = Date.now(), cutoff = admittedAt + 1000;
+      const scope = { schemaVersion: 1 as const, kind: mode === 'local' ? 'team' as const : 'native' as const,
+        teamBindingDigest: runtimeDigest(own.team.definition.binding), actionDigest: runtimeDigest(request.commandId),
+        selectionDigest: runtimeDigest({ providerId, modelId }), sourceRevision: 'TEST-source', rosterRevision: 'TEST-roster',
+        mechanismDigest: modelReadinessMechanismDigest(management), workspace: management.cwd, cutoff,
+        destinationKeys: [runtimeDigest({ launchId: 'TEST-file-run', memberId: member.memberId })] };
+      const reference = (path: string): ReadinessSourceReference => {
+        const directories: unknown[] = []; let directory = parsePath(path).root;
+        for (const part of ['', ...dirname(path).slice(directory.length).split(sep).filter(Boolean)]) {
+          if (part) directory = join(directory, part);
+          try { const stat = lstatSync(directory); directories.push([directory, stat.dev, stat.ino, stat.mode, stat.uid]); }
+          catch (error) { if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+            return { path, root: own.root, present: false,
+              digest: managementDigest({ path, root: own.root, directories, missing: directory }) }; }
+        }
+        try { const stat = lstatSync(path); return { path, root: own.root, present: true,
+          digest: managementDigest({ path, root: own.root, directories,
+            file: [stat.dev, stat.ino, stat.mode, stat.uid, stat.size, stat.mtimeMs, stat.ctimeMs, stat.nlink],
+            bytes: createHash('sha256').update(readFileSync(path)).digest('hex') }) }; }
+        catch (error) { if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+          return { path, root: own.root, present: false, digest: managementDigest({ path, root: own.root, directories, missing: path }) }; }
+      };
+      const owner = { ownerId: 'TEST-file-owner' }, selection = { providerId, modelId };
+      const origin: LocalModelReadinessOrigin = { schemaVersion: 1, kind: 'team', ownerDigest: managementDigest(owner),
+        contextId: 'TEST-file-context', commandId: 'TEST-file-action', selectionDigest: managementDigest(selection),
+        workspaces: [{ path: own.root, project: { selectedPath: config, invalid: false,
+          sources: ['opencode.json', 'opencode.jsonc', '.opencode/opencode.json', '.opencode/opencode.jsonc']
+            .map(name => reference(join(own.root, name))),
+          providers: [{ providerId, baseUrl: 'http://127.0.0.1:9/v1', preset: 'custom', hasConfiguredApiKey: true }] },
+          global: { notConsulted: 'project-precedence' } }], approval: { notConsulted: 'no-private-target' } };
+      const preparation = mode === 'local' ? captureReadinessPreparation({ origin, remainingMs: 1000 }, {
+        kind: 'team', owner, contextId: origin.contextId, commandId: origin.commandId, selection,
+        workspaces: [own.root], targets: [{ workspace: own.root, providerId }], anchorCommandId: request.commandId,
+        admittedAt, original: { present: false } }) : undefined;
+      assert.equal(captureOpenCodeProbeAccount(management, request, () => true, undefined,
+        preparation?.origin), undefined, 'initial scope cannot claim a future effective manual key');
+      if (mode === 'settings') original.start(request);
+      else original.startPrepared(request, () => true, preparation, scope);
+      const admitted = original.readRetainedProbe(request.commandId, request.context);
+      assert.equal(admitted.nativeFileKeyWitness, undefined);
+      assert.equal(admitted.readinessScope?.accountDigest, undefined);
+      if (mode === 'late') await original.cancelContextual(request.commandId, request.context);
+      complete(true);
+      await original.awaitPrepared(request.commandId, request.context);
+      const saved = original.readRetainedProbe(request.commandId, request.context);
+      assert.equal(saved.fingerprint, admitted.fingerprint);
+      assert.deepEqual(saved.readinessScope, admitted.readinessScope, 'scope/cutoff never acquire a late placeholder digest');
+      assert.equal(nativeCalls, 1);
+      assert.equal(JSON.stringify(saved).includes('TEST-original-private-key'), false, 'record has only opaque native evidence');
+      assert.equal(Object.hasOwn(original.read({ commandId: request.commandId, profileId: request.profileId,
+        configRevision: request.configRevision })!, 'nativeFileKeyWitness'), false, 'public snapshot always omits private proof');
+      if (['unclean', 'late', 'settings'].includes(mode)) {
+        assert.equal(saved.phase, mode === 'unclean' ? 'held' : mode === 'late' ? 'cancelled' : 'completed');
+        assert.equal(saved.resourceHeld, mode === 'unclean');
+        assert.equal(saved.ok, mode === 'settings');
+        assert.equal(witnessReads, 0);
+        assert.equal(saved.nativeFileKeyWitness, undefined);
+        assert.equal(storedModelProbeSchema.safeParse({ ...saved, nativeFileKeyWitness: accepted?.encoded }).success, false);
+      } else if (mode === 'copied' || mode === 'foreign') {
+        assert.equal(witnessReads, 1); assert.equal(saved.phase, 'held'); assert.equal(saved.ok, false);
+        assert.equal(saved.nativeFileKeyWitness, undefined);
+      } else if (mode === 'missing') {
+        const historical = original.captureReadinessReference(request.commandId, request.context,
+          () => ({ target, originCurrent: true }));
+        assert.equal(historical.preparationDigest, managementDigest({ scope: saved.readinessScope, anchor: null, origin: null }),
+          'omitting the new witness preserves the historical reference bytes');
+        assert.throws(() => captureOpenCodeProbeAccount(management, request, () => true, saved), { code: 'held' });
+      } else {
+        assert.ok(saved.nativeFileKeyWitness); assert.equal(witnessReads, 1);
+        const account = captureOpenCodeProbeAccount(management, request, () => true, saved); assert.ok(account);
+        assert.equal(account.nativeCredentialScopeDigest, accepted?.scopeDigest);
+        const manager = { probes: original, readinessTarget: () => target };
+        const capture = () => capturePreparedModelReference({ management: manager, profile: member,
+          commandId: request.commandId, context: request.context, ...(mode === 'native' ? { kind: 'native' as const } : {}),
+          isCurrent: () => true });
+        const selected = capture();
+        assert.equal(selected.preparationDigest, managementDigest({ scope: saved.readinessScope,
+          anchor: saved.localModelReadinessPreparation ?? null, origin: saved.localModelReadinessOrigin ?? null,
+          nativeFileKeyWitness: managementDigest(saved.nativeFileKeyWitness) }));
+        const cold = new ModelProbeOwner({ ...ownerOptions, fence: new ManagementResourceFence(recordStore.list()),
+          prepare: () => { throw Error('TEST cold account inspection cannot create another probe'); } });
+        try { assert.deepEqual(capturePreparedModelReference({ management: { ...manager, probes: cold }, profile: member,
+          commandId: request.commandId, context: request.context, ...(mode === 'native' ? { kind: 'native' as const } : {}),
+          isCurrent: () => true }), selected); } finally { await cold.close(); }
+        const binding = { backendId: own.team.definition.binding.backendId, teamId: member.teamId,
+          runId: 'TEST-file-run', memberId: member.memberId, generation: '1' };
+        const entry: MemberEntry = { profile: member, baseProfile: structuredClone(member), team: own.team,
+          binding, delivery: { ...binding, teamName: own.team.definition.binding.teamName },
+          config: { tenantId: own.profile.owner.ownerId, projectId: own.team.definition.scope.projectId,
+            sessionId: member.sessionId, generation: member.generation, configRevision: member.configRevision,
+            requiredCapabilities: ['text'] } };
+        const launch = new TeamLaunchOwner({ definition: { launchId: binding.runId, rosterRevision: runtimeDigest(scope),
+          members: [{ memberId: member.memberId, binding, configurationDigest: runtimeDigest(member),
+            baseConfigurationDigest: runtimeDigest(member), runtimeGeneration: member.generation,
+            contextDigest: runtimeDigest('TEST-no-input'), configRevision: member.configRevision, skipped: false, timeoutMs: 1000 }] },
+          hostIncarnation: 'TEST-file-host', store: new TeamOwnerStore(own.root, own.team.definition.binding.teamName),
+          authorized: (action, callback) => own.owner.withLaunchAuthority('TEST-human', action, callback),
+          runtime: { read: () => ({ attached: false, nativeReady: false }),
+            open: async () => { throw Error('TEST no business allocation in account proof'); } } });
+        try {
+          attachMemberModelReadiness({ launch, entry, reference: selected, commandId: 'TEST-consume',
+            actorDigest: runtimeDigest('TEST-actor'), inputDigest: runtimeDigest(request), cutoff });
+          const consumed = consumeMemberModelReadiness({ management: manager, launch, entry, assertCurrent() {} });
+          assert.equal(consumed.kind, 'preparation'); assert.ok(consumed.assertReadinessCredential);
+          let handoffs = 0;
+          assert.throws(() => { consumed.assertReadinessCredential!('f'.repeat(64)); handoffs++; }, { code: 'held' });
+          assert.equal(handoffs, 0, 'a later foreign native scope is refused before business handoff');
+          consumed.assertReadinessCredential(account.nativeCredentialScopeDigest!);
+          captureNativeRestartReadiness({ management: manager, launch, entry, isCurrent: () => true }).assertCurrent();
+          writeFileSync(file, 'TEST-drifted-original-key', { mode: 0o600 });
+          assert.equal(account.isCurrent(), false);
+          assert.throws(consumed.assertCurrent);
+          assert.throws(() => captureNativeRestartReadiness({ management: manager, launch, entry, isCurrent: () => true }));
+          assert.equal(nativeCalls, 1, 'post-close currentness never starts a replacement native owner');
+        } finally { launch.seal(); }
+      }
+    } finally {
+      if (mode === 'unclean') await assert.rejects(original.close(), { code: 'held' });
+      else await original.close();
+    }
+  }
 });
 
 for (const provider of ['codex', 'opencode'] as const)

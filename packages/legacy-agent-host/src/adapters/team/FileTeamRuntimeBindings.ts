@@ -8,7 +8,8 @@ import {
 } from '../../runtime/identity.js';
 import { TeamOwnerError } from '../../team/contracts.js';
 import { validateRestoreJournal } from '../../team-launch/validateRestoreJournal.js';
-import { validateLaunchPreparation } from '../../team-launch/launchPreparation.js';
+import { validateLiveLaunchPreparation, liveRosterSegment, liveRosterMemberBlocked,
+  liveRosterValidationRecord } from '../../team-launch/liveRosterMembership.js';
 import type { RuntimeMemberBinding } from '../../team/contracts.js';
 import type {
   TeamRuntimeBindings,
@@ -36,7 +37,7 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
       validateNativeLaunchAdditions(row);
       validateRestoreJournal(row);
       validateMemberSelectionChain(row as ActionLaunchRecord);
-      validateLaunchPreparation(row);
+      validateLiveLaunchPreparation(row);
     } catch {
       throw new TeamOwnerError('hold');
     }
@@ -56,7 +57,16 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
       if (checkpointRef !== undefined) throw new TeamOwnerError('hold');
       return undefined;
     }
-    const member = row.definition.members.find((value) => value.memberId === initial.memberId);
+    // Team may have published this exact delivery immediately before launch selection.
+    // Its captured metadata permits the original authority read, never work or a checkpoint.
+    const pending = (row.liveMembership ?? []).filter(value =>
+      ['captured', 'held'].includes(value.phase) && value.selected?.binding &&
+      runtimeDigest(value.selected.binding) === runtimeDigest(normalizeBinding(initial)));
+    if (pending.length > 1 || pending.length && checkpointRef !== undefined)
+      throw new TeamOwnerError('hold');
+    const segment = pending.length === 1 ? { member: pending[0]!.selected!, current: false }
+      : liveRosterSegment(row, normalizeBinding(initial));
+    const member = segment?.member ?? row.definition.members.find((value) => value.memberId === initial.memberId);
     if (!member?.binding || !this.sameMember(initial, member.binding))
       throw new TeamOwnerError('hold');
     // Predecessor records did not contain a numeric runtime generation. They may
@@ -110,12 +120,13 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
         member.restore.commandId.length > 256)
     )
       throw new TeamOwnerError('hold');
-    const prepared = row.preparation?.members.find((item) => item.memberId === member.memberId);
+    const prepared = row.preparation?.members.find((item) => item.memberId === member.memberId &&
+      item.baseConfigurationDigest === member.baseConfigurationDigest && item.configRevision === member.configRevision);
     return structuredClone({
       binding,
       skipped: member.skipped,
       workAllowed:
-        !member.skipped &&
+        !member.skipped && segment?.current !== false && !liveRosterMemberBlocked(row, member.memberId) &&
         !actions.some(
           (a) =>
             a.input.memberId === member.memberId &&
@@ -138,7 +149,7 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
     reference: string
   ): NonNullable<TeamRuntimeSelection['checkpointSource']> {
     try {
-      validateLaunchRecord(row, row.fingerprint, row.definition.members.length);
+      validateLaunchRecord(liveRosterValidationRecord(row), row.fingerprint, row.definition.members.length);
       const restore = member.restore;
       if (!restore || restore.reference !== reference || !/^cp1-[a-f0-9]{64}$/.test(reference))
         throw new Error();
@@ -185,6 +196,8 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
         ...(row.restorations ?? []).map(item => item.member),
         ...(row.memberActions ?? []).flatMap(item => [item.source, item.selected]),
         ...(row.nativeAdditions ?? []).map(item => item.member),
+        ...(row.liveMembership ?? []).flatMap(item =>
+          [item.intent.source, item.selected].filter((value): value is ExpectedLaunchMember => value != null)),
       ].filter(item => item.memberId === member.memberId &&
         runtimeDigest(item.binding) === runtimeDigest(sourceBinding));
       if (selections.some(item =>
@@ -196,7 +209,8 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
       const digests = new Set(selections.map(item => item.configurationDigest!));
       const generations = new Set(selections.map(item => item.runtimeGeneration!));
       if (digests.size > 1 || generations.size > 1) throw new Error();
-      const prepared = row.preparation?.members.find(item => item.memberId === member.memberId);
+      const prepared = row.preparation?.members.find(item => item.memberId === member.memberId &&
+        item.baseConfigurationDigest === selected.baseConfigurationDigest && item.configRevision === selected.configRevision);
       const configurationDigest = selections[0]?.configurationDigest ?? prepared?.configurationDigest;
       const generation = selections[0]?.runtimeGeneration;
       return {
@@ -236,7 +250,10 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
           item.member.memberId === initial.memberId &&
           item.member.restore &&
           runtimeDigest(item.member.restore.sourceBinding) === runtimeDigest(binding)
-      )
+      ) ||
+      !!row?.liveMembership?.some(item => ['selected', 'removed', 'compensated'].includes(item.phase) &&
+        [item.intent.source?.binding, item.selected?.binding].some(value =>
+          value != null && runtimeDigest(normalizeBinding(value)) === runtimeDigest(normalizeBinding(binding))))
     );
   }
 }

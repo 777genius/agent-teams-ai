@@ -89,6 +89,66 @@ test('restored provider authority binds the complete open request and keeps curr
   assert.equal(existsSync(lockPath), false);
   entry.config = originalConfig;
 
+  let preludeFailure: Error | undefined, innerFailure: Error | undefined;
+  let preludeChecks = 0, currentChecks = 0, groupedRuntimeReads = 0;
+  const guardTokens: string[] = [];
+  const grouped = captureMemberProviderAuthority({
+    entry, request, profileId: 'TEST-profile', hostIncarnation: 'TEST-host',
+    beforeTeamAuthority() {
+      preludeChecks++;
+      assert.equal(existsSync(lockPath), false, 'writer/availability prelude precedes the new Team fence');
+      if (preludeFailure) throw preludeFailure;
+    },
+    assertCurrent() {
+      currentChecks++;
+      const token = readFileSync(lockPath, 'utf8').split('\n')[2];
+      assert.ok(token);
+      guardTokens.push(token);
+      if (innerFailure) throw innerFailure;
+      assert.equal(f.owner.authorizeMemberBinding(entry.binding, 'dispatch'), true);
+    },
+    readRuntime() { groupedRuntimeReads++; return { record, attached }; },
+  });
+  tokens.length = 0;
+  grouped.assertCurrent();
+  assert.equal(preludeChecks, 1); assert.equal(currentChecks, 1);
+  assert.ok(tokens.length >= 4, 'the full current guard and unchanged final pair both read real state');
+  assert.equal(new Set([...guardTokens, ...tokens]).size, 1, 'the full guard and pair share the held token');
+  const groupedFirstToken = guardTokens[0]!;
+  assert.equal(existsSync(lockPath), false);
+  tokens.length = 0; guardTokens.length = 0;
+  grouped.assertCurrent();
+  assert.equal(preludeChecks, 2); assert.equal(currentChecks, 2);
+  assert.equal(new Set([...guardTokens, ...tokens]).size, 1);
+  assert.notEqual(guardTokens[0], groupedFirstToken, 'the next full guard acquires fresh authority');
+  assert.equal(existsSync(lockPath), false);
+  tokens.length = 0; guardTokens.length = 0;
+  const fencesBeforePrelude = fences.mock.callCount();
+  preludeFailure = new Error('TEST-writer-or-capture-refusal');
+  assert.throws(() => grouped.assertCurrent(), error => error === preludeFailure);
+  assert.equal(fences.mock.callCount(), fencesBeforePrelude);
+  assert.equal(currentChecks, 2, 'a refused prelude cannot enter the full guard');
+  assert.equal(tokens.length, 0); assert.equal(guardTokens.length, 0);
+  assert.equal(existsSync(lockPath), false);
+  preludeFailure = undefined;
+  innerFailure = new Error('TEST-original-inner-current-refusal');
+  assert.throws(() => grouped.assertCurrent(), error => error === innerFailure);
+  assert.equal(guardTokens.length, 1);
+  assert.equal(tokens.length, 0, 'an inner exception still short-circuits the original final pair');
+  assert.equal(existsSync(lockPath), false, 'the original finally releases a refused grouped guard');
+  innerFailure = undefined;
+  const fencesBeforeWrongAction = fences.mock.callCount();
+  let wrongActionCallbacks = 0;
+  for (const action of ['read', 'control'] as const) {
+    assert.equal(f.owner.authorizeRuntimeAccess(entry.profile.principalId, entry.binding, action,
+      () => { wrongActionCallbacks++; }), false);
+  }
+  assert.equal(wrongActionCallbacks, 0);
+  assert.equal(fences.mock.callCount(), fencesBeforeWrongAction);
+  assert.equal(tokens.length, 0, 'read/control cannot acquire the provider-only composition callback');
+  assert.equal(groupedRuntimeReads, 0, 'grouping ends before any original Runtime lookup');
+  assert.equal(existsSync(lockPath), false);
+
   // An admitted member and an actor allowed to control it are separate original conditions.
   let refusedRuntimeReads = 0;
   const asPrincipal = (principalId: string) => captureMemberProviderAuthority({

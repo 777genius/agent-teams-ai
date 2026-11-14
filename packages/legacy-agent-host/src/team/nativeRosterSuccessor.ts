@@ -1,6 +1,7 @@
 import { digest } from './identity.js';
 import { teamRosterRevision } from './rosterSchema.js';
 import { validateNativeMemberCreationRecords } from './validateNativeMemberCreation.js';
+import { validateLiveRosterMembership } from './liveRosterMembership.js';
 import type { OwnerState } from './ownerState.js';
 import type { TeamMember } from './contracts.js';
 import type { TeamSavedSettings } from './rosterContracts.js';
@@ -13,6 +14,7 @@ export function nativeRosterSuccessor(
   savedSettings?: TeamSavedSettings
 ): boolean {
   validateNativeMemberCreationRecords(state);
+  validateLiveRosterMembership(state);
   const member = state.members.find((row) => row.memberId === expected.memberId);
   if (
     !member?.delivery ||
@@ -35,12 +37,32 @@ export function nativeRosterSuccessor(
     return false;
   let members = [...state.members],
     version = state.rosterVersion ?? 0;
-  for (let remaining = (state.rosterCommands?.length ?? 0) + 1; remaining > 0; remaining--) {
+  const live = (state.rosterCommands ?? []).flatMap(row => row.liveMembership
+    ? [row.liveMembership.publication, row.liveMembership.compensation].filter(edge => edge !== undefined)
+      .map(edge => ({ targetId: row.liveMembership!.delta.targetId, edge: edge! })) : []);
+  const product = (row: TeamMember | null | undefined) => row ? {
+    memberId: row.memberId, name: row.name, role: row.role, settings: row.settings ?? {},
+  } : null;
+  for (let remaining = (state.rosterCommands?.length ?? 0) + live.length + 1; remaining > 0; remaining--) {
     const current = teamRosterRevision(members, version, state.savedSettings);
     if (current === expectedRevision) return true;
-    const receipt = state.rosterCommands?.find(
+    const native = state.rosterCommands?.filter(
       (row) => row.nativeCreation && row.revision === current
-    );
+    ) ?? [];
+    const changes = live.filter(row => row.edge.afterRevision === current);
+    if (native.length + changes.length !== 1) return false;
+    if (changes.length) {
+      const { targetId, edge } = changes[0]!;
+      if (targetId === expected.memberId || version !== edge.afterVersion ||
+          edge.beforeVersion + 1 !== version ||
+          digest(product(members.find(row => row.memberId === targetId))) !== digest(product(edge.after))) return false;
+      members = members.filter(row => row.memberId !== targetId);
+      if (edge.before) members.splice(edge.position, 0, structuredClone(edge.before));
+      version = edge.beforeVersion;
+      if (teamRosterRevision(members, version, state.savedSettings) !== edge.beforeRevision) return false;
+      continue;
+    }
+    const receipt = native[0];
     const addition = receipt?.nativeCreation;
     if (!addition || version < 1 || addition.member.memberId === expected.memberId) return false;
     const added = members.find((row) => row.memberId === addition.member.memberId);

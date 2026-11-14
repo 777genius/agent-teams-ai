@@ -132,6 +132,8 @@ export interface ProcessCommandReceipt {
   nativeAbsence?: NaturalProcessAbsence;
   /** After durable original absence; an unknown intent has lookup authority only. */
   nativeSettlement?: WindowsServiceIntent;
+  /** Original completed Stop's definitive no-dispatch; only a later call may replace that intent. */
+  nativeSettlementNotDispatched?: true;
   phase: 'prepared' | 'held' | 'completed' | 'rejected';
   state: ProcessStopState;
   /** Exact metadata-selected rows retained before policy write; never OS signal authority. */

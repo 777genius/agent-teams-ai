@@ -680,7 +680,8 @@ describe('MessageComposer pending send lifecycle', () => {
   });
 
   it('renders the footer below the flat composer card', () => {
-    const { host, root } = renderComposer();
+    suggestionHarness.state.realEditor = true;
+    const { host, render, root } = renderComposer();
     const layout = host.querySelector('.message-composer-flat-layout');
     const toolbar = layout?.querySelector('.message-composer-flat-toolbar');
     const body = layout?.querySelector('.message-composer-flat-body');
@@ -706,6 +707,13 @@ describe('MessageComposer pending send lifecycle', () => {
     expect(toolbar?.textContent).toContain('Group chat');
     expect(toolbar?.textContent).toContain('Group chat');
 
+    expect(footer?.classList.contains('empty:flex')).toBe(true);
+    expect(footer?.classList.contains('empty:hidden')).toBe(false);
+    render({ layout: 'compact' });
+    const compactFooter = host.querySelector('.message-composer-flat-footer');
+    expect(compactFooter).not.toBeNull();
+    expect(compactFooter?.classList.contains('empty:hidden')).toBe(true);
+    expect(compactFooter?.classList.contains('empty:flex')).toBe(false);
     act(() => {
       root.unmount();
     });
@@ -1210,6 +1218,7 @@ describe('MessageComposer pending send lifecycle', () => {
   });
 
   it('keeps the hint footer while focus moves to Composer controls and clears it outside', () => {
+    suggestionHarness.state.realEditor = true;
     draftHarness.state.text = '';
     const { host, root } = renderComposer({
       cornerActionPrefix: createPortal(
@@ -1217,13 +1226,19 @@ describe('MessageComposer pending send lifecycle', () => {
         document.body
       ),
     });
-    const textarea = getTextarea(host);
+    const textarea = host.querySelector('textarea');
+    if (!(textarea instanceof HTMLTextAreaElement)) throw new Error('Message textarea not found');
+    textarea.style.lineHeight = '20px';
     const selector = host.querySelector<HTMLButtonElement>(
       'button[aria-label="Select Team: team-alpha"]'
     );
     expect(selector).not.toBeNull();
-    const hint = () => host.querySelector('[data-composer-focus-hint]');
     const footer = () => host.querySelector('.message-composer-flat-footer');
+    const hint = () => footer()?.querySelector(':scope > span.min-h-6') ?? null;
+    const originalFooter = footer();
+    expect(originalFooter).not.toBeNull();
+    expect(originalFooter?.classList.contains('empty:flex')).toBe(true);
+    expect(originalFooter?.classList.contains('empty:hidden')).toBe(false);
     expect(hint()).toBeNull();
 
     act(() => textarea.focus());
@@ -1249,6 +1264,8 @@ describe('MessageComposer pending send lifecycle', () => {
     act(() => portalButton!.focus());
     expect(document.activeElement).toBe(portalButton);
     expect(hint()).toBeNull();
+    expect(footer()).toBe(originalFooter);
+    expect(footer()?.textContent).not.toContain('Saved');
     act(() => textarea.focus());
     expect(hint()).not.toBeNull();
 
@@ -1257,6 +1274,10 @@ describe('MessageComposer pending send lifecycle', () => {
     act(() => outside.focus());
     expect(document.activeElement).toBe(outside);
     expect(hint()).toBeNull();
+    expect(footer()).toBe(originalFooter);
+    expect(footer()?.childElementCount).toBe(0);
+    expect(footer()?.classList.contains('empty:flex')).toBe(true);
+    expect(footer()?.classList.contains('empty:hidden')).toBe(false);
     act(() => textarea.focus());
     expect(hint()).not.toBeNull();
     act(() => root.unmount());

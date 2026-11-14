@@ -137,6 +137,7 @@ export function processReceiptFingerprint(
     ...(row.nativeIntent ? { nativeIntent: row.nativeIntent } : {}),
     ...(row.originalRegistration ? { originalRegistration: row.originalRegistration } : {}),
     ...(row.nativeSettlement ? { nativeSettlement: row.nativeSettlement } : {}),
+    ...(row.nativeSettlementNotDispatched !== undefined ? { nativeSettlementNotDispatched: row.nativeSettlementNotDispatched } : {}),
     ...(row.nativeAbsence ? { nativeAbsence: row.nativeAbsence } : {}),
   });
 }
@@ -241,7 +242,8 @@ function validateWindowsProcessReceipt(row: ProcessCommandReceipt, digest: (valu
   const intent = row.nativeIntent;
   const registration = row.originalRegistration;
   if (!intent) {
-    if (registration || row.nativeSettlement || row.nativeAbsence !== undefined || row.capture?.version === 5) hold();
+    if (registration || row.nativeSettlement || row.nativeSettlementNotDispatched !== undefined ||
+        row.nativeAbsence !== undefined || row.capture?.version === 5) hold();
     return;
   }
   if (!windowsServiceIntentSchema.safeParse(intent).success ||
@@ -291,4 +293,7 @@ function validateWindowsProcessReceipt(row: ProcessCommandReceipt, digest: (valu
         !row.capture || row.capture.version !== 5 || digest(settlement.command.capture) !== digest(row.capture) ||
         digest(serviceSource(settlement)) !== digest(serviceSource(row.capture))) hold();
   }
+  if (row.nativeSettlementNotDispatched !== undefined &&
+      (row.nativeSettlementNotDispatched !== true || !row.nativeSettlement || row.operation !== 'terminate' ||
+        row.state.phase !== 'completed' || row.state.native !== 'observed-absent' || row.capture?.version !== 5)) hold();
 }

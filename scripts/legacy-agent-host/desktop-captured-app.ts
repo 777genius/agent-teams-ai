@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync, type ChildProcess } from 'node:child_process';
 import { constants, realpathSync } from 'node:fs';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
+import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { copyFile, lstat, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
@@ -478,9 +479,10 @@ export async function restartCapturedDesktopApp(options: {
   evidence: Evidence; cdpLibrary: DesktopCdpLibrary;
   provider: 'claude' | 'codex' | 'opencode';
   model: { observations: readonly unknown[]; failures: readonly string[] };
-  boundary: 'resume-after-stop' | 'extensions-before-launch' | 'settings-saved-before-launch';
+  boundary: 'resume-after-stop' | 'extensions-before-launch' | 'settings-saved-before-launch' | 'live-membership-after-stop';
   createdHandleId?: string;
   afterOriginalSettingsQuit?(): Promise<void>;
+  afterOriginalMembershipQuit?(): Promise<void>;
   checkpointUpgrade?: DesktopClaudeCheckpointUpgrade;
   markQuitRequested(): void;
   adoptRenderer(cdp: DesktopCdpPort | undefined, hostPid?: number): void;
@@ -490,20 +492,26 @@ export async function restartCapturedDesktopApp(options: {
   const { app, cdp, group, fixture, repo, mode, evidence, provider, model, cdpLibrary } = options;
   const settings = options.boundary === 'settings-saved-before-launch';
   const extensions = options.boundary === 'extensions-before-launch';
+  const membership = options.boundary === 'live-membership-after-stop';
   const initial = extensions || settings;
   if (options.checkpointUpgrade) {
+    assert.equal(membership, false);
     assert.equal(initial, false); assert.equal(provider, 'claude');
     assert.equal(options.checkpointUpgrade.kind, 'same-owner-claude-checkpoint');
     assert.equal(options.checkpointUpgrade.original, fixture);
   }
-  assert.equal(mode, settings ? 'native-mixed-create-launch-ui' : initial ? 'native-launch-ui' : 'native-resume-ui');
-  if (settings) {
-    assert.ok(options.createdHandleId && options.afterOriginalSettingsQuit);
+  assert.equal(mode, settings || membership ? 'native-mixed-create-launch-ui' : initial ? 'native-launch-ui' : 'native-resume-ui');
+  if (settings || membership) {
+    assert.ok(options.createdHandleId && (membership ? options.afterOriginalMembershipQuit : options.afterOriginalSettingsQuit));
     assert.notEqual(options.createdHandleId, fixture.handleId);
   } else {
     assert.equal(options.createdHandleId, undefined);
     assert.equal(options.afterOriginalSettingsQuit, undefined);
   }
+  if (membership) {
+    assert.equal(process.env.LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI, '1'); assert.equal(provider, 'opencode');
+    assert.equal(options.afterOriginalSettingsQuit, undefined);
+  } else assert.equal(options.afterOriginalMembershipQuit, undefined);
   if (extensions) {
     assert.equal(process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI, '1');
     assert.equal(provider, 'claude');
@@ -513,15 +521,16 @@ export async function restartCapturedDesktopApp(options: {
   const originalHost = hosts[0]!;
   options.adoptRenderer(cdp, originalHost.pid);
   const proof: Evidence = { status: 'INCOMPLETE', provider,
-    scope: settings ? 'Guarded same-profile cold startup after Settings and one saved Team, before native Launch'
+    scope: membership ? 'Guarded same-profile cold history after Add, Remove, Restore and exact Team Stop'
+      : settings ? 'Guarded same-profile cold startup after Settings and one saved Team, before native Launch'
       : initial ? 'Guarded same-profile cold startup after extension/skill mutations, before any native Launch'
       : 'Guarded app Quit and captured same-profile cold startup before explicit Resume',
     firstEpoch: { app: evidence.app, startup: evidence.startup, startupOutcome: evidence.startupOutcome,
       rendererTarget: evidence.rendererTarget, compiledBundleHashesAfterStartup: evidence.compiledBundleHashesAfterStartup,
       discovery: evidence.discovery, homePathProof: evidence.homePathProof, host: originalHost } };
-  evidence[settings ? 'coldSettingsBoundary' : initial ? 'coldExtensionBoundary' : 'coldResumeBoundary'] = proof;
+  evidence[membership ? 'coldMembershipBoundary' : settings ? 'coldSettingsBoundary' : initial ? 'coldExtensionBoundary' : 'coldResumeBoundary'] = proof;
   let savedTeamBindings: { handleId: string; original: readonly Evidence[] } | undefined;
-  if (settings) {
+  if (settings || membership) {
     const observed = await readRendererBackendConnections(cdp);
     assert.equal(observed.kind, 'read');
     const selected = object(observed.kind === 'read' ? observed.value : undefined);
@@ -562,9 +571,9 @@ export async function restartCapturedDesktopApp(options: {
   const sources = before.filter(row => Array.isArray(row.inputs) && row.inputs.length === 1);
   const profile = object(JSON.parse(await readFile(fixture.profilePath, 'utf8')));
   const definition = object((profile.teams as unknown[])[0]);
-  if (initial) assert.equal((definition.members as unknown[]).length, 1);
+  if (initial || membership) assert.equal((definition.members as unknown[]).length, 1);
   else assert.equal(sources.length, 1);
-  const member = object(initial ? (definition.members as unknown[])[0]
+  const member = object(initial || membership ? (definition.members as unknown[])[0]
     : (definition.members as unknown[]).find(value =>
       object(value).memberId === object(sources[0]!.binding).memberId));
   const { teamName: _teamName, ...descriptorBinding } = object(member.delivery);
@@ -573,7 +582,42 @@ export async function restartCapturedDesktopApp(options: {
     assert.deepEqual(row.inputs, []); assert.deepEqual(row.interactions, []);
     assert.equal(row.config, null); assert.equal(row.openFingerprint, null); assert.equal(row.nativeReady, false);
   };
-  if (initial) {
+  let membershipHistory: Evidence | undefined;
+  const readMembershipHistory = async () => {
+    const directory = join(fixture.root, 'hoststore/teams/test-created-native-mixed/.host-owner');
+    const read = async (path: string) => {
+      const stat = await lstat(path); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 1024 * 1024);
+      const bytes = await readFile(path); assert.equal(bytes.length, stat.size); return object(JSON.parse(bytes.toString('utf8')));
+    };
+    const state = await read(join(directory, 'state.json'));
+    assert.ok(Array.isArray(state.runtimeCaptures) && state.runtimeCaptures.length === 1);
+    assert.ok(Array.isArray(state.rosterCommands) && Array.isArray(state.members) && state.members.length === 3);
+    const commands = state.rosterCommands.map(object).filter(row => row.liveMembership !== undefined);
+    assert.equal(commands.length, 3);
+    assert.deepEqual(commands.map(row => object(object(row.liveMembership).delta).kind), ['add', 'remove', 'restore']);
+    assert.ok(commands.every(row => object(row.liveMembership).phase === 'completed'));
+    const launch = await read(join(directory, 'launches', runtimeDigest(object(state.runtimeCaptures[0]).launchId) + '.json'));
+    return { members: state.members, removedMembers: state.removedMembers ?? [], runtimeCaptures: state.runtimeCaptures,
+      rosterCommands: state.rosterCommands, launch };
+  };
+  if (membership) {
+    membershipHistory = await readMembershipHistory();
+    const allocated = before.filter(row => row.config !== null), never = before.filter(row => row.config === null);
+    assert.equal(allocated.length, 4); assert.ok(never.length <= 1); never.forEach(assertNeverOpened);
+    assert.ok(allocated.every(row => row.phase === 'closed' && row.custody === 'released' && row.openFingerprint));
+    const carol = (membershipHistory.members as unknown[]).map(object).filter(row => row.name === 'carol');
+    assert.equal(carol.length, 1);
+    const targets = allocated.filter(row => object(row.binding).memberId === carol[0]!.memberId);
+    assert.equal(targets.length, 2); assert.equal(sources.length, 2);
+    assert.equal(new Set(targets.map(row => runtimeDigest(row.binding))).size, 2);
+    assert.equal(new Set(targets.map(row => object(row.config).sessionId)).size, 2);
+    for (const row of allocated) {
+      assert.ok(Array.isArray(row.inputs)); const target = targets.includes(row);
+      assert.equal(row.inputs.length, target ? 1 : 0);
+      if (target) { assert.equal(object(row.inputs[0]).phase, 'terminal'); assert.equal(object(row.inputs[0]).terminal, 'succeeded'); }
+    }
+    proof.originalHistoryDigest = runtimeDigest(membershipHistory);
+  } else if (initial) {
     assert.ok(before.length <= 1, 'only the never-opened original static descriptor may exist');
     for (const row of before) assertNeverOpened(row);
     // Completed management mutations may be followed by finite metadata reads.
@@ -584,7 +628,7 @@ export async function restartCapturedDesktopApp(options: {
     assert.equal(sources.length, 1);
     assert.equal(object(sources[0]!.binding).memberId, member.memberId);
   }
-  const originalCheckpoint = initial ? undefined : await checkpoint(fixture.root, sources[0]!, provider);
+  const originalCheckpoint = initial || membership ? undefined : await checkpoint(fixture.root, sources[0]!, provider);
   if (originalCheckpoint) proof.beforeQuitCheckpoint = { reference: originalCheckpoint.payload.reference,
     payloadFileSha256: originalCheckpoint.payloadFileSha256, historySha256: originalCheckpoint.historySha256 };
   if (options.checkpointUpgrade) {
@@ -599,7 +643,7 @@ export async function restartCapturedDesktopApp(options: {
   };
   const originalMutations = extensions ? await managementRecords() : undefined;
   if (originalMutations) assert.equal(originalMutations.length, 4, 'one plugin install and three skill mutations');
-  const bundleDirectory = join(fixture.root, settings ? 'cold-settings-epoch1-bundles'
+  const bundleDirectory = join(fixture.root, membership ? 'cold-membership-epoch1-bundles' : settings ? 'cold-settings-epoch1-bundles'
     : initial ? 'cold-extension-epoch1-bundles' : 'cold-resume-epoch1-bundles');
   const bundlePins = evidence.compiledBundleHashesAfterStartup;
   assert.ok(Array.isArray(bundlePins) && bundlePins.length > 0 && bundlePins.length <= 4096);
@@ -614,7 +658,7 @@ export async function restartCapturedDesktopApp(options: {
     assert.equal(await fileDigest(target), sha); assert.equal(await fileDigest(source), sha);
   }
   proof.epoch1BundleSnapshot = { directory: bundleDirectory, files: bundlePins };
-  assert.equal(model.observations.length, initial ? 0 : 8);
+  assert.equal(model.observations.length, membership ? 4 : initial ? 0 : 8);
   assertOwnedCdpListener(group);
   options.markQuitRequested(); // One original public Quit, fenced before its uncertain reply.
   const quitObservation: Evidence = { attempted: true }; proof.firstQuit = quitObservation;
@@ -636,24 +680,29 @@ export async function restartCapturedDesktopApp(options: {
   assert.equal(app.signalCode, null);
   assert.deepEqual(remaining, [], 'no group cleanup fallback before cold startup');
   assert.equal(hostAbsent, true); assert.equal(writerReleased, true);
-  if (!initial) {
+  if (!initial && !membership) {
     await observeDesktopMetadataClose(fixture.root, evidence, true);
     assertFirstResumeMetadataAbsent(evidence);
   }
   const postQuit = await readSessions();
-  if (!initial) for (const original of before) {
+  if (!initial) for (const original of before.filter(row => !membership || row.config !== null)) {
     const matches = postQuit.filter(row => isDeepStrictEqual(row.binding, original.binding));
     assert.equal(matches.length, 1); assert.deepEqual(matches[0], original);
   }
-  const added = initial ? postQuit : postQuit.filter(row =>
+  const added = initial ? postQuit : membership ? postQuit.filter(row => !before.some(original =>
+    original.config !== null && isDeepStrictEqual(row.binding, original.binding))) : postQuit.filter(row =>
     !before.some(original => isDeepStrictEqual(row.binding, original.binding)));
   assert.ok(added.length <= 1, 'only one exact static descriptor tombstone may be added');
   for (const row of added) {
     assertNeverOpened(row);
     assert.equal(row.phase, 'closed'); assert.equal(row.custody, 'released'); assert.equal(row.sealed, true);
   }
-  assert.equal(model.observations.length, initial ? 0 : 8, 'Quit cannot release a native input');
+  assert.equal(model.observations.length, membership ? 4 : initial ? 0 : 8, 'Quit cannot release a native input');
   if (settings) await options.afterOriginalSettingsQuit!();
+  if (membership) {
+    assert.deepEqual(await readMembershipHistory(), membershipHistory);
+    await options.afterOriginalMembershipQuit!();
+  }
   await bounded(cdp.close(), 3000, 'disconnect original renderer');
   options.adoptRenderer(undefined);
   assert.equal(await portOccupied(), false);
@@ -688,7 +737,11 @@ export async function restartCapturedDesktopApp(options: {
     assert.deepEqual(await managementRecords(), originalMutations);
     second.originalMutationRecordsUnchanged = originalMutations;
   }
-  assert.equal(model.observations.length, initial ? 0 : 8, 'cold startup cannot release a prompt');
+  if (membership) {
+    assert.deepEqual(await readMembershipHistory(), membershipHistory);
+    second.originalHistoryDigest = runtimeDigest(membershipHistory);
+  }
+  assert.equal(model.observations.length, membership ? 4 : initial ? 0 : 8, 'cold startup cannot release a prompt');
   assert.deepEqual(model.failures, []);
   if (options.checkpointUpgrade) {
     assert.deepEqual(object(second.discovery).bindings, object(object(proof.firstEpoch).discovery).bindings);

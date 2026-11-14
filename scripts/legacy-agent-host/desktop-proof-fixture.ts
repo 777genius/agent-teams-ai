@@ -54,6 +54,15 @@ export async function prepareDesktopProofFixture(
     controlledProcess?: Awaited<ReturnType<typeof prepareControlledProcessFixture>>['controlledProcess'];
   }
 > {
+  const donorSavedOnly = process.env.LEGACY_DESKTOP_DONOR_SAVED_ONLY === '1';
+  if (donorSavedOnly) {
+    assert.equal(mode, 'stopped-import-ui');
+    assert.ok(options.legacyImportMode && options.modelUrl && !options.candidateRuntime &&
+      !options.openCodeLifecycleMode && !options.codexResumeMode && !options.readbackMode &&
+      !options.reviewReadbackMode && !options.nativeReviewReadbackMode && !options.nativeReviewContinuationMode &&
+      !options.controlledProcessMode && !options.processUiMode && !options.processReadbackMode && !options.capturedMcpNonce);
+    assert.equal(process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH ?? '', '');
+  }
   if (process.env.LEGACY_DESKTOP_CLAUDE_CHECKPOINT_UPGRADE === '1') {
     assert.equal(mode, 'native-resume-ui');
     assert.ok(options.modelUrl && options.launchDialogMode && !options.codexResumeMode &&
@@ -136,6 +145,7 @@ export async function prepareDesktopProofFixture(
       manifestSha256: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256! },
   } : undefined;
   const fixture = await prepareDesktopBackendFixture(repo, {
+    ...(donorSavedOnly ? { donorSavedOnly: true as const } : {}),
     ...(selectedV2 ? { nativeOpenCodeV2: selectedV2 } : {}),
     ...(options.capturedMcpNonce ? { capturedMcpNonce: options.capturedMcpNonce } : {}),
     ...(options.candidateRuntime ? { candidateRuntime: options.candidateRuntime } : {}),

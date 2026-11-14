@@ -138,7 +138,7 @@ describe('original Create refusal transport', () => {
     const intent = { teamName: draft.teamName, cwd: draft.savedSettings.cwd, members: [] };
     const result = await createLaunchedHostTeam({
       target: {
-        prepare: registry.prepareCreation.bind(registry),
+        prepare: (action, input) => registry.prepareCreation(action, input),
         submit: registry.submitCreation.bind(registry),
       },
       contextId: draft.contextId,

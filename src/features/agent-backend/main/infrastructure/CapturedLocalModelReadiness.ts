@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { constants, promises as fs } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, parse as parsePath, resolve, sep } from 'node:path';
+import { actualCaptureReadinessCommandId, localModelReadinessCaptureViewSchema, parseLiveRosterResponse } from '@agent-teams/legacy-agent-host/team-host';
 
 import {
   createOpenCodeGlobalConfigEnvironmentResolver,
@@ -14,25 +15,44 @@ import {
   readOpenCodeConfigTarget,
   resolveConfiguredProviderPreset,
 } from '@features/runtime-provider-management/main';
+import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { getNodeValue, parseTree } from 'jsonc-parser';
 
 import { projectBackendResult } from '../adapters/output/projectBackendResult';
+import { parseLaunchModelPreparation } from '../adapters/input/teamOperationValues';
 import { assertBackendRequestGuard, BackendRoutingError } from '../application/backendBinding';
+import { capturedTeamModelProbeRootId } from '../application/prepareCapturedTeamModels';
 
 import type { BackendHandle } from '../../contracts';
-import type { BackendLaunchConfigurationView } from '../../contracts/launch';
+import type { BackendLaunchConfigurationView, BackendLaunchModelSelection } from '../../contracts/launch';
+import type { TeamModelProbeIntents } from '../application/TeamModelProbeIntents';
+import type { CapturedRosterCommands } from './CapturedRosterCommands';
+import type { CapturedTeamRegistry } from './CapturedTeamRegistry';
 import type { BackendOwnerBinding, BackendOwnerRef, BackendScope } from '../application/backendBinding';
 import type { BackendOwnerRouter, BoundBackendCommand } from '../application/BackendOwnerRouter';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
-import type { LocalModelReadinessOrigin, LocalModelReadinessPreparation, ReadinessSourceReference } from '@agent-teams/legacy-agent-host/team-host';
+import type { LocalModelReadinessCaptureView, LocalModelReadinessOrigin, LocalModelReadinessPreparation, ReadinessSourceReference } from '@agent-teams/legacy-agent-host/team-host';
 import type { CreateTeamLaunchPreparationInput } from '@agent-teams/legacy-agent-host/team-registry/create-launch-contracts';
+import type { TeamRegistryRecord } from '@agent-teams/legacy-agent-host/team-registry/contracts';
 import type { Node as JsoncNode,ParseError } from 'jsonc-parser';
 
 type Row = Record<string, unknown>;
 type Scope = LocalModelReadinessOrigin['workspaces'][number]['project'];
 type View = Pick<BackendLaunchConfigurationView, 'members'> & {
-  launch: { launchId: string; rosterRevision: string };
+  launch: Pick<BackendLaunchConfigurationView['launch'], 'launchId' | 'rosterRevision'> &
+    Partial<Pick<BackendLaunchConfigurationView['launch'], 'members' | 'admission'>>;
 };
+type Definition = { owner: BackendOwnerRef; contextId: string; scope: BackendScope };
+export interface CapturedRuntimeReadinessTarget {
+  launchId: string;
+  memberId: string;
+  expectedGeneration: string;
+}
+interface ReadinessRouting {
+  requestTimeoutMs?: number;
+  intents?: TeamModelProbeIntents;
+  rosterCommands?: Pick<CapturedRosterCommands, 'readOriginalIntent'>;
+}
 /** Main-only invocation context. It is never parsed from a renderer request or persisted as a clock. */
 export interface LocalModelReadinessContext {
   remainingMs(): number;
@@ -170,6 +190,7 @@ function providers(raw: string | null): { invalid: boolean; providers: Scope['pr
 export async function captureLocalModelReadinessOrigin(options: {
   kind: 'create' | 'team'; owner: BackendOwnerBinding; contextId: string; commandId: string;
   selection: unknown; workspaces: readonly string[]; current(): void; budget: LocalModelReadinessContext;
+  targets: readonly { workspace: string; providerId: string | null }[];
   home?: string; environment?: NodeJS.ProcessEnv;
   readApprovals?: ReturnType<JsonLocalProviderPrivateNetworkApprovalStore['capture']>;
 }): Promise<LocalModelReadinessOrigin> {
@@ -180,8 +201,13 @@ export async function captureLocalModelReadinessOrigin(options: {
     ownerDigest: readinessOriginDigest(options.owner), contextId: options.contextId,
     commandId: options.commandId, selectionDigest: readinessOriginDigest(options.selection) };
   const requested = [...new Set(options.workspaces)];
+  const targets = options.targets.map(row => ({ ...row }));
   if (!requested.length || requested.length > 256 ||
-      requested.some(path => !isAbsolute(path) || /[\0\r\n]/u.test(path))) return held();
+      requested.some(path => !isAbsolute(path) || /[\0\r\n]/u.test(path)) ||
+      !targets.length || targets.length > 256 || targets.some(row => !requested.includes(row.workspace)) ||
+      requested.some(path => !targets.some(row => row.workspace === path))) return held();
+  const targetsKnown = targets.every(row => row.providerId !== null &&
+    /^[a-z0-9][a-z0-9._-]{0,63}$/u.test(row.providerId));
   let invalidated = false;
   const current = () => {
     if (invalidated) return held();
@@ -191,16 +217,18 @@ export async function captureLocalModelReadinessOrigin(options: {
   const read = (path: string, root: string, maximum = 1024 * 1024) =>
     captureReadinessSource(path, root, maximum, current);
   current();
-  const home = await fs.realpath(homeInput); current();
+  let globalHome: string | undefined;
   const scope = async (kind: 'global' | 'project', workspace: string): Promise<Scope> => {
-    const root = kind === 'global' ? home : workspace;
-    const captured = new Map<string, Awaited<ReturnType<typeof read>>>();
     current();
+    const root = kind === 'global' ? (globalHome ??= await fs.realpath(homeInput)) : workspace;
+    current();
+    const captured = new Map<string, Awaited<ReturnType<typeof read>>>();
     let selected: Awaited<ReturnType<typeof readOpenCodeConfigTarget>> | undefined;
     let selectorFailure: 'config-conflict' | 'config-invalid' | 'project-required' | undefined;
     try {
       selected = await readOpenCodeConfigTarget({
-        scope: kind, projectPath: workspace, homePath: home, getEnvironment: () => environment,
+        scope: kind, projectPath: workspace, homePath: kind === 'global' ? root : homeInput,
+        getEnvironment: () => environment,
         captureRead: { current, read: async path => {
           const value = await read(path, root);
           if (value.raw === null) return held();
@@ -216,7 +244,7 @@ export async function captureLocalModelReadinessOrigin(options: {
     }
     current();
     const paths = kind === 'global'
-      ? OPENCODE_GLOBAL_CONFIG_FILENAMES.map(name => join(home, '.config', 'opencode', name))
+      ? OPENCODE_GLOBAL_CONFIG_FILENAMES.map(name => join(root, '.config', 'opencode', name))
       : OPENCODE_PROJECT_CONFIG_CANDIDATES.map(name => join(workspace, name));
     const sources: ReadinessSourceReference[] = [];
     for (const path of paths) {
@@ -242,25 +270,44 @@ export async function captureLocalModelReadinessOrigin(options: {
     const workspace = await fs.realpath(original); current();
     if (workspace !== original) return held();
     const project = await scope('project', workspace);
-    global ??= await scope('global', workspace);
-    workspaces.push({ path: workspace, project, global });
+    let selectedGlobal: LocalModelReadinessOrigin['workspaces'][number]['global'];
+    if (targetsKnown && !project.invalid && targets.filter(row => row.workspace === workspace)
+      .every(target => project.providers.some(row => row.providerId === target.providerId))) {
+      selectedGlobal = { notConsulted: 'project-precedence' };
+    } else {
+      global ??= await scope('global', workspace);
+      selectedGlobal = global;
+    }
+    workspaces.push({ path: workspace, project, global: selectedGlobal });
   }
-  if (workspaces.reduce((count, row) => count + row.project.providers.length + row.global.providers.length, 0) > 256)
+  if (workspaces.reduce((count, row) => count + row.project.providers.length +
+    ('notConsulted' in row.global ? 0 : row.global.providers.length), 0) > 256)
     return held();
-  const tuples = workspaces.flatMap(row => [row.project, row.global].flatMap(selected => {
+  const policies = targetsKnown ? targets.flatMap(target => {
+    const workspace = workspaces.find(row => row.path === target.workspace)!;
+    const project = workspace.project;
+    const selected = !project.invalid && project.providers.some(row => row.providerId === target.providerId)
+      ? project : 'notConsulted' in workspace.global ? undefined : workspace.global;
+    const provider = selected?.providers.find(row => row.providerId === target.providerId);
+    return selected?.selectedPath && provider ? [{ configPath: selected.selectedPath, provider }] : [];
+  }) : workspaces.flatMap(row => [row.project, ...('notConsulted' in row.global ? [] : [row.global])].flatMap(selected => {
     const configPath = selected.selectedPath;
-    return configPath === null ? [] : selected.providers
-      .filter(provider => isPrivateNetworkRuntimeLocalProviderUrl(provider.baseUrl))
-      .map(provider => ({ configPath, providerId: provider.providerId, baseUrl: provider.baseUrl }));
+    return configPath === null ? [] : selected.providers.map(provider => ({ configPath, provider }));
   }));
-  const approval = await readApprovals(tuples, async (path, maximum) =>
-    read(resolve(path), dirname(resolve(path)), maximum));
+  const tuples = policies.filter(row => isPrivateNetworkRuntimeLocalProviderUrl(row.provider.baseUrl))
+    .map(({ configPath, provider }) => ({ configPath, providerId: provider.providerId, baseUrl: provider.baseUrl }));
+  const approval: LocalModelReadinessOrigin['approval'] = targetsKnown && !tuples.length
+    ? { notConsulted: 'no-private-target' }
+    : await readApprovals(tuples, async (path, maximum) =>
+      read(resolve(path), dirname(resolve(path)), maximum));
   current();
   const result: LocalModelReadinessOrigin = { ...identity, workspaces, approval };
   if (Buffer.byteLength(JSON.stringify(result)) > 256 * 1024) return held();
-  for (const source of [...new Map(workspaces.flatMap(row => [...row.project.sources, ...row.global.sources])
-    .map(source => [source.path, source])).values(), approval.source]) {
-    const actual = await read(source.path, source.root, source.path === approval.source.path ? 131072 : 1024 * 1024);
+  const approvalSource = 'notConsulted' in approval ? undefined : approval.source;
+  for (const source of [...new Map(workspaces.flatMap(row => [...row.project.sources,
+    ...('notConsulted' in row.global ? [] : row.global.sources)])
+    .map(source => [source.path, source])).values(), ...(approvalSource ? [approvalSource] : [])]) {
+    const actual = await read(source.path, source.root, source.path === approvalSource?.path ? 131072 : 1024 * 1024);
     if (readinessOriginDigest(actual.source) !== readinessOriginDigest(source)) return held();
   }
   current();
@@ -304,7 +351,9 @@ export function capturedCreateReadiness(router: BackendOwnerRouter, reference: B
       }))].filter(row => row.providerId === 'opencode');
       original = { digest: fingerprint, promise: captureLocalModelReadinessOrigin({
         kind: 'create', owner, contextId: selection.draft.contextId, commandId: selection.preparationId,
-        ...inputs, selection, workspaces: settings.map(row => row.cwd), current, budget,
+        ...inputs, selection, workspaces: settings.map(row => row.cwd),
+        targets: settings.map(row => ({ workspace: row.cwd,
+          providerId: parseOpenCodeQualifiedModelRef(row.model)?.sourceId ?? null })), current, budget,
       }) };
     }
     const origin = await original.promise;
@@ -313,66 +362,296 @@ export function capturedCreateReadiness(router: BackendOwnerRouter, reference: B
   };
 }
 
-/** Only trusted Main preparation supplies this context; ordinary router calls are unchanged. */
+/** Original selected client budget; reading another phase never restarts this clock. */
+export function captureRequestReadinessBudget(requestTimeoutMs: number | undefined): LocalModelReadinessContext {
+  if (!Number.isSafeInteger(requestTimeoutMs) || !requestTimeoutMs || requestTimeoutMs <= 0) return held();
+  const admitted = performance.now(), duration = Math.min(100000, requestTimeoutMs);
+  return { remainingMs: () => duration - (performance.now() - admitted) };
+}
+
+function currentReadiness(router: BackendOwnerRouter, definition: Definition,
+  guard: BoundBackendCommand['guard'], budget: LocalModelReadinessContext) {
+  const owner = router.ownerBinding(definition.owner), fingerprint = readinessOriginDigest(owner);
+  const current = () => {
+    assertBackendRequestGuard(guard);
+    if (readinessOriginDigest(router.ownerBinding(definition.owner)) !== fingerprint) return held();
+    readinessRemaining(budget);
+  };
+  current();
+  return { owner, current };
+}
+
+/** The requested private attachment is stripped before the ordinary public projection. */
+export async function readCapturedLaunchReadiness(options: {
+  router: BackendOwnerRouter; handle: BackendHandle; definition: Definition;
+  commandId: string; launchId: string; rosterRevision?: string;
+  guard?: BoundBackendCommand['guard']; budget: LocalModelReadinessContext; capture?: true;
+}) {
+  const { router, handle, definition, budget } = options;
+  const { current } = currentReadiness(router, definition, options.guard, budget);
+  const request = { handle, commandId: `readiness-read-${readinessOriginDigest([options.commandId, options.launchId])}`,
+    operation: 'team.launch.configuration.read' as const, payload: { launchId: options.launchId } };
+  const raw = await router.request(handle, { commandId: request.commandId, method: request.operation,
+    payload: request.payload, control: true, guard: options.guard, requestBudget: budget,
+    ...(options.capture && options.rosterRevision ? { localModelReadinessCapture: {
+      launchId: options.launchId, rosterRevision: options.rosterRevision,
+    } } : {}) });
+  current();
+  if (!object(raw)) return held();
+  const { localModelReadinessCapture, ...publicResult } = raw;
+  if (!options.capture && localModelReadinessCapture !== undefined) return held();
+  const result = projectBackendResult(request, publicResult as JsonValue);
+  if (!result.ok || !result.value || !('launch' in result.value) || !('members' in result.value) ||
+      result.value.launch.launchId !== options.launchId || options.rosterRevision !== undefined &&
+      result.value.launch.rosterRevision !== options.rosterRevision) return held();
+  const capture = localModelReadinessCapture === null || localModelReadinessCapture === undefined ? null
+    : localModelReadinessCaptureViewSchema.parse(localModelReadinessCapture);
+  if (capture && (capture.launchId !== options.launchId || capture.rosterRevision !== options.rosterRevision)) return held();
+  return { view: result.value, capture };
+}
+
+/** Only a changed actual cwd starts its one already committed child; Host awaits that same probe. */
+export async function prepareCapturedWorkspaces(options: {
+  router: BackendOwnerRouter; handle: BackendHandle; definition: Definition;
+  view: BackendLaunchConfigurationView; capture: LocalModelReadinessCaptureView;
+  guard?: BoundBackendCommand['guard']; budget: LocalModelReadinessContext;
+}): Promise<LocalModelReadinessContext> {
+  const { router, handle, definition, view, capture, guard } = options;
+  const received = performance.now(), remaining = capture.remainingMs;
+  const budget = { remainingMs: () => Math.min(options.budget.remainingMs(), remaining - (performance.now() - received)) };
+  const { owner, current } = currentReadiness(router, definition, guard, budget);
+  if (capture.launchId !== view.launch.launchId || capture.rosterRevision !== view.launch.rosterRevision) return held();
+  const selected = view.members.filter(row => {
+    if (row.selected?.provider !== 'opencode') return false;
+    const member = view.launch.members.find(member => member.memberId === row.memberId);
+    if (!member) return held();
+    return member.status !== 'skipped';
+  });
+  if (new Set(capture.targets.map(row => row.memberId)).size !== capture.targets.length ||
+      capture.targets.some(target => !selected.some(row => row.memberId === target.memberId))) return held();
+  let inputs: ReturnType<typeof captureReadinessInputs> | undefined;
+  for (const target of capture.targets) {
+    const row = selected.find(member => member.memberId === target.memberId)!.selected!;
+    if (row.context !== undefined) return held();
+    if (row.workspace === target.originalWorkspace) continue;
+    inputs ??= captureReadinessInputs();
+    const commandId = actualCaptureReadinessCommandId(capture.preparationId, capture.captureCommandId, target.memberId);
+    const payload: BackendLaunchModelSelection = { launchId: capture.launchId, rosterRevision: capture.rosterRevision,
+      memberId: target.memberId, model: row.model,
+      ...(row.effort === undefined ? {} : { effort: row.effort }) };
+    const origin = await captureLocalModelReadinessOrigin({ ...inputs, kind: 'team', owner,
+      contextId: definition.contextId, commandId, selection: { handleId: handle.handleId, scope: definition.scope, payload },
+      workspaces: [row.workspace], targets: [{ workspace: row.workspace,
+        providerId: parseOpenCodeQualifiedModelRef(row.model)?.sourceId ?? null }], current, budget });
+    current();
+    const request = { handle, commandId, operation: 'team.launch.probe.start' as const, payload };
+    const raw = await router.request(handle, { commandId, method: request.operation, payload: payload as unknown as JsonValue,
+      guard, requestBudget: budget, localModelReadinessOrigin: createReadinessPreparation(origin, budget) });
+    current();
+    const result = projectBackendResult(request, raw);
+    if (!result.ok || !result.value || !('phase' in result.value) || !('model' in result.value) ||
+      result.value.phase !== 'running' && (result.value.phase !== 'completed' || !result.value.ok)) return held();
+  }
+  current();
+  return budget;
+}
+
+/** Trusted Main phases retain their original owner, payload and remaining action time. */
 export async function requestWithLocalModelReadiness(
   acquire: () => Promise<BackendOwnerRouter>, handle: BackendHandle, command: BoundBackendCommand,
-  definition: { owner: BackendOwnerRef; contextId: string; scope: BackendScope } | undefined
+  definition: Definition | undefined, routing: ReadinessRouting = {}
 ): Promise<JsonValue> {
-  command = { ...command, payload: structuredClone(command.payload) };
+  handle = { ...handle };
+  command = { ...command, payload: structuredClone(command.payload),
+    ...(command.localModelReadinessTarget ? { localModelReadinessTarget: structuredClone(command.localModelReadinessTarget) } : {}) };
   definition = definition ? structuredClone(definition) : undefined;
   const original = command.localModelReadinessContext;
   const preparation = original ? { remainingMs: original.remainingMs.bind(original),
     ...(original.view ? { view: structuredClone(original.view) } : {}) } : undefined;
-  if (command.method !== 'team.launch.probe.start' || !preparation)
-    return (await acquire()).request(handle, command);
-  const originalPayload = object(command.payload) ? command.payload : undefined;
-  const originalDraft = object(originalPayload?.draft) ? originalPayload.draft : undefined;
-  const provider = originalDraft ? originalDraft.providerId : preparation.view?.members
-    .find(row => row.memberId === originalPayload?.memberId)?.selected?.provider;
-  if (provider === 'claude' || provider === 'anthropic' || provider === 'codex')
-    return (await acquire()).request(handle, command);
-  const inputs = captureReadinessInputs();
-  assertBackendRequestGuard(command.guard); readinessRemaining(preparation);
-  const router = await acquire();
-  if (!definition || !object(command.payload) || typeof command.payload.launchId !== 'string' ||
-      typeof command.payload.rosterRevision !== 'string') return held();
-  const owner = router.ownerBinding(definition.owner);
-  const payload = structuredClone(command.payload);
-  const current = () => {
-    assertBackendRequestGuard(command.guard);
-    if (readinessOriginDigest(router.ownerBinding(definition.owner)) !== readinessOriginDigest(owner)) return held();
-    readinessRemaining(preparation);
-  };
-  current();
-  let view = preparation.view;
-  if (!view) {
-    const launchId = command.payload.launchId;
-    const request = { handle, commandId: command.commandId + ':origin',
-      operation: 'team.launch.configuration.read' as const, payload: { launchId } };
-    const raw = await router.request(handle, {
-      commandId: request.commandId, method: request.operation, payload: request.payload, control: true,
-      ...(command.guard ? { guard: command.guard } : {}),
-    });
-    current();
-    const result = projectBackendResult(request, raw);
-    if (!result.ok || !result.value || !('launch' in result.value) || !('members' in result.value))
-      return held();
-    view = { launch: { launchId: result.value.launch.launchId,
-      rosterRevision: result.value.launch.rosterRevision }, members: result.value.members };
+  let payload = object(command.payload) ? command.payload : undefined;
+  const locator = payload?.modelPreparation === undefined ? undefined : parseLaunchModelPreparation(payload.modelPreparation);
+  if (locator) {
+    if (!['team.launch.capture', 'team.launch.start'].includes(command.method)) return held();
+    const { modelPreparation: _locator, ...wire } = payload!;
+    command = { ...command, payload: wire as JsonValue }; payload = wire;
   }
-  if (view.launch.launchId !== payload.launchId || view.launch.rosterRevision !== payload.rosterRevision ||
-      typeof payload.memberId !== 'string') return held();
-  const row = view.members.find(row => row.memberId === payload.memberId);
-  const draft = object(payload.draft) ? payload.draft : undefined;
-  const opencode = draft ? draft.providerId === 'opencode' : row?.selected?.provider === 'opencode';
-  if (!opencode) return router.request(handle, command);
+  const savedCapture = command.method === 'team.launch.capture' && locator;
+  const live = command.method === 'team.roster.replace' && routing.rosterCommands;
+  const probe = command.method === 'team.launch.probe.start' && preparation;
+  const aggregate = command.method === 'team.launch.start';
+  const restart = command.method === 'team.member.action.execute' && payload?.action === 'restart';
+  const open = command.method === 'runtime.open' && command.localModelReadinessTarget;
+  if (!savedCapture && !live && !probe && !aggregate && !restart && !open) {
+    const lookup = command.method === 'team.roster.lookup' && object(payload?.expected);
+    const raw = await (await acquire()).request(handle, { ...command,
+      ...(lookup ? { liveRoster: { phase: 'read' as const } } : {}) });
+    if (object(raw) && ('liveRosterCapture' in raw || 'liveRosterPending' in raw))
+      throw new BackendRoutingError('hold', 'unknown');
+    return raw;
+  }
+  const draft = object(payload?.draft) ? payload.draft : undefined;
+  const knownProvider = probe ? draft?.providerId ?? preparation.view?.members
+    .find(row => row.memberId === payload?.memberId)?.selected?.provider : undefined;
+  if (knownProvider === 'claude' || knownProvider === 'anthropic' || knownProvider === 'codex')
+    return (await acquire()).request(handle, command);
+  const budget = preparation ?? captureRequestReadinessBudget(routing.requestTimeoutMs);
+  assertBackendRequestGuard(command.guard); readinessRemaining(budget);
+  const router = await acquire();
+  if (!definition || !payload) return held();
+  const { owner, current } = currentReadiness(router, definition, command.guard, budget);
+  if (savedCapture) {
+    if (!routing.intents || !routing.rosterCommands || typeof payload.rosterCommandId !== 'string') return held();
+    const originalRoster = await routing.rosterCommands.readOriginalIntent(handle.handleId, payload.rosterCommandId, command.guard);
+    current();
+    const probes = [];
+    for (const selection of locator.selections) {
+      const retained = await routing.intents.read(capturedTeamModelProbeRootId(handle, selection), locator.preparationId);
+      current();
+      if (!retained.retained) return held();
+      probes.push({ commandId: retained.commandId, selection });
+    }
+    return router.request(handle, { ...command, requestBudget: budget, localModelReadinessTransfer: {
+      preparationId: locator.preparationId, probes,
+      roster: { commandId: originalRoster.commandId, expected: originalRoster.payload },
+    } });
+  }
+  if (live) {
+    const raw = await router.request(handle, { ...command, requestBudget: budget,
+      liveRoster: { phase: 'capture', remainingMs: readinessRemaining(budget) } });
+    current();
+    if (!object(raw) || !('liveRosterCapture' in raw || 'liveRosterPending' in raw)) return raw;
+    const response = parseLiveRosterResponse(raw);
+    if (!response.ok || !('liveRosterCapture' in response)) throw new BackendRoutingError('hold', 'unknown');
+    const capture = response.liveRosterCapture;
+    if (capture.commandId !== command.commandId || capture.teamId !== definition.scope.teamId ||
+      capture.requestDigest !== readinessOriginDigest({ commandId: command.commandId, payload }) ||
+      capture.expectedRevision !== payload.expectedRevision) return held();
+    let origin: CapturedReadinessOrigin | undefined;
+    if (capture.target.provider === 'opencode') {
+      const inputs = captureReadinessInputs();
+      origin = createReadinessPreparation(await captureLocalModelReadinessOrigin({ ...inputs, kind: 'team', owner,
+        contextId: definition.contextId, commandId: command.commandId,
+        selection: { handleId: handle.handleId, scope: definition.scope, payload, liveRosterCapture: capture },
+        workspaces: [capture.target.workspace], targets: [{ workspace: capture.target.workspace,
+          providerId: capture.target.modelProviderId }], current, budget }), budget);
+      current();
+    }
+    const result = await router.request(handle, { ...command, requestBudget: budget,
+      liveRoster: { phase: 'continue', captureDigest: capture.captureDigest, remainingMs: readinessRemaining(budget) },
+      ...(origin ? { localModelReadinessOrigin: origin } : {}) });
+    current();
+    if (object(result) && ('liveRosterCapture' in result || 'liveRosterPending' in result))
+      throw new BackendRoutingError('hold', 'unknown');
+    return result;
+  }
+  let view = preparation?.view;
+  let capture: LocalModelReadinessCaptureView | null = null;
+  const target = command.localModelReadinessTarget;
+  const launchId = target?.launchId ?? payload.launchId;
+  if (typeof launchId !== 'string') return held();
+  if (!view) {
+    const read = await readCapturedLaunchReadiness({ router, handle, definition, commandId: command.commandId,
+      launchId, ...(typeof payload.rosterRevision === 'string' ? { rosterRevision: payload.rosterRevision } : {}),
+      guard: command.guard, budget, ...(aggregate ? { capture: true } : {}) });
+    view = read.view; capture = read.capture;
+  }
+  if (view.launch.launchId !== launchId || payload.rosterRevision !== undefined && view.launch.rosterRevision !== payload.rosterRevision)
+    return held();
+  if (aggregate && view.launch.admission?.commandId === command.commandId)
+    return router.request(handle, command);
+  if (target && (target.memberId !== payload.memberId || target.expectedGeneration !== payload.expectedGeneration ||
+      view.launch.members?.find(row => row.memberId === target.memberId)?.generation !== target.expectedGeneration)) return held();
+  const rows = aggregate ? view.members.filter(row =>
+    !view!.launch.members?.some(member => member.memberId === row.memberId && member.status === 'skipped'))
+    : view.members.filter(row => row.memberId === payload.memberId);
+  const row = rows[0];
+  if (!aggregate && !row && !draft) return held();
+  const opencode = draft ? draft.providerId === 'opencode' : rows.some(row => row.selected?.provider === 'opencode');
+  if (!opencode) {
+    if (draft || rows.every(row => row.selected?.provider === 'claude' || row.selected?.provider === 'codex' ||
+      view!.launch.members?.some(member => member.memberId === row.memberId && member.status === 'skipped')))
+      return router.request(handle, command);
+    return held();
+  }
+  current();
+  if (aggregate) {
+    if (!capture || locator && locator.preparationId !== capture.preparationId) return held();
+    const remaining = await prepareCapturedWorkspaces({ router, handle, definition,
+      view: view as BackendLaunchConfigurationView, capture, guard: command.guard, budget });
+    return router.request(handle, { ...command, requestBudget: remaining });
+  }
   const workspace = draft && typeof draft.workspace === 'string' ? draft.workspace : row?.selected?.workspace;
   if (!workspace) return held();
-  const origin = await captureLocalModelReadinessOrigin({
-    ...inputs, kind: 'team', owner, contextId: definition.contextId, commandId: command.commandId,
-    selection: { handleId: handle.handleId, scope: definition.scope, payload }, workspaces: [workspace], current, budget: preparation,
-  });
+  const inputs = captureReadinessInputs();
+  const model = typeof payload.model === 'string' ? payload.model : row?.selected?.model;
+  const origin = await captureLocalModelReadinessOrigin({ ...inputs, kind: 'team', owner,
+    contextId: definition.contextId, commandId: command.commandId,
+    selection: { handleId: handle.handleId, scope: definition.scope, payload },
+    workspaces: [workspace], targets: [{ workspace, providerId: parseOpenCodeQualifiedModelRef(model ?? null)?.sourceId ?? null }], current, budget });
   current();
-  return router.request(handle, { ...command,
-    localModelReadinessOrigin: createReadinessPreparation(origin, preparation) });
+  return router.request(handle, { ...command, requestBudget: budget,
+    localModelReadinessOrigin: createReadinessPreparation(origin, budget) });
+}
+
+/** One captured Create conversation; recovered partial results never continue native work. */
+export function captureCreatedTeamConversation(options: {
+  client: CapturedTeamRegistry; router: BackendOwnerRouter; owner: BackendOwnerRef;
+  contextId: string; guard: NonNullable<BoundBackendCommand['guard']>; requestTimeoutMs: number;
+  refreshSources(cwd: string): Promise<void>;
+  register(record: TeamRegistryRecord): Promise<void>;
+}) {
+  let preparedSources: Promise<void> | undefined;
+  let captureOrigin: ReturnType<typeof capturedCreateReadiness> | undefined;
+  const selected = (input: CreateTeamLaunchPreparationInput) => {
+    if (input.draft.contextId !== options.contextId) throw new BackendRoutingError('forbidden');
+    return structuredClone(input);
+  };
+  const hasOpenCode = (input: CreateTeamLaunchPreparationInput) =>
+    input.draft.savedSettings.providerId === 'opencode' || input.draft.members.some(row => row.memberSettings.providerId === 'opencode');
+  const retain = async <T extends { creation: { commandId: string; phase: string; record: TeamRegistryRecord } }>(commandId: string, result: T) => {
+    if (result.creation.commandId !== commandId || result.creation.phase !== 'published')
+      throw new BackendRoutingError('hold', 'unknown');
+    await options.register(result.creation.record);
+    return result;
+  };
+  return {
+    prepare: async (action: 'prepare' | 'probe.read' | 'probe.cancel',
+      input: CreateTeamLaunchPreparationInput, readiness?: LocalModelReadinessContext) => {
+      const captured = selected(input);
+      let origin: CapturedReadinessOrigin | undefined;
+      if (action === 'prepare' && hasOpenCode(captured)) {
+        if (!readiness) return held();
+        const budget = { remainingMs: readiness.remainingMs.bind(readiness) };
+        captureOrigin ??= capturedCreateReadiness(options.router, options.owner, () => assertBackendRequestGuard(options.guard));
+        preparedSources ??= options.refreshSources(captured.draft.savedSettings.cwd);
+        await preparedSources;
+        origin = createReadinessPreparation(await captureOrigin(captured, budget), budget);
+      }
+      return options.client.prepareCreation(action, captured, action === 'probe.cancel' ? undefined : options.guard, origin);
+    },
+    submit: async (commandId: string, input: CreateTeamLaunchPreparationInput) => {
+      const captured = selected(input);
+      if (!hasOpenCode(captured))
+        return retain(commandId, await options.client.submitCreation(commandId, captured, options.guard));
+      const budget = captureRequestReadinessBudget(options.requestTimeoutMs);
+      let result;
+      try { result = await options.client.captureCreation(commandId, captured, options.guard, budget); }
+      catch (error) {
+        const retained = await options.client.lookupCreation(commandId, captured, options.guard);
+        if (!retained) throw error;
+        return retain(commandId, retained);
+      }
+      await retain(commandId, result);
+      const handle = { handleId: result.creation.record.binding.handleId };
+      const definition = { owner: options.owner, contextId: options.contextId, scope: result.creation.record.binding.scope };
+      const read = await readCapturedLaunchReadiness({ router: options.router, handle, definition, commandId,
+        launchId: result.launch.launchId, rosterRevision: result.launch.rosterRevision,
+        guard: options.guard, budget, capture: true });
+      if (!read.capture || read.capture.preparationId !== captured.preparationId) return held();
+      const remaining = await prepareCapturedWorkspaces({ router: options.router, handle, definition,
+        ...read, capture: read.capture, guard: options.guard, budget });
+      return retain(commandId, await options.client.submitCreation(commandId, captured, options.guard,
+        { launchId: result.launch.launchId, rosterRevision: result.launch.rosterRevision }, remaining));
+    },
+  };
 }

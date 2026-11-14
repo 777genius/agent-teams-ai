@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { closeSync, openSync } from 'node:fs';
-import { lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +28,23 @@ async function pin(path: string, expected?: string) {
   const sha256 = await candidateDigest(path);
   if (expected !== undefined) assert.equal(sha256, hash(expected), path);
   return { path, sha256 };
+}
+
+/** The locked builder omits this exact tracked root placeholder, never shipping payload. */
+async function terminalShippingHash(root: string): Promise<string> {
+  const paths: string[] = [];
+  const visit = async (directory: string, prefix = '') => {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const relative = prefix + entry.name;
+      if (entry.isDirectory()) await visit(join(directory, entry.name), relative + '/');
+      else if (entry.isFile() && relative !== '.gitkeep') paths.push(relative);
+    }
+  };
+  await visit(root);
+  const digest = createHash('sha256');
+  for (const path of paths.sort())
+    digest.update(path).update('\0').update(await readFile(join(root, path))).update('\0');
+  return digest.digest('hex');
 }
 
 /** TEST-only real builder output; reuses the proved cold UI scenario with its relocated Host. */
@@ -80,6 +98,12 @@ export async function qualifyLinuxProcessPacked(input: {
     'mcp-server/dist', 'src/renderer/assets/participant-avatars'].map(async path => ({
     path: join(repository, path), suffix: '', sha256: await treeHash(join(repository, path), ''),
   })))];
+  const terminalSource = join(repository, 'resources/terminal-platform');
+  files.push(await pin(join(terminalSource, '.gitkeep'),
+    '01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b'));
+  const terminalTree = trees.find(value => value.path === terminalSource);
+  assert.ok(terminalTree);
+  const terminalPayloadSha256 = await terminalShippingHash(terminalSource);
   const verify = async () => {
     for (const original of files) await pin(original.path, original.sha256);
     for (const original of trees) assert.equal(await treeHash(original.path, original.suffix), original.sha256, original.path);
@@ -90,7 +114,8 @@ export async function qualifyLinuxProcessPacked(input: {
   const receiptPath = join(output, 'packed-receipt.json');
   const proof: Record<string, unknown> = { schemaVersion: 1, status: 'INCOMPLETE', coldReceipt, sdkReceipt,
     nativeCapture, tuple: 'linux-x64', scope: 'Actual unsigned Electron directory: controlled cold Host, original-ref Stop/history',
-    installerClaim: false, sdkColdSurvivalClaim: false, providerSessions: 0, frozenInputs: { files, trees } };
+    installerClaim: false, sdkColdSurvivalClaim: false, providerSessions: 0, frozenInputs: { files, trees },
+    terminalPayload: { sourceTreeSha256: terminalTree.sha256, shippingSha256: terminalPayloadSha256 } };
   let failure: unknown;
   let packedCapture: Awaited<ReturnType<typeof captureCandidateElectron>> | undefined;
   let packed: Awaited<ReturnType<typeof readCapturedCandidateElectron>> | undefined;
@@ -123,7 +148,8 @@ export async function qualifyLinuxProcessPacked(input: {
     for (const path of ['resources/app.asar.unpacked', 'resources/git', 'resources/terminal-platform']) {
       const sha256 = await treeHash(join(bundleRoot, path), '');
       if (path !== 'resources/app.asar.unpacked')
-        assert.equal(sha256, trees.find(value => value.path === join(repository, path))?.sha256, path);
+        assert.equal(sha256, path === 'resources/terminal-platform' ? terminalPayloadSha256
+          : trees.find(value => value.path === join(repository, path))?.sha256, path);
       trees.push({ path: join(bundleRoot, path), suffix: '', sha256 });
     }
     await verify();

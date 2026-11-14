@@ -7,6 +7,8 @@ import { createFilesystemTeamOwner as createOwner } from '../dist/adapters/team/
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { TeamOwnerError } from '../dist/team/contracts.js';
 import { digest } from '../dist/team/identity.js';
+import { parseLiveRosterPrivateInput, parseLiveRosterResponse } from '../dist/team/liveRosterMembership.js';
+import type { LiveRosterOriginal } from '../dist/team/liveRosterMembership.js';
 import type { FilesystemTeamOwnerOptions } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import type { OwnerState } from '../dist/team/ownerState.js';
 import type {
@@ -392,6 +394,81 @@ test('add/remove/restore retain product IDs and Task bytes; an old member grant 
   );
   assert.deepEqual(readFileSync(taskPath), before);
   assert.ok(!f.state().members.find((member) => member.name === 'alice')!.delivery);
+
+  // Team-owner rules only: Runtime allocation/release is exercised by the connected Host case.
+  const live = fixture(t, options => {
+    options.savedSettings = { cwd: '/TEST/project' };
+    options.members[1]!.delivery = { ...options.binding, runId: 'TEST-live-run', memberId: 'alice-id', generation: '1' };
+  });
+  const usecase = live.owner.nativeRoster.liveMembership();
+  const originalPeers = structuredClone(live.state().members), originalGrants = structuredClone(live.state().grants);
+  const source = { launchId: 'TEST-live-run', sourceCaptureDigest: 'a'.repeat(64),
+    hostIncarnation: 'TEST-host', cutoff: Date.now() + 60_000, assertCurrent() {} };
+  const start = (commandId: string, members: ReplaceTeamRoster['members']) => {
+    const input = live.request(commandId, members), { commandId: _id, ...payload } = input;
+    const requestDigest = digest({ commandId, payload });
+    const begun = usecase.begin('human', input, requestDigest, source);
+    assert.equal(begun.fresh, true);
+    const admission: LiveRosterOriginal = { ...source, principalId: 'human', commandId, requestDigest,
+      fingerprint: begun.record.fingerprint, authorityRevision: begun.record.liveMembership.authorityRevision };
+    return { input, requestDigest, admission, record: begun.record };
+  };
+  const prepared = (action: ReturnType<typeof start>) => {
+    const target = action.record.liveMembership.delta.after!, captureDigest = digest(action.input);
+    usecase.captured(action.admission, { schemaVersion: 1, commandId: action.input.commandId,
+      teamId: live.options.binding.teamId, requestDigest: action.requestDigest,
+      expectedRevision: action.input.expectedRevision, launchId: source.launchId,
+      sourceCaptureDigest: source.sourceCaptureDigest, captureDigest,
+      target: { memberId: target.memberId, name: target.name, provider: 'codex', modelProviderId: null,
+        modelId: 'TEST-model', workspace: live.root, optionsDigest: 'b'.repeat(64), configurationDigest: 'c'.repeat(64) } });
+    usecase.preparing(action.admission, captureDigest);
+    return { principalId: `agent:${action.input.commandId}`, configurationDigest: 'c'.repeat(64),
+      delivery: { ...live.options.binding, runId: source.launchId, memberId: target.memberId, generation: action.input.commandId } };
+  };
+  const choices = [{ name: 'alice' }, { name: 'bob' }, { name: 'worker', workflow: 'TEST own instructions' }];
+  assert.equal(usecase.preview('human', live.request('TEST-not-single', [{ name: 'another' }])), undefined);
+  const configBefore = live.config(), add = start('TEST-live-add', choices);
+  assert.equal(live.config(), configBefore, 'capture decision is not product publication');
+  assert.throws(() => live.human.lookupRoster(add.input.commandId), code('hold'));
+  assert.equal(usecase.begin('human', add.input, add.requestDigest, source).fresh, false);
+  const cold = createOwner(live.options).nativeRoster.liveMembership();
+  assert.equal((cold.lookup('human', add.input, add.requestDigest) as { liveRosterPending: { phase: string } }).liveRosterPending.phase, 'pending');
+  assert.throws(() => cold.lookup('human', { ...add.input, members: [] }, add.requestDigest), code('conflict'));
+  const selected = prepared(add);
+  usecase.publishTarget(add.admission, selected);
+  const added = usecase.complete(add.admission);
+  assert.deepEqual(usecase.lookup('human', add.input, add.requestDigest), added);
+  assert.deepEqual(live.state().members.filter(row => row.name !== 'worker'), originalPeers);
+  assert.deepEqual(live.state().grants.filter(row => row.memberName !== 'worker'), originalGrants);
+  live.owner.connect('alice-session').readRoster();
+  const productId = live.state().members.find(row => row.name === 'worker')!.memberId;
+  const remove = start('TEST-live-remove', choices.slice(0, 2));
+  usecase.publishTarget(remove.admission); usecase.complete(remove.admission);
+  assert.equal(live.state().removedMembers!.find(row => row.name === 'worker')!.memberId, productId);
+  assert.throws(() => live.owner.connect(selected.principalId).readRoster(), code('forbidden'));
+  const restore = start('TEST-live-restore', choices), restoredSelection = prepared(restore);
+  assert.equal(restore.record.liveMembership.delta.kind, 'restore');
+  assert.equal(restoredSelection.delivery.memberId, productId);
+  assert.notEqual(restoredSelection.delivery.generation, selected.delivery.generation);
+  assert.notEqual(restoredSelection.principalId, selected.principalId);
+  usecase.publishTarget(restore.admission, restoredSelection); usecase.complete(restore.admission);
+  assert.deepEqual(live.state().members.filter(row => row.name !== 'worker'), originalPeers);
+  assert.deepEqual(live.state().grants.filter(row => row.memberName !== 'worker'), originalGrants);
+  assert.throws(() => live.owner.connect(selected.principalId).readRoster(), code('forbidden'));
+  const failed = start('TEST-live-compensation', [...choices, { name: 'trial' }]);
+  usecase.publishTarget(failed.admission, prepared(failed)); usecase.compensating(failed.admission);
+  const refusal = usecase.rejectReleased(failed.admission, 'hold');
+  assert.deepEqual(refusal, { ok: false, code: 'hold', outcome: 'rejected' });
+  assert.deepEqual(cold.lookup('human', failed.input, failed.requestDigest), refusal);
+  assert.ok(!live.state().members.some(row => row.name === 'trial'));
+  assert.ok(!live.state().removedMembers!.some(row => row.name === 'trial'));
+  const debt = start('TEST-live-probe-debt', [...choices, { name: 'held' }]);
+  usecase.hold(debt.admission);
+  assert.equal((cold.lookup('human', debt.input, debt.requestDigest) as { liveRosterPending: { phase: string } }).liveRosterPending.phase, 'held');
+  assert.throws(() => live.human.replaceRoster(live.request('TEST-replacement', choices.slice(0, 2))), code('hold'));
+  assert.throws(() => parseLiveRosterPrivateInput('team.roster.lookup', { phase: 'capture', remainingMs: 1 }), code('invalid'));
+  assert.throws(() => parseLiveRosterPrivateInput('team.roster.replace', { phase: 'continue', captureDigest: 'a'.repeat(64), remainingMs: 2 }, { remainingMs: 1 }), code('invalid'));
+  assert.throws(() => parseLiveRosterResponse({ ok: true, liveRosterPending: { commandId: 'TEST', requestDigest: 'a'.repeat(64), phase: 'held', captureDigest: null, raw: 'TEST-not-a-field' } }));
 });
 
 test('unchanged roster records one original intent without detaching targets or invoking Runtime proof', (t) => {

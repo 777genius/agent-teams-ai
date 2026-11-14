@@ -147,13 +147,15 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     });
     const target: CapturedHostScheduleTarget = { target: { kind: 'host', contextId: 'TEST-context',
       handleId: 'TEST-handle', ownerResourceRef: 'TEST-owner', teamResourceRef: 'TEST-team' },
-      isCurrent: () => true, invoke };
+      isCurrent: () => true, invoke, prepareModels: async () => { throw new Error('Unexpected TEST model preparation'); } };
     const adapter = new HostSmartScheduleRuntimeAdapter({ target, selection, runId: 'TEST-occurrence',
       taskFirst: true, getPreviousRuns: async () => [] });
     const expected = { runId: launch.launchId, generation: state.generation! };
     expect(await adapter.getMemberStatuses(selection)).toMatchObject({
       statuses: { alice: { status: 'offline' } } });
     await adapter.attachMember(selection, 'alice', expected);
+    expect(invoke).toHaveBeenCalledWith(expect.objectContaining({ operation: 'runtime.open' }),
+      { launchId: expected.runId, memberId: state.memberId, expectedGeneration: state.generation });
     const admission = { expectedOwner: 'alice', expectedRunId: expected.runId,
       expectedGeneration: expected.generation, isCurrent: () => true, canStart: async () => true };
     await expect(adapter.startTaskByUser(selection, 'TEST-task', admission)).resolves.toEqual({ notifiedOwner: true });
