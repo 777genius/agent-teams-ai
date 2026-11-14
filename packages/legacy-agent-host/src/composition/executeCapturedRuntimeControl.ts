@@ -198,7 +198,10 @@ export async function executeCapturedRuntimeControl(
           runtimeDigest(retained.team.definition.binding) !== runtimeDigest(entry.team.definition.binding) ||
           !assertAuthority) throw new RuntimeOwnerError('hold');
       const current = options.runtime.readSession(entry.binding);
-      if (current.record?.phase === 'unopened' && current.record.custody === 'owned' && !current.attached) {
+      // The original seed has no Runtime row until the first launch claim.
+      const initialBeforeOpen = current.record === undefined && !current.attached &&
+        entry.initialModelAdmission !== undefined && entry.selection === undefined;
+      if (initialBeforeOpen || current.record?.phase === 'unopened' && current.record.custody === 'owned' && !current.attached) {
         actorDigest = runtimeDigest(entry.team.owner.withLaunchAuthority(options.principalId, 'control',
           revision => ({ principalId: options.principalId, revision })));
         if (!readiness && entry.initialModelAdmission && !entry.selection) {
