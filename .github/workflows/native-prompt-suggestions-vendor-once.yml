@@ -1,0 +1,95 @@
+name: Native prompt suggestions exact vendor staging (TEST only)
+
+# One-shot source-artifact adoption. Remove this workflow after the verified commit.
+on:
+  push:
+    branches:
+      - feat/native-prompt-suggestions-stage1-20261114
+    paths:
+      - .github/workflows/native-prompt-suggestions-vendor-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  stage-exact-archive:
+    if: github.repository == '777genius/agent-teams-ai' && github.ref_name == 'feat/native-prompt-suggestions-stage1-20261114'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: true
+          fetch-depth: 1
+
+      - name: Download and verify exact original provider CI artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          url="https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/artifacts/14118487243/zip"
+          if ! curl --fail --silent --show-error --location \
+                -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+                "$url" --output "$tmp/provider.zip"; then
+            curl --fail --silent --show-error --location \
+              -H "Accept: application/vnd.github+json" \
+              "$url" --output "$tmp/provider.zip"
+          fi
+          echo '7abb51947aa7c35b32636648107dbf9bdf74574faf277b8150433610109a523e  '"$tmp"'/provider.zip' | sha256sum --check
+          unzip -q "$tmp/provider.zip" -d "$tmp/extracted"
+          echo 'c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  '"$tmp"'/extracted/agent-teams-provider-implementations-0.0.0.tgz' | sha256sum --check
+          echo 'aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db  '"$tmp"'/extracted/agent-teams-provider-session-contracts-0.0.0.tgz' | sha256sum --check
+          python3 - "$tmp/extracted/receipt.json" <<'PY'
+          import json,sys
+          r=json.load(open(sys.argv[1]))
+          assert r['schemaVersion']==1
+          assert r['sourceCommit']=='74991c21a64f44a268bdb1d769b4a580b33a4853'
+          assert r['nativeHostQualified'] is False
+          assert r['packagedElectronQualified'] is False
+          assert r['qualification']=='source-and-packed-consumer-only'
+          PY
+          tar -tzf "$tmp/extracted/agent-teams-provider-implementations-0.0.0.tgz" | grep -q '^package/dist/prompt-suggestions.js$'
+          dest='vendor/provider-migration/native-prompt-suggestions-74991c21'
+          mkdir -p "$dest"
+          cp "$tmp/extracted/agent-teams-provider-implementations-0.0.0.tgz" "$dest/"
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+
+      - name: Update one package selector and frozen lockfile
+        run: |
+          set -euo pipefail
+          node <<'JS'
+          const fs = require('node:fs');
+          const file = 'packages/legacy-agent-host/package.json';
+          const value = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const key = '@agent-teams/provider-implementations';
+          const expected = 'file:../../vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-implementations-0.0.0.tgz';
+          if (value.dependencies?.[key] !== expected) {
+            throw new Error('Existing provider archive selection has changed. Refusing an automatic overwrite.');
+          }
+          value.dependencies[key] = 'file:../../vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz';
+          fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n');
+          JS
+          corepack enable
+          corepack pnpm --version
+          corepack pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
+          git diff --check
+
+      - name: Commit and push exact tested artifact to isolated feature branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- \
+            packages/legacy-agent-host/package.json \
+            pnpm-lock.yaml \
+            vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
+          git diff --cached --check
+          git diff --cached --quiet && exit 0
+          git commit -m 'chore(native-suggestions): pin exact CI-qualified provider artifact'
+          git push origin HEAD:refs/heads/feat/native-prompt-suggestions-stage1-20261114
