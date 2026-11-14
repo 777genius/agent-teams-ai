@@ -7,6 +7,7 @@ import {
 } from '@renderer/components/runtime/providerConnectionUi';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { readFile as readFileFixture, writeFile } from 'fs/promises';
+import * as os from 'node:os';
 import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -71,6 +72,26 @@ async function execCliWithAuthoritativeRuntimeFixtures(...args: Parameters<typeo
   }
   return { ...result, stdout: JSON.stringify(parsed) };
 }
+
+// The OpenCode status context validates its project directory on macOS.
+// These tests use named fixture paths and never spawn a real runtime.
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const original = await importOriginal<typeof import('node:fs/promises')>();
+  const fixturePaths = new Set([
+    '/tmp/status-hydration-test-project',
+    '/tmp/local-model-project',
+    '/tmp/slow-opencode-project',
+    '/tmp/shared-opencode-project',
+    '/tmp/scoped-project',
+  ]);
+  return {
+    ...original,
+    stat: (target: Parameters<typeof original.stat>[0], ...args: unknown[]) =>
+      fixturePaths.has(String(target))
+        ? Promise.resolve({ isDirectory: () => true })
+        : (original.stat as (...parameters: unknown[]) => unknown)(target, ...args),
+  };
+});
 
 vi.mock('@main/utils/childProcess', () => ({
   execCli: (...args: Parameters<typeof execCliMock>) =>
@@ -703,7 +724,16 @@ describe('ClaudeMultimodelBridgeService', () => {
       expect(opencodeCalls).toHaveLength(1);
       expect(opencodeCalls[0][1]).toEqual(
         entrypoint === 'project'
-          ? ['runtime', 'status', '--json', '--provider', 'opencode']
+          ? [
+              'runtime',
+              'status',
+              '--json',
+              '--provider',
+              'opencode',
+              ...(process.platform === 'darwin'
+                ? ['--project-path', path.resolve(projectPath)]
+                : []),
+            ]
           : ['runtime', 'status', '--json', '--provider', 'opencode', '--summary']
       );
       expect(
@@ -712,8 +742,9 @@ describe('ClaudeMultimodelBridgeService', () => {
         )
       ).toBe(true);
       if (entrypoint === 'project') {
-        // The service resolves the project cwd before spawning.
-        expect(opencodeCalls[0][2]?.cwd).toBe(path.resolve(projectPath));
+        expect(opencodeCalls[0][2]?.cwd).toBe(
+          process.platform === 'darwin' ? os.homedir() : path.resolve(projectPath)
+        );
       } else {
         expect(opencodeCalls[0][2]?.cwd).toBeUndefined();
       }
@@ -1329,9 +1360,20 @@ describe('ClaudeMultimodelBridgeService', () => {
 
     expect(execCliMock).toHaveBeenCalledWith(
       '/mock/agent_teams_orchestrator',
-      ['runtime', 'status', '--json', '--provider', 'opencode'],
-      // The service resolves the project cwd before spawning the catalog probe.
-      expect.objectContaining({ cwd: path.resolve('/tmp/local-model-project') })
+      [
+        'runtime',
+        'status',
+        '--json',
+        '--provider',
+        'opencode',
+        ...(process.platform === 'darwin'
+          ? ['--project-path', path.resolve('/tmp/local-model-project')]
+          : []),
+      ],
+      expect.objectContaining({
+        cwd:
+          process.platform === 'darwin' ? os.homedir() : path.resolve('/tmp/local-model-project'),
+      })
     );
   });
 
@@ -1358,7 +1400,12 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
     // The runtime allows this read 180 s plus its own cleanup.
     expect(execCliMock.mock.calls.map((call) => [call[1].join(' '), call[2]?.timeout])).toEqual([
-      ['runtime status --json --provider opencode', 240_000],
+      [
+        process.platform === 'darwin'
+          ? 'runtime status --json --provider opencode --project-path /tmp/slow-opencode-project'
+          : 'runtime status --json --provider opencode',
+        240_000,
+      ],
     ]);
     expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
       expect.stringContaining('Provider-scoped full runtime status unavailable for opencode'),
@@ -2391,11 +2438,17 @@ describe('ClaudeMultimodelBridgeService', () => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
       if (
         normalizedArgs === 'runtime status --json --provider opencode --summary' ||
-        normalizedArgs === 'runtime status --json --provider opencode'
+        normalizedArgs === 'runtime status --json --provider opencode' ||
+        normalizedArgs ===
+          `runtime status --json --provider opencode --project-path ${resolvedScopedProjectPath}`
       ) {
         return Promise.resolve({
           stdout: JSON.stringify(
-            buildStatus(options?.cwd === resolvedScopedProjectPath ? 'scoped' : 'global')
+            buildStatus(
+              options?.cwd === resolvedScopedProjectPath || args.includes('--project-path')
+                ? 'scoped'
+                : 'global'
+            )
           ),
           stderr: '',
           exitCode: 0,
@@ -2428,11 +2481,18 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(scopedStatus.statusMessage).toBe('scoped');
     expect(execCliMock.mock.calls.map((call) => call[1])).toEqual([
       ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
-      ['runtime', 'status', '--json', '--provider', 'opencode'],
+      [
+        'runtime',
+        'status',
+        '--json',
+        '--provider',
+        'opencode',
+        ...(process.platform === 'darwin' ? ['--project-path', resolvedScopedProjectPath] : []),
+      ],
     ]);
     expect(execCliMock.mock.calls.map((call) => call[2]?.cwd ?? null)).toEqual([
       null,
-      resolvedScopedProjectPath,
+      process.platform === 'darwin' ? os.homedir() : resolvedScopedProjectPath,
     ]);
   });
 

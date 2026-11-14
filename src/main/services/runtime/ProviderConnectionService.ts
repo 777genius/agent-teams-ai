@@ -32,6 +32,7 @@ import {
 import { readClaudeUserAnthropicSettingsAuthEnv } from './claudeUserSettingsEnv';
 import { type CodexLaunchDialect, isCodexExecBinary } from './codexCliBinary';
 import { mergeProviderCatalogDisplayAuthority } from './providerCatalogDisplayAuthority';
+import { resolveCodexDisplayCatalog } from './resolveCodexDisplayCatalog';
 
 import type {
   AnthropicCompatibleEndpointConfig,
@@ -1187,20 +1188,11 @@ export class ProviderConnectionService {
       const orchestratorCatalog = isUsableCodexModelCatalog(withConnection.modelCatalog)
         ? withConnection.modelCatalog
         : null;
-      // The runtime catalog describes model capabilities; config/read supplies the
-      // user's configured effort separately, without exposing the rest of the config.
-      const configuredCatalog =
-        options.hydrateModelCatalog !== false && this.codexModelCatalogFeature
-          ? await this.codexModelCatalogFeature.getCatalog()
-          : null;
-      const catalog = orchestratorCatalog
-        ? configuredCatalog?.configuredReasoningEffort
-          ? {
-              ...orchestratorCatalog,
-              configuredReasoningEffort: configuredCatalog.configuredReasoningEffort,
-            }
-          : orchestratorCatalog
-        : configuredCatalog;
+      const catalog = await resolveCodexDisplayCatalog(
+        orchestratorCatalog,
+        this.codexModelCatalogFeature,
+        options.hydrateModelCatalog !== false
+      );
       if (!isUsableCodexModelCatalog(catalog)) {
         return withConnection;
       }
