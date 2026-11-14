@@ -4728,3 +4728,70 @@ Keep `tsconfig.legacy-agent-host-scripts.json`, every other config, NodeNext, st
 Source stays zero until independent review and root publication of this exact plan. After source GO, stage only these two deltas, freeze full before/after hashes and exact inverse proof for all three variants, and verify the runtime suffix from `export const isProcessRef` through end-of-file byte-for-byte. Independently verify the type export name/shape and that no import edge remains from the contracts leaf to shared Team types.
 
 Root owns canonical validation: repeat the originally failing scripts typecheck on the composed source, then the existing Main/renderer typechecks needed to verify both unchanged consumer names, plus the existing source/lint gates for these paths. Reuse already scheduled canonical checks where they cover the same composed source. No new unit case or new native campaign is justified for this erased two-field relocation; existing §89 tests retain their own prior result and actual future ordinary CI retains its original acceptance role. This appendix does not claim that the compiler has passed, that a native failure is fixed, or that any workflow has been rerun.
+
+
+## 92. Use the existing source-build heap allowance at the captured Darwin Desktop TEST boundary
+
+### 92.1 Actual new failure and its limited scope
+
+Status: PLAN ONLY / source0. This appendix preserves the entire current P09 `67e83c640af6ec32c82b6e3841d4016c9cdc1503` as its exact prefix. It refines §88's TEST environment scope using a new actual failure; it does not change production memory policy, source/Runtime authority or any acceptance result.
+
+Parent Main run43582225377, job132409194247, uses PR head `3a2882e1e07cfc0c8f6f51be322b6244b7e6a179` and executed merge `9ca2fac456faf7cbc138b984f282df8f606ac659`. The original Create-with-native-launch source Desktop attempt fails before Electron/CDP/Host entry. Full job log is `fa73a4965659c1cbf463e2c3bd5cf5e54da717f5`. Official artifact14109011693 is207203 bytes, ZIP SHA256 `12eef0ce5505214203e728dd13f4a9a02590fc48fb4e6440d35c4f03ddc24320`; only its original small logs/receipt were read, with no rerun.
+
+The original `desktop-app.log` blob `e579692e604f5a60797c755c27348ad9ff0b7df1` shows the pinned Node24.21.0 dev build transform3964 modules and enter SSR rendering, then fail at about2034 MiB with `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory`. The unchanged `electron-vite dev` child terminates with SIGABRT and its original `dev:mcp` leader exits1. `connectCapturedDesktopApp` reports the downstream original “captured app exited during startup” assertion. The180000ms startup deadline did not expire.
+
+Original receipt blob `e1993278524211d7e3a649669e9ba41b4ad5e646` is INCOMPLETE/native-create-ui with operations[], no occupied CDP listener and capturedHostObserved=false. Cleanup has remaining[]; capturedHostAbsent remains null because that Host was never observed. Source hashes before/after match. The only sentinel row is the original allowed `claude-multimodel --version`, blob `6364a862f901e4ca8d4ecccb4d90cdd842a44162`. The earlier genuine Claude commands proof and original47 script cases passed in this job; those independent results do not qualify the unstarted Create flow. Evidence packet `e9a559d4d0ff0bc4840230df9461f1a8c6e046c8` retains complete hashes and source joins. No free-RAM measurement or runner-capacity guarantee is inferred.
+
+One subsequent read of five other terminal original jobs and their small artifacts confirms the same app-log sequence in every row:3964 modules, SSR rendering, V8 heap-limit OOM and electron-vite SIGABRT. These are observed failures, not deductions from the common outer assertion:
+
+| Original job | Existing variant | Original app-log blob |
+| --- | --- | --- |
+|132409194267|native-mixed-v2-create-launch-ui|`0aa80559f33b5f02d715ccae148965dd4952e1ab`|
+|132409194287|stopped-import-ui|`41af570b194e5c06523a050d0c127f78c04672e3`|
+|132409194289|stopped-import-native-launch, actual current-source producer|`b512127fc25c8f370c225c6acf586d945bd6c9a9`|
+|132409194324|native-quit-pending-open-readback|`e84672380ee88b26d1f0adcbae29292a57c52520`|
+|132409194356|native-create-member|`3f96b979534d502fe7b3c65294c4668fd427bc75`|
+
+Bulk evidence `1a47eb9b2a09c602a41c8c58bc78211e6a474be0` retains all five complete job-log blobs, verified archive IDs/lengths/SHA256, exact original receipt-member hashes and extracted observations. Receipts are INCOMPLETE with operations[], preserved source freeze and empty cleanup. The stopped-import-native-launch producer also explicitly records phase=connect and zero catalog/model/business/native-child counts. Its outer Stop/Quit assertion is downstream of the same failed builder, not an observed Stop defect. No other job result or model behavior is inferred from this set.
+
+Root separately verified original P7 job132409194111 SUCCESS on the same Darwin ARM merge/Node24.21, evidence `399be4f7807eeaa9cc689ec3cf15e376483fa6af` and cold oracle `d808ee395c2616e1b5d882b4ca8ecaf2f2cfcfa3`, artifact14109036894. Its existing8192 cold arm reached the original source/packed launch-stop and separate cold Host/UI child-stop/physical-absence boundaries. This agent did not download that artifact again. That positive result supports retaining the old arm exactly; it does not qualify the newly included source modes or SDK cold survival.
+
+### 92.2 Existing shared source-build entry, without a second mode registry
+
+The current `desktop-backend-smoke.ts` `e890e4ecacd577e74bd3a900203c9971071a427f` requires `LEGACY_DESKTOP_BACKEND_GO === '1'` at its original entry before preparing the fixture. Its existing mode handling and `prepareDesktopProofMode` `df626ac0ed3a335699c556601bab859b5b82d829` retain the finite known-mode and additional original native/controlled grants. No new list of modes, public flag, selector or helper is required.
+
+The common workflow `ci.yml` `b992f42311f62005ee24d51df71a2e83a4268a1f` already sets that explicit BACKEND_GO in the captured source Desktop setup at1028. The original cold qualifier `fc655e33538c3bed7b35b80d34b871890c03b5fc` also sets BACKEND_GO='1', its original PROCESS_COLD_UI_GO and mode in one closed child environment at110. Thus its supported source invocation satisfies the common entry predicate; its own existing8192 literal remains unchanged.
+
+The same smoke module selects a packed invocation only from its original truthy `LEGACY_DESKTOP_PACKED_CAPTURE_PATH`, validated by `readCapturedCandidateElectron` before fixture creation. At its original spawn, a packed process receives a copy of the same fixture environment. Exclude that existing packed branch from the new common arm by using the identical source-versus-packed discriminator; do not newly send a Node option into packaged Electron. Preserve the complete pre-existing cold arm independently, including its prior behavior for low-level flag combinations outside the normal qualifier. The source branch continues through the unchanged selected Node/pinned pnpm `dev:mcp` invocation.
+
+The actual environment helper `desktop-runtime-source-fixture.ts` currently supplies the8192 literal only to §88's Darwin/arm64 process-cold conjunction. Therefore native-create-ui reaches the original source builder without it. The production launcher `dev-with-runtime.mjs` `9cc8140d2a88207312580450aa9db0c8abc63b0a` copies its original environment and calls unchanged `ensureMinimumNodeOldSpaceEnv`; `node-options.mjs` `423d10be677fa86cc12a56cf433a378e4a0639e5` leaves an absent value absent and preserves8192. The existing package/CI source build already uses8192 as recorded in §88. Make that same allowance explicit at the one shared authorized source TEST environment construction rather than add mode-specific heap branches after each failure.
+
+### 92.3 One existing write path, two exact variants
+
+| Existing TEST path | Exact full preimage | Bounded change |
+| --- | --- | --- |
+| `scripts/legacy-agent-host/desktop-runtime-source-fixture.ts` | Parent `6a7d279caf2d2254ab0cae2bd87103069d87ba67` (298 lines); native and qualification `46054fc75555c65df9d099efb08a01f80353bfe6` (303 lines) | Keep the outer Darwin + arm64 tuple and the complete existing cold conjunction; add only OR (BACKEND_GO='1' + original source branch, falsy PACKED_CAPTURE_PATH). Retain the exact fixed `NODE_OPTIONS: '--max-old-space-size=8192'` field and the empty-object alternative. |
+
+These three preimages were read from exact current heads `3a2882e1e07cfc0c8f6f51be322b6244b7e6a179`, `0e88cb3d18ac710148230bd2dfe5b5f45b22a248` and `ad17fbbd267851291abdca9b565638c774262834`. Preserve each full child variant, including Linux input handling. Do not change the qualifier, smoke, package/lock, workflow, production dev helper, dependencies, source caps or any assertion.
+
+The exact selected predicate is:
+
+```ts
+process.platform === 'darwin' && process.arch === 'arm64' &&
+((process.env.LEGACY_PROCESS_COLD_UI_GO === '1' &&
+  process.env.LEGACY_DESKTOP_PROOF_MODE === 'process-cold-ui') ||
+ (process.env.LEGACY_DESKTOP_BACKEND_GO === '1' &&
+  !process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH))
+```
+
+This field is constructed once in the existing fixture environment, before the original app capture/spawn. It must not read, concatenate or forward arbitrary parent NODE_OPTIONS. The old cold conjunction remains sufficient exactly as before; it is not made dependent on the new GO/source conjunction. The new arm requires the positive tuple, BACKEND_GO and the original non-packed branch. If neither arm applies, add no field, including no undefined property. Existing Linux and unselected/default branches stay unchanged; existing packed behavior changes nowhere because only the new arm excludes packed, while the old cold arm is preserved verbatim. This explicitly supersedes only §88's narrower other-source-mode exclusion for the common authorized Darwin source builder.
+
+Disclose unchanged environment sharing: the source fixture environment is passed to its original selected Node/pnpm/dev descendants, and the controlled-process fixture can pass it to its original TEST root as already recorded in §88. This is not claimed to be a Vite-only value. Native provider recipes, their fixed flags/environment, original authority and model operations are not rewritten by this amendment. All180000ms startup and original per-job/case/action deadlines, request/model limits, process-group ownership, actual Stop/Quit and physical cleanup oracles remain unchanged.
+
+The helper is already explicitly pinned in `desktop-proof-sources.ts` at633 and the unchanged node-options dependency in `desktop-proof-supplementary-sources.ts` at10. No source-roster edit or new file is required.
+
+### 92.4 Review and normal verification
+
+Root publishes this exact appendix before source GO. Independent review must confirm the common positive source entry, exact preservation of the original cold arm, packed exclusion from only the new arm and full variant inverse. Freeze only the one-path/two-distinct-blob predicate delta after GO; every other byte remains unchanged. No new unit test that merely mirrors the conditional or new diagnostic collector is needed.
+
+Root owns existing script types, scoped lint/source-size/source-freeze checks and the ordinary next exact-head source Desktop gates. The actual original Create journey must then reach its real UI/native result with its unchanged assertions, and each other existing mode retains its own independent CI qualification. The new common source scope does not infer failures beyond the six actual original logs above, or claim that larger permitted heap alone guarantees successful compilation. Do not retry the failed attempt, reset a running build, extend a timeout, skip a platform, loosen the original exit assertion or claim this source review as E2E PASS.
