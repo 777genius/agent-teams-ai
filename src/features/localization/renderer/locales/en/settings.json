@@ -359,6 +359,11 @@
         "disabled": "disabled",
         "restart-required": "restart required"
       }
+    },
+    "nativeNextPrompt": {
+      "title": "Next-message suggestions",
+      "label": "Suggest a next message",
+      "description": "Uses extra Claude or Codex model requests. Applies to new teammate sessions after restarting Agent Teams."
     }
   },
   "notifications": {
