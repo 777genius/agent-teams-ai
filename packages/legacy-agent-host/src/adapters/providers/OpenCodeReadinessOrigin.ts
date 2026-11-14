@@ -21,6 +21,13 @@ const hash = (value: Uint8Array) => createHash('sha256').update(value).digest('h
 export function readOpenCodeReadinessSource(
   source: ReadinessSourceReference, maximum: number, current: () => void
 ): string | null {
+  current();
+  try { return observeOpenCodeReadinessSource(source, maximum); }
+  finally { current(); }
+}
+
+/** Callers keep the complete synchronous observation inside their original owner bracket. */
+function observeOpenCodeReadinessSource(source: ReadinessSourceReference, maximum: number): string | null {
   const { path, root } = source;
   if (!isAbsolute(path) || resolve(path) !== path || !isAbsolute(root) || resolve(root) !== root ||
       path !== root && !path.startsWith(root.endsWith(sep) ? root : root + sep) || /[\0\r\n]/u.test(path + root) ||
@@ -54,8 +61,6 @@ export function readOpenCodeReadinessSource(
   };
   let fd: number | undefined;
   try {
-    // The same owner brackets one bounded synchronous readonly source observation.
-    current();
     const before = locate();
     if (!before.file) {
       if (source.present || managementDigest(locate().identity) !== managementDigest(before.identity) ||
@@ -87,7 +92,6 @@ export function readOpenCodeReadinessSource(
   } catch { return held(); }
   finally {
     if (fd !== undefined) closeSync(fd);
-    current();
   }
 }
 
@@ -176,7 +180,7 @@ export function captureOpenCodeReadinessOrigin(
         if (previous.digest !== digest) return held();
         return previous.raw;
       }
-      const raw = readOpenCodeReadinessSource(source, maximum, current);
+      const raw = observeOpenCodeReadinessSource(source, maximum);
       sources.set(source.path, { digest, raw });
       return raw;
     };
