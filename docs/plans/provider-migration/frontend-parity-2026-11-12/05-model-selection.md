@@ -1643,3 +1643,65 @@ Preserve the existing callback, exact member set, strict inequality, original wo
 R1 compared the actual two retained claim clocks and read the exact fixture/factory/worktree seams. Independent plan review must verify that the maximum is calculated only from the original finite deadlines and that each observation is still checked against its own earlier or later deadline. Root publishes this append-only correction before source GO, then reviews the exact one-file forward/inverse diff and runs the original team-create-launch file with the applicable existing type/source checks. Root alone executes and publishes, committing and immediately pushing each reviewed cut.
 
 A passing focused run establishes the corrected TEST deadline join only. The original full Host-suite CI remains required; neither the actual second member's unobserved timely completion nor native E2E success is inferred from this plan.
+
+
+## 26. Admit the pinned V2 no-tool MAX_STEPS message in the existing TEST oracle
+
+### 26.1 Original failure and the boundary of the evidence
+
+Original retained V1/V2 Desktop job132411599820 ran source head `3a2882e1e07cfc0c8f6f51be322b6244b7e6a179`. The original artifact `retained-opencode-132411599820.zip` is365774 bytes, SHA256 `21c681aba1caaad9be836f04dcd488e054a87c566e64adbe2449545c0ba20150`. Its receipt SHA256 is `eb63e742bf5cbe7ffb7640d685ffea36fbf98876aa08c2b8d0c8215cb104e8da`; the original short failure log SHA256 is `9e3c4b1205aa934b9ed4c115ed110d978b70ee7a19964cbab854331be796bfec`. The receipt records actual legacy V1 history and relaunch before the Host attempt, then the first model failure at the user/system-only role assertion, followed by nine requests refused by the existing sealed-fixture guard. It records no accepted Host model observation, cleanup=true and no cleanup failures. The original public start returned hold/unknown.
+
+The failed HTTP request body was not persisted: observations are appended only after the failing guard. Do not describe the expected message below as a captured body or claim that this source diagnosis qualifies native success. Evidence `64c6160b082dbb346029b8d19c15c68de7f3cf47` separates the actual receipt from the source-derived first-request shape, includes the exact delivery/source references and records that no new native invocation or support download was performed.
+
+### 26.2 Exact first-step and selected native wire chain
+
+The original F no-tool configuration `OpenCodeV2EmbeddedConfig.ts` blob `cdb6403f390b40bdc544af801adbc891f861e632` sets the model-probe agent's steps to1, denies tools, disables title/summary and supplies no user plugin. Original `OpenCodeV2ModelProbe.ts` `19c3108232562d6f5bd550cf0011a3bff7c5e22b` creates the fresh native session and submits the existing single prompt `Reply only OK. Do not use tools, access files or run commands.` through its original owned driver. No second user input is needed to reach the failing role check.
+
+Pinned upstream release is `anomalyco/opencode@68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`, whose commit is release v2.1.4 and whose core package declares2.1.4. The source chain is:
+
+| Original source | Exact blob | Relevant behavior |
+| --- | --- | --- |
+| `packages/core/src/session/runner/llm.ts` | `728a736531ff33f36a3197e434229bc9b55208c6` | A fresh drain starts at step1. Before primary preparation, step>=agent.steps appends one `Message.assistant(MAX_STEPS_PROMPT)` after the transcript and chooses no tools. |
+| `packages/core/src/session/runner/max-steps.ts` | `040584ab173877d12b821808489b6a7c80504954` | The exact literal is750 UTF-8 bytes,16 lines, no final newline; SHA256 `a22542c356f74bfe3f8edc3f2251f6d5b3ee2e21746040eb602fa57283397404`. |
+| `packages/ai/src/schema/messages.ts` | `a9359bef1d0c5d5d803fadae535fe116bddff70b` | `Message.assistant` makes that role with exactly one text part and no tool/native/reasoning metadata. |
+| `packages/core/src/session/model-request.ts` | `4bb8e47bae5d5692d2fa01eea38a4b08e8340b86` | Original primary preparation carries the transcript through bounded content handling; ordinary text remains text. |
+| `packages/core/src/aisdk-native.ts` and `packages/core/src/model.ts` | `9bbbbd66a463ece24411b61fda8579d76d99e15e`, `7a199b6c5d72184ca741d5d89fdad73f7b9f62ad` | The declared `aisdk:@ai-sdk/openai-compatible` is translated by the original engine to the builtin compatible provider. It is not evidence that the external AI SDK encoder is selected. |
+| `packages/ai/src/providers/openai-compatible.ts` and `packages/ai/src/protocols/openai-compatible-chat.ts` | `40fa5d50848f87a7fd874316be427cbfe5ac52fb`, `bef6848c101da0a436c7e22798ffe2d161039f91` | The builtin route uses the original OpenAIChat protocol at /chat/completions. |
+| `packages/ai/src/protocols/openai-chat.ts` | `b3ce1d3f66c93b2c5f2630d759b048bcc0e2c126` | Original ordered lowering preserves the final assistant. For this TEST-model/test-local/loopback text-only input with no reasoning/cache/tool metadata, it emits exactly `{role:'assistant', content: MAX_STEPS_PROMPT}`, with string content and no extra message fields. |
+
+F fixture `desktop-opencode-v2-fixture.ts` `8dd6113c9ebad0e9e9e428e322c979817f5c2669` selects that declared package with only the captured TEST baseURL/key and model definition. F `OpenCodeV2ConfiguredPackages.ts` `5f29eb242ae7dce6c96953214029c819bb992bc2` checks native rewriting and leaves the builtin declaration to the engine's full native translation; it does not select an ambient SDK. `OpenCodeV2EmbeddedGraph.ts` `91e35a9ba6a414bb143487632add356171d21b83` verifies the complete manifest and resolves the selected server/core/ai graph.
+
+The original input receipt and runtime lock `771bffacba378d277484712bc5cb7941223b6d2c` agree on runtime source `777genius/agent_teams_orchestrator@f5c69c2e9024ffc36a5db5eafe30f53539b52f62`, engine2.1.4, support archive SHA256 `85da4c67af05401ace01c1582e634af322ae5402430e270aee01eccacc605cf1`, manifest SHA256 `840d7cc145155e0ad97a407af87eb347da1a9cbf034d19c632897e1a5efbff9b` and Bun SHA256 `45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675`. Original preparation script `b6fef813e23b8f18d7f8ebae5b14f5c0a104a30c` verifies that complete delivered graph before the recorded READY result. The runtime package/lock pin server/core/ai2.1.4 and its staging copies selected package bytes. This supplies the recorded delivery/version join to the exact release source; it does not invent a per-file byte readback from an unavailable local support archive or the missing failed HTTP body.
+
+### 26.3 Exactly two existing writable TEST paths
+
+| Path | Current preimage in parent/native/qualification |
+| --- | --- |
+| `scripts/legacy-agent-host/desktop-retained-opencode-model.ts` | `cbe74d1c83eefc470928857fabb5bb9e1d5824d7` |
+| `scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts` | `481f1e791c5173c9784c50607fc8292da856dd28` |
+
+All six current source reads match. Add the finite private role helper and pinned literal inside the existing model file; no new helper file, public export, dependency, source-roster path, workflow or production code is required. The current files are171 and114 physical lines, so existing caps need no adjustment or layout compression.
+
+This appendix supersedes only §22.5's user/system-only role clause and the identical clause in the existing Host source-selection markerless no-tool preflight. Both already use the same native no-tool configuration. The source-selection failure is a source-established next dependency, not a second failure observed in this receipt. Its business/history logic remains unchanged.
+
+### 26.4 Closed optional suffix, original request admission
+
+Use one private assertion helper at those two original role-check positions. Preserve the baseline message list containing only user/system roles. Alternatively, permit exactly one assistant message, only at the final array index, whose complete JSON object is exactly `{role:'assistant', content: <the pinned750-byte literal>}`. Require string content with byte-for-byte equality: no trim, prefix match, substring, alternate text-array representation or normalization. Remove only that positively matched final suffix from the local role-validation view; every preceding message must still be user/system. Do not mutate the original request or count the suffix as a prior model response.
+
+An earlier or duplicate assistant, ordinary history reply, tool role, changed literal, extra message key, reasoning/tool-call field or non-final suffix fails. The helper confers no request authority. Both original callers still enforce exact Host route/owner, TEST-model, the original fixed prompt, exactly one user message and absent-or-empty tools. The coexistence branch additionally requires its original active one-shot `TEST-coexist-launch-once` window, consumed0, no disguised business marker and then consumed1 with the same attribution. The source-selection branch retains its original source-preflight admission and counters. Unarmed default Host input is still refused.
+
+Keep the original global32 ceiling, sealed-after-first-failure behavior, business marker uniqueness/owner separation, all legacy strict-launch/history behavior, responses and observation shapes. Preserve native action order, original Main/Host proof and release requirements, input/Stop/cold/cleanup assertions, deadlines and request budgets. No new inference, retry, timer, route, synthetic readiness receipt or counter reset is introduced.
+
+### 26.5 Critical coverage in the original model case
+
+Extend only the body of the existing `business replies stay owner-bound and duplicate input cannot become a strict proof` case. Preserve all three test declarations, their twelve current registrations and every original assertion/request sequence. Do not add a new test case or a field-permutation matrix.
+
+Keep the current user/system source preflight positive. Within finite fresh controlled fixture instances in that same case, prove the armed coexistence preparation still accepts its original user/system form; prove that the exact native trailing suffix is accepted once by the armed coexistence branch and by source-selection preflight. Check the same OK response, one appropriate observation, original consumed1/command attribution where applicable, no business marker and no fixture failure.
+
+Add only representative refusal inputs in that same case: changed assistant text, the exact assistant placed before the final user input, and an otherwise exact suffix carrying an unexpected tool-call field. They must fail before any accepted observation. These cover literal identity, position/history and the closed message shape; the common predicate also refuses duplicate assistants without a separate exhaustive permutation. Retain the existing unarmed/wrong-route/model/tools/first-failure sealing controls. Always disarm/close using the existing fixture lifetime; these controlled HTTP checks do not add native operations or reset a native journey.
+
+### 26.6 Review, original checks and remaining native gate
+
+Independent plan review and publication precede source GO. Freeze both full sources, exact forward/inverse diffs and own branch preimages; verify that only the two role assertions use the shared helper and that the complete old tests/default/business/cleanup code remains intact except the explicitly added controlled coverage. Root owns applicable original model-file/type/lint/source checks and publication. Where useful, retain the legitimate native-shaped controlled request's rejection against the old oracle before qualifying the exact corrected source.
+
+The actual original retained V1/V2 Desktop gate and source-selection gate must still complete on an ordinary eligible reviewed head with all original owner/history/Stop/custody/cleanup assertions. A controlled oracle PASS would establish this narrow request-shape correction, not native readiness or end-to-end success. Do not rerun, replace or advance active original runs as part of this appendix.
