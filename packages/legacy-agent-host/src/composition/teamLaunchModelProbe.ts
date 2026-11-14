@@ -181,7 +181,7 @@ export function captureTeamModelProbe(options: {
   const selected = recipe();
   const source = runtimeDigest({ entry: entry?.profile, recipe: selected });
   const profile = applyTeamModelProbeSelection(selected, input);
-  const productRosterRevision = input.draft && profile.provider === 'opencode'
+  const productRosterRevision = profile.provider === 'opencode'
     ? options.team.connection.readRoster().revision : undefined;
   const authority = () => ({
     operator: options.team.owner.withLaunchAuthority(

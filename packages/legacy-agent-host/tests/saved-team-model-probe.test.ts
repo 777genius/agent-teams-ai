@@ -64,7 +64,7 @@ function files(root: string, prefix = ''): unknown[] {
   });
 }
 function fixture(t: TestContext, withSources = false, configure?: (profile: TeamHostProfile) => void,
-  onAllocation?: () => void) {
+  onAllocation?: () => void, retainInitialDeliveries = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-saved-model-source-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const binding = {
@@ -165,12 +165,17 @@ function fixture(t: TestContext, withSources = false, configure?: (profile: Team
     root,
     binding,
     savedSettings: definition.savedSettings!,
-    members: definition.members.map(({ memberId, name, role, settings }) => ({
+    members: definition.members.map(({ memberId, name, role, delivery, settings }) => ({
       memberId,
       name,
       role,
+      ...(retainInitialDeliveries && delivery ? { delivery } : {}),
       ...(settings === undefined ? {} : { settings }),
     })),
+    ...(retainInitialDeliveries ? {
+      assertRosterEditable: (members: Parameters<RuntimeTeamCoordinator['assertRosterEditable']>[1]): void =>
+        runtime.assertRosterEditable(binding.teamId, members),
+    } : {}),
     grants: definition.grants.map(({ principalId, memberName, permissions }) => ({
       principalId,
       memberName,
@@ -526,7 +531,10 @@ for (const provider of ['claude', 'codex', 'opencode'] as const)
         })?.phase,
         'cancelled'
       );
-      if (provider === 'opencode' && change === 'roster') await assertRetainedProductRosterTransfer(t);
+      if (provider === 'opencode' && change === 'roster') {
+        await assertRetainedProductRosterTransfer(t);
+        await assertRetainedProductRosterTransfer(t, false);
+      }
     });
 
 test('operator grant revocation invalidates saved source evidence even when the roster and template remain identical', (t) => {
@@ -1277,7 +1285,7 @@ function testPolicyPlugin(root: string) {
   return { path, sha256: createHash('sha256').update(bytes).digest('hex') };
 }
 
-async function assertRetainedProductRosterTransfer(t: TestContext) {
+async function assertRetainedProductRosterTransfer(t: TestContext, draft = true) {
   const providerId = 'test-local', modelId = 'TEST-model';
   let allocations = 0;
   const own = fixture(t, false, profile => {
@@ -1285,7 +1293,8 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
     const alice = definition.members.find(row => row.memberId === 'alice')!;
     alice.settings = { providerId: 'opencode', model: modelId };
     alice.delivery = { ...definition.binding, runId: definition.scope.runId, memberId: 'alice', generation: '1' };
-    definition.grants.push({ principalId: 'TEST-retained-agent', memberName: 'alice', permissions: ['read'] });
+    definition.grants.push({ principalId: 'TEST-retained-agent', memberName: 'alice',
+      permissions: draft ? ['read'] : ['read', 'message.write'] });
     profile.runtime!.members = [runtimeMemberProfileSchema.parse({
       provider: 'opencode', protocolRevision: '1.19.4', teamId: definition.binding.teamId, memberId: 'alice',
       principalId: 'TEST-retained-agent', sessionId: 'TEST-retained-session', generation: 1,
@@ -1301,15 +1310,16 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       npm: '@ai-sdk/openai-compatible', options: { baseURL: 'http://127.0.0.1:9/v1', apiKey: 'TEST-retained-key' },
       models: { [modelId]: { name: modelId } },
     } } }), { mode: 0o600 });
-  }, () => { allocations++; });
+  }, () => { allocations++; }, !draft);
   const initial = own.runtime.executeLaunch(own.team.definition.binding.teamId, 'configuration.read',
     'TEST-retained-configuration', {}) as unknown as { launch: { launchId: string; rosterRevision: string } };
   const originalRoster = own.team.connection.readRoster();
   const payload: TeamModelProbeSelection = {
     launchId: initial.launch.launchId, rosterRevision: initial.launch.rosterRevision,
     memberId: 'alice', model: providerId + '/' + modelId,
-    draft: { providerId: 'opencode', target: { kind: 'member', name: 'alice', originalName: 'alice' } },
   };
+  if (draft) payload.draft = { providerId: 'opencode', target: { kind: 'member', name: 'alice', originalName: 'alice' } };
+  assert.equal(Object.hasOwn(payload, 'draft'), draft);
   assert.notEqual(payload.rosterRevision, originalRoster.revision,
     'technical Launch and product-roster revisions are separate identities');
   assert.equal(payload.launchId.startsWith('saved-model-'), false);
@@ -1413,6 +1423,8 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
     principalId: own.profile.principalId, hostIncarnation: 'TEST-retained-host', transfer,
     admittedAt: Date.now(), isCurrent: () => true };
   const transferred = captureLaunchModelReadiness(options);
+  assert.equal(original.readinessScope?.actionDigest,
+    runtimeDigest({ commandId, context: captured.context, productRosterRevision: originalRoster.revision }));
   assert.equal(transferred.groups.length, 1);
   assert.equal(transferred.groups[0]!.commandId, commandId);
   assert.equal(transferred.groups[0]!.context, captured.context);
