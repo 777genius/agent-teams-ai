@@ -199,12 +199,12 @@ test('mixed Host boots V2 Session SPI profile without invoking V1 management reg
   assert.equal(initial.opens(), 1, 'cold reconstruction performs no initial admission or native work');
   assert.equal(JSON.stringify(launchStore.read<TeamLaunchRecord>(launchPath)), originalLaunch);
   const resumed = await initial.rpc('runtime.restore', { ...target, expectedGeneration: originalBinding.generation,
-    reference: checkpoint.value.reference }, { commandId: 'TEST-original-checkpoint-restore' }) as { ok: boolean };
+    reference: checkpoint.value.reference }, { commandId: 'TEST-original-checkpoint-restore' }) as { ok: boolean; value: { generation: string } };
   assert.equal(resumed.ok, true, JSON.stringify(resumed));
   assert.equal(initial.opens(), 2, 'the existing validated checkpoint continuation needs no fresh model preparation');
   assert.equal([...new FileManagementCommandStore(initial.root).list()].length, 0,
     'neither ordinary initial allocation nor checkpoint continuation creates a model probe');
-  assert.equal((await initial.rpc('runtime.stop', target) as { ok: boolean }).ok, true);
+  assert.equal((await initial.rpc('runtime.stop', { ...target, expectedGeneration: resumed.value.generation }) as { ok: boolean }).ok, true);
   const restoredLaunch = JSON.stringify(launchStore.read<TeamLaunchRecord>(launchPath));
   await initial.restart();
   assert.equal(initial.opens(), 2, 'a selected cold entry retains source provenance without minting initial admission');
