@@ -228,6 +228,99 @@ test('Codex oracle refuses a failed MCP reply instead of fabricating a successfu
       await bounded.close();
     }
   }
+
+  // Source selection holds the same A response; this HTTP fixture cannot attest native custody.
+  let finalReceiptObserved: () => void = () => assert.fail('original receipt observer installed');
+  const finalReceipt = new Promise<void>((resolve) => { finalReceiptObserved = resolve; });
+  let observingFinal = false;
+  const source = await startCodexModel({
+    sourceSelection: true,
+    allowModelProbes: true,
+    uiGeneratedMessageIds: true,
+    captureHistoryMarkers: true,
+    memberName: 'alice',
+    principalId: () => {
+      if (observingFinal) finalReceiptObserved();
+      return 'alice-session';
+    },
+  });
+  const abort = new AbortController();
+  let selectedModel = 'TEST-source-A-model';
+  let history: Record<string, unknown>[] = [];
+  const request = (input = history) => fetch(source.url + '/v1/responses', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, signal: abort.signal,
+    body: JSON.stringify({ model: selectedModel, input, tools: [
+      { type: 'function', name: 'exec_command' },
+      { type: 'namespace', name: 'mcp__team', tools: REQUIRED_TOOLS.map(name => ({ name })) },
+    ] }),
+  });
+  try {
+    assert.equal(source.firstFinalHeld(), false);
+    assert.throws(() => source.releaseFirstFinal(), /original live final response released once/);
+    for (const label of ['ONE', 'TWO'] as const) {
+      if (label === 'TWO') selectedModel = 'TEST-source-B-model';
+      const probe = await request([{
+        role: 'user', content: 'Reply only OK. Do not use tools, access files or run commands.',
+      }]);
+      assert.equal(probe.status, 200);
+      assert.match(await probe.text(), /"text":"OK"/);
+      history = [
+        { role: 'developer', content: CONTEXT_MARKER },
+        { role: 'user', content: 'CODEX_TEAM_' + label },
+      ];
+      const toolCount = label === 'ONE' ? 7 : 2;
+      for (let step = 0; step <= toolCount; step += 1) {
+        let response: Response;
+        if (label === 'ONE' && step === 7) {
+          observingFinal = true;
+          let settled = false;
+          const held = request().finally(() => { settled = true; });
+          void held.catch(() => {});
+          await Promise.race([finalReceipt, held.then(() => assert.fail('original A final held'))]);
+          observingFinal = false;
+          assert.equal(source.firstFinalHeld(), true);
+          assert.equal(settled, false, 'same final HTTP response has no headers before release');
+          assert.equal(source.observations.length, 8);
+          assert.equal(source.probes.length, 1);
+          source.releaseFirstFinal();
+          assert.equal(source.firstFinalHeld(), false);
+          assert.throws(() => source.releaseFirstFinal(), /original live final response released once/);
+          response = await held;
+        } else response = await request();
+        assert.equal(response.status, 200);
+        const packets = (await response.text()).split('\n')
+          .filter(line => line.startsWith('data: ')).map(line => JSON.parse(line.slice(6)) as Record<string, unknown>);
+        const event = packets.find(packet => packet.type === 'response.output_item.done');
+        assert.ok(event && typeof event.item === 'object' && event.item !== null);
+        const item = event.item as Record<string, unknown>;
+        history.push(item);
+        if (step === toolCount) {
+          assert.equal(item.type, 'message');
+          assert.deepEqual(item.content, [{ type: 'output_text', text: 'DONE_CODEX_TEAM_' + label }]);
+          continue;
+        }
+        assert.equal(item.type, 'function_call');
+        history.push({ type: 'function_call_output', call_id: item.call_id,
+          output: item.name === 'exec_command'
+            ? 'Process exited with code ' + (label === 'ONE' ? 7 : 0) + '\nOutput:\n'
+            : JSON.stringify({ phase: 'completed', principalId: 'alice-session', effects: { taskId: 'TEST-source-task' } }) });
+      }
+    }
+    assert.deepEqual(source.failures, []);
+    assert.equal(source.observations.length, 11);
+    assert.deepEqual(source.probes.map(row => row.requestedModel), ['TEST-source-A-model', 'TEST-source-B-model']);
+    assert.ok(source.observations.filter(row => row.turn === 'CODEX_TEAM_ONE')
+      .every(row => row.requestedModel === 'TEST-source-A-model'));
+    assert.ok(source.observations.filter(row => row.turn === 'CODEX_TEAM_TWO').every(row =>
+      row.requestedModel === 'TEST-source-B-model' && !row.priorTurn &&
+      row.priorNativeToolIds?.length === 0 && row.incomingMessageId === undefined && !row.visibleReplyContract));
+    assert.equal(source.firstFinalHeld(), false);
+    assert.equal(source.candidateFinalHeld(), false);
+  } finally {
+    abort.abort();
+    await source.close();
+  }
+
 });
 
 test('capture fixture completes assignment without effects before independent TaskStart read/update', async () => {
