@@ -20,6 +20,7 @@ import { prepareCreatedHostTeam } from '../application/createdHostTeam';
 import { ForegroundModelChecks } from '../application/ForegroundModelChecks';
 import { refreshCapturedRuntimeConfiguration } from '../application/refreshCapturedRuntimeConfiguration';
 import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
+import { capturedCreateReadiness, createReadinessPreparation, requestWithLocalModelReadiness } from '../infrastructure/CapturedLocalModelReadiness';
 import { captureProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import { CapturedRosterCommands } from '../infrastructure/CapturedRosterCommands';
 import { captureRuntimeSources } from '../infrastructure/CapturedRuntimeSources';
@@ -38,6 +39,7 @@ import type {
   HandleBindingStore,
 } from '../application/backendBinding';
 import type { CapturedBackendOwner } from '../application/BackendOwnerRouter';
+import type { LocalModelReadinessContext } from '../infrastructure/CapturedLocalModelReadiness';
 import type { CapturedProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import type {
   DesktopBackendDescriptor,
@@ -115,8 +117,9 @@ export class DesktopBackendFeature {
     };
     this.facade = new BackendOperationsFacade(
       {
-        request: async (handle, command) =>
-          (await target(handle, command.guard)).request(handle, command),
+        request: (handle, command) => requestWithLocalModelReadiness(
+          () => target(handle, command.guard), handle, command,
+          this.handleDefinitions().find(row => row.handleId === handle.handleId)),
         requestPair: async (source, destination, command) => {
           const router = await target(source, command.guard);
           const original = this.handleDefinitions().find(
@@ -385,21 +388,28 @@ export class DesktopBackendFeature {
   async captureTeamCreation(contextId: string, guard: BackendRequestGuard) {
     const target = await this.registry(contextId, guard);
     let preparedSources: Promise<void> | undefined;
+    let captureOrigin: ReturnType<typeof capturedCreateReadiness> | undefined;
     return {
       prepare: async (
         action: 'prepare' | 'probe.read' | 'probe.cancel',
-        input: CreateTeamLaunchPreparationInput
+        input: CreateTeamLaunchPreparationInput, readiness?: LocalModelReadinessContext
       ) => {
         if (input.draft.contextId !== contextId) throw new BackendRoutingError('forbidden');
+        const captured = structuredClone(input);
+        let origin;
         if (action === 'prepare' && (input.draft.savedSettings.providerId === 'opencode' ||
             input.draft.members.some(row => row.memberSettings.providerId === 'opencode'))) {
+          if (!readiness) throw new BackendRoutingError('hold');
+          const budget = { remainingMs: readiness.remainingMs.bind(readiness) };
+          captureOrigin ??= capturedCreateReadiness(this.router!, target.owner, () => assertBackendRequestGuard(guard));
           preparedSources ??= this.refreshLaunchConfiguration(contextId, input.draft.savedSettings.cwd, guard);
           await preparedSources;
+          origin = createReadinessPreparation(await captureOrigin(captured, budget), budget);
         }
         return target.client.prepareCreation(
           action,
-          input,
-          action === 'probe.cancel' ? undefined : guard
+          captured,
+          action === 'probe.cancel' ? undefined : guard, origin
         );
       },
       submit: async (commandId: string, input: CreateTeamLaunchPreparationInput) => {

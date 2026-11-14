@@ -1,9 +1,17 @@
 import assert from 'node:assert/strict';
-import { linkSync, mkdtempSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { linkSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, parse as parsePath, sep } from 'node:path';
 import { test } from 'node:test';
 
+import { captureOpenCodeReadinessOrigin, captureReadinessPreparation, originalReadinessSubset, readOpenCodeReadinessSource } from '../dist/adapters/providers/OpenCodeReadinessOrigin.js';
+import { createOpenCodeLocalModelReadiness } from '../dist/adapters/providers/OpenCodeLocalModelReadiness.js';
+import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
+import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
+import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
+import { managementDigest } from '../dist/management/identity.js';
+import type { LocalModelReadinessOrigin, ReadinessSourceReference } from '../dist/management/commandRecords.js';
 import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
 import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
 import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/OpenCodeV2SessionCredential.js';
@@ -238,4 +246,167 @@ test('incompatible selected aliases and native declaration fields are refused wi
     assert.throws(() => mapOpenCodeV2SelectedModel('TEST-model', declaration), {
       reason: 'configuration-invalid',
     });
+});
+
+// A fixture reference is generated from complete local test files, independently of either bounded reader.
+function readinessReference(path: string, root: string): ReadinessSourceReference {
+  const directories: unknown[] = [];
+  let directory = parsePath(path).root;
+  for (const part of ['', ...dirname(path).slice(directory.length).split(sep).filter(Boolean)]) {
+    if (part) directory = join(directory, part);
+    let stat;
+    try { stat = lstatSync(directory); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      return { path, root, present: false, digest: managementDigest({ path, root, directories, missing: directory }) };
+    }
+    directories.push([directory, stat.dev, stat.ino, stat.mode, stat.uid]);
+  }
+  let stat;
+  try { stat = lstatSync(path); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    return { path, root, present: false, digest: managementDigest({ path, root, directories, missing: path }) };
+  }
+  return { path, root, present: true, digest: managementDigest({ path, root, directories,
+    file: [stat.dev, stat.ino, stat.mode, stat.uid, stat.size, stat.mtimeMs, stat.ctimeMs, stat.nlink],
+    bytes: createHash('sha256').update(readFileSync(path)).digest('hex'),
+  }) };
+}
+
+test('original Main source, exact approval and whole-command commitment survive bounded grouped probes', async (t) => {
+  const f = fixture(t), second = join(f.root, 'second');
+  mkdirSync(second);
+  const config = join(f.project, 'opencode.json'), approvals = join(f.root, 'private-network-approvals.json');
+  const providerId = 'home-server', baseUrl = 'http://192.168.1.20:8080/v1';
+  const policy = { providerId, baseUrl, preset: 'custom' as const, hasConfiguredApiKey: true };
+  f.write(config, { provider: { [providerId]: { npm: '@ai-sdk/openai-compatible', options: {
+    baseURL: baseUrl, apiKey: '{file:/TEST-never-read-this-secret}',
+  } } } });
+  const tuple = { configPath: config, providerId, baseUrl };
+  f.write(approvals, { schemaVersion: 1, approvals: [tuple] });
+  assert.equal(readOpenCodeReadinessSource(readinessReference(approvals, parsePath(approvals).root),
+    131072, () => {}), readFileSync(approvals, 'utf8'), 'filesystem root retains its single separator');
+  const otherPolicies = Array.from({ length: 96 }, (_, index) => ({ providerId: 'test-' + index,
+    baseUrl: 'https://example.test/' + 'x'.repeat(900) + '/v1', preset: 'custom' as const, hasConfiguredApiKey: false }));
+  f.write(join(second, 'opencode.json'), { provider: Object.fromEntries(otherPolicies.map(row => [row.providerId,
+    { npm: '@ai-sdk/openai-compatible', options: { baseURL: row.baseUrl } }])) });
+  const scope = (workspace: string, global: boolean, providers: typeof otherPolicies) => {
+    const paths = global ? ['opencode.json', 'opencode.jsonc'].map(name => join(f.home, '.config', 'opencode', name))
+      : ['opencode.json', 'opencode.jsonc', '.opencode/opencode.json', '.opencode/opencode.jsonc'].map(name => join(workspace, name));
+    return { selectedPath: paths[0]!, invalid: false, sources: paths.map(path => readinessReference(path, global ? f.home : workspace)), providers };
+  };
+  const owner = { ownerId: 'TEST-owner' }, selection = { preparationId: 'TEST-preparation', workspaces: [f.project, second] };
+  const origin: LocalModelReadinessOrigin = {
+    schemaVersion: 1, kind: 'create', ownerDigest: managementDigest(owner), contextId: 'TEST-main-context',
+    commandId: 'TEST-preparation', selectionDigest: managementDigest(selection),
+    workspaces: [
+      { path: f.project, project: scope(f.project, false, [policy]), global: scope(f.project, true, []) },
+      { path: second, project: scope(second, false, otherPolicies), global: scope(second, true, []) },
+    ], approval: { source: readinessReference(approvals, f.root), approved: [tuple] },
+  };
+  assert.ok(Buffer.byteLength(JSON.stringify(origin)) > 64 * 1024);
+  const subset = originalReadinessSubset(origin, f.project, providerId);
+  assert.ok(Buffer.byteLength(JSON.stringify(subset)) < 64 * 1024);
+  const captured = captureOpenCodeReadinessOrigin(subset, { cwd: f.project }, providerId, () => true);
+  assert.equal(captured.privateNetworkApproved, true);
+  assert.equal(captured.policy?.hasConfiguredApiKey, true);
+  assert.equal(JSON.stringify(subset).includes('TEST-never-read-this-secret'), false);
+  const expected = { kind: 'create' as const, owner, contextId: origin.contextId, commandId: origin.commandId,
+    selection, workspaces: [f.project, second], anchorCommandId: 'TEST-first-probe', admittedAt: Date.now() };
+  const prepared = captureReadinessPreparation({ origin, remainingMs: 90000 }, { ...expected, original: { present: false } });
+  const store = new FileManagementCommandStore(f.root);
+  const target = { profileId: 'TEST-Claude', configRevision: 'TEST-config', selectionDigest: 'a'.repeat(64), resourceId: 'b'.repeat(64) };
+  let nativeCalls = 0;
+  const options = { store, fence: new ManagementResourceFence(store.list()), assertWriter() {}, select: () => target,
+    prepare: () => ({ timeoutMs: 180000, run: async () => { nativeCalls++; return true; }, close: async () => true }) };
+  const probes = new ModelProbeOwner(options);
+  const input = { commandId: expected.anchorCommandId, profileId: target.profileId, configRevision: target.configRevision,
+    providerId: 'anthropic', modelId: 'TEST-model', context: 'c'.repeat(64) };
+  const started = probes.startPrepared(input, () => true, { anchor: prepared.anchor });
+  assert.ok(started.expiresAt > prepared.anchor.expiresAt, 'anchor does not shorten the non-OpenCode native timeout');
+  await new Promise<void>(resolve => setImmediate(resolve));
+  assert.equal(probes.read({ commandId: input.commandId, profileId: input.profileId, configRevision: input.configRevision })?.phase, 'completed');
+  assert.equal(nativeCalls, 1);
+  const original = probes.readPreparation(input.commandId);
+  assert.deepEqual(original.anchor, prepared.anchor);
+  const equal = captureReadinessPreparation({ origin: structuredClone(origin), remainingMs: 90000 },
+    { ...expected, admittedAt: Date.now() + 100, original });
+  assert.deepEqual(equal.anchor, prepared.anchor, 'an equal replay cannot renew the original cutoff');
+  const otherWorkspaceChanged = structuredClone(origin);
+  otherWorkspaceChanged.workspaces[1]!.project.sources[0]!.digest = 'd'.repeat(64);
+  assert.throws(() => captureReadinessPreparation({ origin: otherWorkspaceChanged, remainingMs: 90000 },
+    { ...expected, original }), { code: 'held' });
+  const cold = new ModelProbeOwner({ ...options, fence: new ManagementResourceFence(store.list()) });
+  assert.deepEqual(cold.readPreparation(input.commandId), original);
+  assert.equal(nativeCalls, 1, 'cold reference reads allocate nothing');
+  const historical = { ...input, commandId: 'TEST-historical' };
+  probes.start(historical);
+  await new Promise<void>(resolve => setImmediate(resolve));
+  const old = store.read(historical.commandId);
+  assert.throws(() => captureReadinessPreparation({ origin, remainingMs: 90000 }, {
+    ...expected, anchorCommandId: historical.commandId, original: probes.readPreparation(historical.commandId),
+  }), { code: 'held' });
+  assert.deepEqual(store.read(historical.commandId), old);
+  const profile: OpenCodeManagementProfile = { ...f.input, provider: 'opencode', profileId: 'TEST-profile',
+    accountBinding: 'TEST-account', configRevision: 'TEST-revision', executable: { path: process.execPath, sha256: 'a'.repeat(64) },
+    endpoint: 'http://127.0.0.1:12345', timeoutMs: 1000 };
+  const probeInput = { ...input, profileId: profile.profileId,
+    configRevision: profile.configRevision, providerId, modelId: 'TEST-model' };
+  const refuse = (scope: LocalModelReadinessOrigin['workspaces'][number]['project']) => ({
+    ...scope, selectedPath: null, invalid: true as const, selectorFailure: 'config-conflict' as const, providers: [],
+  });
+  const globalRefusal = structuredClone(subset);
+  globalRefusal.workspaces[0]!.global = refuse(globalRefusal.workspaces[0]!.global);
+  assert.equal(captureOpenCodeReadinessOrigin(globalRefusal, profile, providerId, () => true).invalid,
+    false, 'a clean project provider keeps original precedence over a global selector refusal');
+  const unavailable = structuredClone(globalRefusal);
+  unavailable.workspaces[0]!.project = refuse(unavailable.workspaces[0]!.project);
+  unavailable.approval.approved = [];
+  const unknown = captureOpenCodeReadinessOrigin(unavailable, profile, providerId, () => true);
+  assert.equal(unknown.invalid, true);
+  assert.equal(unknown.policy, undefined);
+  let ordinaryAdmissions = 0, ordinaryRuns = 0;
+  const unused = { ordinary: () => {
+    ordinaryAdmissions++;
+    return { timeoutMs: 1000, run: async () => { ordinaryRuns++; return true; }, close: async () => true };
+  }, coordination: () => { throw new Error('refused selector cannot authorize a challenge'); } };
+  assert.throws(() => createOpenCodeLocalModelReadiness(profile, probeInput, () => true, unused, unavailable),
+    { code: 'held' }, 'an unknown ID cannot hide the captured native private URL');
+  assert.throws(() => createOpenCodeLocalModelReadiness(profile, { ...probeInput, providerId: 'ollama' },
+    () => true, unused, unavailable), { code: 'held' }, 'known local IDs retain selector-error blocking');
+  assert.equal(ordinaryAdmissions, 0, 'private refusal happens before even constructing the ordinary adapter');
+  assert.equal(ordinaryRuns, 0, 'private refusal happens before the ordinary phase, not only before model input');
+  const publicCloud = createOpenCodeLocalModelReadiness(profile, { ...probeInput, providerId: 'public-cloud' },
+    () => true, { ordinary: observe => ({ timeoutMs: 1000, run: async () => {
+      ordinaryRuns++;
+      observe({ npm: '@ai-sdk/openai', options: { baseURL: 'https://api.example.test/v1', apiKey: 'TEST-native-key' } });
+      return true;
+    }, close: async () => true }), coordination: unused.coordination,
+    fetchImpl: async () => { throw new Error('unknown public provider must not receive local metadata requests'); },
+  }, unavailable);
+  const cloudDeadline = Date.now() + 900;
+  assert.equal(await publicCloud.run(new AbortController().signal, cloudDeadline), true);
+  assert.equal(ordinaryRuns, 1);
+  await publicCloud.close(cloudDeadline);
+  let modelInputs = 0;
+  const rejected = createOpenCodeLocalModelReadiness(profile, probeInput, () => true, {
+    ordinary: observe => ({ timeoutMs: 1000, run: async () => {
+      observe({ npm: '@ai-sdk/openai-compatible', options: { baseURL: 'http://192.168.1.21:8080/v1', apiKey: 'TEST-resolved-key' } });
+      modelInputs++; return true;
+    }, close: async () => true }),
+    coordination: () => { throw new Error('keyed route cannot request an authless challenge'); },
+  }, subset);
+  const deadline = Date.now() + 900;
+  await assert.rejects(rejected.run(new AbortController().signal, deadline), { code: 'held' });
+  assert.equal(modelInputs, 0);
+  await rejected.close(deadline);
+  const foreign = { ...tuple, configPath: join(f.home, '.config', 'opencode', 'opencode.json') };
+  f.write(approvals, { schemaVersion: 1, approvals: [foreign] });
+  assert.equal(captured.isCurrent(), false, 'approval-source replacement invalidates the original reference');
+  const newOrigin = structuredClone(subset);
+  newOrigin.approval = { source: readinessReference(approvals, f.root), approved: [foreign] };
+  assert.equal(captureOpenCodeReadinessOrigin(newOrigin, { cwd: f.project }, providerId, () => true).privateNetworkApproved,
+    false, 'same URL at a different config file cannot borrow approval');
+  await probes.close(); await cold.close();
 });

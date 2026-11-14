@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { captureReadinessPreparation, originalReadinessSubset } from '../adapters/providers/OpenCodeReadinessOrigin.js';
+import type { LocalModelReadinessPreparation } from '../management/commandRecords.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { isNativeProfilePath } from './nativeProcessProfile.js';
@@ -244,7 +246,9 @@ export async function executeTeamModelProbe(options: {
   action: 'start' | 'read' | 'cancel';
   commandId: string;
   payload: unknown;
+  readiness?: { preparation: LocalModelReadinessPreparation; owner: unknown; handleId: string; scope: unknown };
 }) {
+  const admittedAt = Date.now();
   const input = teamModelProbeSelectionSchema.parse(options.payload);
   const captured = options.runtime.captureLaunchModelProbe(options.teamId, input, options.action);
   const owner = options.management.probes;
@@ -273,9 +277,21 @@ export async function executeTeamModelProbe(options: {
     profileId: captured.profile.profileId,
     configRevision: captured.profile.configRevision,
   };
+  const prepared = options.action === 'start' && options.readiness ? captureReadinessPreparation(
+    options.readiness.preparation, {
+      kind: 'team', owner: options.readiness.owner,
+      // Main's context ID is trusted composition provenance; scope is independently Host-authorized.
+      contextId: options.readiness.preparation.origin.contextId, commandId: options.commandId,
+      selection: { handleId: options.readiness.handleId, scope: options.readiness.scope, payload: input },
+      workspaces: [captured.profile.cwd], anchorCommandId: options.commandId,
+      original: owner.readPreparation(options.commandId), admittedAt,
+    }
+  ) : undefined;
+  if (prepared && captured.profile.provider !== 'opencode') throw new TeamLaunchError('invalid', 'probe-origin');
+  const origin = prepared ? originalReadinessSubset(prepared.origin, captured.profile.cwd, captured.providerId) : undefined;
   const value =
     options.action === 'start'
-      ? owner.start(
+      ? owner.startPrepared(
           {
             ...identity,
             providerId: captured.providerId,
@@ -284,7 +300,8 @@ export async function executeTeamModelProbe(options: {
             ...(captured.modelContext === undefined ? {} : { modelContext: captured.modelContext }),
             context: captured.context,
           },
-          captured.isCurrent
+          captured.isCurrent,
+          prepared && origin ? { anchor: prepared.anchor, origin } : undefined
         )
       : options.action === 'cancel'
         ? await owner.cancel(identity)
