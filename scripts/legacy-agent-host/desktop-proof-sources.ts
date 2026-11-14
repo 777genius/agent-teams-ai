@@ -91,6 +91,7 @@ const desktopProofBaseSources = [
   'src/features/agent-backend/main/application/prepareCapturedTeamModels.ts',
   'scripts/legacy-agent-host/desktop-proof-mode.ts',
   'scripts/legacy-agent-host/desktop-launch-ui-smoke.ts',
+  'scripts/legacy-agent-host/desktop-codex-source-selection.ts',
   'scripts/legacy-agent-host/desktop-relaunch-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-resume-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-resume-records.ts',

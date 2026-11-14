@@ -1,3 +1,4 @@
+import { readCodexSourceSelectionPrincipal } from './desktop-codex-source-selection.ts';
 import { teamRosterRevision } from '../../packages/legacy-agent-host/dist/team/rosterSchema.js';
 import type { OwnerState } from '../../packages/legacy-agent-host/dist/team/ownerState.js';
 import { NATIVE_MEMBER } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/member-creation.ts';
@@ -181,6 +182,16 @@ export async function prepareDesktopProofMode(
   assert.ok(resumeProvider === undefined || resumeProvider === '' || resumeProvider === 'codex' || resumeProvider === 'opencode', 'explicit supported Resume provider');
   const codexResumeMode = resumeProvider === 'codex';
   if (codexResumeMode) assert.ok(resumeMode, 'Codex variant extends only the original Resume UI mode');
+  const sourceSelectionFlag = process.env.LEGACY_DESKTOP_CODEX_SOURCE_SELECTION;
+  assert.ok(sourceSelectionFlag === undefined || sourceSelectionFlag === '1');
+  const codexSourceSelectionMode = sourceSelectionFlag === '1';
+  if (codexSourceSelectionMode) {
+    assert.ok(codexResumeMode && resumeMode && !scheduleUiMode && !commandsUiMode && !extensionsUiMode && !capturedMcpUiMode);
+    assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
+    assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1');
+    assert.equal(process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH, undefined);
+    assert.equal(process.env.LEGACY_DESKTOP_READBACK_ROOT, undefined);
+  }
   const launchDialogMode =
     mode === 'native-launch-ui' ||
     relaunchMode ||
@@ -279,10 +290,12 @@ export async function prepareDesktopProofMode(
       : undefined;
   const codexResumeModel = codexResumeMode ? await startCodexModel({
     memberName: 'alice', uiGeneratedMessageIds: true, captureHistoryMarkers: true,
+    ...(codexSourceSelectionMode ? { sourceSelection: true as const } : {}),
     allowModelProbes: true,
     modelProbeWorkspace: () => join(fixtureRoot(), 'workspace'),
     requestEvidenceDirectory: () => fixtureRoot(),
     principalId: () => {
+      if (codexSourceSelectionMode) return readCodexSourceSelectionPrincipal(fixtureRoot());
       const state = record(JSON.parse(readFileSync(join(fixtureRoot(), 'hoststore/teams/test-desktop-backend/.host-owner/state.json'), 'utf8')));
       assert.ok(Array.isArray(state.runtimeCaptures) && state.runtimeCaptures.length === 1);
       const members = record(state.runtimeCaptures[0]).members;
@@ -510,6 +523,7 @@ export async function prepareDesktopProofMode(
     uiMode,
     model,
     codexResumeMode,
+    codexSourceSelectionMode,
     codexResumeModel,
     openCodeLifecycleMode,
     openCodeLifecycleModel,

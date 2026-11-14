@@ -1,3 +1,4 @@
+import { createDesktopCodexSourceSelection } from './desktop-codex-source-selection.ts';
 import assert from 'node:assert/strict';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -132,7 +133,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   openCodeModel?: Awaited<ReturnType<typeof startOpenCodeModel>>;
   assertOwnedRenderer(): void;
   capturedGroup(): number;
-  restartSameProfile?(): Promise<UiCdpPort>;
+  restartSameProfile?(codexSourceSelectionRestart?: typeof import('./desktop-captured-app.ts').restartCapturedDesktopApp): Promise<UiCdpPort>;
   currentFixture?(): Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
 }): Promise<void> {
   let fixture = options.fixture;
@@ -147,6 +148,11 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(Boolean(codex), Boolean(options.codexResumeModel));
   assert.equal(Boolean(opencode), Boolean(options.openCodeModel));
   if (codex) assert.equal(evidence.mode, 'native-resume-ui');
+  const sourceSelection = codex?.sourceSelection ? createDesktopCodexSourceSelection(cdp, {
+    fixture, model: options.codexResumeModel!, seed: options.seed, evidence,
+    assertOwnedRenderer: options.assertOwnedRenderer, capturedGroup: options.capturedGroup,
+    restartSameProfile: options.restartSameProfile,
+  }) : undefined;
   const provider = opencode ? 'opencode' : codex ? 'codex' : 'claude';
   const firstPrompt = opencode ? 'OPENCODE_TEAM_ONE' : codex ? 'CODEX_TEAM_ONE' : 'NATIVE_TEAM_ONE';
   const firstReply = opencode ? 'REPLY_OPENCODE_ONE' : codex ? 'REPLY_CODEX_ONE' : 'REPLY_NATIVE_ONE';
@@ -160,7 +166,9 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   };
   evidence.launchDialogProof = proof;
   const step = (value: Record<string, unknown>) => steps.push({ monotonicMs: Math.round(performance.now()), ...value });
-  let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step });
+  let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: () => {
+    options.assertOwnedRenderer(); sourceSelection?.observe();
+  }, step });
   const teamRoot = join(fixture.root, 'hoststore/teams/test-desktop-backend');
   const ownerState = async () => record(await json(join(teamRoot, '.host-owner/state.json')));
   const poll = async <T>(read: () => Promise<T>, accept: (value: T) => boolean, label: string, ms = 60000) => {
@@ -291,6 +299,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   proof.capture = capture;
   const capturedSessions = async () => (await readDesktopNativeStopSessions(fixture.root))
     .filter(session => record(session.binding).runId === capture.launchId);
+  await sourceSelection?.beforeTerminal(capture);
   const sessions = await poll(
     capturedSessions,
     rows => rows.length === 1 && Array.isArray(rows[0]!.inputs) &&
@@ -368,7 +377,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   if (codex) proof.runtimeMcpEndpointSha256 = await codexRuntimeEndpointHash(fixture, options.capturedGroup());
   await ui.scrollTo('button[aria-label="Stop"]', 'visible original Stop control');
   await ui.click('button[aria-label="Stop"]', 'original Stop once', 'Stop');
-  await poll(async () => { const rows = await capturedSessions(); if (helper) observeCodexCodeModeProcess(helper); return rows; }, rows => rows.length === 1 && rows[0]!.phase === 'closed' && rows[0]!.custody === 'released', 'native cleanup released');
+  const stoppedSessions = await poll(async () => { const rows = await capturedSessions(); if (helper) observeCodexCodeModeProcess(helper); return rows; }, rows => rows.length === 1 && rows[0]!.phase === 'closed' && rows[0]!.custody === 'released', 'native cleanup released');
   await poll(async () => {
     const rows = processTable(), observed = helper && observeCodexCodeModeProcess(helper);
     return { rows, helperAbsent: !observed || observed.state === 'absent' };
@@ -380,6 +389,11 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     proof.metadataAfterStop = remaining;
   }
   proof.stop = { nativeChildren: children, releasedBeforeQuit: true };
+  if (sourceSelection) {
+    assert.ok(helper);
+    await sourceSelection.afterStop({ capture, session: stoppedSessions[0]!, saved, nativeTask, helper });
+    proof.probes = model.probes; proof.status = 'PASS'; return;
+  }
   if (extensions) await runDesktopNativeExtensionsUiSmoke(cdp, {
     root: fixture.root, evidence, assertOwnedRenderer: options.assertOwnedRenderer, pluginPhase: 'uninstall',
   });
