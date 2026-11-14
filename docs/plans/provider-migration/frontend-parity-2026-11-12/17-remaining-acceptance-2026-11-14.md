@@ -126,3 +126,27 @@ additional finite coverage for applicable original UI journeys is under audit.
 - Provider source `421fee918811b8a0b0c73d0ff3e761b9a1c5ecb0` is already the
   frontend's checked archive. Source/packed provider checks do not establish
   Desktop acceptance.
+
+## Original queue recovery
+
+GitHub run `43635095040` has all thirteen matrix jobs completed/cancelled, but
+its old unconditional aggregate `132575624092` is still queued. Both subsequent
+source runs remained pending without matrix jobs. The available GitHub API
+connector does not expose cancellation, and no connected browser is available.
+
+Move subsequent finite Desktop runs to the versioned `v2` concurrency group,
+retaining the exact per-event/PR isolation and cancellation policy. No old
+matrix job is restarted; its remaining aggregate has no provider or product
+effect. The already corrected aggregate condition prevents recurrence in the
+new group. Runner tuples, all lane commands, failure assertions, provider
+exclusions and workflow permissions remain unchanged. This scheduling repair
+does not qualify any queued or unexecuted UI journey.
+
+The full allowed Host finite suite completed once on Node 24.21.0: 1,346
+tests, 1,343 passed, one failed, two explicit platform/Actions skips and no
+cancellations. Preserve that original failed run. Its sole obsolete MCP
+fixture assertion is corrected by exercising the current captured process
+factory against the original retained Main owner, immutable source origin and
+unchanged guard, before executable access. Replay performs no second catalog
+or origin read. The corrected complete file passes 13/13 tests, Host test
+types and focused lint. No production API changed.
