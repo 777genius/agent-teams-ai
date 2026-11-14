@@ -4998,3 +4998,31 @@ The existing status remains PASS only after the original whole scenario and clea
 ### 100.4 Review and acceptance
 
 Freeze the single-file diff, full source and exact inverse; retain the original case declaration and all original assertions, with normal source-size limits. Independent plan review/publication precedes source; independent source review precedes publication. Root runs the existing Host test and script type gates for the coherent cut. The next ordinary original Linux V2 credential job remains the actual acceptance: a continuing failure must include the failing Host facts and an honest bounded original-record observation. A richer INCOMPLETE receipt is diagnostic progress only, not credential, native cleanup or release qualification.
+
+## 97. Keep the original donor drain open when its fresh closing census is still positive
+
+### 97.1 Actual failure and narrow conclusion
+
+Original parent run `43594538508`, job `132446133162`, executed checkout `09fefda4c255fa172a52b89b2815d18085c79afc` failed after genuine old-frontend Save, in the donor producer's pre-Quit drain. The original assertion at producer line 409 observed selected runtime PID 14634, PPID 13169, PGID 14634. Its expected value was empty. The earlier stopped-import subflow is separate; this failure is not an OOM diagnosis.
+
+Original log `28fc1f0388e85f1147a98140eea7206b79ca88e5`, artifact `14114242108` and the bounded assessment `55245567eca580409c4a2a4257e3253c1bc67ded` retain the evidence. The exact 30503-byte producer receipt has SHA256 `10950a275e6691233eb1633e2f859b2827ca83e3952b866dda9abb5759843767`. The original command began at 12:47:22.844917 UTC; the post-cleanup failure observation was at 12:48:06.235986, under 44 seconds later. The drain's existing 60-second cutoff starts later, after Save/screenshot. That supports an early closing-observation rejection rather than exhaustion of this cutoff. The current source separately samples the loop condition and the final assertion. The precise intervening census/birth timeline was not recorded, so the new-child race is a source-backed inference. Final cleanup reported no remaining captured or unmatched children; it does not complete ordinary donor Quit or immutable-corpus acceptance.
+
+### 97.2 Exact one-file source scope
+
+| Writable existing TEST path | Parent / native / qualification preimage |
+| --- | --- |
+| `scripts/legacy-agent-host/desktop-donor-saved-producer.ts` | `0bb1a59115077756f889dc4362625be3343f7f8f` |
+
+All three current repair heads were read and match. The original process witness in `desktop-captured-app.ts`, SHA `11915e0d9fd425620b8c975901bd4dc65e6b8f27`, is read-only. No production, common witness, model, workflow, test-case, source-roster or dependency path is added to scope.
+
+### 97.3 Same wait, fresh closing witness
+
+Retain the original single `probeDeadline = Date.now() + 60_000`, original captured-native observer, inner selected-runtime drain and existing 100 ms tick. Enclose the original drain and its closing observations in one bounded continuation inside this function. After every exit from the inner drain, take the original fresh selected-runtime census and an exact captured-birth remaining census. Keep these closing samples in local variables only.
+
+If either closing sample is positive while the original deadline still has time, await the existing tick and continue this same observation block. Do not start another check, renew the cutoff, signal a child or request a UI action. When both closing samples are empty, retain those actual final samples for the original assertions. A positive closing sample at the cutoff reaches the same assertion failure. An unknown, throwing or unowned process observation remains an error; it never becomes an empty array. An earlier empty loop sample cannot replace the fresh closing witness. This adds no quiet window or requirement for an invented duration of absence.
+
+Preserve the original error text, both physical-absence assertions, subsequent single ordinary Quit and its separate 20-second limit. Keep all post-Quit PID/group/listener/captured/unmatched absence checks, immutable source/corpus checks, whole sentinel-log oracle and original model/catalog/probe/request budgets unchanged. Cleanup cannot turn the failed original epoch into PASS.
+
+### 97.4 Review and acceptance
+
+Plan/source review and root publication remain sequential; source is zero at this freeze. Require exact whole-file forward/inverse verification and unchanged surrounding producer control flow, then root's existing script/type/source-size gates. The ordinary original donor-saved Desktop lane remains the actual acceptance, including genuine Save, original drain, ordinary Quit, physical absence and immutable corpus before current consumer startup. No new case, rerun collector, timeout increase or native-success claim is introduced.
