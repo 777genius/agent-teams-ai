@@ -183,8 +183,10 @@ jobs:
           git add -- \
             packages/legacy-agent-host/package.json \
             pnpm-lock.yaml \
-            vendor/provider-migration/native-prompt-suggestions-18a1c276/source-receipt.json \
-            vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz
+            vendor/provider-migration/native-prompt-suggestions-18a1c276/source-receipt.json
+          # Packed provider archives are deliberately ignored by the global *.tgz rule.
+          # Force-add ONLY this exact independently SHA256-verified frozen archive.
+          git add -f -- vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz
           git diff --cached --check
           if git diff --cached --quiet; then
             echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
