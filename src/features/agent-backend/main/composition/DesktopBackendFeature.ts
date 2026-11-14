@@ -189,6 +189,9 @@ export class DesktopBackendFeature {
             const unique = new Map(matches.map((entry) => [entry.handleId, entry]));
             if (unique.size !== 1) return;
             const selected = unique.values().next().value!;
+            // A Host notice cannot introduce a member absent from the
+            // original pinned roster, even when the team/run IDs match.
+            if (!selected.members.some(member => member.memberId === value.memberId)) return;
             const projected = projectHostPromptSuggestion(
               raw, hostTeamSelectionKey(selected.handleId), selected.scope.teamId, selected.scope.runId
             );
