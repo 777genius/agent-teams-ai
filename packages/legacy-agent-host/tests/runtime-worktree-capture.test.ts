@@ -398,7 +398,9 @@ test('actual capture persists worktree intent before Git, then captures real tar
   assert.notEqual(capture.workspace, original.worktrees![0]!.target.path);
   assert.equal(capture.worktree!.binding.target.path, capture.workspace);
   assert.ok(lstatSync(capture.workspace).isDirectory());
-  const capturedTeam = { ...live.team, launchId: original.definition.launchId, capture: original.definition.capture };
+  const originalCapture = original.definition.capture;
+  assert.ok(originalCapture !== undefined, 'original launch capture is required');
+  const capturedTeam = { ...live.team, launchId: original.definition.launchId, capture: originalCapture };
   const target = compileLiveRosterMember(live.profile, capturedTeam, row.capture);
   assert.equal(target.profile.cwd, view.target.workspace);
   assert.equal(target.profile.model, settings.model);
