@@ -30,7 +30,7 @@ import type {
 } from './backendBinding';
 import type { HostHandshake, JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 import type { RetainedWindowsCustody } from '@agent-teams/legacy-agent-host/owned-process';
-import type { LocalModelReadinessCapture, LocalModelReadinessTransfer, LiveRosterPrivateInput } from '@agent-teams/legacy-agent-host/team-host';
+import type { LiveRosterPrivateInput, LocalModelReadinessCapture, LocalModelReadinessTransfer } from '@agent-teams/legacy-agent-host/team-host';
 
 interface RegisteredOwner {
   readonly binding: BackendOwnerBinding;
