@@ -262,6 +262,10 @@ export function desktopBackendEnvironment(
     PATH: `${join(root, 'bin')}:${dirname(node)}:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin`,
     SHELL: join(root, 'bin/shell-env'),
     NODE_ENV: 'development',
+    ...(process.platform === 'darwin' && process.arch === 'arm64' &&
+      process.env.LEGACY_PROCESS_COLD_UI_GO === '1' &&
+      process.env.LEGACY_DESKTOP_PROOF_MODE === 'process-cold-ui'
+      ? { NODE_OPTIONS: '--max-old-space-size=8192' } : {}),
     NO_COLOR: '1',
     // A TEST HOME changes pnpm's store lookup. Report drift without installing
     // into the frozen worktree; the harness verifies its selected archive bytes.
