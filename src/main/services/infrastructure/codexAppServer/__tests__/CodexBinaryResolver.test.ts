@@ -8,7 +8,7 @@ import { inflateRawSync } from 'node:zlib';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CapturedCodexManagedManifest } from '@features/codex-runtime-installer/main/infrastructure/captureCodexNativeSelection';
+import type { CapturedCodexManagedManifest } from '@features/codex-runtime-installer/main';
 import type { PathLike } from 'node:fs';
 
 const accessMock = vi.fn<(filePath: PathLike, mode?: number) => Promise<void>>();
