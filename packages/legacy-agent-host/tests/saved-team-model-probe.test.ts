@@ -34,11 +34,13 @@ import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { TeamLaunchOwner } from '../dist/team-launch/TeamLaunchOwner.js';
 import { modelReadinessMechanismDigest } from '../dist/team-launch/launchReadiness.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
+import { attachInitialRuntimeModelAdmission, captureInitialRuntimeModelAdmission,
+  captureInitialRuntimeMemberAdmission, initialRuntimeModelProbeScope } from '../dist/composition/initialRuntimeModelAdmission.js';
 import { resolveTeamModelProbeRecipe, applyTeamModelProbeSelection } from '../dist/composition/teamModelProbeRecipe.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import { runtimeSourceSelectionFixture } from './fixtures/runtime-source-selection.ts';
 import type { HostedTeam, MemberEntry } from '../dist/composition/MemberEntry.js';
-import type { LocalModelReadinessOrigin, ReadinessSourceReference, NativeLocalReadinessEvidence } from '../dist/management/commandRecords.js';
+import type { LocalModelReadinessOrigin, ReadinessSourceReference, NativeLocalReadinessEvidence, StoredModelProbe } from '../dist/management/commandRecords.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ProviderManagementProfile } from '../dist/management/profile.js';
 import type { TeamModelProbeSelection } from '../dist/composition/teamLaunchModelProbe.js';
@@ -589,7 +591,7 @@ test('Team probe read rejects completed evidence after physical config-directory
   assert.equal(runs, 1);
 
   // Real source/record/launch readers with an explicitly synthetic native issuer, not native qualification.
-  for (const mode of ['native', 'local', 'settings', 'missing', 'copied', 'foreign', 'unclean', 'late'] as const) {
+  for (const mode of ['native', 'local', 'initial', 'settings', 'missing', 'copied', 'foreign', 'unclean', 'late'] as const) {
     const own = fixture(t), providerId = 'test-local', modelId = 'TEST-model';
     const home = join(own.root, 'file-home'), data = join(own.root, 'file-data');
     mkdirSync(home); mkdirSync(data);
@@ -618,6 +620,20 @@ test('Team probe read rejects completed evidence after physical config-directory
     const deferred = configuration.selectedFile; assert.ok(deferred);
     const request = { commandId: 'TEST-file-' + mode, profileId: management.profileId,
       configRevision: management.configRevision, providerId, modelId, context: runtimeDigest({ mode }) };
+    const initialProfile = mode === 'initial' ? structuredClone(own.profile) : undefined;
+    if (initialProfile) {
+      const team = initialProfile.teams[0]!;
+      team.scope.runId = 'TEST-file-run';
+      team.members.find(row => row.memberId === member.memberId)!.delivery = {
+        ...team.binding, runId: team.scope.runId, memberId: member.memberId, generation: '1' };
+      team.grants.push({ principalId: member.principalId, memberName: 'team-lead', permissions: ['read'] });
+      initialProfile.management = [management]; initialProfile.runtime!.members = [member];
+      initialProfile.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(initialProfile, {
+        method: 'runtime.open', teamId: member.teamId, commandId: 'TEST-initial-file-open', payload: { memberId: member.memberId },
+        prepared: [{ memberId: member.memberId, commandId: request.commandId, profileId: request.profileId,
+          configRevision: request.configRevision, context: request.context }],
+      })];
+    }
     const target = { profileId: management.profileId, configRevision: management.configRevision,
       selectionDigest: runtimeDigest(management), resourceId: runtimeDigest({ account: management.accountBinding, mode }) };
     const recordStore = new FileManagementCommandStore(own.root);
@@ -662,7 +678,8 @@ test('Team probe read rejects completed evidence after physical config-directory
     const original = new ModelProbeOwner(ownerOptions);
     try {
       const admittedAt = Date.now(), cutoff = admittedAt + 1000;
-      const scope = { schemaVersion: 1 as const, kind: mode === 'local' ? 'team' as const : 'native' as const,
+      const scope = initialProfile ? initialRuntimeModelProbeScope(initialProfile.runtime!.initialModelAdmissions![0]!, member, cutoff)
+        : { schemaVersion: 1 as const, kind: mode === 'local' ? 'team' as const : 'native' as const,
         teamBindingDigest: runtimeDigest(own.team.definition.binding), actionDigest: runtimeDigest(request.commandId),
         selectionDigest: runtimeDigest({ providerId, modelId }), sourceRevision: 'TEST-source', rosterRevision: 'TEST-roster',
         mechanismDigest: modelReadinessMechanismDigest(management), workspace: management.cwd, cutoff,
@@ -698,6 +715,7 @@ test('Team probe read rejects completed evidence after physical config-directory
       assert.equal(captureOpenCodeProbeAccount(management, request, () => true, undefined,
         preparation?.origin), undefined, 'initial scope cannot claim a future effective manual key');
       if (mode === 'settings') original.start(request);
+      else if (mode === 'initial') original.startNativeReadiness(request, () => true, scope);
       else original.startPrepared(request, () => true, preparation, scope);
       const admitted = original.readRetainedProbe(request.commandId, request.context);
       assert.equal(admitted.nativeFileKeyWitness, undefined);
@@ -747,7 +765,8 @@ test('Team probe read rejects completed evidence after physical config-directory
           isCurrent: () => true }), selected); } finally { await cold.close(); }
         const binding = { backendId: own.team.definition.binding.backendId, teamId: member.teamId,
           runId: 'TEST-file-run', memberId: member.memberId, generation: '1' };
-        const entry: MemberEntry = { profile: member, baseProfile: structuredClone(member), team: own.team,
+        const entry: MemberEntry = { profile: member, baseProfile: structuredClone(member),
+          team: initialProfile ? { ...own.team, definition: initialProfile.teams[0]! } : own.team,
           binding, delivery: { ...binding, teamName: own.team.definition.binding.teamName },
           config: { tenantId: own.profile.owner.ownerId, projectId: own.team.definition.scope.projectId,
             sessionId: member.sessionId, generation: member.generation, configRevision: member.configRevision,
@@ -761,9 +780,46 @@ test('Team probe read rejects completed evidence after physical config-directory
           runtime: { read: () => ({ attached: false, nativeReady: false }),
             open: async () => { throw Error('TEST no business allocation in account proof'); } } });
         try {
-          attachMemberModelReadiness({ launch, entry, reference: selected, commandId: 'TEST-consume',
+          if (initialProfile) {
+            const captured = captureInitialRuntimeMemberAdmission(initialProfile, entry); assert.ok(captured);
+            entry.initialModelAdmission = captured;
+            const admit = (actorDigest = runtimeDigest('TEST-actor')) => attachInitialRuntimeModelAdmission({ launch, entries: [entry], management: manager,
+              captureReference: capturePreparedModelReference,
+              method: 'runtime.open', teamId: member.teamId, commandId: 'TEST-initial-file-open',
+              payload: { memberId: member.memberId }, actorDigest,
+              hostIncarnation: 'TEST-file-host', assertCurrent() {} });
+            for (const invalid of ['unscoped', 'foreign', 'expired', 'held'] as const) {
+              const changed: StoredModelProbe = structuredClone(saved);
+              if (invalid === 'unscoped') delete changed.readinessScope;
+              else if (invalid === 'foreign') changed.readinessScope = { ...changed.readinessScope!, actionDigest: 'f'.repeat(64) };
+              else if (invalid === 'expired') changed.expiresAt = Date.now() - 1;
+              else {
+                changed.phase = 'held'; changed.ok = false; changed.resourceHeld = true;
+                delete changed.nativeFileKeyWitness; delete changed.readiness;
+              }
+              recordStore.write(changed);
+              try { assert.throws(admit, 'initial admission cannot adopt ' + invalid + ' proof'); }
+              finally { recordStore.write(saved); }
+              assert.equal(nativeCalls, 1, 'a refused retained receipt cannot create replacement preparation');
+            }
+            admit();
+            const attached = launch.readModelReadiness({ binding, configRevision: member.configRevision,
+              configurationDigest: runtimeDigest(member) });
+            assert.deepEqual(attached.reference, selected);
+            assert.equal(attached.consumer.cutoff, saved.expiresAt);
+            assert.equal(attached.consumer.initialProfile, undefined, 'the original Linux proof remains a prepared arm');
+            admit();
+            assert.deepEqual(launch.readModelReadiness({ binding, configRevision: member.configRevision,
+              configurationDigest: runtimeDigest(member) }), attached, 'same original pending attachment is a read-only replay');
+            assert.throws(() => admit(runtimeDigest('TEST-another-actor')), { code: 'hold' },
+              'another actor cannot replace the retained initial attempt with a new consumer');
+            assert.equal(nativeCalls, 1, 'initial attachment replay and refusal never spend a second probe');
+            assert.deepEqual(original.readRetainedProbe(request.commandId, request.context), saved,
+              'the exact first context, scope, cutoff and clean receipt are never rewritten by allocation attachment');
+          } else attachMemberModelReadiness({ launch, entry, reference: selected, commandId: 'TEST-consume',
             actorDigest: runtimeDigest('TEST-actor'), inputDigest: runtimeDigest(request), cutoff });
-          const consumed = consumeMemberModelReadiness({ management: manager, launch, entry, assertCurrent() {} });
+          const consumed = consumeMemberModelReadiness({ management: manager, launch, entry,
+            hostIncarnation: 'TEST-file-host', assertCurrent() {} });
           assert.equal(consumed.kind, 'preparation'); assert.ok(consumed.assertReadinessCredential);
           let handoffs = 0;
           assert.throws(() => { consumed.assertReadinessCredential!('f'.repeat(64)); handoffs++; }, { code: 'held' });

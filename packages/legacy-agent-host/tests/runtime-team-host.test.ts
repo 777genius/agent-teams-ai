@@ -1,6 +1,6 @@
 import { initialContextDigest } from '../dist/team-launch/context.js';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
@@ -13,6 +13,10 @@ import { createTeamHost } from '../dist/composition/TeamHost.js';
 import { normalizeBinding, runtimeDigest } from '../dist/runtime/identity.js';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
 import { teamModelProbeProfile } from '../dist/composition/teamLaunchModelProbe.js';
+import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
+import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
+import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
+import { localModelReadinessPreparationSchema } from '../dist/management/commandRecords.js';
 
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type {
@@ -109,6 +113,102 @@ test('mixed Host boots V2 Session SPI profile without invoking V1 management reg
   const unprepared = await f.rpc('runtime.open', { memberId: 'bob-id', expectedGeneration: '1' }) as { ok: boolean };
   assert.equal(unprepared.ok, false, 'old external V2 capture cannot invent a retained allocation proof');
   assert.equal(f.opens(), 1, 'missing original preparation refuses before the OpenCode provider factory');
+
+  const originalCommand = 'TEST-original-native-open';
+  const initial = await fixture(t, { independentProviders: true, changeProfile(selected) {
+    const member = structuredClone(f.selected.runtime!.members[1]!);
+    assert.equal(member.provider, 'opencode'); if (member.provider !== 'opencode') assert.fail();
+    const root = selected.owner.storageRoot, team = selected.teams[0]!;
+    const platform = process.platform, arch = process.arch;
+    if ((platform !== 'linux' && platform !== 'darwin' && platform !== 'win32') ||
+        (arch !== 'x64' && arch !== 'arm64')) assert.fail();
+    member.cwd = root; member.protocolRevision = '2.1.4';
+    member.environment = { HOME: join(root, 'home'), XDG_CONFIG_HOME: join(root, 'config'),
+      XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache') };
+    for (const directory of Object.values(member.environment)) mkdirSync(directory);
+    member.embedded = { directory: join(root, 'engine'), manifestSha256: 'e'.repeat(64),
+      version: '2.1.4', platform, arch, externalDirectory: 'deny' };
+    writeFileSync(join(root, 'opencode.json'), JSON.stringify({ provider: { 'TEST-v2-provider': {
+      npm: '@ai-sdk/openai-compatible', options: { apiKey: 'TEST-key', baseURL: 'http://127.0.0.1:9/v1' },
+      models: { 'TEST-v2-native-model': { name: 'TEST exact original model' } },
+    } } }), { mode: 0o600 });
+    member.embedded.configurationSource = captureOpenCodeConfigurationSource(member).reference;
+    team.members.find(row => row.memberId === member.memberId)!.delivery = {
+      ...team.binding, runId: team.scope.runId, memberId: member.memberId, generation: '1' };
+    team.grants.push({ principalId: member.principalId, memberName: 'bob',
+      permissions: ['read', 'task.write', 'message.write'] });
+    selected.runtime!.members.push(member);
+    selected.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(selected, {
+      method: 'runtime.open', teamId: member.teamId, commandId: originalCommand,
+      payload: { memberId: member.memberId },
+    })];
+  } });
+  const target = { memberId: 'bob-id' }, command = { commandId: originalCommand };
+  const first = await initial.rpc('team.launch.read', {}) as { value: { launchId: string; rosterRevision: string } };
+  // Structurally valid, explicitly untrusted Main input must reach the original owner/selection check.
+  const foreignMain = localModelReadinessPreparationSchema.parse({ remainingMs: 1000, origin: {
+    schemaVersion: 1, kind: 'team', ownerDigest: 'f'.repeat(64), contextId: initial.binding.handleId,
+    commandId: originalCommand, selectionDigest: 'f'.repeat(64),
+    workspaces: [{ path: initial.root, project: { selectedPath: null, invalid: true,
+      selectorFailure: 'project-required', providers: [],
+      sources: ['opencode.json', 'opencode.jsonc', '.opencode/opencode.json', '.opencode/opencode.jsonc']
+        .map(name => ({ root: initial.root, path: join(initial.root, name), present: false, digest: 'f'.repeat(64) })) },
+      global: { notConsulted: 'project-precedence' } }], approval: { notConsulted: 'no-private-target' },
+  } });
+  for (const [method, payload, envelope] of [
+    ['runtime.open', target, { commandId: 'TEST-another-open' }],
+    ['runtime.open', { ...target, expectedGeneration: 'foreign' }, command],
+    ['runtime.open', { ...target, model: 'TEST-foreign-model' }, command],
+    ['runtime.open', { ...target, cwd: '/TEST/foreign-workspace' }, command],
+    ['team.launch.start', { launchId: first.value.launchId, rosterRevision: first.value.rosterRevision }, command],
+    ['runtime.open', { ...target, expectedGeneration: '1' }, { ...command, localModelReadinessOrigin: foreignMain }],
+  ] as const) {
+    assert.equal((await initial.rpc(method, payload, envelope) as { ok: boolean }).ok, false,
+      'a different action or supplied Main origin cannot borrow the initial private source');
+    assert.equal(initial.opens(), 0);
+  }
+  const configPath = join(initial.root, 'opencode.json'), originalConfig = readFileSync(configPath, 'utf8');
+  writeFileSync(configPath, originalConfig.replace('TEST-key', 'TEST-changed-key'));
+  assert.equal((await initial.rpc('runtime.open', target, command) as { ok: boolean }).ok, false,
+    'changed original native configuration cannot allocate');
+  assert.equal(initial.opens(), 0);
+  writeFileSync(configPath, originalConfig);
+  const admitted = await initial.rpc('runtime.open', target, command) as { ok: boolean };
+  assert.equal(admitted.ok, true, JSON.stringify(admitted));
+  assert.equal(initial.opens(), 1, 'only the original captured Open invokes its controlled native provider');
+  const launchStore = new TeamOwnerStore(initial.root, initial.selected.teams[0]!.binding.teamName);
+  const launchPath = 'launches/' + runtimeDigest(first.value.launchId) + '.json';
+  const retained = launchStore.read<TeamLaunchRecord>(launchPath)!;
+  const consumer = retained.readiness!.consumers.find(row => row.memberId === target.memberId)!;
+  assert.equal(consumer.disposition, 'consumed'); assert.equal(consumer.initialProfile?.commandId, originalCommand);
+  assert.equal(consumer.cutoff, undefined); assert.equal(consumer.groupCommandId, undefined);
+  assert.deepEqual(retained.readiness!.groups, [], 'ordinary initial provenance is not a fabricated successful probe');
+  const attempt = retained.members.find(row => row.memberId === target.memberId)!.attempts[0]!;
+  assert.equal(attempt.deadlineMs - attempt.startedAtMs, 1000, 'the sole clock is the original business claim');
+  assert.equal((await initial.rpc('runtime.open', target, command) as { ok: boolean }).ok, true);
+  assert.equal(initial.opens(), 1, 'same original Open does not allocate twice');
+  initial.session().checkpoint = () => ({ ok: true, value: { text: 'TEST original controlled checkpoint' } });
+  const checkpoint = await initial.rpc('runtime.checkpoint', { ...target, checkpointId: 'TEST-initial-checkpoint' }) as {
+    ok: boolean; value: { status: string; reference: string } };
+  assert.equal(checkpoint.ok, true); assert.equal(checkpoint.value.status, 'published');
+  assert.equal((await initial.rpc('runtime.stop', target) as { ok: boolean }).ok, true);
+  const originalBinding = initial.contexts[0]!.endpoint.binding;
+  assert.equal(new FileRuntimeStore(initial.root).fenced(originalBinding, tx => tx.get()?.custody), 'released');
+  const originalLaunch = JSON.stringify(launchStore.read<TeamLaunchRecord>(launchPath));
+  await initial.restart();
+  assert.equal(initial.opens(), 1, 'cold reconstruction performs no initial admission or native work');
+  assert.equal(JSON.stringify(launchStore.read<TeamLaunchRecord>(launchPath)), originalLaunch);
+  const resumed = await initial.rpc('runtime.restore', { ...target, expectedGeneration: originalBinding.generation,
+    reference: checkpoint.value.reference }, { commandId: 'TEST-original-checkpoint-restore' }) as { ok: boolean };
+  assert.equal(resumed.ok, true, JSON.stringify(resumed));
+  assert.equal(initial.opens(), 2, 'the existing validated checkpoint continuation needs no fresh model preparation');
+  assert.equal([...new FileManagementCommandStore(initial.root).list()].length, 0,
+    'neither ordinary initial allocation nor checkpoint continuation creates a model probe');
+  assert.equal((await initial.rpc('runtime.stop', target) as { ok: boolean }).ok, true);
+  const restoredLaunch = JSON.stringify(launchStore.read<TeamLaunchRecord>(launchPath));
+  await initial.restart();
+  assert.equal(initial.opens(), 2, 'a selected cold entry retains source provenance without minting initial admission');
+  assert.equal(JSON.stringify(launchStore.read<TeamLaunchRecord>(launchPath)), restoredLaunch);
 });
 
 test('two captured teams may share an original run ID without sharing launch ownership', async (t) => {

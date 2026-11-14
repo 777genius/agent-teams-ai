@@ -117,8 +117,9 @@ export function createRuntimeMemberProviderFactory(options: {
       const readiness = (() => {
         if (entry.profile.provider !== 'opencode') return undefined;
         const launch = options.readinessLaunch?.(entry);
-        if (!launch || !options.modelReadiness) throw new RuntimeOwnerError('hold');
-        return consumeMemberModelReadiness({ management: options.modelReadiness, launch, entry,
+        if (!launch) throw new RuntimeOwnerError('hold');
+        return consumeMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
+          launch, entry, hostIncarnation: options.hostIncarnation,
           assertCurrent: () => { authority.assertCurrent(); assertAllocation(); } });
       })();
       const setupCurrent = () => {

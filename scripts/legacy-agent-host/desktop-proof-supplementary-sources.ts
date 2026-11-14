@@ -80,6 +80,7 @@ export const desktopProofSupplementarySources = [
   'packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts',
   'packages/legacy-agent-host/src/composition/executeRuntimeLaunch.ts',
   'packages/legacy-agent-host/src/composition/executeLiveRosterMembership.ts',
+  'packages/legacy-agent-host/src/composition/initialRuntimeModelAdmission.ts',
   'packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts',
   'packages/legacy-agent-host/src/composition/runtimeCaptureSource.ts',
   'packages/legacy-agent-host/src/composition/runtimeExtraArgs.ts',
