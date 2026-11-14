@@ -6,6 +6,7 @@ on:
       - "packages/legacy-agent-host/src/composition/createCapturedPromptSuggestionBinding.ts"
       - "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts"
       - "packages/legacy-agent-host/tests/native-prompt-suggestions-binding.test.ts"
+      - "packages/legacy-agent-host/tests/native-prompt-suggestions-host.native.ts"
       - ".github/workflows/native-prompt-suggestions-host.yml"
   workflow_dispatch:
 
@@ -40,3 +41,19 @@ jobs:
         run: |
           set -euo pipefail
           node --test packages/legacy-agent-host/tests/native-prompt-suggestions-binding.test.ts
+
+      - name: Original Host plus actual Claude CLI with scripted localhost inference
+        env:
+          NATIVE_SUGGESTIONS_HOST_GO: "1"
+          NATIVE_SUGGESTIONS_HOST_RECEIPT: ${{ github.workspace }}/native-prompt-suggestions-host-receipt.json
+        run: |
+          set -euo pipefail
+          node --test packages/legacy-agent-host/tests/native-prompt-suggestions-host.native.ts
+      - name: Upload bounded original Host native E2E receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: original-host-native-prompt-suggestions-TEST-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: native-prompt-suggestions-host-receipt.json
