@@ -1705,3 +1705,146 @@ Add only representative refusal inputs in that same case: changed assistant text
 Independent plan review and publication precede source GO. Freeze both full sources, exact forward/inverse diffs and own branch preimages; verify that only the two role assertions use the shared helper and that the complete old tests/default/business/cleanup code remains intact except the explicitly added controlled coverage. Root owns applicable original model-file/type/lint/source checks and publication. Where useful, retain the legitimate native-shaped controlled request's rejection against the old oracle before qualifying the exact corrected source.
 
 The actual original retained V1/V2 Desktop gate and source-selection gate must still complete on an ordinary eligible reviewed head with all original owner/history/Stop/custody/cleanup assertions. A controlled oracle PASS would establish this narrow request-shape correction, not native readiness or end-to-end success. Do not rerun, replace or advance active original runs as part of this appendix.
+
+
+## §27. Original mixed Settings Select control after native catalog discovery
+
+**PLAN / source0.** Preserve all previous scopes and acceptance. Parent `09fefda4c255fa172a52b89b2815d18085c79afc`, original run43594538508, jobs132446132946 (V1) and132446133129 (V2), reached actual Settings/project/global-default controls, then failed at desktop-mixed-provider-settings.ts:296 inside the original scrollTo: “select and verify original global default”. Raw logs are15ed36b801032c7744314673bf2acca7b93b3fc3 and045ec9a895aedd0fbfcb5bd91708c97e3423dcb4. Original artifacts14113283450/14113754165 have ZIP SHA2565684790ecf78b4bf18bfc399d67fad7c802b37336fccde52819950b53684ae96 and20b5cc5606c57a27f4440b067c5048b5b33b6ef2f2cd6d77844a6045d05011be.
+
+The existing TEST selector requires the complete aria-label “Select: TEST-model”. Actual ModelRow appends the model's explanatory unavailableTitle when its catalog route still needs verification. It separately exposes aria-pressed=false for this same Select control. The original V1 screenshot/DOM has the TEST-model row and Select button with its needs-test explanation; scrollTo only searches the exact selector and cannot find it. The V2 screenshot instead has the provider's Connect form; that separate reachability gap is NOT fixed or qualified by this selector correction. V1 generation unavailable/disabled controls and both original directory errors are also separate remaining findings.
+
+Change only `scripts/legacy-agent-host/desktop-mixed-provider-settings.ts`, common preimage522c99c88a9ddbb0dfa7a7397046188aa963402b. Within the same exact model row, select `button[aria-pressed="false"]` and require its visible text to equal the existing English “Select” through originalStep's existing text argument. Keep exact model/provider row identity, one original intent, original scroll/click custody and disabled/hit-test refusal. A selected=true button, missing/duplicate target, disabled control or wrong text still fails. No clicking a nearby Test/Connect control, DOM mutation, direct store/API invocation, retry, additional probe, new case or longer timer.
+
+Root checks exact one-call delta and inverse, normal scripts types and existing relevant model/controls cases. The original current-head V1/V2 Settings→Create lane must still pass every global/project/default/test/clear/inheritance/limits/source/cold/native/cleanup oracle. This is not a workaround for a failed provider state.
+
+## §28. Serialize first configuration preparation for one original Main source
+
+**PLAN / source0; observed symptom and inferred cause remain distinct.** The same two original artifacts contain one published initial global and one published initial project runtime.source record, no Settings model probe, and a visible “Unable to confirm provider state” directory error beside successfully loaded provider/model data. The original receipt does not retain the internal failed capture stack; it does not prove which concurrent call failed.
+
+The source nevertheless has a concrete concurrent-first-read hazard. `DesktopBackendFeature.captureCurrentManagementTarget` and `refreshLaunchConfiguration` each independently invoke `refreshCapturedRuntimeConfiguration`. The latter reads current, recovers the original intent, captures preferences, then publishes a new UUID against that original revision. Parallel status/view/directory calls for the same original descriptor selection can both observe the same seed. `RuntimeSourceIndex.refreshConfiguration/publishCandidate` correctly rejects the second different command's stale expectedRevision before creating its journal. Keep that Host conflict fence. Do not solve this by accepting a changed revision after failure, coalescing different preferences, mutating the Host journal or retrying a mutation.
+
+Use a small private queue in the existing configuration-preparation module, keyed solely by the original immutable Main descriptor selection object passed by the two existing callers. The key is coordination identity, not execution authority. Each caller retains its own CapturedRuntimeSources and its own foreground/owner checks. Begin that caller's original current/recover/preferences sequence only after the preceding same-selection preparation settles. Subsequent catalog/model work remains outside the queue. Separate descriptor selections, projects, owners and Main instances never share the queue. Do not cache a captured source/guard across callers.
+
+Bound the queue to32 admitted preparations per original key, matching the existing management bound; reject overflow before current/recover/native dispatch. Retain one tail/count record and remove it only after the last original admitted operation settles. A failed predecessor must not strand unrelated later reads, but each later operation still executes the unchanged original recover/fail-closed algorithm. A stale caller refuses under its existing guard when its own turn starts. No detached worker, generic semaphore framework, alternate Host/owner, extra native invocation, new timeout, widened deadline, source publication replay or default-selection fallback.
+
+Exact writable scope, all existing paths:
+
+| Path | Parent/qualification preimage | Native preimage |
+| --- | --- | --- |
+| src/features/agent-backend/main/application/refreshCapturedRuntimeConfiguration.ts | 6af55c63ae61637f3cf15274a4ab4f23c15894aa | same |
+| src/features/agent-backend/main/composition/DesktopBackendFeature.ts | 57026bef017457339a2d20f7cba0ee2ab4534b1d | 93a278da0cc48261c12daa20923b52b14ab53287 |
+| test/features/agent-backend/desktopRuntimeSources.test.ts | 8e5b5a1ee18bff50a7260853dbf5286c77fb3cd2 | same |
+
+The Main composition delta is exactly the two existing preparation calls passing their original selected object; preserve every Windows/native custody variant. Keep the original refresh body and its original command-only lost-ACK lookup intact inside the same module. Default standalone calls without an original selection retain their original independent behavior; product callers always supply the descriptor selection. Both modules are already in the original source-freeze closure; no new file or roster change is needed. Preserve800-line production limits and the existing TEST caps.
+
+Extend the first existing real Main/Host source test with concurrent initial management captures and Launch configuration preparation, requiring one original published revision and equal retained profile/config for the management captures. Preserve all original preference/limits/inheritance/retained-A/restart assertions and the original20s case deadline. In this same case exercise a failed/stale preparation followed by a fresh valid caller without replaying its failed action; no new named case or generic unit suite. Root first runs the strengthened existing case against the unchanged source to establish the precise RED, then the reviewed correction and the existing source suite/appropriate types/guards. If the original case does not reproduce the race, stop and refine the source diagnosis before publishing production bytes. Actual current-head Settings/native E2E remains mandatory; this controlled regression does not establish the cause or closure of every original UI error.
+
+## 29. Bind retained Launch preparation to its original product-roster publication
+
+### 29.1 Observed mismatch and finite scope
+
+Original batch4 V2 Resume job132446133130 and Review job132446133159 executed `09fefda4c255fa172a52b89b2815d18085c79afc`. Packet `b32566be77052151206877eb1d174ac118e94f9a` retains their original full logs, artifacts14114024098/14114049493 and exact source joins. Each has one successful released preparation and a successful original roster CAS, but no Runtime capture. The UI reports an unknown capture result. Both prepared selections identify a retained technical Launch revision, while the CAS expectedRevision identifies the original product roster; these hashes are intentionally computed from different data. For Resume the technical revision is8f377c7a… and product revision518f489e…; Review usesb180b60a… andc55f2dbc…. The exact current transfer helper compares those two domains directly before consuming the original receipt.
+
+Only three existing paths may change; each preimage is identical in parent/native/qualification:
+
+| Path | Exact preimage |
+| --- | --- |
+| `packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts` | `8f5a9b10521ed707df82ed1b90fc923aa5432274` |
+| `packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts` | `d51831e769c6dc1906e60eeffc3dc20178aee1c6` |
+| `packages/legacy-agent-host/tests/saved-team-model-probe.test.ts` | `245c797fceb1e4b96c09246f902a62540f2a1891` |
+
+Keep Main/Renderer transfer DTOs, RuntimeTeamCaptures, ModelProbeOwner and command-record schemas read-only. Do not introduce a new owner, journal, persistent field, public selector, inference, request, deadline or test case.
+
+### 29.2 Original admission commits both revision domains
+
+The source discriminant is the existing `captureTeamModelProbeSelection` retained-launch branch: `captureTeamModelProbe` is reached only after the current technical Launch and its existing Team authority/source selection are validated. Apply the new commitment only to an OpenCode prospective selection with `input.draft` present. The separate `captureSavedTeamModelProbe` / `saved-model-` branch keeps its original product-revision equality and digest. Non-draft actual-cwd children, Create, native preparation and other providers keep their existing shapes.
+
+Capture `team.connection.readRoster().revision` once as a private `productRosterRevision` during that original prospective admission, before any await or preparation. Include equality to this original value in that captured selection's existing currentness callback alongside the original technical Launch/revision, recipe, target and actor checks. Pass this private value only through the existing captured return; it grants nothing independently.
+
+Use the existing `readinessScope.actionDigest` commitment, with the exact ordered object `runtimeDigest({ commandId, context, productRosterRevision })`. Without the new private value, retain the exact old ordered object `runtimeDigest({ commandId, context })`. A small function in the existing teamLaunchModelProbe module may own these two literal hash shapes so producer and consumer cannot disagree. No schema or stored field is added: ModelProbeOwner already commits the whole scope in its original fingerprint and preparationDigest.
+
+Same-ID replay retains the original cutoff and never upgrades a historical scope. If the exact retained original scope has the old two-field digest, reproduce that old digest rather than adding a product witness. A newly committed scope recomputes its original current product join and conflicts on drift. Read, lookup, cold reconstruction and expiry cannot mint this commitment or reset a clock. Original legacy scopes may use only a previously valid direct-equality path; they cannot qualify the new cross-domain transfer.
+
+### 29.3 Exact original CAS bridge
+
+In `captureLaunchModelReadiness`, preserve the existing exact original full roster-intent lookup, command ID, returned publication revision, current roster, Team binding and current actor checks. Read the one explicit original probe through its existing command/Team/selection lookup and preserve the original technical sourceRevision, rosterRevision and destination joins.
+
+For a retained prospective OpenCode selection carrying the new commitment, require actionDigest to equal the same three-field hash using that original command, its retained context and `transfer.roster.expected.expectedRevision`. This proves the successful original full CAS was based on the product roster captured with the already validated technical selection. It does not rerun the obsolete pre-CAS selection callback after intentional publication. A foreign product revision, command, context, technical source, destination or changed full intent refuses before a capture record is created.
+
+The saved-model branch still requires input.rosterRevision to equal the expected product revision. Other legacy/non-draft paths retain that original direct equality only, without a new fallback. Missing or old-format proof cannot be treated as a newly witnessed cross-domain publication. Keep capturePreparedModelReference's original model/mechanism, effective account/file witness, policy-origin, freshness, native-readiness and released-custody checks, original remaining-budget minimum and every downstream allocation/actual-cwd consumer unchanged.
+
+### 29.4 Existing controlled regression and execution limits
+
+Extend the existing OpenCode/roster probe-journal case in saved-team-model-probe.test.ts with one bounded retained-source sub-scope, preserving all original declarations, assertions and loops. Reuse its real Team, Runtime selection and ModelProbeOwner with the existing controlled native boundary; a finite fixture setup may install the explicit original runtime recipe before coordinator construction. The new sub-scope performs one original prospective probe, confirms its actual completed/released receipt, performs one exact full roster CAS and calls the actual transfer helper. Assert technical and product revisions differ, transfer preserves the original command/context/reference/cutoff, and no member provider is allocated. This positive transfer assertion must fail with the old helper; no successful probe record may be inserted to bypass its producer.
+
+Within the same sub-scope, check same-ID replay does not run another probe and that old-format/mismatched publication commitment, altered selection/command and expired original proof cannot transfer; bounded negative record mutations must restore the exact original bytes. Existing account/source/revocation/cleanup assertions remain intact. Saved-model behavior, original scoped cleanup and cold non-replay stay covered by the unchanged surrounding cases. No Desktop/native request budget or named case is added.
+
+Freeze exact three-path variants and inverses, obtain independent review and root publication. Root owns the existing-case old-source RED, coherent GREEN, original Host build/test types and source guards, followed by the original Resume/Review Desktop lanes. Source review is not native acceptance. Claude Resume's earlier rejected Host operation, §95 setup/oracle joins and stopped/donor failures remain separate.
+
+## 30. Preserve strict allocation deadlines with explicit Host test-file scheduling
+
+### 30.1 Original evidence and bounded conclusion
+
+Batch4 parent and native `test (1/4)` fail only the existing worktree branch of `submit uses original registry/roster/capture/start receipts and recovers same-ID admission after proof expiry`: both original providers opened, all four probes completed successfully and released their resources, but an allocation observation failed the strict comparison with that member's own original 1000ms deadline. Parent reports 1228 pass / 1 fail / 2 original skips, native 1244 / 1 / 2, with no cancelled tests. Raw logs are `e9ba7c85845e08a72fb7a068be58eb21c53c0359` and `63ce25d44d0dfb70c9a7b6c408d1446f785a2f19`; actual checkouts are respectively `889325183907aa17e91c8fb992afa086cab9c621` and `d1829c9f1f0749fa725c5f6466c53f5827b159f1`.
+
+Both logs show the original workflow capturing Node 24.21.0 and placing its exact directory on PATH for the Host command. Earlier controller Node 26 warnings do not identify the Host interpreter. The Host script currently leaves file concurrency implicit. [Node 24.21 CLI documentation](https://nodejs.org/download/release/v24.21.0/docs/api/cli.html#--test-concurrency) specifies the process-isolated default as `os.availableParallelism() - 1`; its [execution model](https://nodejs.org/download/release/v24.21.0/docs/api/test.html#test-runner-execution-model) preserves a separate child process per file.
+
+Root's unchanged isolated case on the current composed build passed in 4.229558s (6.840s command wall time). Its existing CPU profile shows substantial Team journal/currentness/source work, including synchronous reads; this is neither a profile of the failed CI runs nor proof of safely removable production checks. CPU contention remains an inference, not an established unique cause or performance guarantee. Exact original observations, current preimages and profile-file digests are in evidence `00102ab54a98f35a6fe3c919b59628c1e32ed8d8`.
+
+### 30.2 Exact single-path change
+
+The only writable path is `packages/legacy-agent-host/package.json`. Its current preimage is `d7976e13a62c23caaa371a31b4aade20f3639fc0` in parent `6640102f46e63a24b9c72a303b0e00121aed87bc`, native `3ebdb74bdebe8d58aae0b2730b6a0518a716fb5c` and qualification `9ee232b9fa663baaf45fa53b2076af14db57824a`.
+
+Insert exactly `--test-concurrency=1` after `node --test` in the existing `scripts.test` value. Preserve the build and test-type prerequisites, every original file argument and its order, Node engine range, separate process isolation and all other script/package/dependency fields. This makes the complete Host suite admit one file worker at a time; the original tests still exercise their own concurrent operations.
+
+No test body, assertion, case, skip, production path, workflow, request counter, timeout, timer, clock, native script or source guard changes. In particular §§18/21/25 retain the single wait bounded by the maximum original deadline and each exact member's strict observation-before-its-own-deadline assertion. No production validation is cached or removed.
+
+### 30.3 Qualification and remaining risk
+
+Freeze the one-field diff, full inverse and all three preimages for independent review and root-controlled integration/publication. The two original failures are the existing failure evidence; no new stress case or retry collector is introduced.
+
+Root must run the unchanged complete Host suite through the amended script and retain its actual totals, original skips, failure/cleanup evidence and duration. The original ordinary CI gate on the published source remains required. Serial files can increase total suite wall time; no job or operation deadline is enlarged. An isolated PASS or source review cannot substitute for that full-suite result. Any remaining failure stays a failure and must be diagnosed without relaxing the allocation oracle. Source remains zero until explicit root GO.
+
+## 31. Reuse one freshly captured readiness-origin inspector inside the existing account inspection
+
+### 31.1. Concrete evidence and unchanged deadline
+
+The complete serialized Host script still failed its original OpenCode/worktree Create case: 1247 tests, 1244 pass, one fail, two original skips, zero cancelled, 353739.335068 ms. Root evidence `6132c39f101e8b5005189fdf4fc493da31ad02bc` preserves the unchanged 1000 ms per-attempt deadline and strict own-deadline inequality. Both controlled providers opened; all four probes completed and released. Scheduling alone did not resolve the failure.
+
+Root then ran the unchanged isolated case once with Node24 CPU profiling: it passed (case 4935.630272 ms). Profile SHA-256 `e745d3ea4eecc7b31f5675de4326510cd5d438bd2733e06e5406257816148acb` is diagnostic data with profiler overhead, not a measurement of the failed full run. Its sampled constructor stacks include about 180.7 ms under the separate outer origin inspection and 167.9 ms under the account-owned inspection, across that whole isolated run. Evidence and exact source/caller joins are `583dbd4b856921621669947f0088c1e95d5f5f17`. No CPU-load-only or Node-executable-hash cause is claimed, and no sufficient-speed guarantee follows.
+
+### 31.2. One existing production path
+
+The only writable source is `packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts`, common preimage `4c4436c7bae5fa5cb76e01ab6360ade53708c2be`, verified in parent/native/qualification source successors of §103. No fixture, test, scope schema, stored record, caller module, workflow or dependency change.
+
+Within one synchronous `captureReadinessReference` callback, `capturePreparedModelReference` constructs an origin inspector from the exact saved origin, candidate profile, saved provider ID and current-owner callback. Its account call immediately constructs another inspector from those same inputs. The account already owns that inspector and uses it for its policy/currentness checks. This is duplicated physical source inspection, not a need for a second owner or proof.
+
+Keep the exported `captureOpenCodeProbeAccount` five parameters, optional/default behavior, and returned account object shape unchanged. A private worker in the same module owns the existing account-inspection body and returns the unchanged account plus its freshly constructed origin inspector. The public function unwraps only the account. Only `capturePreparedModelReference` consumes the private pair; it uses that origin when the existing account branch is selected, and retains the original direct-origin capture when no account inspection supplies one. No caller can inject an inspector or override its authority. No inspector field escapes through the public account result, `observeAccount`, reference, journal or wire payload.
+
+### 31.3. Authority and source-currentness preservation
+
+Preserve the account worker's complete existing source, native-file witness, credential-scope, profile, selection, cutoff and deferred-manual logic. The private refactor may wrap its result and delegate the public entry, but must not bypass or reorder its internal validation. In particular, the no-original deferred return stays undefined.
+
+Reuse the inspector object, never a prior policy/currentness boolean. Every existing `policy.isCurrent()` and final `origin.isCurrent()` call remains at its original use boundary; each still executes a fresh `inspect()` with both original owner checks and actual source-file validation. Preserve the final origin check after `readinessTarget(candidate)`, account/current-owner checks, reference equality and existing failure ordering outside the removed duplicate constructor. The shared inspector is local to this synchronous callback: no cross-call cache, memoized green, lease, new admission, lifetime extension or transfer across an await. Standalone/preflight/initial and continuation consumers retain their original public helper contract.
+
+The original Runtime allocation timestamp is observed after allocated publication; this change does not reinterpret that observation. Keep all original claims, their 1000 ms limits, wait/timer, maximum original deadline, each member's strict own-deadline assertion, source/native inputs, request budgets and cleanup semantics.
+
+### 31.4. Review and original acceptance
+
+Freeze the one-file full source/diff and verify all three preimages, exact public signature/result shape, private-pair non-escape, worker-body inverse and unchanged currentness call sites. An independent peer must read the shared-policy freshness and post-target guard, including the existing deferred and file-backed branches.
+
+Root runs the unchanged original failing Create case/file and saved-team-model-probe negative guard cases, normal Host build/type/source gates, then the complete original serialized Host suite. Their source preimages remain `c24c405663019f72cbd09f66705971fcd04c4daa` and `ff791b368ffb6c753d89fc3f5778e57782d6a949`. No new case, weakened assertion, synthetic clock, timeout increase, additional probe or repeated-until-green native campaign is authorized. Passing the isolated case alone does not close the full-suite failure. Source remains zero until this appendix is published and root grants the exact one-path GO.
+
+## 32. Preserve original allocation timestamps in the existing Create failure diagnostic
+
+The ordinary serialized Host suite still has one original 1000 ms allocation failure after §31 (raw log `f303ddb8e80513399f8e5a2a319f3b19bcb69c84`). The single reviewed full diagnostic run passed and produced no failure-only timing rows; measured summary `da12af8ea47c1bb656004bb48fa8ea67a4393424` does not identify a late member or establish a fix.
+
+The sole writable path is `packages/legacy-agent-host/tests/team-create-launch.test.ts`, common preimage `c24c405663019f72cbd09f66705971fcd04c4daa` in the three checked §31 source heads. No production, workflow, profiler, dependency or other test path is added.
+
+The fixture already records each first allocation time in `allocatedMembers` from its original `checkReadiness` callback. Add a read accessor returning copied `{ memberId, allocatedAtMs }` rows from that existing map, without exposing the mutable map. Invoke it exactly once in the original failing case's existing first `t.diagnostic(JSON.stringify(...))` catch output, alongside provider/worktree and the original failure; never from the success path or allocation observer.
+
+The existing later launch snapshot already retains launch IDs, member IDs, current attempt IDs, `startedAtMs` and `deadlineMs`. Correlate the new rows by the original member ID; preserve an absent allocation as an absent row, never zero/current time or inferred success. No extra Runtime/filesystem read, clock observation, await, action, timer, observer, derived acceptance value or new diagnostic invocation is introduced. The snapshot fallback, original error rethrow and finally cleanup remain exact.
+
+Keep every original case declaration/assertion, the original maximum-deadline wait, strict timestamp-before-own-deadline checks, 1000 ms claims, inputs/counters and skips unchanged. This is failure evidence only; it does not change an outcome or close the intermittent Host failure.
+
+Freeze the minimal one-file diff/full inverse and obtain one independent source peer after plan publication and explicit root SOURCE GO. Root owns integration and ordinary CI; this appendix requires no new case, benchmark, profiler or repeated diagnostic/full-suite campaign. Source remains zero until that GO.
