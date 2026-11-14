@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { teamModelProbeSelectionSchema } from './teamLaunchModelProbe.js';
-import { teamModelProbeProfile, teamModelProbeEffort } from './teamLaunchModelProbe.js';
+import { teamModelProbeProfile, teamModelProbeEffort, teamModelProbeActionDigest } from './teamLaunchModelProbe.js';
 import { actualCaptureReadinessCommandId, modelReadinessMechanismDigest } from '../team-launch/launchReadiness.js';
 import { captureOpenCodeConfigurationSource } from '../adapters/providers/OpenCodeConfigurationSource.js';
 import { captureOpenCodeReadinessOrigin, captureReadinessPreparation,
@@ -562,13 +562,17 @@ export function captureLaunchModelReadiness(options: {
       });
       if (matches.length !== 1) held();
       const original = matches[0]!, input = original.selection;
-      if (input.draft && input.draft.providerId !== 'opencode' ||
-          input.rosterRevision !== transfer.roster.expected.expectedRevision) held();
+      if (input.draft && input.draft.providerId !== 'opencode') held();
       saved = options.management.probes.readScopedProbe(original.commandId, teamBindingDigest, runtimeDigest(input));
       if (saved.readinessScope?.kind !== 'team' || saved.readinessScope.sourceRevision !== input.launchId ||
           saved.readinessScope.rosterRevision !== input.rosterRevision ||
           !saved.readinessScope.destinationKeys.includes(runtimeDigest(input.draft?.target ?? {
             launchId: input.launchId, memberId: input.memberId }))) held();
+      if (input.draft && !input.launchId.startsWith('saved-model-') &&
+          saved.readinessScope.actionDigest !== teamModelProbeActionDigest(original.commandId, saved.context!)) {
+        if (saved.readinessScope.actionDigest !== teamModelProbeActionDigest(original.commandId, saved.context!,
+          transfer.roster.expected.expectedRevision)) held();
+      } else if (input.rosterRevision !== transfer.roster.expected.expectedRevision) held();
       if (input.draft?.target.kind === 'member') {
         const intended = transfer.roster.expected.members.find(row => row.name === destination.name);
         if (!intended) held();
