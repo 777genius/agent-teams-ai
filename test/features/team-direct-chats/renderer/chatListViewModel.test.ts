@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { msg, toTestKey } from '../core/domain/fixtures';
 
 describe('buildChatListView preview attribution', () => {
-  it('keeps the sender on This team so the row can show alice: text', () => {
+  it('preserves the sender on This team without duplicating it in the alice DM row', () => {
     const rows = buildChatListView({
       members: [
         { name: 'oscar', agentType: 'team-lead' },
@@ -27,7 +27,8 @@ describe('buildChatListView preview attribution', () => {
 
     expect(rows[0]?.previewFrom).toBe('alice');
     expect(rows[0]?.previewText).toBe('nice, work, guys');
-    expect(rows.find((row) => row.displayName === 'alice')?.previewFrom).toBe('alice');
+    // The direct-chat row already identifies Alice, so its preview omits her name.
+    expect(rows.find((row) => row.displayName === 'alice')?.previewFrom).toBeNull();
   });
 
   it('shows latest activity time even when preview prefers an older to-user message', () => {
