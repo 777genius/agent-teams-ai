@@ -5026,3 +5026,35 @@ Preserve the original error text, both physical-absence assertions, subsequent s
 ### 97.4 Review and acceptance
 
 Plan/source review and root publication remain sequential; source is zero at this freeze. Require exact whole-file forward/inverse verification and unchanged surrounding producer control flow, then root's existing script/type/source-size gates. The ordinary original donor-saved Desktop lane remains the actual acceptance, including genuine Save, original drain, ordinary Quit, physical absence and immutable corpus before current consumer startup. No new case, rerun collector, timeout increase or native-success claim is introduced.
+
+## 101. Retain the original failed Claude Launch submission as bounded diagnostic evidence
+
+### 101.1 Established boundary
+
+Original parent job `132446133266` at checkout `09fefda4c255fa172a52b89b2815d18085c79afc` successfully clicked the original Launch control after three completed Claude model probes, then timed out waiting for the same dialog to close. The visible result was `Host team operation invalid (rejected)`; no business request, roster receipt, or Runtime capture was retained. Original artifact `14114099666` does not establish the exact submitted IPC payload or rejecting Host issue. The previous disabled-button/wait explanation is withdrawn.
+
+Original evidence is `e832c885abf734a93adc0853bd272c71ac4983f6`; bounded follow-up evidence is `4ae6f36374d679211586129092ea37cd7524a076`. Root's controlled result `f88c0eb43e4605523cbe7e48301e75cb3a1586a7` accepted the source-derived visible settings through the actual Main/Host parsers and original Team owner until the deliberate Runtime-authority boundary. It performed no native/model request, authorized no mutation, and left original state/config unchanged. This was not the actual submitted wire or reproduction of the refusal.
+
+The exact original roster handler returns before generic command parsing. Its internal `TeamRosterTransitions.validate(next)` uses `safeParse` and `hold`; Runtime read failures likewise map to `hold` in that handler. Actual envelope/input rejection remains unlocalized. No product/schema/authority correction follows from this evidence.
+
+### 101.2 One existing TEST path
+
+Only `scripts/legacy-agent-host/desktop-launch-ui-smoke.ts` is writable; all three current preimages are `f22c23b06e7701cbfccb527d1ccf594a5fa8379d`. Parent `6640102f46e63a24b9c72a303b0e00121aed87bc`, native `3ebdb74bdebe8d58aae0b2730b6a0518a716fb5c`, and qualification `9ee232b9fa663baaf45fa53b2076af14db57824a` were independently read. This is a failure-only TEST diagnostic, with no new file, product field, logger, journal, RPC, mutation, model/native call, or retry.
+
+The existing `captureReadiness` call already has a fixed 3000ms observation bound, one CDP evaluation, original renderer-owner assertion, exact mounted Launch dialog/current React root selection, 256 ancestor / 4096 tree-node / 1024 hook bounds, and explicit unavailable results. Keep these bounds and ownership checks. Move the unchanged original 60000ms dialog-close wait inside the same existing submit try/catch, so its failure invokes the existing single `original-submit-failed` callback just as a click failure does. Keep the before-submit callback, physical click, wait predicate, original rethrow, all success assertions and cleanup unchanged. No second diagnostic call is added to an individual failure path.
+
+Only in that failure phase, extend the same hook traversal to inspect the original `useLaunchDialogRosterSubmission` submitted ref. Require exactly one bounded own-data candidate with the original `roster:` command, a JSON signature no larger than 256 KiB, matching request team selection, and matching metadata command/idempotency key. Its shape is the already retained `{commandId, signature, intent, relaunch?}`; never call a hook, setter, action, provider, or bridge. Missing, ambiguous, malformed, over-limit, replaced, or detached form state is explicitly unavailable. Do not guess a different component or synthesize a replacement request.
+
+### 101.3 Closed projection, with no wire claim
+
+Read the original signature only into transient TEST memory. Remove this private raw field before appending to the existing evidence array. Preserve a closed projection: original bounded command ID, signature/payload SHA-256, expected-revision digest, member count, known configured-field presence/types, admitted provider/backend enum values, and whether runtimeSelectionVersion is absent, exactly 1, or another type/value. Hash member identifiers/text if needed; never persist the raw signature/request, prompt, workspace, extra arguments, unknown key names, credentials, or arbitrary values.
+
+For a useful closed issue locator, apply the existing Host `replaceRosterSchema.safeParse` to the payload reconstructed from this submitted renderer metadata using the existing `createHostTeamRoster` mapping. This is a pure diagnostic schema evaluation, never dispatch. Reuse the existing schema; do not copy or weaken it. Record acceptance or at most eight issue codes/paths, at most eight segments per path; only known schema field names and bounded array indices may be emitted, with other segments replaced by a fixed `other-field` label. Omit error messages and received values. Mark this field explicitly `rendererSourceSchemaCheck`, not the actual Host failure or wire validation. Main normalization and the private Host envelope are not attested by this snapshot.
+
+The relevant readonly source anchors are submitted-ref producer `e1cbbb05ee2fbaf67cf63006ea5326d7ac66452b`, Renderer roster mapping `aaba7f488153b6b6a004c6d3a3f0b61a3254364f`, Host schema `cf6bafacbda97630009c6011049daebdd99adbe3`, and original Host handler `aeb48a5573d50c266115867875667cbaa853ccca`. These paths and the helper are already in the existing source roster; no roster extension is needed. Use Node's existing crypto implementation for hashes. The diagnostic never alters readiness, counts, ownership, error classification, or qualification.
+
+### 101.4 Review and qualification
+
+Freeze the one-file diff/full inverse and all three preimages for independent review before root integration. Root owns the existing scripts type check and source-cap gate. No new test suite, case, native execution, timeout adjustment, or permutation matrix is requested. The next original ordinary UI run retains its existing PASS/failure/cleanup result; diagnostic availability cannot turn failure into success.
+
+If the exact submitted source passes this schema check while the original Host still rejects it, the Host envelope/internal issue remains open. A later minimal Host diagnostic would need its own reviewed scope; this section does not silently add that surface. Source remains zero until the plan is published and root grants GO.
