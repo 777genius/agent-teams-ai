@@ -113,7 +113,10 @@ export class CapturedHostClient {
     }
   );
 
-  constructor(profile: SelectedHostProfile) {
+  constructor(
+    profile: SelectedHostProfile,
+    private readonly onNativePromptSuggestion?: (value: unknown) => void
+  ) {
     this.profile = captureHostProfile(profile);
   }
 
@@ -400,6 +403,10 @@ export class CapturedHostClient {
         } else {
           this.notifications.push(message as unknown as RpcNotification);
           this.notificationBytes += frame.length;
+          if (message.method === 'runtime.prompt-suggestion.updated') {
+            try { this.onNativePromptSuggestion?.(message.params); }
+            catch { /* Auxiliary observations never change the Host wire result. */ }
+          }
         }
       }
       return true;
