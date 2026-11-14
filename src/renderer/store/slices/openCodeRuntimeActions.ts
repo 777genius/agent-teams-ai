@@ -213,9 +213,11 @@ export function createOpenCodeRuntimeActions(
       installInFlight = request;
       return request;
     },
-    invalidateOpenCodeRuntimeStatus: async () => {
+    invalidateOpenCodeRuntimeStatus: async (mode) => {
       const current = invalidateReads();
-      await api.openCodeRuntime?.invalidateStatus();
+      await (mode === undefined
+        ? api.openCodeRuntime?.invalidateStatus()
+        : api.openCodeRuntime?.invalidateStatus(mode));
       if (current === revision && !installInFlight)
         set({ openCodeRuntimeStatus: null, openCodeRuntimeStatusLoading: false });
     },

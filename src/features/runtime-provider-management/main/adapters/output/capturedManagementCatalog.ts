@@ -206,6 +206,16 @@ export function connection(provider: CatalogProvider): Dto.RuntimeProviderConnec
         requiresSecret: false,
         ownershipScope: 'runtime',
       },
+      ...(provider.configured && provider.modelCount > 0
+        ? [{
+            id: 'test',
+            label: 'Test',
+            enabled: true,
+            disabledReason: null,
+            requiresSecret: false,
+            ownershipScope: 'runtime',
+          } as const]
+        : []),
       ...(provider.runtimeGeneration === 'v2' ? [] : [{
         id: 'forget',
         label: 'Forget credential',
