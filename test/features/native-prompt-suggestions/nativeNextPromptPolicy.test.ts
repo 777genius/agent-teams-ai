@@ -20,6 +20,7 @@ const candidate: NativeNextPromptCandidate = {
   suggestionId: 'TEST-suggestion-1',
   memberName: 'alice',
   messageId: 'TEST-human-message-1',
+  inputId: 'TEST-input-1',
   operationRef: 'TEST-original-operation-1',
   completedTurnRef: 'TEST-native-turn-1',
   provider: 'codex',

@@ -31,6 +31,8 @@ function validSuggestion(candidate: NativeNextPromptCandidate): boolean {
     candidate.completedTurnRef.length <= 256 &&
     typeof candidate.messageId === 'string' && candidate.messageId.length > 0 &&
     candidate.messageId.length <= 256 &&
+    typeof candidate.inputId === 'string' && candidate.inputId.length > 0 &&
+    candidate.inputId.length <= 256 &&
     typeof candidate.memberName === 'string' && candidate.memberName.length > 0 &&
     candidate.memberName.length <= 128 &&
     candidate.conversationRef === `direct:${candidate.memberName.trim().toLowerCase()}` &&

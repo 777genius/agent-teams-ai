@@ -4,6 +4,8 @@ import { api } from '@renderer/api';
 
 import { canDisplayNativeNextPrompt, mayAcceptNativeNextPromptWithTab } from '../../core/domain/policy';
 
+import { verifyCurrentNativeSuggestion } from './verifyCurrentNativeSuggestion';
+
 import type { NativeNextPromptCandidate } from '../../contracts';
 
 /** Main has already attached the notice to one captured, authorized Host handle. */
@@ -17,9 +19,13 @@ export function useNativeNextPrompt(input: {
   hasAttachments: boolean;
   hasChips: boolean;
   editingQueueOrRevision: boolean;
-  onInsert(text: string): void;
+  onInsert(text: string): boolean | void;
 }) {
   const [candidate, setCandidate] = useState<NativeNextPromptCandidate | null>(null);
+  const latestInputRef = useRef(input);
+  latestInputRef.current = input;
+  const validationEpochRef = useRef(0);
+  const acceptingRef = useRef(false);
   const dismissedOperationRef = useRef<string | null>(null);
   // A user editing an empty composer can precede the provider's late offer.
   // Dismiss by the original human message, not just an arrived operation.
@@ -27,6 +33,8 @@ export function useNativeNextPrompt(input: {
   const conversationRef = 'direct:' + input.recipient.trim().toLowerCase();
 
   useEffect(() => {
+    validationEpochRef.current++;
+    acceptingRef.current = false;
     setCandidate(null);
     dismissedOperationRef.current = null;
     invalidatedMessageIdRef.current = null;
@@ -59,6 +67,8 @@ export function useNativeNextPrompt(input: {
         value.messageId === invalidatedMessageIdRef.current ||
         value.operationRef === dismissedOperationRef.current
       ) return;
+      validationEpochRef.current++;
+      acceptingRef.current = false;
       setCandidate(value);
     });
     return () => unsubscribe?.();
@@ -94,17 +104,51 @@ export function useNativeNextPrompt(input: {
     input.editingQueueOrRevision]);
 
   const dismiss = useCallback(() => {
+    validationEpochRef.current++;
+    acceptingRef.current = false;
     if (candidate) dismissedOperationRef.current = candidate.operationRef;
     setCandidate(null);
   }, [candidate]);
 
   const insert = useCallback((): boolean => {
-    if (!candidate || !visible) return false;
-    input.onInsert(candidate.text);
-    dismissedOperationRef.current = candidate.operationRef;
-    setCandidate(null);
-    return true;
-  }, [candidate, visible, input.onInsert]);
+    if (!candidate || !visible || acceptingRef.current) return false;
+    const selected = candidate;
+    const epoch = ++validationEpochRef.current;
+    acceptingRef.current = true;
+    // A read-only independent Runtime generation/input check precedes
+    // every user-driven insertion; a stale candidate cannot edit the draft.
+    void verifyCurrentNativeSuggestion(selected, api.agentBackend)
+      .then(current => {
+        if (validationEpochRef.current !== epoch) return;
+        acceptingRef.current = false;
+        const now = latestInputRef.current;
+        const sameEditor =
+          now.teamName === selected.ownerHandle &&
+          now.memberId === selected.memberId &&
+          now.recipient.trim().toLowerCase() === selected.memberName.trim().toLowerCase() &&
+          now.latestDirectMessageId === selected.messageId &&
+          now.editable && now.draftText.length === 0 &&
+          !now.hasAttachments && !now.hasChips && !now.editingQueueOrRevision &&
+          invalidatedMessageIdRef.current !== selected.messageId &&
+          dismissedOperationRef.current !== selected.operationRef;
+        if (current && sameEditor) {
+          // The existing composer additionally checks its live draft,
+          // IME preedit and destination synchronously inside onInsert.
+          now.onInsert(selected.text);
+        }
+        dismissedOperationRef.current = selected.operationRef;
+        setCandidate(previous =>
+          previous?.suggestionId === selected.suggestionId ? null : previous);
+      })
+      .catch(() => {
+        if (validationEpochRef.current !== epoch) return;
+        acceptingRef.current = false;
+        dismissedOperationRef.current = selected.operationRef;
+        setCandidate(previous =>
+          previous?.suggestionId === selected.suggestionId ? null : previous);
+      });
+    return true; // Only consumes Tab; the draft mutation awaits Runtime.
+  }, [candidate, visible]);
 
   const onTab = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>): boolean =>
     mayAcceptNativeNextPromptWithTab({
@@ -116,6 +160,8 @@ export function useNativeNextPrompt(input: {
 
   /** Invalidate a displayed or pending old offer before an ordinary user send. */
   const invalidate = useCallback(() => {
+    validationEpochRef.current++;
+    acceptingRef.current = false;
     if (input.latestDirectMessageId)
       invalidatedMessageIdRef.current = input.latestDirectMessageId;
     if (candidate) dismissedOperationRef.current = candidate.operationRef;

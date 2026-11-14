@@ -653,9 +653,10 @@ const MemberMessageComposer = ({
         draft.address.target.kind !== 'direct' ||
         draft.editorContext.kind !== 'plain' ||
         current.text.length > 0 || current.chips.length > 0 ||
-        current.attachments.length > 0 || current.restoredOrigin != null) return;
+        current.attachments.length > 0 || current.restoredOrigin != null) return false;
     draft.setText(text);
     focusComposerTextarea();
+    return true;
   }, [
     draft.snapshot, draft.canSubmit, draft.isRestoring,
     draft.renderedAddressKey, draft.addressKey, draft.address.target.kind,

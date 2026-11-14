@@ -28,11 +28,11 @@ export function projectHostPromptSuggestion(
   const all = keys.map(key => bounded(key));
   if (all.some(item => item === null)) return null;
   const [runId, memberId, generation, suggestionId,
-    messageId, operationRef, _inputId, completedTurnRef] = all as string[];
+    messageId, operationRef, inputId, completedTurnRef] = all as string[];
   return Object.freeze({
     ownerHandle, provider, teamId, memberName, runId: runId!,
     memberId: memberId!, generation: generation!, suggestionId: suggestionId!,
-    messageId: messageId!, operationRef: operationRef!,
+    messageId: messageId!, inputId: inputId!, operationRef: operationRef!,
     completedTurnRef: completedTurnRef!, text,
     conversationRef: `direct:${memberName.trim().toLowerCase()}`,
   });

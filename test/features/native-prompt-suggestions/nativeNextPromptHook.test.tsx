@@ -6,10 +6,16 @@ import { useNativeNextPrompt } from '../../../src/features/native-prompt-suggest
 import { NativeNextPromptRow } from '../../../src/features/native-prompt-suggestions/renderer/ui/NativeNextPromptRow';
 import { SettingsToggle } from '../../../src/renderer/components/settings/components/SettingsToggle';
 
+import { verifyCurrentNativeSuggestion } from '../../../src/features/native-prompt-suggestions/renderer/hooks/verifyCurrentNativeSuggestion';
+
 import type { NativeNextPromptCandidate } from '../../../src/features/native-prompt-suggestions/contracts';
 
 const transport = vi.hoisted(() => ({
   listeners: new Set<(value: NativeNextPromptCandidate) => void>(),
+  current: true,
+}));
+vi.mock('../../../src/features/native-prompt-suggestions/renderer/hooks/verifyCurrentNativeSuggestion', () => ({
+  verifyCurrentNativeSuggestion: vi.fn(async () => transport.current),
 }));
 vi.mock('@renderer/api', () => ({
   api: {
@@ -33,6 +39,7 @@ const origin: NativeNextPromptCandidate = {
   conversationRef: 'direct:alice',
   suggestionId: 'TEST-suggestion-A',
   messageId: 'TEST-human-message-A',
+  inputId: 'TEST-input-A',
   operationRef: 'TEST-operation-A',
   completedTurnRef: 'TEST-native-turn-A',
   provider: 'claude',
@@ -43,6 +50,8 @@ const roots: ReturnType<typeof createRoot>[] = [];
 afterEach(() => {
   act(() => roots.splice(0).forEach(root => root.unmount()));
   transport.listeners.clear();
+  transport.current = true;
+  vi.clearAllMocks();
   vi.unstubAllGlobals();
   document.body.innerHTML = '';
 });
@@ -107,18 +116,42 @@ describe('native next-prompt setting accessibility', () => {
 });
 
 describe('native next prompt UX in the actual feature hook + row', () => {
-  it('accepts exact human direct suggestion as editable draft, never auto-sends', () => {
+  it('accepts exact human direct suggestion as editable draft, never auto-sends', async () => {
     const x = fixture();
     x.emit(origin);
     const row = x.host.querySelector('[data-testid="native-next-prompt-row"]');
     expect(row).not.toBeNull();
     expect(row?.textContent).toContain(origin.text);
-    act(() => x.host.querySelector<HTMLButtonElement>('[aria-label="Insert"]')!.click());
+    await act(async () => { x.host.querySelector<HTMLButtonElement>('[aria-label="Insert"]')!.click(); });
+    expect(verifyCurrentNativeSuggestion).toHaveBeenCalledOnce();
     expect(x.onInsert).toHaveBeenCalledOnce();
     expect(x.onInsert).toHaveBeenCalledWith(origin.text);
     expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
     x.emit(origin);
     expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+  });
+
+  it('rejects acceptance-time Runtime mismatch without mutating a draft', async () => {
+    const x = fixture();
+    transport.current = false;
+    x.emit(origin);
+    await act(async () => { x.host.querySelector<HTMLButtonElement>('[aria-label="Insert"]')!.click(); });
+    expect(x.onInsert).not.toHaveBeenCalled();
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+  });
+
+  it('rejects user edits while the Runtime read is in flight', async () => {
+    const x = fixture();
+    x.emit(origin);
+    let release: (() => void) | undefined;
+    vi.mocked(verifyCurrentNativeSuggestion).mockImplementationOnce(() =>
+      new Promise<boolean>(resolve => { release = () => resolve(true); })
+    );
+    act(() => x.host.querySelector<HTMLButtonElement>('[aria-label="Insert"]')!.click());
+    x.input.draftText = 'Actual user draft';
+    x.render();
+    await act(async () => { release?.(); });
+    expect(x.onInsert).not.toHaveBeenCalled();
   });
 
   it('uses the captured native provider even when UI model metadata is unavailable', () => {

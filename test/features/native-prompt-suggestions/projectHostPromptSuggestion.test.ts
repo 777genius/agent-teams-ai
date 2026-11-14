@@ -30,12 +30,12 @@ describe('captured Host suggestion projection', () => {
       generation: original.generation,
       suggestionId: original.suggestionId,
       messageId: original.messageId,
+      inputId: original.inputId,
       operationRef: original.operationRef,
       completedTurnRef: original.completedTurnRef,
       text: original.text,
       conversationRef: 'direct:alice',
     });
-    expect(result).not.toHaveProperty('inputId');
     expect(Object.isFrozen(result)).toBe(true);
   });
 

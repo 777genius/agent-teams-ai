@@ -16,6 +16,8 @@ export interface NativeNextPromptCandidate extends NativeNextPromptIdentity {
   readonly suggestionId: string;
   readonly memberName: string;
   readonly messageId: string;
+  /** Opaque original Host input used for a fresh read-only Runtime check. */
+  readonly inputId: string;
   readonly provider: NativeNextPromptProvider;
   /** Verified original successful Host input; not a UI run ordinal. */
   readonly operationRef: string;
