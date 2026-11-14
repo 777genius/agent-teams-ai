@@ -2569,6 +2569,7 @@
       "allFlagsValid": "تمام جھنڈے موزوں",
       "unknownFlags": "نامعلوم: {{flags}}",
       "protectedFlags": "وعدہ : {{flags}}",
+      "missingValue": "قدر موجود نہیں: {{flags}}",
       "failed": "وی پی این ڈی ناکام"
     },
     "placeholders": {

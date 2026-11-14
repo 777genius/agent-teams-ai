@@ -2569,6 +2569,7 @@
       "allFlagsValid": "Todas las banderas válidas",
       "unknownFlags": "Desconocido: {{flags}}",
       "protectedFlags": "Protegido: {{flags}}",
+      "missingValue": "Falta el valor: {{flags}}",
       "failed": "Validación fallida"
     },
     "placeholders": {

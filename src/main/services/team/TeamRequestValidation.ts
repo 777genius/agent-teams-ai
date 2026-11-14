@@ -2,7 +2,10 @@ import {
   validateTeammateName,
   validateTeamName,
 } from '@main/services/team/TeamIdentifierValidation';
-import { extractUserFlags, PROTECTED_CLI_FLAGS } from '@shared/utils/cliArgsParser';
+import {
+  findOptionMissingValue,
+  findProtectedUserFlags,
+} from '@shared/utils/cliArgsParser';
 import {
   formatEffortLevelListForProvider,
   isTeamEffortLevelForProvider,
@@ -120,15 +123,32 @@ export function assertOptionalExtraCliArgs(value: unknown): string | undefined {
     throw new TeamRequestValidationError('extraCliArgs too long (max 1024)');
   }
 
-  const protectedFlags = extractUserFlags(extraCliArgs).filter((flag) =>
-    PROTECTED_CLI_FLAGS.has(flag)
-  );
+  const protectedFlags = findProtectedUserFlags(extraCliArgs);
   if (protectedFlags.length > 0) {
     throw new TeamRequestValidationError(
       `extraCliArgs contains app-managed flags: ${[...new Set(protectedFlags)].join(', ')}`
     );
   }
+  const missingValue = findOptionMissingValue(extraCliArgs);
+  if (missingValue) {
+    throw new TeamRequestValidationError(`extraCliArgs ends with ${missingValue} but no value`);
+  }
   return extraCliArgs;
+}
+
+/**
+ * The same fail-closed guard as assertOptionalExtraCliArgs, for desktop IPC handlers
+ * that return an error result instead of throwing.
+ */
+export function checkOptionalExtraCliArgs(
+  value: unknown
+): { ok: true; value: string | undefined } | { ok: false; error: string } {
+  try {
+    return { ok: true, value: assertOptionalExtraCliArgs(value) };
+  } catch (error) {
+    if (error instanceof TeamRequestValidationError) return { ok: false, error: error.message };
+    throw error;
+  }
 }
 
 export function assertOptionalEffort(

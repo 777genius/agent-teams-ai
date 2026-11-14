@@ -2569,6 +2569,7 @@
       "allFlagsValid": "모든 플래그 유효한",
       "unknownFlags": "알려진: {{flags}}",
       "protectedFlags": "보호하는: {{flags}}",
+      "missingValue": "값 누락: {{flags}}",
       "failed": "유효성 검사"
     },
     "placeholders": {

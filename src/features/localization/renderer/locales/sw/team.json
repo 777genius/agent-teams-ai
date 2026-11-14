@@ -2571,6 +2571,7 @@
       "allFlagsValid": "Bendera zote halali",
       "unknownFlags": "Zisizojulikana: {{flags}}",
       "protectedFlags": "Zilizolindwa: {{flags}}",
+      "missingValue": "Thamani inakosekana: {{flags}}",
       "failed": "Uthibitishaji umeshindwa"
     },
     "placeholders": {
