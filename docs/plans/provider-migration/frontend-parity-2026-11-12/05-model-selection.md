@@ -793,3 +793,22 @@ Reuse only existing meaningful cases in `src/features/runtime-provider-managemen
 Source GO after publication is for this exact publisher/reader/preparation slice only. Hand off immutable preimage/final blobs, private field/schema and whole-file inverses for the unchanged config-selector/store defaults. Required focused checks are actual Main source/approval/strict-envelope cases, Host configuration/probe source cases and coherent Main/Host builds/types with the checked D002 consumer. Original existing native/Desktop lanes must separately qualify the connected preparation and unchanged business/custom-MCP/plugin paths; preserve their current request/time/controller budgets and original inputs. No additional sampler, native invocation, matrix, job, replay or cap increase is permitted. Root owns publication and the shared check slot.
 
 B2 allocation source/activation remains gated on the complete durable attachment, original Stop/cold/debt behavior and every supported entry point in §16.2, plus an explicit exact native/Main acceptance count at final handoff. A successfully reviewed or executed witness cut is not by itself local-model parity. The V2 file-materialization question remains a separate concrete source/qualification item, not a reason to delay implementing and reviewing this finished boundary.
+
+### §16B.3a. Public entrypoint wiring for the existing policy helpers
+
+Review of the unpublished B3 draft found four cross-feature deep imports from the new Main publisher. The feature architecture standard requires production consumers to use the owning feature's public entrypoint. Keep the publisher and its behavior as specified in §16B.3; add only `src/features/runtime-provider-management/main/index.ts` (preimage `532e202d015fdac4a7cdbab8dfd87e397a582cbe`) to that production source scope.
+
+Use explicit named re-exports, with no wildcard, new facade, service instance, renderer contract or policy copy:
+
+| Existing export | Purpose at the original Main capture |
+| --- | --- |
+| `isPrivateNetworkRuntimeLocalProviderUrl`, `normalizeRuntimeLocalProviderTarget` | Reuse the original normalized destination and private-network classification before selecting exact approval tuples. |
+| `JsonLocalProviderPrivateNetworkApprovalStore` | Obtain the existing store's read-only source capture and original private path; retain its writer and schema unchanged. |
+| `createOpenCodeGlobalConfigEnvironmentResolver` | Capture the same Main environment inputs synchronously before the original asynchronous preparation. |
+| `OPENCODE_GLOBAL_CONFIG_FILENAMES`, `OPENCODE_PROJECT_CONFIG_CANDIDATES` | Recheck the original finite two-global/four-project candidate set, without inventing another search. |
+| `readOpenCodeConfigTarget` | Use the existing selector and its private bounded capture mode. |
+| `resolveConfiguredProviderPreset` | Reuse the original configured-provider classification. |
+
+`CapturedLocalModelReadiness.ts` imports these names through `@features/runtime-provider-management/main`. The main entrypoint re-exports the two pure rules directly from their existing domain implementation; browser contracts remain unchanged. The already scoped `TeamHost.ts` exposes only the three private wire types `LocalModelReadinessOrigin`, `LocalModelReadinessPreparation`, and `ReadinessSourceReference` from the existing `commandRecords.ts` through the existing `@agent-teams/legacy-agent-host/team-host` package entrypoint. They do not become Renderer DTOs or additional callable Host methods.
+
+This closes an import boundary only. All §16B.3 source, owner, deadline, one-intent retention, original-file approval and credential guards remain required. Existing entrypoint exports remain byte-for-byte intact, apart from appending the named exports. Verify the exact inverse for that append and the existing source-size ratchet; the same focused Main/Host types and original native/Desktop lanes remain the qualification gates. No additional probe, job, matrix, retry or allocation authority is added.
