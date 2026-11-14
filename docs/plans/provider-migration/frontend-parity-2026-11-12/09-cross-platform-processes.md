@@ -4524,3 +4524,207 @@ Add only useTaskDetailPresentation and TaskDetailHeader to the existing integrat
 Before source, perform two independent review rounds: first critique the concrete focus/layout and same-read/owner-lifetime design against the original sources; then review the frozen revised appendix, exact eight-path inventory, full-prefix composition and critical negatives. Root reads the same frozen text, publishes the plan immediately with readback, and gives source GO only after those reviews. Round1 concerns must be resolved explicitly rather than carried as an optional implementation debt. Source0 until that gate; the Composer subset can be authorized separately if Taskboard's continuation still needs correction.
 
 Implement in isolated staging only. Freeze complete before/after hashes and inverse diffs, request independent source peers for both cuts, and give Root the final manifest. Root owns serial focused existing tests, canonical relevant types/lint/source-size checks and normal desktop/native qualification. No alternate live PR, special diagnostic workflow, extra model invocation or old-run replay is introduced. Successful unit/type checks will qualify only their stated scope. The original /cost and Taskboard failures remain actual failed evidence until a new ordinary current-head run completes their original one-action business and cleanup assertions.
+
+
+## 88. Carry the existing 8192 MiB source-build allowance into the original controlled Darwin cold-UI TEST environment
+
+### 88.1 Actual terminal failure and original evidence
+
+The ordinary parent Main run `43570716992`, job `132374282713`, at PR head `ea16834de1c133fcd2756965977064a97e82afba` completes the original process/packed qualification and its three controlled process tests, then fails the separate source Desktop cold-UI proof. The job's merge-checkout identity is `3bf9e4b39238bb154a7c6acf4d6c6f91b48a03be`; retain that distinction from the PR head. Full original job log: `c7b3254c1ea220283f84aab0906e0bbea2222132`.
+
+The original small proof artifact `14103703086` was downloaded through the official connector's artifact file reference. Its exact size is 1,434,415 bytes and ZIP SHA256 is `e2f4adb2196ff49b07f7485855c434ccda0994ce9cadd267c9948d106543db2a`. The archive contains 144 members. Only the necessary existing logs/receipts were extracted; the separate 3.16 GB artifact, a native rerun and a new diagnostic collector were not needed. The closed evidence record is `873e7f4b31d78d22b2859f56fc1f81f6a601bd81`.
+
+| Original member in `TEST-desktop-backend-VqVMxZ` or its original parent directory | Retained evidence |
+| --- | --- |
+| `desktop-app.log` | Blob `e104aaab59beeea6488717c26a0c3c8e5f5c4582`; original SHA256 `9b13ba129b9afd1a4061c9689a92a5608c2e7b6857307704aa69c0d6c3139f7e`. |
+| `desktop-backend-receipt.json` | Original SHA256 `e14dbbc8d94a6fd108c5e040e30894ffe78a603e55c9c6d4a2c23bf9378d65b1`; exact extracted bytes and closed projection retained. |
+| `cold-ui.log` | Blob `2de0d504d985c756c338e05af0a06080d6291e8a`; original SHA256 `964b675de1c535fc8b7c256191b038e226d59880fc13bf9ca2b697bcc6418b31`. |
+| `cold-ui-runner-oracle.json` | Blob `e6d1756fb56f0ea4b272212ff5a2025dc09c8f17`; original SHA256 `2eed36e64fac0aad2755a2b0ecf10e8a7360a69487eebce2bbb4d921978cd202`. |
+
+The pinned Node v24.21.0 dev process transforms 3963 modules and reaches SSR “rendering chunks”. Its final GC rows report about 2034–2050 MiB used before `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory`; `electron-vite dev` then terminates with SIGABRT. The existing capture assertion reports `captured app exited during startup` at `desktop-captured-app.ts:116`; this is not a startup deadline expiry. The receipt has `status: INCOMPLETE`, `appExitCode: 1`, no occupied CDP listener and no Main-owned captured Host B. The original controlled native root/services and standalone Host A had already been allocated; their original cleanup observes all three native identities absent and Host A closed. Do not turn that cleanup result into a successful Host B/Processes UI Stop proof.
+
+The job log identifies a Namespace `6x14` macOS ARM runner and profile `namespace-profile-macos-15`; it does not measure free RAM at the failing allocation. This plan makes no capacity guarantee from the label and does not add a resource collector.
+
+### 88.2 Exact source chain and existing allowance
+
+The existing package build at `package.json` `7afadd43590e265d6691b47f0c4b3cda02f4e3a9` and the same job's pre-freeze build at `.github/workflows/ci.yml` `b992f42311f62005ee24d51df71a2e83a4268a1f` already invoke `node --max-old-space-size=8192 ...electron-vite.js build`. That original build passes before the P7 freeze. The separate later cold-UI source startup invokes the same selected Node and pinned pnpm entry through the unchanged `dev:mcp` route and performs a dev build.
+
+The original `qualify-process-cold-ui.ts` constructs a closed child environment without `NODE_OPTIONS`. Its original fixture later constructs a second closed `desktopBackendEnvironment`, also without that field. Therefore setting an outer workflow variable alone does not reach the dev process. `desktop-backend-smoke.ts` `54ea6231bbf80210923bf0028760cf9103c33ba9` passes that fixture environment to its unchanged captured spawn. `scripts/dev-with-runtime.mjs` `9cc8140d2a88207312580450aa9db0c8abc63b0a` copies its own environment into `uiEnv`, calls the existing `ensureMinimumNodeOldSpaceEnv`, then uses the same environment for `pnpm exec electron-vite dev`. The unchanged helper `scripts/lib/node-options.mjs` `423d10be677fa86cc12a56cf433a378e4a0639e5` leaves an absent value absent and preserves an explicit 8192 value; its default minimum of 2048 does not create a flag when none was supplied.
+
+The original before-app source freeze exactly matches the current qualifier, source-environment helper, smoke actor and dev launcher bytes. Both changed TEST source paths are already explicitly listed. The unchanged `node-options.mjs` dependency is not currently listed; add its one explicit source pin below because its preservation of the fixed value is part of this proof. Do not claim implicit import traversal.
+
+### 88.3 Three existing writable paths, original variants
+
+| Existing path | Exact preimage | Bounded change |
+| --- | --- | --- |
+| `scripts/legacy-agent-host/qualify-process-cold-ui.ts` | Common `0c8acfd8afdba093ef90ef2010cf41babcf865f5` | Add literal `NODE_OPTIONS: '--max-old-space-size=8192'` in the original closed child environment. The existing Darwin/arm64/Node/GO and original-P7 checks remain first. |
+| `scripts/legacy-agent-host/desktop-runtime-source-fixture.ts` | Parent `f423eabcb069dfb918f39a1789900f050e314c9d`; native and qualification `a450545f823491093faac6df1bb1a80420b08619` | At original environment construction, add that same literal only for the exact positive Darwin/arm64 + `LEGACY_PROCESS_COLD_UI_GO === '1'` + `LEGACY_DESKTOP_PROOF_MODE === 'process-cold-ui'` conjunction. Preserve each variant's entire existing delta. |
+| `scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts` | Common `c117bf12e003234f0415bc594bec13caf37a6ea7` | Add exactly the existing `scripts/lib/node-options.mjs` path. Keep all prior entries/order, the hook and live-driver/source pins. |
+
+Use the fixed literal at both closed environment boundaries. Do not read, concatenate, normalize or forward arbitrary parent `NODE_OPTIONS`; the existing production dev/helper code remains unchanged. Construct this value before the original fixture/capture/start path. Do not mutate an already captured environment, rebuild a selection after a failure, retry the startup or change the pinned Node/pnpm executable, argv, cwd, original process-group owner, source selection or cleanup order.
+
+The positive tuple restriction is deliberate: the native Linux qualifier `qualify-linux-process-cold-ui.ts` `7d794bda2c08141b63e11b6c156b1608659a65ce` also uses the same mode/GO flags and must retain its existing environment in this bounded Darwin fix. Other source, packed, mixed, donor and retained modes also remain unchanged. Default branches must produce the same own properties and values, without adding an undefined `NODE_OPTIONS` key.
+
+Disclose the original environment sharing: `desktop-controlled-process-fixture.ts` `8eeba7cf03ccbb5a1df041f595c7084dd0735013` already passes `fixture.appEnvironment` to its controlled TEST root. In this selected Darwin scope that original Node root receives the same fixed heap option; it remains the same finite TEST process with the same script, handles, native registration and cleanup. No provider Runtime or model input is added, and no native custody observation becomes synthetic. Do not describe this as a Vite-only environment that cannot be inherited.
+
+This is the existing 8192 MiB source-build allowance made explicit in the selected TEST launch, not a new general runtime memory policy. Preserve the original 180,000 ms startup window, 45-minute job, 300,000 ms controlled-service TTL, all native/model/HTTP counters, original P7 evidence, refusal behavior and final source/physical-absence assertions. No production path, new source file, workflow/job/step, platform skip, public flag, diagnostic collector, source-size baseline or timeout change is permitted.
+
+### 88.4 Review, source proof and original gate
+
+Publish this appendix before source work. Freeze the three-path/four-distinct-blob candidate and variant manifest. Root and independent peer review exact environment literals, the positive mode/tuple conjunction, original dev Node route, untouched default branches and the one source-pin addition. Verify forward/inverse equality for each own preimage and that only this explicit field is added in the selected environment. Preserve all existing case declarations and assertions; no new suite or a test mirroring the conditional is needed.
+
+Root owns the existing script type/source-size checks and the next authorized ordinary current-tuple process/cold-UI gate. It must complete the original actual Host restart and Processes UI Stop with unchanged identity, custody, source freeze, neighbor independence, final Quit and physical cleanup. The next receipt must bind the revised qualifier/environment bytes and the newly listed unchanged `node-options.mjs` bytes. Source review and the earlier original P7 PASS do not establish that the revised dev build or cold-UI gate succeeds. Do not advance active live heads, dispatch a new diagnostic workflow or rerun the failed native attempt merely to acquire another observation.
+
+
+## 89. Preserve the packaged cold Processes UI proof without a dev-server module import
+
+### 89.1 Exact original failure and qualification boundary
+
+The original native Sentry run `43570723528`, job `132374303165`, head `6562a78f147f288edf79d652d9661b651c661af0`, completed the source cold UI arm and then failed its separate packaged arm. The source receipt has `status: PASS` and `positiveStop: COMPLETED_ORIGINAL_REF_STOP`. The packaged desktop receipt has `status: INCOMPLETE` and the original error `TypeError: Failed to fetch dynamically imported module: file:///api/index.ts`, at `desktop-native-process-ui.ts:160:5` through the original smoke call at 413. This is a TEST source-server import used under the captured packaged renderer's `file:` URL; the same import occurs in the later post-Stop observation at 366.
+
+Official artifact `14106476241` was downloaded once as file `file_00000000d74c8246b9d99a8c8ea7cf4d`, verified at 33,737,929 bytes and SHA256 `80d5ade9670fa9b0ed6a90f87873d74a6356c79e32c10efe561a1720f3c29d57`. Only eight selected original members were extracted. Closed evidence manifest `084bfab8ceaa7ca7570ef89a6f65ccc072ceebf2` records all member hashes, source/packaged distinction and unchanged original job log `46769dbc0a5ab08886ee10fb66ced0af20e722e2`. Durable original small members include source receipt `900be5aff58151318b91f036ced8dd256b7e6a5b`, packaged receipt `814f927e649d43471098230d8a8829f8970ca0ba`, packaged log `3e0438b6a552c1a80e73439c10f9a6ca2cc5a546`, app log `52f7191ae3fe51f2adb3113ff5ecb9da94f76693`, and controlled-service receipt `5a2f944b7e59939a52723610587ff3cf78467580`. All uploaded bytes were read back exactly.
+
+The packaged app reached the real ProcessesSection original row: original primary PID 6621, the original opaque process reference, `observation: same-live`, and `canTerminate: true`. Standalone Host A PID 6645 had exited 0/null with its writer released; cold Host B PID 6790 was distinct and observed. The failing import preceded `coldOwnerRead`, the original Stop input, its command receipt and the post-Stop observation. Failure cleanup subsequently observed the original root/primary/neighbor absent. It is not a successful packaged Stop, a new native identity/custody failure, the Darwin source-build OOM in §88, or new evidence about POSIX §75. No native rerun was used for this diagnosis.
+
+### 89.2 Existing public read and original owner
+
+`src/renderer/api/index.ts` `1c0623475dd6cf9f9d735d784e4aaf3ab8a9c158` routes Host Team `getData` through `createHostBackendRenderer`, not directly through the legacy preload `teams.getData`. `createHostTeamsApi.ts` `c69c98f1ab47b5a118225fb30fa23e7df3d653f6` selects one connection by the original Host Team selection key, and its `getData` performs one existing public `process.list` for that selected handle, followed by `readBackendProcesses`. It does not merge process inventories from other connections; the final Team view passes this selected owner's complete process array through. Its other snapshot/lifecycle/roster reads are not a substitute for the process inventory.
+
+`createAgentBackendBridge.ts` `c0e58c715cc0095627d74a83f6129786a823c901` already exposes `window.electronAPI.agentBackend.getConnections()` and `.invoke()` in the packaged preload. `contracts/connections.ts` `edd0cba7255617eb894c9d9529b45ffb34523179` and `contracts/processes.ts` `41dd6a8e480b98e85922312fbc4e95089b58f609` retain the ordinary handle/current-owner and strict bounded process contracts. `createHostBackendRenderer.ts` `baddadb15ab013f923036718dc1aec88744a69d2` classifies `process.list` as a read. This TEST change does not change any renderer or Main/Host authority implementation.
+
+The existing `verifyCapturedDesktopBinding` in `desktop-captured-app.ts` `11915e0d9fd425620b8c975901bd4dc65e6b8f27` has already retained `evidence.discovery`, required ready state and exactly one binding for this scope, checked the exact fixture handle, closed binding keys, ownerResourceRef and teamResourceRef, and pinned the actual packaged renderer/app.asar. The new packed read must use that retained original full binding, not select a new latest handle. Preserve its handle, both resource refs, label and all member metadata; absence, duplicates, foreign owner or any changed binding means refusal, not an empty process inventory.
+
+### 89.3 Bounded three-path source scope and variant preimages
+
+Preimages were freshly matched on parent `0737f90229661487590af047348cf67330701bbe`, native `1753d03965daaf51e1bb901f356a3464c7ea122e`, and qualification `8c7bdfaa7c06b46e942c2388617e89eaf5736b8f`. The three writable TEST paths have six distinct blobs:
+
+| Existing path | Exact preimage and variant | Bounded change |
+|---|---|---|
+| `scripts/legacy-agent-host/desktop-native-process-ui.ts` | Common `b31d14cf1d8327d076aae497d5ed610b5f34ec08`, 380 lines | One finite TEST read helper and optional captured packed-renderer input. Only the two existing process observations select this read; all later predicates/effects remain. |
+| `scripts/legacy-agent-host/desktop-native-process-ui.test.ts` | Parent/qualification `f0ca67038da2ba60bff054ae3c122ce3711e74c1`, 21 lines; native `0654b9085d11cd27b29a35e279c565a9119f4e27`, 56 lines | Extend the two original observer cases with the finite bridge/read refusal coverage below; retain every original line/assertion and the native-only third atomic-service-readiness case byte-for-byte. No new case or suite. |
+| `scripts/legacy-agent-host/desktop-backend-smoke.ts` | Parent `54ea6231bbf80210923bf0028760cf9103c33ba9` (797 lines); native `adc9a6d2988cc9377f3044794f04bd2769072d73` (800); qualification `447006b5ec8322bd8a0cab24e51e64e40209cf8a` (790) | Forward the already verified `packed.rendererUrl`, only when the existing packed capture is present, in the existing `qualifyColdProcessUi` options object. Preserve each own variant, all existing mode guards and line counts. |
+
+Do not add a path, workflow, public flag, production export, dependency or source-size exception. The UI helper, its test, smoke caller and existing strict process parser are already explicitly listed in the source-freeze rosters; no new roster entry or import traversal is needed. Keep each smoke variant's original 797/800/790 physical-line budget with a normal in-place property addition at the existing call site, without unrelated compression or extraction.
+
+### 89.4 Exact packed observation and unchanged source default
+
+The optional packed renderer input comes only from the original successfully parsed captured candidate. The UI helper admits it only inside the existing controlled Linux x64 cold-process TEST scope and original GO, with the retained original discovery binding and `hostTeamSelectionKey(fixture.handleId)`. It must not infer packaged mode from a failed source import, add a fallback after an exception, or read a different environment/handle after failure. Freeze the retained binding as a private JSON value before the first observation and reuse that exact value after Stop.
+
+Each of the two original `Runtime.evaluate` observations remains one evaluation. In the packed arm it verifies the current renderer URL against the original captured URL (using the already established query/hash normalization), retains the current preload/backend object, reads existing public connections once, and requires ready state with exactly the retained original full binding. It then invokes exactly one `process.list` with that original handle, a fresh ordinary read command ID, and the original empty payload. After the awaited reply, read existing connections once more and require the same full original binding, the same preload/backend object and the same captured renderer URL. A missing, ambiguous, malformed or changed owner, a refused/unknown result, or an unavailable bridge must throw at this original observation. No retry, wait, fallback, new signal, process registration or native input is allowed.
+
+Apply the existing `readBackendProcesses` to the complete successful reply in the TEST caller, including every returned row; do not filter away a neighbor, unrelated row, duplicate or malformed process. Return only that canonical process projection and identify the packed public-read route in the proof. Do not fabricate a full `getData` Team snapshot or claim that the direct packed read exercised the source-only module loader or all of its unrelated Team reads. The actual UI still uses the original product renderer adapter; the independent packed observation reads the same canonical process operation through its supported public bridge.
+
+With no explicit packed input, preserve the original source `import('/api/index.ts')` and `api.teams.getData(selection)` expression and returned data unchanged. No raw legacy `window.electronAPI.teams.getData`, DOM/store write, handler call, private function-name discovery, compiled-bundle scraping, production global export, raw Host transport or alternate Stop route is permitted.
+
+Preserve both original observation positions and every original predicate after them: the one original processRef row, observation/canTerminate equality with real React props; physical visible original-row Stop control; one original termination command/receipt and native request; original owner/history and primary/neighbor lifecycle; exact post-Stop row deep equality, stopped style/indicator and absence of Kill; existing native/Host incarnation, source, bundle, receipt, Quit and physical cleanup checks. Source/POSIX/readback modes, all other smoke arms, startup/deadline/TTL budgets and the existing process/model/native counters stay unchanged. A packed refusal remains INCOMPLETE.
+
+### 89.5 Existing-case coverage, review and original gate
+
+Within the two existing TEST cases, exercise the actual new read helper with a finite `evaluate` stub that evaluates its emitted expression against an owned fake preload and location. Verify a successful complete two-row process array, the exact retained handle and empty payload, one `process.list` and two connection reads for each packed observation, and post-Stop projection without a mutation. Keep the original React-fiber assertions. Verify the unchanged source expression and returned data without invoking a packed bridge.
+
+Keep refusal coverage in those same cases focused on the main boundaries: a foreign or ambiguous original owner before the read must dispatch zero process reads; one owner change after the awaited read must retain exactly the one original process read with no retry; a refused reply stays refused; and one malformed or duplicate process reply demonstrates the existing strict parser. Preserve the successful complete-row and unchanged-source assertions above. All implementation guards still apply, but do not add separate field-by-field permutations of member/label/handle/resource fields or every state/bridge/URL transition handled by the same exact-binding predicate. Preserve the native-only third case and its original timing/atomic-publication assertions exactly. These are controlled TEST assertions, not an OS/native qualification.
+
+Publish this appendix before source work. Freeze all six source blobs and per-variant forward/inverse proofs; root and independent peer review exact route/owner joins, default expression, complete process projection, existing cases and unchanged native variant. Root owns the existing focused test file, script type/source-size checks and publication. The next authorized ordinary native Linux source-and-packed gate must still complete the original captured Host restart, real ProcessesSection Stop and final physical cleanup. The original source PASS and source review cannot establish that the revised packaged gate has passed. No live-head advance, workflow rerun/cancellation, extra collector or new native experiment is authorized by this amendment.
+
+## 90. Repair the twelve original agent-backend lint errors without changing the captured authority contract
+
+### 90.1 Original failure and already-published repairs
+
+This appendix is a finite lint repair, based on the original terminal native workflow `43570723512`, head `6562a78f147f288edf79d652d9661b651c661af0`, actual checkout merge `6713b4e4fe0562bb23872faba807410ae4d0b774`. Its `lint (features)` job `132377335457` finishes with exactly **12 errors and 1430 warnings**. Full immutable log: `ea64d3f027a92e3e9d8c265d6dda46f68aa92150`. Bounded classification, all five original logs, current source maps and preserved native variant differences: evidence `3296e3dc241eedde85b51d9a646f90d637679963`. Log and source bytes were independently read back; no local lint, compiler or test result is inferred from this source review.
+
+The native validate job `132377335396` fails only the existing `capturedDefaults.test.ts:167` readonly-property delete (TS2704), already corrected by R34.1 `d9ae6d299f6c089a6e33f4ecba61dfc57fc3f26f` → `d97412d8d0115e4458d89d5fbc6ea20b2fe851ef`. Its original log is `b1e4834529f03d05a667e8dbc4a223ec722c071b`. The native test shard job `132377335447` passes **424 agent-teams-controller tests in 19 files and 78 mcp-server tests in 4 files**, then stops in Host TEST typechecking on exactly the two `runtime-worktree-capture.test.ts:402/429` TS2379 diagnostics. P11 §16 already corrects that file `2b11a5f7edd046ec9beb1631141ac1147380c262` → `11d964d1d12e71fe275d683289beab9f395407fd`. Its original log is `de4720113e36d6a03daadbcd29932274a389bfdd`. **Host runtime tests did not execute in that job**; the live Stop, TLO seal and Create checks are distinct evidence.
+
+Because the child variants contain different Windows custody code, the two corresponding qualification logs were read once to confirm the boundary. Qualification workflow `43570718937`, head `ce66cd4c0bc9222a93e36cbc8aa039da465a4d01`, actual merge `8819be2a6e59f21c890e63364b3d5d2a557bfa1e`, has the same sole validate TS2704 and two TEST TS2379 errors, with the same 424/78 passing counts before the Host typecheck. Logs: validate `132378965989` → `bfc8add8c7d50d41ec11babd119539d104324a4d`; test `132378966039` → `a7c8e980eef86146de8fb32c1fbfa6a586785a48`. The original failing runs are not post-repair qualification.
+
+### 90.2 Exact eight existing writable paths and variant preimages
+
+The current parent `a390e771aaced8f7eacc0517b6b4b9b9b84dc380`, native `381398813e6c5b725248917cbcae2b5ffdc83a70`, and qualification `dd72da5b5884b784f097615993a90c747659a177` source maps were read directly. All eight lint paths still have their original failed-run bytes within their own variant. The table gives complete preimages; parent and qualification are identical for these paths. These **eight production paths / ten distinct blobs** are the entire source scope. No TEST, manifest, workflow, dependency, generated file, lint configuration, public DTO/schema or new file is writable.
+
+| Existing path | Parent and qualification preimage | Native preimage | Original errors |
+| --- | --- | --- | ---: |
+| `src/features/agent-backend/contracts/operations.ts` | `90d91180d410494bc7c08a91b1e5de1110991b11` | `90d91180d410494bc7c08a91b1e5de1110991b11` | 1 |
+| `src/features/agent-backend/main/adapters/input/teamOperationValues.ts` | `ef26303e94304bb81bb60f071e4d7d24e2db0168` | `ef26303e94304bb81bb60f071e4d7d24e2db0168` | 1 |
+| `src/features/agent-backend/main/application/BackendOwnerRouter.ts` | `b4d0a08ac79717a8320b20322403841fb5faf4ec` | `f974ca8178fccdbadbb13445126eeb1a4eae8efe` | 1 |
+| `src/features/agent-backend/main/application/captureHostScheduleTarget.ts` | `cda295f61946ac0851016d7d3850666c91ec6ad0` | `cda295f61946ac0851016d7d3850666c91ec6ad0` | 1 |
+| `src/features/agent-backend/main/composition/DesktopBackendFeature.ts` | `bd757836d09071b5a000bab33dc1525ed948400a` | `d063974bbbbf0fba439dc20d1167240f9a241f98` | 1 |
+| `src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness.ts` | `4511c5cc787163317fe563e48673880481ae5cb5` | `4511c5cc787163317fe563e48673880481ae5cb5` | 5 |
+| `src/features/agent-backend/main/infrastructure/CapturedRosterCommands.ts` | `6968b42f01fc71cd0e38866c7667bf392c237d74` | `6968b42f01fc71cd0e38866c7667bf392c237d74` | 1 |
+| `src/features/agent-backend/main/infrastructure/CapturedTeamRegistry.ts` | `860d7a183f099f516c67a8b537708fa82731ee69` | `860d7a183f099f516c67a8b537708fa82731ee69` | 1 |
+
+### 90.3 Exact syntax changes
+
+1. Apply the repository's existing `simple-import-sort/imports` ordering only to the import declarations of the seven reported paths: all table rows except `CapturedRosterCommands.ts`. Preserve every imported symbol, module specifier, alias and type-only designation; do not add imports or fix unrelated warnings. Existing exports and module bodies remain unchanged except for the following separately enumerated local syntax changes.
+2. In `CapturedLocalModelReadiness.ts:45`, express the existing private object alias `Definition` as an `interface` with the **same three fields and types**: `owner: BackendOwnerRef`, `contextId: string`, and `scope: BackendScope`. This changes the erased declaration form only; no field, optionality, visibility, schema, parser or call-site type is broadened.
+3. In that same file's original `scope(kind, workspace)` function, extract the nested `globalHome ??= await fs.realpath(homeInput)` assignment from the conditional expression. Initialize a local `root` to the same `workspace`; only inside the original `kind === 'global'` branch perform **the same nullish assignment** to the already-existing enclosing `globalHome`, then select that value as `root`. Preserve the original real `current()` immediately before the selection and immediately after it. The filesystem call remains conditional on the same global branch and original nullish value, at the same await boundary. Preserve the existing function-local memo and selected path; do not introduce a new cache, permission, fallback, read or await.
+4. Remove only the two compiler-erased, lint-reported non-null assertions on `view!` at the original lines 565 and 572. The existing view read and launch/roster checks already precede both callbacks. Preserve the two predicates, selected rows, short circuits, every authority/currentness check and every router invocation.
+5. In `CapturedRosterCommands.ts:56`, remove only the lint-reported non-null assertion from `retained[0]!`. Preserve `readScope`, the after-await guard, the exact-one-record check, and `this.original` with the same array entry and handle. No lookup, dispatch, retained result or ledger behavior changes.
+
+This accounts for **seven import-sort errors, one declaration-form error, one nested-assignment error and three redundant non-null assertions = twelve errors**. The 1430 reported warnings are outside this cut. No rule disable, assertion weakening, new test, timer, native command, capture, retry or owner is introduced.
+
+### 90.4 Preserve native custody and all original admission boundaries
+
+The native `BackendOwnerRouter.ts` retains its original `RetainedWindowsCustody` import and `CapturedBackendOwner.nativeCustody` property. The native `DesktopBackendFeature.ts` retains its original `captureMainWindowsCustody` import, captured owner/client handoff, initialization-failure cleanup, shutdown chaining and complete `closeNativeOwners()` body. These are actual native custody behavior; the parent file must not overwrite them. Sort each variant's own imports and verify its own inverse independently.
+
+All other executable statements and conditions remain byte-identical except for the equivalent extraction in §90.3(3). In that extraction, do not move either `current()`, evaluate `fs.realpath` for project scope or an already captured global root, reset the existing memo, or reorder any capture/selector operation after it. Main-origin selection, scheduler bindings, same-request cutoff, source/file identity, imported producer/Host contracts and the original physical cleanup remain the existing contract.
+
+### 90.5 Review, publication and validation
+
+Keep source at zero until this exact appendix is independently reviewed and published. Freeze source/diffs for all three variants with ten original/full final hashes, explicit old/new import declarations, and a finite inverse for the four local syntax categories. Independently verify that all original native custody additions and all out-of-scope bytes survive. Root remains the sole publisher and heavy-check owner.
+
+Root then runs the existing features lint gate and the canonical Main typecheck on the composed source. The published R34.1 and P11 §16 checks retain their separate evidence. No new unit case is needed for erased declarations or an equivalent local extraction; do not create a broad new test campaign. The next authorized ordinary CI runs provide actual whole-head results. This appendix does not rerun/cancel a workflow, change a live head, relax a warning/error policy, or qualify any native runtime acceptance.
+
+## 91. Keep the original process-stop selection type in the backend contract leaf
+
+### 91.1 Actual failure and the dependency that exposes it
+
+This is a two-path type-ownership repair for the existing strict scripts build after §89. The original two process-observer cases passed separately; that result does not qualify the scripts typecheck. Root's actual scripts typecheck on composed source `a390e771aaced8f7eacc0517b6b4b9b9b84dc380` failed with exactly `src/features/agent-backend/contracts/processes.ts(37,43): error TS2307: Cannot find module '@shared/types/team' or its corresponding type declarations.` The complete original log is immutable blob `d39bb0b96468029cb843c223bac7c7464d9791c3`; it is a compiler failure before a new native acceptance run.
+
+The source edge is concrete: the §89 `scripts/legacy-agent-host/desktop-native-process-ui.ts` imports the existing strict `readBackendProcesses` parser from `../../src/features/agent-backend/contracts/processes.ts` at line 13 and calls it at line 62. That contract module has no other import dependency; its line 37 aliases `ProcessStopSelection` to `import('@shared/types/team').CapturedTeamProcessStop`. The original shared declaration at `src/shared/types/team.ts:806–809` contains only `processRef: string` and `originalCommandId?: string`. Resolving this otherwise unrelated erased alias pulls in the shared Team type graph. The scripts project `tsconfig.legacy-agent-host-scripts.json` (`cc479baf31482568a34f7ec4971f45070437777d`) intentionally uses strict NodeNext/noEmit and has no UI aliases.
+
+The repair puts that existing two-field contract beside the process operations and parser that already own it. It does not change compiler resolution policy or copy the runtime parser into a fixture. The former §89 accepted/refused process observations, exact owner joins and native oracles remain separate and unchanged.
+
+### 91.2 Exact writable scope and current preimages
+
+The following two complete source blobs were freshly fetched from all three working variants. No third source, config, test or roster path is authorized by this appendix.
+
+| Existing writable path | Parent / native / qualification preimage | Planned delta |
+| --- | --- | --- |
+| `src/features/agent-backend/contracts/processes.ts` | `41dd6a8e480b98e85922312fbc4e95089b58f609` on all three | Replace its one erased type alias with the exact original two-field exported interface named `ProcessStopSelection`. |
+| `src/shared/types/team.ts` | `a2620b67a93bc82c78124f4b6ea0f55ed72ee01a` on all three | Replace its original four-line `CapturedTeamProcessStop` interface with a type-only re-export of `ProcessStopSelection` under that same original public name. |
+
+The pinned source-read heads are parent `bd26037a23069c8cbdd8fbbbe85af5ac57c1c0b3`, native `29fc2ba25ad192a22a63d1898d380898218e2023`, and qualification `ea4d9df8ccc76afae978569ae8717098e84486f4`. Publication must recheck these exact two blob preimages even if unrelated working changes advance. Current P09 prefix is exactly `00bc1c937e5d1eaae46234ed3b72749fa3ca811b`; this appendix does not replace any §90 text.
+
+### 91.3 One canonical declaration, two unchanged exported names
+
+At the existing alias location in `contracts/processes.ts`, retain the preceding original comment and introduce only:
+
+```ts
+export interface ProcessStopSelection {
+  processRef: string;
+  originalCommandId?: string;
+}
+```
+
+At the existing shared declaration location, use the ordinary existing feature-alias resolution available to the UI/Main projects, with a type-only re-export:
+
+```ts
+export type {
+  ProcessStopSelection as CapturedTeamProcessStop,
+} from '@features/agent-backend/contracts/processes';
+```
+
+There is one canonical field declaration. Its names, string types, required/optional distinction and mutability are unchanged; no index signature, readonly modifier, default or widening is added. Both original exported names remain available. The scripts graph now terminates at the backend contract leaf instead of resolving Team/UI types. The shared side already uses feature contract imports and exports; this reverse type-only edge introduces no runtime import or new file.
+
+The bounded repository-wide TypeScript/JavaScript usage census found only the original declaration/alias, the renderer's type-only import and `captured?: ProcessStopSelection` parameter in `src/features/agent-backend/renderer/createHostProcessControls.ts`, and `captured?: import('./team').CapturedTeamProcessStop` in `src/shared/types/api.ts:590`. There is no internal use of the old name inside `team.ts`, so a re-export is sufficient. No second declaration or module augmentation of either type or these two modules was found in repository source/tests/scripts/packages. This is the compatibility basis for replacing the former interface with a re-export; it is not an assertion about hypothetical external declaration-merging clients.
+
+### 91.4 Runtime and acceptance boundaries
+
+Every byte of `processes.ts` outside that one type declaration and every byte of `team.ts` outside its replaced declaration must remain unchanged. In particular, retain all original process record fields, `isProcessRef`, `assertOriginalProcessStop`, `readBackendProcess`, `readBackendProcesses`, the 1024-row bound, duplicate-identity refusal, capability checks and original stop selection/recovery logic. The renderer consumer and shared API parameter are read-only source references, not edit targets.
+
+Keep `tsconfig.legacy-agent-host-scripts.json`, every other config, NodeNext, strict/noEmit, include roots and alias tables byte-identical. Do not add a suppression, cast, duplicate interface/schema/parser, looser process DTO, runtime import, fixture fallback or package dependency. No source action, read, request, mutation, timer, native count, owner authority, cleanup or retry changes. Existing source-proof roster `scripts/legacy-agent-host/desktop-proof-sources.ts` already contains the contracts path at line 645; no new path is introduced or roster allowance requested. The small contracts module grows from 141 to 144 physical lines; the existing shared module shrinks by one line.
+
+### 91.5 Review and finite verification
+
+Source stays zero until independent review and root publication of this exact plan. After source GO, stage only these two deltas, freeze full before/after hashes and exact inverse proof for all three variants, and verify the runtime suffix from `export const isProcessRef` through end-of-file byte-for-byte. Independently verify the type export name/shape and that no import edge remains from the contracts leaf to shared Team types.
+
+Root owns canonical validation: repeat the originally failing scripts typecheck on the composed source, then the existing Main/renderer typechecks needed to verify both unchanged consumer names, plus the existing source/lint gates for these paths. Reuse already scheduled canonical checks where they cover the same composed source. No new unit case or new native campaign is justified for this erased two-field relocation; existing §89 tests retain their own prior result and actual future ordinary CI retains its original acceptance role. This appendix does not claim that the compiler has passed, that a native failure is fixed, or that any workflow has been rerun.

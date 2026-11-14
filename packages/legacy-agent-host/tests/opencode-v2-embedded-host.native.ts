@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
+import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { NativeCoordinationFixture } from './fixtures/native-opencode-team/coordination-probe.ts';
 import { record } from './fixtures/native-claude-team/model.ts';
@@ -261,6 +262,11 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       const { captureNativeCoordinationFixture } = await import('./fixtures/native-opencode-team/coordination-probe.ts');
       coordination = captureNativeCoordinationFixture(profile);
     }
+    const initialOpen = { commandId: 'TEST-open', payload: { memberId: 'carol-id' } };
+    profile.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(profile, {
+      method: 'runtime.open', teamId: scope.teamId, ...initialOpen,
+      ...(coordination ? { prepared: [coordination.initialReadiness] } : {}),
+    })];
     const profilePath = join(root, 'profile.json');
     const bytes = JSON.stringify(profile);
     await writeFile(profilePath, bytes, { mode: 0o600 });
@@ -287,7 +293,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     await host.rpc('host.handshake', { protocolVersion: 1 });
     // Observe the existing 120-second embedded startup plus MCP readiness; never retry the intent.
     const originalOpenStartedAt = performance.now();
-    const opened = await host.rpc('runtime.open', envelope('TEST-open', { memberId: 'carol-id' }), 180_000)
+    const opened = await host.rpc('runtime.open', envelope(initialOpen.commandId, initialOpen.payload), 180_000)
       .finally(() => { originalOpenElapsedMs = Math.round(performance.now() - originalOpenStartedAt); });
     // This read cannot open/retry a member. Keep its original attempt even when nativeReady is false.
     try {

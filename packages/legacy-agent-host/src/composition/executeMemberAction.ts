@@ -15,9 +15,10 @@ import { attachMemberModelReadiness, captureActionModelReadiness,
 import type { LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import type { ModelReadinessReference } from '../management/commandRecords.js';
+import { captureInitialRuntimeRestart } from './initialRuntimeModelAdmission.js';
 
 type Launch = Pick<TeamLaunchOwner, 'read' | 'startMember' | 'readModelReadinessAction' |
-  'readModelReadinessSource' | 'attachModelReadiness' | 'retireModelReadiness'> & {
+  'readModelReadiness' | 'readModelReadinessSource' | 'attachModelReadiness' | 'retireModelReadiness'> & {
   memberActions(): ReturnType<typeof createLaunchMemberActions>;
 };
 export function parseMemberAction(commandId: string, raw: unknown): MemberActionInput {
@@ -161,17 +162,23 @@ export function executeMemberAction(
     : undefined;
   const actorDigest = digest(known!.actor);
   let prepared: ReturnType<typeof captureActionModelReadiness> | undefined;
+  let initialRestart: ReturnType<typeof captureInitialRuntimeRestart>;
   let reference: ModelReadinessReference | undefined;
   if (entry.profile.provider === 'opencode' && input.action === 'restart') {
-    if (!options.modelReadiness) throw new RuntimeOwnerError('hold');
-    const nativeSource = options.admission ? captureNativeRestartReadiness({
-      management: options.modelReadiness, launch, entry, isCurrent,
-    }) : undefined;
-    prepared = captureActionModelReadiness({ management: options.modelReadiness, launch,
-      targets: [{ entry, profile, binding }], commandId, payload: raw, actorDigest,
-      ...(readiness ? { readiness } : {}), ...(nativeSource ? { nativeSource } : {}),
-      ...(authorized ? { authorized } : {}), assertCurrent: current,
-    });
+    if (profile.provider !== 'opencode') throw new RuntimeOwnerError('hold');
+    if (options.admission && authorized) initialRestart = captureInitialRuntimeRestart({
+      launch, entry, input, actorDigest, profile, binding, assertCurrent: current, authorized });
+    if (!initialRestart) {
+      if (!options.modelReadiness) throw new RuntimeOwnerError('hold');
+      const nativeSource = options.admission ? captureNativeRestartReadiness({
+        management: options.modelReadiness, launch, entry, isCurrent,
+      }) : undefined;
+      prepared = captureActionModelReadiness({ management: options.modelReadiness, launch,
+        targets: [{ entry, profile, binding }], commandId, payload: raw, actorDigest,
+        ...(readiness ? { readiness } : {}), ...(nativeSource ? { nativeSource } : {}),
+        ...(authorized ? { authorized } : {}), assertCurrent: current,
+      });
+    }
   } else if (entry.profile.provider === 'opencode') launch.retireModelReadiness(input.memberId);
   const cancelOriginalPreparation = async () => {
     if (entry.profile.provider === 'opencode' && options.modelReadiness)
@@ -251,6 +258,10 @@ export function executeMemberAction(
         attachMemberModelReadiness({ launch, entry, reference, commandId, actorDigest,
           inputDigest: prepared.inputDigest, cutoff: prepared.cutoff,
           ...(authorized ? { authorized } : {}) });
+      }
+      if (initialRestart) {
+        selectedAuthority();
+        initialRestart.attach();
       }
     },
     startSelected() {

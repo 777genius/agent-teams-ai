@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { attachMemberModelReadiness, captureActionModelReadiness,
-  inspectMemberModelReadiness } from './prepareTeamModelReadiness.js';
+  capturePreparedModelReference, inspectMemberModelReadiness } from './prepareTeamModelReadiness.js';
+import { attachInitialRuntimeModelAdmission } from './initialRuntimeModelAdmission.js';
 import type { LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { assertRuntimeWorktree } from './runtimeWorktreeCapture.js';
@@ -43,6 +44,7 @@ export async function executeCapturedRuntimeControl(
     runtime: RuntimeOwner;
     interactionControls: HostInteractionControls;
     principalId: string;
+    hostIncarnation: string;
     isSealed(): boolean;
     assertWriter(): void;
     kick(): void;
@@ -194,19 +196,36 @@ export async function executeCapturedRuntimeControl(
     if (entry.profile.provider === 'opencode') {
       if (!retained || retained.team.owner !== entry.team.owner ||
           runtimeDigest(retained.team.definition.binding) !== runtimeDigest(entry.team.definition.binding) ||
-          !options.modelReadiness || !assertAuthority) throw new RuntimeOwnerError('hold');
+          !assertAuthority) throw new RuntimeOwnerError('hold');
       const current = options.runtime.readSession(entry.binding);
-      if (current.record?.phase === 'unopened' && current.record.custody === 'owned' && !current.attached) {
+      // The original seed has no Runtime row until the first launch claim.
+      const initialBeforeOpen = current.record === undefined && !current.attached &&
+        entry.initialModelAdmission !== undefined && entry.selection === undefined;
+      if (initialBeforeOpen || current.record?.phase === 'unopened' && current.record.custody === 'owned' && !current.attached) {
+        actorDigest = runtimeDigest(entry.team.owner.withLaunchAuthority(options.principalId, 'control',
+          revision => ({ principalId: options.principalId, revision })));
+        if (!readiness && entry.initialModelAdmission && !entry.selection) {
+          if (!commandId) throw new RuntimeOwnerError('hold');
+          attachInitialRuntimeModelAdmission({ launch, entries: [entry], method: 'runtime.open',
+            teamId, commandId, payload: raw, actorDigest, hostIncarnation: options.hostIncarnation,
+            captureReference: capturePreparedModelReference,
+            ...(options.modelReadiness ? { management: options.modelReadiness } : {}), assertCurrent: assertAuthority });
+        }
         let qualified = false;
         try {
-          inspectMemberModelReadiness({ management: options.modelReadiness, launch, entry, assertCurrent: assertAuthority });
-          qualified = true;
+          const selected = inspectMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
+            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent: assertAuthority });
+          const reference = selected.reference;
+          const initialReference = reference && entry.initialModelAdmission?.admissions.some(admission =>
+            admission.targets.some(target => target.memberId === entry.profile.memberId &&
+              target.source.kind === 'native-local-readiness' && target.source.probe.commandId === reference.commandId &&
+              target.source.probe.profileId === reference.profileId && target.source.probe.configRevision === reference.configRevision &&
+              target.source.probe.context === reference.context));
+          qualified = !readiness || selected.kind !== 'initial' && !initialReference;
         } catch { assertAuthority(); }
         if (!qualified) {
-          if (!commandId || !readiness || parsed.expectedGeneration !== entry.binding.generation)
+          if (!options.modelReadiness || !commandId || !readiness || parsed.expectedGeneration !== entry.binding.generation)
             throw new RuntimeOwnerError('hold');
-          actorDigest = runtimeDigest(entry.team.owner.withLaunchAuthority(options.principalId, 'control',
-            revision => ({ principalId: options.principalId, revision })));
           preparation = captureActionModelReadiness({ management: options.modelReadiness, launch,
             targets: [{ entry, profile: entry.profile, binding: entry.binding }], commandId,
             payload: raw, actorDigest, readiness, assertCurrent: assertAuthority });

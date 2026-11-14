@@ -13,6 +13,7 @@ import { ManagementCommandError } from '../management/commandRecords.js';
 import { nativeLocalReadinessPurpose } from '../management/ModelProbeOwner.js';
 import { managementDigest } from '../management/identity.js';
 import { runtimeDigest } from '../runtime/identity.js';
+import { inspectInitialRuntimeModelAdmission } from './initialRuntimeModelAdmission.js';
 
 import type { ModelProbeInput } from '../management/ModelProbeOwner.js';
 import type { ModelReadinessProbeScope, ModelReadinessReference, ReadinessPreparationAnchor,
@@ -256,14 +257,17 @@ export async function prepareCapturedLaunchReadiness(options: {
 
 /** Synchronous allocation check; no preparation/native effects are allowed at this boundary. */
 export function inspectMemberModelReadiness(options: {
-  management: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
+  management?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
   launch: TeamLaunchOwner; entry: MemberEntry; assertCurrent(): void;
-}): { assertCurrent(): void; consumerId: string; kind: 'preparation' | 'continuation';
+  hostIncarnation: string; phase?: 'preclaim' | 'allocation';
+}): { assertCurrent(): void; consumerId: string; kind: 'preparation' | 'continuation' | 'initial';
   reference?: ModelReadinessReference; assertReadinessCredential?(scopeDigest: string): void } {
   const { entry, launch } = options;
   const selected = { binding: entry.binding, configRevision: entry.profile.configRevision,
     configurationDigest: runtimeDigest(entry.profile) };
   const original = launch.readModelReadiness(selected);
+  if (original.consumer.initialProfile) return inspectInitialRuntimeModelAdmission({ ...options,
+    phase: options.phase ?? 'preclaim' });
   const observedAccount: { value?: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>> } = {};
   const current = () => {
     options.assertCurrent();
@@ -276,7 +280,7 @@ export function inspectMemberModelReadiness(options: {
           runtimeDigest(restore.sourceBinding) !== runtimeDigest(consumer.continuation.sourceBinding)) held();
       return;
     }
-    if (!current.reference || consumer.cutoff === undefined || Date.now() >= consumer.cutoff) held();
+    if (!options.management || !current.reference || consumer.cutoff === undefined || Date.now() >= consumer.cutoff) held();
     const observed = capturePreparedModelReference({ management: options.management, profile: entry.profile,
       commandId: current.reference.commandId, context: current.reference.context,
       ...(current.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}),
@@ -299,7 +303,7 @@ export function inspectMemberModelReadiness(options: {
 }
 
 export function consumeMemberModelReadiness(options: Parameters<typeof inspectMemberModelReadiness>[0]) {
-  const captured = inspectMemberModelReadiness(options);
+  const captured = inspectMemberModelReadiness({ ...options, phase: 'allocation' });
   options.launch.consumeModelReadiness(captured.consumerId);
   return captured;
 }

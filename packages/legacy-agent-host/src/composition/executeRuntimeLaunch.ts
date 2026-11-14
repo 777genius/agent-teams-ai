@@ -20,10 +20,11 @@ import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import { attachMemberModelReadiness, captureActionModelReadiness,
-  prepareCapturedLaunchReadiness } from './prepareTeamModelReadiness.js';
+  capturePreparedModelReference, prepareCapturedLaunchReadiness } from './prepareTeamModelReadiness.js';
 import type { CaptureModelReadinessTransfer, LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { applyLaunchConfiguration, launchConfigurationSchema } from './launchConfiguration.js';
+import { attachInitialRuntimeModelAdmission } from './initialRuntimeModelAdmission.js';
 
 export type RuntimeLaunchAsyncOperation = 'capture' | 'start' | 'retry';
 export type RuntimeLaunchSyncOperation =
@@ -35,6 +36,7 @@ export type RuntimeLaunchSyncOperation =
 export type RuntimeLaunchOperation = RuntimeLaunchAsyncOperation | RuntimeLaunchSyncOperation;
 interface LaunchComposition {
   profile: TeamHostProfile;
+  hostIncarnation: string;
   sources?: RuntimeRecipeSources;
   teams: ReadonlyMap<string, HostedTeam>;
   capturedTeams: ReadonlyMap<string, HostedTeam>;
@@ -161,6 +163,7 @@ export function executeRuntimeLaunch(
   };
   const isStartCurrent = () => { try { assertStartCurrent(); return true; } catch { return false; } };
   let action: ReturnType<typeof captureActionModelReadiness> | undefined;
+  let initialAdmission = false;
   const actorDigest = runtimeDigest({ principalId: options.profile.principalId, revision: originalRevision });
   const pendingOpenCode = operation === 'start' ? (() => {
     const summary = launch.read();
@@ -183,6 +186,13 @@ export function executeRuntimeLaunch(
     });
     action = captureActionModelReadiness({ management: options.modelReadiness, launch, targets,
       commandId, payload: raw, actorDigest, readiness, assertCurrent: assertStartCurrent });
+  } else if (pendingOpenCode.length && !readiness && pendingOpenCode.every(entry =>
+      entry.initialModelAdmission !== undefined && entry.selection === undefined)) {
+    attachInitialRuntimeModelAdmission({ launch, entries: pendingOpenCode, method: 'team.launch.start',
+      teamId, commandId, payload: raw, actorDigest, hostIncarnation: options.hostIncarnation,
+      captureReference: capturePreparedModelReference,
+      ...(options.modelReadiness ? { management: options.modelReadiness } : {}), assertCurrent: assertStartCurrent });
+    initialAdmission = true;
   }
   const retryMembers =
     operation === 'retry'
@@ -211,6 +221,7 @@ export function executeRuntimeLaunch(
       commandId,
       ...(pendingOpenCode.length ? { beforeStart: async () => {
         assertStartCurrent();
+        if (initialAdmission) return;
         if (!options.modelReadiness) throw new TeamLaunchError('hold', 'launch-readiness-required');
         if (action) {
           const references = await action.prepare();

@@ -399,7 +399,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       await runDesktopActivityUiSmoke(cdp, {root:fixture.root, source:activitySource, teamName:activitySource.teamName, memberName:activitySource.memberName, memberId:activitySource.memberId, handleId:fixture.handleId, evidence, assertOwnedRenderer:()=>assertOwnedCdpListener(group), assertNoNativeChildren:phase=>assertNoNativeHostChildren(group,fixture,phase)});
     } else if (processUiMode || controlledProcessMode) {
       hostPid = await qualifyColdProcessUi(cdp, { fixture, evidence, group, processReadbackMode, processReadbackSource,
-        controlledSource: controlledProcess?.source, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+        ...(packed ? { packedRendererUrl: packed.rendererUrl } : {}), controlledSource: controlledProcess?.source, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (await runDesktopNativeQuitMode(cdp, {mode, root: fixture.root, seed: fixture.uiSeed, evidence, model: openCodeLifecycleModel ?? conversationModel, coldMetadata, assertOwnedRenderer: () => assertOwnedCdpListener(group)})) {
       // Exact Quit/readback witnesses are finalized below before fallback cleanup.
     } else if (nativeReviewMode) {

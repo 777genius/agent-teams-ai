@@ -4,10 +4,10 @@ import {
   teamRegistryReceiptSchema,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
 import {
+  createTeamLaunchCaptureResultSchema,
   type CreateTeamLaunchPreparationInput,
   createTeamLaunchPreparationInputSchema,
   createTeamLaunchPreparationSnapshotSchema,
-  createTeamLaunchCaptureResultSchema,
   createTeamLaunchSubmitResultSchema,
 } from '@agent-teams/legacy-agent-host/team-registry/create-launch-contracts';
 
@@ -23,8 +23,8 @@ import { readinessPreparationWire, readinessRemaining } from './CapturedLocalMod
 
 import type { BackendOwnerBinding, BackendRequestGuard } from '../application/backendBinding';
 import type { CapturedReadinessOrigin, LocalModelReadinessContext } from './CapturedLocalModelReadiness';
-import type { LocalModelReadinessCapture } from '@agent-teams/legacy-agent-host/team-host';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
+import type { LocalModelReadinessCapture } from '@agent-teams/legacy-agent-host/team-host';
 import type {
   CreateTeamRegistryPayload,
   TeamRegistryReceipt,

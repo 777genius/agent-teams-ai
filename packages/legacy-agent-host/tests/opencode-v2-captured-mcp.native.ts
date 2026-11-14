@@ -6,6 +6,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promi
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { OpenCodeMemberProfile } from '../dist/composition/runtimeProfile.js';
 import { record } from './fixtures/native-claude-team/model.ts';
@@ -160,20 +161,30 @@ test('native V2 captured allowlist and app-only preserve Team tools, original re
         ],
       }], runtime: { members },
     };
+    const binding = { schemaVersion: 1, handleId: 'TEST-captured-mcp-handle', owner, scope };
+    let controls = 0;
+    const envelope = (payload: unknown, commandId = 'TEST-mcp-control-' + ++controls) => ({ commandId, binding, payload });
+    const initialOpens = ['allow', 'app-only'].map(memberId => {
+      const payload = { memberId };
+      return { ...envelope(payload), payload };
+    });
+    profile.runtime!.initialModelAdmissions = initialOpens.map(({ commandId, payload }) =>
+      captureInitialRuntimeModelAdmission(profile, {
+        method: 'runtime.open', teamId: scope.teamId, commandId, payload,
+      }));
     const profilePath = join(root, 'profile.json');
     await writeFile(profilePath, JSON.stringify(profile), { mode: 0o600 });
     const profileHash = await fileHash(profilePath);
     const start = () => { t.signal.throwIfAborted(); return startHost({ node, entry, root, profile: profilePath, profileHash }); };
-    const binding = { schemaVersion: 1, handleId: 'TEST-captured-mcp-handle', owner, scope };
-    let controls = 0;
-    const envelope = (payload: unknown, commandId = 'TEST-mcp-control-' + ++controls) => ({ commandId, binding, payload });
     const originals: { command: ReturnType<typeof envelope>; receipt: Record<string, unknown>;
       memberId: string; inputId: string }[] = [];
     const grants = new Set<string>();
     host = start();
     await host.rpc('host.handshake', { protocolVersion: 1 });
     for (const [memberId, turn] of [['allow', 'ALLOW'], ['app-only', 'APP_ONLY']] as const) {
-      const opened = value(await host.rpc('runtime.open', envelope({ memberId }), 180_000));
+      const initialOpen = initialOpens.find(command => command.payload.memberId === memberId);
+      assert.ok(initialOpen, 'the original member Open was captured before profile serialization');
+      const opened = value(await host.rpc('runtime.open', initialOpen, 180_000));
       assert.equal(opened.nativeReady, true);
       if (memberId === 'allow') {
         lifecycle = await events(actorLog);

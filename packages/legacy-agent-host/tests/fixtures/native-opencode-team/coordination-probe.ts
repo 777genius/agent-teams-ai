@@ -6,6 +6,7 @@ import { FileManagementCommandStore } from '../../../dist/adapters/providers/Fil
 import { ProviderManagementCoordinator } from '../../../dist/composition/ProviderManagementCoordinator.js';
 import { readTeamHostProfile } from '../../../dist/composition/readProfile.js';
 import { teamModelProbeProfile } from '../../../dist/composition/teamLaunchModelProbe.js';
+import { initialRuntimeModelProbeScope } from '../../../dist/composition/initialRuntimeModelAdmission.js';
 import { managementDigest } from '../../../dist/management/identity.js';
 import { nativeLocalReadinessPurpose } from '../../../dist/management/ModelProbeOwner.js';
 import { providerManagementProfileSchema } from '../../../dist/management/profile.js';
@@ -13,6 +14,7 @@ import { tick } from '../native-host.ts';
 
 import type { TeamHostProfile } from '../../../dist/composition/TeamHost.js';
 import type { ModelProbeInput } from '../../../dist/management/ModelProbeOwner.js';
+import type { InitialRuntimeModelProbeLocator } from '../../../dist/composition/initialRuntimeModelAdmission.js';
 import type { startOpenCodeModel } from './model.ts';
 
 type Model = Awaited<ReturnType<typeof startOpenCodeModel>>;
@@ -31,6 +33,7 @@ type Evidence = {
 };
 export interface NativeCoordinationFixture {
   readonly evidence: Evidence;
+  readonly initialReadiness: InitialRuntimeModelProbeLocator;
   run(options: { profilePath: string; profileSha256: string; model: Model; signal?: AbortSignal }): Promise<void>;
 }
 
@@ -68,6 +71,7 @@ export function captureNativeCoordinationFixture(profile: TeamHostProfile,
   let attempted = false;
   return {
     evidence,
+    initialReadiness: { memberId: member.memberId, ...lookup, context },
     async run({ profilePath, profileSha256, model, signal }) {
       assert.equal(attempted, false, 'one original qualification invocation');
       attempted = true; evidence.status = 'INCOMPLETE';
@@ -87,6 +91,8 @@ export function captureNativeCoordinationFixture(profile: TeamHostProfile,
           row.teamId === member.teamId && row.memberId === member.memberId)), memberDigest);
         assert.equal(managementDigest(original.management?.find(row => row.profileId === selected.profileId)),
           managementDigest(selected), 'same original fully captured management recipe');
+        assert.equal(managementDigest(original.runtime?.initialModelAdmissions),
+          managementDigest(profile.runtime?.initialModelAdmissions), 'same original initial intent');
       };
       const current = () => { signal?.throwIfAborted(); assertCurrent(); return true; };
       const cancel = () => manager?.seal();
@@ -98,7 +104,13 @@ export function captureNativeCoordinationFixture(profile: TeamHostProfile,
         signal?.addEventListener('abort', cancel, { once: true });
         current();
         model.coordination.arm();
-        let observed = manager.startNativeReadiness(input, current);
+        const admissions = profile.runtime?.initialModelAdmissions?.filter(row => row.targets.some(target =>
+          target.memberId === member.memberId && target.source.kind === 'native-local-readiness' &&
+          managementDigest(target.source.probe) === managementDigest({ ...lookup, context }))) ?? [];
+        assert.equal(admissions.length, 1, 'one original scoped allocation destination');
+        const scope = initialRuntimeModelProbeScope(admissions[0]!, member,
+          Date.now() + (selected.modelProbeTimeoutMs ?? 90000));
+        let observed = manager.startNativeReadiness(input, current, scope);
         admitted = true;
         const deadline = admissionDeadline = observed.expiresAt;
         assert.ok(deadline > Date.now() && deadline - Date.now() <= 90000);
@@ -120,6 +132,7 @@ export function captureNativeCoordinationFixture(profile: TeamHostProfile,
         assert.equal(saved.purpose, nativeLocalReadinessPurpose); assert.equal(saved.context, context);
         assert.equal(saved.phase, 'completed'); assert.equal(saved.ok, true); assert.equal(saved.resourceHeld, false);
         assert.equal(saved.expiresAt, deadline);
+        assert.deepEqual(saved.readinessScope, scope);
         assert.deepEqual(proof.readiness, saved.readiness);
         assert.equal(proof.readiness.selectionDigest, saved.selectionDigest);
         assert.equal(model.localReadiness.ordinary.length, 1); assert.equal(model.localReadiness.inventoryReads, 1);
