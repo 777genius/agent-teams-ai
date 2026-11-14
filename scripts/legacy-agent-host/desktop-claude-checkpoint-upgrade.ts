@@ -321,11 +321,15 @@ export async function prepareDesktopClaudeCheckpointUpgrade(repo: string, pnpm: 
       assert.equal(currentAttempt.attemptId, attempts[0]!.currentAttemptId);
       assert.equal(currentAttempt.claimed, true); assert.equal(currentAttempt.noAllocation, false);
       assert.equal(currentAttempt.hostIncarnation, source.hostIncarnation);
-      const prepared = journal.preparation!.members.filter(row => row.memberId === base.memberId);
-      assert.equal(prepared.length, 1);
-      const { applyLaunchConfiguration } = await import(pathToFileURL(join(oldHost, 'dist/composition/launchConfiguration.js')).href) as
-        typeof import('../../packages/legacy-agent-host/dist/composition/launchConfiguration.js');
-      const effective = { ...applyLaunchConfiguration(base, prepared[0]!.configuration),
+      let configured: NonNullable<typeof oldProfile.runtime>['members'][number] = base;
+      if (journal.preparation !== undefined) {
+        const prepared = journal.preparation.members.filter(row => row.memberId === base.memberId);
+        assert.equal(prepared.length, 1);
+        const { applyLaunchConfiguration } = await import(pathToFileURL(join(oldHost, 'dist/composition/launchConfiguration.js')).href) as
+          typeof import('../../packages/legacy-agent-host/dist/composition/launchConfiguration.js');
+        configured = applyLaunchConfiguration(base, prepared[0]!.configuration);
+      }
+      const effective = { ...configured,
         generation: selected[0]!.runtimeGeneration! };
       assert.equal(runtimeDigest(effective), selected[0]!.configurationDigest);
       assert.equal(effective.generation, object(source.config).generation);
