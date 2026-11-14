@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   HostTaskSubmissionRefusal,
@@ -11,6 +11,7 @@ import {
   captureTaskDetailReadScope,
   isTaskDetailReadScopeCurrent,
   isTaskDetailTeamUnavailable,
+  isTaskDetailTokenCurrent,
 } from '@renderer/store/team/taskDetailReadAuthority';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
@@ -25,6 +26,8 @@ import { useShallow } from 'zustand/react/shallow';
 
 import {
   EMPTY_TASK_DETAIL_SESSION,
+  isSameTaskDetailReadScope,
+  isTaskDetailReadTokenForResource,
   isValidTaskDetailIdentity,
   taskDetailKey,
 } from '../../core/domain';
@@ -37,6 +40,7 @@ import type {
   TaskDetailSavePart,
   TaskDetailSession,
 } from '../../contracts';
+import type { TaskDetailReadToken } from '@renderer/store/team/taskDetailReadAuthority';
 import type {
   AddTaskCommentRequest,
   CommentAttachmentPayload,
@@ -53,6 +57,8 @@ export interface TaskDetailSessionController {
   session: TaskDetailSession;
   isOwner: boolean;
   canEditNow: () => boolean;
+  canResolveClarification: boolean;
+  resolveClarification: () => void;
   isOriginCurrent: () => boolean;
   canSubmit: boolean;
   isDraftSaved: boolean;
@@ -111,6 +117,7 @@ export function useTaskDetailSession({
         activeContextId: state.activeContextId,
         switching: state.isContextSwitching,
         phase: state.taskDetailById[identityKey]?.phase,
+        detail: state.taskDetailById[identityKey],
         deletionIntent: state.taskDetailById[identityKey]?.deletionIntent,
         teamUnavailable: isTaskDetailTeamUnavailable(state, identity.teamName, liveScope),
       };
@@ -153,9 +160,10 @@ export function useTaskDetailSession({
     key: identityKey,
     isSaved: false,
     attachmentError: null as string | null,
+    clarificationPending: false,
   });
   if (localUi.key !== identityKey) {
-    setLocalUi({ key: identityKey, isSaved: false, attachmentError: null });
+    setLocalUi({ key: identityKey, isSaved: false, attachmentError: null, clarificationPending: false });
   }
   const isDraftSaved = localUi.key === identityKey && localUi.isSaved;
   const attachmentError = localUi.key === identityKey ? localUi.attachmentError : null;
@@ -245,6 +253,118 @@ export function useTaskDetailSession({
       currentTaskState.status !== 'deleted'
     );
   }, [identity, identityKey, isOriginCurrent, scope, session.ownerRevision, surfaceId]);
+
+  const clarificationOrigin = useMemo(
+    () => ({ isOriginCurrent, requireOwner, surfaceId }),
+    [isOriginCurrent, requireOwner, surfaceId]
+  );
+  const clarification = useRef<{
+    origin: typeof clarificationOrigin | null;
+    pending: { origin: typeof clarificationOrigin; cancel(): void } | null;
+  }>({ origin: clarificationOrigin, pending: null });
+  clarification.current.origin = clarificationOrigin;
+  useEffect(() => {
+    clarification.current.origin = clarificationOrigin;
+    return () => {
+      if (clarification.current.origin === clarificationOrigin) clarification.current.origin = null;
+      const pending = clarification.current.pending;
+      if (pending?.origin === clarificationOrigin) pending.cancel();
+    };
+  }, [clarificationOrigin]);
+
+  const readClarification = useCallback(() => {
+    const state = useStore.getState();
+    const entry = state.taskDetailById[identityKey];
+    const current = state.taskDetailSessionById[identityKey];
+    const team = state.teamDataCacheByName[identity.teamName] ??
+      (state.selectedTeamName === identity.teamName ? state.selectedTeamData : null);
+    if (
+      !isOriginCurrent() || currentTask?.id !== identity.taskId ||
+      current?.ownerSurfaceId !== surfaceId || current.ownerRevision !== session.ownerRevision ||
+      !entry?.full || taskDetailKey(entry.identity) !== identityKey || entry.phase !== 'ready' ||
+      entry.error !== null || entry.deletionIntent !== null || entry.refreshPending ||
+      entry.full.id !== identity.taskId || entry.full.deletedAt || entry.full.status === 'deleted' ||
+      !entry.full.needsClarification || team?.config.deletedAt ||
+      state.teamManagementNoticeByTeam[identity.teamName]?.kind === 'trashed' ||
+      state.teamByName[identity.teamName]?.deletedAt
+    ) return null;
+    if (entry.loading && (
+      !entry.fullToken || !isTaskDetailReadTokenForResource(entry.fullToken, identity) ||
+      !isSameTaskDetailReadScope(entry.fullToken.scope, scope)
+    )) return null;
+    return { entry, task: entry.full };
+  }, [currentTask?.id, identity, identityKey, isOriginCurrent, scope, session.ownerRevision, surfaceId]);
+
+  const resolveClarification = useCallback(() => {
+    if (clarification.current.origin !== clarificationOrigin || clarification.current.pending) return;
+    const original = readClarification();
+    if (!original) return;
+    if (!original.entry.loading) {
+      if (requireOwner())
+        void useStore.getState().setTaskNeedsClarification(identity.teamName, identity.taskId, null);
+      return;
+    }
+    if (!original.entry.fullToken) return;
+    const clarificationValue = original.task.needsClarification;
+    let token: TaskDetailReadToken = {
+      ...original.entry.fullToken, scope: { ...original.entry.fullToken.scope },
+    };
+    let successor = false;
+    let unsubscribe = () => {};
+    const intent = {
+      origin: clarificationOrigin,
+      cancel: (): void => {
+        if (clarification.current.pending !== intent) return;
+        clarification.current.pending = null;
+        unsubscribe();
+        setLocalUi(current =>
+          current.key === identityKey ? { ...current, clarificationPending: false } : current
+        );
+      },
+    };
+    const observe = () => {
+      if (clarification.current.pending !== intent) return;
+      const next = clarification.current.origin === intent.origin ? readClarification() : null;
+      if (!next || next.task.needsClarification !== clarificationValue || !next.entry.fullToken) {
+        intent.cancel();
+        return;
+      }
+      const current = next.entry.fullToken;
+      if (!isTaskDetailReadTokenForResource(current, identity) ||
+          !isSameTaskDetailReadScope(current.scope, scope)) {
+        intent.cancel();
+        return;
+      }
+      const same = current.resource === token.resource && current.key === token.key &&
+        current.sourceEpoch === token.sourceEpoch && current.serial === token.serial &&
+        current.physicalStartOrder === token.physicalStartOrder &&
+        isSameTaskDetailReadScope(current.scope, token.scope);
+      if (!same) {
+        if (successor || current.serial <= token.serial || current.sourceEpoch < token.sourceEpoch ||
+            current.physicalStartOrder <= token.physicalStartOrder) {
+          intent.cancel();
+          return;
+        }
+        successor = true;
+        token = { ...current, scope: { ...current.scope } };
+      }
+      if (next.entry.loading) return;
+      // The start token is copied; only the original committed token can authorize this one call.
+      const currentRead = isTaskDetailTokenCurrent(current, scope);
+      intent.cancel();
+      if (currentRead && clarification.current.origin === intent.origin && requireOwner())
+        void useStore.getState().setTaskNeedsClarification(identity.teamName, identity.taskId, null);
+    };
+    clarification.current.pending = intent;
+    setLocalUi(current =>
+      current.key === identityKey ? { ...current, clarificationPending: true } : current
+    );
+    unsubscribe = useStore.subscribe(observe);
+    observe();
+  }, [clarificationOrigin, identity, identityKey, readClarification, requireOwner, scope]);
+  const clarificationRead = readClarification();
+  const canResolveClarification = !(localUi.key === identityKey && localUi.clarificationPending) &&
+    clarificationRead !== null && (clarificationRead.entry.loading || requireOwner());
 
   const persistDraft = useCallback(
     (value: { text?: string; commentChips?: InlineChip[] }) => {
@@ -552,6 +672,8 @@ export function useTaskDetailSession({
       session,
       isOwner,
       canEditNow: requireOwner,
+      canResolveClarification,
+      resolveClarification,
       isOriginCurrent,
       canSubmit:
         isOwner &&
@@ -582,11 +704,13 @@ export function useTaskDetailSession({
       addCommentChip,
       addPendingFiles,
       attachmentError,
+      canResolveClarification,
       identity,
       isDraftSaved,
       isOwner,
       isOriginCurrent,
       requireOwner,
+      resolveClarification,
       openInTaskTab,
       removeCommentChip,
       removePendingAttachment,

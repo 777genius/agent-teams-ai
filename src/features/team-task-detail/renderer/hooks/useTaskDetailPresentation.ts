@@ -137,7 +137,6 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
     return () => setResourceDemand(surfaceId, resourceIdentity, 'detail', false);
   }, [resourceIdentity, resourceVisible, setResourceDemand, surfaceId]);
   const getTaskAttachmentData = useStore((state) => state.getTaskAttachmentData);
-  const setTaskNeedsClarification = useStore((state) => state.setTaskNeedsClarification);
   const handoffIntentRef = useRef(false);
   const [rootElement, setRootElement] = useState<HTMLElement | null>(null);
   const [logsRefreshing, setLogsRefreshing] = useState(false);
@@ -325,11 +324,7 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
       handleDependencyClick,
       handleReply: (author, text) =>
         sessionController.setReply({ taskId: currentTask.id, author, text }),
-      markClarificationResolved: () => {
-        if (sessionController.canEditNow()) {
-          void setTaskNeedsClarification(teamName, currentTask.id, null);
-        }
-      },
+      markClarificationResolved: sessionController.resolveClarification,
       refreshChanges: taskChanges.actions.refresh,
       saveDescription,
       saveSubject,
