@@ -1738,3 +1738,45 @@ Exact writable scope, all existing paths:
 The Main composition delta is exactly the two existing preparation calls passing their original selected object; preserve every Windows/native custody variant. Keep the original refresh body and its original command-only lost-ACK lookup intact inside the same module. Default standalone calls without an original selection retain their original independent behavior; product callers always supply the descriptor selection. Both modules are already in the original source-freeze closure; no new file or roster change is needed. Preserve800-line production limits and the existing TEST caps.
 
 Extend the first existing real Main/Host source test with concurrent initial management captures and Launch configuration preparation, requiring one original published revision and equal retained profile/config for the management captures. Preserve all original preference/limits/inheritance/retained-A/restart assertions and the original20s case deadline. In this same case exercise a failed/stale preparation followed by a fresh valid caller without replaying its failed action; no new named case or generic unit suite. Root first runs the strengthened existing case against the unchanged source to establish the precise RED, then the reviewed correction and the existing source suite/appropriate types/guards. If the original case does not reproduce the race, stop and refine the source diagnosis before publishing production bytes. Actual current-head Settings/native E2E remains mandatory; this controlled regression does not establish the cause or closure of every original UI error.
+
+## 29. Bind retained Launch preparation to its original product-roster publication
+
+### 29.1 Observed mismatch and finite scope
+
+Original batch4 V2 Resume job132446133130 and Review job132446133159 executed `09fefda4c255fa172a52b89b2815d18085c79afc`. Packet `b32566be77052151206877eb1d174ac118e94f9a` retains their original full logs, artifacts14114024098/14114049493 and exact source joins. Each has one successful released preparation and a successful original roster CAS, but no Runtime capture. The UI reports an unknown capture result. Both prepared selections identify a retained technical Launch revision, while the CAS expectedRevision identifies the original product roster; these hashes are intentionally computed from different data. For Resume the technical revision is8f377c7a… and product revision518f489e…; Review usesb180b60a… andc55f2dbc…. The exact current transfer helper compares those two domains directly before consuming the original receipt.
+
+Only three existing paths may change; each preimage is identical in parent/native/qualification:
+
+| Path | Exact preimage |
+| --- | --- |
+| `packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts` | `8f5a9b10521ed707df82ed1b90fc923aa5432274` |
+| `packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts` | `d51831e769c6dc1906e60eeffc3dc20178aee1c6` |
+| `packages/legacy-agent-host/tests/saved-team-model-probe.test.ts` | `245c797fceb1e4b96c09246f902a62540f2a1891` |
+
+Keep Main/Renderer transfer DTOs, RuntimeTeamCaptures, ModelProbeOwner and command-record schemas read-only. Do not introduce a new owner, journal, persistent field, public selector, inference, request, deadline or test case.
+
+### 29.2 Original admission commits both revision domains
+
+The source discriminant is the existing `captureTeamModelProbeSelection` retained-launch branch: `captureTeamModelProbe` is reached only after the current technical Launch and its existing Team authority/source selection are validated. Apply the new commitment only to an OpenCode prospective selection with `input.draft` present. The separate `captureSavedTeamModelProbe` / `saved-model-` branch keeps its original product-revision equality and digest. Non-draft actual-cwd children, Create, native preparation and other providers keep their existing shapes.
+
+Capture `team.connection.readRoster().revision` once as a private `productRosterRevision` during that original prospective admission, before any await or preparation. Include equality to this original value in that captured selection's existing currentness callback alongside the original technical Launch/revision, recipe, target and actor checks. Pass this private value only through the existing captured return; it grants nothing independently.
+
+Use the existing `readinessScope.actionDigest` commitment, with the exact ordered object `runtimeDigest({ commandId, context, productRosterRevision })`. Without the new private value, retain the exact old ordered object `runtimeDigest({ commandId, context })`. A small function in the existing teamLaunchModelProbe module may own these two literal hash shapes so producer and consumer cannot disagree. No schema or stored field is added: ModelProbeOwner already commits the whole scope in its original fingerprint and preparationDigest.
+
+Same-ID replay retains the original cutoff and never upgrades a historical scope. If the exact retained original scope has the old two-field digest, reproduce that old digest rather than adding a product witness. A newly committed scope recomputes its original current product join and conflicts on drift. Read, lookup, cold reconstruction and expiry cannot mint this commitment or reset a clock. Original legacy scopes may use only a previously valid direct-equality path; they cannot qualify the new cross-domain transfer.
+
+### 29.3 Exact original CAS bridge
+
+In `captureLaunchModelReadiness`, preserve the existing exact original full roster-intent lookup, command ID, returned publication revision, current roster, Team binding and current actor checks. Read the one explicit original probe through its existing command/Team/selection lookup and preserve the original technical sourceRevision, rosterRevision and destination joins.
+
+For a retained prospective OpenCode selection carrying the new commitment, require actionDigest to equal the same three-field hash using that original command, its retained context and `transfer.roster.expected.expectedRevision`. This proves the successful original full CAS was based on the product roster captured with the already validated technical selection. It does not rerun the obsolete pre-CAS selection callback after intentional publication. A foreign product revision, command, context, technical source, destination or changed full intent refuses before a capture record is created.
+
+The saved-model branch still requires input.rosterRevision to equal the expected product revision. Other legacy/non-draft paths retain that original direct equality only, without a new fallback. Missing or old-format proof cannot be treated as a newly witnessed cross-domain publication. Keep capturePreparedModelReference's original model/mechanism, effective account/file witness, policy-origin, freshness, native-readiness and released-custody checks, original remaining-budget minimum and every downstream allocation/actual-cwd consumer unchanged.
+
+### 29.4 Existing controlled regression and execution limits
+
+Extend the existing OpenCode/roster probe-journal case in saved-team-model-probe.test.ts with one bounded retained-source sub-scope, preserving all original declarations, assertions and loops. Reuse its real Team, Runtime selection and ModelProbeOwner with the existing controlled native boundary; a finite fixture setup may install the explicit original runtime recipe before coordinator construction. The new sub-scope performs one original prospective probe, confirms its actual completed/released receipt, performs one exact full roster CAS and calls the actual transfer helper. Assert technical and product revisions differ, transfer preserves the original command/context/reference/cutoff, and no member provider is allocated. This positive transfer assertion must fail with the old helper; no successful probe record may be inserted to bypass its producer.
+
+Within the same sub-scope, check same-ID replay does not run another probe and that old-format/mismatched publication commitment, altered selection/command and expired original proof cannot transfer; bounded negative record mutations must restore the exact original bytes. Existing account/source/revocation/cleanup assertions remain intact. Saved-model behavior, original scoped cleanup and cold non-replay stay covered by the unchanged surrounding cases. No Desktop/native request budget or named case is added.
+
+Freeze exact three-path variants and inverses, obtain independent review and root publication. Root owns the existing-case old-source RED, coherent GREEN, original Host build/test types and source guards, followed by the original Resume/Review Desktop lanes. Source review is not native acceptance. Claude Resume's earlier rejected Host operation, §95 setup/oracle joins and stopped/donor failures remain separate.
