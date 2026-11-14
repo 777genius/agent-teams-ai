@@ -1136,6 +1136,7 @@ const MemberMessageComposer = ({
           maxLength={MAX_TEXT_LENGTH}
           hintText={crossTeamHintText}
           showHint={!isCompactLayout && composerFocus.isComposerFocused}
+          footerClassName={!isCompactLayout ? 'empty:flex' : undefined}
           cornerActionLeft={
             <ActionModeSelector
               value={actionMode}

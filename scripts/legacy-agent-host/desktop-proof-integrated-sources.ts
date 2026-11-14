@@ -80,6 +80,8 @@ export const desktopProofIntegratedSources = [
   'src/features/team-task-detail/contracts/index.ts',
   'src/features/team-task-detail/core/domain/taskDetailSession.ts',
   'src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts',
+  'src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts',
+  'src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx',
   'src/renderer/components/team/dialogs/retainedCreateTaskSubmission.ts',
   'src/renderer/store/slices/teamTaskDetailSlice.ts',
   'test/features/agent-backend/backendOperationsFacade.test.ts',

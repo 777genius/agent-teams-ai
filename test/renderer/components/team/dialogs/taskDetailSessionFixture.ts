@@ -10,6 +10,8 @@ export function createTaskDetailSessionFixture(taskId: string): TaskDetailSessio
     session: { ...EMPTY_TASK_DETAIL_SESSION, ownerSurfaceId: 'TEST-dialog', ownerRevision: 1 },
     isOwner: true,
     canEditNow: () => true,
+    canResolveClarification: true,
+    resolveClarification: vi.fn(),
     isOriginCurrent: () => true,
     canSubmit: true,
     isDraftSaved: false,
