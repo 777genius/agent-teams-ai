@@ -294,8 +294,8 @@ export async function createMixedProviderSettingsProof(options: {
     const selectedModel = scope === 'global' ? modelA : modelB;
     const row = '[role="dialog"] [data-testid=' + JSON.stringify('runtime-provider-model-row-' + selectedModel) + ']';
     await originalStep(scope === 'global' ? 'global-default' : 'project-default', ui,
-      row + ' button[aria-label=' + JSON.stringify('Select: ' + selectedModel.split('/')[1]) + ']',
-      'select and verify original ' + scope + ' default');
+      row + ' button[aria-pressed="false"]',
+      'select and verify original ' + scope + ' default', 'Select');
   };
   const runPrelude = async (cdp: UiCdpPort, ui: Controls) => {
     noBusiness();
