@@ -223,13 +223,104 @@ describe('captured legacy host client over real subprocess stdio', () => {
   });
 
   it('does not turn a generic remote exception after an effect into a rejection receipt', async () => {
-    const profile = await fixture();
+    const profile = await fixture(`
+      'team.roster.replace': { lane: 'work',
+        handle: () => ({ ok: false, code: 'invalid', outcome: 'rejected' }) },
+    `);
     const transport = client(profile);
-    await transport.start();
-    const error = await transport.request('failure').catch((value: unknown) => value);
-    expect(error).toMatchObject({ code: 'remote-error', outcome: 'unknown' });
-    expect(String(error)).not.toContain('private payload');
-    expect(await readFile(join(profile.cwd, 'effects'), 'utf8')).toBe('effect\n');
+    const priorGate = process.env.LEGACY_DESKTOP_BACKEND_GO;
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {
+      throw new Error('TEST diagnostic sink failed');
+    });
+    try {
+      delete process.env.LEGACY_DESKTOP_BACKEND_GO;
+      await transport.start();
+      const rejected = { ok: false, code: 'invalid', outcome: 'rejected' };
+      expect(await transport.request('team.roster.replace', {})).toEqual(rejected);
+      expect(logged).not.toHaveBeenCalled();
+
+      process.env.LEGACY_DESKTOP_BACKEND_GO = '1';
+      const error = await transport.request('failure').catch((value: unknown) => value);
+      expect(error).toMatchObject({ code: 'remote-error', outcome: 'unknown' });
+      expect(String(error)).not.toContain('private payload');
+      expect(await readFile(join(profile.cwd, 'effects'), 'utf8')).toBe('effect\n');
+      expect(logged).not.toHaveBeenCalled();
+
+      const params = {
+        commandId: 'TEST-private-roster-command',
+        binding: {
+          schemaVersion: 1,
+          handleId: 'TEST-private-handle',
+          owner: {
+            ownerId: 'TEST-private-owner',
+            revision: 'TEST-private-revision',
+            storageRoot: profile.cwd,
+            profileId: 'TEST-private-profile',
+            protocolVersion: 1,
+            buildId: 'TEST-private-build',
+            nodeSha256: 'b'.repeat(64),
+            hostEntrySha256: 'c'.repeat(64),
+          },
+          scope: {
+            projectId: 'TEST-private-project',
+            workspaceId: 'TEST-private-workspace',
+            teamId: 'TEST-private-team',
+            runId: 'TEST-private-run',
+            memberId: null,
+            generation: null,
+          },
+        },
+        payload: {
+          expectedRevision: 'a'.repeat(64),
+          members: [],
+          savedSettings: { cwd: profile.cwd, prompt: 'TEST-private-original-prompt' },
+        },
+        liveRoster: { phase: 'capture', remainingMs: 1000.5 },
+        'TEST-private-unknown-key': 'TEST-private-unknown-value',
+      };
+      const committedParams = createHash('sha256').update(JSON.stringify(params)).digest('hex');
+      const committedPayload = createHash('sha256')
+        .update(JSON.stringify(params.payload))
+        .digest('hex');
+      const pending = transport.request('team.roster.replace', params);
+      params.payload.savedSettings.prompt = 'TEST-private-later-prompt';
+      expect(await pending).toEqual(rejected);
+      expect(logged).toHaveBeenCalledTimes(1);
+      const [namespace, output] = logged.mock.calls[0] ?? [];
+      expect(namespace).toBe('[TEST:HostRosterWire]');
+      expect(typeof output).toBe('string');
+      const serialized = String(output);
+      expect(Buffer.byteLength(serialized, 'utf8')).toBeLessThanOrEqual(4096);
+      expect(serialized).not.toContain('TEST-private');
+      expect(serialized).not.toContain(profile.cwd);
+      expect(serialized).not.toContain('a'.repeat(64));
+      const observation: unknown = JSON.parse(serialized);
+      expect(observation).toMatchObject({
+        tag: 'HOST_ROSTER_REJECTED_WIRE',
+        hashes: {
+          frame: expect.stringMatching(/^[a-f0-9]{64}$/),
+          params: committedParams,
+          payload: committedPayload,
+        },
+        fields: {
+          params: { type: 'object', unknownKeys: 1 },
+          payload: { known: { members: 'array', savedSettings: 'object' }, unknownKeys: 0 },
+          savedSettings: { known: { cwd: 'string', prompt: 'string', model: 'absent' } },
+          scope: { known: { memberId: 'null', generation: 'null' } },
+        },
+        members: 0,
+        liveRoster: {
+          phase: 'capture',
+          remainingMs: { present: true, type: 'number', integer: false, inRange: true },
+        },
+      });
+      expect(await transport.request('team.roster.replace', params)).toEqual(rejected);
+      expect(logged).toHaveBeenCalledTimes(1);
+    } finally {
+      logged.mockRestore();
+      if (priorGate === undefined) delete process.env.LEGACY_DESKTOP_BACKEND_GO;
+      else process.env.LEGACY_DESKTOP_BACKEND_GO = priorGate;
+    }
   });
 
   it.each([

@@ -19,6 +19,10 @@ import {
 import { observeLinuxChildLaunchFailure, remainingLinuxChildLaunchTime, spawnWithLinuxChildLaunch } from '@main/utils/linuxChildLaunch';
 import { createLogger } from '@shared/utils/logger';
 
+import {
+  observeCapturedHostStartup,
+  observeCapturedRosterRejection,
+} from './CapturedHostDiagnostics';
 import { decodeClaudeCloseDiagnostics } from './decodeClaudeCloseDiagnostics';
 import {
   captureHostProfile,
@@ -27,35 +31,7 @@ import {
   validateHostProfile,
 } from './selectedHostProfile';
 
-let startupProbeCount = 0;
-export const observeCapturedHostStartup = (
-  phase:
-    | 'profile-validation-start'
-    | 'profile-validation-complete'
-    | 'child-captured'
-    | 'ready'
-    | 'request-timeout'
-    | 'request-admitted'
-    | 'response-accepted'
-    | 'owner-start'
-    | 'owner-started'
-    | 'read-start'
-    | 'read-complete',
-  kind: 'handshake' | 'rpc' | 'registry-list' | 'retirement-read' = 'handshake'
-): void => {
-  if (process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS !== '1' || startupProbeCount >= 128) return;
-  startupProbeCount++;
-  try {
-    createLogger('TEST:HostStartup').diagnostic('Host startup observation', {
-      phase,
-      kind,
-      observation: startupProbeCount,
-      elapsedMs: Math.round(performance.now()),
-    });
-  } catch {
-    /* Passive diagnostics cannot change transport outcomes. */
-  }
-};
+export { observeCapturedHostStartup } from './CapturedHostDiagnostics';
 
 interface PendingRequest {
   maxFrameBytes: number;
@@ -95,6 +71,7 @@ export class CapturedHostClient {
   private writeCount = 0;
   private writeTimers = new Set<ReturnType<typeof setTimeout>>();
   private diagnosticTail = Buffer.alloc(0);
+  private rosterRejectionObserved = false;
   private readonly retainCloseDiagnostic = decodeClaudeCloseDiagnostics(
     (observation) => {
       createLogger('Host:ClaudeClose').diagnostic('Claude close stage', observation);
@@ -300,6 +277,18 @@ export class CapturedHostClient {
             'response-accepted',
             method === 'host.handshake' ? 'handshake' : 'rpc'
           );
+          if (
+            !this.rosterRejectionObserved &&
+            process.env.LEGACY_DESKTOP_BACKEND_GO === '1' &&
+            method === 'team.roster.replace' &&
+            isRecord(value) &&
+            value.ok === false &&
+            value.code === 'invalid' &&
+            value.outcome === 'rejected'
+          ) {
+            this.rosterRejectionObserved = true;
+            observeCapturedRosterRejection(frame);
+          }
           resolve(value);
         },
         reject,
