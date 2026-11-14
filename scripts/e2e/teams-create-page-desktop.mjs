@@ -1531,7 +1531,8 @@ async function main() {
         button.getClientRects().length > 0)`;
     await cdp.click(validateButton);
     await cdp.waitFor(
-      "document.querySelector('[data-testid=create-team-page] .text-emerald-400')?.textContent?.includes('All flags valid')",
+      "Array.from(document.querySelectorAll('[data-testid=create-team-page] .text-emerald-400'))" +
+        ".some(el => el.textContent?.includes('All flags valid') && el.getClientRects().length > 0)",
       'supported teammate override accepted by real Validate IPC'
     );
     await captureScreenshot(cdp, fixture, 'teammate-mode-validated');
