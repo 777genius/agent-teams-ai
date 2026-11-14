@@ -20,6 +20,7 @@ import { baseEditorTheme } from '@renderer/utils/codemirrorTheme';
 
 import {
   acceptChunk,
+  computeChunkIndexAtPos,
   consumeIgnoredReviewDocChange,
   getChunks,
   ignoreNextReviewDocChange,
@@ -73,33 +74,6 @@ interface CodeMirrorDiffViewProps {
   globalHunkOffset?: number;
   /** Total hunk count across all review files */
   totalReviewHunks?: number;
-}
-
-/** Compute hunk index for the chunk at a given position (B-side / modified doc).
- *  If the position falls inside a chunk, returns that chunk's index.
- *  Otherwise returns the nearest chunk by distance (avoids defaulting to 0). */
-function computeHunkIndexAtPos(state: EditorState, pos: number): number {
-  const chunks = getChunks(state);
-  if (!chunks || chunks.chunks.length === 0) return 0;
-
-  let nearestIndex = 0;
-  let nearestDist = Infinity;
-
-  let index = 0;
-  for (const chunk of chunks.chunks) {
-    // Exact match — position is inside this chunk
-    if (pos >= chunk.fromB && pos <= chunk.toB) {
-      return index;
-    }
-    // Track nearest chunk for fallback
-    const dist = Math.min(Math.abs(pos - chunk.fromB), Math.abs(pos - chunk.toB));
-    if (dist < nearestDist) {
-      nearestDist = dist;
-      nearestIndex = index;
-    }
-    index++;
-  }
-  return nearestIndex;
 }
 
 /** Diff-specific theme — merge toolbar, changed/deleted line backgrounds, collapse markers */
@@ -342,7 +316,7 @@ export const CodeMirrorDiffView = ({
   const resolveDeletedChunkIndex = useCallback(
     (deletedChunk: Element, view: EditorView): number => {
       try {
-        return computeHunkIndexAtPos(view.state, view.posAtDOM(deletedChunk));
+        return computeChunkIndexAtPos(view.state, view.posAtDOM(deletedChunk));
       } catch {
         return -1;
       }
@@ -446,6 +420,22 @@ export const CodeMirrorDiffView = ({
     ]
   );
 
+  // Editor transactions may finish after a later mouse move. Resolve the latest
+  // pointer against this mounted view instead of erasing that newer hover.
+  const refreshFloatingToolbar = useCallback(
+    (view: EditorView): void => {
+      if (viewRef.current !== view) return;
+      const pointer = lastPointerRef.current;
+      const root = rootRef.current;
+      if (!pointer || !root || !root.contains(document.elementFromPoint(pointer.x, pointer.y))) {
+        hideFloatingToolbar();
+        return;
+      }
+      updateFloatingToolbar(view, pointer.y, { clientX: pointer.x, followCursor: true });
+    },
+    [hideFloatingToolbar, updateFloatingToolbar]
+  );
+
   const actOnActiveChunk = useCallback(
     (decision: 'accept' | 'reject') => {
       const view = viewRef.current;
@@ -474,12 +464,9 @@ export const CodeMirrorDiffView = ({
       }
 
       scrollToNextChunk();
-      requestAnimationFrame(() => {
-        const scrollerRect = view.scrollDOM.getBoundingClientRect();
-        updateFloatingToolbar(view, (scrollerRect.top + scrollerRect.bottom) / 2);
-      });
+      requestAnimationFrame(() => refreshFloatingToolbar(view));
     },
-    [scrollToNextChunk, updateFloatingToolbar]
+    [scrollToNextChunk, refreshFloatingToolbar]
   );
 
   const moveBetweenChunks = useCallback(
@@ -492,12 +479,9 @@ export const CodeMirrorDiffView = ({
         goToNextChunk(view);
       }
 
-      requestAnimationFrame(() => {
-        const scrollerRect = view.scrollDOM.getBoundingClientRect();
-        updateFloatingToolbar(view, (scrollerRect.top + scrollerRect.bottom) / 2);
-      });
+      requestAnimationFrame(() => refreshFloatingToolbar(view));
     },
-    [updateFloatingToolbar]
+    [refreshFloatingToolbar]
   );
 
   useEffect(() => {
@@ -677,14 +661,10 @@ export const CodeMirrorDiffView = ({
       })
     );
 
-    // Ensure at least one toolbar is visible (initial load + after accept/reject).
+    // Preserve the latest hovered hunk through the original deferred editor update.
     extensions.push(
       EditorView.updateListener.of((update) => {
-        requestAnimationFrame(() => {
-          const v = update.view;
-          const scrollerRect = v.scrollDOM.getBoundingClientRect();
-          updateFloatingToolbar(v, (scrollerRect.top + scrollerRect.bottom) / 2);
-        });
+        requestAnimationFrame(() => refreshFloatingToolbar(update.view));
       })
     );
 
@@ -716,6 +696,7 @@ export const CodeMirrorDiffView = ({
     portionSize,
     original,
     updateFloatingToolbar,
+    refreshFloatingToolbar,
   ]);
 
   useEffect(() => {

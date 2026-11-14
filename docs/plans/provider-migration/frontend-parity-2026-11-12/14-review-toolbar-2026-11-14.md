@@ -97,3 +97,28 @@ zero skipped, in the isolated merged dependency graph. Original log SHA256:
 Independent source review approved the repair and requested explicit
 old-view and foreign-hit negative cases for its two new guards. Actual
 Electron Review acceptance is still pending; these checks do not replace it.
+
+Before the next original UI run, extend the existing explicit supplementary
+source roster with exactly `CodeMirrorDiffView.tsx`, its existing
+`CodeMirrorDiffUtils.ts` dependency and the new hover regression. These
+three paths were absent from that roster. Preserve all previous inputs and
+the original pre-flow/post-cleanup source equality checks; no dynamic
+filesystem discovery or new source-freeze mechanism is introduced.
+
+## Final bounded renderer checks
+
+The old-view case retains a queued callback from the original editor,
+mounts a different editor, hovers its remaining hunk, then executes that
+old callback. It verifies that the old view's coordinate resolver is not
+called and that the current toolbar, state and callbacks remain intact.
+The foreign-hit case places an unrelated toolbar under the retained
+pointer coordinates and verifies that it cannot supply an actionable
+hunk. These cases exercise the new ownership checks without changing the
+production E2E or its pointer behavior.
+
+The final five hover cases and the three existing draft/history cases
+passed 8/8, zero skipped, in 3.358 seconds with pinned Node 24.21.0 and the
+isolated frozen dependency graph. Log SHA256:
+`508030c0c80bc6ce56b1db628ec1ad0634e227372d935cb5a02818e6da1d09ad`.
+This is a renderer regression result. The original Electron Review and
+cold readback receipts remain required and are not inferred from it.
