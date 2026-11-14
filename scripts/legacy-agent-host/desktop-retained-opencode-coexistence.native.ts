@@ -320,10 +320,14 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     steps.push({ observed: 'retained_legacy_fork_owner_before_new_Host_runtime', runId: retainedLaunch.runId, legacyProcesses });
     const selection = await host('team.launch.read', 'TEST-coexist-launch-read', {}); assert.equal(selection.ok, true);
     const launch = record(selection.value);
-    const started = await host('team.launch.start', 'TEST-coexist-launch-once', {
-      launchId: launch.launchId, rosterRevision: launch.rosterRevision,
-      configuration: { members: [{ memberId: 'alice-id', model: 'test-local/TEST-model', permissions: 'bypass' }] },
-    }); assert.equal(started.ok, true, JSON.stringify(started));
+    const preparation = model.armHostPreparation('TEST-coexist-launch-once');
+    try {
+      const started = await host('team.launch.start', 'TEST-coexist-launch-once', {
+        launchId: launch.launchId, rosterRevision: launch.rosterRevision,
+        configuration: { members: [{ memberId: 'alice-id', model: 'test-local/TEST-model', permissions: 'bypass' }] },
+      }); assert.equal(started.ok, true, JSON.stringify(started));
+      assert.equal(preparation.consumed, 1, 'the original Main launch performs exactly one Host preparation');
+    } finally { preparation.disarm(); }
     await waitFor(async () => { const value = await host('runtime.read', 'TEST-coexist-native-read', { memberId: 'alice-id' });
       assert.equal(value.ok, true); return record(value.value).nativeReady === true ? value : null;
     }, 'new actual Host V2 runtime ready', 90_000);
