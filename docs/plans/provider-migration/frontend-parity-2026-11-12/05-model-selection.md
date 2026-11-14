@@ -1804,3 +1804,33 @@ No test body, assertion, case, skip, production path, workflow, request counter,
 Freeze the one-field diff, full inverse and all three preimages for independent review and root-controlled integration/publication. The two original failures are the existing failure evidence; no new stress case or retry collector is introduced.
 
 Root must run the unchanged complete Host suite through the amended script and retain its actual totals, original skips, failure/cleanup evidence and duration. The original ordinary CI gate on the published source remains required. Serial files can increase total suite wall time; no job or operation deadline is enlarged. An isolated PASS or source review cannot substitute for that full-suite result. Any remaining failure stays a failure and must be diagnosed without relaxing the allocation oracle. Source remains zero until explicit root GO.
+
+## 31. Reuse one freshly captured readiness-origin inspector inside the existing account inspection
+
+### 31.1. Concrete evidence and unchanged deadline
+
+The complete serialized Host script still failed its original OpenCode/worktree Create case: 1247 tests, 1244 pass, one fail, two original skips, zero cancelled, 353739.335068 ms. Root evidence `6132c39f101e8b5005189fdf4fc493da31ad02bc` preserves the unchanged 1000 ms per-attempt deadline and strict own-deadline inequality. Both controlled providers opened; all four probes completed and released. Scheduling alone did not resolve the failure.
+
+Root then ran the unchanged isolated case once with Node24 CPU profiling: it passed (case 4935.630272 ms). Profile SHA-256 `e745d3ea4eecc7b31f5675de4326510cd5d438bd2733e06e5406257816148acb` is diagnostic data with profiler overhead, not a measurement of the failed full run. Its sampled constructor stacks include about 180.7 ms under the separate outer origin inspection and 167.9 ms under the account-owned inspection, across that whole isolated run. Evidence and exact source/caller joins are `583dbd4b856921621669947f0088c1e95d5f5f17`. No CPU-load-only or Node-executable-hash cause is claimed, and no sufficient-speed guarantee follows.
+
+### 31.2. One existing production path
+
+The only writable source is `packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts`, common preimage `4c4436c7bae5fa5cb76e01ab6360ade53708c2be`, verified in parent/native/qualification source successors of §103. No fixture, test, scope schema, stored record, caller module, workflow or dependency change.
+
+Within one synchronous `captureReadinessReference` callback, `capturePreparedModelReference` constructs an origin inspector from the exact saved origin, candidate profile, saved provider ID and current-owner callback. Its account call immediately constructs another inspector from those same inputs. The account already owns that inspector and uses it for its policy/currentness checks. This is duplicated physical source inspection, not a need for a second owner or proof.
+
+Keep the exported `captureOpenCodeProbeAccount` five parameters, optional/default behavior, and returned account object shape unchanged. A private worker in the same module owns the existing account-inspection body and returns the unchanged account plus its freshly constructed origin inspector. The public function unwraps only the account. Only `capturePreparedModelReference` consumes the private pair; it uses that origin when the existing account branch is selected, and retains the original direct-origin capture when no account inspection supplies one. No caller can inject an inspector or override its authority. No inspector field escapes through the public account result, `observeAccount`, reference, journal or wire payload.
+
+### 31.3. Authority and source-currentness preservation
+
+Preserve the account worker's complete existing source, native-file witness, credential-scope, profile, selection, cutoff and deferred-manual logic. The private refactor may wrap its result and delegate the public entry, but must not bypass or reorder its internal validation. In particular, the no-original deferred return stays undefined.
+
+Reuse the inspector object, never a prior policy/currentness boolean. Every existing `policy.isCurrent()` and final `origin.isCurrent()` call remains at its original use boundary; each still executes a fresh `inspect()` with both original owner checks and actual source-file validation. Preserve the final origin check after `readinessTarget(candidate)`, account/current-owner checks, reference equality and existing failure ordering outside the removed duplicate constructor. The shared inspector is local to this synchronous callback: no cross-call cache, memoized green, lease, new admission, lifetime extension or transfer across an await. Standalone/preflight/initial and continuation consumers retain their original public helper contract.
+
+The original Runtime allocation timestamp is observed after allocated publication; this change does not reinterpret that observation. Keep all original claims, their 1000 ms limits, wait/timer, maximum original deadline, each member's strict own-deadline assertion, source/native inputs, request budgets and cleanup semantics.
+
+### 31.4. Review and original acceptance
+
+Freeze the one-file full source/diff and verify all three preimages, exact public signature/result shape, private-pair non-escape, worker-body inverse and unchanged currentness call sites. An independent peer must read the shared-policy freshness and post-target guard, including the existing deferred and file-backed branches.
+
+Root runs the unchanged original failing Create case/file and saved-team-model-probe negative guard cases, normal Host build/type/source gates, then the complete original serialized Host suite. Their source preimages remain `c24c405663019f72cbd09f66705971fcd04c4daa` and `ff791b368ffb6c753d89fc3f5778e57782d6a949`. No new case, weakened assertion, synthetic clock, timeout increase, additional probe or repeated-until-green native campaign is authorized. Passing the isolated case alone does not close the full-suite failure. Source remains zero until this appendix is published and root grants the exact one-path GO.
