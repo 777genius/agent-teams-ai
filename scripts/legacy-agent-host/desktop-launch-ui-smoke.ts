@@ -1,9 +1,11 @@
 import { createDesktopCodexSourceSelection } from './desktop-codex-source-selection.ts';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
+import { replaceRosterSchema } from '../../packages/legacy-agent-host/dist/team/rosterSchema.js';
 import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren, observeDesktopOpenCodeMetadata, captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
@@ -27,6 +29,86 @@ const record = (raw: unknown): Record<string, unknown> => {
 };
 const json = async (path: string) => JSON.parse(await readFile(path, 'utf8')) as unknown;
 
+/** Renderer source only: the Main normalization and original Host envelope remain unobserved. */
+function projectSubmittedRoster(raw: unknown, handleId: string): Record<string, unknown> {
+  const value = record(raw);
+  if ('unavailable' in value) {
+    const reasons = ['submitted-ref-missing', 'submitted-ref-ambiguous', 'submitted-ref-malformed',
+      'submitted-signature-limit', 'submitted-source-mismatch', 'submitted-form-detached',
+      'submitted-hook-traversal-truncated'];
+    return { unavailable: typeof value.unavailable === 'string' && reasons.includes(value.unavailable)
+      ? value.unavailable : 'submitted-diagnostic-unavailable' };
+  }
+  assert.equal(typeof value.commandId, 'string');
+  assert.equal(typeof value.signature, 'string');
+  const commandId = value.commandId as string, signature = value.signature as string;
+  assert.ok(commandId.startsWith('roster:') && commandId.length <= 256 &&
+    commandId.trim() === commandId && !commandId.includes('\0'));
+  assert.ok(Buffer.byteLength(signature, 'utf8') <= 256 * 1024);
+  const submitted = record(JSON.parse(signature));
+  const request = record(submitted.request), metadata = record(submitted.metadata);
+  const command = record(metadata.command), configuration = record(metadata.configuration);
+  assert.equal(request.teamName, 'host-team:' + encodeURIComponent(handleId));
+  assert.equal(command.commandId, commandId);
+  assert.equal(command.idempotencyKey, commandId);
+  const payload = {
+    expectedRevision: configuration.expectedRevision,
+    members: submitted.members,
+    ...(configuration.savedSettings === undefined ? {} : { savedSettings: configuration.savedSettings }),
+    ...(submitted.intent === undefined ? {} : { memberSettingsRelaunch: submitted.intent }),
+  };
+  const hash = (text: string) => createHash('sha256').update(text).digest('hex');
+  const type = (item: unknown) => item === null ? 'null' : Array.isArray(item) ? 'array' : typeof item;
+  const settings = configuration.savedSettings;
+  const configured = settings && typeof settings === 'object' && !Array.isArray(settings)
+    ? settings as Record<string, unknown> : undefined;
+  const fields = ['runtimeSelectionVersion', 'cwd', 'displayName', 'description', 'color', 'prompt',
+    'providerId', 'providerBackendId', 'model', 'effort', 'fastMode', 'syncModelsWithLead',
+    'limitContext', 'skipPermissions', 'worktree', 'extraCliArgs', 'allowExperimentalLocalModels'];
+  const present = (source: Record<string, unknown> | undefined, key: string) =>
+    source && Object.hasOwn(source, key) ? type(source[key]) : 'absent';
+  const admitted = (source: Record<string, unknown> | undefined, key: string, values: string[]) =>
+    typeof source?.[key] === 'string' && values.includes(source[key] as string) ? source[key] : null;
+  const providers = ['anthropic', 'codex', 'gemini', 'opencode'];
+  const backends = ['auto', 'adapter', 'api', 'cli-sdk', 'codex-native', 'opencode-cli'];
+  const version = (source: Record<string, unknown> | undefined) =>
+    !source || !Object.hasOwn(source, 'runtimeSelectionVersion') ? 'absent'
+      : source.runtimeSelectionVersion === 1 ? 'exactly-1' : 'other-type-or-value';
+  const checked = replaceRosterSchema.safeParse({ commandId, ...payload });
+  const knownFields = new Set([...fields, 'commandId', 'expectedRevision', 'members', 'name',
+    'savedSettings', 'memberSettingsRelaunch', 'role', 'workflow', 'isolation', 'mcpPolicy',
+    'mode', 'scopes', 'user', 'project', 'local', 'serverNames', 'memberName', 'targetKind',
+    'expectedFingerprint', 'expectedTeamSettingsFingerprint', 'baseline']);
+  const knownCodes = new Set(['invalid_type', 'invalid_value', 'invalid_format', 'too_big',
+    'too_small', 'custom', 'unrecognized_keys', 'invalid_union', 'not_multiple_of',
+    'invalid_key', 'invalid_element', 'invalid_enum_value', 'invalid_literal', 'invalid_string']);
+  return {
+    commandId, signatureSha256: hash(signature), payloadSha256: hash(JSON.stringify(payload)),
+    expectedRevisionDigest: typeof payload.expectedRevision === 'string' &&
+      /^[a-f0-9]{64}$/.test(payload.expectedRevision) ? payload.expectedRevision : null,
+    expectedRevisionType: type(payload.expectedRevision),
+    memberCount: Array.isArray(submitted.members) ? submitted.members.length : null,
+    membersType: type(submitted.members), savedSettingsType: type(settings),
+    configuredFields: Object.fromEntries(fields.map(key => [key, present(configured, key)])),
+    requestFields: Object.fromEntries(fields.map(key => [key, present(request, key)])),
+    configuredProvider: admitted(configured, 'providerId', providers),
+    configuredBackend: admitted(configured, 'providerBackendId', backends),
+    requestProvider: admitted(request, 'providerId', providers),
+    requestBackend: admitted(request, 'providerBackendId', backends),
+    runtimeSelectionVersion: version(configured), requestRuntimeSelectionVersion: version(request),
+    rendererSourceSchemaCheck: checked.success ? { accepted: true } : {
+      accepted: false, truncated: checked.error.issues.length > 8,
+      issues: checked.error.issues.slice(0, 8).map(issue => ({
+        code: knownCodes.has(issue.code) ? issue.code : 'other-code',
+        path: issue.path.slice(0, 8).map(segment => typeof segment === 'string' && knownFields.has(segment)
+          ? segment : typeof segment === 'number' && Number.isInteger(segment) &&
+            segment >= 0 && segment < 256 ? segment : 'other-field'),
+        pathTruncated: issue.path.length > 8,
+      })),
+    },
+  };
+}
+
 /** Private React-layout-dependent TEST diagnosis only; never a workflow qualification. */
 export async function captureReadiness(
   cdp: UiCdpPort,
@@ -42,6 +124,7 @@ export async function captureReadiness(
     const snapshot = await Promise.race([
       cdp.evaluate(`(() => {
           const teamName=${JSON.stringify('host-team:' + encodeURIComponent(handleId))};
+          const captureSubmitted=${phase === 'original-submit-failed'};
           const prompt=document.querySelector('[role="dialog"] #dialog-prompt'),dialog=prompt?.closest('[role="dialog"]');
           if(!prompt||!dialog)return {unavailable:'original-launch-dialog-unavailable',now:Date.now()};
           const field=(value,key)=>value&&(typeof value==='object'||typeof value==='function')
@@ -98,10 +181,13 @@ export async function captureReadiness(
                 capturedTeamReadiness:proof?Object.fromEntries(['handleId','preparationId','launchId','rosterRevision','selectionSignature','expiresAt'].map(key=>[key,field(proof,key)])):null};
             })});
           };
+          const submitted=[];
           let hook=field(component,'memoizedState'),count=0;
           for(;hook&&count<1024;hook=field(hook,'next'),count++){
             const value=field(hook,'memoizedState'),current=field(value,'current');
             projectChecks(value,count,'state');projectChecks(current,count,'ref');
+            if(captureSubmitted&&current&&typeof current==='object'&&!Array.isArray(current)&&
+              Object.hasOwn(current,'commandId')&&Object.hasOwn(current,'signature'))submitted.push(current);
             if(typeof current!=='string'||current.length>65536)continue;
             try{const scope=JSON.parse(current);
               if(Array.isArray(scope)&&scope.length===7&&scope[0]===true&&scope[1]===teamName&&
@@ -109,12 +195,53 @@ export async function captureReadiness(
                 result.currentDraftSignatures.push({hookIndex:count,signature:current});
             }catch{}
           }
+          if(captureSubmitted){
+            const unavailable=reason=>{result.submittedSource={unavailable:reason};};
+            if(hook)unavailable('submitted-hook-traversal-truncated');
+            else if(!prompt.isConnected||!dialog.isConnected||prompt.closest('[role="dialog"]')!==dialog||
+              document.querySelector('[role="dialog"] #dialog-prompt')!==prompt||
+              field(field(root,'stateNode'),'current')!==currentRoot||!matches(component))
+              unavailable('submitted-form-detached');
+            else if(submitted.length!==1)unavailable(submitted.length?'submitted-ref-ambiguous':'submitted-ref-missing');
+            else{
+              const original=submitted[0],keys=Reflect.ownKeys(original);
+              const data=key=>Object.hasOwn(Object.getOwnPropertyDescriptor(original,key)??{},'value');
+              const commandId=field(original,'commandId'),signature=field(original,'signature');
+              if(keys.length>4||keys.some(key=>!['commandId','signature','intent','relaunch'].includes(key))||
+                !['commandId','signature','intent'].every(data)||keys.some(key=>!data(key))||
+                typeof commandId!=='string'||!commandId.startsWith('roster:')||commandId.length>256||
+                commandId.trim()!==commandId||commandId.includes('\\0')||typeof signature!=='string')
+                unavailable('submitted-ref-malformed');
+              else if(signature.length>262144||new TextEncoder().encode(signature).byteLength>262144)
+                unavailable('submitted-signature-limit');
+              else{
+                try{
+                  const source=JSON.parse(signature),request=field(source,'request'),metadata=field(source,'metadata');
+                  const command=field(metadata,'command');
+                  if(field(request,'teamName')!==teamName||field(command,'commandId')!==commandId||
+                    field(command,'idempotencyKey')!==commandId)unavailable('submitted-source-mismatch');
+                  else result.submittedSource={commandId,signature};
+                }catch{unavailable('submitted-ref-malformed');}
+              }
+            }
+          }
           return {...result,hookCount:count,...(hook?{unavailable:'hook-traversal-truncated'}:{})};
         })()`),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => reject(new Error('Readiness diagnostic timed out')), 3000);
       }),
     ]);
+    if (phase === 'original-submit-failed') {
+      const captured = record(snapshot);
+      const submitted = captured.submittedSource;
+      delete captured.submittedSource;
+      try {
+        captured.submittedIntent = submitted === undefined
+          ? { unavailable: 'submitted-diagnostic-unavailable' } : projectSubmittedRoster(submitted, handleId);
+      } catch {
+        captured.submittedIntent = { unavailable: 'submitted-projection-failed' };
+      }
+    }
     diagnostics.push({ phase, snapshot });
   } catch {
     diagnostics.push({ phase, unavailable: 'readiness-diagnostic-read-failed' });
@@ -266,6 +393,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   );
   try {
     await ui.click('[role="dialog"] button', 'submit original Launch team once', 'Launch team');
+    await ui.waitRead(`!document.querySelector('[role="dialog"] #dialog-prompt')`, 'original launch dialog closes', 60000);
   } catch (error) {
     await captureReadiness(
       cdp,
@@ -276,7 +404,6 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     );
     throw error;
   }
-  await ui.waitRead(`!document.querySelector('[role="dialog"] #dialog-prompt')`, 'original launch dialog closes', 60000);
   const state = await poll(ownerState, value => Array.isArray(value.runtimeCaptures) && value.runtimeCaptures.length === 1, 'one fresh Team capture');
   const captures = state.runtimeCaptures as unknown[];
   const capture = record(captures[0]);
