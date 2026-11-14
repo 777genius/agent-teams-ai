@@ -1,10 +1,14 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import { OpenCodeV2InstallAction } from '@features/opencode-runtime-installer/renderer';
-import { getRuntimeInstallLabel } from '@renderer/components/dashboard/runtimeInstallActionUi';
+import { isOpenCodeRuntimeUsable } from '@features/runtime-provider-management/renderer';
+import {
+  getRuntimeInstallLabel,
+  shouldShowOpenCodeInstallAction,
+} from '@renderer/components/dashboard/runtimeInstallActionUi';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { OpenCodeRuntimeStatus } from '@shared/types';
+import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
@@ -24,6 +28,75 @@ describe('V2 installation choice', () => {
       t
     );
     expect(label).toBe('cliStatus.runtimeInstall.install OpenCode V1');
+
+    const provider: CliProviderStatus = {
+      providerId: 'opencode',
+      displayName: 'OpenCode',
+      supported: true,
+      authenticated: true,
+      authMethod: 'managed',
+      verificationState: 'verified',
+      models: [],
+      canLoginFromUi: false,
+      capabilities: {
+        teamLaunch: true,
+        oneShot: true,
+        extensions: {
+          plugins: { status: 'unsupported', ownership: 'shared' },
+          mcp: { status: 'unsupported', ownership: 'shared' },
+          skills: { status: 'unsupported', ownership: 'shared' },
+          apiKeys: { status: 'unsupported', ownership: 'shared' },
+        },
+      },
+    };
+    const native: OpenCodeRuntimeStatus = {
+      installed: true,
+      source: 'captured-host',
+      state: 'ready',
+      nativeGeneration: 'v1',
+      sourceRevision: 'b'.repeat(64),
+    };
+    const missing: OpenCodeRuntimeStatus = {
+      ...native, v1Maintenance: { installed: false, source: 'missing', state: 'idle' },
+    };
+    expect(isOpenCodeRuntimeUsable(native)).toBe(true);
+    expect(isOpenCodeRuntimeUsable(missing)).toBe(true);
+    expect(shouldShowOpenCodeInstallAction(provider, false, native, false)).toBe(false);
+    expect(shouldShowOpenCodeInstallAction(provider, false, missing, false)).toBe(true);
+    expect(getRuntimeInstallLabel(missing, t)).toBe('cliStatus.runtimeInstall.install OpenCode V1');
+    expect(shouldShowOpenCodeInstallAction(provider, true, missing, false)).toBe(false);
+    expect(shouldShowOpenCodeInstallAction(provider, false, missing, true)).toBe(false);
+
+    const unknown: OpenCodeRuntimeStatus = {
+      installed: true,
+      source: 'captured-host',
+      state: 'ready',
+      sourceRevision: 'b'.repeat(64),
+      v1Maintenance: { installed: false, source: 'missing', state: 'idle' },
+    };
+    const unsupported: OpenCodeRuntimeStatus = { ...missing, version: '2.777.777 (TEST sentinel)' };
+    for (const refused of [unknown, unsupported, { ...missing, nativeGeneration: 'v2' as const }]) {
+      expect(isOpenCodeRuntimeUsable(refused)).toBe(false);
+      expect(getRuntimeInstallLabel(refused, t)).not.toBe('cliStatus.runtimeInstall.install OpenCode V1');
+    }
+    expect(shouldShowOpenCodeInstallAction(provider, false, unknown, false)).toBe(false);
+    expect(getRuntimeInstallLabel({ ...missing, state: 'checking' }, t))
+      .toBe('cliStatus.runtimeInstall.checking');
+    expect(getRuntimeInstallLabel({ ...missing, state: 'failed' }, t))
+      .toBe('cliStatus.runtimeInstall.retryInstall');
+    expect(isOpenCodeRuntimeUsable({ ...missing, state: 'failed' })).toBe(false);
+    const path: OpenCodeRuntimeStatus = {
+      ...native,
+      v1Maintenance: { installed: true, source: 'path', state: 'ready', version: '1.19.4' },
+    };
+    expect(shouldShowOpenCodeInstallAction(provider, false, path, false)).toBe(false);
+    expect(getRuntimeInstallLabel({
+      ...native,
+      source: 'path',
+      version: '1.19.4',
+      latestVersion: '1.19.5',
+      updateAvailable: true,
+    }, t)).toBe('cliStatus.runtimeInstall.update v1.19.4 → v1.19.5');
   });
   it('labels a failed first-time OpenCode installation as retry', () => {
     const t = ((key: string) => key) as Parameters<typeof getRuntimeInstallLabel>[1];

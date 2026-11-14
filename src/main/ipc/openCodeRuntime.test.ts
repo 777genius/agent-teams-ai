@@ -107,6 +107,24 @@ function sourceFixture() {
   selected.sources = sources;
   return { summary, sources, status, read };
 }
+function v1SourceFixture() {
+  const original = sourceFixture();
+  const summary: SourceSummary = {
+    sourceId: original.summary.sourceId,
+    revision: original.summary.revision,
+    profileId: 'TEST-v1-captured-profile',
+    configRevision: 'TEST-v1-captured-config',
+    sourceKind: 'captured',
+    nativeGeneration: 'v1',
+  };
+  const status: OpenCodeRuntimeStatus = {
+    installed: true, source: 'captured-host', state: 'ready',
+    nativeGeneration: 'v1', sourceRevision: summary.revision,
+  };
+  vi.mocked(original.sources.current).mockImplementation(async () => ({ ...summary }));
+  original.read.mockResolvedValue(status);
+  return { ...original, summary, status };
+}
 function expectNoSourceMutation(sources: CapturedRuntimeSources) {
   expect(sources.publish).not.toHaveBeenCalled();
   expect(sources.refreshConfiguration).not.toHaveBeenCalled();
@@ -172,6 +190,43 @@ it('unselected Host preserves installer status while selected native V1 requires
   selected.native = { readOpenCodeRuntimeStatus: async () => captured };
   await expect(f.invoke()).resolves.toEqual({ success: true, data: captured });
   expect(f.getStatus).toHaveBeenCalledTimes(1);
+
+  expect(f.getReadinessStatus).not.toHaveBeenCalled();
+  const s = v1SourceFixture();
+  expect(s.summary.configurationCurrent).toBeUndefined();
+  const cases: [OpenCodeRuntimeStatus, OpenCodeRuntimeStatus['v1Maintenance']][] = [
+    [
+      { installed: false, source: 'missing', state: 'idle', compatibleV2Version: '2.1.4' },
+      { installed: false, source: 'missing', state: 'idle' },
+    ],
+    [
+      { installed: true, source: 'path', state: 'ready', version: '1.19.4' },
+      { installed: true, source: 'path', state: 'ready', version: '1.19.4' },
+    ],
+  ];
+  for (const [stock, maintenance] of cases) {
+    f.getReadinessStatus.mockResolvedValueOnce(stock);
+    await expect(f.invoke()).resolves.toEqual({
+      success: true, data: { ...s.status, v1Maintenance: maintenance },
+    });
+  }
+  expect(s.read).toHaveBeenCalledTimes(2);
+  expect(s.sources.current).toHaveBeenCalledTimes(4);
+  expect(f.getReadinessStatus).toHaveBeenCalledTimes(2);
+  expect(f.getStatus).toHaveBeenCalledTimes(1);
+  expect(f.install).not.toHaveBeenCalled();
+  expectNoSourceMutation(s.sources);
+
+  selected.sources = undefined;
+  await expect(f.invoke()).resolves.toEqual({ success: true, data: s.status });
+  selected.sources = s.sources;
+  const published: OpenCodeRuntimeStatus = { ...s.status, source: 'path', version: '1.19.4' };
+  s.read.mockResolvedValueOnce(published);
+  await expect(f.invoke()).resolves.toEqual({ success: true, data: published });
+  expect(s.sources.current).toHaveBeenCalledTimes(4);
+  expect(f.getReadinessStatus).toHaveBeenCalledTimes(2);
+  expect(f.getStatus).toHaveBeenCalledTimes(1);
+  expectNoSourceMutation(s.sources);
 });
 
 it('failed or absent native runtime evidence never falls back to a global CLI', async () => {
@@ -186,6 +241,7 @@ it('failed or absent native runtime evidence never falls back to a global CLI', 
   };
   await expect(f.invoke()).resolves.toMatchObject({ success: false });
   expect(f.getStatus).not.toHaveBeenCalled();
+  expect(f.getReadinessStatus).not.toHaveBeenCalled();
 });
 
 it('native runtime status requires the original sender and rejects a changed context after the read', async () => {
@@ -217,6 +273,63 @@ it('the V1 native response is also discarded if the captured context changes whi
   };
   await expect(f.invoke()).resolves.toMatchObject({ success: false });
   expect(f.getStatus).not.toHaveBeenCalled();
+
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  current = true;
+  const s = v1SourceFixture();
+  const unqualified: OpenCodeRuntimeStatus[] = [
+    { installed: false, source: 'path', state: 'failed', error: 'TEST failed version' },
+    { installed: true, source: 'path', state: 'ready', version: '2.3.0' },
+    { installed: false, source: 'missing', state: 'idle', ignoredOverride: {
+      binaryPath: '/TEST/ignored', envName: 'TEST_OVERRIDE', version: null, reason: 'TEST invalid',
+    } },
+  ];
+  for (const stock of unqualified) {
+    f.getReadinessStatus.mockResolvedValueOnce(stock);
+    await expect(f.invoke()).resolves.toEqual({ success: true, data: s.status });
+  }
+  f.getReadinessStatus.mockRejectedValueOnce(new Error('TEST optional discovery unavailable'));
+  await expect(f.invoke()).resolves.toEqual({ success: true, data: s.status });
+  expect(s.sources.current).toHaveBeenCalledTimes(8);
+  expect(f.getReadinessStatus).toHaveBeenCalledTimes(4);
+  expectNoSourceMutation(s.sources);
+
+  const changed = v1SourceFixture();
+  f.getReadinessStatus.mockImplementationOnce(async () => {
+    changed.summary.configRevision = 'TEST-replaced-config';
+    return { installed: false, source: 'missing', state: 'idle' };
+  });
+  await expect(f.invoke()).resolves.toMatchObject({ success: false });
+  expect(changed.sources.current).toHaveBeenCalledTimes(2);
+  expectNoSourceMutation(changed.sources);
+
+  const changedAfterFailure = v1SourceFixture();
+  f.getReadinessStatus.mockImplementationOnce(async () => {
+    changedAfterFailure.summary.preferencesDigest = 'd'.repeat(64);
+    throw new Error('TEST optional failure after original source changed');
+  });
+  await expect(f.invoke()).resolves.toMatchObject({ success: false });
+  expect(changedAfterFailure.sources.current).toHaveBeenCalledTimes(2);
+  expectNoSourceMutation(changedAfterFailure.sources);
+
+  const foreground = v1SourceFixture();
+  f.getReadinessStatus.mockImplementationOnce(async () => {
+    current = false;
+    throw new Error('TEST optional failure after foreground changed');
+  });
+  await expect(f.invoke()).resolves.toMatchObject({ success: false });
+  expect(foreground.sources.current).toHaveBeenCalledTimes(2);
+  expectNoSourceMutation(foreground.sources);
+
+  current = true;
+  const mismatched = v1SourceFixture();
+  mismatched.summary.revision = 'd'.repeat(64);
+  await expect(f.invoke()).resolves.toMatchObject({ success: false });
+  expect(mismatched.sources.current).toHaveBeenCalledTimes(1);
+  expect(f.getReadinessStatus).toHaveBeenCalledTimes(7);
+  expect(f.getStatus).not.toHaveBeenCalled();
+  expect(f.install).not.toHaveBeenCalled();
+  expectNoSourceMutation(mismatched.sources);
 });
 
 it('adds only qualified CLI maintenance beside the original selected engine', async () => {
