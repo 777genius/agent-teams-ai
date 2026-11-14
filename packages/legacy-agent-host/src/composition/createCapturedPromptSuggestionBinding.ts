@@ -26,6 +26,8 @@ export interface CapturedPromptSuggestionNotice {
   readonly messageId: string;
   readonly operationRef: string;
   readonly inputId: string;
+  /** Native Codex turn, or the original Host operation for Claude's SDK push event. */
+  readonly completedTurnRef: string;
   readonly text: string;
 }
 
@@ -43,6 +45,10 @@ export function createCapturedPromptSuggestionBinding(input: {
   const { entry } = input;
   const binding = Object.freeze(normalizeBinding(entry.binding));
   const identity = digest(binding);
+  // Native SDK output can arrive before Runtime has persisted its terminal.
+  // Retain only one volatile candidate and retry on the existing event-drain callback.
+  let pending: CapturedPromptSuggestion | undefined;
+  let lastPublishedOperation: string | undefined;
   const current = () => input.isCurrent() &&
     digest(normalizeBinding(entry.binding)) === identity;
 
@@ -67,45 +73,59 @@ export function createCapturedPromptSuggestionBinding(input: {
     return { record, selected };
   }
 
+  function publishCandidate(candidate: CapturedPromptSuggestion): void {
+    if (
+      candidate.sessionRef !== entry.profile.sessionId ||
+      candidate.provider !== entry.profile.provider ||
+      !candidate.nativeSessionRef ||
+      !candidate.text.trim() ||
+      lastPublishedOperation === candidate.operationRef
+    ) return;
+    const found = locate(candidate);
+    if (!found) return;
+    const index = found.record.inputs.indexOf(found.selected);
+    if (found.record.inputs.slice(index + 1).some((row) =>
+      !['admitted', 'cancelled', 'rejected', 'not-sent'].includes(row.phase)
+    )) return;
+    // Provider result is known, but Runtime's result feed may not be settled yet.
+    if (found.selected.phase === 'claimed' || found.selected.phase === 'consumed') {
+      pending = Object.freeze({ ...candidate });
+      return;
+    }
+    if (found.selected.phase !== 'terminal' || found.selected.terminal !== 'succeeded') return;
+    if (!current()) return;
+    input.publish(Object.freeze({
+      provider: candidate.provider,
+      teamId: binding.teamId,
+      runId: binding.runId,
+      memberId: binding.memberId,
+      generation: binding.generation,
+      suggestionId: randomUUID(),
+      messageId: found.selected.intent.messageId,
+      operationRef: candidate.operationRef,
+      inputId: candidate.inputId,
+      completedTurnRef: candidate.nativeTurnRef ?? candidate.operationRef,
+      text: candidate.text,
+    }));
+    lastPublishedOperation = candidate.operationRef;
+    pending = undefined;
+  }
+
   return Object.freeze({
     eligible(original: Readonly<{ inputId: string; operationRef: string }>): boolean {
       try { return locate(original) !== null; } catch { return false; }
     },
     offer(candidate: CapturedPromptSuggestion): void {
-      try {
-        if (
-          candidate.sessionRef !== entry.profile.sessionId ||
-          candidate.provider !== entry.profile.provider ||
-          !candidate.nativeSessionRef ||
-          !candidate.text.trim()
-        ) return;
-        const found = locate(candidate);
-        if (!found || found.selected.phase !== 'terminal' ||
-            found.selected.terminal !== 'succeeded') return;
-
-        // Only a later *executed* turn supersedes; a never-executed canceled
-        // queue row must not become a false 'latest completed' source.
-        const index = found.record.inputs.indexOf(found.selected);
-        if (found.record.inputs.slice(index + 1).some((row) =>
-          !['admitted', 'cancelled', 'rejected', 'not-sent'].includes(row.phase)
-        )) return;
-
-        if (!current()) return;
-        input.publish(Object.freeze({
-          provider: candidate.provider,
-          teamId: binding.teamId,
-          runId: binding.runId,
-          memberId: binding.memberId,
-          generation: binding.generation,
-          suggestionId: randomUUID(),
-          messageId: found.selected.intent.messageId,
-          operationRef: candidate.operationRef,
-          inputId: candidate.inputId,
-          text: candidate.text,
-        }));
-      } catch {
-        // Auxiliary inference cannot alter native terminal, checkpoint or Team.
-      }
+      try { publishCandidate(candidate); }
+      catch { pending = undefined; /* Auxiliary output must never change a native terminal. */ }
+    },
+    /** One existing provider event-drain callback, never a new timer/poll. */
+    flushPending(): void {
+      const candidate = pending;
+      if (!candidate) return;
+      pending = undefined;
+      try { publishCandidate(candidate); }
+      catch { pending = undefined; }
     },
   });
 }
