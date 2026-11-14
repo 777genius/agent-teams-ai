@@ -357,12 +357,13 @@ jobs:
           selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
           "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 |
             tee "$RUNNER_TEMP/native-next-prompt-electron-ui.log"
-      - name: Independently check actual Electron proof and collect synthetic screenshots
+      - name: Independently check actual Electron proof and collect real screenshots
         shell: bash
         run: |
           set -euo pipefail
           node --input-type=module <<'JS'
           import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
           import { createHash } from 'node:crypto';
           import { copyFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
           import { join } from 'node:path';
@@ -391,7 +392,7 @@ jobs:
             copyFileSync(png, join(process.env.RUNNER_TEMP, 'native-next-prompt-' + index + '.png'));
           }
           writeFileSync(join(process.env.RUNNER_TEMP, 'native-next-prompt-electron-evidence.json'),
-            JSON.stringify({source:process.env.GITHUB_SHA, receipt:r}, null, 2));
+            JSON.stringify({source:execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), triggerSha:process.env.GITHUB_SHA, receipt:r}, null, 2));
           JS
       - name: Retain actual Electron screenshots, receipt and setup diagnostics
         if: always()
