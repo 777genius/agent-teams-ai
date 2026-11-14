@@ -345,6 +345,17 @@ if (process.argv.includes('--custody-teammate')) {
   await runCustodyApp();
 } else if (process.argv.includes('--custody-probe')) {
   await runCustodyProbe();
+} else if (process.argv.includes('--kill-owned-fixture')) {
+  assert.equal(process.platform, 'win32');
+  const index = process.argv.indexOf('--kill-owned-fixture');
+  const pidText = process.argv[index + 1];
+  const pid = Number(pidText);
+  const marker = process.argv[index + 2];
+  assert.ok(Number.isSafeInteger(pid) && pid > 0 && String(pid) === pidText,
+    'Fixture cleanup requires an original positive PID');
+  assert.match(marker, /^native-custody-[0-9a-f-]{36}$/,
+    'Fixture cleanup requires its original unique command-line marker');
+  killVerifiedOriginal(pid, marker);
 } else if (process.argv.includes('--teammate-fixture')) {
   await runTeammateFixture();
 } else {

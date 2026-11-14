@@ -1097,6 +1097,7 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
   const inspector = await CdpClient.connect(inspectorUrl);
   const nodeBinary = await realpath(process.execPath);
   const scriptPath = path.join(repoRoot, 'scripts/e2e/windows-teammate-console-native.mjs');
+  const fixtureMarker = 'native-custody-' + randomUUID();
   try {
     await inspector.send('Runtime.enable');
     // The native IPC/store can hydrate before React finishes rendering Teams.
@@ -1112,7 +1113,7 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
       '(async () => {',
       "  const req = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);",
       "  if (!req) throw new Error('Electron main module require unavailable');",
-      "  const { spawn } = req('node:child_process');",
+      "  const { spawn, spawnSync } = req('node:child_process');",
       "  const { BrowserWindow } = req('electron');",
       "  const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));",
       "  if (!win) throw new Error('Real Electron test BrowserWindow missing');",
@@ -1121,7 +1122,7 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
       '  const onMainBlur = () => { mainBlurEvents++; };',
       "  win.on('blur', onMainBlur);",
       '  const child = spawn(' + JSON.stringify(nodeBinary) + ', [' +
-        JSON.stringify(scriptPath) + ", '--teammate-fixture'], " +
+        JSON.stringify(scriptPath) + ", '--teammate-fixture', " + JSON.stringify(fixtureMarker) + "], " +
         "{ detached: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });",
       '  return await new Promise((resolve, reject) => {',
       '    let settled = false, ready = false, stderr = ""; const tools = [];',
@@ -1129,8 +1130,15 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
       '      if (settled) return; settled = true; clearTimeout(deadline);',
       "      win.off('blur', onMainBlur);",
       "      if (error && child.pid && child.exitCode === null && child.signalCode === null) {",
-      '        // Never tree-kill an unverified numeric PID: it may have been recycled.',
-      '        child.kill("SIGKILL");',
+      '        // Terminate only the original marker-bound fixture process tree.',
+      '        const result = spawnSync(' + JSON.stringify(nodeBinary) + ', [' +
+        JSON.stringify(scriptPath) + ", '--kill-owned-fixture', String(child.pid), " +
+        JSON.stringify(fixtureMarker) +
+        "], { windowsHide: true, timeout: 30000, encoding: 'utf8' });",
+      '        if (result.error || result.status !== 0) {',
+      '          child.kill("SIGKILL");',
+      '          error = new Error("Verified fixture cleanup failed: " + (error?.message || String(error)));',
+      '        }',
       '      }',
       '      if (error) reject(error); else resolve(value);',
       '    };',
