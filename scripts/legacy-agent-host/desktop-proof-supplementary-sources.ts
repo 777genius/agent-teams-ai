@@ -26,6 +26,18 @@ export const desktopProofProcessSources = [
 
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
 export const desktopProofSupplementarySources = [
+  'scripts/legacy-agent-host/desktop-emulated-selection-ui.ts',
+  'src/renderer/components/team/review/CodeMirrorDiffView.tsx',
+  'src/renderer/components/team/review/CodeMirrorDiffUtils.ts',
+  'test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx',
+  'src/features/agent-backend/main/adapters/output/projectTeamMessagesPage.ts',
+  'src/features/agent-backend/renderer/readHostMessagesPage.ts',
+  'src/renderer/store/team/teamMessagesCache.ts',
+  'src/renderer/store/team/teamMessagesProvenance.ts',
+  'src/shared/types/teamMessages.ts',
+  'packages/legacy-agent-host/src/runtime/runtimeConversation.ts',
+  'packages/legacy-agent-host/src/composition/readTeamConversation.ts',
+  'packages/legacy-agent-host/src/team/ownerMessageReads.ts',
   'packages/legacy-agent-host/src/process/qualifiedDarwinBuild.ts',
   'packages/legacy-agent-host/tests/registered-process-build-selection.test.ts',
   'scripts/legacy-agent-host/qualify-process-normal-sdk.ts',
@@ -150,7 +162,6 @@ export const desktopProofSupplementarySources = [
   'scripts/legacy-agent-host/desktop-proof-fixture.ts',
   'scripts/legacy-agent-host/desktop-proof-mode.ts',
   'scripts/legacy-agent-host/desktop-proof-sources.ts',
-  'scripts/legacy-agent-host/desktop-readback-fixture.ts',
   'scripts/legacy-agent-host/desktop-codex-resume-fixture.ts',
   'scripts/legacy-agent-host/desktop-codex-resume-fixture.test.ts',
   'packages/legacy-agent-host/src/team/teamCommandFingerprint.ts',

@@ -22,14 +22,19 @@ import {
 
 test('offline Desktop admission refuses inherited native selections before preparing a fixture', (t) => {
   const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith('LEGACY_DESKTOP_')));
+  const controlledKeys = ['LEGACY_PROCESS_COLD_UI_GO', 'LEGACY_M19_PROVIDER_UI_GO', 'LEGACY_M19_ORIGINAL_HOST_CRASH_GO'];
+  const controlledOriginal = Object.fromEntries(controlledKeys.filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]]));
   for (const key of Object.keys(original)) delete process.env[key];
+  for (const key of controlledKeys) delete process.env[key];
   t.after(() => {
     for (const key of Object.keys(process.env)) if (key.startsWith('LEGACY_DESKTOP_')) delete process.env[key];
+    for (const key of controlledKeys) delete process.env[key];
     Object.assign(process.env, original);
+    Object.assign(process.env, controlledOriginal);
   });
   Object.assign(process.env, { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
     LEGACY_DESKTOP_TEST_DISPLAY: ':97', LEGACY_DESKTOP_TEST_XAUTHORITY: '/TEST/Xauthority' });
-  for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-opencode-runtime-ui', 'review-ui', 'review-readback-ui']) {
+  for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-opencode-runtime-ui', 'emulated-selection-ui', 'review-ui', 'review-readback-ui']) {
     process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
     if (process.platform === 'darwin' || process.platform === 'linux' && process.arch === 'x64')
       assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
@@ -48,6 +53,27 @@ test('offline Desktop admission refuses inherited native selections before prepa
     assert.throws(() => assertDesktopProofEnvironment(true), new RegExp(`provider-emulation refuses ${key}`));
     delete process.env[key];
   }
+  process.env.LEGACY_DESKTOP_PROOF_MODE = 'process-cold-ui';
+  process.env.LEGACY_PROCESS_COLD_UI_GO = '1';
+  process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH = '/TEST-process-inputs/capture.json';
+  process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 = 'a'.repeat(64);
+  if (process.platform === 'linux' && process.arch === 'x64') {
+    assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
+    process.env.LEGACY_M19_PROVIDER_UI_GO = '1';
+    assert.throws(() => assertDesktopProofEnvironment(false));
+    delete process.env.LEGACY_M19_PROVIDER_UI_GO;
+    process.env.LEGACY_DESKTOP_CLAUDE_PATH = '/TEST-no-vendor';
+    assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_CLAUDE_PATH/);
+    delete process.env.LEGACY_DESKTOP_CLAUDE_PATH;
+  } else assert.throws(() => assertDesktopProofEnvironment(false));
+  process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 = 'invalid';
+  assert.throws(() => assertDesktopProofEnvironment(false), /only the original offline/);
+  process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 = 'a'.repeat(64);
+  process.env.LEGACY_DESKTOP_PROOF_MODE = 'team-ui';
+  assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_PROCESS_CAPTURE_PATH/);
+  delete process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH;
+  delete process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256;
+  delete process.env.LEGACY_PROCESS_COLD_UI_GO;
   process.env.LEGACY_DESKTOP_PROOF_MODE = 'review-readback-ui';
   process.env.LEGACY_DESKTOP_READBACK_ROOT = '/TEST/TEST-desktop-backend-abc123';
   process.env.LEGACY_DESKTOP_READBACK_RECEIPT_SHA256 = 'a'.repeat(64);

@@ -24,7 +24,8 @@ export const desktopRuntimePeerSources = [
 ] as const;
 
 /** TEST executables implement a finite native protocol; the original Host and D remain unchanged. */
-export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex') {
+export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection') {
+  assert.ok(variant === undefined || variant === 'selection' && provider === 'codex');
   const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true });
   const selectedSources = provider === 'claude' ? ['tools/owned-process-broker/fixtures/claudeProviderPeer.mjs'] : desktopRuntimePeerSources;
   const sources = await Promise.all(selectedSources.map(async source => {
@@ -51,6 +52,7 @@ await import(${JSON.stringify(pathToFileURL(sources[0]!.path).href)});
       TEST_EMULATED_DESKTOP_PROVIDER: '1', TEST_PEER_SCENARIO: 'desktop-ui-v1', TEST_PEER_PROVIDER: provider,
       TEST_PEER_ROLE: role, TEST_DESKTOP_PEER_ROOT: root, TEST_PEER_EFFECTS: join(root, 'effects.ndjson'),
       TEST_DESKTOP_PEER_WORKSPACE: join(fixture.root, 'workspace'),
+      ...(variant === 'selection' ? { TEST_DESKTOP_SELECTION: 'two-models-v1' } : {}),
       ...(provider !== 'claude' ? { TEST_PEER_HELPER_SHA256: sources[1]!.sha256 } : {}),
       ...(provider === 'opencode' ? { OPENCODE_CONFIG_CONTENT: JSON.stringify({ autoupdate: false, share: 'disabled',
         model: 'TEST-provider/TEST-model', small_model: 'TEST-provider/TEST-model', provider: { 'TEST-provider': {
@@ -123,7 +125,7 @@ await import(${JSON.stringify(pathToFileURL(sources[0]!.path).href)});
     await writeFile(join(fixture.root, 'ui-seed-receipt.json'), JSON.stringify(receipt, null, 2), { mode: 0o600, flag: 'wx' });
   } finally { lease.release(); }
   if (provider === 'claude') await seedDesktopLegacySchedule(fixture, { model, prompt: 'TEST_UI_STANDALONE_DONE' });
-  return { ...fixture, uiSeed, emulatedRuntime: { provider, sources, executable, peers, versionSentinel, savedModel,
+  return { ...fixture, uiSeed, emulatedRuntime: { provider, sources, executable, peers, versionSentinel, savedModel, variant,
     observedPeerPids: [] as number[], commandPrefix: `${fixture.node} ${executable.path} ` } };
 }
 
@@ -164,6 +166,7 @@ export async function verifyDesktopEmulatedRuntimeFixture(fixture: Awaited<Retur
   }
   const member = profile.runtime!.members[0]!;
   return { executable: selected.executable, sources: selected.sources, provider: selected.provider,
+    ...(selected.variant === 'selection' ? { selectionVariant: 'two-models-v1' } : {}),
     protocolRevision: member.provider === 'claude' ? 'sdk-0.3.305' : member.protocolRevision,
     ...(selected.versionSentinel ? { versionSentinelSha256: selected.versionSentinel.versionSha256 } : {}),
     runtimeConfigured: true, managementConfigured: true, vendorsAllowed: false };

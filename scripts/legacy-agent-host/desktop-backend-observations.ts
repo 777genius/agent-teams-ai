@@ -20,13 +20,22 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
   assert.ok(emulatedOnly === undefined || emulatedOnly === '1', 'explicit provider-emulation admission');
   if (emulatedOnly === '1') {
     const mode = process.env.LEGACY_DESKTOP_PROOF_MODE;
-    assert.ok(['team-ui', 'task-board-ui', 'emulated-management-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-opencode-runtime-ui', 'review-ui', 'review-readback-ui'].includes(mode ?? ''),
+    const controlled = mode === 'process-cold-ui' && process.env.LEGACY_PROCESS_COLD_UI_GO === '1' &&
+      /^\/(?:[^/]+\/)*TEST-[^/]+\/[^\0\r\n]+\.json$/u.test(process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH ?? '') &&
+      /^[a-f0-9]{64}$/u.test(process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 ?? '');
+    assert.ok(controlled || ['team-ui', 'task-board-ui', 'emulated-management-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-opencode-runtime-ui', 'emulated-selection-ui', 'review-ui', 'review-readback-ui'].includes(mode ?? ''),
       'provider-emulation admits only the original offline controls and exact pinned TEST provider modes');
+    if (controlled) {
+      assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
+      assert.equal(process.env.LEGACY_M19_PROVIDER_UI_GO, undefined);
+      assert.equal(process.env.LEGACY_M19_ORIGINAL_HOST_CRASH_GO, undefined);
+    }
     // Reject inherited native/scenario selectors before any fixture or model starts.
     const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|EMULATED_ONLY|PROOF_MODE|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
     for (const key of Object.keys(process.env))
       if (key.startsWith('LEGACY_DESKTOP_')) assert.ok(allowed.test(key) ||
-        mode === 'review-readback-ui' && /^LEGACY_DESKTOP_READBACK_(?:ROOT|RECEIPT_SHA256)$/u.test(key),
+        mode === 'review-readback-ui' && /^LEGACY_DESKTOP_READBACK_(?:ROOT|RECEIPT_SHA256)$/u.test(key) ||
+        controlled && /^LEGACY_DESKTOP_PROCESS_CAPTURE_(?:PATH|SHA256)$/u.test(key),
         `provider-emulation refuses ${key}`);
   }
   assert.ok(process.platform === 'darwin' ||

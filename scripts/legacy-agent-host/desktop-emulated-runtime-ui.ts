@@ -11,6 +11,7 @@ import { json, record, rows } from './desktop-resume-records.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { EDITED_SCHEDULE_LABEL, LEGACY_SCHEDULE_ID, LEGACY_SCHEDULE_LABEL } from './desktop-schedule-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
+import { runDesktopEmulatedSelectionUi } from './desktop-emulated-selection-ui.ts';
 import type { prepareDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 
@@ -23,6 +24,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   evidence: Row;
   assertOwnedRenderer(): void;
 }) {
+  if (options.fixture.emulatedRuntime.variant === 'selection') return runDesktopEmulatedSelectionUi(cdp, options);
   const { fixture } = options, steps: Row[] = [], commands: Row[] = [], provider = fixture.emulatedRuntime.provider;
   const proof: Row = { status: 'INCOMPLETE', provider, steps, commands,
     scope: 'Original Launch, Composer stream, permission/question controls, cost/Stats, schedules, renderer reload and Team Stop through original Host/D and finite TEST protocol peers',

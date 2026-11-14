@@ -18,6 +18,9 @@ assert.equal(process.env.TEST_PEER_SCENARIO, 'desktop-ui-v1');
 const provider = process.env.TEST_PEER_PROVIDER, role = process.env.TEST_PEER_ROLE;
 assert.ok(provider === 'codex' || provider === 'opencode');
 assert.ok(role === 'management' || role === 'runtime');
+const selection = process.env.TEST_DESKTOP_SELECTION;
+assert.ok(selection === undefined || selection === 'two-models-v1' && provider === 'codex');
+const codexModels = selection === undefined ? ['TEST-model'] : ['TEST-model', 'TEST-model-next'];
 const root = process.env.TEST_DESKTOP_PEER_ROOT;
 assert.ok(root); assert.equal(basename(root), `TEST-peer-${provider}-scope`);
 assert.equal(realpathSync(root), root);
@@ -241,11 +244,17 @@ async function receive(frame) {
     case 'account/read': result = { account: { type: 'chatgpt', email: 'TEST@example.invalid', planType: 'plus' }, requiresOpenaiAuth: true }; break;
     case 'account/rateLimits/read': result = { rateLimits: { primary: null, secondary: null, credits: null, planType: 'plus' } }; break;
     case 'config/read': result = { config: { model: 'TEST-model', model_provider: 'TEST-fixture', features: { apps: false } } }; break;
-    case 'model/list': result = { data: [{ id: 'TEST-model', model: 'TEST-model', displayName: 'TEST model', description: 'Finite TEST protocol peer',
-      hidden: false, isDefault: true, supportedReasoningEfforts: ['low', 'high'], defaultReasoningEffort: 'low',
-      inputModalities: ['text'], supportsPersonality: false }], nextCursor: null }; break;
+    case 'model/list': result = { data: codexModels.map((model, index) => ({ id: model, model,
+      displayName: index === 0 ? 'TEST model' : 'TEST next model', description: 'Finite TEST protocol peer',
+      hidden: false, isDefault: index === 0, supportedReasoningEfforts: ['low', 'high'], defaultReasoningEffort: 'low',
+      inputModalities: ['text'], supportsPersonality: false })), nextCursor: null }; break;
     case 'thread/start':
-      assert.equal(active, undefined); assert.equal(params.cwd, process.cwd()); assert.equal(params.model, 'TEST-model');
+      assert.equal(active, undefined); assert.equal(params.cwd, process.cwd()); assert.ok(codexModels.includes(params.model));
+      if (selection !== undefined) {
+        if (runtimeMcp) assert.ok(['low', 'high'].includes(options.model_reasoning_effort));
+        effect({ event: 'thread-selection', threadId, model: params.model,
+          effort: options.model_reasoning_effort ?? null, runtimeMcp });
+      }
       result = { thread: { id: threadId }, cwd: params.cwd, model: params.model, modelProvider: params.modelProvider ?? 'TEST-fixture',
         reasoningEffort: options.model_reasoning_effort ?? null, serviceTier: options.service_tier ?? null }; break;
     case 'mcpServerStatus/list':

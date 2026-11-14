@@ -65,7 +65,20 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
   const capture = row(JSON.parse(await readFile(capturePath, 'utf8')));
   assert.equal(capture.schemaVersion, 1);
   if (linux) assert.equal(capture.platform, 'linux-x64');
-  const node = await pinned(capture.node), hostPin = await pinned(capture.host), claude = await pinned(capture.claude);
+  const noProvider = capture.kind === 'TEST-controlled-process-no-provider-v1';
+  assert.ok(capture.kind === undefined || noProvider, 'one explicit controlled process capture kind');
+  if (noProvider) {
+    assert.equal(process.env.LEGACY_DESKTOP_EMULATED_ONLY, '1');
+    assert.equal(linux, true); assert.equal(candidate, undefined);
+    const keys = (value: unknown, expected: string[]) => assert.deepEqual(Object.keys(row(value)).sort(), expected.sort());
+    keys(capture, ['schemaVersion', 'kind', 'platform', 'node', 'host', 'corepack', 'processArtifact']);
+    keys(capture.node, ['path', 'sha256']); keys(capture.host, ['path', 'sha256', 'sourceSha256', 'distSha256']);
+    keys(capture.corepack, ['entry', 'package', 'library']);
+    for (const pin of Object.values(row(capture.corepack))) keys(pin, ['path', 'sha256']);
+    keys(capture.processArtifact, ['directory', 'manifestSha256']);
+    for (const key of ['sourceSha256', 'distSha256']) assert.match(text(row(capture.host)[key]), /^[a-f0-9]{64}$/);
+  } else assert.notEqual(process.env.LEGACY_DESKTOP_EMULATED_ONLY, '1', 'emulated lane requires its no-provider capture');
+  const node = await pinned(capture.node), hostPin = await pinned(capture.host), claude = noProvider ? undefined : await pinned(capture.claude);
   const corepack = row(capture.corepack);
   const packageEntry = await pinned(corepack.entry), packagePin = await pinned(corepack.package), library = await pinned(corepack.library);
   assert.equal(node.path, await realpath(process.execPath));
@@ -76,13 +89,13 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
   assert.equal(library.path, await realpath(join(dirname(pnpm), 'lib/corepack.cjs')));
   const packageJson = row(JSON.parse(await readFile(packagePin.path, 'utf8')));
   assert.equal(packageJson.name, 'corepack'); assert.equal(packageJson.version, '0.36.0');
-  assert.equal(claude.sha256, desktopClaudeSha256());
+  if (claude) assert.equal(claude.sha256, desktopClaudeSha256());
   const selection = row(capture.processArtifact);
   const artifact = { directory: text(selection.directory), manifestSha256: text(selection.manifestSha256) };
   if (candidate) {
     assert.equal(linux, true, 'bounded Linux packed process proof');
     assert.equal(node.path, candidate.nodeExecutable); assert.equal(node.sha256, candidate.nodeSha256);
-    assert.equal(hostPin.sha256, candidate.hostEntrySha256); assert.equal(claude.path, candidate.claudeExecutable);
+    assert.equal(hostPin.sha256, candidate.hostEntrySha256); assert.equal(claude!.path, candidate.claudeExecutable);
     assert.deepEqual(artifact, candidate.processCustody);
   }
   privatePath(artifact.directory);
@@ -95,15 +108,17 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
   if (!linux) assert.equal(artifactSource.sha256, 'a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5');
   assert.equal(await fileDigest(nativeSource), artifactSource.sha256);
   const fixture = await prepareProcessFixture(repo, { pnpmEntry: pnpm, processArtifact: artifact, controlledServicesOnly: true,
-    ...(candidate ? { candidateRuntime: candidate } : {}),
-    nativeClaude: { ...claude, modelUrl: 'http://127.0.0.1:9' } });
+    ...(noProvider ? { providerMode: 'none' as const } : {
+      ...(candidate ? { candidateRuntime: candidate } : {}),
+      nativeClaude: { ...claude!, modelUrl: 'http://127.0.0.1:9' } }) });
   assert.equal(fixture.node, node.path); assert.equal(fixture.hostEntry, hostPin.path);
   const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8')) as TeamHostProfile;
   assert.equal(profile.runtime, undefined);
+  if (noProvider) assert.equal(profile.management, undefined);
   assert.ok(profile.teams.every(team => team.members.every(member => member.delivery === undefined)));
   const rootScript = join(fixture.root, 'workspace/process-controlled-root.ts');
   await copyFile(join(import.meta.dirname, 'fixtures/process-controlled-root.ts'), rootScript);
-  const pins = [capturePin, node, hostPin, claude, packageEntry, packagePin, library, manifest, binary, artifactSource,
+  const pins = [capturePin, node, hostPin, ...(claude ? [claude] : []), packageEntry, packagePin, library, manifest, binary, artifactSource,
     { path: fixture.profilePath, sha256: fixture.pins.profileSha256 },
     { path: fixture.descriptorPath, sha256: fixture.pins.descriptorSha256 }];
   for (const path of [rootScript, join(fixture.root, 'workspace/process-foreground-service.ts'), join(fixture.root, 'process-ui-seed.json')])
@@ -119,6 +134,7 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
   assert.ok(native);
   const proof: Record<string, unknown> = { status: 'INCOMPLETE', scope: 'Controlled native kernel/canonical owner registration, real Host restart, existing UI original-ref Stop; no SDK session',
     sourcePins: pins, hostSourceSha256: sourceSha256, hostDistSha256: distSha256,
+    ...(noProvider ? { captureKind: capture.kind, providersConfigured: false, processArtifact: artifact } : {}),
     runtimeCustody: 'NOT_ALLOCATED', original911Unchanged: true };
   let child: ReturnType<typeof spawn> | undefined, hostA: ReturnType<typeof startHost> | undefined;
   let rootCapture: RegisteredProcessCapture | undefined, primaryCapture: RegisteredProcessCapture | undefined, neighborCapture: RegisteredProcessCapture | undefined;
