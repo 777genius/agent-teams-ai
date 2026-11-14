@@ -560,66 +560,105 @@ describe('ClaudeMultimodelBridgeService', () => {
   )(
     'restores $providerId launch from a full reply via $entrypoint',
     async ({ providerId, entrypoint }) => {
-      execCliMock.mockImplementation((_binaryPath, args) => {
-        const requestedId = args[args.indexOf('--provider') + 1] as CliProviderId;
-        const full = fullStatusFixture(requestedId);
-        return Promise.resolve(
-          statusReply(
-            requestedId,
-            args.includes('--summary')
-              ? {
-                  ...full,
-                  modelCatalog: null,
-                  ...(requestedId === 'opencode'
-                    ? { statusCheckOutcome: 'model_only', authenticated: false }
-                    : {}),
-                }
-              : full
-          )
-        );
+      const originalNodeEnv = process.env.NODE_ENV;
+      const originalGate = process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH;
+      const prefix = 'TEST_CURRENT_STOPPED_RUNTIME_STATUS ';
+      const diagnosticWrites: string[] = [];
+      const write = vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+        if (typeof chunk === 'string' && chunk.startsWith(prefix)) diagnosticWrites.push(chunk);
+        return true;
       });
-      const { ClaudeMultimodelBridgeService } =
-        await import('@main/services/runtime/ClaudeMultimodelBridgeService');
-      const service = new ClaudeMultimodelBridgeService();
-      let resolveReady!: (provider: CliProviderStatus) => void;
-      const ready = new Promise<CliProviderStatus>((resolve) => {
-        resolveReady = resolve;
-      });
-      const onUpdate = (provider: CliProviderStatus) => {
-        if (provider.providerId === providerId && provider.capabilities.teamLaunch)
-          resolveReady(provider);
-      };
-      let hydrated: CliProviderStatus;
-      if (entrypoint === 'project') {
-        hydrated = await service.getProviderStatus('/mock/runtime', providerId, undefined, {
-          projectPath: '/tmp/status-hydration-test-project',
+      try {
+        process.env.NODE_ENV = 'development';
+        if (providerId === 'anthropic') process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH = '1';
+        else delete process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH;
+        execCliMock.mockImplementation((_binaryPath, args) => {
+          const requestedId = args[args.indexOf('--provider') + 1] as CliProviderId;
+          const full = fullStatusFixture(requestedId);
+          return Promise.resolve(
+            statusReply(
+              requestedId,
+              args.includes('--summary')
+                ? {
+                    ...full,
+                    modelCatalog: null,
+                    ...(requestedId === 'opencode'
+                      ? { statusCheckOutcome: 'model_only', authenticated: false }
+                      : {}),
+                  }
+                : full
+            )
+          );
         });
-        expect(
-          execCliMock.mock.calls.every(
-            // The service resolves the project cwd before spawning.
-            (call) => call[2].cwd === path.resolve('/tmp/status-hydration-test-project')
-          )
-        ).toBe(true);
-      } else {
-        const initial =
-          entrypoint === 'aggregate'
-            ? (
-                await service.getProviderStatuses('/mock/runtime', (providers) =>
-                  providers.forEach(onUpdate)
-                )
-              ).find((provider) => provider.providerId === providerId)!
-            : await service.getProviderStatus('/mock/runtime', providerId, onUpdate);
-        expect(initial.capabilities.teamLaunch).toBe(false);
-        expect(initial.modelCatalog).toBeNull();
-        hydrated = await ready;
+        const { ClaudeMultimodelBridgeService } =
+          await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+        const service = new ClaudeMultimodelBridgeService();
+        let resolveReady!: (provider: CliProviderStatus) => void;
+        const ready = new Promise<CliProviderStatus>((resolve) => {
+          resolveReady = resolve;
+        });
+        const onUpdate = (provider: CliProviderStatus) => {
+          if (provider.providerId === providerId && provider.capabilities.teamLaunch)
+            resolveReady(provider);
+        };
+        let hydrated: CliProviderStatus;
+        if (entrypoint === 'project') {
+          hydrated = await service.getProviderStatus('/mock/runtime', providerId, undefined, {
+            projectPath: '/tmp/status-hydration-test-project',
+          });
+          expect(
+            execCliMock.mock.calls.every(
+              // The service resolves the project cwd before spawning.
+              (call) => call[2].cwd === path.resolve('/tmp/status-hydration-test-project')
+            )
+          ).toBe(true);
+        } else {
+          const initial =
+            entrypoint === 'aggregate'
+              ? (
+                  await service.getProviderStatuses('/mock/runtime', (providers) =>
+                    providers.forEach(onUpdate)
+                  )
+                ).find((provider) => provider.providerId === providerId)!
+              : await service.getProviderStatus('/mock/runtime', providerId, onUpdate);
+          expect(initial.capabilities.teamLaunch).toBe(false);
+          expect(initial.modelCatalog).toBeNull();
+          hydrated = await ready;
+        }
+        expect(hydrated).toMatchObject({
+          authenticated: true,
+          statusCheckOutcome: 'authoritative',
+          capabilities: { teamLaunch: true },
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: { providerId, status: 'ready' },
+        });
+        if (providerId === 'codex') {
+          expect(diagnosticWrites).toEqual([]);
+        } else {
+          const observations: Record<string, unknown>[] = diagnosticWrites.map((line) =>
+            JSON.parse(line.slice(prefix.length))
+          );
+          expect(observations.map((value) => value.sequence))
+            .toEqual(observations.map((_, index) => index + 1));
+          expect(observations.map((value) => Object.keys(value).sort())).toEqual(
+            observations.map(() => ['overflow', 'projectScoped', 'provider', 'sequence', 'summary'])
+          );
+          expect(observations.filter((value) => value.provider === 'anthropic')).toEqual([
+            { sequence: expect.any(Number), overflow: false, provider: 'anthropic',
+              summary: true, projectScoped: entrypoint === 'project' },
+            { sequence: expect.any(Number), overflow: false, provider: 'anthropic',
+              summary: false, projectScoped: entrypoint === 'project' },
+          ]);
+          expect(diagnosticWrites.every((line) => line.length <= 512 &&
+            !line.includes('/mock/') && !line.includes('/tmp/'))).toBe(true);
+        }
+      } finally {
+        write.mockRestore();
+        if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = originalNodeEnv;
+        if (originalGate === undefined) delete process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH;
+        else process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH = originalGate;
       }
-      expect(hydrated).toMatchObject({
-        authenticated: true,
-        statusCheckOutcome: 'authoritative',
-        capabilities: { teamLaunch: true },
-        modelCatalogRefreshState: 'ready',
-        modelCatalog: { providerId, status: 'ready' },
-      });
     }
   );
 
@@ -1349,41 +1388,67 @@ describe('ClaudeMultimodelBridgeService', () => {
   });
 
   it('coalesces concurrent project-scoped status reads across bridge consumers', async () => {
-    let resolveStatus!: (value: ReturnType<typeof statusReply>) => void;
-    execCliMock.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveStatus = resolve;
-        })
-    );
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalGate = process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH;
+    const prefix = 'TEST_CURRENT_STOPPED_RUNTIME_STATUS ';
+    const diagnosticWrites: string[] = [];
+    const write = vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      if (typeof chunk === 'string' && chunk.startsWith(prefix)) {
+        diagnosticWrites.push(chunk);
+        throw new Error('TEST diagnostic write unavailable');
+      }
+      return true;
+    });
+    try {
+      process.env.NODE_ENV = 'development';
+      process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH = '1';
+      let resolveStatus!: (value: ReturnType<typeof statusReply>) => void;
+      execCliMock.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveStatus = resolve;
+          })
+      );
 
-    const { ClaudeMultimodelBridgeService } =
-      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
-    const dashboardBridge = new ClaudeMultimodelBridgeService();
-    const provisioningBridge = new ClaudeMultimodelBridgeService();
-    const options = { projectPath: '/tmp/shared-opencode-project' };
+      const { ClaudeMultimodelBridgeService } =
+        await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+      const dashboardBridge = new ClaudeMultimodelBridgeService();
+      const provisioningBridge = new ClaudeMultimodelBridgeService();
+      const options = { projectPath: '/tmp/shared-opencode-project' };
 
-    const dashboardRead = dashboardBridge.getProviderStatus(
-      '/mock/agent_teams_orchestrator',
-      'opencode',
-      undefined,
-      options
-    );
-    const provisioningRead = provisioningBridge.getProviderStatus(
-      '/mock/agent_teams_orchestrator',
-      'opencode',
-      undefined,
-      options
-    );
-    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledOnce());
+      const dashboardRead = dashboardBridge.getProviderStatus(
+        '/mock/agent_teams_orchestrator',
+        'opencode',
+        undefined,
+        options
+      );
+      const provisioningRead = provisioningBridge.getProviderStatus(
+        '/mock/agent_teams_orchestrator',
+        'opencode',
+        undefined,
+        options
+      );
+      await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledOnce());
 
-    resolveStatus(statusReply('opencode', fullStatusFixture('opencode')));
+      resolveStatus(statusReply('opencode', fullStatusFixture('opencode')));
 
-    await expect(Promise.all([dashboardRead, provisioningRead])).resolves.toEqual([
-      expect.objectContaining({ providerId: 'opencode', authenticated: true }),
-      expect.objectContaining({ providerId: 'opencode', authenticated: true }),
-    ]);
-    expect(execCliMock).toHaveBeenCalledOnce();
+      await expect(Promise.all([dashboardRead, provisioningRead])).resolves.toEqual([
+        expect.objectContaining({ providerId: 'opencode', authenticated: true }),
+        expect.objectContaining({ providerId: 'opencode', authenticated: true }),
+      ]);
+      expect(execCliMock).toHaveBeenCalledOnce();
+      expect(diagnosticWrites).toEqual([
+        prefix + JSON.stringify({
+          sequence: 1, overflow: false, provider: 'opencode', summary: false, projectScoped: true,
+        }) + '\n',
+      ]);
+    } finally {
+      write.mockRestore();
+      if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = originalNodeEnv;
+      if (originalGate === undefined) delete process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH;
+      else process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH = originalGate;
+    }
   });
 
   it('reuses a just-completed authoritative OpenCode project status across bridge consumers', async () => {
