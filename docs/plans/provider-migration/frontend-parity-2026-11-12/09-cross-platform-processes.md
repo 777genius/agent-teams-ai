@@ -3921,3 +3921,114 @@ The fresh D002 consumer at `ebb3debaa381fa7cc34d346eb49a507423d0e453` passed fro
 In the one existing file, preimage `b64fe10746e044cae4982f4fbb24e265362da1ca`, annotate only that local variable as `NonNullable<typeof oldProfile.runtime>['members'][number]`. This is the actual unchanged original member union, not a cast or a new schema. Keep every subsequent original member/team/provider/executable assertion, capture compilation, native/session/launch joins, digest calculation and cleanup unchanged. The original provider equality still rejects a mismatched reconstructed provider before use; the annotation emits no runtime code. Do not substitute the static seed for the genuine compiled profile or add a test/native invocation.
 
 Root and an independent peer review the exact note and one-line inverse delta. Root commits/pushes with normal lease/readback and repeats the existing failed script type check. Existing Host test-type and focused case success remain separate evidence; no whole-app/native success follows from this fix.
+
+
+## 75. POSIX selected-image proof: original Darwin receipts and the remaining authority boundary
+
+### 75.1. Scope and conclusion
+
+This is an evidence and proof-boundary amendment to §§47/50/62, not authorization to change production, the native actor, its assertions or supported executable formats. The original review thread [PRRT_kwDORVTEtM622qol](https://github.com/777genius/agent-teams-ai/pull/1186#discussion_r4556997490) remains unresolved. Its concern is the already-published lower-trust pathname/in-place writer between verification and actual consumption of the selected executable. This amendment does not add a privileged attacker, task-memory mutation, arbitrary future dependency integrity or a new sandbox threat model.
+
+The complete original Darwin artifacts now distinguish three facts: the compiler-default x64 image-observation path refuses before user code; the ad-hoc Mach-O mutation cases continue with A markers; the interpreter-script negative control actually executes B. None can be substituted for another. In particular, A markers are not evidence that B executed, and they are not proof that the entire kernel-selected image equals the captured bytes. Both original fixture results remain INCOMPLETE under their unchanged oracle.
+
+Evidence manifest: `7bd7f8b68e8655f84cc68649b6c7e7c6a6f6807d` in `777genius/agent-teams-ai`. It preserves the closed original twenty observation rows, ZIP/member identities, source pins and explicit limits of the source inference. It adds no native execution or synthesized acceptance.
+
+### 75.2. Exact original artifacts, read without a replay
+
+All facts below come from ordinary run [43515484835](https://github.com/777genius/agent-teams-ai/actions/runs/43515484835), source `8f28b801f513187b84b17f8748745dc563b6e43a`, Node24.21.0. Both artifacts contain `opencode-v2-posix-exec.json`; the original C source SHA256 is `b6ecbe29bfbaa4542534244bb002de1828394cfcea676f27b44044745471fcdc`.
+
+| Original job | OS build in original receipt | Official artifact | ZIP bytes / SHA256 | Receipt bytes / SHA256 |
+| --- | --- | --- | --- | --- |
+| [132196281665 / Darwin x64](https://github.com/777genius/agent-teams-ai/actions/runs/43515484835/job/132196281665) | `24G830` | `14082626502` | 9628 / `389ac24acc6a4f55422caf1c19ae1a63f0f6b15aa396c25da541e947ff1436aa` | 14234 / `e9e5ae5663863c8f9b40a5df88bef243c385435e3ecc4de6712794173e813720` |
+| [132196281676 / Darwin ARM64](https://github.com/777genius/agent-teams-ai/actions/runs/43515484835/job/132196281676) | `24H232` | `14081930739` | 10237 / `4be87d4c33b8c128a645cc242e0a886b9a3593f77a655ac92c9114fac6be743d` | 14293 / `ec33655fb58fdfb1076fb30edc9f0061ca73312d53a7641c59431fa7a72c493c` |
+
+Official downloads were checked against these exact outer digests and sizes. Extraction inspected only bounded original JSON members, rejected absolute/parent paths and symlinks, and executed no member. Each receipt retains ten rows; every row confirms the original child reaped, original group absent and cleanup true. Both overall receipts retain `nativeFixtureQualified=false`, `productQualified=false`, `installedRuntimeQualified=false`, `customExecutableQualified=false`, `scriptQualified=false`, `status=INCOMPLETE`.
+
+| Original case | x64 observation | ARM64 observation | What is established |
+| --- | --- | --- | --- |
+| compiler-default plain | A markers, exit0 | A markers, exit0 | Original ordinary fixture executes with its original argv/resources. |
+| compiler-default suspended baseline | `kernel-image`, errno13, execErrno0, stopped before user code, no image observation/resume/markers; cleanup true | Image matched; A markers, exit0; flags `0x22020001` | The selected default x64 observation chain is unavailable/refusing in this actual run; the ARM result cannot qualify it. |
+| ad-hoc baseline | Image matched; A markers, exit0 | Same | This signed TEST variant passes its baseline only. |
+| ad-hoc rename / in-place before image check | Image mismatch, no resume/markers | Same | These controlled replacement cases were refused before fixture instructions. |
+| ad-hoc after-check / already-open writer | Mutation returns0; resumed; `LIB/BIN:A/MAIN:A`, exit0 | Same | The file write succeeded but the recorded payload remained A. Both rows are still INCOMPLETE under the unchanged no-marker-after-write assertion. |
+| script plain | `SCRIPT:A`, exit0 | Same | Original script semantics remain an existing compatibility requirement. |
+| script negative control | Interpreter image differs from script; intentional resume after mutation0; `SCRIPT:B`, exit0 | Same | Validating only the interpreter cannot validate the subsequently read selected script. The negative control deliberately continues past image mismatch; it is not evidence that a correct product script guard admitted B. |
+
+The ad-hoc process flags are `0x22000001` on both architectures. The current x64 baseline's zero flags are an unavailable observation, not proof that the compiler output is unsigned. The individual failing Security/proc call was not retained. Do not infer it from the aggregated EACCES.
+
+### 75.3. What the current source actually proves
+
+The original actor is `packages/legacy-agent-host/tests/fixtures/posix-exec-native.c`, blob `882c986d13920db54720b4672dd6cfc55e361aaf`; its existing caller is `packages/legacy-agent-host/tests/registered-process-executable.native.ts`, blob `e5ffada8250e2a65076b74419e539b842b5867d2`.
+
+The Darwin `original_image` function at205–229 joins the original direct child's audit token to proc path and dynamic SecCode, checks validity, compares a signing path, then obtains signing flags. Several distinct failures collapse to EACCES. At the later `kernel-image` stage the actor opens the returned pathname, obtains file identity and hashes that open file. Its receipt field `kernelSha256` names that existing observation; it is not a hash of the child's mapped private VM object. Retaining the original PID/birth/parent/group/audit token protects child identity, but it does not turn a reopened path into a retained capability for all mapped bytes.
+
+The current production `CapturedProcess.ts`, blob `7fc0b23faf93756f8dac159eec97292a6085c634`, still verifies the selected executable at119, verifies directories, then uses the original pathname spawn at122–128. Its hash/stat checks at270–287 do not hold an executable descriptor through kernel selection. `verifyRuntimeSourceCandidate.ts` (`b08299f6d342f12da8fff60ddaadf3f121c94bc3`) retains an FD while hashing at publication, then closes it; that does not become a launch capability. `nativeProcessProfile.ts` (`34daeaecc7fa6d9f809bb3c69e0b7acdcde7fd73`) binds path and SHA without requiring Mach-O, ELF or a signature. Existing `runtime-source-native-identity.test.ts` (`5bb419c418c07f1d8050e47afb1131a1903ec5e3`) includes executable shell wrappers. Preserve this contract.
+
+The actor's original distinction stays intact: successful ETXTBSY after-check write denial permits A; a successful mutation currently requires no library/payload marker and a terminating signal. No acceptance edit is authorized here. A future implementation cannot obtain a PASS merely by reclassifying the present A-marker rows.
+
+### 75.4. Primary source explains a Mach-O candidate, not a qualified replacement
+
+Inspected Apple source pins are XNU `f6217f891ac0bb64f3d375211650a4c1ff8ca1ea` and Security `db15acbe6a7f257a859ad9a3bb86097bfe0679d9`. These exact public sources are not established as byte-equivalent to either original runner's kernel/Security build. They supply a bounded mechanism to investigate, not OS qualification.
+
+- [Mach-O loader](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/mach_loader.c) (`a07d07363ab3120eb968d0c2e74c598af09ff235`,2163–2176) maps file-backed segments with private copying. [Vnode pager](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/osfmk/vm/bsd_vm.c) (`0a9f38a2257fdbb18d7dc5634c02f1fcc076bef7`,398–437) chooses delayed-copy semantics.
+- [VM object copying](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/osfmk/vm/vm_object.c) (`e2dd65e1fb875c550e3ad3965d01d69eaa39d5e8`,3627–3693), [clustered writes](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/vfs/vfs_cluster.c) (`806e747acd9d419b52607d776c7e7af2b7a1621b`,4352–4363) and [pageout](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/osfmk/vm/vm_pageout.c) (`cc456d0c391d5fa990ecc7859b310e89012dc310`,6115–6132,6348–6385) preserve old data for private copies before modifying backing pages. That mechanism is consistent with observed A continuation after an ordinary same-inode write. It does not by itself prove which complete bytes were selected across earlier concurrent loading/hash operations.
+- [Dynamic code validation](https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/Code.cpp) (`da3c6b0522167f8576c11454b30fb827fbf4245b`,181–242) joins dynamic state with static signing information. [Static validation](https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/StaticCode.cpp) (`be158f70e5c75d9c86728c291dd887e57b2199e4`,534–560,726–736) can reject missing CodeDirectory as unsigned. Therefore this chain is not established as a format/signature-neutral image witness. This source fact does not identify the original x64 failing subcall.
+- [Process flags](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/osfmk/kern/cs_blobs.h) (`9d36c1af4a00548fd47b1da6d95c0635326a6ff6`) show that the observed ad-hoc flags lack the individual CS_HARD, CS_KILL and CS_ENFORCEMENT bits. [Invalid-page handling](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_cs.c) (`c1c3929fb6505c3f1c74a4da1c565031ebc2949e`,249–317) distinguishes these actions. Do not turn those individual flags into a claim that global AMFI/pmap policy is disabled, or predict a later signal solely from successful SecCode validity.
+
+The useful candidate is an exact original **mapped-image** binding that permits verified A to continue despite a later file update. It still needs a public, available witness for the complete selected bytes, a proof spanning the load/check interval, and source/OS-bound stability of later page consumption. The present pathname hash and A markers supply none of those missing joins automatically. This is separate from the script problem below.
+
+### 75.5. The selected-script counterexample and the necessary authority
+
+The existing script control already uses the same writer and preservation requirements as §50. After the original child is stopped with its interpreter selected, the controller rewrites the selected script and resumes. The interpreter then reads the pathname and produces SCRIPT:B. No additional attacker ability or future dependency policy is needed for this counterexample.
+
+[Darwin exec source](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_exec.c) (`47420f9f8f620233f112e87a51ed8f576caa3546`,script handling603–737,2499–2507,6118–6138) switches to the interpreter and passes the ordinary script pathname. Its special set-ID handling is not an authorized workaround. [Linux exec.c v6.18](https://github.com/torvalds/linux/blob/v6.18/fs/exec.c) (`4298e7e08d5d78ea327c10e9e962780b3d976e1a`,1685–1725) releases the original script file's executable write denial on interpreter substitution before the exec trace event; [binfmt_script.c](https://github.com/torvalds/linux/blob/v6.18/fs/binfmt_script.c) (`637daf6e4d4520f21d0cbfee242337f97e06d882`) passes its filename to the interpreter. Neither native-image witness can silently stand for script-body integrity.
+
+For this already-observed case, another observational hash merely becomes another last check. If the same existing writer can change the original script after that check and before the relevant interpreter read, the later read is not bound to the checked bytes. Avoiding B while retaining arbitrary existing script behavior therefore needs one of two additional capabilities:
+
+1. Exclude that writer from the original selected path/inode for the relevant selected-script consumption, under an explicitly justified source/writer authority contract; or
+2. Bind those later reads to the original verified bytes through a separately qualified mechanism, while preserving the existing script's pathname/$0, argv/env/cwd, resource lookup and process custody.
+
+This states a necessary boundary for the current launch-only proposal, not a claim that every conceivable OS design is impossible. It neither authorizes chmod/ACL changes nor substitutes a copy or an interpreter-specific wrapper. Retaining an FD without byte stability is insufficient, as §50 already observed. No blanket script refusal is permitted.
+
+### 75.6. Alternatives examined and their precise remaining limits
+
+| Candidate | Source/evidence-backed limit | Decision or proof still required |
+| --- | --- | --- |
+| Original-path pre-user stop + reopened hash | Current actor can reject controlled pre-check replacements; the reopened file is not the complete mapped VM object, and a script is read later. | Exact mapped image/bytes and stability for native binaries; separate script-consumption authority. |
+| Existing dynamic SecCode chain | Individual x64 failure is collapsed; unsigned validation is not neutral; code-signing identity alone is not the requested general SHA/custody proof. | Available unsigned/custom-compatible image witness; no new CS flags, signing requirement or entitlement. |
+| Public process region/path information | [proc_info.c](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/proc_info.c), blob `c061a09289afe73572456395af70de2cd92b69fc`,1132–1163 exposes region vnode facts, while1379–1470 returns a path from the text vnode. A matching file-backed region/path is not on its own a full original-image hash. | Unambiguous original kernel image binding and stable bytes, not selection of any matching region. |
+| Reading the stopped task's VM | [task_read_for_pid](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_proc.c), blob `a08362b2e777ee607e226d869131efd5e164e526`,6074–6186 includes POSIX, MACF and taskgated checks. | A universally available own-child capability is not established. No permission/entitlement bypass or equivalent-memory claim. |
+| File data generation count around load/hash | [getattrlist contract](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/man/man2/getattrlist.2), blob `8429aa7b281b4b39966639e95e2ab99a25bfb9a9`,637–655 defines nonzero unchanged data generation but makes zero invalid and permits it for mapped files. | Actual filesystem support and a usable nonzero count across this mapping remain unproved. Zero, missing returned attribute or metadata timestamps cannot become success. Even a valid finite bracket does not govern a later script read. |
+| More specific HFS generation behavior | HFS `core/hfs_vnops.c` blob `cd5a56aa74f6dae8b8e2e6760e5bb0bf2d2d9fd3`,1158–1172 returns zero for a writable mapping. XNU `vm_map.c` blob `fb4fae0136e0c53233cf2deb3bd498d86ebf8d7c`,5230–5246 removes write protection from pager notification for private COW. | This narrower source does not identify/qualify the original runner volume's implementation or all supported custom locations. It is an unqualified native-only research lead, not the chosen product fix. |
+| Advisory lock, late hash/kill, immutable-instance naming alone | None excludes the already-permitted noncooperating in-place writer from the subsequent script read. An installer promise not to overwrite A covers that writer only. | An actual enforced or explicitly trusted writer boundary; no broad owner/GID inference. |
+| FD alias, copied executable, file lease or changed code-signing policy | §47/50 already record argv/provenance/resources/script counterexamples or excluded private authority. | These stay excluded. No fallback is authorized by this appendix. |
+
+This table does not make scripts unsupported and does not transfer a partial Mach-O proof to the whole product.
+
+### 75.7. The concrete owner decision before a different authority design
+
+Continue work on the independent product/CI items. No project-wide pause follows from this record.
+
+The unresolved policy decision is specifically whether the selected-source contract may change **who can still write the original selected executable/script, or how its bytes are consumed**, while retaining the existing frontend feature. This is narrower than approving a generic sandbox, refusing unsigned files, trusting an entire group, or changing the user's executable location without consent.
+
+Under the present §47 contract, the writer remains one already considered able to perform the selected pathname/in-place change. Marking a custom source trusted or assuming its updates cooperate would narrow that threat boundary; it cannot be presented as fixing the same arbitrary-writer race. Conversely, a new mechanism that freezes/rebinds the actual reads must prove the old execution semantics and needs its own authority/design approval. Neither choice is implied by source capture, a verified version, an original process handle, nor the existing immutable installer publication.
+
+Root/owner must select or authorize such a boundary before a future proposal relies on it. If no boundary change is authorized, keep the existing frontend compatibility and open §47 gap; do not claim a protected script launch from an interpreter-image check. Native Mach-O proof work may remain separately possible within existing constraints, but it cannot close script parity and cannot remove today's failed oracle by fiat.
+
+### 75.8. Requirements for any next bounded implementation proposal
+
+No production or TEST source change is authorized here. A later proposal must name exact current paths/preimages, its public API/authority, the original process object and cleanup, and the finite source formats/OS/filesystem facts it actually proves. It must address all of these joins before activation:
+
+- The exact original selected bytes are connected to the kernel's actual selected native image before any replacement instruction, including the original rename, same-inode, already-open writer and after-final-check schedules.
+- Original verified A continuation and execution of unverified B are distinguished through an actual binding proof. A few A markers or a path SHA cannot substitute for that proof. Existing zero-marker-after-write assertions remain unchanged until a separately reviewed proof and acceptance decision, not an incidental green test edit.
+- The selected script's later reads are covered by the expressly approved authority/compatibility boundary; no native-only PASS is promoted to script/custom/installed qualification.
+- Original argv0/$0, arguments, environment, cwd, executable-relative resource behavior, selected provenance, physical child/birth/group and cleanup remain intact. No numeric PID adoption, copied-location fallback, extra owner/journal, code-signing policy, entitlement or unsupported-format shortcut.
+- Qualification uses only a subsequently reviewed extension of the existing native lane and its existing budgets. This record authorizes no rerun, new matrix, timeout increase, background experiment or ignored failure.
+
+The exact x64 Security/proc subfailure and generation-count availability can be investigated only if they serve that concrete proposal. A generic extra diagnostic does not itself solve script read authority or establish mapped-image equality.
+
+### 75.9. Publication and review
+
+The only deliverables in this cut are this appendix and the immutable original-evidence manifest. The current C actor, caller, production launcher, source profiles, permission policy and every native qualification flag stay unchanged. Root is the sole publisher; verify the full prior P09 prefix before appending.
+
+Independent review must check the twenty original rows and distinctions above, the selected-script source path, the conditional Mach-O inference and the exact narrow owner decision. A source-only review is not native qualification. §47 and its review thread remain open, with a concrete proof/authority requirement instead of an unsupported race-free claim.
