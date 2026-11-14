@@ -349,6 +349,56 @@ test('original Main source, exact approval and whole-command commitment survive 
     ...expected, anchorCommandId: historical.commandId, original: probes.readPreparation(historical.commandId),
   }), { code: 'held' });
   assert.deepEqual(store.read(historical.commandId), old);
+  const compiledTargets = [
+    { workspace: f.project, providerId },
+    { workspace: second, providerId: otherPolicies[0]!.providerId },
+  ];
+  const projectOnly = structuredClone(origin);
+  for (const workspace of projectOnly.workspaces)
+    workspace.global = { notConsulted: 'project-precedence' };
+  const originalRecord = store.read(input.commandId);
+  for (const candidate of [projectOnly, { ...origin, approval: { notConsulted: 'no-private-target' as const } }]) {
+    assert.throws(() => captureReadinessPreparation({ origin: candidate, remainingMs: 90000 },
+      { ...expected, targets: compiledTargets, original }), { code: 'held' },
+    'an existing commitment cannot acquire either unconsulted arm');
+    assert.deepEqual(store.read(input.commandId), originalRecord);
+  }
+  const newSelection = { ...selection, preparationId: 'TEST-new-preparation' };
+  projectOnly.commandId = newSelection.preparationId;
+  projectOnly.selectionDigest = managementDigest(newSelection);
+  const fresh = { ...expected, selection: newSelection, commandId: projectOnly.commandId,
+    anchorCommandId: 'TEST-new-first-probe', original: { present: false } };
+  assert.throws(() => captureReadinessPreparation({ origin: projectOnly, remainingMs: 90000 }, fresh), { code: 'held' });
+  assert.throws(() => captureReadinessPreparation({ origin: projectOnly, remainingMs: 90000 },
+    { ...fresh, targets: compiledTargets.slice(0, 1) }), { code: 'held' }, 'a group cannot hide another workspace');
+  assert.throws(() => captureReadinessPreparation({ origin: projectOnly, remainingMs: 90000 },
+    { ...fresh, targets: [...compiledTargets, { workspace: second, providerId: 'missing-provider' }] }),
+  { code: 'held' }, 'every compiled provider must be covered before an unconsulted arm is accepted');
+  const projectOnlyPrepared = captureReadinessPreparation({ origin: projectOnly, remainingMs: 90000 },
+    { ...fresh, targets: compiledTargets });
+  assert.equal(projectOnlyPrepared.anchor.originDigest, managementDigest(projectOnly));
+  assert.deepEqual(store.read(input.commandId), originalRecord, 'source validation does not rewrite or admit a probe');
+
+  const dependency = fixture(t), dependencyConfig = join(dependency.project, 'opencode.json');
+  const publicPolicy = { providerId, baseUrl: 'https://api.example.test/v1', preset: 'custom' as const, hasConfiguredApiKey: false };
+  dependency.write(dependencyConfig, { provider: { [providerId]: { npm: '@ai-sdk/openai-compatible',
+    options: { baseURL: publicPolicy.baseUrl } } } });
+  const unusedGlobal = join(dependency.home, '.config', 'opencode', 'opencode.json');
+  mkdirSync(dirname(unusedGlobal), { recursive: true });
+  writeFileSync(unusedGlobal, Buffer.alloc(1024 * 1024 + 1));
+  writeFileSync(join(dependency.root, 'unused-approvals.json'), Buffer.alloc(131073));
+  const dependencyOrigin: LocalModelReadinessOrigin = { ...projectOnly,
+    workspaces: [{ path: dependency.project, project: scope(dependency.project, false, [publicPolicy]),
+      global: { notConsulted: 'project-precedence' } }], approval: { notConsulted: 'no-private-target' },
+  };
+  const independent = captureOpenCodeReadinessOrigin(dependencyOrigin, { cwd: dependency.project }, providerId, () => true);
+  assert.equal(independent.policy?.baseUrl, publicPolicy.baseUrl);
+  assert.equal(independent.privateNetworkApproved, false, 'unconsulted approval is never approval');
+  const uncovered = structuredClone(dependencyOrigin);
+  uncovered.workspaces[0]!.project.providers = [];
+  assert.throws(() => captureOpenCodeReadinessOrigin(uncovered, { cwd: dependency.project }, providerId, () => true), { code: 'held' });
+  dependency.write(dependencyConfig, { provider: {} });
+  assert.equal(independent.isCurrent(), false, 'the consulted project identity remains mandatory');
   const profile: OpenCodeManagementProfile = { ...f.input, provider: 'opencode', profileId: 'TEST-profile',
     accountBinding: 'TEST-account', configRevision: 'TEST-revision', executable: { path: process.execPath, sha256: 'a'.repeat(64) },
     endpoint: 'http://127.0.0.1:12345', timeoutMs: 1000 };
@@ -358,11 +408,14 @@ test('original Main source, exact approval and whole-command commitment survive 
     ...scope, selectedPath: null, invalid: true as const, selectorFailure: 'config-conflict' as const, providers: [],
   });
   const globalRefusal = structuredClone(subset);
-  globalRefusal.workspaces[0]!.global = refuse(globalRefusal.workspaces[0]!.global);
+  const originalGlobal = globalRefusal.workspaces[0]!.global;
+  assert.ok('sources' in originalGlobal);
+  globalRefusal.workspaces[0]!.global = refuse(originalGlobal);
   assert.equal(captureOpenCodeReadinessOrigin(globalRefusal, profile, providerId, () => true).invalid,
     false, 'a clean project provider keeps original precedence over a global selector refusal');
   const unavailable = structuredClone(globalRefusal);
   unavailable.workspaces[0]!.project = refuse(unavailable.workspaces[0]!.project);
+  assert.ok('approved' in unavailable.approval);
   unavailable.approval.approved = [];
   const unknown = captureOpenCodeReadinessOrigin(unavailable, profile, providerId, () => true);
   assert.equal(unknown.invalid, true);
@@ -372,6 +425,9 @@ test('original Main source, exact approval and whole-command commitment survive 
     ordinaryAdmissions++;
     return { timeoutMs: 1000, run: async () => { ordinaryRuns++; return true; }, close: async () => true };
   }, coordination: () => { throw new Error('refused selector cannot authorize a challenge'); } };
+  assert.throws(() => createOpenCodeLocalModelReadiness(profile, probeInput, () => true, unused,
+    { ...subset, approval: { notConsulted: 'no-private-target' } }), { code: 'held' },
+  'an unconsulted approval cannot authorize the source-declared native private URL');
   assert.throws(() => createOpenCodeLocalModelReadiness(profile, probeInput, () => true, unused, unavailable),
     { code: 'held' }, 'an unknown ID cannot hide the captured native private URL');
   assert.throws(() => createOpenCodeLocalModelReadiness(profile, { ...probeInput, providerId: 'ollama' },

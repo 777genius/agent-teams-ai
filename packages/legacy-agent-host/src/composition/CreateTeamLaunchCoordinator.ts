@@ -64,6 +64,8 @@ export class CreateTeamLaunchCoordinator {
       commandId: input.preparationId, selection: input, anchorCommandId, original, admittedAt,
       workspaces: captured.selections.filter(row => row.selection.profile.provider === 'opencode')
         .map(row => row.selection.profile.cwd),
+      targets: captured.selections.filter(row => row.selection.profile.provider === 'opencode')
+        .map(row => ({ workspace: row.selection.profile.cwd, providerId: row.selection.providerId })),
     }) : undefined;
     const groups = new Map<string, ProviderModelProbeSnapshot | null>();
     let advanced = false;

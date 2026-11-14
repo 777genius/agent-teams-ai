@@ -14,6 +14,7 @@ import {
   readOpenCodeConfigTarget,
   resolveConfiguredProviderPreset,
 } from '@features/runtime-provider-management/main';
+import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { getNodeValue, parseTree } from 'jsonc-parser';
 
 import { projectBackendResult } from '../adapters/output/projectBackendResult';
@@ -170,6 +171,7 @@ function providers(raw: string | null): { invalid: boolean; providers: Scope['pr
 export async function captureLocalModelReadinessOrigin(options: {
   kind: 'create' | 'team'; owner: BackendOwnerBinding; contextId: string; commandId: string;
   selection: unknown; workspaces: readonly string[]; current(): void; budget: LocalModelReadinessContext;
+  targets: readonly { workspace: string; providerId: string | null }[];
   home?: string; environment?: NodeJS.ProcessEnv;
   readApprovals?: ReturnType<JsonLocalProviderPrivateNetworkApprovalStore['capture']>;
 }): Promise<LocalModelReadinessOrigin> {
@@ -180,8 +182,13 @@ export async function captureLocalModelReadinessOrigin(options: {
     ownerDigest: readinessOriginDigest(options.owner), contextId: options.contextId,
     commandId: options.commandId, selectionDigest: readinessOriginDigest(options.selection) };
   const requested = [...new Set(options.workspaces)];
+  const targets = options.targets.map(row => ({ ...row }));
   if (!requested.length || requested.length > 256 ||
-      requested.some(path => !isAbsolute(path) || /[\0\r\n]/u.test(path))) return held();
+      requested.some(path => !isAbsolute(path) || /[\0\r\n]/u.test(path)) ||
+      !targets.length || targets.length > 256 || targets.some(row => !requested.includes(row.workspace)) ||
+      requested.some(path => !targets.some(row => row.workspace === path))) return held();
+  const targetsKnown = targets.every(row => row.providerId !== null &&
+    /^[a-z0-9][a-z0-9._-]{0,63}$/u.test(row.providerId));
   let invalidated = false;
   const current = () => {
     if (invalidated) return held();
@@ -191,16 +198,18 @@ export async function captureLocalModelReadinessOrigin(options: {
   const read = (path: string, root: string, maximum = 1024 * 1024) =>
     captureReadinessSource(path, root, maximum, current);
   current();
-  const home = await fs.realpath(homeInput); current();
+  let globalHome: string | undefined;
   const scope = async (kind: 'global' | 'project', workspace: string): Promise<Scope> => {
-    const root = kind === 'global' ? home : workspace;
-    const captured = new Map<string, Awaited<ReturnType<typeof read>>>();
     current();
+    const root = kind === 'global' ? (globalHome ??= await fs.realpath(homeInput)) : workspace;
+    current();
+    const captured = new Map<string, Awaited<ReturnType<typeof read>>>();
     let selected: Awaited<ReturnType<typeof readOpenCodeConfigTarget>> | undefined;
     let selectorFailure: 'config-conflict' | 'config-invalid' | 'project-required' | undefined;
     try {
       selected = await readOpenCodeConfigTarget({
-        scope: kind, projectPath: workspace, homePath: home, getEnvironment: () => environment,
+        scope: kind, projectPath: workspace, homePath: kind === 'global' ? root : homeInput,
+        getEnvironment: () => environment,
         captureRead: { current, read: async path => {
           const value = await read(path, root);
           if (value.raw === null) return held();
@@ -216,7 +225,7 @@ export async function captureLocalModelReadinessOrigin(options: {
     }
     current();
     const paths = kind === 'global'
-      ? OPENCODE_GLOBAL_CONFIG_FILENAMES.map(name => join(home, '.config', 'opencode', name))
+      ? OPENCODE_GLOBAL_CONFIG_FILENAMES.map(name => join(root, '.config', 'opencode', name))
       : OPENCODE_PROJECT_CONFIG_CANDIDATES.map(name => join(workspace, name));
     const sources: ReadinessSourceReference[] = [];
     for (const path of paths) {
@@ -242,25 +251,44 @@ export async function captureLocalModelReadinessOrigin(options: {
     const workspace = await fs.realpath(original); current();
     if (workspace !== original) return held();
     const project = await scope('project', workspace);
-    global ??= await scope('global', workspace);
-    workspaces.push({ path: workspace, project, global });
+    let selectedGlobal: LocalModelReadinessOrigin['workspaces'][number]['global'];
+    if (targetsKnown && !project.invalid && targets.filter(row => row.workspace === workspace)
+      .every(target => project.providers.some(row => row.providerId === target.providerId))) {
+      selectedGlobal = { notConsulted: 'project-precedence' };
+    } else {
+      global ??= await scope('global', workspace);
+      selectedGlobal = global;
+    }
+    workspaces.push({ path: workspace, project, global: selectedGlobal });
   }
-  if (workspaces.reduce((count, row) => count + row.project.providers.length + row.global.providers.length, 0) > 256)
+  if (workspaces.reduce((count, row) => count + row.project.providers.length +
+    ('notConsulted' in row.global ? 0 : row.global.providers.length), 0) > 256)
     return held();
-  const tuples = workspaces.flatMap(row => [row.project, row.global].flatMap(selected => {
+  const policies = targetsKnown ? targets.flatMap(target => {
+    const workspace = workspaces.find(row => row.path === target.workspace)!;
+    const project = workspace.project;
+    const selected = !project.invalid && project.providers.some(row => row.providerId === target.providerId)
+      ? project : 'notConsulted' in workspace.global ? undefined : workspace.global;
+    const provider = selected?.providers.find(row => row.providerId === target.providerId);
+    return selected?.selectedPath && provider ? [{ configPath: selected.selectedPath, provider }] : [];
+  }) : workspaces.flatMap(row => [row.project, ...('notConsulted' in row.global ? [] : [row.global])].flatMap(selected => {
     const configPath = selected.selectedPath;
-    return configPath === null ? [] : selected.providers
-      .filter(provider => isPrivateNetworkRuntimeLocalProviderUrl(provider.baseUrl))
-      .map(provider => ({ configPath, providerId: provider.providerId, baseUrl: provider.baseUrl }));
+    return configPath === null ? [] : selected.providers.map(provider => ({ configPath, provider }));
   }));
-  const approval = await readApprovals(tuples, async (path, maximum) =>
-    read(resolve(path), dirname(resolve(path)), maximum));
+  const tuples = policies.filter(row => isPrivateNetworkRuntimeLocalProviderUrl(row.provider.baseUrl))
+    .map(({ configPath, provider }) => ({ configPath, providerId: provider.providerId, baseUrl: provider.baseUrl }));
+  const approval: LocalModelReadinessOrigin['approval'] = targetsKnown && !tuples.length
+    ? { notConsulted: 'no-private-target' }
+    : await readApprovals(tuples, async (path, maximum) =>
+      read(resolve(path), dirname(resolve(path)), maximum));
   current();
   const result: LocalModelReadinessOrigin = { ...identity, workspaces, approval };
   if (Buffer.byteLength(JSON.stringify(result)) > 256 * 1024) return held();
-  for (const source of [...new Map(workspaces.flatMap(row => [...row.project.sources, ...row.global.sources])
-    .map(source => [source.path, source])).values(), approval.source]) {
-    const actual = await read(source.path, source.root, source.path === approval.source.path ? 131072 : 1024 * 1024);
+  const approvalSource = 'notConsulted' in approval ? undefined : approval.source;
+  for (const source of [...new Map(workspaces.flatMap(row => [...row.project.sources,
+    ...('notConsulted' in row.global ? [] : row.global.sources)])
+    .map(source => [source.path, source])).values(), ...(approvalSource ? [approvalSource] : [])]) {
+    const actual = await read(source.path, source.root, source.path === approvalSource?.path ? 131072 : 1024 * 1024);
     if (readinessOriginDigest(actual.source) !== readinessOriginDigest(source)) return held();
   }
   current();
@@ -304,7 +332,9 @@ export function capturedCreateReadiness(router: BackendOwnerRouter, reference: B
       }))].filter(row => row.providerId === 'opencode');
       original = { digest: fingerprint, promise: captureLocalModelReadinessOrigin({
         kind: 'create', owner, contextId: selection.draft.contextId, commandId: selection.preparationId,
-        ...inputs, selection, workspaces: settings.map(row => row.cwd), current, budget,
+        ...inputs, selection, workspaces: settings.map(row => row.cwd),
+        targets: settings.map(row => ({ workspace: row.cwd,
+          providerId: parseOpenCodeQualifiedModelRef(row.model)?.sourceId ?? null })), current, budget,
       }) };
     }
     const origin = await original.promise;
@@ -371,6 +401,8 @@ export async function requestWithLocalModelReadiness(
   const origin = await captureLocalModelReadinessOrigin({
     ...inputs, kind: 'team', owner, contextId: definition.contextId, commandId: command.commandId,
     selection: { handleId: handle.handleId, scope: definition.scope, payload }, workspaces: [workspace], current, budget: preparation,
+    targets: [{ workspace, providerId: parseOpenCodeQualifiedModelRef(
+      typeof payload.model === 'string' ? payload.model : null)?.sourceId ?? null }],
   });
   current();
   return router.request(handle, { ...command,
