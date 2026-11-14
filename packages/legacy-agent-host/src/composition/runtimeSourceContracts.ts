@@ -6,6 +6,7 @@ import { openCodeManagedPreferencesSchema } from './openCodeManagedPreferences.j
 export { openCodeManagedPreferencesSchema, openCodeManagedPreferencesDigest } from './openCodeManagedPreferences.js';
 export type { OpenCodeManagedPreferences } from './openCodeManagedPreferences.js';
 import { runtimeSourceRefusalSchema } from '../management/runtimeSourceVerification.js';
+import { runtimeDigest } from '../runtime/identity.js';
 export { runtimeSourceRefusalSchema };
 export type { RuntimeSourceRefusal } from '../management/runtimeSourceVerification.js';
 import type { RuntimeMemberProfile } from './runtimeProfile.js';
@@ -72,6 +73,13 @@ export const runtimeSourceCandidateSchema = z
   })
   .strict();
 export type RuntimeSourceCandidate = z.infer<typeof runtimeSourceCandidateSchema>;
+
+/** Private read projection only; source publication and retained identity bytes stay unchanged. */
+export function runtimeSourceNativeExecutableDigest(value: RuntimeSourceCandidate['executable']): string {
+  const selected = executable.parse(value);
+  return runtimeDigest({ path: selected.path, sha256: selected.sha256 });
+}
+
 /** Installer selection without access to the Host's private execution paths. */
 export const runtimeSourceNativeSelectionSchema = z
   .object({
@@ -96,6 +104,8 @@ export const runtimeSourceSummarySchema = z
     sourceKind: z.enum(['captured', 'bundled', 'app-managed', 'path', 'override']),
     nativeGeneration: z.enum(['v1', 'v2']).optional(),
     cliVersion: id.optional(),
+    /** Codex native executable identity for the original Main resolver join; never a public status field. */
+    nativeExecutableDigest: hash.optional(),
     engineVersion: id.optional(),
     /** Read-only freshness check; no source paths, contents or credentials leave the Host. */
     configurationCurrent: z.boolean().optional(),

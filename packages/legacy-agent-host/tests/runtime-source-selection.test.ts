@@ -8,6 +8,9 @@ import { test } from 'node:test';
 import { acquireProfileWriterLease } from '../dist/adapters/profile/ProfileWriterLease.js';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { RuntimeSourceIndex } from '../dist/composition/RuntimeSourceIndex.js';
+import { runtimeSourceNativeExecutableDigest, runtimeSourceSummarySchema } from '../dist/composition/runtimeSourceContracts.js';
+import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
+import { providerManagementProfileSchema } from '../dist/management/profile.js';
 import {
   captureRuntimeSource,
   compileRuntimeCapture,
@@ -23,7 +26,7 @@ import type {
 import type { TeamRosterConfiguration } from '../dist/team/rosterContracts.js';
 import type { TestContext } from 'node:test';
 
-function fixture() {
+function fixture(provider: 'claude' | 'codex' = 'claude') {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-runtime-source-')));
   mkdirSync(join(root, '.claude'), { mode: 0o700 });
   const bytes = '#!/bin/sh\nprintf TEST-source-fixture\n';
@@ -38,6 +41,7 @@ function fixture() {
     HOME: root,
     PATH: '/usr/bin',
     TEST_AUTH_VALUE: 'TEST-do-not-persist-secret',
+    ...(provider === 'codex' ? { CODEX_HOME: root } : {}),
   };
   const scope = {
     projectId: 'TEST-host-project',
@@ -61,23 +65,24 @@ function fixture() {
       hostEntrySha256: 'b'.repeat(64),
     },
     management: [
-      {
-        provider: 'claude',
-        sdkRevision: '0.3.305',
+      providerManagementProfileSchema.parse({
+        provider,
+        ...(provider === 'claude' ? { sdkRevision: '0.3.305' as const } : {}),
         profileId: 'TEST-management',
         configRevision: 'TEST-config',
-        configNamespace: 'native-default',
+        ...(provider === 'claude' ? { configNamespace: 'native-default' as const } : {}),
         accountBinding: 'TEST-account',
         cwd: root,
         environment,
         executable: original,
         timeoutMs: 1000,
-      },
+        ...(provider === 'codex' ? { protocolRevision: '0.162.0' as const } : {}),
+      }),
     ],
     runtime: {
       members: [
-        {
-          provider: 'claude',
+        runtimeMemberProfileSchema.parse({
+          provider,
           teamId: 'TEST-team',
           memberId: 'lead',
           principalId: 'TEST-agent',
@@ -89,8 +94,10 @@ function fixture() {
           cwd: root,
           environment,
           executable: original,
-          nativeTools: ['Read'],
-          autoAllowedTools: ['Read'],
+          ...(provider === 'claude' ? { nativeTools: ['Read'], autoAllowedTools: ['Read'] } : {
+            protocolRevision: '0.162.0' as const,
+            nativeOptions: { approvalPolicy: 'never' as const, sandbox: 'read-only' as const },
+          }),
           limits: {
             queuedInputs: 8,
             inputBytes: 4096,
@@ -99,7 +106,7 @@ function fixture() {
             pendingInteractions: 8,
             timeoutMs: 1000,
           },
-        },
+        }),
       ],
     },
     teams: [
@@ -117,7 +124,7 @@ function fixture() {
     ownerRevision: profile.owner.revision,
     contextId: 'TEST-desktop-context',
     projectPath: root,
-    runtimeId: 'claude',
+    runtimeId: provider,
     profileId: 'TEST-management',
     configRevision: 'TEST-config',
     teamScopes: [
@@ -143,16 +150,26 @@ function fixture() {
   };
 }
 
-function leased(t: TestContext) {
-  const f = fixture();
+function leased(t: TestContext, provider: 'claude' | 'codex' = 'claude') {
+  const f = fixture(provider);
   let lease = acquireProfileWriterLease(f.root);
+  let nativeChecks = 0;
   t.after(() => {
     lease.release();
     rmSync(f.root, { recursive: true, force: true });
   });
   const open = () => {
     const captured = lease;
-    return new RuntimeSourceIndex(f.profile, () => captured.assertCurrent());
+    return new RuntimeSourceIndex(f.profile, () => captured.assertCurrent(), provider === 'codex' ? {
+      createNativeCheck: (_seed, candidate, current) => {
+        const version = candidate.nativeCli?.version;
+        assert.ok(version);
+        return {
+          run: async () => { assert.ok(current()); nativeChecks++; return { nativeVersion: version }; },
+          close: async () => true,
+        };
+      },
+    } : {});
   };
   let index = open();
   return {
@@ -160,6 +177,7 @@ function leased(t: TestContext) {
     get index() {
       return index;
     },
+    get nativeChecks() { return nativeChecks; },
     restart() {
       lease.release();
       lease = acquireProfileWriterLease(f.root);
@@ -177,6 +195,7 @@ test('publication pins new captures while seed and retained captures replay unch
   f.grant.teamScopes = [firstScope, otherScope, firstScope];
   const equivalent = { ...f.grant, teamScopes: [otherScope, firstScope] };
   const initial = f.index.current({ grant: f.grant });
+  assert.equal(initial.nativeExecutableDigest, undefined, 'the identity projection is Codex-only');
   const seed = captureRuntimeSource(f.profile, f.team, 'TEST-seed', 'TEST-roster', f.roster, {
     deferMcp: true,
   });
@@ -252,6 +271,69 @@ test('publication pins new captures while seed and retained captures replay unch
   rmSync(join(f.root, 'runtime-sources', 'index.json'));
   assert.throws(() => f.index.current({ grant: f.grant }), { code: 'held' });
   assert.throws(() => f.restart(), { code: 'held' }, 'missing published index cannot fall back to the seed after restart');
+
+  const codex = leased(t, 'codex'), profileBytes = JSON.stringify(codex.profile);
+  const captured = codex.index.current({ grant: codex.grant });
+  assert.equal(captured.cliVersion, undefined, 'an initial protocol label is not a measured CLI version');
+  assert.equal(captured.nativeExecutableDigest, runtimeSourceNativeExecutableDigest(codex.original));
+  assert.equal(runtimeSourceNativeExecutableDigest({ sha256: codex.original.sha256, path: codex.original.path }),
+    captured.nativeExecutableDigest, 'the executable digest has one canonical property order');
+  assert.notEqual(runtimeSourceNativeExecutableDigest({ ...codex.original, sha256: 'f'.repeat(64) }),
+    captured.nativeExecutableDigest, 'the same pathname with different bytes is a different executable');
+  assert.throws(() => runtimeSourceNativeExecutableDigest({ path: 'relative', sha256: codex.original.sha256 }));
+  assert.equal(runtimeSourceSummarySchema.safeParse({ ...captured, nativeExecutableDigest: 'invalid' }).success, false);
+  const seedCapture = captureRuntimeSource(codex.profile, codex.team, 'TEST-codex-seed', 'TEST-roster', codex.roster,
+    { deferMcp: true });
+  const seedCaptureBytes = JSON.stringify(seedCapture);
+  const original = await codex.index.publish({ grant: codex.grant, commandId: 'TEST-codex-A',
+    expectedRevision: captured.revision, candidate: { sourceKind: 'captured', executable: codex.original,
+      nativeCli: { executable: codex.original, version: '0.162.0' } } }, () => {});
+  assert.equal(original.phase, 'published');
+  const oldCapture = captureRuntimeSource(codex.profile, codex.team, 'TEST-codex-retained', 'TEST-roster', codex.roster,
+    { deferMcp: true, sources: codex.index });
+  const oldCaptureBytes = JSON.stringify(oldCapture);
+  const store = new FileManagementCommandStore(codex.root);
+  const receiptBytes = JSON.stringify(store.read(original.commandId));
+  const recordBytes = JSON.stringify(JSON.parse(readFileSync(join(codex.root, 'runtime-sources', 'index.json'), 'utf8')).records[0]);
+  const version = process.platform === 'darwin' && process.arch === 'arm64' ? '0.169.0' : '0.162.0';
+  const replacementInput = { grant: codex.grant, commandId: 'TEST-codex-B', expectedRevision: original.selection!.revision,
+    nativeSelection: { sourceKind: 'app-managed', nativeCli: { executable: codex.replacement, version } } };
+  const replacement = await codex.index.publish(replacementInput, selected => {
+    assert.ok(selected.provider === 'codex');
+    assert.equal(selected.protocolRevision, version, 'metadata follows the exact verified native version');
+  });
+  assert.equal(replacement.phase, 'published');
+  assert.equal(replacement.selection?.cliVersion, version);
+  assert.equal(replacement.selection?.nativeExecutableDigest, runtimeSourceNativeExecutableDigest(codex.replacement));
+  const newCapture = captureRuntimeSource(codex.profile, codex.team, 'TEST-codex-new', 'TEST-roster', codex.roster,
+    { deferMcp: true, sources: codex.index });
+  const indexBytes = readFileSync(join(codex.root, 'runtime-sources', 'index.json'), 'utf8');
+  codex.restart();
+  const oldProfile = compileRuntimeCapture(codex.profile, codex.team, oldCapture, 'model-preflight', codex.index).profiles[0]!;
+  const newProfile = compileRuntimeCapture(codex.profile, codex.team, newCapture, 'model-preflight', codex.index).profiles[0]!;
+  assert.ok(oldProfile.provider === 'codex' && newProfile.provider === 'codex');
+  assert.equal(oldProfile.protocolRevision, '0.162.0');
+  assert.equal(newProfile.protocolRevision, version, 'fresh members follow B without relabelling retained A');
+  assert.deepEqual(oldProfile.executable, codex.original);
+  assert.deepEqual(newProfile.executable, codex.replacement);
+  const retained = codex.index.retainedManagementProfiles();
+  const oldManagement = retained.find(row => row.profileId === original.selection!.profileId);
+  const newManagement = retained.find(row => row.profileId === replacement.selection!.profileId);
+  assert.ok(oldManagement?.provider === 'codex' && newManagement?.provider === 'codex');
+  assert.equal(oldManagement.protocolRevision, '0.162.0');
+  assert.equal(newManagement.protocolRevision, version);
+  assert.deepEqual(await codex.index.publish(replacementInput, () => assert.fail('same original publication cannot re-admit')), replacement);
+  assert.equal(codex.nativeChecks, 2, 'cold/current/replay never allocate another native verifier');
+  assert.equal(readFileSync(join(codex.root, 'runtime-sources', 'index.json'), 'utf8'), indexBytes);
+  assert.equal(JSON.stringify(JSON.parse(indexBytes).records[0]), recordBytes);
+  assert.equal(JSON.stringify(store.read(original.commandId)), receiptBytes);
+  assert.equal(JSON.stringify(codex.profile), profileBytes);
+  assert.equal(JSON.stringify(seedCapture), seedCaptureBytes);
+  assert.equal(JSON.stringify(oldCapture), oldCaptureBytes);
+  for (const bytes of [indexBytes, receiptBytes, JSON.stringify(store.read(replacement.commandId)),
+    profileBytes, seedCaptureBytes, oldCaptureBytes, JSON.stringify(newCapture)])
+    assert.equal(bytes.includes('nativeExecutableDigest'), false, 'the private projection never rewrites stored or captured identity');
+  await codex.index.close();
 });
 
 test('cold source history isolates an unavailable seed without falling through its selected project scope', async (t) => {

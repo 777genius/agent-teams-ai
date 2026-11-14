@@ -108,7 +108,7 @@ const codex = common
       })
       .transform((value) => captureCodexConfiguredMcpCatalog(value))
       .optional(),
-    protocolRevision: z.literal('0.162.0'),
+    protocolRevision: z.enum(['0.162.0', '0.169.0']),
     // D passes this budget into pinned CodexAppServerClient.maxTextBytes (1 MiB ceiling).
     limits: common.shape.limits
       .extend({ outputBytes: z.number().int().min(1).max(1_048_576) })
