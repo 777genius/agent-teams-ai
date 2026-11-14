@@ -2653,3 +2653,122 @@ After independent source review, root performs the ordinary coherent Host/ledger
 This is plan-only until root publishes the reviewed appendix and authorizes the four-source cut. Root is the only publisher. Preserve the already-queued ordinary R30 baseline run; do not update an active head or rerun an old failure merely to obtain faster feedback.
 
 The source-level claim is limited to eliminating one repeated canonical acquisition for the final synchronous provider authority pair while retaining its original checks. The actual cause of the recorded namespace time, the amount attributable to this pair, Ready latency, and terminal completion remain unqualified until original R30 detail and the ordinary post-change native gate are read with their real platform/source/pin identities. Do not compare unlike lanes as a causal timing result. If the native gate still fails, retain its original input/receipt/cleanup and investigate that evidence without relaxing waits, permissions, unknown ownership or timeouts.
+
+## Review 33 — group the original synchronous provider guard after the writer prelude
+
+### R33.1. Original post-R32 evidence
+
+The original source-host jobs at head `6d7449224b47924028b43a153cb249c2982a1b51`,
+run `43548415982`, still fail the existing terminal assertion. Their receipt
+bytes and hashes were read from the completed original logs and independently
+verified, without replaying a model request.
+
+| Job / platform | Host sampled us | Controller-lock sampled us | Directory sampled us | Tree sampled us | Requests / cleanup |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 132305016744 / Windows x64 | 147469869 | 50497434 | 19930152 | 17657528 | 4 / true |
+| 132305016769 / Windows ARM64 | 179073169 | 52150593 | 14036346 | 23298602 | 4 / false |
+| 132305016820 / Darwin x64 | 218034488 | 89193225 | 13336502 | 20641410 | 0 / true |
+
+Original receipt blobs are respectively `bc00b76b9d495e1292eda903c18b2966e89cecaf`,
+`5dfb6baac323072a698c66e28d2b5b769b3816d5`, and
+`a5b110ce2d4e4618c92603eac5ff5309161be9bb`.
+The independently retained wrapper file has SHA-256
+`f19ca9fdab4c5f36f099c14d2a81baee357691363c8d6996e80d9cb346e00419`
+and 237680 bytes; it also retains the separate parent packaged failures.
+These are the original whole-host sampled-stack partitions including cleanup,
+not isolated function self-time or an input-only benchmark. The evidence does
+not attribute all latency to a lock, prove cleanup on ARM64, or qualify native
+performance. The original 90-second input and 120-second bootstrap limits remain.
+
+### R33.2. Bounded source change and guard order
+
+Keep R32's private provider admission/control pair. Its caller still performs
+the original coordinator guard in separate synchronous Team fences before that
+pair. A finite private callback can keep those existing checks within one
+already-held Team fence. No predicate, source scan or state read is cached.
+
+1. Pass an optional private `beforeTeamAuthority(entry)` callback from the
+   coordinator through the existing member factory to the captured provider
+   authority. It repeats only the original writer and captured-Team availability
+   prelude, in that order, before touching any new Team lock. The old full
+   coordinator/current callback still runs unchanged inside the grouped call;
+   those two prelude checks therefore occur again. This is an explicit added
+   check, not a claim that physical read counts are unchanged.
+2. Add an optional synchronous fourth callback to the existing private
+   `TeamOwner.authorizeRuntimeAccess` / `TeamDeliveryAuthority.runtimeAccess`
+   composition methods. Accept it only for the literal `'provider'`; reject a
+   supplied callback on `'read'` or `'control'` before doing their work.
+   No Host method, DTO, permission or public runtime action gains a field.
+3. On the provider branch, enter the same original `store.fenced`, invoke that
+   callback, then run the unchanged `memberAuthorized(binding,'admit') &&
+   runtimeAccess(principal,binding,'control')` pair. The callback executes the
+   original full coordinator/current guard followed by the exact original Team
+   object, binding, delivery, profile, configuration and principal comparisons.
+   Use the originally captured Team owner for the outer grouping; mutable entry
+   state cannot select a different outer authority namespace.
+4. Preserve short circuit and error identity. A callback exception propagates
+   verbatim through the original `finally`; it is not converted into a false
+   authorization result. Missing optional composition port keeps the old guard
+   order and old separate-call behavior for existing controlled consumers.
+5. Keep every existing `TeamOwnerStore.fenced` validation, including validation
+   before nested depth reuse. Keep controller acquisition/publication/release,
+   per-await checks, source/account predicates, runtime reads and all original
+   allocation and lifetime boundaries. The grouped callback is synchronous and
+   ends before the original Runtime lookup or any await. No lock, token, boolean
+   permission or state snapshot survives it. Do not use
+   `withLaunchAuthority('read')`: that adds unrelated recovery/state work.
+
+This changes repeated acquisition around a cohesive existing guard. It does not
+change the controller dependency, namespace traversal, resource custody,
+permissions, request counters, cleanup conclusions or native timeouts.
+
+### R33.3. Exact existing paths and connected-source composition
+
+| Existing path | Inspected repair / qualification preimage | Native preimage |
+| --- | --- | --- |
+| `packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts` | `da96d4667c7139e75d6990d6376b1980d0c9508c` | `ad6d518e15f4d9ad7100cbea42e8707b00588e49` |
+| `packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts` | `53f4c270f1634a65f8eb465f11b7e2e59242ee22` | `966c5c6e758be51cde700073f6035bd5a4056d00` |
+| `packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts` | `bccb77ceb951a0fada6c1637211d2171926b561b` | `bccb77ceb951a0fada6c1637211d2171926b561b` |
+| `packages/legacy-agent-host/src/team/TeamOwner.ts` | `42345e89da5ad5533c39d7f258a67e531207da3c` | `42345e89da5ad5533c39d7f258a67e531207da3c` |
+| `packages/legacy-agent-host/src/team/TeamDeliveryAuthority.ts` | `857e9673a2f9d7f5a4cb9841b6adde81d108d42c` | `857e9673a2f9d7f5a4cb9841b6adde81d108d42c` |
+| `packages/legacy-agent-host/tests/member-provider-authority.test.ts` | `e0cd4db39c3b201de59613585e94347448bb7516` | `e0cd4db39c3b201de59613585e94347448bb7516` |
+
+These six files are the entire source/test scope. There are no new files.
+Coordinator/factory/TeamOwner also participate in the already approved B2 and
+live-membership work. This appendix is a plan, not permission to overwrite those
+pending deltas: root must freeze their final connected blobs and record exact
+post-composition preimages plus the small R33-only diff before source GO. Preserve
+the native Windows-launch fields and the 800-line/frozen-file limits. No source
+file cap or public contract is widened.
+
+### R33.4. Existing focused regression and execution
+
+Extend the existing real-store case in `member-provider-authority.test.ts`;
+retain both existing test names, their original assertions and the R32 final-pair
+proof. Use the original lock-token observation to check that the new full guard
+and final pair see one still-held token, that it is absent after return/refusal,
+and that a later independent call obtains fresh authority. A synthetic token
+observation proves grouping only, not native latency.
+
+Within that same case retain complete-request/current-generation, revocation,
+foreign-principal, allocation/lifetime and cleanup assertions. Check the new
+prelude refusal happens before any Team lock/read, the original inner callback
+exception is preserved, and a supplied callback cannot enter read/control.
+No production counter, permissions stub, new suite or native benchmark is needed.
+
+Root serially runs the coherent Host build/test types and the existing authority
+and fence cases, then source-size and diff guards. Ordinary exact-head native
+and packaged jobs remain the performance and behavior acceptance gate. Keep
+their original inputs, model/HTTP arithmetic, deadlines, output assertions and
+cleanup requirements. A continued failure requires analysis of its new original
+receipt; this plan grants no rerun or timeout increase.
+
+### R33.5. Review and publication
+
+Design review identified and incorporated the three requirements above:
+unchanged callback exceptions, explicit rejection outside provider, and the
+additional writer/availability prelude. Independent review of this exact
+appendix precedes publication; independent review of exact frozen connected
+source precedes delivery. Root commits and immediately pushes each reviewed
+plan/source change with expected-head and readback checks. Active PR heads wait
+for their current CI; no merge to main, activation or release is part of this cut.
