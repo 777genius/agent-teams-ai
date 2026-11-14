@@ -619,7 +619,8 @@ test('Team probe read rejects completed evidence after physical config-directory
     const configuration = captureOpenCodeV2Configuration(management, { providerId, modelId }, () => true);
     const deferred = configuration.selectedFile; assert.ok(deferred);
     const request = { commandId: 'TEST-file-' + mode, profileId: management.profileId,
-      configRevision: management.configRevision, providerId, modelId, context: runtimeDigest({ mode }) };
+      configRevision: management.configRevision, providerId,
+      modelId: mode === 'initial' ? providerId + '/' + modelId : modelId, context: runtimeDigest({ mode }) };
     const initialProfile = mode === 'initial' ? structuredClone(own.profile) : undefined;
     if (initialProfile) {
       const team = initialProfile.teams[0]!;
@@ -826,6 +827,20 @@ test('Team probe read rejects completed evidence after physical config-directory
           assert.equal(handoffs, 0, 'a later foreign native scope is refused before business handoff');
           consumed.assertReadinessCredential(account.nativeCredentialScopeDigest!);
           captureNativeRestartReadiness({ management: manager, launch, entry, isCurrent: () => true }).assertCurrent();
+          if (initialProfile) {
+            assert.equal(saved.modelId, providerId + '/' + member.model,
+              'the original qualified probe remains unchanged while the member model stays bare');
+            for (const modelId of ['test-foreign/' + member.model, providerId + '/' + request.modelId]) {
+              recordStore.write({ ...saved, modelId });
+              try {
+                assert.throws(capture, { code: 'held' });
+                assert.throws(() => captureNativeRestartReadiness({ management: manager, launch, entry,
+                  isCurrent: () => true }), { code: 'held' });
+              } finally { recordStore.write(saved); }
+            }
+            assert.deepEqual(original.readRetainedProbe(request.commandId, request.context), saved,
+              'model comparison never rewrites the original scoped receipt or native account witness');
+          }
           writeFileSync(file, 'TEST-drifted-original-key', { mode: 0o600 });
           assert.equal(account.isCurrent(), false);
           assert.throws(consumed.assertCurrent);

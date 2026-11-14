@@ -19,6 +19,7 @@ import { PROCESS_BOOTSTRAP, PROCESS_REGISTER_ID, PROCESS_LABEL, PROCESS_NEIGHBOR
   type Service } from '../../scripts/legacy-agent-host/desktop-native-process-model.ts';
 import { capturedQueryableWitness, timeout } from './nativeGateContext';
 import type { NativeGateEvents } from './nativeGateEvents';
+import { prepareRetainedProviderFixture, type RetainedProvider } from './nativeRetainedProviderFixture';
 
 const object = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -53,8 +54,10 @@ interface ScopedStop {
 export async function prepareNativeRetainedServiceScenario(options: {
   sandbox: string; fixture: string; track(child: ChildProcess): void; events: NativeGateEvents;
   mode: 'natural-services' | 'scoped-services';
+  provider?: RetainedProvider; bash?: string;
 }) {
   const scoped = options.mode === 'scoped-services';
+  if (options.provider) assert.ok(scoped && options.bash, 'One explicit retained provider scenario');
   const root = join(realpathSync.native(options.sandbox), 'TEST-desktop-backend-natural-' + randomUUID());
   mkdirSync(root); mkdirSync(join(root, 'workspace'));
   const roles = { primary: { nonce: 'TEST-' + randomUUID() }, neighbor: { nonce: 'TEST-' + randomUUID() } };
@@ -92,7 +95,11 @@ export async function prepareNativeRetainedServiceScenario(options: {
   const whole = new Promise<void>(resolve => { confirmWhole = resolve; });
   const captures = new Map<Role, { capture: WindowsServiceCapture; intent: WindowsServiceIntent; witness: Witness }>();
   const stops = new Map<Role, ScopedStop>();
-  const model = await startProcessModel({
+  const providerFixture = options.provider ? await prepareRetainedProviderFixture({
+    provider: options.provider, sandbox: options.sandbox, root, actor, node: seed.node,
+    bash: options.bash!, services: readServices, fixture: options.fixture, track: options.track, events: options.events,
+  }) : undefined;
+  const model = providerFixture?.model ?? await startProcessModel({
     bashCommand: () => quote(seed.node) + ' ' + quote(actor) + ' ' + quote(root),
     services: readServices, serviceLifecycle: lifecycle,
     ...(scoped ? { windowsScopedServices: {
@@ -137,6 +144,7 @@ export async function prepareNativeRetainedServiceScenario(options: {
   let phase = 'prepared';
   const observeAttempt = (call: HostCustodyCall, epoch: number) => {
     if (!scoped) return;
+    if (providerFixture && !call.operation.startsWith('service-') && !providerFixture.isMember(call)) return;
     if (call.operation.startsWith('service-')) {
       const key = call.operation.slice(8) as keyof typeof serviceAttempts;
       assert.ok(key in serviceAttempts);
@@ -194,6 +202,7 @@ export async function prepareNativeRetainedServiceScenario(options: {
     }
   };
   const observeCustody = async (call: HostCustodyCall, value: HostCustodyResult, epoch: number) => {
+    if (providerFixture && !call.operation.startsWith('service-') && !providerFixture.isMember(call)) return;
     if (!scoped && epoch === 2) {
       if (call.operation === 'allocate') proof.secondHostNativeAllocations++;
       if (call.operation === 'write') proof.secondHostInputWrites++;
@@ -204,6 +213,7 @@ export async function prepareNativeRetainedServiceScenario(options: {
       assert.equal(allocation, undefined); allocation = structuredClone(call);
     }
     if (value.operation === 'prepare') {
+      if (providerFixture) allocation = providerFixture.memberAllocation();
       assert.equal(providerRoot, undefined); providerRoot = structuredClone(value.root);
     }
     if (call.operation === 'service-capture') {
@@ -280,19 +290,21 @@ export async function prepareNativeRetainedServiceScenario(options: {
       const result = object(await timeout(client.request(method, {
         commandId, binding: { schemaVersion: 1, handleId: 'TEST-natural-process',
           owner: options.profile.owner, scope: team.scope }, payload,
-      }, { control: method === 'runtime.read' || method.startsWith('team.process.') || method === 'team.lifecycle.read' }),
+      }, { control: method === 'runtime.read' || method.startsWith('team.process.') || method === 'team.lifecycle.read',
+        ...(providerFixture ? { remainingMs: budget } : {}) }),
       budget));
       remaining(deadline); // A delayed timeout callback cannot qualify a late public reply.
       assert.equal(result.ok, true, 'Original natural-service Host route succeeded');
       return result.value;
     };
     phase = 'native-bootstrap';
+    const providerTurnDeadline = providerFixture?.beginBusiness();
     const input = object(await request(options.client, 'team.execute', 'TEST-native-process-bootstrap', {
       operation: 'message.send', payload: { to: 'alice', text: PROCESS_BOOTSTRAP,
         messageId: 'TEST-native-process-bootstrap', actionMode: 'do' },
-    }));
+    }, providerTurnDeadline));
     const inputId = object(input.effects).deliveryId; assert.equal(typeof inputId, 'string');
-    const turnDeadline = performance.now() + 35000;
+    const turnDeadline = providerTurnDeadline ?? performance.now() + 35000;
     for (;;) {
       assert.deepEqual(model.failures, []);
       const state = object(await request(options.client, 'runtime.read', 'TEST-native-process-terminal',
@@ -304,7 +316,8 @@ export async function prepareNativeRetainedServiceScenario(options: {
     }
     assert.deepEqual(model.observations.map(value => [value.turn, value.step]),
       [[PROCESS_BOOTSTRAP, 0], [PROCESS_BOOTSTRAP, 1], [PROCESS_BOOTSTRAP, 2], [PROCESS_BOOTSTRAP, 3]]);
-    assert.equal(model.probes.length, 0);
+    assert.equal(model.probes.length, providerFixture?.provider === 'opencode-v1' ? 1 : 0);
+    providerFixture?.businessComplete();
     assert.ok(capture && captureIntent && primaryWitness);
     assert.equal(capture.mainEpoch, options.mainEpoch);
     if (scoped) {
@@ -394,12 +407,15 @@ export async function prepareNativeRetainedServiceScenario(options: {
       assert.equal(await timeout(options.providerWitness.observe(), remaining(warmDeadline)), 'alive');
       scopedProof.providerAliveAfterWarm = true;
       await list(options.client, 'after-primary', { primary: 'absent', neighbor: 'same-live' }, warmDeadline);
-      while (!model.notificationAcks.some(ack => ack.role === 'primary' && ack.responseFinished)) {
-        assert.deepEqual(model.failures, []); await delay(Math.min(25, remaining(warmDeadline)));
-      }
-      assert.equal(model.notificationAcks.filter(ack => ack.role === 'primary').length, 1);
-      assert.equal(model.notificationAcks.find(ack => ack.role === 'primary')!.exitReason, 'original-service-scope');
-      scopedProof.primaryNotificationAcknowledged = true; scopedProof.warmPublicScopedStopQualified = true;
+      if (!providerFixture) {
+        while (!model.notificationAcks.some(ack => ack.role === 'primary' && ack.responseFinished)) {
+          assert.deepEqual(model.failures, []); await delay(Math.min(25, remaining(warmDeadline)));
+        }
+        assert.equal(model.notificationAcks.filter(ack => ack.role === 'primary').length, 1);
+        assert.equal(model.notificationAcks.find(ack => ack.role === 'primary')!.exitReason, 'original-service-scope');
+        scopedProof.primaryNotificationAcknowledged = true;
+      } else assert.equal(model.notificationAcks.length, 0);
+      scopedProof.warmPublicScopedStopQualified = true;
       phase = 'original-host-loss';
       await options.crashOriginalHost();
       assert.equal(await options.providerWitness.observe(), 'alive');
@@ -425,6 +441,7 @@ export async function prepareNativeRetainedServiceScenario(options: {
       assert.equal(scopedProof.secondHostCaptureAttempts, 0);
       assert.deepEqual(model.failures, []); assert.equal(model.observations.length, 4);
       scopedProof.sameMainColdPublicStopQualified = true;
+      if (providerFixture) { assert.equal(model.notificationAcks.length, 0); providerFixture.businessComplete(); }
       cleanupRequested = true;
       assert.equal((await successor.shutdown()).childExit, 'confirmed');
       assert.equal(sha(readFileSync(seedPath)), sha(seedBytes));
@@ -509,13 +526,13 @@ export async function prepareNativeRetainedServiceScenario(options: {
     assert.equal(sha(readFileSync(actorSource)), sha(actorBytes));
     phase = 'completed';
   }
-  return { model, observeAttempt, observeCustody, run,
+  return { model, providerFixture, observeAttempt, observeCustody, run,
     phase: () => phase,
     evidence: () => ({ ...proof, serviceCounts: { ...serviceCounts }, wholeConfirmed, released,
       actorSha256: sha(actorBytes), nativeNotificationCount: model.notificationAcks.length }),
     scopedEvidence: () => ({ ...scopedProof, serviceCounts: { ...serviceCounts }, serviceAttempts: { ...serviceAttempts },
       actorSha256: sha(actorBytes), nativeNotificationCount: model.notificationAcks.length }),
-    closeHost: async () => { if (scoped) cleanupRequested = true; if (successor) await successor.shutdown(); },
+    closeHost: async () => { providerFixture?.seal(); if (scoped) cleanupRequested = true; if (successor) await successor.shutdown(); },
     drain: async () => {
       if (scoped) for (const original of captures.values()) assert.equal(await original.witness.wait(), 0);
       else if (primaryWitness) assert.equal(await primaryWitness.wait(), 0);

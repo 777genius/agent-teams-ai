@@ -1,6 +1,8 @@
 import { lstatSync } from 'node:fs';
 import { join } from 'node:path';
 import { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
+import { CapturedProcess, type CapturedProcessProfile } from '../adapters/providers/CapturedProcess.js';
+import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 import { RuntimeSourceIndex } from './RuntimeSourceIndex.js';
 import { teamModelProbeProfile } from './teamLaunchModelProbe.js';
 import type { TeamHostProfile } from './TeamHost.js';
@@ -13,7 +15,8 @@ export function createHostProviderManagementComposition(
   assertWriter: () => void,
   onOAuthProgress: (snapshot: ProviderOAuthSnapshot) => void,
   processCustody?: RegisteredProcessRootSource,
-  assertCleanupWriter = assertWriter
+  assertCleanupWriter = assertWriter,
+  retainedWindowsLaunch?: HostWindowsLaunch
 ) {
   // Presence reads must not create stores before an unrelated Team namespace is admitted.
   // Either retained namespace still requires strict validation after its current seed is removed.
@@ -72,6 +75,11 @@ export function createHostProviderManagementComposition(
           onOAuthProgress,
           unavailableProfiles: retained.unavailable,
           ...(processCustody ? { processCustody } : {}),
+          ...(retainedWindowsLaunch ? {
+            createProcess: (selected: CapturedProcessProfile, current: () => boolean) =>
+              new CapturedProcess(selected, current, undefined, undefined, undefined,
+                selected.windowsBroker ? retainedWindowsLaunch.port(selected, current) : undefined),
+          } : {}),
         })
       : undefined,
   };

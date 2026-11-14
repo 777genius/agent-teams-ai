@@ -33,6 +33,7 @@ vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnvBestEffort: resolveInteractiveShellEnvBestEffortMock,
 }));
 
+import { runtimeSourceNativeExecutableDigest } from '@agent-teams/legacy-agent-host/runtime-sources';
 import {
   createCodexRuntimeInstallerFeature,
   extractCodexRuntimePackageFilesFromTarball,
@@ -42,6 +43,31 @@ import {
   verifyCodexRuntimePackageIntegrity,
 } from '@features/codex-runtime-installer/main';
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
+
+import { CapturedCodexRuntimeInstaller } from '../../../../src/features/codex-runtime-installer/main/application/CapturedCodexRuntimeInstaller';
+import { captureCodexNativeSelection } from '../../../../src/features/codex-runtime-installer/main/infrastructure/captureCodexNativeSelection';
+import {
+  captureAppManagedCodexRuntime,
+  CodexRuntimeInstallerService,
+} from '../../../../src/features/codex-runtime-installer/main/infrastructure/CodexRuntimeInstallerService';
+
+import type {
+  RuntimeSourcePublication,
+  RuntimeSourceSummary,
+} from '@agent-teams/legacy-agent-host/runtime-sources';
+import type { CapturedRuntimeSources } from '@features/agent-backend/main';
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
+import type { CapturedCodexResolver } from '@main/services/infrastructure/codexAppServer/CodexBinaryResolver';
+
+function deferred<T>() {
+  let resolve: (value: T) => void = () => {
+    throw new Error('TEST deferred not initialized');
+  };
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
 
 let tempRoot: string | null = null;
 const originalPath = process.env.PATH;
@@ -202,10 +228,7 @@ describe('CodexRuntimeInstallerService resolver', () => {
       expect(await snapshotRuntimePackage(status.binaryPath, firstPackage.files)).toEqual(
         firstSnapshot
       );
-      const secondSnapshot = await snapshotRuntimePackage(
-        repaired.binaryPath,
-        secondPackage.files
-      );
+      const secondSnapshot = await snapshotRuntimePackage(repaired.binaryPath, secondPackage.files);
       expect(
         secondSnapshot.files.map(({ relativePath, bytes }) => ({ relativePath, bytes }))
       ).toEqual(
@@ -217,6 +240,133 @@ describe('CodexRuntimeInstallerService resolver', () => {
       }
       expect(secondFetch).toHaveBeenCalledTimes(3);
       expect(execCliMock).toHaveBeenCalledTimes(2);
+
+      const heldPublication = deferred<void>(),
+        entered = deferred<void>();
+      const native = new CodexRuntimeInstallerService({
+        resolveLatestVersion: async () => '1.0.0',
+      });
+      const progress: CodexRuntimeStatus[] = [];
+      vi.spyOn(native, 'publishCapturedStatus').mockImplementation((status) => {
+        progress.push(status);
+      });
+      let selected: RuntimeSourceSummary = {
+        sourceId: 'a'.repeat(64),
+        revision: 'b'.repeat(64),
+        sourceKind: 'app-managed',
+        profileId: 'TEST-original',
+        configRevision: 'TEST-original',
+        cliVersion: '1.0.0',
+        nativeExecutableDigest: runtimeSourceNativeExecutableDigest({
+          path: repaired.binaryPath,
+          sha256: createHash('sha256')
+            .update(await fs.readFile(repaired.binaryPath))
+            .digest('hex'),
+        }),
+      };
+      let published: RuntimeSourcePublication | null = null;
+      const sources: CapturedRuntimeSources = {
+        current: async () => structuredClone(selected),
+        retained: async () => [structuredClone(selected)],
+        recover: async () => null,
+        refreshConfiguration: async () => {
+          throw new Error('TEST wrong operation');
+        },
+        lookup: vi.fn(async (commandId) => (published?.commandId === commandId ? published : null)),
+        publish: vi.fn(async (input) => {
+          entered.resolve();
+          await heldPublication.promise;
+          expect(input.expectedRevision).toBe('b'.repeat(64));
+          const chosen = input.nativeSelection;
+          if (!chosen) throw new Error('TEST requires the original native selection');
+          selected = {
+            ...selected,
+            revision: 'c'.repeat(64),
+            sourceKind: chosen.sourceKind,
+            profileId: 'TEST-published',
+            configRevision: 'TEST-published',
+            nativeExecutableDigest: runtimeSourceNativeExecutableDigest(
+              chosen.nativeCli.executable
+            ),
+          };
+          return (published = {
+            commandId: input.commandId,
+            phase: 'published',
+            selection: structuredClone(selected),
+          });
+        }),
+      };
+      const capture = () => {
+        let manifest = captureAppManagedCodexRuntime();
+        const resolver: CapturedCodexResolver = {
+          fingerprint: manifest.fingerprint,
+          assertAuthority: () => {},
+          assertCurrent: () => manifest.assertCurrent(),
+          acceptAcquired: (value) => {
+            manifest = value;
+          },
+          resolve: async () => {
+            if (!manifest.binaryPath)
+              throw new Error('TEST expected the complete acquired package');
+            const original = await captureCodexNativeSelection(manifest.binaryPath, () =>
+              manifest.assertCurrent()
+            );
+            return {
+              selection: {
+                sourceKind: 'app-managed',
+                nativeCli: {
+                  executable: original.executable,
+                  version: '1.0.0',
+                },
+              },
+              assertCurrent: original.assertCurrent,
+            };
+          },
+        };
+        return { sources: Promise.resolve(sources), resolver };
+      };
+      const installer = new CapturedCodexRuntimeInstaller(native);
+      const thirdFetch = stubPackageDownload(
+        new Response(new Uint8Array(secondPackage.tarball)),
+        secondPackage.tarball
+      );
+      const installing = installer.install(capture());
+      await entered.promise;
+      try {
+        expect(
+          progress.some((value) => value.state === 'ready' || value.progress?.phase === 'ready')
+        ).toBe(false);
+        expect(progress.at(-1)).toMatchObject({
+          state: 'installing',
+          sourceRevision: 'b'.repeat(64),
+        });
+        expect(progress.every((value) => value.binaryPath === undefined)).toBe(true);
+        expect(sources.publish).toHaveBeenCalledTimes(1);
+        expect(thirdFetch).toHaveBeenCalledTimes(3);
+        expect(await snapshotRuntimePackage(status.binaryPath, firstPackage.files)).toEqual(
+          firstSnapshot
+        );
+      } finally {
+        heldPublication.resolve();
+      }
+      const final = await installing;
+      expect(final).toMatchObject({
+        state: 'ready',
+        sourceRevision: 'c'.repeat(64),
+        version: '1.0.0',
+      });
+      expect(progress.at(-1)).toEqual(final);
+      expect(final.binaryPath).toBeUndefined();
+      expect(await installer.selectInstalled(capture())).toEqual(final);
+      const cold = new CapturedCodexRuntimeInstaller(native);
+      expect(await cold.selectInstalled(capture())).toEqual(final);
+      expect(await cold.getStatus(capture())).toMatchObject({
+        sourceRevision: final.sourceRevision,
+        version: '1.0.0',
+      });
+      expect(sources.publish).toHaveBeenCalledTimes(1);
+      expect(thirdFetch).toHaveBeenCalledTimes(3);
+      expect(execCliMock).toHaveBeenCalledTimes(3);
     }
   );
 
@@ -224,10 +374,7 @@ describe('CodexRuntimeInstallerService resolver', () => {
     'retains the original full package after %s failure without rolling back publication',
     async (stage) => {
       const firstPackage = createRuntimePackage('A');
-      stubPackageDownload(
-        new Response(new Uint8Array(firstPackage.tarball)),
-        firstPackage.tarball
-      );
+      stubPackageDownload(new Response(new Uint8Array(firstPackage.tarball)), firstPackage.tarball);
       const feature = createCodexRuntimeInstallerFeature();
       const first = await feature.install();
       expect(first.state).toBe('ready');

@@ -18,6 +18,7 @@ import { nativePeerTurn, nativePeerActions } from '../native-peers.ts';
 
 import { nativeToolReceipt, record } from '../native-claude-team/model.ts';
 import { isOpenCodeModelProbe } from './model-probe.ts';
+import type { RetainedProcessScenario } from '../native-codex-team/model.ts';
 
 export const CONTEXT_MARKER = 'TEST_OPENCODE_CAPTURED_MEMBER_CONTEXT_V1';
 export const COORDINATION_TOOLS = ['coordination_task_briefing', 'coordination_message_send'] as const;
@@ -58,6 +59,7 @@ export type LiveMembershipModelPhase = 'idle' | 'add' | 'add-ready' | 'remove' |
 export async function startOpenCodeModel(
   options: {
     nativeGeneration?: 'v2';
+    retainedProcess?: RetainedProcessScenario;
     coordinationProof?: true;
     localReadinessProof?: true;
     liveMembershipPhase?: () => LiveMembershipModelPhase;
@@ -81,6 +83,10 @@ export async function startOpenCodeModel(
   } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate));
+  if (options.retainedProcess) {
+    assert.deepEqual(Object.keys(options), ['retainedProcess'], 'one retained process scenario');
+    assert.equal(options.retainedProcess.turn, 'TEST_NATIVE_PROCESS_BOOTSTRAP');
+  }
   if (options.liveMembershipPhase) assert.ok(options.allowModelProbes && options.uiGeneratedMessageIds &&
     options.principalId && !options.coordinationProof && !options.localReadinessProof && !options.sharedSessionProbe &&
     !options.mixedGroups && !options.mixedTaskNotifications && !options.peerMessaging && !options.captureFileUpdate &&
@@ -189,7 +195,7 @@ export async function startOpenCodeModel(
         chunks.push(chunk);
       }
       const body = record(JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown);
-      if (options.liveMembershipPhase) {
+      if (options.liveMembershipPhase || options.retainedProcess) {
         assert.equal(request.headers.authorization, 'Bearer TEST-LOCALHOST-ONLY');
         assert.equal(body.model, 'TEST-model');
       }
@@ -211,6 +217,7 @@ export async function startOpenCodeModel(
       }
       const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
       const user = messages.filter((item) => item.role === 'user');
+      const processPhase = options.retainedProcess?.phase();
       if (options.localReadinessProof && coordinationArmed && ordinaryReadinessObservations.length === 0) {
         assert.equal(inventoryReads, 0); assert.equal(coordinationObservations.length, 0);
         assert.equal(isOpenCodeModelProbe(body, options.nativeGeneration ?? 'v1'), true,
@@ -296,9 +303,13 @@ export async function startOpenCodeModel(
       if (options.coordinationProof) assert.equal(coordinationFinished, true,
         'no business input before the original challenge is completed and released');
       if (
-        options.allowModelProbes &&
+        (options.allowModelProbes || processPhase === 'standalone-management-probe') &&
         isOpenCodeModelProbe(body, options.nativeGeneration ?? 'v1')
       ) {
+        if (options.retainedProcess) {
+          assert.equal(probes.length, 0);
+          assert.equal(observations.length, 0);
+        }
         if (options.liveMembershipPhase) {
           const expected = options.liveMembershipPhase() === 'add' ? 0 : options.liveMembershipPhase() === 'restore' ? 1 : -1;
           assert.ok(expected >= 0, 'only the original Add or Restore may prepare a model');
@@ -344,6 +355,7 @@ export async function startOpenCodeModel(
         return;
       }
       assert.equal(settingsProbe, undefined, 'no business input during Settings verification');
+      if (options.retainedProcess) assert.equal(processPhase, 'business');
       if (options.selectedBusinessOutputTokens !== undefined)
         assert.equal(body.max_tokens, options.selectedBusinessOutputTokens,
           'actual business request uses the saved local output limit');
@@ -404,6 +416,12 @@ export async function startOpenCodeModel(
       let mixedGroup: MixedGroupTurn | undefined;
       for (const message of messages.toReversed()) {
         if (message.role !== 'user') continue;
+        if (options.retainedProcess) {
+          turnText = mixedNativeText(message.content);
+          assert.ok(turnText.includes(options.retainedProcess.turn), 'no historical process-input fallback');
+          turn = options.retainedProcess.turn;
+          break;
+        }
         const group = options.mixedGroups
           ? readMixedGroupTurn(message.content, 'carol')
           : undefined;
@@ -497,6 +515,26 @@ export async function startOpenCodeModel(
       const tools = (Array.isArray(body.tools) ? body.tools : [])
         .map(record)
         .map((tool) => String(record(tool.function).name));
+      let processAction: Awaited<ReturnType<RetainedProcessScenario['next']>>;
+      if (options.retainedProcess) {
+        assert.ok(step < 4);
+        assert.equal(observations.length, step);
+        assert.equal(probes.length, 1);
+        const calls = messages.filter(row => row.role === 'assistant').flatMap(row =>
+          Array.isArray(row.tool_calls) ? row.tool_calls.map(record) : []);
+        const results = messages.filter(row => row.role === 'tool');
+        assert.deepEqual(calls.map(row => row.id), Array.from({ length: step }, (_, index) => `TEST_${turn}_${index}`));
+        assert.deepEqual(results.map(row => row.tool_call_id), calls.map(row => row.id));
+        const call = calls.at(-1);
+        if (call) assert.equal(call.type, 'function');
+        const operation = call ? record(call.function) : {};
+        processAction = await options.retainedProcess.next({
+          provider: 'opencode-v1', step, userText: turnText, tools: tools.map(name => ({ name })),
+          previous: call ? { callId: String(call.id), name: String(operation.name),
+            input: record(JSON.parse(String(operation.arguments))), output: results.at(-1)?.content } : undefined,
+        });
+        assert.equal(options.retainedProcess.phase(), 'business');
+      }
       const liveActions = options.liveMembershipPhase ? [{ name: 'message_send', input: {
         commandId: 'TEST-live-reply-' + (turn.endsWith('_ADD') ? 'add' : 'restore'), to: 'user', text: 'REPLY_' + turn,
       } }] : undefined;
@@ -673,7 +711,9 @@ export async function startOpenCodeModel(
                 },
               ]
         : undefined;
-      const action = notice
+      const action = options.retainedProcess
+        ? processAction
+        : notice
         ? undefined
         : (liveActions ?? groupActions ??
             captureActions ??

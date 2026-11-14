@@ -19,13 +19,14 @@ import {
   runtimeSourceLookupSchema,
   runtimeSourceReadSchema,
   refreshRuntimeConfigurationSchema,
+  runtimeSourceNativeExecutableDigest,
 } from './runtimeSourceContracts.js';
 import {
   assertRuntimeSourceQualification,
   verifyRuntimeSourceCandidate,
   verifyRuntimeSourceExecutable,
 } from './verifyRuntimeSourceCandidate.js';
-import { RuntimeSourceAdmissionError } from './runtimeSourceQualification.js';
+import { qualifiedCodexProtocolRevision, RuntimeSourceAdmissionError } from './runtimeSourceQualification.js';
 import { RuntimeSourceUnavailable, readOriginalRuntimeSourcePublication, sameRuntimeSourceGrantAuthority, validateRuntimeSourceHistory } from './runtimeSourceGrantAuthority.js';
 import type { RuntimeSourceRecord } from '../adapters/profile/FileRuntimeSourceIndex.js';
 import type { ProviderManagementProfile } from '../management/profile.js';
@@ -636,6 +637,9 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       ...(recipe.provider === 'opencode'
         ? applyOpenCodeRuntimeSource(recipe, record.candidate) : structuredClone(recipe)),
       executable: record.candidate.executable,
+      ...(seed.provider === 'codex' ? {
+        protocolRevision: qualifiedCodexProtocolRevision(record.candidate.nativeCli?.version ?? seed.protocolRevision),
+      } : {}),
     });
   }
 
@@ -718,6 +722,9 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       profileId: record ? `runtime-source:${record.revision}` : seed.profileId,
       configRevision: record ? `runtime-source:${record.revision}` : seed.configRevision,
       sourceKind: record?.candidate.sourceKind ?? 'captured',
+      ...(seed.provider === 'codex' ? {
+        nativeExecutableDigest: runtimeSourceNativeExecutableDigest(record?.candidate.executable ?? seed.executable),
+      } : {}),
       ...(record?.candidate.openCodePreferences ? {
         preferencesDigest: openCodeManagedPreferencesDigest(record.candidate.openCodePreferences),
       } : {}),
@@ -739,6 +746,9 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       profileId: selected.profileId,
       configRevision: selected.configRevision,
       executable: record.candidate.executable,
+      ...(seed.provider === 'codex' ? {
+        protocolRevision: qualifiedCodexProtocolRevision(record.candidate.nativeCli?.version ?? seed.protocolRevision),
+      } : {}),
     });
   }
 

@@ -2464,3 +2464,68 @@ Before source freeze, recheck these exact bytes and compose shared current helpe
 All connected B work remains: original captured resolver precedence and finite deadline/cleanup semantics; private executable-identity projection without stored/public leakage; one original acquisition with pending progress until one confirmed source publication; exact lost-ACK/recovery/no-op behavior; both finite member and management protocol mappings; old A package/source/profile/checkpoint retention; and the real Settings Update with retained A, genuine fresh B Launch and original cold history/physical absence. Preserve the original11 business requests plus two ordinary Launch probes within cap8, the existing job/case deadlines, all meaningful existing cases and the genuine registry/package/control requirements. The original default journey stays separate and unchanged. No new owner, selector, registry, generic framework, native inference or unit-test suite is added by this refresh.
 
 Review §22.6 and §25.16 independently, publish their exact prefix/inverse with root's immediate commit/push, then issue separate scoped decisions. Corrected current assertions alone are not a successful native result; historical D or default Desktop success alone is not source-publication parity. Main remains unmerged.
+
+### §25.17. C10 prerequisites: exact source roster and original pre-App native child witnesses
+
+**PLAN PROPOSAL / C10 source0.** This amendment keeps the existing §25.14 journey, actual official registry, A ONE8/B fresh TWO3, two ordinary Launch probes, all clocks, source limits and default Resume journey. A17/B9 source publication does not supply an execution result: the interrupted local Main check remains unknown while the executor is unavailable. Root must establish the required compiled A/B result and issue explicit C10 source GO. This proposal itself adds no source, process, test execution or CI action.
+
+The current-pin candidate evidence `ded76e614605db09f1795416921e496d4384e57b` already qualified the original D421fee/91350 native candidate within its recorded scope. A17 source manifest `203aaf8f321ad6c8d90bddfa09c940865a86c34b` and B9 `dfa1112f5841f64fa0c4ceda47ffcb9b870948d6` are source inputs to this amendment, not substitutes for the remaining C10 native installer/retention proof.
+
+#### A. Two extra existing paths, with sequential W01 composition
+
+| Additional existing write path | Current exact preimage | Bounded amendment |
+| --- | --- | --- |
+| `scripts/legacy-agent-host/desktop-proof-management-sources.ts` | parent `74b128c5701ae5a384bcc2863412c8fd336469de`; native `782d214542e8d4e15cdbec7402c92dd526ad2a64`; qualification `c093219e79e1283692017cc91cbe58a8d4552b45` | Add the thirteen missing A17/B9 source-path strings listed below; preserve each variant's entire existing roster and order. No new roster or file. |
+| `packages/legacy-agent-host/src/adapters/providers/readCodexMcpCatalog.ts` | `ee4c8fce0aa5c1683f746c20403d032f42b25d08` in all three current branches | Propagate only the already reviewed private optional process factory from W01 candidate `7230804bd10e8a521cb3e1b1e9760920e9ebcef5` into the common reader, preserving the exact default constructor and complete original request/terminal/dispose body. |
+
+These six current preimages were independently read. If W01 publishes the same catalog candidate first in the native branch, that exact file is already composed there; do not apply the delta twice or overwrite later W01 bytes. Preserve native roster Linux/Windows custody entries and qualification roster login entries. Root owns final sequential composition. This expands the existing C10 ten-path scope to twelve existing-or-already-declared paths; it creates no additional file.
+
+The catalog change is exactly one type import, an optional fourth parameter
+`createProcess?: (selected: CodexMemberProfile, current: () => boolean) => CapturedProcessPort`,
+and selection of that factory or the unchanged `new CapturedProcess(profile, current)`. Full substitution against ee4c exactly reproduces7230804. This is a new shared private dependency-injection surface relative to the parent/qualification baseline; it is not a public DTO/RPC, general path reader, transport interceptor or new process owner. Existing callers that omit it keep the original constructor. D continues to own the same command/argv, environment, cwd, deadline, stdout decoding, terminal and dispose→confirmStopped sequence.
+
+P08 §16's retained Windows owner forwarding and native acceptance remain native-first. Common propagation of this platform-neutral port does not enable or qualify any Windows retained owner behavior, add an authority callback, change a broker handle, or transfer a Darwin proof to Windows. P08 §16.9 records that precise exception to the source-propagation boundary.
+
+#### B. Natural finite roster addition
+
+The current `desktop-proof-sources.ts` ee554 includes the existing supplementary f5708, integrated e7585 and management74b128 rosters. Their union already pins the five other A17/B9 production paths: Main agentBackend, Codex management/member adapters, runtimeProfile and management/profile. It omits these thirteen direct A17/B9 acquisition/publication paths:
+
+| Existing source path to add to the management roster | Slice | Reviewed source blob, for traceability only |
+| --- | --- | --- |
+| `src/features/codex-runtime-installer/contracts/dto.ts` | A17 | `ce9d2f9da714483dff1a5cd2c2dcd91cf9b2a982` |
+| `src/features/codex-runtime-installer/main/adapters/input/ipc/registerCodexRuntimeInstallerIpc.ts` | A17 | `b09935876962ee515562a69c07b95ccf15950608` |
+| `src/features/codex-runtime-installer/main/application/CapturedCodexRuntimeInstaller.ts` | A17 | `a9f00433467ee57e4441657c78911c5c8528b794` |
+| `src/features/codex-runtime-installer/main/composition/createCodexRuntimeInstallerFeature.ts` | A17 | `c8c3093d11909527c2a5cfd7c59717bde59670cd` |
+| `src/features/codex-runtime-installer/main/index.ts` | A17 | `447fb9c3f28ecc3751cc7910b22e28f14c19f38a` |
+| `src/features/codex-runtime-installer/main/infrastructure/CodexRuntimeInstallerService.ts` | A17 | `4a11a6355feaa825512b4b31b098c2375992ed01` |
+| `src/features/codex-runtime-installer/main/infrastructure/captureCodexNativeSelection.ts` | A17 | `62c448fc55b0d663534e4900fd608b93bcbdf6ff` |
+| `src/features/codex-runtime-installer/main/infrastructure/codexRuntimeInstallerPresentation.ts` | A17 | `9ccb48c55f4320bcf16ec96bf1eeb90d4565b992` |
+| `src/main/ipc/codexRuntime.ts` | A17 | `acb7cbf53c1f7362591df5522bf120d775cd20bc` |
+| `src/main/services/infrastructure/codexAppServer/CodexBinaryResolver.ts` | A17 | `9568953bdb8c20a6c580aacb23edb3ee1a019d5c` |
+| `packages/legacy-agent-host/src/composition/RuntimeSourceIndex.ts` | B9 | `8cc328d93f8d76ef556343181e03056d74e76af3` |
+| `packages/legacy-agent-host/src/composition/runtimeSourceContracts.ts` | B9 | `217eec395ae3fb3c6f010796516ca3d6bd5f5711` |
+| `packages/legacy-agent-host/src/composition/runtimeSourceQualification.ts` | B9 | `fb25a317426e009f7920f2270a7f72d7f384f462` |
+
+Keep the source roster as path strings consumed by the existing before/after source hash capture; do not embed these Git hashes as runtime authorization. Parent management roster grows213→226 physical lines, native226→239, qualification223→236. The main797-line roster still needs only its already planned one-line new-helper entry. No layout compression or cap change is required. Existing full roster ordering/deduplication and source-freeze failure behavior remain unchanged. Compiled Main/preload hashes continue to prove actual compiled bytes and retain their explicit source-rebuild limitation; neither that fact nor this finite source list claims a complete transitive build proof.
+
+#### C. Original pre-App custody witness, without delayed PID adoption
+
+The existing fixture `desktop-codex-resume-fixture.ts` e8b351 performs an actual Codex metadata read and the original native MCP catalog read before serializing the final profile and before any app/Host startup. `CodexManagementHost.ts` ac874 already accepts its private third constructor factory. The catalog ee4c calls assertCurrent before launch; later D canRead calls may occur after a fast child has exited. A later empty process table or a completed management journal cannot retroactively identify that child.
+
+Use the same small source-selection-only fixture wrapper at both actual factory sites. Construct exactly the original `CapturedProcess(selected, current)`, retaining the unchanged selected profile and callback. Its source b5c545 launches synchronously, retains the genuine returned handle, and uses the original cwd/environment and detached behavior. Delegate every custody method to this same instance. Do not install a custom process-tree source, change its launch method, suppress currentness, substitute a native command, or introduce another custody owner.
+
+At fixture entry, freeze the original TEST runner's actual positive process-group identity from the existing process table; do not assume its PID equals PGID or select a new group later. Before each original native launch, retain the selected exact A path/hash and the fixed metadata/catalog purpose. The wrapper calls the original launch once, then immediately performs the existing read-only `captureDesktopNativeExecutable(A, originalGroup).observe()` from captured-app11915. Require one new witness for that exact returned handle's positive PID, its stable birth and ancestry to the original group; keep the original handle/role association. Reject an absent witness, PID reuse, ambiguity, foreign ancestry or changing identity. No await, suspension, delayed recapture, extra native invocation, retry or new timeout is added between launch and this observation. The helper's existing64-ancestor/32-child bounds remain unchanged.
+
+The witness confers no signal/termination authority. If observation fails after the genuine spawn, the original retained custody must still settle: the fixture's unconditional finally seals the same instance and starts or joins its one retained confirmStopped promise. Normal D disposal and the fixture finally join that same result; they must not launch another cleanup attempt or discard a false/unknown result. Metadata uses its original close/finally as well. No failed observation may escape before preserving a reference for this cleanup. A missing/ambiguous observation fails qualification even if subsequent cleanup succeeds; an unconfirmed cleanup remains held/failing.
+
+Only after each original read has completed and its own cleanup has settled may the fixture accept its recorded physical witness as released. Require the original observed birth absent and, before app startup, no unmatched process running that exact selected A executable. A complete journal or exit code alone cannot satisfy this check. Preserve the original one metadata read and one catalog invocation, with their own original deadlines and no model business/probe input. Keep every default fixture path and generated environment unchanged outside the explicit Codex source-selection option.
+
+This solves the earliest pre-App handle-observation gap. The app epochs still use their original A/B executable/birth observers, native CodeMode parent/helper witnesses, actual Host/group custody and existing Stop/Quit/absence conditions. They may retain only actually observed children. Missing required metadata/preflight identity remains a failed C10 proof; it must not be filled from a journal or assumed from a matching basename. Source review of this proposal is not a complete physical-census or native PASS.
+
+#### D. C10 control and cold integration stay in the existing scope
+
+The six UI implementation paths remain exactly the already assigned mode, Codex fixture, new Codex source-selection helper, original Launch UI helper, existing fixture test and main source roster. The Launch helper supplies a source-only callback after the original first capture/saved settings, before its existing terminal poll, and another after actual A Stop/released/physical absence, before the old cold-Resume suffix. The callbacks are present together only for explicit Codex source selection. Default code continues through its original eight-round cold/Resume oracle.
+
+The first callback waits for the model's original A step7 final response to be held, uses the real Update notice/dialog once under current renderer ownership and actual advertised-package equality, observes confirmed B publication/metadata, then releases the same response once. The second callback uses the real Fresh Launch for B and its distinct capture/native thread, then the new helper's exact eleven-round cold branch. The old captured-app helper is not widened to accept eleven. Reuse its existing connect/binding/spawn/adoption primitives and original3s Quit reply,30s physical absence and180s startup budgets; retain A and B checkpoints/history/source bytes and zero cold input. Root owns the backend/CI port composition; Profiles owns the model's explicit sourceSelection and firstFinalHeld/releaseFirstFinal option. No generic callback registry, new selector or additional business/preparation action is authorized.
+
+After publication of the reviewed amendment and explicit C10 source GO, independent source review must verify exact catalog-port/default inverse, all three roster variants, original-handle capture before D traffic, unconditional once-only cleanup, and unchanged default/8+3/probe/deadline behavior. Root owns compiled A/B eligibility, existing focused cases, script/type/source gates and the one ordinary current-head source-selection invocation. No source or execution is performed by this proposal.

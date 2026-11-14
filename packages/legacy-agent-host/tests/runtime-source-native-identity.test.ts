@@ -15,6 +15,8 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { acquireProfileWriterLease } from '../dist/adapters/profile/ProfileWriterLease.js';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
+import { CodexManagementHost } from '../dist/adapters/providers/CodexManagementHost.js';
+import { createCodexMemberProvider } from '../dist/adapters/providers/CodexMemberProvider.js';
 import { RuntimeSourceNativeVersion } from '../dist/adapters/providers/RuntimeSourceNativeVersion.js';
 import { RuntimeSourceIndex } from '../dist/composition/RuntimeSourceIndex.js';
 import { applyLaunchConfiguration } from '../dist/composition/launchConfiguration.js';
@@ -25,6 +27,7 @@ import { assertRuntimeSourceQualification } from '../dist/composition/verifyRunt
 import { providerManagementProfileSchema } from '../dist/management/profile.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
+import type { MemberProviderContext } from '../dist/adapters/providers/MemberProvider.js';
 import type {
   RuntimeSourceCandidate,
   RuntimeSourceGrant,
@@ -573,6 +576,42 @@ test(
       { reason: 'unqualified-version' }
     );
     assert.deepEqual(f.reads(), []);
+    if (process.platform !== 'darwin' || process.arch !== 'arm64') {
+      const unsupported = f.input('TEST-unsupported-tuple', f.candidate('TEST-unsupported-tuple', '0.169.0'));
+      await assert.rejects(f.index.publish(unsupported, () => assert.fail('unqualified source cannot admit')),
+        { reason: 'unqualified-version' });
+      assert.equal(f.store.read(unsupported.commandId), undefined, 'tuple refusal precedes publication reservation');
+      const seed = f.profile.management![0]!;
+      const metadata = providerManagementProfileSchema.parse({ ...seed, protocolRevision: '0.169.0' });
+      assert.ok(metadata.provider === 'codex');
+      let allocations = 0;
+      assert.throws(() => new CodexManagementHost(metadata, () => true, () => {
+        allocations++; return assert.fail('metadata tuple guard must precede native custody');
+      }), { reason: 'unqualified-version' });
+      const member = runtimeMemberProfileSchema.parse({
+        provider: 'codex', protocolRevision: '0.169.0', teamId: 'TEST-team', memberId: 'TEST-member',
+        principalId: 'TEST-agent', sessionId: 'TEST-session', generation: 0, configRevision: seed.configRevision,
+        model: 'TEST-model', accountBinding: seed.accountBinding, cwd: seed.cwd,
+        environment: seed.environment, executable: seed.executable,
+        nativeOptions: { approvalPolicy: 'never', sandbox: 'read-only' },
+        limits: { queuedInputs: 1, inputBytes: 4096, outputBytes: 8192, outputEvents: 64,
+          pendingInteractions: 1, timeoutMs: 1000 },
+      });
+      const context: MemberProviderContext = {
+        profile: member, instructions: '', isCurrent: () => true, canAllocate: () => true,
+        get request() { return assert.fail('tuple refusal precedes member open'); },
+        get endpoint() { return assert.fail('tuple refusal precedes Team endpoint use'); },
+        get connection() { return assert.fail('tuple refusal precedes Team tool use'); },
+        readCheckpoint: async () => assert.fail('tuple refusal cannot read a checkpoint'),
+        onProgress() {},
+      };
+      assert.throws(() => createCodexMemberProvider(context, { createProcess: () => {
+        allocations++; return assert.fail('member tuple guard must precede native custody');
+      } }), { reason: 'unqualified-version' });
+      assert.equal(allocations, 0);
+      assert.deepEqual(f.reads(), [], 'unqualified direct profiles cannot run a version or app-server child');
+      assert.deepEqual(f.index.current({ grant: f.grant }), initial);
+    }
     const staticRefusals = [];
     for (const failure of ['missing', 'changed']) {
       const input = f.input(`TEST-static-${failure}`), path = input.candidate.executable.path;
