@@ -250,7 +250,10 @@ export function createOpenCodeV2ModelProbe(
       nativeCredential = await credential.prepare(wire, client);
       await attestOpenCodeV2ModelSelection(client, selection.model,
         { signal, deadline, isCurrent: current });
-      options.readiness?.observeProvider?.(observedProvider);
+      options.readiness?.observeProvider?.({
+        ...observedProvider,
+        ...(nativeCredential ? { credentialScopeDigest: nativeCredential.scopeDigest } : {}),
+      });
       assertCurrent(signal);
       await client.createSession({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) });
     });
