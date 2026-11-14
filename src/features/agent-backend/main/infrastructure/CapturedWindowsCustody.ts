@@ -12,12 +12,12 @@ import {
   windowsBrokerReference,
 } from '@agent-teams/legacy-agent-host/owned-process';
 
-import { capturedHostProfileDigest } from './selectedHostProfile';
 import { bindMainWindowsRuntimeSources, CapturedWindowsRuntimeSources } from './CapturedWindowsRuntimeSources';
 import { captureWindowsSourceAssociation } from './capturedWindowsSourceAssociation';
+import { capturedHostProfileDigest } from './selectedHostProfile';
 
-import type { SelectedHostProfile } from './selectedHostProfile';
 import type { SelectedWindowsProcessProfile, WindowsSourceLaunchSelection } from './CapturedWindowsRuntimeSources';
+import type { SelectedHostProfile } from './selectedHostProfile';
 import type { RuntimeSourceGrant } from '@agent-teams/legacy-agent-host/runtime-sources';
 
 function unavailable(): never {

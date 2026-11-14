@@ -21,8 +21,8 @@ import { refreshCapturedRuntimeConfiguration } from '../application/refreshCaptu
 import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
 import { captureProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import { CapturedRosterCommands } from '../infrastructure/CapturedRosterCommands';
-import { captureRuntimeSources } from '../infrastructure/CapturedRuntimeSources';
 import { capturedRuntimeSourceGrant } from '../infrastructure/capturedRuntimeSourceGrant';
+import { captureRuntimeSources } from '../infrastructure/CapturedRuntimeSources';
 import { CapturedScheduledRuns } from '../infrastructure/CapturedScheduledRuns';
 import { CapturedTeamRegistry } from '../infrastructure/CapturedTeamRegistry';
 import { captureMainWindowsCustody } from '../infrastructure/CapturedWindowsCustody';

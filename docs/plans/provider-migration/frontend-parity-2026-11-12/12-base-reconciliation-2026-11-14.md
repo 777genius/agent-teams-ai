@@ -204,3 +204,22 @@ registry, public purpose selector, deadline change or native-namespace
 permission is introduced. Preserve both parents' critical owner, queue,
 credential, Skip and diagnostic cases, and review the exact extraction
 independently before the merge is staged.
+
+## Verification follow-up: inherited import ordering
+
+The first canonical full `pnpm lint:fast` on the reconciled checkout
+reported six errors, all `simple-import-sort/imports`, and 212 warnings.
+Before the next check, sort only the existing import blocks in
+`DesktopBackendFeature.ts`, `CapturedWindowsCustody.ts`,
+`CapturedWindowsRuntimeSources.ts`, `registerCodexRuntimeInstallerIpc.ts`,
+`createCodexRuntimeInstallerFeature.ts` and `src/main/ipc/codexRuntime.ts`.
+Apply only that rule's fixes; do not reformat file bodies, change behavior,
+raise size baselines or suppress existing diagnostics. Inspect the exact
+diff and re-run the canonical fast lint against its existing cache. The
+failed original log remains preserved as SHA256
+`d1dd44b8867d42a19ab541064fbf44728dc2d438a05ded1c90d450bfcbba1a3e`.
+
+The reviewed diff changes only those six import blocks. Canonical fast
+lint then passed with zero errors and the same 212 warnings. Its log
+SHA256 is
+`622305785d18c473574ae6be489b4b8fe15a1e54490ad75a92849e81abe2c982`.

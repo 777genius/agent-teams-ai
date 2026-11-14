@@ -7,8 +7,8 @@ import {
   type CodexRuntimeInstallerServiceDependencies,
 } from '../infrastructure/CodexRuntimeInstallerService';
 
-import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { CapturedRuntimeSources } from '@features/agent-backend/main';
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { BrowserWindow } from 'electron';
 
 export interface CodexRuntimeInstallerFeatureFacade {

@@ -7,8 +7,8 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
 import type { CodexRuntimeInstallerFeatureFacade } from '../../../composition/createCodexRuntimeInstallerFeature';
-import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { CapturedRuntimeSources } from '@features/agent-backend/main';
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { IpcResult } from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 

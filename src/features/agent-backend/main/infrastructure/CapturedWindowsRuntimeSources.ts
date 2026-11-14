@@ -22,6 +22,7 @@ import { publishRuntimeSourceRequestSchema, refreshRuntimeConfigurationSchema,
 
 import { matchesWindowsSourceAssociation } from './capturedWindowsSourceAssociation';
 
+import type { WindowsOriginalSourceAssociation } from './capturedWindowsSourceAssociation';
 import type {
   CapturedWindowsLauncher,
   NativeProcessProfile,
@@ -32,7 +33,6 @@ import type {
 } from '@agent-teams/legacy-agent-host/owned-process';
 import type { RuntimeConfigurationRefreshIntent, RuntimeSourceCandidate, RuntimeSourceGrant,
   RuntimeSourcePublishIntent } from '@agent-teams/legacy-agent-host/runtime-sources';
-import type { WindowsOriginalSourceAssociation } from './capturedWindowsSourceAssociation';
 
 export type SelectedWindowsProcessProfile = NativeProcessProfile & {
   provider: 'claude' | 'codex' | 'opencode';
