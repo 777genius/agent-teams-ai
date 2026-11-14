@@ -12,7 +12,9 @@ export async function verifyCurrentNativeSuggestion(
   backend: Pick<AgentBackendApi, 'getConnections' | 'invoke'> | undefined
 ): Promise<boolean> {
   if (!backend || typeof candidate.inputId !== 'string' ||
-      candidate.inputId.length === 0 || candidate.inputId.length > 256) return false;
+      candidate.inputId.length === 0 || candidate.inputId.length > 256 ||
+      typeof candidate.operationRef !== 'string' ||
+      candidate.operationRef.length === 0 || candidate.operationRef.length > 256) return false;
   try {
     const handleId = parseHostTeamSelectionKey(candidate.ownerHandle);
     const currentConnection = async (): Promise<boolean> => {
@@ -28,7 +30,10 @@ export async function verifyCurrentNativeSuggestion(
       handle: { handleId },
       commandId: crypto.randomUUID(),
       operation: 'runtime.read',
-      payload: { memberId: candidate.memberId, expectedGeneration: candidate.generation },
+      payload: {
+        memberId: candidate.memberId, expectedGeneration: candidate.generation,
+        nativePromptProof: { inputId: candidate.inputId, operationRef: candidate.operationRef },
+      },
     });
     if (!result.ok || !result.value ||
         typeof result.value !== 'object' || Array.isArray(result.value)) return false;
@@ -37,6 +42,7 @@ export async function verifyCurrentNativeSuggestion(
         state.generation !== candidate.generation ||
         state.phase !== 'allocated' || state.sealed !== false ||
         state.custody !== 'owned' || state.nativeReady !== true ||
+        state.nativePromptCurrent !== true ||
         state.attached !== true || !Array.isArray(state.inputs) ||
         state.inputs.length > 2048) return false;
     const rows = state.inputs as unknown[];
