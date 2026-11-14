@@ -5333,3 +5333,47 @@ Extend only the existing Preserve qualification evidence path list to include th
 ### 108.5. Review, verification and explicit limits
 
 Root controls plan publication, source GO, canonical application and all checks. Source remains zero until this appendix is independently reviewed and published with explicit GO. Review reporter ownership, preservation of the first failure, and the file bounds/custody above before approving source. Source review must verify exact default-branch preservation and all original assertion/declaration lines; bounded file-only controls may exercise marker refusal, ownership/path escape, absent/unstable/truncated reports and serialization failure without launching Electron or inducing a crash. Existing harness tests, Main/build checks and the next original native job remain separate gates. No diagnostic result is itself product qualification. This proposal does not resolve the native crash or the pending Windows child integration, and does not justify a dependency update or longer wait.
+
+## 109. Retain the original Linux V2 credential cleanup failure through bounded private observations
+
+### 109.1. Original evidence and unresolved branch
+
+Original parent run `43622192296`, job `132530121244`, source head `def734338f13bcc3209e78079a0cedbc48f05a5b` failed the existing credential case. Full log `14a0185cf2e1ef617eec64d84c8efe107de6fbdd` records the first failure at test591 → stop454 → native-host344: Host exit1 failed the original zero-exit cleanup assertion. The unchanged finally644 then retained the same refusal. Artifact `14127960641` is 11912 bytes, SHA256 `c6ac1ab106e69a64311183b3b48ee74739cd1cb7211d2638a354c73c2fa543f8`.
+
+Exact credential receipt `6ce3464965abeaa3f7a83b8ed46dd7805ff76aee` has five completed steps, requests refused/OK/OK/timeout, two successful prior Host exits, and epoch3 PID4075 exit1 with valid stdout and diagnosticBytes433. Its original timeout journal is held/resourceHeld:true/nativePhase:probe-intent, with a verification locator but no verification result. The raw433-byte stderr and the precise false-close branch were not retained. No causal production repair follows from these facts. Evidence/source map `68ea2de0160dbba65d316dacc181b1387cfdf727` preserves the original facts, archived-source joins and limits.
+
+### 109.2. Existing seams and the remaining diagnostic gap
+
+The original fixture already exposes startHost.testImports and the original stderr callback (native-host `429d9dbcfe93733647aacd4da6973e3f2f07631b`,141–173/204–208). The credential case currently attaches only its authoritative metadata-line observer. Existing passive-diagnostics contains closed projections and an explicitly imported, pinned Node/platform subscriber.
+
+Both earlier PASS receipts in this same ZIP reached256 retained trace entries and trace-limit. Bulk child/HTTP observations can therefore consume the existing ordinary budget before the later credential timeout. Reuse will select a closed failure-only import arm, preserving the current numeric bounds and reservation behavior.
+
+The checked D archive SHA91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94 contains exact v2-native-cut blob `c855f82126084c00e92713d113bf91644d01ee3b` and v2-driver-native `70c45992e478fdc070707b6533594c0b0748b382`; both installed members match the archive. The existing read-cut-failed channel preserves the first native read failure before later cleanup translation. It cannot alone distinguish which original Host cleanup operation returned false. OpenCodeV2ModelProbe19c310 at381–439 joins request drainage, sticky ownerCleanupUnknown, driver close, owned server stop, optional coordination close and namespace removal. Operation0b7b2 at39–45/84–100 retains unsettled cleanup; Coordinator88c183 at777–792 refuses shutdown when cleanup or the original resourceHeld debt remains. Those authority and return semantics stay intact.
+
+### 109.3. Exact three-path scope
+
+| Existing path | Exact preimage |
+| --- | --- |
+| packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts | 19c3108232562d6f5bd550cf0011a3bff7c5e22b |
+| packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts | f2142d5a8b2d9ea8c8438e84c67b621115c8ea9f |
+| packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts | 476facd9bd641fa6163a471ff9d8fc7e7c8de05f |
+
+All nine current preimages match at parent `5c975db6b8c7f234c3ce42126bf8399a38f29668`, native `9c32f40f54ae24217e663e5643b7cc394ab99d95`, qualification `ecd878c213cfddc5d0e55b4fc07cf5401cea9b36`. This appendix follows exact P09 `d4c47fe7a3d2279cdb632bec6b60ae8761bb4f87`. No other production, fixture, workflow, dependency or stored/public schema path is writable.
+
+### 109.4. Minimal implementation and preserved original behavior
+
+1. In the existing ModelProbe close implementation, add the private diagnostics_channel `agent-teams:opencode-v2:model-probe-close-failed`. Only an existing subscriber enables an observation record. Record results at their original await/check sites; do not repeat an await, read, currentness check, close or namespace operation. When the original memoized close resolves exactly false, publish one immutable copied observation if a subscriber remains, then return the unchanged false. A confirmed close emits nothing. Diagnostic publication is contained and cannot change released, sticky UNKNOWN, rejection or the original close result.
+
+   The entire payload is closed: workCompleted:boolean; requestDrain:boolean|null; ownerCleanupUnknown:boolean|null at the original drain/clean conjunction; driver/server/coordination each one of absent/pending/confirmed/unknown/threw; namespace one of not-reached/pending/confirmed/identity-mismatch/threw. Pending/null means the original operation has not supplied a result. workCompleted distinguishes the existing outer deadline returning false while original cleanup is still running. Snapshot the record before publication; later original work must not mutate the emitted object or encounter a frozen working record. Do not read a new clock or add a timer, promise race or extra asynchronous boundary. No Error, identifier, path, endpoint, credential, payload or native output enters this channel.
+
+2. In the existing passive helper, recognize only the literal import query `?credential-failures=1` inside its existing Node24.21.0/platform/actual--import gate. This arm retains the existing read-cut-failed and metadata-read-failed subscriptions and stdin-ended observation, subscribes to the new false-close event, then returns before bulk child/Undici observers. The default import retains its original subscriptions and behavior. Add an independent closed own-data projection for the new event, rejecting accessors and unrecognized booleans/enums. Reproject at the existing receipt boundary and contain subscriber errors. Keep maximum256, 64KiB trace,512-byte line, existing reserved slots and explicit limited indication unchanged; no reset or extension across parent capture epochs.
+
+3. In the same original credential case, create one existing passive capture for the whole case. Add the exact private helper URL to the original startHost.testImports; forward the same existing stderr chunk and original captured HostEpoch ID to that capture while preserving the original metadata observer. No new Host/native process, IPC/HTTP/model request or diagnostic read is introduced. Capture errors remain diagnostic unavailability. Only an original failed outcome adds projected observations and bounded availability/limited facts to the existing receipt; do not retain raw stderr. Keep the original closeFailure/timeoutJournal and original errors, cleanup assertions and AggregateError behavior.
+
+The original single case and all126 assertion-containing lines remain. Keep the four original Host epochs, five metadata owners/ten metadata records, four original probes/requests, three final key effects, exact source/pin checks, native physical identity/census, original240s case/30s probe bounds, timeout rejection distinction and cold no-replay checks. A retained diagnostic does not discharge resourceHeld or qualify a native operation. Missing, rejected, truncated or pending facts remain explicitly incomplete.
+
+### 109.5. Review and qualification
+
+Source remains zero until independent review, publication and root SOURCE GO. Review must verify every original await/check/return and memoization boundary, passive default preservation, one failure publication, immutable pending-work snapshot and closed projections. Root may use bounded data-only controls with synthetic channel records/trace pressure and existing test cases to verify malformed/accessor/secret refusal, limits, success silence and preservation of the original false result; no new test suite or native campaign is required. Root owns existing types/build/caps and the next original native job.
+
+The current Linux failure remains OPEN. The next original receipt must distinguish the observed cleanup branch before any behavioral repair is proposed. A sibling PASS or a diagnostic-control PASS does not settle this failure, and observation loss cannot be converted to confirmed cleanup.
