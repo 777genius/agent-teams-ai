@@ -262,9 +262,13 @@ POSIX source-identity P09 §75 остаётся отдельным открыт�
 
 Предыдущие разделы сохранены как история. Этот статус разделяет результаты
 исходных запусков Batch5 и последующие изменения в repair-ветках.
-На срезе CI 20:28:35 UTC parent Full qualification (job132567214491) завершился
-FAIL; parent packaged aggregate и native CI aggregate ещё ожидали выполнения.
-Общий итог приёмки остаётся открытым.
+На срезе CI 20:54:19 UTC parent: все 24 runs terminal — 20 SUCCESS / 4 FAIL;
+qualification: все 5 terminal — 4 SUCCESS / 1 FAIL; native: 10 runs —
+5 SUCCESS / 3 FAIL / 1 SKIP / 1 QUEUED. Единственный незавершённый — native
+aggregate run43622201276 / job132571271096. Parent packaged aggregate
+run43622192458 / job132569274507 завершился SUCCESS; parent Full qualification
+job132567214491 остаётся FAIL. Общий итог приёмки открыт; CI текущего
+repair-состава ещё требуется, прежние PASS ему не приписываются.
 
 ### Подтверждённые исходные сценарии
 
@@ -272,6 +276,14 @@ FAIL; parent packaged aggregate и native CI aggregate ещё ожидали в�
   каждый — шесть native steps, 11 model requests, два Host exit0 и cleanup. Это
   отдельная приёмка packaged Host; Windows Retry/Processes UI, model-readiness
   coordination, vendor authentication и release этими receipts не подтверждаются.
+- Darwin ARM (parent/qualification/native): три исходных P16/P23 manual Host
+  PASS — по 11 model requests, два Host exit0 и cleanup, exact source/input pins.
+  Native P24 остаётся FAIL и §75 открыт; Desktop/release и более поздние repair
+  heads этими результатами не квалифицированы.
+- Windows x64/ARM: шесть исходных jobs, 12 manual+auto Host PASS — по 11 requests,
+  всего 24 Host exit0/null/stdoutValid и original Job descendant/neighbor cleanup.
+  Шаги 18–22, Windows coordination, packaged/same-Main Windows25, vendorAuth,
+  release и более поздние heads остаются вне этих source Host результатов.
 - Codex Login на Linux x64 прошёл browser/device-code pending, copy, повторное
   открытие того же authorization, cancel и физический cleanup через исходные
   Settings/preload/Main/Host/native app-server. Аутентифицированный vendor login
@@ -308,11 +320,18 @@ P06 §33 — лишний status/catalogue вызов stopped import. Причи
 intermittent deadline не объявлен исправленным. §110 опубликован в трёх repair-ветках.
 Стандартные build, test-types, fast lint и source-size guard прошли.
 
+§111 также опубликован в трёх repair-ветках: focused 44/44 PASS и один полный
+исходный serialized Host прогон — 1247 total / 1245 PASS / 0 FAIL / 2 existing
+skips за 339109.265 ms. Build, test-types, fast lint и source-size guard — PASS.
+Это локальная проверка exact §111; она не доказывает timing reliability и не
+заменяет pending current-PR CI или исходную native/Desktop приёмку.
+
 Оба parent Windows broker jobs завершились exit75 в старом debug-service пути.
 Соответствующая native-child реализация уже прошла исходные ранние service gates;
 последующие Windows profile/UI failures учитываются отдельно. Оба child PR1187
 и PR1188 ещё должны пройти требуемую приёмку и интегрироваться в parity, затем
-parity — в Stage1 с проверкой итогового состава. Repair refs не означают слияние.
+parity — в Stage1 с проверкой итогового состава. Repair refs не означают слияние;
+merge в main по-прежнему вне цели.
 
 P09 §75 остаётся открытым для POSIX custom executable с заранее открытым
 некооперативным writable FD: подтверждённого общего решения, сохраняющего
@@ -326,9 +345,16 @@ original path/$0/argv/env/cwd/resources и valid #! scripts, не установ
 Packaged V2: `22be288cf747c28b12f54cb12dd58793eae2463a`,
 `4b9d2c6a1025d247f5284e972e4bebc862210bd6`, `b1aded232baadf88e3c9231d7a34df0767c42db1`,
 `cccadb9c360b40ee788ecca8eb0589ca8f3af0ed`, `99a79b55ed181faddd8c2ec43ab227786ec8f53d`.
+Darwin ARM: `a456eaabac8eaf096c6d64a14c72da110b7ddcb1`, root peer
+`e396a23f78fce642b74153eb1c281f4636475b34`; Windows source Host manual+auto:
+`aa002d813f7d857b608e8e5b038973456b77b398`, root peer
+`c8614feb8120a7cf51d0dc4bf572687bd591f01b`.
 Codex Login: `6acf32e640d267444a577c6eec3de1337d054f78`; native schedules:
 `8a0f02e0afcfc5290604fe298e7e8446c8daf12c`; retained coexistence:
 `88ea496f988e1f61c8097588d0b726a902fb48c0`.
 Host focused FAIL: `a2b06a599ad16e02acd2a8a7c163e5097b0afa16`; полный исходный PASS:
 `1588a0fe785a3d9aa97bea0c9cec021d54964138`; validation §110:
 `f794e5df742c6dbfe7a4fdd05bb77a3b1e370493`.
+§111 focused PASS: `5785fa006e7f387ba8fb1f75f6b33b15c21ede64`; полный raw PASS:
+`c4e6e97df81aed7bf97835f617405965c0f69f5f`; validation:
+`b27434b3a1e3d9244bf8ac9d64697fbf614d2cf4`.
