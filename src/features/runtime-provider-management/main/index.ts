@@ -33,3 +33,18 @@ export {
   type OpenCodeBinaryVersionProbe,
   probeOpenCodeBinaryVersion,
 } from './infrastructure/openCodeVersionDiagnostics';
+
+// Explicit Main-only helpers for the original local-model readiness capture.
+export {
+  isPrivateNetworkRuntimeLocalProviderUrl,
+  normalizeRuntimeLocalProviderTarget,
+} from '../core/domain';
+export { JsonLocalProviderPrivateNetworkApprovalStore } from './infrastructure/LocalProviderPrivateNetworkApprovalStore';
+export {
+  createOpenCodeGlobalConfigEnvironmentResolver,
+  OPENCODE_GLOBAL_CONFIG_FILENAMES,
+  OPENCODE_PROJECT_CONFIG_CANDIDATES,
+  readOpenCodeConfigTarget,
+} from './infrastructure/openCodeGlobalConfigOverrides';
+export { resolveConfiguredProviderPreset } from './infrastructure/OpenCodeLocalProviderSupport';
+export { LocalProviderOperationError } from './infrastructure/OpenCodeLocalProviderSupport';

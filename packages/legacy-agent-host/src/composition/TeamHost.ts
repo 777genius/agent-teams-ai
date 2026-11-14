@@ -5,7 +5,7 @@ import { createProviderManagementMethods } from './createProviderManagementMetho
 import { createHostProviderManagementComposition } from './createHostProviderManagementComposition.js';
 import { createRuntimeSourceMethods } from './createRuntimeSourceMethods.js';
 import { createHostScheduledRunComposition } from './createHostScheduledRunComposition.js';
-import { envelopeSchema, equalFields, hostOwnerSchema, json } from './teamHostEnvelope.js';
+import { envelopeSchema, parsePreparationEnvelope, parseCreationEnvelope, equalFields, hostOwnerSchema, json } from './teamHostEnvelope.js';
 import { join } from 'node:path';
 import { createHostTeamLifecycleComposition } from './createHostTeamLifecycleComposition.js';
 import { createHostWorkSyncComposition } from './createHostWorkSyncComposition.js';
@@ -465,16 +465,17 @@ export function createTeamHost(
     });
 
     const creationMethods = createTeamCreationMethods({
-      select(raw) {
+      select(raw, preparation) {
         if (sealed) throw new TeamLaunchError('hold', 'sealed');
         lease.assertCurrent();
-        const input = z.object({ owner: hostOwnerSchema, commandId: id, payload: z.unknown() }).strict().parse(raw);
+        const input = parseCreationEnvelope(raw, preparation);
         if (!creationLaunch || !equalFields(input.owner, profile.owner))
           throw new TeamLaunchError('forbidden', 'creation-owner');
         return {
           coordinator: creationLaunch,
           commandId: input.commandId,
           payload: input.payload,
+          ...(input.localModelReadinessOrigin ? { localModelReadinessOrigin: input.localModelReadinessOrigin } : {}),
         };
       },
     });
@@ -577,7 +578,7 @@ export function createTeamHost(
             try {
               if (sealed) throw new TeamLaunchError('hold', 'sealed');
               lease.assertCurrent();
-              const input = envelopeSchema.parse(raw),
+              const input = parsePreparationEnvelope(raw, action === 'start'),
                 selected = teams.get(input.binding.scope.teamId);
               if (
                 !selected ||
@@ -595,6 +596,10 @@ export function createTeamHost(
                     teamId: selected.definition.binding.teamId,
                     commandId: input.commandId,
                     payload: input.payload,
+                    ...(input.localModelReadinessOrigin ? { readiness: {
+                      preparation: input.localModelReadinessOrigin, owner: profile.owner,
+                      handleId: input.binding.handleId, scope: input.binding.scope,
+                    } } : {}),
                   })
                 ),
               };
@@ -776,3 +781,5 @@ export function createTeamHost(
     throw error;
   }
 }
+
+export type { LocalModelReadinessOrigin, LocalModelReadinessPreparation, ReadinessSourceReference } from '../management/commandRecords.js';

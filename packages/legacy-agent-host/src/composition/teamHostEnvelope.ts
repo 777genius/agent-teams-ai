@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { localModelReadinessPreparationSchema } from '../management/commandRecords.js';
 import { teamRegistryScopeSchema } from '../team-registry/contracts.js';
 import type { JsonValue } from '../contracts.js';
 
@@ -14,6 +15,21 @@ export const envelopeSchema = z.object({
     owner: hostOwnerSchema, scope: teamRegistryScopeSchema }).strict(),
   payload: z.unknown(),
 }).strict();
+export const preparationEnvelopeSchema = envelopeSchema.extend({
+  localModelReadinessOrigin: localModelReadinessPreparationSchema.optional(),
+}).strict();
+export const creationEnvelopeSchema = z.object({
+  owner: hostOwnerSchema, commandId: id, payload: z.unknown(),
+}).strict();
+export const creationPreparationEnvelopeSchema = creationEnvelopeSchema.extend({
+  localModelReadinessOrigin: localModelReadinessPreparationSchema.optional(),
+}).strict();
+export function parsePreparationEnvelope(raw: unknown, preparation: boolean): z.infer<typeof preparationEnvelopeSchema> {
+  return preparation ? preparationEnvelopeSchema.parse(raw) : envelopeSchema.parse(raw);
+}
+export function parseCreationEnvelope(raw: unknown, preparation: boolean): z.infer<typeof creationPreparationEnvelopeSchema> {
+  return preparation ? creationPreparationEnvelopeSchema.parse(raw) : creationEnvelopeSchema.parse(raw);
+}
 export function json(value: unknown): JsonValue {
   return JSON.parse(JSON.stringify(value)) as JsonValue;
 }

@@ -5,7 +5,9 @@ import { managementDigest } from './identity.js';
 import { modelProbeLimitsSchema } from './modelLimits.js';
 
 import type {
+  LocalModelReadinessOrigin,
   ManagementCommandStore,
+  ReadinessPreparationAnchor,
   ManagementTarget,
   NativeLocalReadinessEvidence,
   StoredModelProbe,
@@ -66,7 +68,10 @@ export class ModelProbeOwner {
       fence: ManagementResourceFence;
       assertWriter(): void;
       select(profileId: string, configRevision: string): ManagementTarget;
-      prepare(input: ModelProbeInput, isCurrent: () => boolean, purpose?: NativeModelProbePurpose): NativeModelProbe;
+      prepare(input: ModelProbeInput, isCurrent: () => boolean, purpose?: NativeModelProbePurpose,
+        origin?: LocalModelReadinessOrigin): NativeModelProbe;
+      readinessOriginCurrent?(origin: LocalModelReadinessOrigin, input: ModelProbeInput,
+        current?: () => boolean): boolean;
     }
   ) {}
 
@@ -84,6 +89,37 @@ export class ModelProbeOwner {
   startNativeReadiness(raw: unknown, guard: () => boolean): ProviderModelProbeSnapshot {
     const input = startSchema.extend({ context: coordinationIdentity.shape.context }).parse(raw);
     return this.admit(input, guard, nativeLocalReadinessPurpose);
+  }
+
+  /** Private preparation composition; never upgrades an already retained ordinary receipt. */
+  startPrepared(raw: unknown, guard: () => boolean, prepared?: {
+    anchor: ReadinessPreparationAnchor; origin?: LocalModelReadinessOrigin;
+  }): ProviderModelProbeSnapshot {
+    this.assertAdmission();
+    const input = startSchema.parse(raw), previous = this.options.store.read(input.commandId);
+    if (previous) {
+      if (previous.kind !== 'model.probe' || prepared &&
+          (managementDigest(previous.localModelReadinessPreparation ?? null) !== managementDigest(prepared.anchor) ||
+           managementDigest(previous.localModelReadinessOrigin ?? null) !== managementDigest(prepared.origin ?? null)))
+        throw new ManagementCommandError('conflict');
+      return this.admit(input, guard, previous.purpose,
+        previous.localModelReadinessPreparation ? {
+          anchor: previous.localModelReadinessPreparation,
+          ...(previous.localModelReadinessOrigin ? { origin: previous.localModelReadinessOrigin } : {}),
+        } : undefined);
+    }
+    return this.admit(input, guard, prepared?.origin ? nativeLocalReadinessPurpose : undefined, prepared);
+  }
+
+  /** Original first-group record only. Absence and a historical record without origin are distinct. */
+  readPreparation(commandId: string): { present: boolean; anchor?: ReadinessPreparationAnchor } {
+    this.assertAdmission();
+    const saved = this.options.store.read(id.parse(commandId));
+    if (!saved) return { present: false };
+    if (saved.kind !== 'model.probe') throw new ManagementCommandError('conflict');
+    const anchor = saved.localModelReadinessPreparation;
+    if (anchor && anchor.anchorCommandId !== commandId) throw new ManagementCommandError('conflict');
+    return { present: true, ...(anchor ? { anchor: structuredClone(anchor) } : {}) };
   }
 
   /** B2 may consume only this original complete receipt, never a public ok boolean. */
@@ -115,19 +151,25 @@ export class ModelProbeOwner {
   }
 
   private admit(input: ModelProbeInput, guard: () => boolean,
-    purpose?: NativeModelProbePurpose): ProviderModelProbeSnapshot {
+    purpose?: NativeModelProbePurpose,
+    prepared?: { anchor: ReadinessPreparationAnchor; origin?: LocalModelReadinessOrigin }
+  ): ProviderModelProbeSnapshot {
     this.assertAdmission();
     const admittedAt = Date.now();
     const isCurrent = () => {
       try {
-        return guard();
+        return guard() && (!prepared?.origin || Date.now() < prepared.anchor.expiresAt);
       } catch {
         return false;
       }
     };
     if (!isCurrent()) throw new ManagementCommandError('held');
     const target = this.options.select(input.profileId, input.configRevision);
-    const fingerprint = managementDigest(purpose ? { ...input, purpose, target } : input);
+    if (prepared?.origin && this.options.readinessOriginCurrent?.(prepared.origin, input, isCurrent) !== true)
+      throw new ManagementCommandError('held');
+    const original = purpose ? { ...input, purpose, target } : input;
+    const fingerprint = managementDigest(prepared ? { ...original, localModelReadinessPreparation: prepared.anchor,
+      ...(prepared.origin ? { localModelReadinessOrigin: prepared.origin } : {}) } : original);
     const previous = this.options.store.read(input.commandId);
     if (previous) {
       if (previous.kind !== 'model.probe' || previous.fingerprint !== fingerprint)
@@ -135,10 +177,11 @@ export class ModelProbeOwner {
       assertManagementTarget(previous, target);
       return this.snapshot(previous);
     }
+    if (prepared && Date.now() >= prepared.anchor.expiresAt) throw new ManagementCommandError('held');
     this.options.fence.reserve(target.resourceId, input.commandId);
     let entry: ActiveProbe;
     try {
-      const native = this.options.prepare(input, isCurrent, purpose);
+      const native = this.options.prepare(input, isCurrent, purpose, prepared?.origin);
       if (
         !Number.isSafeInteger(native.timeoutMs) ||
         native.timeoutMs < 1 ||
@@ -150,6 +193,8 @@ export class ModelProbeOwner {
         ...target,
         kind: 'model.probe',
         ...(purpose ? { purpose } : {}),
+        ...(prepared ? { localModelReadinessPreparation: structuredClone(prepared.anchor) } : {}),
+        ...(prepared?.origin ? { localModelReadinessOrigin: structuredClone(prepared.origin) } : {}),
         commandId: input.commandId,
         providerId: input.providerId,
         modelId: input.modelId,
@@ -161,7 +206,9 @@ export class ModelProbeOwner {
         phase: 'running',
         resourceHeld: true,
         ok: false,
-        expiresAt: (purpose ? admittedAt : Date.now()) + native.timeoutMs,
+        expiresAt: prepared?.origin
+          ? Math.min(admittedAt + native.timeoutMs, prepared.anchor.expiresAt)
+          : (purpose ? admittedAt : Date.now()) + native.timeoutMs,
       };
       this.options.store.write(saved);
       entry = { saved, native, abort: new AbortController(), retired: false, isCurrent };
@@ -192,6 +239,7 @@ export class ModelProbeOwner {
       saved = this.original(input);
     if (!saved) return null;
     assertManagementTarget(saved, this.options.select(input.profileId, input.configRevision));
+    if (!this.originCurrent(saved)) throw new ManagementCommandError('held');
     return this.snapshot(saved);
   }
 
@@ -266,6 +314,12 @@ export class ModelProbeOwner {
     };
   }
 
+  private originCurrent(saved: StoredModelProbe): boolean {
+    if (!saved.localModelReadinessOrigin) return true;
+    try { return this.options.readinessOriginCurrent?.(saved.localModelReadinessOrigin, saved) === true; }
+    catch { return false; }
+  }
+
   private assertAdmission(): void {
     this.options.assertWriter();
     if (this.sealed) throw new ManagementCommandError('held');
@@ -307,7 +361,7 @@ export class ModelProbeOwner {
       } catch {
         /* Unknown custody remains held. */
       }
-      if (phase === 'completed' && (!entry.isCurrent() ||
+      if (phase === 'completed' && (!entry.isCurrent() || !this.originCurrent(entry.saved) ||
           entry.saved.purpose && Date.now() >= entry.saved.expiresAt)) {
         phase = 'cancelled';
         ok = false;

@@ -1,3 +1,5 @@
+import { captureOpenCodeReadinessOrigin } from '../adapters/providers/OpenCodeReadinessOrigin.js';
+import type { LocalModelReadinessOrigin } from '../management/commandRecords.js';
 import { SkillCoordinator } from '../skills/SkillCoordinator.js';
 import { NativeExtensionCoordinator } from '../extensions/NativeExtensionCoordinator.js';
 import { ClaudeAuthenticationCoordinator } from './ClaudeAuthenticationCoordinator.js';
@@ -201,12 +203,17 @@ export class ProviderManagementCoordinator {
       fence,
       assertWriter: () => this.assertWriter(),
       select: (profileId, configRevision) => this.target(profileId, configRevision),
-      prepare: (input, isCurrent, purpose) => this.prepareProbe(input, isCurrent, purpose),
+      prepare: (input, isCurrent, purpose, origin) => this.prepareProbe(input, isCurrent, purpose, undefined, origin),
+      readinessOriginCurrent: (origin, input, current = () => true) => {
+        try { captureOpenCodeReadinessOrigin(origin, this.select(input.profileId, input.configRevision), input.providerId,
+          () => { this.assertCurrent(); return current(); }); return true; } catch { return false; }
+      },
     });
   }
 
   private prepareProbe(input: ModelProbeInput, isCurrent: () => boolean,
-    purpose?: NativeModelProbePurpose, observeProvider?: (provider: unknown) => boolean): NativeModelProbe {
+    purpose?: NativeModelProbePurpose, observeProvider?: (provider: unknown) => boolean,
+    origin?: LocalModelReadinessOrigin): NativeModelProbe {
     if (purpose && !this.profiles.has(input.profileId)) throw new ManagementCommandError('invalid');
     if (this.claude.has(input.profileId)) return this.claude.prepareProbe(input, isCurrent);
     if (this.codex.has(input.profileId)) return this.codex.prepareProbe(input, isCurrent);
@@ -228,7 +235,7 @@ export class ProviderManagementCoordinator {
             ...(this.processCustody ? { processCustody: this.processCustody } : {}),
             coordination: true, readiness: { expectedProvider: provider } })
           : this.prepareCoordination(profile, selected, current, { provider, ...(key === undefined ? {} : { key }) }),
-      });
+      }, origin);
     }
     if (profile.nativeGeneration === 'v2') {
       const target = this.credentialTarget(profile);

@@ -8,6 +8,7 @@ import { hostTeamRunId } from '../../contracts/teamRunSelection';
 import { assertBackendRequestGuard, BackendRoutingError } from './backendBinding';
 import { captureConfiguredHostTeamDraft } from './createConfiguredHostTeam';
 
+import type { LocalModelReadinessContext } from '../infrastructure/CapturedLocalModelReadiness';
 import type { BackendRequestGuard } from './backendBinding';
 import type {
   CreateTeamLaunchPreparationInput,
@@ -23,7 +24,8 @@ import type {
 export interface CapturedTeamCreationPort {
   prepare(
     action: 'prepare' | 'probe.read' | 'probe.cancel',
-    input: CreateTeamLaunchPreparationInput
+    input: CreateTeamLaunchPreparationInput,
+    readiness?: LocalModelReadinessContext
   ): Promise<CreateTeamLaunchPreparationSnapshot>;
   submit(
     commandId: string,
@@ -57,11 +59,16 @@ export async function prepareCreatedHostTeam(options: {
   const signature = createdTeamSelectionSignature(options.draft as TeamCreateRequest);
   const current = () => assertBackendRequestGuard(options.guard);
   const deadline = performance.now() + 90_000;
+  const readiness = input.draft.savedSettings.providerId === 'opencode' ||
+    input.draft.members.some(row => row.memberSettings.providerId === 'opencode')
+    ? { remainingMs: () => deadline - performance.now() } : undefined;
+  const prepare = () => readiness
+    ? options.target.prepare('prepare', input, readiness) : options.target.prepare('prepare', input);
   let active = false;
   try {
     current();
     active = true;
-    let snapshot = await options.target.prepare('prepare', input);
+    let snapshot = await prepare();
     while (true) {
       current();
       if (snapshot.preparationId !== input.preparationId)
@@ -112,7 +119,7 @@ export async function prepareCreatedHostTeam(options: {
         !snapshot.probes.some((probe) => probe.phase === 'running') &&
         snapshot.probes.some((probe) => probe.phase === 'not-started')
       )
-        snapshot = await options.target.prepare('prepare', input);
+        snapshot = await prepare();
     }
   } finally {
     // Cancels only original private probe IDs; never reads a new foreground owner.

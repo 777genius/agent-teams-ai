@@ -1,6 +1,8 @@
 import { digest, effectId } from '../team/identity.js';
 import { teamRosterRevision } from '../team/rosterSchema.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
+import { captureReadinessPreparation, originalReadinessSubset } from '../adapters/providers/OpenCodeReadinessOrigin.js';
+import type { LocalModelReadinessPreparation } from '../management/commandRecords.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
 import { captureCreateTeamDraft } from './captureCreateTeamDraft.js';
 import type { TeamHostProfile } from './TeamHost.js';
@@ -48,11 +50,21 @@ export class CreateTeamLaunchCoordinator {
 
   async prepare(
     action: 'start' | 'read' | 'cancel',
-    raw: unknown
+    raw: unknown,
+    origin?: LocalModelReadinessPreparation
   ): Promise<CreateTeamLaunchPreparationSnapshot> {
     if (action === 'cancel') return this.cancelPreparation(raw);
+    const admittedAt = Date.now();
     const captured = this.capture(raw);
     const { input, draftDigest } = captured;
+    const anchorCommandId = this.probeCommand(input.preparationId, captured.selections[0]!.memberName);
+    const original = this.options.management.probes.readPreparation(anchorCommandId);
+    const prepared = action === 'start' && origin ? captureReadinessPreparation(origin, {
+      kind: 'create', owner: this.options.profile.owner, contextId: input.draft.contextId,
+      commandId: input.preparationId, selection: input, anchorCommandId, original, admittedAt,
+      workspaces: captured.selections.filter(row => row.selection.profile.provider === 'opencode')
+        .map(row => row.selection.profile.cwd),
+    }) : undefined;
     const groups = new Map<string, ProviderModelProbeSnapshot | null>();
     let advanced = false;
     const probes: CreateTeamLaunchPreparationSnapshot['probes'] = [];
@@ -99,11 +111,15 @@ export class CreateTeamLaunchCoordinator {
         // Existing start replay validates the original target inode/account selection.
         // No await separates read and this same-ID replay under the single profile writer;
         // a query can never take the absent-intent allocation branch here.
-        if (saved) saved = this.options.management.probes.start(originalInput, current);
+        if (saved) saved = this.options.management.probes.startPrepared(originalInput, current);
         if (action === 'start' && !advanced && !saved) {
           // Earlier probes must be green before the next shared account fence can be admitted.
           if (probes.every((probe) => probe.ok)) {
-            saved = this.options.management.probes.start(originalInput, current);
+            if (original.anchor && !prepared) throw new TeamLaunchError('hold', 'creation-origin-required');
+            const origin = prepared && profile.provider === 'opencode'
+              ? originalReadinessSubset(prepared.origin, profile.cwd, providerId) : undefined;
+            saved = this.options.management.probes.startPrepared(originalInput, current,
+              prepared ? { anchor: prepared.anchor, ...(origin ? { origin } : {}) } : undefined);
             advanced = true;
           }
         }
