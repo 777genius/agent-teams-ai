@@ -58,7 +58,8 @@ export function buildTransientHandoffMessage(
     from: card.sourceLabel,
     to: card.destinationLabel,
     text: buildText(card),
-    timestamp: new Date(card.updatedAt * 1000).toISOString(),
+    // Animation time is relative to the graph, not a Unix timestamp.
+    timestamp: new Date().toISOString(),
     read: true,
     summary: buildSummary(card),
     color: card.color,
