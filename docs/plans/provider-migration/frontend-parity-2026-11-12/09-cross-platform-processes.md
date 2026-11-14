@@ -4524,3 +4524,53 @@ Add only useTaskDetailPresentation and TaskDetailHeader to the existing integrat
 Before source, perform two independent review rounds: first critique the concrete focus/layout and same-read/owner-lifetime design against the original sources; then review the frozen revised appendix, exact eight-path inventory, full-prefix composition and critical negatives. Root reads the same frozen text, publishes the plan immediately with readback, and gives source GO only after those reviews. Round1 concerns must be resolved explicitly rather than carried as an optional implementation debt. Source0 until that gate; the Composer subset can be authorized separately if Taskboard's continuation still needs correction.
 
 Implement in isolated staging only. Freeze complete before/after hashes and inverse diffs, request independent source peers for both cuts, and give Root the final manifest. Root owns serial focused existing tests, canonical relevant types/lint/source-size checks and normal desktop/native qualification. No alternate live PR, special diagnostic workflow, extra model invocation or old-run replay is introduced. Successful unit/type checks will qualify only their stated scope. The original /cost and Taskboard failures remain actual failed evidence until a new ordinary current-head run completes their original one-action business and cleanup assertions.
+
+
+## 88. Carry the existing 8192 MiB source-build allowance into the original controlled Darwin cold-UI TEST environment
+
+### 88.1 Actual terminal failure and original evidence
+
+The ordinary parent Main run `43570716992`, job `132374282713`, at PR head `ea16834de1c133fcd2756965977064a97e82afba` completes the original process/packed qualification and its three controlled process tests, then fails the separate source Desktop cold-UI proof. The job's merge-checkout identity is `3bf9e4b39238bb154a7c6acf4d6c6f91b48a03be`; retain that distinction from the PR head. Full original job log: `c7b3254c1ea220283f84aab0906e0bbea2222132`.
+
+The original small proof artifact `14103703086` was downloaded through the official connector's artifact file reference. Its exact size is 1,434,415 bytes and ZIP SHA256 is `e2f4adb2196ff49b07f7485855c434ccda0994ce9cadd267c9948d106543db2a`. The archive contains 144 members. Only the necessary existing logs/receipts were extracted; the separate 3.16 GB artifact, a native rerun and a new diagnostic collector were not needed. The closed evidence record is `873e7f4b31d78d22b2859f56fc1f81f6a601bd81`.
+
+| Original member in `TEST-desktop-backend-VqVMxZ` or its original parent directory | Retained evidence |
+| --- | --- |
+| `desktop-app.log` | Blob `e104aaab59beeea6488717c26a0c3c8e5f5c4582`; original SHA256 `9b13ba129b9afd1a4061c9689a92a5608c2e7b6857307704aa69c0d6c3139f7e`. |
+| `desktop-backend-receipt.json` | Original SHA256 `e14dbbc8d94a6fd108c5e040e30894ffe78a603e55c9c6d4a2c23bf9378d65b1`; exact extracted bytes and closed projection retained. |
+| `cold-ui.log` | Blob `2de0d504d985c756c338e05af0a06080d6291e8a`; original SHA256 `964b675de1c535fc8b7c256191b038e226d59880fc13bf9ca2b697bcc6418b31`. |
+| `cold-ui-runner-oracle.json` | Blob `e6d1756fb56f0ea4b272212ff5a2025dc09c8f17`; original SHA256 `2eed36e64fac0aad2755a2b0ecf10e8a7360a69487eebce2bbb4d921978cd202`. |
+
+The pinned Node v24.21.0 dev process transforms 3963 modules and reaches SSR “rendering chunks”. Its final GC rows report about 2034–2050 MiB used before `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory`; `electron-vite dev` then terminates with SIGABRT. The existing capture assertion reports `captured app exited during startup` at `desktop-captured-app.ts:116`; this is not a startup deadline expiry. The receipt has `status: INCOMPLETE`, `appExitCode: 1`, no occupied CDP listener and no Main-owned captured Host B. The original controlled native root/services and standalone Host A had already been allocated; their original cleanup observes all three native identities absent and Host A closed. Do not turn that cleanup result into a successful Host B/Processes UI Stop proof.
+
+The job log identifies a Namespace `6x14` macOS ARM runner and profile `namespace-profile-macos-15`; it does not measure free RAM at the failing allocation. This plan makes no capacity guarantee from the label and does not add a resource collector.
+
+### 88.2 Exact source chain and existing allowance
+
+The existing package build at `package.json` `7afadd43590e265d6691b47f0c4b3cda02f4e3a9` and the same job's pre-freeze build at `.github/workflows/ci.yml` `b992f42311f62005ee24d51df71a2e83a4268a1f` already invoke `node --max-old-space-size=8192 ...electron-vite.js build`. That original build passes before the P7 freeze. The separate later cold-UI source startup invokes the same selected Node and pinned pnpm entry through the unchanged `dev:mcp` route and performs a dev build.
+
+The original `qualify-process-cold-ui.ts` constructs a closed child environment without `NODE_OPTIONS`. Its original fixture later constructs a second closed `desktopBackendEnvironment`, also without that field. Therefore setting an outer workflow variable alone does not reach the dev process. `desktop-backend-smoke.ts` `54ea6231bbf80210923bf0028760cf9103c33ba9` passes that fixture environment to its unchanged captured spawn. `scripts/dev-with-runtime.mjs` `9cc8140d2a88207312580450aa9db0c8abc63b0a` copies its own environment into `uiEnv`, calls the existing `ensureMinimumNodeOldSpaceEnv`, then uses the same environment for `pnpm exec electron-vite dev`. The unchanged helper `scripts/lib/node-options.mjs` `423d10be677fa86cc12a56cf433a378e4a0639e5` leaves an absent value absent and preserves an explicit 8192 value; its default minimum of 2048 does not create a flag when none was supplied.
+
+The original before-app source freeze exactly matches the current qualifier, source-environment helper, smoke actor and dev launcher bytes. Both changed TEST source paths are already explicitly listed. The unchanged `node-options.mjs` dependency is not currently listed; add its one explicit source pin below because its preservation of the fixed value is part of this proof. Do not claim implicit import traversal.
+
+### 88.3 Three existing writable paths, original variants
+
+| Existing path | Exact preimage | Bounded change |
+| --- | --- | --- |
+| `scripts/legacy-agent-host/qualify-process-cold-ui.ts` | Common `0c8acfd8afdba093ef90ef2010cf41babcf865f5` | Add literal `NODE_OPTIONS: '--max-old-space-size=8192'` in the original closed child environment. The existing Darwin/arm64/Node/GO and original-P7 checks remain first. |
+| `scripts/legacy-agent-host/desktop-runtime-source-fixture.ts` | Parent `f423eabcb069dfb918f39a1789900f050e314c9d`; native and qualification `a450545f823491093faac6df1bb1a80420b08619` | At original environment construction, add that same literal only for the exact positive Darwin/arm64 + `LEGACY_PROCESS_COLD_UI_GO === '1'` + `LEGACY_DESKTOP_PROOF_MODE === 'process-cold-ui'` conjunction. Preserve each variant's entire existing delta. |
+| `scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts` | Common `c117bf12e003234f0415bc594bec13caf37a6ea7` | Add exactly the existing `scripts/lib/node-options.mjs` path. Keep all prior entries/order, the hook and live-driver/source pins. |
+
+Use the fixed literal at both closed environment boundaries. Do not read, concatenate, normalize or forward arbitrary parent `NODE_OPTIONS`; the existing production dev/helper code remains unchanged. Construct this value before the original fixture/capture/start path. Do not mutate an already captured environment, rebuild a selection after a failure, retry the startup or change the pinned Node/pnpm executable, argv, cwd, original process-group owner, source selection or cleanup order.
+
+The positive tuple restriction is deliberate: the native Linux qualifier `qualify-linux-process-cold-ui.ts` `7d794bda2c08141b63e11b6c156b1608659a65ce` also uses the same mode/GO flags and must retain its existing environment in this bounded Darwin fix. Other source, packed, mixed, donor and retained modes also remain unchanged. Default branches must produce the same own properties and values, without adding an undefined `NODE_OPTIONS` key.
+
+Disclose the original environment sharing: `desktop-controlled-process-fixture.ts` `8eeba7cf03ccbb5a1df041f595c7084dd0735013` already passes `fixture.appEnvironment` to its controlled TEST root. In this selected Darwin scope that original Node root receives the same fixed heap option; it remains the same finite TEST process with the same script, handles, native registration and cleanup. No provider Runtime or model input is added, and no native custody observation becomes synthetic. Do not describe this as a Vite-only environment that cannot be inherited.
+
+This is the existing 8192 MiB source-build allowance made explicit in the selected TEST launch, not a new general runtime memory policy. Preserve the original 180,000 ms startup window, 45-minute job, 300,000 ms controlled-service TTL, all native/model/HTTP counters, original P7 evidence, refusal behavior and final source/physical-absence assertions. No production path, new source file, workflow/job/step, platform skip, public flag, diagnostic collector, source-size baseline or timeout change is permitted.
+
+### 88.4 Review, source proof and original gate
+
+Publish this appendix before source work. Freeze the three-path/four-distinct-blob candidate and variant manifest. Root and independent peer review exact environment literals, the positive mode/tuple conjunction, original dev Node route, untouched default branches and the one source-pin addition. Verify forward/inverse equality for each own preimage and that only this explicit field is added in the selected environment. Preserve all existing case declarations and assertions; no new suite or a test mirroring the conditional is needed.
+
+Root owns the existing script type/source-size checks and the next authorized ordinary current-tuple process/cold-UI gate. It must complete the original actual Host restart and Processes UI Stop with unchanged identity, custody, source freeze, neighbor independence, final Quit and physical cleanup. The next receipt must bind the revised qualifier/environment bytes and the newly listed unchanged `node-options.mjs` bytes. Source review and the earlier original P7 PASS do not establish that the revised dev build or cold-UI gate succeeds. Do not advance active live heads, dispatch a new diagnostic workflow or rerun the failed native attempt merely to acquire another observation.
