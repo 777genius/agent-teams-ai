@@ -7,18 +7,25 @@ on:
       - feat/native-prompt-suggestions-stage1-20261114
     paths:
       - .github/workflows/native-prompt-suggestions-vendor-once.yml
+  pull_request:
+    types: [synchronize]
+    branches:
+      - feat/provider-host-frontend-parity-20261112
+    paths:
+      - .github/workflows/native-prompt-suggestions-vendor-once.yml
 
 permissions:
   contents: write
 
 jobs:
   stage-exact-archive:
-    if: github.repository == '777genius/agent-teams-ai' && github.ref_name == 'feat/native-prompt-suggestions-stage1-20261114'
+    if: github.repository == '777genius/agent-teams-ai' && (github.ref_name == 'feat/native-prompt-suggestions-stage1-20261114' || (github.event.pull_request.head.ref == 'feat/native-prompt-suggestions-stage1-20261114' && github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-24.04
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
+          ref: feat/native-prompt-suggestions-stage1-20261114
           persist-credentials: true
           fetch-depth: 1
 
