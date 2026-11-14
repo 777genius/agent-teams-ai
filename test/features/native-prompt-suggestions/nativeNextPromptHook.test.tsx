@@ -136,6 +136,50 @@ describe('native next prompt UX in the actual feature hook + row', () => {
     expect(x.onInsert).not.toHaveBeenCalled();
   });
 
+  it('rejects a late SDK offer when user already typed then cleared a draft', () => {
+    const x = fixture();
+    // No candidate exists yet: a new draft edit still invalidates the
+    // completed human message rather than merely clearing visible React state.
+    act(() => x.getHook()?.invalidate());
+    x.emit(origin);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+    x.input.latestDirectMessageId = 'TEST-human-message-B';
+    x.render();
+    const next = {
+      ...origin, messageId: 'TEST-human-message-B',
+      operationRef: 'TEST-operation-B', completedTurnRef: 'TEST-native-turn-B',
+      suggestionId: 'TEST-suggestion-B',
+    };
+    x.emit(next);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).not.toBeNull();
+  });
+
+  it('does not resurrect an old suggestion after teammate stops and restarts', () => {
+    const x = fixture();
+    x.emit(origin);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).not.toBeNull();
+    x.input.editable = false;
+    x.render();
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+    x.input.editable = true;
+    x.render();
+    x.emit(origin);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+  });
+
+  it('retains an early offer until the matching human inbox message is readable', () => {
+    const x = fixture();
+    x.input.latestDirectMessageId = 'TEST-human-message-A-older';
+    x.render();
+    const next = { ...origin, messageId: 'TEST-human-message-B',
+      operationRef: 'TEST-operation-B', completedTurnRef: 'TEST-native-turn-B' };
+    x.emit(next);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+    x.input.latestDirectMessageId = next.messageId;
+    x.render();
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).not.toBeNull();
+  });
+
   it('unsubscribes on disposal, including same-named members from other teams', () => {
     const x = fixture();
     expect(transport.listeners.size).toBe(1);
