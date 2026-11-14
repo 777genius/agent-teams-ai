@@ -11,8 +11,8 @@ import { parseTeamLifecyclePayload } from './teamLifecycleValues';
 
 import type {
   BackendLaunchConfiguration,
-  BackendLaunchModelSelection,
   BackendLaunchModelPreparation,
+  BackendLaunchModelSelection,
 } from '../../../contracts/launch';
 import type { BackendOperationPayloads } from '../../../contracts/operations';
 
