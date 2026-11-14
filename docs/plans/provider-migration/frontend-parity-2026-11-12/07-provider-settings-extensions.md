@@ -2789,3 +2789,26 @@ The already approved R33 change uses the following frozen connected source, incl
 `TeamOwner.authorizeRuntimeAccess` remains a direct delegate to its existing `deliveryAuthority.runtimeAccess`. Its parameter tuple is derived with `Parameters<ReturnType<typeof createTeamDeliveryAuthority>['runtimeAccess']>` and forwarded unchanged. The one existing method therefore owns the exact three original arguments and optional fourth synchronous callback; there is no duplicate signature or new interface. This cohesive delegate simplification retains the 800-line limit without removing checks or changing formatting elsewhere. The other R33 semantics and the original two test names remain exactly as specified in R33.2 and R33.4.
 
 The factory retains R10's independent fresh-preparation credential callback after `canAllocate`; grouping the original current guard does not move readiness consumption, credential verification, endpoint creation, allocation or any await. Coordinator and factory preserve every existing native Windows-launch field and forwarding path. Each variant is composed from its own frozen preimage. Root reviews the exact R33-only diff before publication and owns all compiler, test and original native acceptance runs.
+
+## R34. Preserve the original scoped default-model controls in captured provider Settings
+
+### Review 1 — actual frontend contract and failure
+
+Both original mixed Desktop cases on head `5ca255671764862da273b65b8df18262cfdc0f82` reach Settings → Models but time out waiting for the original inheritance card. Original artifacts `14096340511` (344613 bytes, SHA-256 `b16024222eeda0531204d43abadd997eecaa5bff64155ec435c72738f3a374db`) and `14096490437` (317652 bytes, SHA-256 `ef3afe717ff44d91ad70d1fd1f2a0bdd72e43c8d1eaf4b815d55834b0e495e07`) show the legacy configured-model panel instead. Their failed receipts remain incomplete.
+
+`core/domain/providerManagementView.ts::supportsScopedDefaultModelInheritance` requires the existing `configuredModels` field alongside project path and the three saved-default fields. The captured management adapter already reads the same saved preferences and returns those three fields when its original preferences store exists, but omits `configuredModels`. The unchanged original panel therefore selects its legacy branch deterministically. B2 readiness, a longer UI timeout, or a second click cannot repair that missing DTO field.
+
+### Review 2 — two existing files, same captured catalog and authority
+
+| Existing path | Exact common preimage | Change |
+| --- | --- | --- |
+| `src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts` | `6f7a206efdc28ccdbe97ea4ff282b600b4394161` | In the existing `preferences.store` view projection, return `configuredModels` from the already-read current catalog's configured or connected providers, using the existing `models` and `preferenceModelRows` helpers and the same resolved preferences. |
+| `test/features/runtime-provider-management/capturedDefaults.test.ts` | `c880573ce82e498d91cc789d88c0d1552b851b17` | Extend the existing global-default case, including a fresh absent-preferences scope; preserve every original case name and mutation/probe oracle. |
+
+Do not issue another catalog/probe request or manufacture a model when a summary catalog contains no model rows. An empty catalog projection is a supported empty list, while absence of the original preferences store still omits the capability field and keeps the existing unavailable diagnostic. Project/global/default inheritance and managed limits come from the same original captured preferences. Every projected row retains `availability: untested`, `proofState: needs_probe` and `requiresExecutionProof: true`; catalog presence never becomes an execution grant. Preserve the existing final `isCurrent` check, degraded refresh behavior, source ownership, API-key actions, native/default model semantics and all request counts.
+
+The test fixture may expose its existing one model in the summary catalog for the existing global-default case, matching the original catalog schema. Assert the real `supportsScopedDefaultModelInheritance` predicate, exact default/proof fields, and one catalog request for a read-only view. A fresh absent-preferences scope inside that same existing global-default case must keep that predicate false. Do not add a suite, a synthetic renderer replacement, a new DTO/capability flag, or change the UI predicate/harness.
+
+### Review 3 — checks and original acceptance
+
+Root and an independent peer review the exact small diff against these preimages. Run the existing captured-defaults test file, the relevant renderer/main type gate, fast lint and source-size guard in the serialized slot. Publish each reviewed commit with immediate push and readback. Both original mixed V1/V2 Settings → Create → native conversation → cold reopen → physical cleanup cases remain mandatory with their existing controls, budgets, model counts and assertions. Passing this focused contract test does not qualify either Desktop journey.
