@@ -383,3 +383,41 @@ A finite comparison of the 91 production TypeScript paths in the already publish
 | `src/shared/types/teamProvisioning.ts` | `4a111f4dcb6b1b233ac1412119ccf20cbde95296` |
 
 Root composes these ten literal entries with the already published P05 §17.2 scoped-hook entry and the separately reviewed §12 new driver entry, retaining all previous roster bytes and order. The current published supplementary roster is `bf222350e768eae6493c841197eaf447069b0afa`; the reviewed driver-only composition is `ce05df0bd5db4a5a46baaaffd7f0767375f6336a`. No source directory glob or source-size baseline change is allowed. Independently review the exact additions and before/after roster composition, then retain their actual hashes in the existing native/Desktop receipts. The other nine §12 paths and all original acceptance checks remain unchanged. Source review does not replace execution; the next ordinary CI must run the complete connected tree. Publish this amendment before the ten entries.
+
+
+## 15. Use the original Runtime digest for synthetic live capture fields in the existing fixture case
+
+### 15.1 Actual current-head failure and exact cause
+
+The ordinary parent Main run `43570716992` at `ea16834de1c133fcd2756965977064a97e82afba` stops before Desktop launch in the shared controlled preflight: mixed job `132374282978` and pending-Quit job `132374283065` each report 47 cases, 46 passed and one failed. The original full job logs are retained as immutable blobs `8c1e4d816fae9ba394905d7686bb766b7a4cc528` and `12d4df2cedb0682218b26379215151d98a2db492`. The failing existing case is “mixed principal callback requires exact canonical capture delivery and live registered grant”, declared at line 368 of `scripts/legacy-agent-host/desktop-mixed-native-fixture.test.ts`; its first live target read at line 492 reaches the strict `sourceCaptureDigest` comparison at reader line 140. Missing application receipts after this preflight are consequences of this failure, not evidence of a Desktop or native failure.
+
+The synthetic live records use the already imported Team `digest`, which hashes recursively key-sorted `stableJson`. The existing reader and actual Runtime producers use `runtimeDigest`, which hashes `JSON.stringify` in the object's original property order. These are separate existing contracts. For this exact source object, a source-only SHA256 calculation reproduces both original CI values: the synthetic Team digest is `2c5d4a9b7b615abb0840147ce16e5469879a09e0a6518b8dfe2049bd60a44457`, while the required Runtime digest is `b88fdb2bf5a6c4e4bd848edcf3b23664b67b7e3de52e83404ab5fa52be95a8e5`. This is a TEST input-construction error. It does not justify changing the production algorithms, identity rules or reader assertions.
+
+| Existing source | Exact current blob | Established contract |
+| --- | --- | --- |
+| `packages/legacy-agent-host/src/team/identity.ts` | `a86e937f6874b0f2bb51fb727e4d526784846486` | Team `digest` hashes sorted `stableJson`; existing Team request, effect and revision uses remain intact. |
+| `packages/legacy-agent-host/src/runtime/identity.ts` | `e2b5fc6216637c1d78ff807bf0e11c63d5ec5f63` | `runtimeDigest` hashes `JSON.stringify(value)`. |
+| `packages/legacy-agent-host/src/composition/executeLiveRosterMembership.ts` | `267b4a9e5fa19d3a339a55cfc317741f90d76e9d` | The original first flight derives `sourceCaptureDigest` from `runtimeDigest(retained.team.capture ?? null)` before the Team admission. |
+| `packages/legacy-agent-host/src/composition/captureLiveRosterMember.ts` | `ce195d3f70cb36a9fbc89493cbdcb2e0dade9387` | Compilation uses `live-${runtimeDigest(origin)}`; the original capture view uses `runtimeDigest(capture)`. |
+| `packages/legacy-agent-host/src/team-launch/liveRosterMembership.ts` | `6ad18f7477d1c9729e89f1576b759fb630888843` | The launch journal imports `runtimeDigest as digest` and retains that same capture digest. |
+| `scripts/legacy-agent-host/desktop-mixed-native-fixture.ts` | `426c45f6236a3aaf8b3f5e14b4cf21e4ce000c8f` | The existing reader strictly checks the source, capture and origin revision with those Runtime contracts. It remains unchanged. |
+
+### 15.2 Exact one-file correction
+
+Change only `scripts/legacy-agent-host/desktop-mixed-native-fixture.test.ts`, preimage `401b5c16a1e1fc2f335adde7ed57e60e876b5eb3`. Official reads confirm these exact same bytes in current parent `ea16834de1c133fcd2756965977064a97e82afba`, qualification `ce66cd4c0bc9222a93e36cbc8aa039da465a4d01` and native `6562a78f147f288edf79d652d9661b651c661af0`.
+
+Import the already existing `runtimeDigest` from `../../packages/legacy-agent-host/dist/runtime/identity.js`. In only the newly added synthetic live `install` block of the same existing case, use it for exactly these seven calls:
+
+| Synthetic field family | Exact replacements |
+| --- | --- |
+| Original source capture identity in captured/view/decision/intent records | Four `digest(source)` calls become `runtimeDigest(source)`. |
+| Exact captured object identity in view/launch records | Two `digest(captured)` calls become `runtimeDigest(captured)`. |
+| Selected Runtime configuration revision | One `digest(origin)` call becomes `runtimeDigest(origin)` inside the existing `live-` revision. |
+
+Keep every other Team `digest` and `effectId` use unchanged, including the request/revision/fingerprint/expected-revision fixtures, the arbitrary fixed configuration-digest fixture and the original launch filename. Do not sort or normalize the input objects, replace the global digest import, hardcode expected hashes, change an assertion, add a case, alter the fixture reader or touch a native/production source. Preserve the original 11 literal case declarations and the existing foreign owner/Team, stale command, peer identity, revoked grant, restored generation and tampered configuration refusals. No file, timer, model/HTTP request, probe, launch, cleanup or source-size allowance is added.
+
+### 15.3 Review and execution boundary
+
+Publish this amendment before source work. Freeze the one-file delta with full remote readback and an exact inverse that restores `401b5c16a1e1fc2f335adde7ed57e60e876b5eb3`; independently verify the one import and seven localized substitutions while all assertions and all other case bytes remain unchanged. Root alone publishes the reviewed working-ref correction and owns the original existing script/type/size checks and complete controlled preflight. Do not advance active live heads, cancel or rerun current jobs.
+
+The hash calculation and source review are not a test, compiler, Desktop or native execution PASS. The next authorized ordinary current-head gate must execute the unchanged controlled suite and then the original Desktop/native journey. The separate current-provider pin mismatch and the V2 `runtime.open` refusal are separate findings and are not included in this correction.
