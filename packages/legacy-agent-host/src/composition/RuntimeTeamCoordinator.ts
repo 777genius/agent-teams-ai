@@ -230,7 +230,7 @@ export class RuntimeTeamCoordinator {
           this.options.assertWriter();
           this.captures.assertAvailable(entry.binding.teamId);
         },
-        assertCurrent: (entry) => this.assertCurrent(entry),
+        assertCurrent: (entry) => this.assertCurrent(entry, true),
         captureInteractions: (entry) => this.interactionControls.capture(entry),
         readRuntime: (binding) => this.runtime.readCapturedSession(binding),
         readCheckpoint: (reference, request) => this.runtime.readCheckpoint(reference, request),
@@ -779,14 +779,14 @@ export class RuntimeTeamCoordinator {
       return false;
     }
   }
-  private assertCurrent(entry: MemberEntry): void {
+  private assertCurrent(entry: MemberEntry, insideProviderFence = false): void {
     this.options.assertWriter();
     this.captures.assertAvailable(entry.binding.teamId);
     assertCapturedRosterCurrent(entry.team, entry.profile.principalId);
     if (
       this.sealed ||
       (entry.endpointExpiresAtMs !== undefined && Date.now() >= entry.endpointExpiresAtMs) ||
-      !entry.team.owner.authorizeMemberBinding(entry.binding, 'dispatch')
+      (!insideProviderFence && !entry.team.owner.authorizeMemberBinding(entry.binding, 'dispatch'))
     )
       throw new RuntimeOwnerError('forbidden');
   }

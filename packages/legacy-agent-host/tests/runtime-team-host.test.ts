@@ -1788,6 +1788,29 @@ test(
       assert.equal(opened.ok, false, denied);
       assert.equal(restricted.opens(), 0, 'authority failure must precede provider creation');
     }
+
+    const originalContext = f.contexts[0]!;
+    assert.equal(originalContext.isCurrent(), true, 'the original opened provider retains current authority');
+    const ownerStore = new TeamOwnerStore(f.root, f.selected.teams[0]!.binding.teamName);
+    const statePath = join(ownerStore.directory, 'state.json');
+    const originalState = ownerStore.fenced(() => readFileSync(statePath, 'utf8'));
+    const state = JSON.parse(originalState) as { grants: { principalId: string; revoked?: boolean }[] };
+    const grant = state.grants.find(row => row.principalId === originalContext.profile.principalId);
+    assert.ok(grant && !grant.revoked);
+    const originalOpens = f.opens();
+    try {
+      ownerStore.fenced(() => {
+        grant.revoked = true;
+        ownerStore.write('state.json', state);
+      });
+      assert.equal(originalContext.isCurrent(), false, 'the original provider rejects the persisted member revocation');
+      assert.equal(originalContext.canAllocate(), false, 'the retained allocation callback cannot use the revoked member grant');
+      assert.equal(f.opens(), originalOpens, 'refused retained callbacks cannot create another provider');
+    } finally {
+      ownerStore.fenced(() => writeFileSync(statePath, originalState));
+    }
+    assert.equal(readFileSync(statePath, 'utf8'), originalState, 'restore the exact original state before cleanup');
+    assert.equal(originalContext.isCurrent(), true, 'a later call reads the restored original grant without a cache');
   }
 );
 
