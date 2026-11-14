@@ -1,3 +1,4 @@
+import { channel } from 'node:diagnostics_channel';
 import { lstatSync, realpathSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -32,6 +33,18 @@ const unavailable = (): never => {
   throw new ManagementCommandError('held');
 };
 const prompt = 'Reply only OK. Do not use tools, access files or run commands.';
+
+type ProbeCloseStage = 'absent' | 'pending' | 'confirmed' | 'unknown' | 'threw';
+interface ProbeCloseFailure {
+  workCompleted: boolean;
+  requestDrain: boolean | null;
+  ownerCleanupUnknown: boolean | null;
+  driver: ProbeCloseStage;
+  server: ProbeCloseStage;
+  coordination: ProbeCloseStage;
+  namespace: 'not-reached' | 'pending' | 'confirmed' | 'identity-mismatch' | 'threw';
+}
+const closeFailureChannel = channel('agent-teams:opencode-v2:model-probe-close-failed');
 
 /**
  * One finite native mechanism under the existing ModelProbeOwner journal.
@@ -383,59 +396,103 @@ export function createOpenCodeV2ModelProbe(
       coordination?.seal();
       abort.abort();
       if (closing) return closing;
+      let observation: ProbeCloseFailure | undefined;
+      try {
+        if (closeFailureChannel.hasSubscribers) observation = {
+          workCompleted: false, requestDrain: null, ownerCleanupUnknown: null,
+          driver: 'pending', server: 'pending', coordination: 'pending', namespace: 'not-reached',
+        };
+      } catch { /* Optional observation cannot alter the original close. */ }
       const work = (async () => {
-        await starting?.catch(() => {});
-        // Rejected late custody checks cannot send credentials. Give their
-        // original finite requests time to settle before SPI abort; a missing
-        // release remains UNKNOWN and is never converted to a clean cancel.
-        let timer: ReturnType<typeof setTimeout> | undefined;
-        let clean = false;
         try {
-          clean = await Promise.race([
-            Promise.all([...requests]).then(() => true),
-            new Promise<false>((resolve) => {
-              timer = setTimeout(() => resolve(false), Math.min(timeoutMs, 5000,
-                purposeBound ? Math.max(0, (originalDeadline ?? deadline) - Date.now()) : 5000));
-            }),
-          ]);
-        } finally {
-          clearTimeout(timer);
-        }
-        clean = clean && !ownerCleanupUnknown;
-        try {
-          if (driver) clean = (await driver.close()).cleanup === 'confirmed' && clean;
-        } catch {
-          clean = false;
-        }
-        try {
-          if (server) clean = (await server.stopOwned()) && clean;
-        } catch {
-          clean = false;
-        }
-        if (coordination) {
-          try { clean = await coordination.close() && clean; } catch { clean = false; }
-        }
-        if (!clean) return false;
-        try {
-          for (const [directory, identity] of namespaceRoots) {
-            const stat = lstatSync(directory, { bigint: true });
-            if (
-              !stat.isDirectory() ||
-              stat.isSymbolicLink() ||
-              realpathSync(directory) !== directory ||
-              stat.dev !== identity.dev ||
-              stat.ino !== identity.ino
-            )
-              return false;
-            await rm(directory, { recursive: true, force: true });
+          await starting?.catch(() => {});
+          // Rejected late custody checks cannot send credentials. Give their
+          // original finite requests time to settle before SPI abort; a missing
+          // release remains UNKNOWN and is never converted to a clean cancel.
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          let clean = false;
+          try {
+            clean = await Promise.race([
+              Promise.all([...requests]).then(() => true),
+              new Promise<false>((resolve) => {
+                timer = setTimeout(() => resolve(false), Math.min(timeoutMs, 5000,
+                  purposeBound ? Math.max(0, (originalDeadline ?? deadline) - Date.now()) : 5000));
+              }),
+            ]);
+          } finally {
+            clearTimeout(timer);
           }
-          return true;
-        } catch {
-          return false;
+          if (observation) {
+            observation.requestDrain = clean;
+            observation.ownerCleanupUnknown = ownerCleanupUnknown;
+          }
+          clean = clean && !ownerCleanupUnknown;
+          try {
+            if (driver) {
+              const confirmed = (await driver.close()).cleanup === 'confirmed';
+              if (observation) observation.driver = confirmed ? 'confirmed' : 'unknown';
+              clean = confirmed && clean;
+            } else if (observation) observation.driver = 'absent';
+          } catch {
+            if (observation) observation.driver = 'threw';
+            clean = false;
+          }
+          try {
+            if (server) {
+              const stopped = await server.stopOwned();
+              if (observation) observation.server = stopped ? 'confirmed' : 'unknown';
+              clean = stopped && clean;
+            } else if (observation) observation.server = 'absent';
+          } catch {
+            if (observation) observation.server = 'threw';
+            clean = false;
+          }
+          if (coordination) {
+            try {
+              const stopped = await coordination.close();
+              if (observation) observation.coordination = stopped ? 'confirmed' : 'unknown';
+              clean = stopped && clean;
+            } catch {
+              if (observation) observation.coordination = 'threw';
+              clean = false;
+            }
+          } else if (observation) observation.coordination = 'absent';
+          if (!clean) return false;
+          try {
+            if (observation) observation.namespace = 'pending';
+            for (const [directory, identity] of namespaceRoots) {
+              const stat = lstatSync(directory, { bigint: true });
+              if (
+                !stat.isDirectory() ||
+                stat.isSymbolicLink() ||
+                realpathSync(directory) !== directory ||
+                stat.dev !== identity.dev ||
+                stat.ino !== identity.ino
+              ) {
+                if (observation) observation.namespace = 'identity-mismatch';
+                return false;
+              }
+              await rm(directory, { recursive: true, force: true });
+            }
+            if (observation) observation.namespace = 'confirmed';
+            return true;
+          } catch {
+            if (observation) observation.namespace = 'threw';
+            return false;
+          }
+        } finally {
+          if (observation) observation.workCompleted = true;
         }
       })();
       closing = (purposeBound ? closeCoordinationByDeadline(work, originalDeadline ?? deadline) : work)
-        .then(clean => { released = clean; return clean; });
+        .then(clean => {
+          released = clean;
+          try {
+            if (clean === false && observation && closeFailureChannel.hasSubscribers)
+              closeFailureChannel.publish(Object.freeze({ ...observation }));
+          } catch { /* Diagnostics cannot discharge or replace the original failed close. */ }
+          return clean;
+        });
       return closing;
     },
   };
