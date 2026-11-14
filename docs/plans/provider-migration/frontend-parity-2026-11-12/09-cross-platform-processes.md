@@ -4032,3 +4032,38 @@ The exact x64 Security/proc subfailure and generation-count availability can be 
 The only deliverables in this cut are this appendix and the immutable original-evidence manifest. The current C actor, caller, production launcher, source profiles, permission policy and every native qualification flag stay unchanged. Root is the sole publisher; verify the full prior P09 prefix before appending.
 
 Independent review must check the twenty original rows and distinctions above, the selected-script source path, the conditional Mach-O inference and the exact narrow owner decision. A source-only review is not native qualification. §47 and its review thread remain open, with a concrete proof/authority requirement instead of an unsupported race-free claim.
+
+
+## 76. Existing Linux launch helper: exact types and synchronous cleanup ownership
+
+### Review 1 — current CI failures and exact unchanged sources
+
+Qualification head `e551565da1daf06c104bf0403e4b7f28949e71fd`, Main run43515479588, has two concrete static failures. Validate job132206650385 reports childProcess.test.ts1005: the declared `Buffer` return of the existing TEST execStatus helper widens its actual Buffer.alloc result to ArrayBufferLike, while Node24's spawnSync output contract requires a non-shared buffer. Main lint job132206650584 reports eight errors in the two existing Linux helper modules: an object type alias, four redundant assertions, a try/promise structure and two throws of a memo typed unknown. The same two production preimages remain in current repair35cea655; this is not a claim that the new parent CI has finished.
+
+The other old test-shard failure, management-model-probe.test.ts434's SDK transport optional-property mismatch, is already corrected in the published B1 source and passed the root's clean Host test type check. Do not change that test or the SDK again for this slice.
+
+| Path | Exact current preimage | Bounded change |
+| --- | --- | --- |
+| `src/main/utils/linuxChildLaunch.ts` | `17fc7cdd21d5a5fff9527c114b96bef7372571d2` | Use an interface for Handoff, remove only the three redundant assertions reported in this file, and separate synchronous original cleanup invocation from its returned promise rejection handler. |
+| `src/main/utils/linuxChildLaunchSelection.ts` | `86103b92c6c8dc1dae9333c19afc53c730b2cba8` | State the existing Error predicate as a type guard, type the original memo Error-or-undefined, and remove the one already-narrowed string assertion. |
+| `test/main/utils/childProcess.test.ts` | `9446abefc6578baaef789bfa333dec085bda7052` | Remove only execStatus's widening return annotation; infer the exact Buffer.alloc return. |
+
+Root rechecks these preimages in all three working trees. There are no workflow, dependency, descriptor, native C, provider or unrelated formatting changes.
+
+### Review 2 — preserve the original effects and failure identities
+
+`isLinuxChildLaunchFailure` already returns true only for a LinuxChildLaunchFailure (an Error subclass) or an Error in the original WeakSet. Change its signature to `error is Error` without changing that boolean expression. The initializer already preserves such an original Error or constructs the same fixed selection failure. Therefore `initializationFailure: Error | undefined` describes its actual existing values; it neither casts an unknown into Error nor wraps/replaces an existing Error. Keep the original initialization, repeated-selection refusal, native allocation classification and every thrown object unchanged.
+
+In linuxChildLaunch, replace only the Handoff declaration syntax, remove the two unnecessary `frame[5]!` assertions after the exact-length guard, and let Buffer.isEncoding supply its existing narrowing without `as BufferEncoding`. In Selection, retain the original typeof check and pass its already-narrowed row[key] to hashPattern without the cast. Do not remove any length, frame, checksum, file identity, descriptor, directory, architecture or option predicate.
+
+The cleanup callback needs both boundaries: it may throw synchronously while obtaining the original cleanup promise, and that promise may reject later. Keep the callback invocation synchronous in a try/catch, retaining its returned `Promise<void>` in a local. On a synchronous exception, invoke the same kill closure and return from the failure listener. Outside that try, attach the same rejection handler to the returned promise. The actual original caller in childProcess.ts (`7ce6cfe1150747d6a43bd9854bd86b209eb44597`,184–187) returns its original killProcessTreeAndWait promise; it does not return a custom thenable. No deferred invocation, extra microtask wrapper, await, child discovery, event synthesis, signal target, deadline or second cleanup owner is introduced. The callback remains pending until this exact child's genuine close, and the tree owner's cleanup still begins before any fallback immediate-child signal.
+
+The TEST execStatus helper continues allocating the same12 bytes and writing the same magic/version/stage/errno. It returns that same original Buffer with an inferred non-shared ArrayBuffer type. No copying, casting, changed synthetic event, widened mock contract or assertion is needed.
+
+### Review 3 — bounded verification and publication
+
+Root publishes this appendix after independent plan review, then reviews and publishes only the three exact source deltas with immediate pushes and ref/tree/blob readback. Source-only review must distinguish erased type changes from the narrowly equivalent valid-Promise cleanup control flow; no lint rule, type check or platform guard is disabled.
+
+Use the existing childProcess critical cases, the existing source-size guard, Main test types and the normal type-aware Main lint shard. The earlier fast lint result does not cover these type-aware rules, and the earlier54 passing childProcess runtime cases do not establish test compilation. Do not add a new suite or expand native inputs. The ordinary existing CI remains authoritative for native helper/custody and full application qualification; no active head is replaced or manually rerun for this static correction.
+
+The local executor became unavailable before this proposal. That does not make a source review or a queued CI run a successful check. Keep execution pending until the existing checks actually complete through the restored normal environment or ordinary exact-head CI.
