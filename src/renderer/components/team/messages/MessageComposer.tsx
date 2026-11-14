@@ -1170,7 +1170,12 @@ const MemberMessageComposer = ({
           }
           value={draft.text}
           readOnly={draft.isRestoring}
-          onValueChange={draft.setText}
+          onValueChange={(value) => {
+            // Typing/editing is an explicit dismissal, not a temporary hide that
+            // later reappears when the user clears their own draft.
+            nativeSuggestion.invalidate();
+            draft.setText(value);
+          }}
           suggestions={mentionSuggestions}
           teamSuggestions={teamMentionSuggestions}
           taskSuggestions={taskSuggestions}
