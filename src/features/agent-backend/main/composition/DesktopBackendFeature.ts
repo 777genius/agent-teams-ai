@@ -596,7 +596,7 @@ export class DesktopBackendFeature {
       available.find(row => row.projectPath === null);
     if (!selected) return;
     const sources = await this.captureSourceTarget(selected, guard);
-    if (sources) await refreshCapturedRuntimeConfiguration(sources);
+    if (sources) await refreshCapturedRuntimeConfiguration(sources, selected);
   }
 
   /** Main Skills choices derive solely from the original authorized descriptor, including optional runtimes. */
@@ -709,7 +709,7 @@ export class DesktopBackendFeature {
     return this.captureManagementTarget(
       selected,
       guard,
-      sources ? await refreshCapturedRuntimeConfiguration(sources) : undefined
+      sources ? await refreshCapturedRuntimeConfiguration(sources, selected) : undefined
     );
   }
 

@@ -2529,3 +2529,147 @@ The six UI implementation paths remain exactly the already assigned mode, Codex 
 The first callback waits for the model's original A step7 final response to be held, uses the real Update notice/dialog once under current renderer ownership and actual advertised-package equality, observes confirmed B publication/metadata, then releases the same response once. The second callback uses the real Fresh Launch for B and its distinct capture/native thread, then the new helper's exact eleven-round cold branch. The old captured-app helper is not widened to accept eleven. Reuse its existing connect/binding/spawn/adoption primitives and original3s Quit reply,30s physical absence and180s startup budgets; retain A and B checkpoints/history/source bytes and zero cold input. Root owns the backend/CI port composition; Profiles owns the model's explicit sourceSelection and firstFinalHeld/releaseFirstFinal option. No generic callback registry, new selector or additional business/preparation action is authorized.
 
 After publication of the reviewed amendment and explicit C10 source GO, independent source review must verify exact catalog-port/default inverse, all three roster variants, original-handle capture before D traffic, unconditional once-only cleanup, and unchanged default/8+3/probe/deadline behavior. Root owns compiled A/B eligibility, existing focused cases, script/type/source gates and the one ordinary current-head source-selection invocation. No source or execution is performed by this proposal.
+
+
+### §25.18. Exact ordinary PATH alias for the existing genuine A input
+
+**PLAN / alias source0 until root publication.** This is one setup correction inside the already approved C10 fixture and its already declared cold witness. It preserves §§25.14–25.17, the genuine A/B binaries, default Resume invocation, ordinary resolver, original clocks, one Update, A8 + fresh B3, two Launch probes and physical absence rules.
+
+The original source job in `.github/workflows/ci.yml` (b992f42311f62005ee24d51df71a2e83a4268a1f) extracts the official A executable as `codex/codex-aarch64-apple-darwin` and its exact companion as `codex/codex-code-mode-host`. Merely prepending that directory to PATH cannot satisfy the existing resolver's literal `codex` candidate. The A path/hash used by the profile and native census must stay the same. Setting a nonempty CODEX_CLI_PATH would instead keep A above installed B and defeat the intended ordinary managed precedence.
+
+The current private resolver `CodexBinaryResolver.ts` 9568953bdb8c20a6c580aacb23edb3ee1a019d5c keeps override, managed, then PATH order. Its existing `captureCodexNativeSelection.ts` 62c448fc55b0d663534e4900fd608b93bcbdf6ff resolves the selected pathname with realpath, reads/hash-pins that canonical regular native image, retains selected-to-canonical witnesses, invokes the original selected pathname, and rechecks those same witnesses after the original bounded version request. This is the ordinary existing symlink route, not a wrapper execution bypass.
+
+**Finite setup.** Only under the already validated explicit Darwin ARM/source/Codex C10 mode, create `<fixture.root>/codex-source-bin` as a new private 0700 directory before any App. Create exactly one symlink `codex` to the already checked absolute genuine A executable. Require new-directory/new-link creation, lstat symlink identity, exact readlink target, realpath equal to original A, and original fixed A SHA256. Retain the directory and link identity plus the original target. The App's explicit C10 environment uses this directory as the PATH prefix and CODEX_CLI_PATH=''; all other original environment fields and the default mode remain unchanged. Do not copy/rename/rewrite A, create a shell/JS wrapper, add an override, mutate shared staged inputs or fabricate a native version.
+
+Return a private readonly witness with the existing `codexResume.sourceSelection` object. Its revalidation checks the same directory/link/target relationship and original A bytes before Update and at the existing Stop/Quit/cold checkpoints. The already declared `desktop-codex-source-selection.ts` calls that witness; no new process, native request, journal, public DTO, generic path or owner is introduced. Census and code-mode checks still use the canonical original A path/birth, never the alias as signal authority. A missing/changed alias or target fails the same proof; no retry or fallback is added.
+
+**Exact writable scope.** Existing `scripts/legacy-agent-host/desktop-codex-resume-fixture.ts` preimage e8b351deb3184237ae2f0d9f40a3b0aabd5c3b65 is common to all three branches; compose the setup into its in-progress approved C10 delta. The directly consumed NEW `scripts/legacy-agent-host/desktop-codex-source-selection.ts` is already in C10 and only consumes/rechecks this private witness at its existing boundaries. No extra path, workflow, case or allowance is added. Preserve all original six fixture case names and assertions; any existing-case assertion needed for the witness is confined to the already approved fixture test. Root owns the exact composed source/type/size checks and actual original C10 execution; this setup proposal is not native qualification.
+
+
+## 29. Preserve captured OpenCode Settings status and configured model access
+
+**PLAN / source0 until root publication and explicit SOURCE GO.** This is a bounded correction of two remaining Settings paths in the original mixed V1/V2 desktop journey. It does not change the already published P05 §27 visible Select locator or §28 serialized original configuration preparation. Existing native owners, profile/source capture, credential/model proof, settings counts, timers, sentinel and physical cleanup remain the authority.
+
+### 29.1. Original failures and the limit of their evidence
+
+Read-only evidence is frozen in blob 2b50f1b15de6506c6f44696b065ba6227092e201. Parent original job132446132946 (V1; full log15ed36b801032c7744314673bf2acca7b93b3fc3, artifact14113283450) and job132446133129 (V2; full log045ec9a895aedd0fbfcb5bd91708c97e3423dcb4, artifact14113754165) both explicitly checkout and verify 09fefda4c255fa172a52b89b2815d18085c79afc. Do not infer source provenance from an artifact merge suffix. The already downloaded ZIPs and exact receipt/app-log/screenshot/model members are hashed in the evidence; no new run or download was made.
+
+Both receipts stop at the original global-default select/read, with providerSettings INCOMPLETE and no completed Settings step. All three model ledgers contain zero business/probe observations. Both app logs record two invalidateStatus failures because the stock resolver reaches the unchanged 2.777.777 TEST sentinel. V1 visibly has its two models but reports unavailable provider state. V2 visibly has the configured test-local default and two models, yet its expanded compact row opens the API-key Connect form. These facts do not qualify any model execution or prove that one correction alone closes the whole journey.
+
+The successful native catalog DTO itself is not retained in the artifact. Its action/metadata explanation below is an exact source inference, separate from the screenshots. Both cleanup records report App exit0 and no remaining group rows, but capturedHostObserved is false and capturedHostAbsent is null; no unobserved Host absence is invented.
+
+### 29.2. Exact old frontend and current source contract
+
+Old frontend4a0e06277fe216d9f82dbbede362668fe46622ee uses IPC07bd3a4f5437ddbfc0cbbe1fe07c4f14f1c0590b: invalidateStatus only invalidates the existing status cache. Its Panel d5ff84106abad43b1781d170c82589629ba50519, row view176344903eaee49ced9607a29f28a3c556e59f6e and interaction1a0454ca78e425281e605865a41a3aca2969d942 are byte-identical to the current versions. Their existing model lane can coexist with an optional credential connection. The old UI's explicit Test/use/configured-authless distinctions are retained; no replacement Settings UI is introduced.
+
+Current status client c48ffaedfe8328f31907eb470a87b6b03377423a already constructs an installed/ready status after a successful same-target native catalog and before/after currentness checks. It discards that object for V1 when selection.cliVersion is absent. IPC29796a5c0f553dda9d323c9c6d745883dbe9d9b8 interprets that null as permission to query the stock installer. The same IPC runs selectInstalled for every invalidation, including the unchanged Panel opening effect. Explicit Dashboard/Team Refresh and post-install selection are intentional newer behavior and must remain operational.
+
+V2 Host271428a021460170efa7a897fffc602e23be3ad8 distinguishes actual configured source from its separately verified connected-key callback. Its original authless policy14b91af7788556021b884211526e296f1511c61d does not inspect apiKey; the fixture8dd6113c9ebad0e9e9e428e322c979817f5c2669 declares the expected OpenAI-compatible package and loopback URL. Therefore API-key presence is not evidence that configuredAuthless is false. The concrete loss is that compact connection projection d462486c7914ff325a7fe24466f224d55200458b drops configured/configuredAuthless and emits Connect (plus V1 Forget), without the existing Test lane. An unverified V2 compact row cannot select models from that projection. The directory can carry authless metadata, but its header still chooses Connect first when both lanes exist.
+
+### 29.3. Honest captured V1 availability, without a fabricated version
+
+Add one optional display field nativeGeneration: 'v1' | 'v2' to the existing OpenCodeRuntimeStatus type. The captured status client fills it only from parseManagementRuntime's existing exact successful catalog envelope, after the same original profileId/configRevision/source-generation joins. Keep both original currentness checks, selection revision reread and optional registry handling. Return the already constructed V1 status even when cliVersion is unknown. Leave version, engineVersion, binaryPath and latest/update metadata absent unless their original source actually supplies them. No protocol revision, fixture filename, catalog model or public boolean may be converted into a CLI version.
+
+The selected-native IPC path must never use null as a stock-runtime fallback. Preserve the original no-native-port installer path for genuinely unmanaged callers. If the selected native port returns null, lacks its method, fails or changes context, return the existing normalized failure path without stock discovery. Keep the nullable method shape for older adapters/negative fixtures, but correct its comment to make the refusal contract explicit. The existing tests that intentionally expected native V1 null→stock are replaced by the exact new captured-status/refusal expectations; this is a stated product contract correction, not an altered native oracle.
+
+In existing runtimeProviderQuickConnect.ts, use one internal feature helper for only the closed versionless V1 tuple: installed true, state ready, source captured-host, nativeGeneration v1, and no version/engineVersion/V2-support fields. This helper permits presentation of the already available captured runtime. Known versions still go through the unchanged supported-version rule, so unsupported/unknown/sentinel/old versions cannot bypass compatibility by adding a generation tag. A missing generation or non-captured source is not inferred as V1. Panel consumes the same helper through its existing core-domain barrel; no new public feature export or file is needed. Existing version-based V2 and normal V1 handling remains.
+
+Include the existing opaque sourceRevision and the explicit generation in the Panel's settled runtime identity when present, and in the existing quick-connect revision projection as applicable. This prevents the directory presentation from reusing an old source's rows just because version/path presentation is unchanged. It is an invalidation identity, never a new source grant, cached execution result, credential verification or native currentness substitute. Existing provider/source/model preparation still decides every actual effect.
+
+### 29.4. Passive refresh and explicit source selection keep distinct intent
+
+Extend only the existing invalidateStatus argument with the closed optional literal 'cache-only', forwarded through the existing OpenCodeRuntimeAPI, preload method, store action type and store action. No new IPC channel, command registry, queue or runtime owner is introduced. Main accepts only undefined or that exact literal and refuses every other supplied value before cache/selection work.
+
+The Panel opening effect supplies 'cache-only'. Main keeps the original sender/current-context check for a selected native port, invalidates the existing service cache, and performs no captureSources/selectInstalled/install/discovery/publication in this passive branch. The subsequent unchanged fetchOpenCodeRuntimeStatus still captures the real current native target and its original serialized configuration owner, reads the same native catalog, and checks it after awaits. The marker cannot suppress native status/configuration validation or substitute an earlier snapshot.
+
+An omitted argument retains the entire current explicit selection branch, including recover, same sources.current, installed executable verification, original publication receipt/lost-ACK reconciliation and error behavior. Existing Dashboard Refresh, Team Refresh and install-follow-up callers remain no-argument calls. Preserve the Panel's existing open/dependency/StrictMode lifetime, store revision fencing, loading/error handling, one invalidate→fetch ordering and cleanup; add no delay/retry or once-ever cache.
+
+### 29.5. Configured models remain inspectable and testable before connection proof
+
+In capturedManagementCatalog.connection, add the already existing Test action only when the validated native provider has configured === true and modelCount > 0. Retain its existing connected/not-connected state, ownership, auth methods, Connect and V1 Forget behavior. The Test action requires no submitted secret and belongs to the existing runtime scope. It means an explicit model check is available from the captured route; it does not mean the credential or model is valid.
+
+In runtimeProviderDirectoryInteraction, let an already enabled Test/model lane suppress only row/header auto-Connect, in the same way the existing read-only model lane does. Both unchanged compact and directory row implementations then select their original model lists on click/keyboard. Their explicit Connect buttons still call the original startConnect callbacks, and credential forms, verified-key conditions, compatibility matrix and credential ownership remain unchanged.
+
+Do not mark the provider connected, change configuredAuthless, invent anonymous/free access, mutate source classification or set model proof to verified. Models remain untested/needs_probe/requiresExecutionProof. An unconfigured catalog row without the existing read-only/Test lane still opens Connect; zero models do not grant a model lane. Missing, malformed, stale or foreign catalog responses continue through the original refusal, scope and cancellation rules. The actual Test/default/Launch requests use their unchanged captured target, model input, private credential, account/source currentness and native proof paths.
+
+### 29.6. Finite existing write scope and exact preimages
+
+All18 paths below were freshly verified on parent eb25707553dbeaf9b16808502e6e63b56d0677a9, native0099a7636013e78c3b35e1e5c3870b12ef81559d and qualification767965db15f85c69ae28eeb0c18ac0619a82aff3. Their preimages are identical across the branches. Later unrelated publications must not be used to overwrite a drifted file; refresh these exact joins before source composition.
+
+| Existing path | Exact preimage on all three working branches | Bounded change |
+|---|---|---|
+| `src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts` | `c48ffaedfe8328f31907eb470a87b6b03377423a` | Project original generation; retain successful V1 status without an invented CLI version. |
+| `src/shared/types/cliInstaller.ts` | `2585793708732b1a5597b07b4b08f064fb495238` | Optional native generation metadata and the one closed cache-only invalidation argument. |
+| `src/features/runtime-provider-management/core/application/RuntimeProviderStatusPort.ts` | `f2ec547aeaef94485609a14d6190b2afbdcb800e` | Correct the existing nullable-port comment: a missing native status cannot authorize stock fallback. |
+| `src/main/ipc/openCodeRuntime.ts` | `29796a5c0f553dda9d323c9c6d745883dbe9d9b8` | Refuse native-null fallback; validate cache-only mode and retain explicit selection branch. |
+| `src/preload/index.ts` | `d31f34a1dd8cef8c11935bf43fba13660ac513d7` | Forward only the optional existing invalidation argument. |
+| `src/renderer/store/slices/cliInstallerSlice.ts` | `3958bb219db5509e6c6433a006e5a0bfacb2791f` | Forward-compatible optional argument in the existing action type. |
+| `src/renderer/store/slices/openCodeRuntimeActions.ts` | `04daf0193c316a443c9f86cc4d8aa2f7161e6378` | Forward that argument through the unchanged read revision/clear sequence. |
+| `src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx` | `d5ff84106abad43b1781d170c82589629ba50519` | Passive cache-only opening; explicit captured generation and source revision in presentation. |
+| `src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect.ts` | `21e1256d9ccde083b8a1c2ceb0a80061afff2ccd` | One closed versionless captured-V1 predicate; unchanged known-version compatibility rules. |
+| `src/features/runtime-provider-management/main/adapters/output/capturedManagementCatalog.ts` | `d462486c7914ff325a7fe24466f224d55200458b` | Existing Test action from validated configured plus positive model count. |
+| `src/features/runtime-provider-management/renderer/view-models/runtimeProviderDirectoryInteraction.ts` | `1a0454ca78e425281e605865a41a3aca2969d942` | Prefer the existing Test/model lane for row activation while retaining explicit Connect. |
+| `test/features/runtime-provider-management/capturedRuntimeStatus.test.ts` | `8b12e3ce09481f2643f7c13bab2d2dcf6c2f67ac` | Existing V1/V2/currentness cases. |
+| `src/main/ipc/openCodeRuntime.test.ts` | `88f2a9c092feffbe6d5574bc92467cdab76b0520` | Existing status/installer cases; native-null refusal, passive zero selection, explicit selection retained. |
+| `src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect.test.ts` | `dd6e98214189919b1ea00e0b7655c7352d3f5653` | Existing ready/unknown/unsupported-version case extensions. |
+| `test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanel.test.ts` | `a470c6371490e43886889dac81f75d5c81bd0af7` | Existing generation/open-effect case extension. |
+| `test/features/runtime-provider-management/capturedManagementClient.test.ts` | `4aa4c66589aabfedecf059c510d5ef0808e696e9` | Existing catalog projection case extension. |
+| `test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts` | `13b19f1bfed9f41eb271f71bf261f006540fd28e` | Existing compact/directory row case extensions. |
+| `scripts/legacy-agent-host/desktop-proof-integrated-sources.ts` | `e7585549638bdfc95b45cd57bb9184375a234fb1` | Add only the three newly affected, currently unlisted production paths. |
+
+The existing integrated source roster already includes the status IPC/core paths and belongs to this original captured-status closure. Add only src/renderer/store/slices/openCodeRuntimeActions.ts, src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx and src/features/runtime-provider-management/renderer/view-models/runtimeProviderDirectoryInteraction.ts, which are absent from the current combined rosters. Retain every old row and all C10/W01 variants. Do not create another roster or use source hashes as runtime authority. RuntimeProviderManagementPanelView.tsx, Host/D, installer implementation, private configuration/credential readers, all native fixtures/workflows and the actual mixed settings script are read-only dependencies.
+
+### 29.7. Bounded existing-case checks and actual acceptance
+
+Use the six existing test files in the table; do not create a suite or a field-permutation campaign. In the existing captured-status V1 case, require the exact ready captured-generation object with absent unknown version, one original catalog request and no registry fallback; keep stale/malformed/foreign/selection-replacement checks. In existing IPC cases, preserve unmanaged stock behavior but require selected-native null/failure to refuse stock; extend the same cases with cache-only zero discovery/publication, one representative invalid marker and the original no-argument selection branch.
+
+In the existing quick-connect and Panel generation/open cases, cover the closed captured-V1 status and unchanged unknown/unsupported version behavior, exact cache-only argument, fresh same-owner fetch and generation/source identity. In the existing management catalog case, exercise configured-but-not-connected with a positive model count and retain not-connected/untested/no-secret output, plus the original unconfigured case. Extend the existing compact/directory row cases with the corresponding Test+Connect projection: row click/keyboard selects models, explicit Connect still invokes only Connect, and the original unconfigured/disabled behavior remains. Preserve all unrelated cases/assertions; only the explicitly superseded native-null fallback expectations change.
+
+Root alone runs the original relevant type/lint/source guards and these existing cases after exact source peer. The original mixed V1 and V2 desktop jobs must then run on the next ordinary coherent source head. Keep the original expected Settings requests4/3, all later original business/preflight counts, native dialogs/controls, no-mutation-retry rule, pinned inputs, sentinel log and physical cleanup. No new model request, native probe, owner, collector, test run, timeout or allowance is authorized by this plan. An empty old model ledger is not positive native qualification, and source/unit PASS cannot replace those original desktop receipts.
+
+### 29.8. Review and publication
+
+Root and an independent peer review this exact appendix and source chain before publication. Author stages only these18 existing paths after explicit GO, freezes each original/final blob plus complete forward/inverse diffs, and requests source review. Root owns canonical composition, checks and immediate publication to the three working refs; live CI/head advancement remains root's ordinary gate. P05 §27/28, C10, W01 and the distinct remaining native failures retain their own evidence and completion criteria.
+
+## 30. Remove ambiguous repetition from captured Codex NODE_OPTIONS validation
+
+### 30.1. Applicable CodeQL finding and input boundary
+
+PR1186 review thread `PRRT_kwDORVTEtM63eEU7`, comment `4573603075`, links security alert 610 against `captureCodexNativeSelection.ts:357`. The thread remains open and current. Read-only evidence `abba416ac6d9f7a1e2773f1e1a5808d9e8ef7f45` verifies the same source in parent `5f07c1e9e0c0e4459a25d4586dd4009c275224b0`, native `c546aefafeaf5e613c779a5ef76f6d7e516cab0e`, and qualification `cfc20848e45926750698d0135561a8772a3370ac`. This appendix preserves the entire current P06 prefix `10b36d6d25110c513184459c249fd37916ce1bb0`.
+
+The finding is valid at source level. The Windows npm-shim path tests captured `NODE_OPTIONS` with a repeated group containing both leading and trailing `\s*`. Repeated allowed flags followed by a rejected suffix permit independent whitespace partitions between adjacent groups. The input comes from the original merged process/cached-shell environment, not a newly introduced IPC field. The shim/script 64 KiB bounds do not bound this environment string. The existing 15,000 ms resolver deadline is checked before/after work and cannot interrupt this synchronous match. No application freeze, exploit duration or unauthenticated remote route is claimed. [CodeQL's original query guidance](https://codeql.github.com/codeql-query-help/javascript/js-redos/) recommends removing ambiguous repetition.
+
+### 30.2. One equivalent expression, unchanged selection contract
+
+Replace only the existing validator expression:
+
+```ts
+/^(?:\s*--(?:max-old-space-size|max-semi-space-size)=\d+\s*)*$/
+```
+
+with:
+
+```ts
+/^(?:(?:\s*--(?:max-old-space-size|max-semi-space-size)=\d+)+\s*)?$/
+```
+
+The repeated nonempty group ends at its digits; only the next group owns inter-option whitespace, and one suffix owns final whitespace. This removes the repeated ambiguous boundary without a parser, helper, dependency or size policy. Language equivalence follows by writing the old group as W F D W: W W = W, so (W F D W)* equals optional (W F D)+ W. Keep the existing anchors, flags and original input unchanged. Thus absent/undefined/empty values, exact hyphenated names, ASCII digits including zero/leading zeros, repeated flags, leading/trailing/inter-option whitespace, adjacent flags without a separator, and the original end-anchor behavior retain their previous acceptance. Do not trim, normalize, split or forward a modified value.
+
+Keep the existing case-insensitive environment-key census, refusal of multiple NODE_OPTIONS keys, original held error, full environment fingerprint/currentness checks, exact official wrapper hashes, package-resolution witnesses, interpreter/native identities and version probe untouched. The fix does not authorize loaders, imports, conditions, symlink flags or unknown options. Resolution deadline, candidate ordering, native cleanup and source publication remain unchanged.
+
+### 30.3. Exact two-path scope and existing-case verification
+
+All three variants have these exact preimages:
+
+| Existing path | Original blob | Authorized delta after SOURCE GO |
+| --- | --- | --- |
+| `src/features/codex-runtime-installer/main/infrastructure/captureCodexNativeSelection.ts` | `62c448fc55b0d663534e4900fd608b93bcbdf6ff` | The single equivalent expression above; natural formatting only. |
+| `src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.test.ts` | `46a479072f7559f3981a56e267fa31c8eb271c72` | Extend only the existing first Windows command-shim case, retaining its official wrapper fixture and every original assertion. |
+
+The existing case already exercises actual static file capture and native identity with a mocked original version process. Preserve its omitted-options positive. Add finite positive captured values for empty and combined/repeated heap flags, including original whitespace/adjacent-flag forms; verify exact native identity and unchanged option forwarding to the one mocked version probe per accepted capture. Negative values cover space/tab-only input, an unsupported option or invalid digit suffix after eight repeated allowed flags, and duplicate differently-cased keys. Each negative must retain the original held error and zero mocked execution. Restore the original environment builder before the existing package-drift/wrapper-drift/unknown-cleanup checks. Do not duplicate the compressed wrapper, add a case, export a validator or add wall-clock assertions. All 18 original case declarations and assertions remain.
+
+These checks protect compatibility and refusal behavior. They are not a claimed old-source timing RED; do not execute a large exponential input or add a benchmark. Root owns the existing resolver test file, normal types/lint/size gates and applicable current-head CodeQL verification. No new native/UI/model request, job, timeout, retry, skip, cap or CI allowance is introduced.
+
+### 30.4. Explicit security-review disposition
+
+Disposition is **accepted finding; narrowly planned fix**, with no suppression or dismissal. Independent plan review and root publication precede SOURCE GO. Freeze both final sources, exact forward/inverse diffs, unchanged-case evidence and current variant preimages for independent source review. After publication and actual checks, root records the corrective source/validation evidence against the original review/security finding; an open thread or unobserved CodeQL result must not be silently reported resolved. Source/unit results do not substitute for the separate original Windows native qualification.

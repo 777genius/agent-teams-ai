@@ -198,12 +198,67 @@ export function projectDesktopCodexLoginFailure(evidence: Record<string, unknown
       ['show original Cancel login action', 'cancel'], ['cancel original browser login', 'browser-cancel'],
       ['cancel original device_code login', 'device-code-cancel'],
     ]);
+    const initialUnavailableTarget = ((): Record<string, unknown> => {
+      const prefix = 'UI target read failed: open existing More menu; facts=';
+      const raw = evidence.failure;
+      if (typeof raw !== 'string' || !raw.startsWith(prefix)) return { state: 'not-recorded' };
+      const unavailable = { state: 'unavailable' };
+      if (raw.length > 4000) return unavailable;
+      try {
+        const facts = object(JSON.parse(raw.slice(prefix.length)));
+        if (!facts) return unavailable;
+        const requiredBooleans = [
+          'disabled', 'ariaDisabled', 'pointerEventsNone', 'centerInViewport', 'hitPresent',
+        ] as const;
+        const optionalBooleans = [
+          'rootPresent', 'uiInitialized', 'splashPresent', 'splashPositiveSize', 'splashError',
+          'splashSlow', 'documentComplete', 'languageEnglish', 'languageEmpty', 'rootFallbackShape',
+        ] as const;
+        const counts = [
+          ['matches', 256, true], ['rawMatches', 256, false], ['rootChildren', 16, false],
+        ] as const;
+        const allowed = new Set<string>([
+          ...requiredBooleans, ...optionalBooleans, ...counts.map(([key]) => key),
+        ]);
+        if (Object.keys(facts).some(key => !allowed.has(key))) return unavailable;
+        const projected: Record<string, boolean | number | null> = {};
+        for (const key of requiredBooleans) {
+          const value = Object.hasOwn(facts, key) ? facts[key] : undefined;
+          if (typeof value !== 'boolean') return unavailable;
+          projected[key] = value;
+        }
+        for (const key of optionalBooleans) {
+          if (!Object.hasOwn(facts, key)) {
+            projected[key] = null;
+            continue;
+          }
+          const value = facts[key];
+          if (typeof value !== 'boolean') return unavailable;
+          projected[key] = value;
+        }
+        for (const [key, limit, required] of counts) {
+          if (!Object.hasOwn(facts, key)) {
+            if (required) return unavailable;
+            projected[key] = null;
+            continue;
+          }
+          const value = facts[key];
+          if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0 || value > limit)
+            return unavailable;
+          projected[key] = value;
+        }
+        return { state: 'retained', facts: projected };
+      } catch {
+        return unavailable;
+      }
+    })();
     const projection = {
       scope, unavailable: false,
       status: choice(evidence.status, ['PASS', 'INCOMPLETE']),
       initialSnapshotRecorded: present(evidence.codexInitialAccount),
       proofRecorded: present(evidence.codexLoginUi),
       originalFailureRecorded: failureRecorded(evidence.failure),
+      initialUnavailableTarget,
       listenerFailure: {
         recorded: present(evidence.cdpListenerFailure),
         ...count(listener?.scope === 'original-linux-lsof-test-cdp' ? listener.holderCount : undefined, 256),

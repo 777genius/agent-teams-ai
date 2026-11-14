@@ -67,10 +67,11 @@ async function handleGetStatus(
       return { success: false, error: 'Native runtime status request is not authorized' };
     const captured = await native.readOpenCodeRuntimeStatus();
     if (!current()) return { success: false, error: 'Native runtime status context changed' };
-    // Only the explicit native V1 tag retains this existing CLI status source.
-    const status = captured === null ? await requireService().getStatus() : captured;
+    if (captured === null)
+      return { success: false, error: 'Native runtime status could not be confirmed' };
+    const status = captured;
     if (!current()) return { success: false, error: 'Native runtime status context changed' };
-    const result = captured === null ? status : await withV2Maintenance(_event, current, status);
+    const result = await withV2Maintenance(_event, current, status);
     if (!current()) return { success: false, error: 'Native runtime status context changed' };
     return { success: true, data: result };
   } catch (error) {
@@ -182,8 +183,21 @@ async function handleInstall(
   }
 }
 
-async function handleInvalidateStatus(_event: IpcMainInvokeEvent): Promise<IpcResult<void>> {
+async function handleInvalidateStatus(
+  _event: IpcMainInvokeEvent,
+  mode?: unknown
+): Promise<IpcResult<void>> {
   try {
+    if (mode !== undefined && mode !== 'cache-only')
+      throw new Error('Invalid OpenCode status invalidation mode');
+    if (mode === 'cache-only') {
+      const native = getDesktopProviderStatusPort();
+      const current = native ? captureDesktopStatusRequest(_event) : undefined;
+      if (native && !current?.()) throw new Error('Native runtime status request is not authorized');
+      requireService().invalidateStatusCache();
+      if (native && !current?.()) throw new Error('Native runtime status context changed');
+      return { success: true, data: undefined };
+    }
     requireService().invalidateStatusCache();
     const captured = captureDesktopRuntimeSources(_event, 'opencode');
     if (captured) {

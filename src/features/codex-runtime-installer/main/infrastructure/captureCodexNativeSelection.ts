@@ -354,7 +354,7 @@ export async function captureCodexNativeSelection(
       // Loaders, conditions and symlink changes would replace the original static resolution.
       if (
         options.length > 1 ||
-        !/^(?:\s*--(?:max-old-space-size|max-semi-space-size)=\d+\s*)*$/.test(options[0]?.[1] ?? '')
+        !/^(?:(?:\s*--(?:max-old-space-size|max-semi-space-size)=\d+)+\s*)?$/.test(options[0]?.[1] ?? '')
       )
         held();
       const script = await inspect(expand(nodeScript), 64n * 1024n, false);
