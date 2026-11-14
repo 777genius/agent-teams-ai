@@ -19,7 +19,7 @@ const original = Object.freeze({
 
 describe('captured Host suggestion projection', () => {
   it('projects only one exact original owner/team and a matching personal conversation', () => {
-    const result = projectHostPromptSuggestion(original, 'host-team:TEST-public-handle', 'TEST-team-A');
+    const result = projectHostPromptSuggestion(original, 'host-team:TEST-public-handle', 'TEST-team-A', 'TEST-run-A');
     expect(result).toEqual({
       ownerHandle: 'host-team:TEST-public-handle',
       provider: original.provider,
@@ -39,8 +39,13 @@ describe('captured Host suggestion projection', () => {
     expect(Object.isFrozen(result)).toBe(true);
   });
 
+  it('rejects an otherwise valid candidate when the descriptor run differs', () => {
+    expect(projectHostPromptSuggestion(original, 'host-team:TEST-public-handle', 'TEST-team-A', 'TEST-other-run')).toBeNull();
+  });
+
   it.each([
     ['foreign team', { teamId: 'TEST-other' }],
+    ['foreign run', { runId: 'TEST-other-run' }],
     ['missing native turn', { completedTurnRef: undefined }],
     ['missing message', { messageId: undefined }],
     ['missing member id', { memberId: undefined }],
@@ -49,6 +54,6 @@ describe('captured Host suggestion projection', () => {
     ['control character', { text: 'RUN\u0000TOOL' }],
     ['invalid member name', { memberName: 'A\nb' }],
   ] as const)('suppresses %s before IPC/SSE', (_name, mutation) => {
-    expect(projectHostPromptSuggestion({ ...original, ...mutation }, 'host-team:TEST-public-handle', 'TEST-team-A')).toBeNull();
+    expect(projectHostPromptSuggestion({ ...original, ...mutation }, 'host-team:TEST-public-handle', 'TEST-team-A', 'TEST-run-A')).toBeNull();
   });
 });
