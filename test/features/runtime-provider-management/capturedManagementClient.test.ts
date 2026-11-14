@@ -12,7 +12,11 @@ import type {
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
 const binding = { profileId: 'TEST-original', configRevision: 'TEST-v1' };
-function fixture(declaredInputModalities?: JsonValue, generation: 'v1' | 'v2' = 'v1') {
+function fixture(
+  declaredInputModalities?: JsonValue,
+  generation: 'v1' | 'v2' = 'v1',
+  configured = false
+) {
   const calls: { operation: string; payload: Record<string, JsonValue> }[] = [];
   let connected = false;
   let fail = false;
@@ -55,7 +59,7 @@ function fixture(declaredInputModalities?: JsonValue, generation: 'v1' | 'v2' = 
               displayName: 'TEST provider',
               source: 'api',
               connected,
-              configured: false,
+              configured,
               defaultModelId: 'TEST-model',
               modelCount: 1,
               authMethods: ['api'],
@@ -137,6 +141,29 @@ it('maps native catalogs/models without private metadata or invented model execu
   for (const secret of ['TEST-secret', 'TEST-original', 'TEST-v1', 'targetId'])
     expect(text).not.toContain(secret);
   expect(f.capture).toHaveBeenCalledWith(null);
+  expect(view.view?.providers[0]?.actions.some((action) => action.id === 'test')).toBe(false);
+
+  const configured = fixture(undefined, 'v2', true);
+  const configuredView = await configured.port.loadView({ runtimeId: 'opencode' });
+  expect(configuredView.view?.providers[0]).toMatchObject({
+    state: 'not-connected',
+    modelCount: 1,
+    actions: [
+      { id: 'connect', enabled: true, ownershipScope: 'runtime' },
+      { id: 'test', enabled: true, requiresSecret: false, ownershipScope: 'runtime' },
+    ],
+  });
+  const configuredModels = await configured.port.loadModels({
+    runtimeId: 'opencode', providerId: 'TEST-provider',
+  });
+  expect(configuredModels.models?.models[0]).toMatchObject({
+    availability: 'untested',
+    default: false,
+    proofState: 'needs_probe',
+    requiresExecutionProof: true,
+  });
+  for (const secret of ['TEST-secret', 'TEST-original', 'TEST-v1', 'targetId'])
+    expect(JSON.stringify([configuredView, configuredModels])).not.toContain(secret);
 });
 
 it('filters/paginates a directory and reports malformed responses as unavailable rather than empty ready', async () => {
