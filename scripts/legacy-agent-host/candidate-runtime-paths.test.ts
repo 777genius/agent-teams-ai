@@ -5,7 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { candidateDigest } from './candidate-closure.ts';
-import { desktopNodeScriptHeader, prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
+import { desktopAgentSentinelSource, desktopNodeScriptHeader, desktopShellEnvironmentProbeSource,
+  prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
+import { prepareDonorSavedPackageManager } from './desktop-donor-saved-producer.ts';
 import { captureCandidateElectron, readCapturedCandidateElectron } from './candidate-electron.ts';
 import { prepareDesktopSkillsFixture } from './desktop-skills-fixture.ts';
 import { readCandidateRuntimePaths } from './candidate-runtime-paths.ts';
@@ -243,6 +245,104 @@ test(
       { executable: 'skills-claude-management', allowed: false, skillsMetadataRefusal: true, operation: 'auth.status', argc: 3, flags: ['--json'] },
       { executable: 'skills-codex-management', allowed: false, skillsMetadataRefusal: true, operation: 'app-server.read', argc: 3, flags: ['--listen'] },
     ]);
+
+    // Saved-only donor metadata cannot advertise a usable Codex or escape to another candidate.
+    const donorRoot = join(root, 'TEST donor source');
+    const donorFixture = join(root, 'TEST donor fixture');
+    const donorLog = join(donorFixture, 'sentinels.ndjson');
+    const donorBin = join(donorFixture, 'bin');
+    const donorVendor = join(donorFixture, 'claude/local/node_modules/.bin');
+    for (const directory of [donorRoot, donorBin, donorVendor, join(donorFixture, 'home'),
+      join(donorFixture, 'config/codex'), join(donorFixture, 'userData'), join(donorRoot, 'node_modules/.bin')])
+      await mkdir(directory, { recursive: true, mode: 0o700 });
+    const donorSentinel = desktopAgentSentinelSource(spacedNode, donorLog, 'TEST-version', 'donor-saved-only');
+    for (const directory of [donorBin, donorVendor])
+      await writeFile(join(directory, 'codex'), donorSentinel, { mode: 0o700 });
+    const donorShell = desktopShellEnvironmentProbeSource(spacedNode, donorLog);
+    await writeFile(join(donorBin, 'shell-env'), donorShell, { mode: 0o700 });
+    const originalPackageManager = join(donorFixture, 'TEST original pnpm.mjs');
+    const originalCalls = join(donorFixture, 'original-calls.ndjson');
+    await writeFile(originalPackageManager,
+      "import {appendFileSync} from 'node:fs';\nconst value={cwd:process.cwd(),args:process.argv.slice(2)};\n" +
+      'appendFileSync(' + JSON.stringify(originalCalls) + ',JSON.stringify(value)+"\\n",{mode:0o600});\n' +
+      'process.stdout.write(JSON.stringify(value));\n', { mode: 0o600 });
+    const shellQuote = (value: string) => "'" + value.replaceAll("'", "'\\''") + "'";
+    const originalShim = '#!/bin/sh\nexec ' + shellQuote(spacedNode) + ' ' +
+      shellQuote(originalPackageManager) + ' "$@"\n';
+    await writeFile(join(donorBin, 'pnpm'), originalShim, { mode: 0o700 });
+    const donorPackageManager = await prepareDonorSavedPackageManager({
+      root: donorFixture, donorRoot, node: spacedNode,
+      pnpmStubSha256: await candidateDigest(join(donorBin, 'pnpm')),
+      sentinelSha256: await candidateDigest(join(donorBin, 'codex')),
+      shellProbeSha256: await candidateDigest(join(donorBin, 'shell-env')),
+    });
+    const donorEnv: Record<string, string> = {
+      HOME: join(donorFixture, 'home'), CFFIXED_USER_HOME: join(donorFixture, 'home'),
+      AGENT_TEAMS_ELECTRON_USER_DATA_DIR: join(donorFixture, 'userData'),
+      AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: join(donorFixture, 'claude'),
+      CLAUDE_ROOT: join(donorFixture, 'claude'), CLAUDE_CONFIG_DIR: join(donorFixture, 'claude'),
+      CODEX_HOME: join(donorFixture, 'config/codex'), SHELL: join(donorBin, 'shell-env'),
+      PATH: './node_modules/.bin:' + donorPackageManager.bin,
+    };
+    const donorVersion = spawnSync(join(donorBin, 'codex'), ['--version'],
+      { env: donorEnv, encoding: 'utf8', timeout: 5000 });
+    assert.equal(donorVersion.error, undefined); assert.equal(donorVersion.status, 78);
+    assert.equal(donorVersion.stdout, '');
+    const donorAgent = spawnSync(join(donorBin, 'codex'), ['app-server'],
+      { env: donorEnv, encoding: 'utf8', timeout: 5000 });
+    assert.equal(donorAgent.error, undefined); assert.equal(donorAgent.status, 78);
+    const ordinaryBin = join(donorFixture, 'ordinary');
+    await mkdir(ordinaryBin, { mode: 0o700 });
+    await writeFile(join(ordinaryBin, 'codex'),
+      desktopAgentSentinelSource(spacedNode, donorLog, 'TEST-version', 'metadata'), { mode: 0o700 });
+    const ordinaryVersion = spawnSync(join(ordinaryBin, 'codex'), ['--version'],
+      { env: donorEnv, encoding: 'utf8', timeout: 5000 });
+    assert.equal(ordinaryVersion.error, undefined); assert.equal(ordinaryVersion.status, 0);
+    assert.equal(ordinaryVersion.stdout, 'TEST-version (TEST sentinel)\n');
+    assert.deepEqual((await readFile(donorLog, 'utf8')).trim().split('\n').map(line => JSON.parse(line)), [
+      { executable: 'codex', allowed: true, argc: 1, command: null, flags: ['--version'] },
+      { executable: 'codex', allowed: false, argc: 1, command: 'app-server', flags: [] },
+      { executable: 'codex', allowed: true, argc: 1, command: null, flags: ['--version'] },
+    ]);
+    const originalArgs = ['exec', 'electron-vite', 'dev', ...args];
+    const invokeDonorShim = (environment = donorEnv) => spawnSync(join(donorPackageManager.bin, 'pnpm'), originalArgs,
+      { cwd: donorRoot, env: environment, encoding: 'utf8', timeout: 5000 });
+    const foreign = join(donorRoot, 'node_modules/.bin/codex');
+    const foreignEffect = join(donorFixture, 'TEST foreign effect must not exist');
+    const managed = join(donorFixture, 'userData/data/runtimes/codex/current.json');
+    await mkdir(join(donorFixture, 'userData/data/runtimes/codex'), { recursive: true, mode: 0o700 });
+    for (const failure of ['foreign', 'pin', 'override', 'managed'] as const) {
+      if (failure === 'foreign') await writeFile(foreign,
+        desktopNodeScriptHeader(spacedNode) + "import {writeFileSync} from 'node:fs';\nwriteFileSync(" +
+        JSON.stringify(foreignEffect) + ",'TEST unexpected invocation');\n", { mode: 0o700 });
+      if (failure === 'pin') await writeFile(join(donorVendor, 'codex'), donorSentinel + '// TEST changed pin\n');
+      if (failure === 'managed') await writeFile(managed, '{}', { mode: 0o600 });
+      const refused = invokeDonorShim(failure === 'override' ? { ...donorEnv, CODEX_CLI_PATH: foreign } : donorEnv);
+      assert.equal(refused.error, undefined); assert.notEqual(refused.status, 0, failure);
+      assert.match(refused.stderr, failure === 'foreign' ? /Unexpected donor Codex candidate/ :
+        failure === 'pin' ? /Donor metadata pin changed/ : failure === 'override' ?
+          /Donor Codex override must be absent/ : /Donor managed Codex manifest must be absent/);
+      await assert.rejects(readFile(originalCalls), { code: 'ENOENT' });
+      await assert.rejects(readFile(foreignEffect), { code: 'ENOENT' });
+      await assert.rejects(readFile(donorPackageManager.receiptPath), { code: 'ENOENT' });
+      if (failure === 'foreign') await rm(foreign);
+      if (failure === 'pin') await writeFile(join(donorVendor, 'codex'), donorSentinel);
+      if (failure === 'managed') await rm(managed);
+    }
+    const copiedShim = await readFile(join(donorPackageManager.bin, 'pnpm'), 'utf8');
+    assert.ok(copiedShim.endsWith(originalShim.slice('#!/bin/sh\n'.length)));
+    const admitted = invokeDonorShim();
+    assert.equal(admitted.error, undefined); assert.equal(admitted.status, 0, admitted.stderr);
+    assert.deepEqual(JSON.parse(admitted.stdout), { cwd: donorRoot, args: originalArgs });
+    const availability = JSON.parse(await readFile(donorPackageManager.receiptPath, 'utf8'));
+    assert.equal(availability.kind, 'donor-saved-codex-unavailable');
+    assert.deepEqual(availability.invocation, originalArgs);
+    assert.ok(availability.observations.some((row: { path: string; kind: string }) =>
+      row.path === foreign && row.kind === 'absent'));
+    const duplicate = invokeDonorShim();
+    assert.equal(duplicate.error, undefined); assert.notEqual(duplicate.status, 0);
+    assert.match(duplicate.stderr, /EEXIST/);
+    assert.equal((await readFile(originalCalls, 'utf8')).trim().split('\n').length, 1);
 
     assert.match(packed.rendererUrl, /^file:/);
     assert.ok(packed.rendererUrl.includes('App%20Bundle.app'));
