@@ -1877,6 +1877,11 @@
       "voiceToText": "Voice to text",
       "send": "Отправить",
       "sendingUnavailableLaunching": "Отправка недоступна, пока команда запускается"
+    },
+    "suggestions": {
+      "insert": "Вставить",
+      "dismiss": "Скрыть подсказку",
+      "tab": "Tab"
     }
   },
   "claudeLogs": {
