@@ -21,6 +21,7 @@ import {
   registerBackendConnectionsHttp,
   registerBackendConnectionsIpc,
 } from '../../../src/features/agent-backend/main';
+import { readinessOriginDigest } from '../../../src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness';
 import { JsonLocalProviderPrivateNetworkApprovalStore } from '../../../src/features/runtime-provider-management/main';
 import { setAppDataBasePath } from '../../../src/main/utils/pathDecoder';
 import { clearShellEnvCache } from '../../../src/main/utils/shellEnv';
@@ -95,6 +96,16 @@ async function fixture(blockStartup = false): Promise<{
         admission:{commandId:'historical-start',sourceRosterRevision:'roster-1'},
         members:[{memberId:'member-1',binding:null,attempt:{attemptId:'attempt-1',status:'not-started',
           nativeReady:false,usable:false,controlAvailable:false,noAllocation:true,reason:'not-started'}}]};
+      const initialLaunch = launchId => ({...historicalLaunch,launchId,admission:undefined,expected:3,
+        members:['member-1','member-2','member-3'].map(memberId=>({memberId,binding:{memberId,generation:'1'},
+          attempt:{...historicalLaunch.members[0].attempt,attemptId:'initial-'+memberId,noAllocation:false}}))});
+      const initialView = launchId => ({launch:initialLaunch(launchId),
+        members:[{memberId:'member-1',label:'Worker',role:'lead',selected:{provider:'opencode',
+          workspace:${JSON.stringify(storageRoot)},model:'home-server/TEST-original',capabilities:['model','permissions','effort']}},
+          {memberId:'member-2',label:'Second',role:'member',selected:{provider:'opencode',
+            workspace:${JSON.stringify(join(storageRoot, 'initial-secondary'))},model:'second-cloud/TEST-second',capabilities:['model']}},
+          {memberId:'member-3',label:'Claude',role:'member',selected:{provider:'claude',
+            workspace:${JSON.stringify(join(storageRoot, 'unread-claude'))},model:'TEST-claude',capabilities:['model']}}]});
       const server = createHostServer({ input: process.stdin, output: process.stdout, buildId:'TEST-desktop-v1', methods: {
         'team.execute': { lane:'work', handle: (request) => {
           appendFileSync(${JSON.stringify(join(storageRoot, 'effects'))}, request.commandId+'\\n');
@@ -109,6 +120,12 @@ async function fixture(blockStartup = false): Promise<{
         'team.lifecycle.retired.read': { lane:'control', handle: () => ({ok:true,value:{teamIds:[]}}) },
         'team.launch.configuration.read': { lane:'control', handle: (request) => {
           appendFileSync(${JSON.stringify(join(storageRoot, 'launch-reads'))}, request.commandId+'\\n');
+          if (['initial-launch','initial-missing','initial-expired'].includes(request.payload.launchId))
+            return {ok:true,value:initialView(request.payload.launchId),
+              ...(request.payload.launchId==='initial-missing'?{}:{localModelReadinessCapture:
+                request.payload.launchId==='initial-expired'?{preparationId:'expired-preparation',
+                  captureCommandId:'expired-capture',launchId:request.payload.launchId,rosterRevision:'roster-1',
+                  captureDigest:'a'.repeat(64),remainingMs:0,targets:[]}:null})};
           if (request.payload.launchId === 'historical-launch') return {ok:true,
             localModelReadinessCapture:null,value:{launch:historicalLaunch,
               members:[{memberId:'member-1',label:'Worker',role:'lead',selected:{provider:'opencode',
@@ -127,6 +144,10 @@ async function fixture(blockStartup = false): Promise<{
         }},
         'team.launch.start': { lane:'work', handle: request => {
           appendFileSync(${JSON.stringify(join(storageRoot, 'launch-starts'))}, JSON.stringify(request)+'\\n');
+          if (request.payload.launchId==='initial-launch') return {ok:true,value:{
+            ...initialLaunch(request.payload.launchId),admission:{commandId:request.commandId,
+              sourceRosterRevision:request.payload.rosterRevision,
+              members:request.payload.configuration.members.map(({memberId,...configuration})=>({memberId,configuration}))}}};
           return {ok:true,value:historicalLaunch};
         }},
         'team.creation.prepare': { lane:'work', handle: (request) => ({ok:true,value:{
@@ -571,6 +592,54 @@ it('uses two lazily captured subprocess hosts and captured context grants for fi
       expect(historicalWire.localModelReadinessTransfer).toBeUndefined();
       expect(approvalCapture).not.toHaveBeenCalled();
     } finally { approvalCapture.mockRestore(); }
+
+    const secondWorkspace = join(workspace, 'initial-secondary');
+    await mkdir(secondWorkspace);
+    await writeFile(join(secondWorkspace, 'opencode.json'), JSON.stringify({ provider: { 'second-cloud': {
+      npm: '@ai-sdk/openai-compatible', options: {
+        baseURL: 'https://second.example.test/v1', apiKey: 'TEST-second-key',
+      },
+    } } }));
+    const initialPayload = { launchId: 'initial-launch', rosterRevision: 'roster-1',
+      configuration: { members: [{ memberId: 'member-1', model: 'public-cloud/TEST-model',
+        permissions: 'bypass' as const, effort: 'high' as const }] } };
+    const beforeStarts = await readFile(join(workspace, 'launch-starts'), 'utf8');
+    const beforeProbes = await readFile(join(workspace, 'probe-requests'), 'utf8');
+    expect(await invoke(trusted, { handle: { handleId: 'opaque-A' }, commandId: 'initial-start',
+      operation: 'team.launch.start', payload: initialPayload })).toMatchObject({
+      ok: true, value: { launchId: 'initial-launch', admission: { commandId: 'initial-start' } },
+    });
+    const afterStarts = await readFile(join(workspace, 'launch-starts'), 'utf8');
+    expect(afterStarts.startsWith(beforeStarts)).toBe(true);
+    const initialLines = afterStarts.slice(beforeStarts.length).trim().split('\n');
+    expect(initialLines).toHaveLength(1);
+    const initialWire = JSON.parse(initialLines[0]);
+    expect(initialWire.commandId).toBe('initial-start');
+    expect(initialWire.payload).toEqual(initialPayload);
+    expect(initialWire.binding.owner).toMatchObject({ ownerId: 'A', revision: 'v1' });
+    const initialOrigin = initialWire.localModelReadinessOrigin.origin;
+    expect(initialOrigin.ownerDigest).toBe(readinessOriginDigest(initialWire.binding.owner));
+    expect(initialOrigin.contextId).toBe('context-A');
+    expect(initialOrigin.commandId).toBe('initial-start');
+    expect(initialOrigin.selectionDigest).toBe(readinessOriginDigest({
+      handleId: 'opaque-A', scope: setup.descriptor.handles[0].scope, payload: initialPayload,
+    }));
+    expect(initialOrigin.workspaces.map((row: { path: string }) => row.path))
+      .toEqual([workspace, secondWorkspace]);
+    expect(initialOrigin.workspaces.map((row: { global: unknown }) => row.global))
+      .toEqual([{ notConsulted: 'project-precedence' }, { notConsulted: 'project-precedence' }]);
+    expect(initialOrigin.approval).toEqual({ notConsulted: 'no-private-target' });
+    expect(Number.isSafeInteger(initialWire.localModelReadinessOrigin.remainingMs)).toBe(true);
+    expect(initialWire.localModelReadinessOrigin.remainingMs).toBeGreaterThan(0);
+    expect(initialWire.localModelReadinessOrigin.remainingMs)
+      .toBeLessThanOrEqual(setup.descriptor.owners[0].profile.requestTimeoutMs);
+    for (const launchId of ['initial-missing', 'initial-expired']) {
+      expect(await invoke(trusted, { handle: { handleId: 'opaque-A' }, commandId: launchId,
+        operation: 'team.launch.start', payload: { ...initialPayload, launchId } }))
+        .toEqual({ ok: false, code: 'hold', outcome: 'not-dispatched' });
+      expect(await readFile(join(workspace, 'launch-starts'), 'utf8')).toBe(afterStarts);
+    }
+    expect(await readFile(join(workspace, 'probe-requests'), 'utf8')).toBe(beforeProbes);
   } finally {
     vi.stubEnv('HOME', originalHome);
     vi.stubEnv('USERPROFILE', originalUserProfile);

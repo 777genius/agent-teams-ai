@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { test } from 'node:test';
 
+import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { NativeCoordinationFixture } from './fixtures/native-opencode-team/coordination-probe.ts';
 import { record } from './fixtures/native-claude-team/model.ts';
@@ -246,6 +247,11 @@ test('selected stable V1 executes native tools through Host and retains cold rec
       const { captureNativeCoordinationFixture } = await import('./fixtures/native-opencode-team/coordination-probe.ts');
       coordination = captureNativeCoordinationFixture(profile, { contextTokens: 64000, outputTokens: 1024 });
     }
+    const initialOpen = { commandId: 'TEST-open', payload: { memberId: 'carol-id' } };
+    profile.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(profile, {
+      method: 'runtime.open', teamId: scope.teamId, ...initialOpen,
+      ...(coordination ? { prepared: [coordination.initialReadiness] } : {}),
+    })];
     const profilePath = join(root, 'profile.json');
     const profileBytes = JSON.stringify(profile);
     await writeFile(profilePath, profileBytes, { mode: 0o600 });
@@ -260,7 +266,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     const envelope = (commandId: string, payload: unknown) => ({ commandId, binding, payload });
     host = start();
     await host.rpc('host.handshake', { protocolVersion: 1 });
-    const opened = await host.rpc('runtime.open', envelope('TEST-open', { memberId: 'carol-id' }));
+    const opened = await host.rpc('runtime.open', envelope(initialOpen.commandId, initialOpen.payload));
     assert.equal(opened.ok, true);
     assert.equal(record(opened.value).nativeReady, true);
     steps.push('original_host_native_runtime_and_mcp_ready');

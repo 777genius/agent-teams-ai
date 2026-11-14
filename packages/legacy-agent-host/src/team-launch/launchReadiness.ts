@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { modelReadinessReferenceSchema } from '../management/commandRecords.js';
+import { managementDigest } from '../management/identity.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from './contracts.js';
 
@@ -7,7 +8,7 @@ import type { JsonValue } from '../contracts.js';
 import type { ModelReadinessReference } from '../management/commandRecords.js';
 import type { ProviderManagementProfile } from '../management/profile.js';
 import type { RuntimeBinding } from '../runtime/contracts.js';
-import type { TeamLaunchRecord } from './contracts.js';
+import type { LaunchAttempt, TeamLaunchRecord } from './contracts.js';
 import type { TeamLaunchDefinition } from './contracts.js';
 import type { TeamStore } from '../team/ports.js';
 
@@ -50,9 +51,15 @@ const consumerSchema = z.object({
   /** First action admission records its cutoff before awaits, without qualifying allocation. */
   admissionOnly: z.literal(true).optional(),
   continuation: z.object({ reference: id, sourceBinding: binding }).strict().optional(),
+  initialProfile: z.object({
+    kind: z.literal('native-bootstrap'), captureDigest: hash, commandId: id, actionDigest: hash,
+    predecessorConsumerId: hash.optional(),
+  }).strict().optional(),
   disposition: z.enum(['pending', 'consumed', 'retired']),
 }).strict().refine(value => value.memberId === value.binding.memberId &&
-  (value.continuation === undefined ? value.cutoff !== undefined : value.groupCommandId === undefined));
+  (value.initialProfile ? value.cutoff === undefined && value.groupCommandId === undefined &&
+    value.policyCommandId === undefined && value.admissionOnly === undefined && value.continuation === undefined
+    : value.continuation === undefined ? value.cutoff !== undefined : value.groupCommandId === undefined));
 export type LaunchReadinessConsumer = z.infer<typeof consumerSchema>;
 
 export const launchReadinessSchema = z.object({
@@ -88,6 +95,55 @@ export function modelReadinessMechanismDigest(profile: ProviderManagementProfile
 
 function held(reason: string): never { throw new TeamLaunchError('hold', reason); }
 
+/** An ordinary initial source can advance only through the existing exact native action or retry journal. */
+function validateInitialReadiness(record: TeamLaunchRecord, consumer: LaunchReadinessConsumer,
+  consumers: readonly LaunchReadinessConsumer[]): void {
+  const source = consumer.initialProfile;
+  if (!source) return;
+  const { consumerId, disposition: _disposition, ...identity } = consumer;
+  const member = record.members.find(row => row.memberId === consumer.memberId);
+  const index = member?.attempts.findIndex(row => row.attemptId === consumer.sourceAttemptId) ?? -1;
+  if (consumerId !== managementDigest(identity) || !member || index < 0)
+    held('launch-readiness-initial-identity');
+  if (!source.predecessorConsumerId) {
+    if (consumer.actionId !== source.commandId || index !== 0 ||
+        consumer.sourceAttemptId !== `initial-${runtimeDigest({ launchId: record.definition.launchId, memberId: consumer.memberId })}`)
+      held('launch-readiness-initial-source');
+    return;
+  }
+  const previous = consumers.find(row => row.consumerId === source.predecessorConsumerId);
+  if (!previous?.initialProfile || consumers.indexOf(previous) >= consumers.indexOf(consumer) ||
+      previous.memberId !== consumer.memberId || previous.disposition !== 'retired' ||
+      previous.baseConfigurationDigest !== consumer.baseConfigurationDigest ||
+      previous.initialProfile.captureDigest !== source.captureDigest ||
+      previous.initialProfile.commandId !== source.commandId || previous.initialProfile.actionDigest !== source.actionDigest)
+    held('launch-readiness-initial-predecessor');
+  const action = record.memberActions?.find(row => row.input.commandId === consumer.actionId);
+  if (action) {
+    const { commandId: _commandId, ...input } = action.input;
+    if (action.phase !== 'selected' || action.input.action !== 'restart' || !action.actor.inputAuthority ||
+        action.sourceAttemptId !== previous.sourceAttemptId ||
+        consumer.sourceAttemptId !== `action-${runtimeDigest(action.input.commandId)}` ||
+        runtimeDigest(action.actor) !== consumer.actorDigest || managementDigest(input) !== consumer.inputDigest ||
+        runtimeDigest(action.source.binding) !== runtimeDigest(previous.binding) ||
+        action.source.configurationDigest !== previous.configurationDigest ||
+        runtimeDigest(action.selected.binding) !== runtimeDigest(consumer.binding) ||
+        action.selected.configurationDigest !== consumer.configurationDigest ||
+        action.selected.baseConfigurationDigest !== consumer.baseConfigurationDigest ||
+        action.selected.configRevision !== consumer.configRevision)
+      held('launch-readiness-initial-action');
+    return;
+  }
+  const retry = record.retries.find(row => row.commandId === consumer.actionId);
+  const before = member.attempts[index - 1];
+  if (!retry || retry.attemptId !== consumer.sourceAttemptId || !retry.memberIds.includes(consumer.memberId) ||
+      retry.fingerprint !== consumer.inputDigest || before?.attemptId !== previous.sourceAttemptId ||
+      !before.claimed || previous.actorDigest !== consumer.actorDigest ||
+      runtimeDigest(previous.binding) !== runtimeDigest(consumer.binding) ||
+      previous.configurationDigest !== consumer.configurationDigest || previous.configRevision !== consumer.configRevision)
+    held('launch-readiness-initial-retry');
+}
+
 export function validateLaunchReadiness(record: TeamLaunchRecord): void {
   if (record.readiness === undefined) return;
   const parsed = launchReadinessSchema.safeParse(record.readiness);
@@ -101,6 +157,7 @@ export function validateLaunchReadiness(record: TeamLaunchRecord): void {
     held('launch-readiness-budget');
   const active = value.consumers.filter(row => row.disposition !== 'retired');
   if (active.length > 256) held('launch-readiness-budget');
+  for (const consumer of value.consumers) validateInitialReadiness(record, consumer, value.consumers);
   for (const consumer of active) {
     if (consumer.admissionOnly) continue;
     const member = record.definition.members.find(row => row.memberId === consumer.memberId);
@@ -208,14 +265,23 @@ export function readReadinessCapture(record: TeamLaunchRecord, expected: LocalMo
 
 export function attachLaunchReadiness(record: TeamLaunchRecord, input: {
   reference?: ModelReadinessReference;
+  /** Restriction only: a first initial attachment cannot replace any retained same-attempt command. */
+  initialAttemptId?: string;
   consumer: Omit<LaunchReadinessConsumer, 'consumerId' | 'disposition' | 'sourceAttemptId'> & { sourceAttemptId?: string };
 }): TeamLaunchRecord {
   const target = record.members.find(row => row.memberId === input.consumer.memberId);
   if (!target) held('launch-readiness-target');
   const selected = { ...input.consumer, sourceAttemptId: input.consumer.sourceAttemptId ?? target.currentAttemptId };
   const consumer = consumerSchema.parse({ ...selected,
-    consumerId: runtimeDigest(selected), disposition: 'pending' });
+    consumerId: selected.initialProfile ? managementDigest(selected) : runtimeDigest(selected), disposition: 'pending' });
   const prior = record.readiness ?? { schemaVersion: 1 as const, groups: [], consumers: [] };
+  const initial = `initial-${runtimeDigest({ launchId: record.definition.launchId, memberId: consumer.memberId })}`;
+  if (input.initialAttemptId !== undefined || consumer.initialProfile && !consumer.initialProfile.predecessorConsumerId) {
+    if (input.initialAttemptId !== undefined && input.initialAttemptId !== initial ||
+        target.currentAttemptId !== initial || consumer.sourceAttemptId !== initial ||
+        prior.consumers.some(row => row.memberId === consumer.memberId && row.sourceAttemptId === initial &&
+          row.consumerId !== consumer.consumerId)) held('launch-readiness-initial-already-retained');
+  }
   const existing = prior.consumers.find(row => row.consumerId === consumer.consumerId);
   if (existing) {
     if (existing.disposition === 'retired') held('launch-readiness-retired');
@@ -226,10 +292,10 @@ export function attachLaunchReadiness(record: TeamLaunchRecord, input: {
   }
   if (!consumer.admissionOnly && !consumer.continuation && target.attempts.find(row => row.attemptId === target.currentAttemptId)?.claimed)
     held('launch-readiness-already-claimed');
-  if (!consumer.continuation && (consumer.cutoff === undefined || Date.now() >= consumer.cutoff) || input.reference &&
+  if (!consumer.continuation && !consumer.initialProfile && (consumer.cutoff === undefined || Date.now() >= consumer.cutoff) || input.reference &&
       (input.reference.commandId !== consumer.groupCommandId || Date.now() >= input.reference.expiresAt))
     held('launch-readiness-expired');
-  if (consumer.groupCommandId === undefined && !consumer.continuation && !consumer.admissionOnly)
+  if (consumer.groupCommandId === undefined && !consumer.continuation && !consumer.admissionOnly && !consumer.initialProfile)
     held('launch-readiness-reference-required');
   let groups = [...prior.groups];
   if (input.reference) {
@@ -268,7 +334,7 @@ export function attachLaunchReadiness(record: TeamLaunchRecord, input: {
 
 export function selectedReadiness(record: TeamLaunchRecord, selected: {
   binding: RuntimeBinding; configRevision: string; configurationDigest: string;
-}): { consumer: LaunchReadinessConsumer; reference?: ModelReadinessReference } {
+}): { consumer: LaunchReadinessConsumer; attempt: LaunchAttempt; reference?: ModelReadinessReference } {
   validateLaunchReadiness(record);
   const consumer = record.readiness?.consumers.find(row => row.memberId === selected.binding.memberId &&
     row.disposition !== 'retired' && runtimeDigest(row.binding) === runtimeDigest(selected.binding));
@@ -278,7 +344,11 @@ export function selectedReadiness(record: TeamLaunchRecord, selected: {
     held('launch-readiness-required');
   const reference = record.readiness!.groups.find(row => row.commandId === consumer.groupCommandId);
   if (consumer.groupCommandId && !reference) held('launch-readiness-reference-required');
-  return { consumer: structuredClone(consumer), ...(reference ? { reference: structuredClone(reference) } : {}) };
+  const attempt = record.members.find(row => row.memberId === consumer.memberId)?.attempts
+    .find(row => row.attemptId === consumer.sourceAttemptId);
+  if (!attempt) held('launch-readiness-attempt');
+  return { consumer: structuredClone(consumer), attempt: structuredClone(attempt),
+    ...(reference ? { reference: structuredClone(reference) } : {}) };
 }
 
 /** Exact current attempt's historical provenance. This is never an allocation qualification. */
@@ -305,9 +375,16 @@ export function selectedReadinessSource(record: TeamLaunchRecord, selected: {
 
 export function consumeLaunchReadiness(record: TeamLaunchRecord, consumerId: string): TeamLaunchRecord {
   const current = record.readiness?.consumers.find(row => row.consumerId === consumerId);
-  if (!current || current.disposition === 'retired' || !current.continuation &&
+  if (!current || current.disposition === 'retired' || !current.continuation && !current.initialProfile &&
       (current.cutoff === undefined || Date.now() >= current.cutoff))
     held('launch-readiness-expired');
+  if (current.initialProfile) {
+    const selected = selectedReadiness(record, { binding: current.binding,
+      configRevision: current.configRevision, configurationDigest: current.configurationDigest });
+    if (!selected.attempt.claimed || selected.attempt.noAllocation || selected.attempt.startedAtMs <= 0 ||
+        selected.attempt.deadlineMs <= selected.attempt.startedAtMs || Date.now() >= selected.attempt.deadlineMs)
+      held('launch-readiness-initial-claim');
+  }
   if (current.disposition === 'consumed') return record;
   return { ...record, readiness: { ...record.readiness!, consumers: record.readiness!.consumers.map(row =>
     row.consumerId === consumerId ? { ...row, disposition: 'consumed' as const } : row) } };
@@ -335,12 +412,14 @@ export function reuseReadinessForRetry(record: TeamLaunchRecord, memberIds: read
     const previous = consumers.find(row => row.memberId === memberId && row.disposition !== 'retired');
     if (!previous) continue;
     const reference = record.readiness.groups.find(row => row.commandId === previous.groupCommandId);
-    if (previous.admissionOnly || !previous.continuation && (!reference || previous.cutoff === undefined ||
+    if (previous.admissionOnly || !previous.continuation && !previous.initialProfile && (!reference || previous.cutoff === undefined ||
         Date.now() >= previous.cutoff || Date.now() >= reference.expiresAt)) held('launch-readiness-expired');
     const { consumerId: _id, disposition: _state, ...original } = previous;
-    const selected = { ...original, actionId, inputDigest, sourceAttemptId: attemptId };
+    const selected = { ...original, actionId, inputDigest, sourceAttemptId: attemptId,
+      ...(previous.initialProfile ? { initialProfile: { ...previous.initialProfile,
+        predecessorConsumerId: previous.consumerId } } : {}) };
     consumers[consumers.indexOf(previous)] = { ...previous, disposition: 'retired' };
-    consumers.push({ ...selected, consumerId: runtimeDigest(selected), disposition: 'pending' });
+    consumers.push({ ...selected, consumerId: selected.initialProfile ? managementDigest(selected) : runtimeDigest(selected), disposition: 'pending' });
   }
   return { ...record, readiness: { ...record.readiness, consumers } };
 }

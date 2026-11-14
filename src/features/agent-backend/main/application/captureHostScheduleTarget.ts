@@ -4,9 +4,9 @@ import { assertBackendRequestGuard, BackendRoutingError } from './backendBinding
 
 import type { BackendOperationRequest } from '../../contracts/operations';
 import type { DesktopBackendFeature } from '../composition/DesktopBackendFeature';
+import type { CapturedRuntimeReadinessTarget } from '../infrastructure/CapturedLocalModelReadiness';
 import type { BackendRequestGuard } from './backendBinding';
 import type { CapturedTeamModelRequest } from './prepareCapturedTeamModels';
-import type { CapturedRuntimeReadinessTarget } from '../infrastructure/CapturedLocalModelReadiness';
 import type { HostScheduleTarget } from '@shared/types/schedule';
 
 /** Captures only an already authorized team; schedules do not create another owner registry. */

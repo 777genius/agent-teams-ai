@@ -19,8 +19,8 @@ import type {
   BackendLaunchConfiguration,
   BackendLaunchConfigurationView,
   BackendLaunchModelConfigurationView,
-  BackendLaunchModelProbe,
   BackendLaunchModelPreparation,
+  BackendLaunchModelProbe,
   BackendLaunchModelSelection,
   BackendLaunchSnapshot,
 } from './launch';

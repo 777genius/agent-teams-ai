@@ -803,10 +803,9 @@ export interface OpenCodeRuntimeDeliveryUserVisibleImpact {
   observedAt?: string;
   nextReviewAt?: string;
 }
-export interface CapturedTeamProcessStop {
-  processRef: string;
-  originalCommandId?: string;
-}
+export type {
+  ProcessStopSelection as CapturedTeamProcessStop,
+} from '@features/agent-backend/contracts/processes';
 export interface TeamProcess {
   processRef?: string;
   observation?: 'same-live' | 'absent' | 'stale' | 'unknown' | 'metadata-stopped';

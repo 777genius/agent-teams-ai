@@ -34,7 +34,10 @@ export interface BackendProcessOperationPayloads {
   'process.terminate': { processRef: string };
 }
 /** Existing UI stop carries its displayed original row; PID is display consistency only. */
-export type ProcessStopSelection = import('@shared/types/team').CapturedTeamProcessStop;
+export interface ProcessStopSelection {
+  processRef: string;
+  originalCommandId?: string;
+}
 export const isProcessRef = (value: unknown): value is string =>
   typeof value === 'string' && /^p1:[A-Za-z0-9_-]{1,128}:[a-f0-9]{64}$/.test(value);
 export function assertOriginalProcessStop(
