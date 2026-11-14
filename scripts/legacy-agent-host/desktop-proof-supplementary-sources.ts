@@ -56,6 +56,7 @@ export const desktopProofSupplementarySources = [
   'src/features/agent-backend/main/adapters/output/HostSmartScheduleRuntimeAdapter.ts',
   'src/features/agent-backend/main/application/captureHostScheduleTarget.ts',
   'src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness.ts',
+  'src/features/agent-backend/main/infrastructure/CapturedHostDiagnostics.ts',
   'src/shared/types/teamProvisioning.ts',
   'packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts',
   'packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts',
