@@ -755,15 +755,26 @@ export const ProviderRuntimeSettingsDialog = ({
     [onRefreshProvider]
   );
 
+  const apiKeyDetailsRequestedRef = useRef(false);
+  const requestApiKeyDetails = useCallback(
+    (providerId: CliProviderId): void => {
+      if (!open || !isApiKeyProviderId(providerId) || apiKeyDetailsRequestedRef.current) return;
+      apiKeyDetailsRequestedRef.current = true;
+      void fetchApiKeys();
+      void fetchApiKeyStorageStatus();
+    },
+    [fetchApiKeyStorageStatus, fetchApiKeys, open]
+  );
+
   useEffect(() => {
+    apiKeyDetailsRequestedRef.current = false;
     if (!open) {
       return;
     }
 
     setSelectedProviderId(initialProviderId);
-    void fetchApiKeys();
-    void fetchApiKeyStorageStatus();
-  }, [fetchApiKeyStorageStatus, fetchApiKeys, initialProviderId, open]);
+    requestApiKeyDetails(initialProviderId);
+  }, [initialProviderId, open, requestApiKeyDetails]);
   useEffect(() => {
     if (open) {
       return;
@@ -1769,6 +1780,7 @@ export const ProviderRuntimeSettingsDialog = ({
               onValueChange={(value) => {
                 if (!runtimeProviderOperationBlocking) {
                   setSelectedProviderId(value as CliProviderId);
+                  requestApiKeyDetails(value as CliProviderId);
                 }
               }}
             >

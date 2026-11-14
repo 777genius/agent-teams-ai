@@ -691,7 +691,7 @@ export async function prepareDesktopBackendFixture(
   const sentinelSource = `${desktopNodeScriptHeader(node)}import {appendFileSync} from 'node:fs';
 import {basename} from 'node:path';
 const args=process.argv.slice(2),allowed=${options.candidateRuntime ? 'false' : "args.length===1&&args[0]==='--version'"};
-appendFileSync(${JSON.stringify(sentinelLog)},JSON.stringify({executable:basename(process.argv[1]),allowed,argc:args.length,flags:args.filter(x=>x.startsWith('-')).map(x=>x.split('=')[0]).slice(0,16)})+'\\n',{mode:0o600});
+appendFileSync(${JSON.stringify(sentinelLog)},JSON.stringify({executable:basename(process.argv[1]),allowed,argc:args.length,command:args.length===1&&args[0]==='app-server'?'app-server':null,flags:args.filter(x=>x.startsWith('-')).map(x=>x.split('=')[0]).slice(0,16)})+'\\n',{mode:0o600});
 if(allowed){console.log(${JSON.stringify(lock.cliVersion + ' (TEST sentinel)')});process.exit(0)}
 process.stderr.write('TEST sentinel refuses native agent invocation\\n');process.exit(78);
 `;
