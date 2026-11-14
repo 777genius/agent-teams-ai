@@ -7262,17 +7262,19 @@ describe('ipc teams handlers', () => {
       '--max-turns 5 --teammate-mode tmux');
     expect(allowed).toMatchObject({ success: true, data: { valid: true } });
 
-    const noValue = await validate({ sender: { send: vi.fn() } } as never, '--max-turns=');
-    expect(noValue).toMatchObject({
-      success: true, data: { valid: false, missingValueFlag: '--max-turns' },
-    });
+    for (const raw of ['--max-turns=', '--max-turns ""', '-p-max-turns=']) {
+      const noValue = await validate({ sender: { send: vi.fn() } } as never, raw);
+      expect(noValue).toMatchObject({
+        success: true, data: { valid: false, missingValueFlag: '--max-turns' },
+      });
+    }
 
     const protectedMode = await validate({ sender: { send: vi.fn() } } as never,
       '--teammate-mode unsupported');
     expect(protectedMode).toMatchObject({
       success: true, data: { valid: false, invalidFlags: ['--teammate-mode'] },
     });
-    expect(teamHandlerMocks.getCliHelpOutput).toHaveBeenCalledTimes(3);
+    expect(teamHandlerMocks.getCliHelpOutput).toHaveBeenCalledTimes(5);
   });
 
   // Simulated desktop submits that skip the optional Validate button.
@@ -7282,6 +7284,8 @@ describe('ipc teams handlers', () => {
       ['--disallowed-tools x', 'app-managed flags: --disallowed-tools'],
       ['--max-turns', 'ends with --max-turns but no value'],
       ['--max-turns=', 'ends with --max-turns but no value'],
+      ['--max-turns ""', 'ends with --max-turns but no value'],
+      ['-p-max-turns=', 'ends with --max-turns but no value'],
     ] as const;
 
     it.each(blockedArgs)('rejects %s on team create', async (extraCliArgs, error) => {

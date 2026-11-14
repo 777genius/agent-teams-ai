@@ -201,8 +201,23 @@ describe('findOptionMissingValue', () => {
     expect(findOptionMissingValue('--max-turns=')).toBe('--max-turns');
     expect(findOptionMissingValue('--max-turns=""')).toBe('--max-turns');
     expect(findOptionMissingValue('--append-system-prompt=')).toBe('--append-system-prompt');
+    expect(findOptionMissingValue('-p-max-turns=')).toBe('--max-turns');
+    expect(findOptionMissingValue('-p-append-system-prompt=')).toBe('--append-system-prompt');
+    expect(findOptionMissingValue('-pn=')).toBe('-n');
+    expect(findInvalidUserFlags('-p-max-turns=', new Set()).missingValueFlag).toBe('--max-turns');
     expect(findInvalidUserFlags('--max-turns=', new Set()).missingValueFlag).toBe('--max-turns');
     expect(findOptionMissingValue('--max-turns=5')).toBeUndefined();
+  });
+
+  it('rejects separate quoted empty required operands without hiding dash-prefixed values', () => {
+    expect(findOptionMissingValue('--max-turns ""')).toBe('--max-turns');
+    expect(findOptionMissingValue("--append-system-prompt ''")).toBe('--append-system-prompt');
+    expect(findOptionMissingValue('-pn ""')).toBe('-n');
+    expect(findOptionMissingValue('--teammate-mode ""')).toBe('--teammate-mode');
+    expect(findOptionMissingValue('--append-system-prompt "-review"')).toBeUndefined();
+    expect(findOptionMissingValue('-pn -dash-name')).toBeUndefined();
+    expect(findOptionMissingValue('-nname=')).toBeUndefined();
+    expect(findOptionMissingValue('-p-max-turns=5')).toBeUndefined();
   });
 
   it('reports an option that needs a value but ends the args', () => {

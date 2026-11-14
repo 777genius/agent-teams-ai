@@ -204,19 +204,28 @@ function scanUserFlags(raw: string): {
       // value, the CLI reads the next token as that value, even if it starts with `-`.
       const last = shortFlags[shortFlags.length - 1];
       const wholeToken = `-${shortFlags.map((flag) => flag.slice(1)).join('')}`;
+      // A synthetic --required= or -n= after a short cluster still has no value.
+      // Do not mistake an attached nonempty -nname= operand for this form.
+      if (OPTIONS_WITH_REQUIRED_VALUE.has(last) && token === `${wholeToken}=`) {
+        missingValue = last;
+      }
       if (token === wholeToken && OPTIONS_WITH_REQUIRED_VALUE.has(last)) {
-        if (i === tokens.length) missingValue = last;
-        flags.push(...protectedLongFlagIn(tokens[i++]));
+        const value = tokens[i++];
+        if (!value) missingValue = last;
+        flags.push(...protectedLongFlagIn(value));
       }
       continue;
     }
     if (token === '--teammate-mode' || token.startsWith('--teammate-mode=')) {
       flags.push('--teammate-mode');
       if (token === '--teammate-mode') {
-        if (i === tokens.length) missingValue = token;
-        teammateModes.push(tokens[i++] ?? '');
+        const value = tokens[i++];
+        if (!value) missingValue = token;
+        teammateModes.push(value ?? '');
       } else {
-        teammateModes.push(token.slice('--teammate-mode='.length));
+        const value = token.slice('--teammate-mode='.length);
+        if (!value) missingValue = '--teammate-mode';
+        teammateModes.push(value);
       }
       continue;
     }
@@ -240,8 +249,9 @@ function scanUserFlags(raw: string): {
     // `--append-system-prompt "-review it"`: the CLI reads the next token as the
     // value of an option that requires one, even if it starts with `-`.
     if (equalsIndex === -1 && OPTIONS_WITH_REQUIRED_VALUE.has(token)) {
-      if (i === tokens.length) missingValue = token;
-      flags.push(...protectedLongFlagIn(tokens[i++]));
+      const value = tokens[i++];
+      if (!value) missingValue = token;
+      flags.push(...protectedLongFlagIn(value));
     }
   }
   return { flags, missingValue, teammateModes };
