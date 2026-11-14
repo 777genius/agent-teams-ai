@@ -1,6 +1,7 @@
 import { assertGroupOriginal, groupTargetCommand } from '../group-chats/groupDelivery.js';
 import { validateCrossTeamTargetContext } from '../cross-team/crossTeamInbound.js';
 import { captureCommandSelection } from './captureCommandSelection.js';
+import { assertExpectedTaskRecipient } from './expectedTaskRecipient.js';
 import { validateCommandAttachments } from './validateCommandAttachments.js';
 import {
   teamCommandPath,
@@ -15,6 +16,8 @@ import { TeamOwnerError } from './contracts.js';
 import { TaskPolicyRejected } from './ports.js';
 import { validateTeamCommand } from './validateTeamCommand.js';
 import { teamCommandFingerprint } from './teamCommandFingerprint.js';
+import { validateHostCostCommand } from './hostCostCommand.js';
+import type { PrepareHostCost } from './hostCostCommand.js';
 import type { CapturedGroupIntent } from '../group-chats/groupCommandRecords.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
 import type { OwnerState } from './ownerState.js';
@@ -40,7 +43,8 @@ export function executeTeamCommand(
   principalId: string,
   rawCommand: TeamCommand,
   crossTeam?: CapturedCrossTeamIntent,
-  group?: CapturedGroupIntent
+  group?: CapturedGroupIntent,
+  prepareHostCost?: PrepareHostCost
 ): CommandReceipt {
   validateTeamCommand(rawCommand);
   const command = structuredClone(rawCommand);
@@ -85,6 +89,8 @@ export function executeTeamCommand(
     )
       throw new TeamOwnerError('conflict');
     let receipt = readProductCommand(options.store, command.commandId);
+    if (!receipt) assertExpectedTaskRecipient(command, options.state().members,
+      () => options.policy.taskBoard(grant.memberName));
     const {
       messageRecipient,
       messageRecipientRole,
@@ -92,6 +98,16 @@ export function executeTeamCommand(
       taskRecipients,
       taskStartLeadName,
     } = captureCommandSelection(command, receipt, options.state().members, grant);
+    const hostCommand = receipt?.hostCommand ??
+      (!receipt && prepareHostCost ? structuredClone(prepareHostCost()) : undefined);
+    if (hostCommand && (grant.memberName !== 'user' || crossTeam || group))
+      throw new TeamOwnerError('forbidden');
+    if (hostCommand && !['completed', 'rejected'].includes(receipt?.phase ?? 'prepared')) {
+      if (receipt && receipt.authorityRevision !== (grant.revision ?? 1))
+        throw new TeamOwnerError('forbidden');
+      if (digest(messageRecipient?.delivery) !== digest(deliveryBinding))
+        throw new TeamOwnerError('hold');
+    }
     const fingerprint = teamCommandFingerprint({
       binding: options.binding,
       principalId,
@@ -102,6 +118,7 @@ export function executeTeamCommand(
       taskStartLeadName,
       ...(crossTeam ? { crossTeam } : {}),
       ...(group ? { group } : {}),
+      ...(hostCommand ? { hostCommand } : {}),
     });
     if (receipt) {
       if (
@@ -152,6 +169,7 @@ export function executeTeamCommand(
         command,
         ...(crossTeam ? { crossTeam: structuredClone(crossTeam) } : {}),
         ...(group ? { group: structuredClone(group) } : {}),
+        ...(hostCommand ? { hostCommand } : {}),
         ...(taskStartLeadName ? { taskStartLeadName } : {}),
         ...(messageRecipientRole ? { messageRecipientRole } : {}),
         effects: {
@@ -181,6 +199,7 @@ export function executeTeamCommand(
             }
           : {}),
       };
+      validateHostCostCommand(receipt);
       options.store.write(location, receipt);
     }
     receipt.phase = 'applying';
@@ -236,4 +255,13 @@ export function executeTeamCommand(
       options.invalidate();
     }
   });
+}
+
+/** Complete only already prepared Host output; the saved snapshot is never recaptured. */
+export function resumeHostCostCommands(store: TeamStore, finish: (receipt: CommandReceipt) => void): void {
+  const pending = store.fenced(() => listProductCommandReceipts(store).filter(receipt =>
+    receipt.hostCommand?.kind === 'cost' && !['completed', 'rejected'].includes(receipt.phase)));
+  for (const receipt of pending) {
+    try { finish(receipt); } catch { /* Original authority or generation remains held. */ }
+  }
 }

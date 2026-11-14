@@ -745,6 +745,7 @@ export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'>, Native
   name: string;
   /** Presentation provenance only; does not assert native liveness or grant control. */
   runtimeOwner?: 'captured-host';
+  sessionCommands?: readonly { name: string; description: string }[];
   /** Opaque configured-state token from an application owner, never native identity. */
   configuredSettingsFingerprint?: string;
   agentId?: string;
@@ -802,10 +803,9 @@ export interface OpenCodeRuntimeDeliveryUserVisibleImpact {
   observedAt?: string;
   nextReviewAt?: string;
 }
-export interface CapturedTeamProcessStop {
-  processRef: string;
-  originalCommandId?: string;
-}
+export type {
+  ProcessStopSelection as CapturedTeamProcessStop,
+} from '@features/agent-backend/contracts';
 export interface TeamProcess {
   processRef?: string;
   observation?: 'same-live' | 'absent' | 'stale' | 'unknown' | 'metadata-stopped';
@@ -826,6 +826,7 @@ export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'>, Native
   name: string;
   /** Presentation provenance only; does not assert native liveness or grant control. */
   runtimeOwner?: 'captured-host';
+  sessionCommands?: readonly { name: string; description: string }[];
   /** Opaque configured-state token from an application owner, never native identity. */
   configuredSettingsFingerprint?: string;
   agentId?: string;
@@ -919,6 +920,7 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
   /** One existing-dialog launch intent, including its confirmed saved-roster operation. */
   command?: ApplicationCommandRequestIdentity;
   savedRosterCommandId?: string;
+  modelPreparation?: TeamProvisioningTypes.CapturedTeamModelPreparation;
   cwd: string;
   prompt?: string;
   /** Explicit opt-in: start the configured runtime without replaying saved one-time work. */
@@ -942,7 +944,7 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
 
 export interface TeamLaunchResponse {
   runId: string;
-  launchStatus?: 'started' | 'already_launching' | 'already_running';
+  launchStatus?: 'started' | 'already_launching' | 'already_running' | 'unconfirmed';
   alreadyLaunching?: boolean;
   alreadyRunning?: boolean;
 }
@@ -1147,6 +1149,8 @@ export interface TeamAgentRuntimeEntry {
   memberName: string;
   alive: boolean;
   restartable: boolean;
+  /** Host logical generation used for original-recipient preconditions; never a native PID. */
+  runtimeGeneration?: string;
   backendType?: TeamAgentRuntimeBackendType;
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;
@@ -1404,7 +1408,7 @@ export interface TeamCreateResponse {
   runId: string;
   /** Canonical owner-qualified selection returned by the selected Host. */
   teamName?: string;
-  launchStatus?: 'started' | 'already_launching' | 'already_running';
+  launchStatus?: 'started' | 'already_launching' | 'already_running' | 'unconfirmed';
   alreadyLaunching?: boolean;
   alreadyRunning?: boolean;
 }
@@ -1476,18 +1480,8 @@ export interface TeamProvisioningSupportDiagnostic {
   createdAt: string;
 }
 
-/** A current observation from one captured Team preparation, never global provider authority. */
-export interface CapturedTeamReadiness {
-  handleId: string;
-  preparationId: string;
-  launchId: string;
-  rosterRevision: string;
-  selectionSignature: string;
-  expiresAt: number;
-}
-
 export interface TeamProvisioningPrepareResult {
-  capturedTeamReadiness?: CapturedTeamReadiness;
+  capturedTeamReadiness?: TeamProvisioningTypes.CapturedTeamReadiness;
   createdTeamReadiness?: CreatedTeamReadiness;
   ready: boolean;
   message: string;

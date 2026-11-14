@@ -1842,8 +1842,10 @@ const electronAPI: ElectronAPI = {
     install: async (options?: OpenCodeRuntimeInstallOptions): Promise<OpenCodeRuntimeStatus> => {
       return invokeIpcWithResult<OpenCodeRuntimeStatus>(OPENCODE_RUNTIME_INSTALL, options);
     },
-    invalidateStatus: async (): Promise<void> => {
-      return invokeIpcWithResult<void>(OPENCODE_RUNTIME_INVALIDATE_STATUS);
+    invalidateStatus: async (mode?: 'cache-only'): Promise<void> => {
+      return mode === undefined
+        ? invokeIpcWithResult<void>(OPENCODE_RUNTIME_INVALIDATE_STATUS)
+        : invokeIpcWithResult<void>(OPENCODE_RUNTIME_INVALIDATE_STATUS, mode);
     },
     onProgress: (callback: (event: unknown, data: OpenCodeRuntimeStatus) => void): (() => void) => {
       ipcRenderer.on(

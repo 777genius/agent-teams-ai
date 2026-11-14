@@ -5,6 +5,7 @@ import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
+import type { NativeClaudeAuthenticationAction } from '@renderer/components/runtime/useProviderAuthenticationActions';
 
 interface StoreState {
   cliStatus: Record<string, unknown> | null;
@@ -65,11 +66,15 @@ interface StoreState {
   openExtensionsTab: ReturnType<typeof vi.fn>;
 }
 
+const loadNativeClaudeSetupForm = vi.hoisted(() => vi.fn());
 const storeState = {} as StoreState;
 let providerRuntimeSettingsDialogProps: {
   onSelectBackend?: (providerId: string, backendId: string) => Promise<void> | void;
   onRefreshProvider?: (providerId: string) => Promise<boolean>;
   open?: boolean;
+  disabled?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  nativeClaudeAuthAction?: NativeClaudeAuthenticationAction | null;
   initialProviderId?: string;
   initialRuntimeProviderId?: string | null;
   initialRuntimeProviderAction?: 'connect' | 'select' | null;
@@ -105,6 +110,7 @@ const codexAccountHookState = {
 
 vi.mock('@renderer/api', () => ({
   api: {
+    runtimeProviderManagement: { loadSetupForm: loadNativeClaudeSetupForm },
     openExternal: vi.fn(() => Promise.resolve({ success: true })),
     showInFolder: vi.fn(),
   },
@@ -192,6 +198,9 @@ vi.mock('@renderer/components/runtime/ProviderRuntimeSettingsDialog', () => ({
     onSelectBackend?: (providerId: string, backendId: string) => Promise<void> | void;
     onRefreshProvider?: (providerId: string) => Promise<boolean>;
     open?: boolean;
+    disabled?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    nativeClaudeAuthAction?: NativeClaudeAuthenticationAction | null;
     initialProviderId?: string;
     initialRuntimeProviderId?: string | null;
     initialRuntimeProviderAction?: 'connect' | 'select' | null;
@@ -452,6 +461,7 @@ describe('CLI status visibility during completed install state', () => {
 
   beforeEach(() => {
     providerRuntimeSettingsDialogProps = null;
+    loadNativeClaudeSetupForm.mockReset();
     runtimeProviderOnboardingDialogProps = null;
     terminalModalProps = null;
     quickConnectConnectedCount = 0;
@@ -2310,8 +2320,8 @@ describe('CLI status visibility during completed install state', () => {
   });
 
   it.each([
-    ['1.17.18', '1.18.32'],
-    ['2.1.3', '2.1.4'],
+    ['1.19.4', '1.19.5'],
+    ['2.0.21', '2.3.0'],
   ])(
     'retains usable OpenCode %s and shows a failed native update before retrying %s',
     async (version, latestVersion) => {
@@ -2319,11 +2329,13 @@ describe('CLI status visibility during completed install state', () => {
       storeState.cliInstallerState = 'idle';
       storeState.openCodeRuntimeStatus = {
         installed: true,
-        binaryPath: '/app-data/runtimes/opencode/opencode',
         version,
-        latestVersion,
-        ...(version.startsWith('2.') && { v2Support: 'ready' as const }),
-        updateAvailable: true,
+        ...(version.startsWith('2.') && {
+          v2Support: 'ready' as const,
+          engineVersion: '2.1.4',
+          compatibleV2Version: '2.1.4',
+        }),
+        sourceRevision: 'a'.repeat(64),
         source: 'app-managed',
         state: 'ready',
       };
@@ -2350,7 +2362,24 @@ describe('CLI status visibility during completed install state', () => {
       const root = createRoot(host);
       try {
         act(() => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+        expect(host.textContent).toContain('Connected');
+        expect(
+          Array.from(host.querySelectorAll('button')).some((button) =>
+            button.textContent?.includes('Update')
+          )
+        ).toBe(false);
+        storeState.openCodeRuntimeStatus = {
+          ...storeState.openCodeRuntimeStatus,
+          latestVersion,
+          updateAvailable: true,
+        };
+        act(() => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
         expect(host.textContent).toContain(`v${version} → v${latestVersion}`);
+        const update = Array.from(host.querySelectorAll('button')).find((button) =>
+          button.textContent?.includes('Update')
+        );
+        expect(update).toBeDefined();
+        expect(update?.disabled).toBe(false);
 
         storeState.openCodeRuntimeStatus = {
           ...storeState.openCodeRuntimeStatus,
@@ -2838,6 +2867,109 @@ describe('CLI status visibility during completed install state', () => {
       root.unmount();
       await flushLazyImports();
     });
+  });
+
+  it('routes captured Claude sign-in and confirmed sign-out to the original account without a legacy path', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    const provider = {
+      providerId: 'anthropic',
+      displayName: 'Anthropic',
+      supported: true,
+      authenticated: false,
+      authMethod: null as string | null,
+      nativeAuthManagement: 'claude',
+      verificationState: 'verified',
+      statusMessage: 'Not connected',
+      models: [],
+      canLoginFromUi: true,
+      capabilities: { teamLaunch: true, oneShot: true },
+      connection: {
+        supportsOAuth: true, supportsApiKey: true,
+        configurableAuthModes: ['auto', 'oauth', 'api_key'],
+        configuredAuthMode: 'oauth', apiKeyConfigured: false,
+        apiKeySource: null, apiKeySourceLabel: null,
+      },
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator', binaryPath: null, providers: [provider],
+    });
+    loadNativeClaudeSetupForm.mockResolvedValue({
+      setupForm: { connectionContextToken: 'TEST-original-login' },
+    });
+    const { confirm } = await import('@renderer/components/common/ConfirmDialog');
+    vi.mocked(confirm).mockClear();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = async () => {
+      await act(async () => {
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
+        await flushLazyImports();
+      });
+    };
+    const click = async (label: string) => {
+      const button = Array.from(host.querySelectorAll('button')).find(
+        (entry) => entry.textContent?.trim() === label
+      );
+      expect(button).toBeDefined();
+      expect(button!.disabled).toBe(false);
+      await act(async () => { button!.click(); await flushLazyImports(); });
+    };
+    const close = async () => {
+      await act(async () => {
+        providerRuntimeSettingsDialogProps!.onOpenChange!(false);
+        await flushLazyImports();
+      });
+    };
+    try {
+      await render();
+      await click('Connect Anthropic');
+      expect(loadNativeClaudeSetupForm).toHaveBeenCalledExactlyOnceWith({
+        runtimeId: 'claude', providerId: 'anthropic', projectPath: null,
+      });
+      expect(providerRuntimeSettingsDialogProps?.nativeClaudeAuthAction).toEqual({
+        action: 'login', projectPath: null, connectionContextToken: 'TEST-original-login',
+      });
+      expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+      await close();
+      await act(async () => {
+        host.querySelector<HTMLButtonElement>('[data-testid="runtime-manage-anthropic"]')!.click();
+        await flushLazyImports();
+      });
+      expect(providerRuntimeSettingsDialogProps?.nativeClaudeAuthAction).toBeNull();
+      await close();
+
+      loadNativeClaudeSetupForm.mockRejectedValueOnce(new Error('TEST original account unavailable'));
+      await click('Connect Anthropic');
+      expect(providerRuntimeSettingsDialogProps?.nativeClaudeAuthAction).toEqual({
+        action: 'login', projectPath: null, error: 'TEST original account unavailable',
+      });
+      expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+      await close();
+
+      provider.authenticated = true;
+      provider.authMethod = 'claude.ai';
+      storeState.cliStatus = { ...storeState.cliStatus, providers: [{ ...provider }] };
+      loadNativeClaudeSetupForm.mockResolvedValue({
+        setupForm: { connectionContextToken: 'TEST-original-logout' },
+      });
+      await render();
+      await click('Disconnect');
+      expect(confirm).toHaveBeenCalledOnce();
+      expect(loadNativeClaudeSetupForm.mock.invocationCallOrder.at(-1))
+        .toBeLessThan(vi.mocked(confirm).mock.invocationCallOrder[0]!);
+      expect(providerRuntimeSettingsDialogProps?.nativeClaudeAuthAction).toEqual({
+        action: 'logout', projectPath: null, connectionContextToken: 'TEST-original-logout',
+      });
+      expect(loadNativeClaudeSetupForm).toHaveBeenCalledTimes(3);
+      expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+      expect(storeState.updateConfig).not.toHaveBeenCalled();
+      expect(storeState.installCli).not.toHaveBeenCalled();
+      expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => { root.unmount(); await flushLazyImports(); });
+    }
   });
 
   it('shows subscription limit placeholders while an Anthropic subscription provider is checking', async () => {
@@ -3698,6 +3830,81 @@ describe('CLI status visibility during completed install state', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('opens each provider settings with an installed captured Host and no legacy command path', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    const providers = (['anthropic', 'codex', 'opencode'] as const).map((providerId) => ({
+      ...createDeferredMultimodelProvider(providerId, providerId),
+      verificationState: 'error',
+      statusMessage: 'TEST provider configuration requires attention',
+    }));
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      binaryPath: null,
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      providers,
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = async (key: string) => {
+      await act(async () => {
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true, key }));
+        await flushLazyImports();
+      });
+    };
+    try {
+      for (const providerId of ['anthropic', 'codex', 'opencode'] as const) {
+        await render(providerId);
+        const manage = host.querySelector<HTMLButtonElement>(
+          `[data-testid="runtime-manage-${providerId}"]`
+        );
+        expect(manage).not.toBeNull();
+        expect(manage?.disabled).toBe(false);
+        await act(async () => {
+          manage!.click();
+          await flushLazyImports();
+        });
+        expect(providerRuntimeSettingsDialogProps?.open).toBe(true);
+        expect(providerRuntimeSettingsDialogProps?.initialProviderId).toBe(providerId);
+        expect(providerRuntimeSettingsDialogProps?.disabled).toBe(false);
+        expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+      }
+      expect(storeState.cliStatus.providers).toBe(providers);
+      expect(providers.every((provider) => provider.verificationState === 'error')).toBe(true);
+      storeState.cliStatusLoading = true;
+      await render('opencode');
+      for (const providerId of ['anthropic', 'codex', 'opencode']) {
+        const manage = host.querySelector<HTMLButtonElement>(
+          `[data-testid="runtime-manage-${providerId}"]`
+        );
+        expect(manage === null || manage.disabled).toBe(true);
+      }
+      if (host.querySelector('[data-testid="provider-runtime-settings-dialog"]')) {
+        expect(providerRuntimeSettingsDialogProps?.disabled).toBe(true);
+      }
+      storeState.cliStatusLoading = false;
+      storeState.cliStatus = { ...storeState.cliStatus, installed: false };
+      await render('opencode');
+      expect(host.querySelector('[data-testid^="runtime-manage-"]')).toBeNull();
+      expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+      expect(storeState.installCli).not.toHaveBeenCalled();
+      expect(storeState.installOpenCodeRuntime).not.toHaveBeenCalled();
+      expect(storeState.installCodexRuntime).not.toHaveBeenCalled();
+      expect(storeState.updateConfig).not.toHaveBeenCalled();
+      expect(codexAccountHookState.startChatgptLogin).not.toHaveBeenCalled();
+      expect(codexAccountHookState.cancelChatgptLogin).not.toHaveBeenCalled();
+      expect(codexAccountHookState.logout).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await flushLazyImports();
+      });
+    }
   });
 
   it('routes API-key misconfiguration to provider settings instead of login', async () => {
@@ -4733,6 +4940,7 @@ describe('CLI status visibility during completed install state', () => {
       supportsSelfUpdate: false,
       showVersionDetails: false,
       showBinaryPath: false,
+      binaryPath: null,
       authLoggedIn: false,
       providers: [
         createCodexNativeRolloutProvider({
@@ -4798,14 +5006,25 @@ describe('CLI status visibility during completed install state', () => {
       (button) => button.textContent?.trim() === 'Generate link'
     );
     expect(reconnectButton).toBeTruthy();
+    expect(reconnectButton!.disabled).toBe(false);
 
     await act(async () => {
-      reconnectButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      reconnectButton!.click();
       await Promise.resolve();
     });
 
-    expect(codexAccountHookState.startChatgptLogin).toHaveBeenCalledTimes(1);
+    expect(codexAccountHookState.startChatgptLogin).toHaveBeenCalledExactlyOnceWith('browser');
     expect(host.textContent).not.toContain('5h left');
+    storeState.cliStatusLoading = true;
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
+      await Promise.resolve();
+    });
+    const checkingReconnect = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Generate link'
+    );
+    expect(checkingReconnect === undefined || checkingReconnect.disabled).toBe(true);
+    expect(codexAccountHookState.startChatgptLogin).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.unmount();

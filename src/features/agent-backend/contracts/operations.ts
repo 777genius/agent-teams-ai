@@ -19,6 +19,7 @@ import type {
   BackendLaunchConfiguration,
   BackendLaunchConfigurationView,
   BackendLaunchModelConfigurationView,
+  BackendLaunchModelPreparation,
   BackendLaunchModelProbe,
   BackendLaunchModelSelection,
   BackendLaunchSnapshot,
@@ -86,6 +87,14 @@ export interface BackendTaskRef {
   teamName: string;
 }
 
+export interface BackendTaskRecipient {
+  name: string;
+  memberId: string;
+  runId: string;
+  generation: string;
+  requireIdle?: true;
+}
+
 export interface BackendOperationPayloads
   extends
     BackendGroupPayloads,
@@ -111,10 +120,12 @@ export interface BackendOperationPayloads
     prompt?: string;
     promptTaskRefs?: BackendTaskRef[];
     startImmediately?: boolean;
+    notifyOwner?: false;
+    expectedRecipient?: BackendTaskRecipient;
     descriptionTaskRefs?: BackendTaskRef[];
   };
   'task.update': { taskId: string; subject?: string; description?: string };
-  'task.start': { taskId: string; notification: 'legacy' | 'user' };
+  'task.start': { taskId: string; notification: 'legacy' | 'user'; expectedRecipient?: BackendTaskRecipient };
   'task.board.clear': { taskId: string };
   'task.board.order': {
     columnId: 'todo' | 'in_progress' | 'done' | 'review' | 'approved';
@@ -157,6 +168,7 @@ export interface BackendOperationPayloads
     messageId?: string;
     summary?: string;
     actionMode?: 'do' | 'ask' | 'delegate';
+    nativeCommand?: true;
     attachments?: AttachmentReference[];
   };
   'team.activity.logs.read': BackendTeamActivityLogsQuery;
@@ -171,7 +183,7 @@ export interface BackendOperationPayloads
   'team.roster.read': Record<string, never>;
   'team.roster.lookup': { expected?: BackendRosterReplacement };
   'team.roster.replace': BackendRosterReplacement;
-  'team.launch.capture': { rosterCommandId: string };
+  'team.launch.capture': { rosterCommandId: string; modelPreparation?: BackendLaunchModelPreparation };
   'team.launch.read': { launchId?: string };
   'team.launch.configuration.read': { launchId?: string };
   'team.launch.model.configuration.read': Record<string, never>;
@@ -183,7 +195,10 @@ export interface BackendOperationPayloads
   'team.launch.start': {
     launchId: string;
     rosterRevision: string;
+    modelPreparation?: BackendLaunchModelPreparation;
     configuration?: BackendLaunchConfiguration;
+    /** Omitted uses the saved prompt; null is a bootstrap-only launch. */
+    initialPrompt?: string | null;
   };
   'team.launch.retry': {
     launchId: string;
@@ -313,6 +328,7 @@ export interface BackendCommandReceipt {
 export interface BackendRuntimeSnapshot {
   memberId: string;
   attachmentCapabilities?: NativeAttachmentCapabilities;
+  sessionCommands?: readonly { name: string; description: string }[];
   generation?: string;
   phase: string;
   sealed: boolean;

@@ -1,8 +1,8 @@
 import { createMixedTaskNoticeReader } from '../../packages/legacy-agent-host/tests/fixtures/native-mixed-task-notifications.ts';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { readFileSync } from 'node:fs';
-import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { readFileSync, lstatSync } from 'node:fs';
+import { mkdir, readFile, realpath, writeFile, open } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
 import {
@@ -12,7 +12,11 @@ import {
 import {
   startOpenCodeModel,
   CONTEXT_MARKER as openCodeContext,
+  type SettingsModelProbe,
+  type LiveMembershipModelPhase,
 } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
+import { runtimeDigest, normalizeBinding } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import { effectId } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
 import { desktopBackendEnvironment, digest, fileDigest } from './desktop-backend-fixture.ts';
 import { desktopOpenCodeV2ManagementProfile, prepareDesktopOpenCodeV2Recipe } from './desktop-opencode-v2-fixture.ts';
@@ -74,10 +78,122 @@ export function readMixedCapturedPrincipal(
   return String(grants[0]!.principalId);
 }
 
+export interface DesktopLiveMemberSelection { commandId: string; memberId: string }
+
+/** One explicit case reads original owner files; it does not admit work or select a latest result. */
+export function readMixedLiveMembershipIdentity(root: string, provider: 'claude' | 'codex' | 'opencode',
+  target?: DesktopLiveMemberSelection) {
+  assert.match(basename(root), /^TEST-desktop-backend-/);
+  const directory = join(root, 'hoststore/teams', mixedDesktopTeamName, '.host-owner');
+  const read = (name: string) => {
+    const path = join(directory, name), before = lstatSync(path);
+    assert.ok(before.isFile() && !before.isSymbolicLink() && before.size <= 1024 * 1024);
+    const bytes = readFileSync(path), after = lstatSync(path);
+    assert.equal(bytes.length, before.size);
+    assert.deepEqual([after.dev, after.ino, after.size, after.mtimeMs, after.ctimeMs],
+      [before.dev, before.ino, before.size, before.mtimeMs, before.ctimeMs]);
+    return record(JSON.parse(bytes.toString('utf8')));
+  };
+  const rows = (value: unknown, maximum: number) => {
+    assert.ok(Array.isArray(value) && value.length <= maximum); return value.map(record);
+  };
+  const state = read('state.json'), captures = rows(state.runtimeCaptures, 1);
+  assert.equal(captures.length, 1);
+  const capture = captures[0]!, original = rows(capture.members, 2), members = rows(state.members, 3);
+  assert.equal(original.length, 2, 'the original capture contains only the two non-OpenCode peers');
+  assert.equal(record(state.savedSettings).providerId, 'anthropic');
+  const launch = read(`launches/${runtimeDigest(capture.launchId)}.json`), definition = record(launch.definition);
+  assert.equal(definition.launchId, capture.launchId);
+  const selectedMembers = rows(definition.members, 3), source = record(definition.capture);
+  assert.equal(source.commandId, capture.commandId);
+  assert.equal(source.configurationRevision, capture.configurationRevision);
+  assert.equal(rows(source.members, 2).length, 2);
+  const name = provider === 'claude' ? 'team-lead' : provider === 'codex' ? 'bob' : 'carol';
+  const found = members.filter(row => row.name === name);
+  assert.equal(found.length, 1); const member = found[0]!;
+  assert.equal(member.role, provider === 'claude' ? 'lead' : 'member');
+  if (provider !== 'claude') assert.equal(record(member.settings).providerId, provider);
+  const selection = selectedMembers.filter(row => row.memberId === member.memberId);
+  assert.equal(selection.length, 1); const selected = selection[0]!;
+  const currentDelivery = record(member.delivery);
+  for (const key of ['backendId', 'teamId', 'runId', 'memberId', 'generation'])
+    assert.ok(typeof currentDelivery[key] === 'string' && currentDelivery[key]);
+  const binding = normalizeBinding({ backendId: String(currentDelivery.backendId), teamId: String(currentDelivery.teamId),
+    runId: String(currentDelivery.runId), memberId: String(currentDelivery.memberId), generation: String(currentDelivery.generation) });
+  assert.deepEqual(selected.binding, binding);
+  assert.equal(binding.backendId, record(state.binding).backendId);
+  assert.equal(binding.teamId, record(state.binding).teamId);
+  assert.equal(binding.runId, capture.launchId); assert.equal(binding.memberId, member.memberId);
+  let principalId: string, commandId: string | undefined, captured: Record<string, unknown> | undefined;
+  if (provider !== 'opencode') {
+    assert.equal(target, undefined);
+    const peers = original.filter(row => row.memberId === member.memberId); assert.equal(peers.length, 1);
+    assert.deepEqual(peers[0]!.delivery, currentDelivery);
+    assert.equal(typeof peers[0]!.principalId, 'string'); principalId = String(peers[0]!.principalId);
+  } else {
+    assert.ok(target); assert.equal(target.memberId, member.memberId);
+    assert.equal(members.length, 3); assert.ok(!original.some(row => row.memberId === target.memberId));
+    const commands = rows(state.rosterCommands, 1024).filter(row => row.commandId === target.commandId);
+    assert.equal(commands.length, 1); const command = commands[0]!, decision = record(command.liveMembership);
+    assert.equal(decision.phase, 'completed'); assert.ok(['add', 'restore'].includes(String(record(decision.delta).kind)));
+    assert.equal(record(decision.delta).targetId, target.memberId); assert.equal(decision.launchId, capture.launchId);
+    assert.equal(decision.sourceCaptureDigest, runtimeDigest(source));
+    const view = record(decision.capture), privateTarget = record(view.target), published = record(decision.selection);
+    assert.equal(view.commandId, target.commandId); assert.equal(view.teamId, record(state.binding).teamId);
+    assert.equal(view.requestDigest, decision.requestDigest); assert.equal(view.sourceCaptureDigest, decision.sourceCaptureDigest);
+    assert.equal(privateTarget.memberId, target.memberId);
+    assert.equal(privateTarget.provider, 'opencode'); assert.equal(privateTarget.name, name);
+    assert.deepEqual(published.delivery, currentDelivery);
+    assert.equal(published.configurationDigest, selected.configurationDigest);
+    assert.equal(privateTarget.configurationDigest, selected.configurationDigest);
+    const history = rows(launch.liveMembership, 3).filter(row => record(row.intent).commandId === target.commandId);
+    assert.equal(history.length, 1); const row = history[0]!, intent = record(row.intent);
+    assert.equal(row.phase, 'selected'); assert.equal(intent.memberId, target.memberId);
+    for (const key of ['requestDigest', 'sourceCaptureDigest', 'expectedRevision', 'launchId'])
+      assert.equal(intent[key], key === 'expectedRevision' ? record(decision.input).expectedRevision : decision[key]);
+    assert.equal(intent.originalFingerprint, command.fingerprint); assert.equal(row.rosterRevision, command.revision);
+    assert.deepEqual(row.selected, selected); captured = record(row.capture);
+    assert.equal(runtimeDigest(captured), row.captureDigest); assert.equal(row.captureDigest, view.captureDigest);
+    assert.equal(captured.configurationDigest, selected.configurationDigest);
+    assert.equal(captured.runtimeGeneration, selected.runtimeGeneration);
+    assert.equal(captured.workspace, privateTarget.workspace);
+    assert.equal(record(captured.member).memberId, target.memberId);
+    assert.deepEqual(record(captured.member).settings, member.settings);
+    const fresh = effectId('live-roster-agent', String(record(state.binding).teamId), target.commandId,
+      target.memberId, String(decision.requestDigest));
+    principalId = `agent:${fresh}`; commandId = target.commandId;
+    assert.equal(published.principalId, principalId);
+    const { configurationDigest: _digest, runtimeGeneration: _generation, ...origin } = captured;
+    assert.equal(selected.configRevision, `live-${runtimeDigest(origin)}`);
+  }
+  const grants = rows(state.grants, 1024).filter(row => row.principalId === principalId && row.revoked !== true);
+  assert.equal(grants.length, 1); assert.equal(grants[0]!.memberName, name);
+  assert.ok(Array.isArray(grants[0]!.permissions));
+  for (const permission of ['read', 'task.write', 'message.write', 'process.write'])
+    assert.ok(grants[0]!.permissions.includes(permission));
+  return { principalId, memberId: String(member.memberId), binding, launchId: String(capture.launchId),
+    selected, ...(commandId ? { commandId, captured,
+      sessionId: effectId('live-roster-session', principalId.slice('agent:'.length)) } : {}) };
+}
+
 /** Called only inside the explicitly authorized desktop proof; no agent starts here. */
-export async function startDesktopMixedModels(root: () => string, options: { nativeGeneration?: 'v2' } = {}) {
+export async function startDesktopMixedModels(root: () => string, options: { nativeGeneration?: 'v2'; liveMembership?: true } = {}) {
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1');
+  if (options.liveMembership) assert.equal(process.env.LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI, '1');
+  let membershipPhase: LiveMembershipModelPhase = 'idle', membershipTarget: DesktopLiveMemberSelection | undefined;
+  const principal = (provider: 'claude' | 'codex' | 'opencode') => options.liveMembership
+    ? readMixedLiveMembershipIdentity(root(), provider, provider === 'opencode' ? membershipTarget : undefined).principalId
+    : readMixedCapturedPrincipal(root(), provider);
   let claudeProbePhase: 'native' | 'cold-readback' = 'native';
+  let settingsProbe: SettingsModelProbe | 'idle' | undefined = 'idle';
+  const settingsExpected: SettingsModelProbe[] = [
+    { step: 'global-default', model: 'TEST-model' },
+    { step: 'project-default', model: 'TEST-project-model' },
+    { step: 'project-test', model: 'TEST-project-model' },
+    ...(!options.nativeGeneration
+      ? [{ step: 'local-limits' as const, model: 'TEST-model' as const, outputTokens: 1536 }] : []),
+  ];
+  const settingsCompleted: SettingsModelProbe['step'][] = [];
   const claude = await startNativeTeamModel({
       mixedTaskNotifications: createMixedTaskNoticeReader(root, 'team-lead'),
     allowModelProbes: true,
@@ -86,7 +202,7 @@ export async function startDesktopMixedModels(root: () => string, options: { nat
     mixedGroups: true,
     uiGeneratedMessageIds: true,
     memberName: 'team-lead',
-    principalId: () => readMixedCapturedPrincipal(root(), 'claude'),
+    principalId: () => principal('claude'),
   });
   let codex: Awaited<ReturnType<typeof startCodexModel>> | undefined;
   let opencode: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
@@ -96,20 +212,71 @@ export async function startDesktopMixedModels(root: () => string, options: { nat
       allowModelProbes: true,
       modelProbeWorkspace: () => join(root(), 'workspace'),
       mixedGroups: true,
-      principalId: () => readMixedCapturedPrincipal(root(), 'codex'),
+      principalId: () => principal('codex'),
     });
     opencode = await startOpenCodeModel({
       ...(options.nativeGeneration ? { nativeGeneration: options.nativeGeneration } : {}),
-      mixedTaskNotifications: createMixedTaskNoticeReader(root, 'carol'),
+      ...(!options.liveMembership ? { mixedTaskNotifications: createMixedTaskNoticeReader(root, 'carol'),
+        mixedGroups: true, settingsProbe: () => settingsProbe,
+        ...(!options.nativeGeneration ? { selectedBusinessOutputTokens: 1536 } : {}) } : {
+        uiGeneratedMessageIds: true, liveMembershipPhase: () => membershipPhase }),
       allowModelProbes: true,
-      mixedGroups: true,
-      principalId: () => readMixedCapturedPrincipal(root(), 'opencode'),
+      principalId: () => principal('opencode'),
+      selectedModel: { id: 'TEST-model' },
     });
     const selected = { claude, codex, opencode };
     let evidenceRoot: string | undefined;
     return {
       ...selected,
       openCodeGeneration: options.nativeGeneration ?? 'v1' as const,
+      openCodeProviderId: options.nativeGeneration ? 'test-local' as const : 'local' as const,
+      ...(options.liveMembership ? { membership: {
+        get phase() { return membershipPhase; },
+        advance(next: Exclude<LiveMembershipModelPhase, 'idle'>, target?: DesktopLiveMemberSelection) {
+          const phases: LiveMembershipModelPhase[] = ['idle', 'add', 'add-ready', 'remove', 'restore', 'restore-ready', 'stopped'];
+          const index = phases.indexOf(membershipPhase);
+          assert.equal(next, phases[index + 1], 'one finite original membership phase');
+          const counts = [[0, 0], [1, 0], [1, 2], [1, 2], [2, 2], [2, 4]][index]!;
+          assert.deepEqual([selected.opencode.probes.length, selected.opencode.observations.length], counts);
+          for (const model of Object.values(selected)) assert.deepEqual(model.failures, []);
+          for (const model of [selected.claude, selected.codex]) {
+            assert.equal(model.observations.length, 0); assert.equal(model.notificationObservations?.length ?? 0, 0);
+          }
+          if (next === 'add-ready' || next === 'restore-ready') {
+            assert.ok(target); readMixedLiveMembershipIdentity(root(), 'opencode', target);
+            membershipTarget = Object.freeze({ ...target });
+          } else assert.equal(target, undefined);
+          membershipPhase = next;
+        },
+      } } : {}),
+      settingsProbes: {
+        expectedCount: settingsExpected.length,
+        begin(step: SettingsModelProbe['step']) {
+          const expected = settingsExpected[settingsCompleted.length];
+          assert.equal(expected?.step, step, 'one ordered original Settings intent');
+          assert.equal(settingsProbe, step === 'local-limits' ? undefined : 'idle');
+          settingsProbe = Object.freeze({ ...expected! });
+        },
+        finish(step: SettingsModelProbe['step']) {
+          assert.ok(settingsProbe && settingsProbe !== 'idle');
+          assert.equal(settingsProbe.step, step);
+          assert.deepEqual(selected.opencode.failures, []);
+          assert.equal(selected.opencode.probes.filter(probe => probe.settingsStep === step).length, 1);
+          settingsCompleted.push(step);
+          settingsProbe = step === 'local-limits' ? undefined : 'idle';
+        },
+        beginConfiguration() {
+          assert.deepEqual(settingsCompleted, ['global-default', 'project-default', 'project-test']);
+          assert.equal(settingsProbe, 'idle');
+          settingsProbe = undefined;
+        },
+        assertComplete() {
+          assert.equal(settingsProbe, undefined);
+          assert.deepEqual(settingsCompleted, settingsExpected.map(probe => probe.step));
+          assert.equal(selected.opencode.probes.filter(probe => probe.settingsStep !== undefined).length,
+            settingsExpected.length);
+        },
+      },
       beginColdReadbackProbes: () => {
         assert.equal(claudeProbePhase, 'native', 'one original cold readback phase');
         const nativeProbeCount = claude.probes.length;
@@ -191,6 +358,19 @@ export async function prepareDesktopMixedNativeFixture(
   assert.equal(options.models.openCodeGeneration, options.openCodeV2 ? 'v2' : 'v1',
     'the native oracle and selected engine must use the same protocol');
   assert.equal(profile.runtime!.providerTemplates!.length, 1);
+  // Metadata-only TEST rows feed the ordinary project picker before any app exists.
+  // These are neither native history nor an imported product corpus.
+  for (const name of ['workspace', 'workspace-other']) {
+    const cwd = join(base.root, name);
+    await mkdir(cwd, { recursive: true, mode: 0o700 });
+    const discovery = join(base.root, 'claude/projects', cwd.replace(/[/\\]/g, '-'));
+    await mkdir(discovery, { recursive: true, mode: 0o700 });
+    await writeFile(join(discovery, 'TEST-project-discovery-only.jsonl'),
+      JSON.stringify({ type: 'TEST-project-discovery-only', cwd }) + '\n',
+      { mode: 0o600, flag: 'wx' });
+    await mkdir(join(base.root, 'preferences', name), { recursive: true, mode: 0o700 });
+  }
+  await mkdir(join(base.root, 'preferences/global'), { recursive: true, mode: 0o700 });
   claude.nativeOptions = { ...claude.nativeOptions, settingSources: [] };
   assert.notEqual(options.openCodeManagementEndpoint, options.openCodeEndpoint);
   for (const value of [options.openCodeEndpoint, options.openCodeManagementEndpoint]) {
@@ -295,7 +475,7 @@ stream_max_retries = 0
     repo: join(import.meta.dirname, '../..'), root: base.root, node: base.node,
     selection: { ...options.openCodeV2, endpoint: options.openCodeEndpoint,
       managementEndpoint: options.openCodeManagementEndpoint,
-      modelUrl: options.models.opencode.url },
+      modelUrl: options.models.opencode.url, settingsProjectModel: true },
     identity: common('opencode'),
   }) : {
     ...common('opencode'),
@@ -309,9 +489,9 @@ stream_max_retries = 0
       OPENCODE_CONFIG_CONTENT: JSON.stringify({
         autoupdate: false,
         share: 'disabled',
-        enabled_providers: ['test-local'],
-        model: 'test-local/TEST-model',
-        small_model: 'test-local/TEST-model',
+        enabled_providers: ['local'],
+        model: 'local/TEST-model',
+        small_model: 'local/TEST-model',
         permission: { '*': 'deny', bash: 'allow' },
         agent: {
           title: { disable: true },
@@ -320,7 +500,7 @@ stream_max_retries = 0
         },
         compaction: { auto: false },
         provider: {
-          'test-local': {
+          local: {
             npm: '@ai-sdk/openai-compatible',
             name: 'TEST fixture',
             options: {
@@ -329,6 +509,7 @@ stream_max_retries = 0
             },
             models: {
               'TEST-model': { name: 'TEST-model', limit: { context: 200000, output: 2000 } },
+              'TEST-project-model': { name: 'TEST-project-model', limit: { context: 98304, output: 1024 } },
             },
           },
         },
@@ -340,7 +521,7 @@ stream_max_retries = 0
       NO_COLOR: '1',
     },
     nativeOptions: {
-      providerId: 'test-local',
+      providerId: 'local',
       agent: 'TEST-member',
       instructions: openCodeContext,
     },
@@ -349,6 +530,39 @@ stream_max_retries = 0
     if (profile.processCustody)
       assert.deepEqual(profile.processCustody, options.openCodeV2.processCustody);
     profile.processCustody = options.openCodeV2.processCustody;
+  }
+  let membershipProject: { path: string; sha256: string; dev: number; ino: number } | undefined;
+  if (options.models.membership) {
+    assert.equal(process.env.LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI, '1');
+    const providerId = options.models.openCodeProviderId;
+    assert.equal(opencode.nativeOptions.providerId, providerId);
+    assert.equal(opencode.cwd, join(base.root, 'workspace')); assert.equal(await realpath(opencode.cwd), opencode.cwd);
+    const original = options.openCodeV2
+      ? record(record('embedded' in opencode ? opencode.embedded : undefined).providerConfiguration) : undefined;
+    if (original) assert.equal(original.package, 'aisdk:@ai-sdk/openai-compatible');
+    const provider = original ? { npm: '@ai-sdk/openai-compatible', options: original.settings, models: original.models }
+      : record(record(record(JSON.parse(opencode.environment.OPENCODE_CONFIG_CONTENT!)).provider)[providerId]);
+    assert.equal(provider.npm, '@ai-sdk/openai-compatible');
+    assert.equal(record(provider.options).baseURL, options.models.opencode.url + '/v1');
+    assert.equal(record(provider.options).apiKey, 'TEST-LOCALHOST-ONLY');
+    assert.ok(record(provider.models)['TEST-model']);
+    const bytes = Buffer.from(JSON.stringify({ provider: { [providerId]: provider } }) + '\n');
+    assert.ok(bytes.length <= 64 * 1024);
+    const path = join(opencode.cwd, 'opencode.json'), file = await open(path, 'wx+', 0o600);
+    try {
+      await file.writeFile(bytes); const stat = await file.stat();
+      assert.ok(stat.isFile() && stat.nlink === 1 && stat.size === bytes.length && (stat.mode & 0o777) === 0o600);
+      const actual = Buffer.alloc(bytes.length + 1); let offset = 0;
+      while (offset < actual.length) {
+        const { bytesRead } = await file.read(actual, offset, actual.length - offset, offset);
+        if (!bytesRead) break; offset += bytesRead;
+      }
+      assert.ok(offset === bytes.length && actual.subarray(0, offset).equals(bytes));
+      const after = lstatSync(path);
+      assert.ok(after.isFile() && !after.isSymbolicLink() && after.dev === stat.dev && after.ino === stat.ino);
+      assert.equal(await realpath(path), path);
+      membershipProject = { path, sha256: digest(bytes), dev: stat.dev, ino: stat.ino };
+    } finally { await file.close(); }
   }
   profile.runtime!.providerTemplates!.push(codex, opencode);
   const descriptor = record(JSON.parse(await readFile(base.descriptorPath, 'utf8')));
@@ -384,12 +598,22 @@ stream_max_retries = 0
   ];
   for (const item of management) {
     profile.management!.push(item);
-    descriptor.management.push({
-      ...selected,
-      runtimeId: item.provider,
-      profileId: item.profileId,
-      configRevision: item.configRevision,
-    });
+    for (const projectPath of item.provider === 'opencode'
+      ? [null, join(base.root, 'workspace'), join(base.root, 'workspace-other')] : [null]) {
+      descriptor.management.push({
+        ...selected,
+        runtimeId: item.provider,
+        profileId: item.profileId,
+        configRevision: item.configRevision,
+        projectPath,
+        ...(item.provider === 'opencode' ? {
+          preferences: {
+            globalRoot: join(base.root, 'preferences/global'),
+            projectRoot: projectPath === null ? null : join(base.root, 'preferences', basename(projectPath)),
+          },
+        } : {}),
+      });
+    }
   }
   const profileBytes = JSON.stringify(profile);
   await writeFile(base.profilePath, profileBytes, { mode: 0o600 });
@@ -404,6 +628,7 @@ stream_max_retries = 0
   await writeFile(base.descriptorPath, descriptorBytes, { mode: 0o600 });
   return {
     ...base,
+    ...(membershipProject ? { membershipProject } : {}),
     pins: {
       ...base.pins,
       profileSha256: digest(profileBytes),

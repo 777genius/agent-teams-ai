@@ -50,7 +50,7 @@ function fixture() {
   let current = true,
     selected = { ...target },
     calls = 0;
-  let effect: () => Promise<{ ok: boolean; settled: boolean }> = async () => ({
+  let effect: () => Promise<{ ok: boolean; settled: boolean; rejected?: boolean }> = async () => ({
     ok: true,
     settled: true,
   });
@@ -154,6 +154,34 @@ test('one credential namespace serializes native writers; uncertain writer block
   assert.equal((await restarted.execute(command)).phase, 'held');
   await assert.rejects(restarted.execute(next), { code: 'held' });
   assert.equal(f.count(), 1);
+});
+
+test('original pending credentials survive cold lookup without replay; only explicit rejection plus cleanup permits a fresh intent', async (t) => {
+  const pending = { profileId: command.profileId, configRevision: command.configRevision, providerId: command.providerId };
+  for (const rejected of [false, true]) {
+    const f = fixture();
+    t.after(f.cleanup);
+    f.setEffect(async () => ({ ok: false, settled: true, ...(rejected ? { rejected: true } : {}) }));
+    const first = await f.owner().execute(command);
+    const cold = f.owner();
+    assert.equal(first.phase, 'held');
+    assert.deepEqual(cold.pending(pending), rejected ? null : first);
+    assert.deepEqual(cold.resume(command), first);
+    assert.throws(() => cold.resume({ ...command, key: 'TEST-changed-key' }), { code: 'conflict' });
+    assert.throws(() => cold.resume({ ...command, commandId: 'TEST-never-claimed' }), { code: 'conflict' });
+    assert.equal(f.count(), 1);
+    if (rejected) {
+      f.setEffect(async () => ({ ok: true, settled: true }));
+      assert.equal((await cold.execute({ ...command, commandId: 'TEST-new-explicit-intent' })).phase, 'completed');
+      assert.equal(cold.pending(pending), null);
+      assert.equal(f.count(), 2);
+    } else {
+      f.changeSelection();
+      assert.throws(() => cold.pending(pending), { code: 'conflict' });
+      assert.throws(() => cold.resume(command), { code: 'conflict' });
+      assert.equal(f.count(), 1);
+    }
+  }
 });
 
 test('publication loss never resubmits a completed native effect; a confirmed settled writer permits a separate later intent', async (t) => {

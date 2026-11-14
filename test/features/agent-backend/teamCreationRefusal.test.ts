@@ -1,13 +1,17 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
 
+import { hostTeamSelectionKey } from '../../../src/features/agent-backend/contracts';
 import { TeamCreationRefusal } from '../../../src/features/agent-backend/contracts/creation';
+import { hostTeamRunId } from '../../../src/features/agent-backend/contracts/teamRunSelection';
+import { createLaunchedHostTeam } from '../../../src/features/agent-backend/main/application/createdHostTeam';
 import { CapturedTeamRegistry } from '../../../src/features/agent-backend/main/infrastructure/CapturedTeamRegistry';
 import { createHostTeamsApi } from '../../../src/features/agent-backend/renderer/createHostTeamsApi';
 import {
   readTeamCreationConfigResult,
   readTeamCreationResult,
 } from '../../../src/features/agent-backend/renderer/readTeamCreationResult';
+import { createdTeamSelectionSignature } from '../../../src/shared/utils/createdTeamReadiness';
 
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts';
 import type { BackendOwnerBinding } from '../../../src/features/agent-backend/main/application/backendBinding';
@@ -74,37 +78,97 @@ describe('original Create refusal transport', () => {
       ).rejects.toMatchObject({ code, outcome: 'rejected', name: 'TeamCreationRefusal' });
       expect(request.mock.calls.map(([method]) => method)).toEqual([
         'team.creation.submit',
-        'team.registry.lookup',
+        'team.creation.lookup',
       ]);
       expect(request.mock.calls[1]![1]).toMatchObject({
         owner,
         commandId: 'TEST-original',
-        payload: { contextId: draft.contextId, expected: draft },
+        payload: { preparationId: 'TEST-preparation', draft },
       });
     }
   );
 
-  it.each(['pending', 'published', 'held'] as const)(
-    'keeps a launch refusal UNKNOWN when the original registry intent is %s',
-    async (phase) => {
-      const request = vi.fn(
-        async (method: string, _params: unknown): Promise<JsonValue> =>
-          method === 'team.creation.submit'
-            ? { ok: false, code: 'conflict', outcome: 'rejected' }
-            : { ok: true, value: { ...published, phase } }
-      );
-      const registry = new CapturedTeamRegistry({
-        owner,
-        client: { request },
-        start: async () => {},
-        available: () => true,
-      });
-      await expect(
-        registry.submitCreation('TEST-original', { preparationId: 'TEST-preparation', draft })
-      ).rejects.toMatchObject({ code: 'hold', outcome: 'unknown' });
-      expect(request).toHaveBeenCalledTimes(2);
-    }
-  );
+  it('keeps an original incomplete or in-flight capture UNKNOWN after a submit refusal', async () => {
+    const request = vi.fn(
+      async (method: string, _params: unknown): Promise<JsonValue> =>
+        method === 'team.creation.submit'
+          ? { ok: false, code: 'conflict', outcome: 'rejected' }
+          : { ok: false, code: 'hold', outcome: 'unknown' }
+    );
+    const registry = new CapturedTeamRegistry({
+      owner,
+      client: { request },
+      start: async () => {},
+      available: () => true,
+    });
+    await expect(
+      registry.submitCreation('TEST-original', { preparationId: 'TEST-preparation', draft })
+    ).rejects.toMatchObject({ code: 'hold', outcome: 'unknown' });
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  it('recovers the original complete capture as a saved Team without claiming a launch', async () => {
+    const original = {
+      creation: published,
+      partialCreated: true,
+      launch: {
+        launchId: 'TEST-capture-B',
+        rosterRevision: 'TEST-roster-B',
+        startedAtMs: null,
+        observedAtMs: 1,
+        status: 'pending',
+        ready: 0,
+        expected: 0,
+        retryCapability: 'same-binding-no-allocation-only',
+        members: [],
+      },
+    };
+    const request = vi.fn(
+      async (method: string, _params: unknown): Promise<JsonValue> =>
+        method === 'team.creation.submit'
+          ? { ok: false, code: 'conflict', outcome: 'rejected' }
+          : { ok: true, value: original }
+    );
+    const registry = new CapturedTeamRegistry({
+      owner,
+      client: { request },
+      start: async () => {},
+      available: () => true,
+    });
+    const intent = { teamName: draft.teamName, cwd: draft.savedSettings.cwd, members: [] };
+    const result = await createLaunchedHostTeam({
+      target: {
+        prepare: (action, input) => registry.prepareCreation(action, input),
+        submit: registry.submitCreation.bind(registry),
+      },
+      contextId: draft.contextId,
+      guard: { isCurrent: () => true },
+      request: {
+        ...intent,
+        command: { commandId: 'TEST-original', idempotencyKey: 'TEST-original' },
+        createdTeamReadiness: {
+          preparationId: 'TEST-preparation',
+          selectionSignature: createdTeamSelectionSignature(intent),
+          draftDigest: 'a'.repeat(64),
+          expiresAt: Date.now() + 60_000,
+        },
+      },
+    });
+    expect(result).toEqual({
+      teamName: hostTeamSelectionKey('TEST-handle'),
+      runId: hostTeamRunId('TEST-handle', 'TEST-capture-B', 'TEST-roster-B'),
+      launchStatus: 'unconfirmed',
+    });
+    expect(request.mock.calls.map(([method]) => method)).toEqual([
+      'team.creation.submit',
+      'team.creation.lookup',
+    ]);
+    expect(request.mock.calls[1]![1]).toEqual(request.mock.calls[0]![1]);
+    original.creation = { ...published, phase: 'pending' };
+    await expect(
+      registry.submitCreation('TEST-original', { preparationId: 'TEST-preparation', draft })
+    ).rejects.toThrow('published Team');
+  });
 
   it('keeps UNKNOWN when original context authority changes during the registry absence read', async () => {
     let current = true;
@@ -129,7 +193,7 @@ describe('original Create refusal transport', () => {
     ).rejects.toMatchObject({ code: 'forbidden', outcome: 'unknown' });
     expect(request.mock.calls.map(([method]) => method)).toEqual([
       'team.creation.submit',
-      'team.registry.lookup',
+      'team.creation.lookup',
     ]);
   });
 
@@ -143,7 +207,7 @@ describe('original Create refusal transport', () => {
         async (method: string, _params: unknown): Promise<JsonValue> =>
           method === 'team.creation.submit'
             ? refusal
-            : method === 'team.registry.lookup'
+            : method === 'team.creation.lookup'
               ? { ok: false, code: 'hold', outcome: 'unknown' }
               : { ok: true, value: null }
       );

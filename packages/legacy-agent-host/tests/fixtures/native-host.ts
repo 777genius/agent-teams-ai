@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { delimiter, dirname, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -32,6 +33,7 @@ export function assertSafeRuntimeProjection(value: unknown): void {
         'interactions',
         'diagnostic',
         'attachmentCapabilities',
+        'sessionCommands',
       ].includes(key)
     ),
     'runtime RPC exposes only its explicit safe projection'
@@ -47,6 +49,20 @@ export function assertSafeRuntimeProjection(value: unknown): void {
     const capabilities = record(safe.attachmentCapabilities);
     assert.deepEqual(Object.keys(capabilities).sort(), ['documents', 'images', 'textFiles']);
     assert.ok(Object.values(capabilities).every((value) => typeof value === 'boolean'));
+  }
+  if (Object.hasOwn(safe, 'sessionCommands')) {
+    assert.ok(Array.isArray(safe.sessionCommands) && safe.sessionCommands.length <= 4096);
+    const names = new Set<string>();
+    for (const value of safe.sessionCommands) {
+      const command = record(value);
+      assert.deepEqual(Object.keys(command).sort(), ['description', 'name']);
+      assert.equal(typeof command.name, 'string');
+      assert.match(String(command.name), /^[a-z][a-z0-9:-]{0,63}$/iu);
+      assert.equal(names.has(String(command.name)), false);
+      names.add(String(command.name));
+      assert.ok(typeof command.description === 'string' && command.description.length <= 4096);
+      assert.equal(command.description.includes('\0'), false);
+    }
   }
   assert.equal(JSON.stringify(safe).includes('Bearer '), false);
 }
@@ -130,12 +146,21 @@ export function startHost(options: {
   profileHash: string;
   onDiagnostic?(chunk: Buffer): void;
   testImports?: readonly string[];
+  /** Source-only observation of the original TEST Host; never propagated to native children. */
+  testCpuProfile?: true;
   gitBinDirectory?: string;
   onNotification?(method: string, params: unknown): void;
 }) {
+  const testCpuProfilePath = options.testCpuProfile
+    ? join(options.root, 'TEST-original-host.cpuprofile') : undefined;
+  const testCpuProfileIntervalUs = testCpuProfilePath ? 10_000 as const : undefined;
+  if (testCpuProfilePath) assert.equal(existsSync(testCpuProfilePath), false, 'fresh original TEST CPU profile');
   const child = spawn(
     options.node,
-    [...(options.testImports ?? []).flatMap((path) => ['--import', path]), options.entry],
+    [...(testCpuProfilePath ? ['--cpu-prof', `--cpu-prof-dir=${options.root}`,
+      '--cpu-prof-name=TEST-original-host.cpuprofile',
+      `--cpu-prof-interval=${testCpuProfileIntervalUs}`] : []),
+      ...(options.testImports ?? []).flatMap((path) => ['--import', path]), options.entry],
     {
       cwd: options.root,
       env: {
@@ -213,6 +238,8 @@ export function startHost(options: {
   }
   return {
     child,
+    testCpuProfilePath,
+    testCpuProfileIntervalUs,
     async rpc(method: string, params: unknown, timeoutMs = 60_000): Promise<Record<string, unknown>> {
       assert.ok(!exited && stdoutValid);
       assert.ok(
@@ -266,6 +293,28 @@ export function startHost(options: {
         assert.equal(typeof safe.checkpointId, 'string');
         assert.ok(['published', 'unsupported', 'held'].includes(String(safe.status)));
         if (safe.status === 'published') assert.match(String(safe.reference), /^cp1-[a-f0-9]{64}$/);
+      } else if (method.startsWith('runtime.source.') && result.ok === true) {
+        const { runtimeSourcePublicationSchema, runtimeSourceSummarySchema } =
+          await import('../../dist/composition/runtimeSourceContracts.js');
+        switch (method) {
+          case 'runtime.source.current':
+            runtimeSourceSummarySchema.parse(result.value);
+            break;
+          case 'runtime.source.retained':
+            runtimeSourceSummarySchema.array().parse(result.value);
+            break;
+          case 'runtime.source.lookup':
+          case 'runtime.source.recover':
+            runtimeSourcePublicationSchema.nullable().parse(result.value);
+            break;
+          case 'runtime.source.publish':
+          case 'runtime.source.refreshConfiguration':
+            runtimeSourcePublicationSchema.parse(result.value);
+            break;
+          default:
+            assert.fail('Unknown runtime source RPC');
+        }
+        assert.equal(JSON.stringify(result.value).includes('Bearer '), false);
       } else if (method.startsWith('runtime.') && result.ok === true) {
         assertSafeRuntimeProjection(result.value);
       }

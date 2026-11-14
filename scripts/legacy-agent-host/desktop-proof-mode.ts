@@ -1,13 +1,18 @@
+import { readCodexSourceSelectionPrincipal } from './desktop-codex-source-selection.ts';
 import { teamRosterRevision } from '../../packages/legacy-agent-host/dist/team/rosterSchema.js';
 import type { OwnerState } from '../../packages/legacy-agent-host/dist/team/ownerState.js';
 import { NATIVE_MEMBER } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/member-creation.ts';
 import assert from 'node:assert/strict';
 import { nativeProcessReadbackAction } from './desktop-native-process-readback.ts';
+import { desktopScheduleScenario } from './desktop-schedule-fixture.ts';
+import { desktopNativeCommandScenario } from './desktop-native-commands-fixture.ts';
+import { desktopNativeExtensionScenario } from './desktop-native-extension-consumption-fixture.ts';
+import { startDesktopCapturedMcpModel } from './desktop-opencode-v2-mcp-fixture.ts';
 import { startProcessModel } from './desktop-native-process-model.ts';
 import { readProcessServices } from './desktop-native-process-fixture.ts';
 import { startDesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { startDesktopApprovalModel } from './desktop-approval-model.ts';
-import { LEGACY_IMPORT_TEAM } from './desktop-stopped-import-fixture.ts';
+import { LEGACY_IMPORT_TEAM, CURRENT_LEGACY_SOURCE_PROMPT, CURRENT_LEGACY_SOURCE_REPLY } from './desktop-stopped-import-fixture.ts';
 import { startNativeReviewModel } from './desktop-native-review-model.ts';
 import { startOpenCodeV2ReviewModel } from './desktop-opencode-v2-review-model.ts';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -62,6 +67,31 @@ export async function prepareDesktopProofMode(
     'explicit known proof mode'
   );
   const mixedMode = mode === 'native-mixed-create-launch-ui';
+  const membershipFlag = process.env.LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI;
+  assert.ok(membershipFlag === undefined || membershipFlag === '1');
+  if (membershipFlag === '1') {
+    assert.equal(mixedMode, true);
+    assert.equal(process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH, undefined);
+    assert.equal(process.env.LEGACY_DESKTOP_READBACK_ROOT, undefined);
+  }
+  const scheduleUiMode = process.env.LEGACY_DESKTOP_SCHEDULE_UI === '1';
+  if (scheduleUiMode) assert.equal(mode, 'native-launch-ui', 'schedule proof extends the existing Launch mode');
+  const commandsUiMode = process.env.LEGACY_DESKTOP_COMMANDS_UI === '1';
+  if (commandsUiMode) {
+    assert.equal(mode, 'native-launch-ui', 'commands proof extends the existing Launch mode');
+    assert.equal(scheduleUiMode, false, 'one finite UI variant');
+  }
+  const extensionsUiMode = process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI === '1';
+  if (extensionsUiMode) {
+    assert.equal(mode, 'native-launch-ui', 'extension consumption extends the original Launch mode');
+    assert.ok(!scheduleUiMode && !commandsUiMode, 'one finite UI variant');
+  }
+  const capturedMcpUiMode = process.env.LEGACY_DESKTOP_OPENCODE_MCP_UI === '1';
+  if (capturedMcpUiMode) {
+    assert.equal(mode, 'native-launch-ui');
+    assert.equal(process.env.LEGACY_DESKTOP_OPENCODE_GENERATION, 'v2');
+    assert.ok(!scheduleUiMode && !commandsUiMode && !extensionsUiMode, 'one finite UI variant');
+  }
   const processUiMode = mode === 'native-process-ui';
   const controlledProcessMode = mode === 'process-cold-ui';
   if (controlledProcessMode) {
@@ -146,12 +176,22 @@ export async function prepareDesktopProofMode(
       'native-conversation-ui',
       'attachment scenario extends existing native conversation only'
     );
-  const relaunchMode = mode === 'native-relaunch-ui';
+  const relaunchMode = mode === 'native-relaunch-ui' || extensionsUiMode;
   const resumeMode = mode === 'native-resume-ui';
   const resumeProvider = process.env.LEGACY_DESKTOP_RESUME_PROVIDER;
   assert.ok(resumeProvider === undefined || resumeProvider === '' || resumeProvider === 'codex' || resumeProvider === 'opencode', 'explicit supported Resume provider');
   const codexResumeMode = resumeProvider === 'codex';
   if (codexResumeMode) assert.ok(resumeMode, 'Codex variant extends only the original Resume UI mode');
+  const sourceSelectionFlag = process.env.LEGACY_DESKTOP_CODEX_SOURCE_SELECTION;
+  assert.ok(sourceSelectionFlag === undefined || sourceSelectionFlag === '1');
+  const codexSourceSelectionMode = sourceSelectionFlag === '1';
+  if (codexSourceSelectionMode) {
+    assert.ok(codexResumeMode && resumeMode && !scheduleUiMode && !commandsUiMode && !extensionsUiMode && !capturedMcpUiMode);
+    assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
+    assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1');
+    assert.equal(process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH, undefined);
+    assert.equal(process.env.LEGACY_DESKTOP_READBACK_ROOT, undefined);
+  }
   const launchDialogMode =
     mode === 'native-launch-ui' ||
     relaunchMode ||
@@ -180,15 +220,17 @@ export async function prepareDesktopProofMode(
   assert.ok(openCodeGeneration === undefined || openCodeGeneration === '' || openCodeGeneration === 'v2',
     'explicit known Desktop OpenCode generation');
   const openCodeLifecycleMode = openCodeGeneration === 'v2' &&
-    ['native-resume-ui', 'native-stop-ui', 'native-quit-ui', 'native-quit-readback-ui', 'native-review-ui', 'native-review-readback-ui', 'native-conversation-ui', 'native-readback-ui'].includes(mode);
+    (capturedMcpUiMode || ['native-resume-ui', 'native-stop-ui', 'native-quit-ui', 'native-quit-readback-ui', 'native-review-ui', 'native-review-readback-ui', 'native-conversation-ui', 'native-readback-ui'].includes(mode));
   const openCodeReviewMode = openCodeGeneration === 'v2' && nativeReviewMode;
   if (openCodeReviewMode) assert.equal(nativeReviewContinuationMode, false);
   if (openCodeLifecycleMode && conversationMode) assert.ok(chatAttachments && !groupChats,
     'the V2 conversation variant proves the original PNG Composer only');
   if (resumeProvider === 'opencode') assert.ok(resumeMode && openCodeLifecycleMode);
   if (openCodeLifecycleMode && resumeMode) assert.equal(resumeProvider, 'opencode');
-  const mixedModels = mixedMode ? await startDesktopMixedModels(fixtureRoot,
-    openCodeGeneration === 'v2' ? { nativeGeneration: 'v2' } : {}) : undefined;
+  const mixedModels = mixedMode ? await startDesktopMixedModels(fixtureRoot, {
+    ...(openCodeGeneration === 'v2' ? { nativeGeneration: 'v2' as const } : {}),
+    ...(membershipFlag === '1' ? { liveMembership: true as const } : {}),
+  }) : undefined;
   const nativeMemberCreation =
     createLaunchMode && process.env.LEGACY_DESKTOP_NATIVE_MEMBER_CREATE === '1'
       ? {
@@ -248,10 +290,12 @@ export async function prepareDesktopProofMode(
       : undefined;
   const codexResumeModel = codexResumeMode ? await startCodexModel({
     memberName: 'alice', uiGeneratedMessageIds: true, captureHistoryMarkers: true,
+    ...(codexSourceSelectionMode ? { sourceSelection: true as const } : {}),
     allowModelProbes: true,
     modelProbeWorkspace: () => join(fixtureRoot(), 'workspace'),
     requestEvidenceDirectory: () => fixtureRoot(),
     principalId: () => {
+      if (codexSourceSelectionMode) return readCodexSourceSelectionPrincipal(fixtureRoot());
       const state = record(JSON.parse(readFileSync(join(fixtureRoot(), 'hoststore/teams/test-desktop-backend/.host-owner/state.json'), 'utf8')));
       assert.ok(Array.isArray(state.runtimeCaptures) && state.runtimeCaptures.length === 1);
       const members = record(state.runtimeCaptures[0]).members;
@@ -262,10 +306,12 @@ export async function prepareDesktopProofMode(
       return member.principalId;
     },
   }) : undefined;
-  const openCodeLifecycleModel = openCodeLifecycleMode && !openCodeReviewMode && !readbackMode ? await startOpenCodeModel({
+  const capturedMcpModel = capturedMcpUiMode ? await startDesktopCapturedMcpModel(fixtureRoot) : undefined;
+  const openCodeLifecycleModel = openCodeLifecycleMode && !capturedMcpUiMode && !openCodeReviewMode && !readbackMode ? await startOpenCodeModel({
     nativeGeneration: 'v2', memberName: 'alice', uiGeneratedMessageIds: true,
     nativeMessageImage: conversationMode && chatAttachments,
     captureHistoryMarkers: resumeMode, allowModelProbes: resumeMode,
+    ...(nativeStopMode ? { configuredLaunchPreparation: true as const } : {}),
     holdInitialTurnResponse: mode === 'native-quit-ui',
     principalId: () => {
       if (!resumeMode) return 'alice-session';
@@ -333,8 +379,10 @@ export async function prepareDesktopProofMode(
           : legacyImportMode
             ? await startNativeTeamModel({
                 allowModelProbes: true,
+                ...(process.env.LEGACY_DESKTOP_DONOR_SAVED_ONLY === '1' ? { donorSavedProbes: true } : {}),
                 ...(process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1'
                   ? {
+                      currentLegacySource: { teamName: LEGACY_IMPORT_TEAM, prompt: CURRENT_LEGACY_SOURCE_PROMPT, reply: CURRENT_LEGACY_SOURCE_REPLY },
                       memberName: 'team-lead' as const,
                       principalId: () => {
                         const state = record(
@@ -376,6 +424,9 @@ export async function prepareDesktopProofMode(
               : launchDialogMode || createLaunchMode
                 ? await startNativeTeamModel({
                     allowModelProbes: true,
+                    ...(scheduleUiMode ? { nativeSchedules: desktopScheduleScenario(fixtureRoot) } : {}),
+                    ...(commandsUiMode ? { nativeCommands: desktopNativeCommandScenario(fixtureRoot) } : {}),
+                    ...(extensionsUiMode ? { nativeExtensions: desktopNativeExtensionScenario(fixtureRoot) } : {}),
                     ...(nativeMemberCreation ? { nativeMemberCreation } : {}),
                     ...(resumeMode
                       ? { uiGeneratedMessageIds: true, captureHistoryMarkers: true }
@@ -449,6 +500,9 @@ export async function prepareDesktopProofMode(
   return {
     mixedMode,
     mixedModels,
+    extensionsUiMode,
+    capturedMcpUiMode,
+    capturedMcpModel,
     processUiMode,
     controlledProcessMode,
     processReadbackMode,
@@ -470,6 +524,7 @@ export async function prepareDesktopProofMode(
     uiMode,
     model,
     codexResumeMode,
+    codexSourceSelectionMode,
     codexResumeModel,
     openCodeLifecycleMode,
     openCodeLifecycleModel,

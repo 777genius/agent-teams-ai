@@ -1,5 +1,7 @@
 import { assertTeamExecutionAllowed } from './teamLifecycleAdmission.js';
-import { listTeamCommandEntries } from './commandEntries.js';
+import { listTeamCommandEntries, teamCommandPath } from './commandEntries.js';
+import { validateTeamLifecycleReceipt } from './lifecycleContracts.js';
+import { validateNativeMemberCreationRecords } from './validateNativeMemberCreation.js';
 import { z } from 'zod';
 
 import { TeamOwnerError } from './contracts.js';
@@ -39,6 +41,11 @@ const delivery = z
     generation: id,
   })
   .strict();
+const lifecyclePresence = z.object({
+  cleanupCommandId: z.string().min(1).max(256).refine(value => !value.includes('\0')),
+  cleanupPending: z.boolean(),
+  deletedAt: z.string().min(1).max(256).refine(value => !value.includes('\0')).optional(),
+}).strict();
 const member = z.object({ memberId: segment, principalId: id, delivery }).strict();
 const registration = z
   .object({
@@ -224,6 +231,61 @@ export class TeamRuntimeRegistration {
       throw new TeamOwnerError('hold');
     this.options.assertEditable(structuredClone(old.members));
     return captured;
+  }
+
+  /** Original composition presence only; never actor authority or a cleanup witness. */
+  hasRetained(): boolean {
+    return this.options.store.fenced(() => {
+      const state = this.options.store.read<OwnerState>('state.json');
+      if (
+        !state || state.schemaVersion !== 1 || state.ready !== true ||
+        digest(state.binding) !== digest(this.options.binding) ||
+        !Array.isArray(state.members) || state.members.length > 256 ||
+        (state.removedMembers !== undefined &&
+          (!Array.isArray(state.removedMembers) || state.removedMembers.length > 1024)) ||
+        (state.rosterCommands !== undefined &&
+          (!Array.isArray(state.rosterCommands) || state.rosterCommands.length > 1024))
+      )
+        throw new TeamOwnerError('hold');
+      this.validate(state);
+      const members = [...state.members, ...(state.removedMembers ?? [])];
+      for (const value of members) {
+        if (!value || typeof value !== 'object' || Array.isArray(value) ||
+            !segment.safeParse(value.memberId).success ||
+            !segment.safeParse(value.name).success || !['lead', 'member'].includes(value.role))
+          throw new TeamOwnerError('hold');
+        if (value.delivery !== undefined &&
+            (!delivery.safeParse(value.delivery).success ||
+              value.delivery.backendId !== this.options.binding.backendId ||
+              value.delivery.teamId !== this.options.binding.teamId ||
+              value.delivery.teamName !== this.options.binding.teamName ||
+              value.delivery.memberId !== value.memberId))
+          throw new TeamOwnerError('hold');
+      }
+      if (state.lifecycle !== undefined && !lifecyclePresence.safeParse(state.lifecycle).success)
+        throw new TeamOwnerError('hold');
+      if (state.rosterProjection !== undefined &&
+          (!state.rosterProjection || typeof state.rosterProjection !== 'object' ||
+            Array.isArray(state.rosterProjection)))
+        throw new TeamOwnerError('hold');
+      if (state.rosterCommands?.some(row => !row || typeof row !== 'object' || Array.isArray(row)))
+        throw new TeamOwnerError('hold');
+      validateNativeMemberCreationRecords(state);
+      let cleanupRequiresRuntime = false;
+      if (state.lifecycle?.cleanupPending) {
+        const commandId = state.lifecycle.cleanupCommandId;
+        const original = validateTeamLifecycleReceipt(
+          this.options.store.read<unknown>(teamCommandPath(commandId))
+        );
+        if (original.commandId !== commandId ||
+            digest(original.binding) !== digest(this.options.binding) ||
+            original.operation !== 'trash' || original.phase !== 'completed')
+          throw new TeamOwnerError('hold');
+        cleanupRequiresRuntime = original.targets.length > 0 || original.runtimeBindings.length > 0;
+      }
+      return !!state.runtimeCaptures?.length || members.some(value => value.delivery !== undefined) ||
+        cleanupRequiresRuntime || !!state.rosterCommands?.some(row => row.nativeCreation !== undefined);
+    });
   }
 
   all(principalId: string): TeamRuntimeCapture[] {

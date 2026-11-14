@@ -17,9 +17,15 @@ import { createServer } from 'node:http';
 import { nativePeerTurn, nativePeerActions } from '../native-peers.ts';
 
 import { nativeToolReceipt, record } from '../native-claude-team/model.ts';
-import { isOpenCodeModelProbe } from './model-probe.ts';
+import { createConfiguredOpenCodeLaunchPreparation, isOpenCodeModelProbe, replyOpenCodeModelProbe } from './model-probe.ts';
 
 export const CONTEXT_MARKER = 'TEST_OPENCODE_CAPTURED_MEMBER_CONTEXT_V1';
+export const COORDINATION_TOOLS = ['coordination_task_briefing', 'coordination_message_send'] as const;
+export const COORDINATION_PROMPT =
+  'Native local coordination check. Call coordination_task_briefing with {} once. ' +
+  'Read its nonce and destination from the actual result. Then call coordination_message_send ' +
+  'with exactly that nonce and destination once. After its accepted result reply OK. ' +
+  'Do not use any other tool, file, command or agent.';
 export const REQUIRED_TOOLS = [
   'task_create',
   'task_set_owner',
@@ -42,9 +48,19 @@ export interface CaptureFileUpdateScenario {
   taskId(): string;
   phase(): 'assignment' | 'task-start';
 }
+export type SettingsModelProbe = {
+  step: 'global-default' | 'project-default' | 'project-test' | 'local-limits';
+  model: 'TEST-model' | 'TEST-project-model';
+  outputTokens?: number;
+};
+export type LiveMembershipModelPhase = 'idle' | 'add' | 'add-ready' | 'remove' | 'restore' | 'restore-ready' | 'stopped';
+
 export async function startOpenCodeModel(
   options: {
     nativeGeneration?: 'v2';
+    coordinationProof?: true;
+    localReadinessProof?: true;
+    liveMembershipPhase?: () => LiveMembershipModelPhase;
     sharedSessionProbe?: boolean;
     nativeMessageImage?: boolean;
     mixedGroups?: boolean;
@@ -52,14 +68,25 @@ export async function startOpenCodeModel(
     peerMessaging?: boolean;
     captureFileUpdate?: CaptureFileUpdateScenario;
     allowModelProbes?: boolean;
+    configuredLaunchPreparation?: true;
+    settingsProbe?: () => SettingsModelProbe | 'idle' | undefined;
+    selectedBusinessOutputTokens?: number;
     memberName?: 'alice' | 'carol';
     uiGeneratedMessageIds?: boolean;
     captureHistoryMarkers?: boolean;
     holdInitialTurnResponse?: boolean;
     principalId?: () => string;
+    selectedModel?: { id: string; effort?: string };
+    selectedOutputTokens?: number;
+    selectedConfiguration?: { scope: string };
   } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate));
+  if (options.liveMembershipPhase) assert.ok(options.allowModelProbes && options.uiGeneratedMessageIds &&
+    options.principalId && !options.coordinationProof && !options.localReadinessProof && !options.sharedSessionProbe &&
+    !options.mixedGroups && !options.mixedTaskNotifications && !options.peerMessaging && !options.captureFileUpdate &&
+    !options.settingsProbe && !options.holdInitialTurnResponse, 'one explicit live membership oracle');
+  const livePrincipals = new Map<string, string>();
   if (options.sharedSessionProbe)
     assert.ok(
       !options.mixedGroups &&
@@ -73,7 +100,40 @@ export async function startOpenCodeModel(
       /\/TEST-native-opencode-capture-[^/]+\/workspace$/
     );
 
-  const probes: { requestedModel?: string; requestedEffort?: string }[] = [];
+  if (options.localReadinessProof) assert.equal(options.coordinationProof, true);
+  if (options.coordinationProof)
+    assert.ok(!options.sharedSessionProbe && !options.mixedGroups && !options.peerMessaging &&
+      !options.captureFileUpdate && !options.allowModelProbes && !options.settingsProbe &&
+      !options.mixedTaskNotifications, 'one explicitly selected native coordination scenario');
+  const coordinationObservations: { step: number; nativeToolRefs: string[];
+    requestedModel?: string; requestedEffort?: string; requestedOutputTokens?: number }[] = [];
+  const ordinaryReadinessObservations: { requestedModel?: string; requestedEffort?: string; requestedOutputTokens?: number }[] = [];
+  let inventoryReads = 0;
+  const localReadiness = { ordinary: ordinaryReadinessObservations, get inventoryReads() { return inventoryReads; } };
+  let coordinationArmed = false, coordinationFinished = false, coordinationNonce: string | undefined;
+  const coordination = {
+    observations: coordinationObservations,
+    arm() {
+      assert.equal(options.coordinationProof, true);
+      assert.ok(!coordinationArmed && !coordinationFinished && observations.length === 0 && probes.length === 0);
+      coordinationArmed = true;
+    },
+    finish() {
+      assert.ok(coordinationArmed && !coordinationFinished);
+      assert.equal(coordinationObservations.length, 3); assert.equal(failures.length, 0);
+      if (options.localReadinessProof) {
+        assert.equal(ordinaryReadinessObservations.length, 1); assert.equal(inventoryReads, 1);
+      }
+      coordinationArmed = false; coordinationFinished = true;
+    },
+  };
+  const probes: {
+    requestedModel?: string;
+    requestedEffort?: string;
+    requestedOutputTokens?: number;
+    settingsStep?: SettingsModelProbe['step'];
+  }[] = [];
+  const settingsSteps = new Set<SettingsModelProbe['step']>();
   const observations: {
     nativeImage?: ReturnType<typeof assertNativeMessageImage>;
     failedShellToolOutput?: ReturnType<typeof assertCaptureFailedShellOutput>;
@@ -82,6 +142,8 @@ export async function startOpenCodeModel(
     contextEffective: boolean;
     priorTurn: boolean;
     requestedModel?: string;
+    requestedEffort?: string;
+    requestedOutputTokens?: number;
     priorNativeToolIds?: string[];
     visibleReplyContract?: boolean;
     incomingMessageId?: string;
@@ -94,14 +156,31 @@ export async function startOpenCodeModel(
   const heldInitialRequests: { turn: string; step: number; disconnected: boolean }[] = [];
   const counts = new Map<string, number>();
   let taskId: string | undefined;
+  const configuredLaunch = createConfiguredOpenCodeLaunchPreparation(options,
+    () => ({ probes: probes.length, business: observations.length }));
   const server = createServer((request, response) => {
     void (async () => {
       assert.equal(failures.length, 0, 'oracle seals after its first protocol failure');
+      if (options.localReadinessProof && request.method === 'GET') {
+        assert.equal(request.url, '/v1/models');
+        assert.ok(coordinationArmed && !coordinationFinished);
+        assert.equal(ordinaryReadinessObservations.length, 1);
+        assert.equal(coordinationObservations.length, 0); assert.equal(inventoryReads, 0);
+        assert.equal(request.headers.authorization, undefined);
+        for await (const chunk of request) assert.equal(Buffer.byteLength(chunk), 0, 'bodyless original metadata read');
+        inventoryReads++;
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end(JSON.stringify({ data: [...new Set(['TEST-model', options.selectedModel?.id ?? 'TEST-model'])]
+          .map(id => ({ id })) }));
+        return;
+      }
       assert.equal(request.method, 'POST');
+      if (options.localReadinessProof) assert.equal(request.headers.authorization, undefined,
+        'the original authless source remains authless through business continuation');
       assert.match(request.url ?? '', /\/v1\/chat\/completions$/);
       if (!options.mixedTaskNotifications)
         assert.ok(
-          observations.length < (options.peerMessaging ? 48 : 16),
+          observations.length + coordinationObservations.length + ordinaryReadinessObservations.length < (options.peerMessaging ? 48 : 16),
           'finite model request budget'
         );
       let bytes = 0;
@@ -113,34 +192,153 @@ export async function startOpenCodeModel(
         chunks.push(chunk);
       }
       const body = record(JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown);
+      const configuredProbe = configuredLaunch?.request(request, body);
+      if (options.liveMembershipPhase) {
+        assert.equal(request.headers.authorization, 'Bearer TEST-LOCALHOST-ONLY');
+        assert.equal(body.model, 'TEST-model');
+      }
+      const settingsProbe = options.settingsProbe?.();
+      if (options.selectedModel && !settingsProbe) {
+        assert.equal(body.model, options.selectedModel.id, 'actual native request uses the selected model');
+        assert.equal(body.reasoning_effort, options.selectedModel.effort,
+          'actual native request applies the selected named variant');
+      }
+      if (options.selectedOutputTokens !== undefined)
+        assert.equal(body.max_tokens, options.selectedOutputTokens,
+          'actual native request uses the saved selected-model output limit');
+      if (options.selectedConfiguration) {
+        assert.equal(body.test_config_scope, options.selectedConfiguration.scope,
+          'actual native request retains its original private model body');
+        assert.equal(request.headers['x-test-config-scope'], options.selectedConfiguration.scope,
+          'actual native request retains its original private model headers');
+        assert.equal(request.headers.authorization, options.localReadinessProof ? undefined : 'Bearer TEST-LOCALHOST-ONLY');
+      }
       const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
       const user = messages.filter((item) => item.role === 'user');
+      if (options.localReadinessProof && coordinationArmed && ordinaryReadinessObservations.length === 0) {
+        assert.equal(inventoryReads, 0); assert.equal(coordinationObservations.length, 0);
+        assert.equal(isOpenCodeModelProbe(body, options.nativeGeneration ?? 'v1'), true,
+          'the first native input is the original ordinary no-tool probe');
+        ordinaryReadinessObservations.push({
+          ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+          ...(typeof body.reasoning_effort === 'string' ? { requestedEffort: body.reasoning_effort } : {}),
+          ...(typeof body.max_tokens === 'number' ? { requestedOutputTokens: body.max_tokens } : {}),
+        });
+        const event = (delta: Record<string, unknown>, finish: string | null) => ({
+          id: 'TEST-native-readiness-ordinary', object: 'chat.completion.chunk', created: 1700000000,
+          model: typeof body.model === 'string' ? body.model : 'TEST-model',
+          choices: [{ index: 0, delta, finish_reason: finish }],
+        });
+        response.writeHead(200, { 'content-type': 'text/event-stream' });
+        response.write('data: ' + JSON.stringify(event({ role: 'assistant', content: 'OK' }, null)) + '\n\n');
+        response.write('data: ' + JSON.stringify(event({}, 'stop')) + '\n\n');
+        response.end('data: [DONE]\n\n');
+        return;
+      }
+      if (coordinationArmed) {
+        if (options.localReadinessProof) {
+          assert.equal(ordinaryReadinessObservations.length, 1); assert.equal(inventoryReads, 1);
+        }
+        const step = coordinationObservations.length;
+        assert.ok(step < 3, 'one original two-tool challenge and terminal');
+        assert.equal(user.length, 1); assert.equal(mixedNativeText(user[0]!.content), COORDINATION_PROMPT);
+        const offered = (Array.isArray(body.tools) ? body.tools : []).map(record)
+          .map(tool => String(record(tool.function).name));
+        assert.deepEqual([...offered].sort(), [...COORDINATION_TOOLS].sort(),
+          'only the two inert native tools may be offered');
+        const calls = messages.filter(message => message.role === 'assistant').flatMap(message =>
+          Array.isArray(message.tool_calls) ? message.tool_calls.map(record) : []);
+        const results = messages.filter(message => message.role === 'tool');
+        assert.equal(calls.length, step); assert.equal(results.length, step);
+        for (let index = 0; index < step; index++) {
+          const id = 'TEST_COORDINATION_' + index;
+          assert.equal(calls[index]!.id, id); assert.equal(results[index]!.tool_call_id, id);
+          const call = record(calls[index]!.function);
+          assert.equal(call.name, COORDINATION_TOOLS[index]); assert.equal(typeof call.arguments, 'string');
+          const args = record(JSON.parse(call.arguments as string) as unknown);
+          if (index === 0) assert.deepEqual(args, {});
+          else assert.ok(Object.keys(args).sort().join(',') === 'destination,nonce' &&
+            args.destination === 'native-local-coordination-v1' && args.nonce === coordinationNonce,
+            'second actual native tool consumes the original nonce');
+          let content = results[index]!.content;
+          if (Array.isArray(content)) {
+            assert.equal(content.length, 1);
+            const block = record(content[0]); assert.equal(block.type, 'text'); content = block.text;
+          }
+          assert.equal(typeof content, 'string');
+          const result = record(JSON.parse(content as string) as unknown);
+          if (index === 0) {
+            assert.equal(Object.keys(result).sort().join(','), 'destination,nonce');
+            assert.equal(result.destination, 'native-local-coordination-v1');
+            assert.ok(typeof result.nonce === 'string' && /^[a-f0-9]{64}$/.test(result.nonce),
+              'first native tool supplies a bounded actual challenge nonce');
+            if (coordinationNonce !== undefined) assert.ok(coordinationNonce === result.nonce, 'original nonce unchanged');
+            else coordinationNonce = result.nonce;
+          } else assert.ok(Object.keys(result).sort().join(',') === 'accepted,nonce' &&
+            result.accepted === true && result.nonce === coordinationNonce, 'actual second tool accepted the original nonce');
+        }
+        coordinationObservations.push({ step, nativeToolRefs: calls.map(call => String(call.id)),
+          ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+          ...(typeof body.reasoning_effort === 'string' ? { requestedEffort: body.reasoning_effort } : {}),
+          ...(typeof body.max_tokens === 'number' ? { requestedOutputTokens: body.max_tokens } : {}) });
+        const delta = step === 2 ? { role: 'assistant', content: 'OK' } : {
+          role: 'assistant', tool_calls: [{ index: 0, id: 'TEST_COORDINATION_' + step, type: 'function',
+            function: { name: COORDINATION_TOOLS[step], arguments: JSON.stringify(step === 0 ? {} :
+              { nonce: coordinationNonce, destination: 'native-local-coordination-v1' }) } }],
+        };
+        const event = (value: unknown, finish: string | null) => ({
+          id: 'TEST-coordination-response-' + step, object: 'chat.completion.chunk', created: 1700000000,
+          model: typeof body.model === 'string' ? body.model : 'TEST-model',
+          choices: [{ index: 0, delta: value, finish_reason: finish }],
+        });
+        response.writeHead(200, { 'content-type': 'text/event-stream' });
+        response.write('data: ' + JSON.stringify(event(delta, null)) + '\n\n');
+        response.write('data: ' + JSON.stringify(event({}, step === 2 ? 'stop' : 'tool_calls')) + '\n\n');
+        response.end('data: [DONE]\n\n');
+        return;
+      }
+      if (options.coordinationProof) assert.equal(coordinationFinished, true,
+        'no business input before the original challenge is completed and released');
       if (
-        options.allowModelProbes &&
+        (options.allowModelProbes || configuredProbe) &&
         isOpenCodeModelProbe(body, options.nativeGeneration ?? 'v1')
       ) {
-        assert.ok(probes.length < 8, 'bounded original-dialog model probes');
+        if (options.liveMembershipPhase) {
+          const expected = options.liveMembershipPhase() === 'add' ? 0 : options.liveMembershipPhase() === 'restore' ? 1 : -1;
+          assert.ok(expected >= 0, 'only the original Add or Restore may prepare a model');
+          assert.equal(probes.length, expected); assert.equal(observations.length, expected * 2);
+        }
+        assert.notEqual(settingsProbe, 'idle', 'no unrequested Settings model probe');
+        if (settingsProbe && settingsProbe !== 'idle') {
+          assert.equal(settingsSteps.has(settingsProbe.step), false, 'one original Settings action');
+          assert.equal(body.model, settingsProbe.model, 'Settings action uses its selected model');
+          assert.equal(body.reasoning_effort, undefined);
+          if (settingsProbe.outputTokens !== undefined)
+            assert.equal(body.max_tokens, settingsProbe.outputTokens);
+          settingsSteps.add(settingsProbe.step);
+        } else {
+          assert.ok(
+            probes.filter((probe) => probe.settingsStep === undefined).length < 8,
+            'bounded original-dialog model probes'
+          );
+        }
         probes.push({
+          ...(settingsProbe && settingsProbe !== 'idle' ? {
+            settingsStep: settingsProbe.step,
+            ...(typeof body.max_tokens === 'number' ? { requestedOutputTokens: body.max_tokens } : {}),
+          } : {}),
           ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
           ...(typeof body.reasoning_effort === 'string'
             ? { requestedEffort: body.reasoning_effort }
             : {}),
         });
-        const event = (delta: Record<string, unknown>, finish: string | null) => ({
-          id: `TEST-opencode-probe-${probes.length}`,
-          object: 'chat.completion.chunk',
-          created: 1700000000,
-          model: typeof body.model === 'string' ? body.model : 'TEST-model',
-          choices: [{ index: 0, delta, finish_reason: finish }],
-        });
-        response.writeHead(200, { 'content-type': 'text/event-stream' });
-        response.write(
-          `data: ${JSON.stringify(event({ role: 'assistant', content: 'OK' }, null))}\n\n`
-        );
-        response.write(`data: ${JSON.stringify(event({}, 'stop'))}\n\n`);
-        response.end('data: [DONE]\n\n');
+        replyOpenCodeModelProbe(response, body, probes.length);
         return;
       }
+      assert.equal(settingsProbe, undefined, 'no business input during Settings verification');
+      if (options.selectedBusinessOutputTokens !== undefined)
+        assert.equal(body.max_tokens, options.selectedBusinessOutputTokens,
+          'actual business request uses the saved local output limit');
       if (options.sharedSessionProbe) {
         const text = JSON.stringify(user.at(-1)?.content),
           turn = /TEST_SHARED_OPENCODE_(A1|B1|B2)/.exec(text)?.[0];
@@ -204,6 +402,12 @@ export async function startOpenCodeModel(
         const capture =
           options.captureFileUpdate && JSON.stringify(message.content).includes(CAPTURE_TURN);
         const match = /OPENCODE_TEAM_(ONE|TWO)/.exec(JSON.stringify(message.content));
+        const live = options.liveMembershipPhase
+          ? /TEST_LIVE_MEMBERSHIP_(ADD|RESTORE)/.exec(mixedNativeText(message.content)) : undefined;
+        if (options.liveMembershipPhase) {
+          if (!mixedSemanticText(message.content)) continue;
+          assert.ok(live, 'no historical fallback for a foreign current membership input');
+        }
         const peer = options.peerMessaging
           ? nativePeerTurn(JSON.stringify(message.content), 'carol')
           : undefined;
@@ -220,11 +424,11 @@ export async function startOpenCodeModel(
             'unrecognized CURRENT mixed input; no historical fallback'
           );
         }
-        if (group || capture || peer || match) {
+        if (group || capture || peer || match || live) {
           turnText = mixedNativeText(message.content);
           mixedGroup = group;
           turn =
-            group?.turn ??
+            live?.[0] ?? group?.turn ??
             (capture
               ? options.captureFileUpdate!.phase() === 'assignment'
                 ? CAPTURE_ASSIGNMENT
@@ -285,6 +489,37 @@ export async function startOpenCodeModel(
       const tools = (Array.isArray(body.tools) ? body.tools : [])
         .map(record)
         .map((tool) => String(record(tool.function).name));
+      const liveActions = options.liveMembershipPhase ? [{ name: 'message_send', input: {
+        commandId: 'TEST-live-reply-' + (turn.endsWith('_ADD') ? 'add' : 'restore'), to: 'user', text: 'REPLY_' + turn,
+      } }] : undefined;
+      if (liveActions) {
+        const restoring = turn === 'TEST_LIVE_MEMBERSHIP_RESTORE', phase = restoring ? 'restore-ready' : 'add-ready';
+        assert.equal(options.liveMembershipPhase!(), phase); assert.ok(step < 2, 'one tool and one terminal, no replay');
+        assert.equal(probes.length, restoring ? 2 : 1); assert.equal(observations.length, (restoring ? 2 : 0) + step);
+        assert.equal(counts.get(restoring ? 'TEST_LIVE_MEMBERSHIP_ADD' : 'TEST_LIVE_MEMBERSHIP_RESTORE') ?? 0, restoring ? 2 : 0);
+        const principal = options.principalId!(); assert.ok(principal);
+        if (step === 0) {
+          assert.equal(livePrincipals.has(turn), false);
+          if (restoring) assert.notEqual(principal, livePrincipals.get('TEST_LIVE_MEMBERSHIP_ADD'));
+          livePrincipals.set(turn, principal);
+        }
+        assert.equal(livePrincipals.get(turn), principal, 'the native tool result retains this exact current member');
+        const calls = messages.filter(row => row.role === 'assistant').flatMap(row =>
+          Array.isArray(row.tool_calls) ? row.tool_calls.map(record) : []), results = messages.filter(row => row.role === 'tool');
+        assert.equal(calls.length, step); assert.equal(results.length, step);
+        for (const name of REQUIRED_TOOLS) assert.ok(tools.some(tool => options.nativeGeneration === 'v2'
+          ? [`agent-teams_${name}`, `mcp__agent-teams__${name}`].includes(tool) : tool === `team_${name}`));
+        if (step === 1) {
+          const call = calls[0]!, result = results[0]!, operation = record(call.function);
+          assert.equal(call.id, `TEST_${turn}_0`); assert.equal(result.tool_call_id, call.id);
+          assert.ok(tools.includes(String(operation.name)) && String(operation.name).endsWith('message_send'));
+          assert.deepEqual(JSON.parse(String(operation.arguments)), liveActions[0]!.input);
+          const receipt = nativeToolReceipt(result.content);
+          assert.equal(receipt.phase, 'completed'); assert.equal(receipt.principalId, principal);
+          assert.equal(receipt.operation, 'message.send'); assert.equal(receipt.commandId, liveActions[0]!.input.commandId);
+          assert.ok(typeof record(receipt.effects).messageId === 'string' && record(receipt.effects).messageId);
+        }
+      }
       if (mixedGroup && step > 0) {
         const last = messages.filter((item) => item.role === 'tool').at(-1);
         assertMixedGroupReceipt(mixedGroup, step, last?.content, nativeToolReceipt);
@@ -319,6 +554,9 @@ export async function startOpenCodeModel(
         contextEffective,
         priorTurn: JSON.stringify(messages).includes('OPENCODE_TEAM_ONE'),
         ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+        ...(typeof body.reasoning_effort === 'string' ? { requestedEffort: body.reasoning_effort } : {}),
+        ...(options.selectedOutputTokens === undefined && options.selectedBusinessOutputTokens === undefined
+          ? {} : { requestedOutputTokens: Number(body.max_tokens) }),
         ...(options.captureHistoryMarkers ? { priorNativeToolIds: messages.flatMap(message =>
           Array.isArray(message.tool_calls) ? message.tool_calls.map(record)
             .filter(call => typeof call.id === 'string' && /^TEST_OPENCODE_TEAM_ONE_[0-6]$/.test(call.id))
@@ -333,6 +571,7 @@ export async function startOpenCodeModel(
         })() : {}),
         tools,
       };
+      if (liveActions) assert.equal(observation.visibleReplyContract, true, 'actual original UI message envelope');
       if (notice) notificationObservations.push({ ...observation, notice });
       else observations.push(observation);
       if (options.holdInitialTurnResponse) {
@@ -428,7 +667,7 @@ export async function startOpenCodeModel(
         : undefined;
       const action = notice
         ? undefined
-        : (groupActions ??
+        : (liveActions ?? groupActions ??
             captureActions ??
             peerActions ??
             (turn === 'OPENCODE_TEAM_ONE' ? first : second))[step];
@@ -467,7 +706,7 @@ export async function startOpenCodeModel(
         id: `TEST-opencode-response-${observations.length + notificationObservations.length}`,
         object: 'chat.completion.chunk',
         created: 1700000000,
-        model: 'TEST-model',
+        model: options.selectedModel?.id ?? 'TEST-model',
         choices: [{ index: 0, delta: value, finish_reason: finish }],
       });
       response.writeHead(200, { 'content-type': 'text/event-stream' });
@@ -489,6 +728,9 @@ export async function startOpenCodeModel(
     observations,
     ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     probes,
+    ...(configuredLaunch ? { configuredLaunchPreparation: configuredLaunch.port } : {}),
+    ...(options.coordinationProof ? { coordination } : {}),
+    ...(options.localReadinessProof ? { localReadiness } : {}),
     failures,
     ...(options.holdInitialTurnResponse ? { heldInitialRequests } : {}),
     close: () =>

@@ -2,6 +2,7 @@ import { groupInboundText, groupTargetCommand } from '../group-chats/groupDelive
 import type { CapturedGroupIntent } from '../group-chats/groupCommandRecords.js';
 import { crossTeamInboundText, crossTeamTargetCommand } from '../cross-team/crossTeamInbound.js';
 import { digest } from './identity.js';
+import { parseNativeSessionCommand } from './nativeSessionCommand.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
 import { createRequire } from 'node:module';
 
@@ -31,6 +32,7 @@ export function formatTeamMessage(
   crossTeam?: CapturedCrossTeamIntent,
   group?: CapturedGroupIntent
 ): string {
+  if (payload.nativeCommand && (crossTeam || group)) throw new TeamOwnerError('forbidden');
   if (group) {
     if (
       crossTeam ||
@@ -50,6 +52,12 @@ export function formatTeamMessage(
   }
   if (payload.messageId !== undefined && payload.messageId !== messageId)
     throw new TeamOwnerError('hold');
+  if (payload.nativeCommand) {
+    const command = parseNativeSessionCommand(payload.text);
+    if (!command || actor !== 'user' || recipientRole !== 'lead' || payload.attachments?.length)
+      throw new TeamOwnerError('forbidden');
+    return command.raw;
+  }
   // Existing durable plain-text commands must keep their original native input bytes.
   if (
     payload.messageId === undefined &&

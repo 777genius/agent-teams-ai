@@ -1,5 +1,5 @@
 import { CODEX_RUNTIME_PROGRESS } from '@features/codex-runtime-installer/contracts';
-import { renamePathWithRetry } from '@main/utils/atomicWrite';
+import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import {
@@ -11,18 +11,30 @@ import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
-import { isVersionOlder, normalizeVersion } from '@shared/utils/version';
+import { normalizeVersion } from '@shared/utils/version';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fsp, readFileSync } from 'fs';
 import path from 'path';
 import { gunzipSync } from 'zlib';
 
+import { captureCodexManagedManifest } from './captureCodexNativeSelection';
+import {
+  codexRuntimeFailedStatus,
+  codexRuntimeInstalledStatus,
+  codexRuntimeMissingStatus,
+  codexRuntimeObservedStatus,
+  codexRuntimePreferredStatus,
+  codexRuntimeProgressStatus,
+  codexRuntimeUnavailableStatus,
+  codexRuntimeVersionStatus,
+} from './codexRuntimeInstallerPresentation';
 import {
   CODEX_RUNTIME_VERSION_TIMEOUT_MS as VERSION_TIMEOUT_MS,
   probeManagedCodexVersion,
 } from './probeManagedCodexVersion';
 
 import type { CodexRuntimeInstallerPort } from '../../core/application/ports/CodexRuntimeInstallerPort';
+import type { CapturedCodexManagedManifest } from './captureCodexNativeSelection';
 import type {
   CodexRuntimeInstallProgress,
   CodexRuntimeStatus,
@@ -113,6 +125,20 @@ function readCurrentManifestSync(): CodexRuntimeManifest | null {
   } catch {
     return null;
   }
+}
+
+export function captureAppManagedCodexRuntime(): CapturedCodexManagedManifest {
+  return captureCodexManagedManifest(getCurrentManifestPath());
+}
+
+export interface CapturedCodexAcquisition {
+  readonly status: CodexRuntimeStatus;
+  readonly manifest: CapturedCodexManagedManifest;
+}
+export interface CapturedCodexAcquisitionRequest {
+  assertCurrent(): void;
+  acceptAcquired(manifest: CapturedCodexManagedManifest): void;
+  onProgress(status: CodexRuntimeStatus): void;
 }
 
 export function resolveAppManagedCodexRuntimeBinaryPath(): string | null {
@@ -500,6 +526,7 @@ async function writePackageFiles(
 export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
   private mainWindow: BrowserWindow | null = null;
   private installPromise: Promise<CodexRuntimeStatus> | null = null;
+  private installOwner: CapturedCodexAcquisitionRequest | null = null;
   private latestStatus: CodexRuntimeStatus | null = null;
 
   constructor(private readonly dependencies: CodexRuntimeInstallerServiceDependencies = {}) {}
@@ -525,18 +552,14 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
     }
 
     const pathStatus = await this.getPathStatus();
-    const status =
-      pathStatus.installed ||
-      appManagedStatus.source !== 'app-managed' ||
-      appManagedStatus.state !== 'failed'
-        ? pathStatus
-        : appManagedStatus;
+    const status = codexRuntimePreferredStatus(appManagedStatus, pathStatus);
     const versionAwareStatus = await this.withLatestVersion(status);
     this.latestStatus = versionAwareStatus;
     return versionAwareStatus;
   }
 
   async install(): Promise<CodexRuntimeStatus> {
+    if (this.installOwner) throw new Error('Another Codex acquisition is still in progress.');
     if (this.installPromise) {
       return this.installPromise;
     }
@@ -546,130 +569,121 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
     return this.installPromise;
   }
 
+  async installCaptured(
+    request: CapturedCodexAcquisitionRequest
+  ): Promise<CapturedCodexAcquisition> {
+    request.assertCurrent();
+    if (this.installPromise) throw new Error('Another Codex acquisition is still in progress.');
+    let manifest: CapturedCodexManagedManifest | undefined;
+    const original: CapturedCodexAcquisitionRequest = {
+      ...request,
+      acceptAcquired(value) {
+        request.acceptAcquired(value);
+        manifest = value;
+      },
+    };
+    this.installOwner = original;
+    const pending = Promise.resolve().then(() => this.installInternal(original));
+    this.installPromise = pending;
+    try {
+      const status = await pending;
+      if (!manifest || !status.installed || status.state !== 'ready')
+        throw new Error(status.error ?? 'The original Codex acquisition could not be confirmed.');
+      request.assertCurrent();
+      return Object.freeze({ status, manifest });
+    } finally {
+      if (this.installPromise === pending) {
+        this.installPromise = null;
+        this.installOwner = null;
+      }
+    }
+  }
+
+  async readLatestVersion(): Promise<string | null> {
+    return (await this.withLatestVersion(codexRuntimeMissingStatus())).latestVersion;
+  }
+
+  publishCapturedStatus(status: CodexRuntimeStatus): void {
+    safeSendToRenderer(this.mainWindow, CHANNEL, status);
+  }
+
   private publish(status: CodexRuntimeStatus): void {
     this.latestStatus = status;
     safeSendToRenderer(this.mainWindow, CHANNEL, status);
   }
 
-  private publishProgress(progress: CodexRuntimeInstallProgress): void {
-    const currentStatus = this.latestStatus;
-    this.publish({
-      installed: currentStatus?.installed ?? false,
-      ...(currentStatus?.binaryPath ? { binaryPath: currentStatus.binaryPath } : {}),
-      ...(currentStatus?.version ? { version: currentStatus.version } : {}),
-      latestVersion: currentStatus?.latestVersion ?? null,
-      updateAvailable: currentStatus?.updateAvailable ?? false,
-      source: currentStatus?.source ?? 'missing',
-      state: progress.phase,
-      progress,
-    });
-  }
-
   private async withLatestVersion(status: CodexRuntimeStatus): Promise<CodexRuntimeStatus> {
     try {
-      const latestVersion = await (
-        this.dependencies.resolveLatestVersion ?? resolveLatestCodexVersion
-      )();
-      return {
-        ...status,
-        latestVersion,
-        updateAvailable: Boolean(
-          status.installed &&
-          status.version &&
-          latestVersion &&
-          isVersionOlder(status.version, latestVersion)
-        ),
-      };
+      return codexRuntimeVersionStatus(
+        status,
+        await (this.dependencies.resolveLatestVersion ?? resolveLatestCodexVersion)()
+      );
     } catch (error) {
       logger.warn('Failed to resolve latest Codex version:', getErrorMessage(error));
-      return {
-        ...status,
-        latestVersion: null,
-        updateAvailable: false,
-      };
+      return codexRuntimeVersionStatus(status, null);
     }
   }
 
   private async getAppManagedStatus(): Promise<CodexRuntimeStatus> {
     const manifest = await readCurrentManifest();
     if (!isAbsoluteExistingFile(manifest?.binaryPath)) {
-      return {
-        installed: false,
-        latestVersion: null,
-        updateAvailable: false,
-        source: 'missing',
-        state: 'idle',
-      };
+      return codexRuntimeMissingStatus();
     }
     try {
       const stdout = await probeManagedCodexVersion(manifest.binaryPath);
-      return {
-        installed: true,
-        binaryPath: manifest.binaryPath,
-        version: stdout.trim() || manifest.platformVersion,
-        latestVersion: null,
-        updateAvailable: false,
-        source: 'app-managed',
-        state: 'ready',
-      };
+      return codexRuntimeObservedStatus(
+        'app-managed',
+        manifest.binaryPath,
+        stdout.trim() || manifest.platformVersion
+      );
     } catch (error) {
-      return {
-        installed: false,
-        binaryPath: manifest.binaryPath,
-        version: manifest.platformVersion,
-        latestVersion: null,
-        updateAvailable: false,
-        source: 'app-managed',
-        state: 'failed',
-        error: getErrorMessage(error),
-      };
+      return codexRuntimeUnavailableStatus(
+        'app-managed',
+        manifest.binaryPath,
+        error,
+        manifest.platformVersion
+      );
     }
   }
 
   private async getPathStatus(): Promise<CodexRuntimeStatus> {
     const binaryPath = await resolvePathCodexBinaryWithBestEffortEnv();
     if (!binaryPath) {
-      return {
-        installed: false,
-        latestVersion: null,
-        updateAvailable: false,
-        source: 'missing',
-        state: 'idle',
-      };
+      return codexRuntimeMissingStatus();
     }
     try {
       const { stdout } = await execCli(binaryPath, ['--version'], {
         timeout: VERSION_TIMEOUT_MS,
         windowsHide: true,
       });
-      return {
-        installed: true,
-        binaryPath,
-        version: stdout.trim() || undefined,
-        latestVersion: null,
-        updateAvailable: false,
-        source: 'path',
-        state: 'ready',
-      };
+      return codexRuntimeObservedStatus('path', binaryPath, stdout.trim() || undefined);
     } catch (error) {
-      return {
-        installed: false,
-        binaryPath,
-        latestVersion: null,
-        updateAvailable: false,
-        source: 'path',
-        state: 'failed',
-        error: getErrorMessage(error),
-      };
+      return codexRuntimeUnavailableStatus('path', binaryPath, error);
     }
   }
 
-  private async installInternal(): Promise<CodexRuntimeStatus> {
+  private async installInternal(
+    captured?: CapturedCodexAcquisitionRequest
+  ): Promise<CodexRuntimeStatus> {
+    const checked = async <T>(work: () => Promise<T>): Promise<T> => {
+      captured?.assertCurrent();
+      try {
+        return await work();
+      } finally {
+        captured?.assertCurrent();
+      }
+    };
+    const progress = (value: CodexRuntimeInstallProgress) => {
+      if (captured) {
+        captured.assertCurrent();
+        captured.onProgress(codexRuntimeProgressStatus(this.latestStatus, value));
+      } else this.publish(codexRuntimeProgressStatus(this.latestStatus, value));
+    };
     let tempDir: string | null = null;
     const previousStatus = this.latestStatus?.installed ? this.latestStatus : null;
     try {
-      this.publishProgress({ phase: 'checking', detail: 'Resolving latest Codex package...' });
-      const rootMetadata = await fetchPackageMetadata(ROOT_PACKAGE_NAME);
+      progress({ phase: 'checking', detail: 'Resolving latest Codex package...' });
+      const rootMetadata = await checked(() => fetchPackageMetadata(ROOT_PACKAGE_NAME));
       const candidates = getCodexRuntimePlatformCandidates();
       const optionalDependencies = rootMetadata.optionalDependencies ?? {};
       const selected =
@@ -685,18 +699,20 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         optionalDependencies[selected.optionalDependencyName],
         fallbackPlatformVersion
       );
-      const platformMetadata = await fetchPackageMetadata(ROOT_PACKAGE_NAME, platformVersion);
+      const platformMetadata = await checked(() =>
+        fetchPackageMetadata(ROOT_PACKAGE_NAME, platformVersion)
+      );
 
-      this.publishProgress({
+      progress({
         phase: 'downloading',
         detail: `Downloading Codex ${platformMetadata.version}...`,
       });
-      const tarball = await downloadTarball(platformMetadata.dist!.tarball!, (progress) => {
-        this.publishProgress(progress);
-      });
+      const tarball = await checked(() =>
+        downloadTarball(platformMetadata.dist!.tarball!, progress)
+      );
       verifyCodexRuntimePackageIntegrity(tarball, platformMetadata.dist!.integrity!);
 
-      this.publishProgress({ phase: 'installing', detail: 'Extracting Codex runtime...' });
+      progress({ phase: 'installing', detail: 'Extracting Codex runtime...' });
       const files = extractCodexRuntimePackageFilesFromTarball(tarball, selected.vendorTarget);
       const binaryRelativePath = resolveCodexRuntimeBinaryRelativePath(files);
       const runtimeRoot = getRuntimeRootPath();
@@ -705,25 +721,29 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         runtimeRoot,
         'versions',
         platformMetadata.version!,
-        selected.vendorTarget
+        `${selected.vendorTarget}-${randomUUID()}`
       );
       const binaryPath = path.join(versionDir, binaryRelativePath);
 
-      await fsp.rm(tempDir, { recursive: true, force: true });
-      await fsp.mkdir(tempDir, { recursive: true });
-      await writePackageFiles(tempDir, files);
+      const staging = tempDir;
+      await checked(() => fsp.rm(staging, { recursive: true, force: true }));
+      await checked(() => fsp.mkdir(staging, { recursive: true }));
+      await checked(() => writePackageFiles(staging, files));
 
-      this.publishProgress({ phase: 'installing', detail: 'Verifying Codex binary...' });
+      progress({ phase: 'installing', detail: 'Verifying Codex binary...' });
       const tempBinaryPath = path.join(tempDir, binaryRelativePath);
-      const { stdout } = await execCli(tempBinaryPath, ['--version'], {
-        timeout: VERSION_TIMEOUT_MS,
-        windowsHide: true,
-      });
+      const { stdout } = await checked(() =>
+        execCli(tempBinaryPath, ['--version'], {
+          timeout: VERSION_TIMEOUT_MS,
+          windowsHide: true,
+        })
+      );
 
-      await fsp.rm(versionDir, { recursive: true, force: true });
-      await fsp.mkdir(path.dirname(versionDir), { recursive: true });
+      await checked(() => fsp.mkdir(path.dirname(versionDir), { recursive: true }));
+      captured?.assertCurrent();
       await renamePathWithRetry(tempDir, versionDir);
       tempDir = null;
+      captured?.assertCurrent();
       const manifest: CodexRuntimeManifest = {
         schemaVersion: CURRENT_MANIFEST_SCHEMA_VERSION,
         rootVersion: rootMetadata.version!,
@@ -733,48 +753,44 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         integrity: platformMetadata.dist!.integrity!,
         installedAt: new Date().toISOString(),
       };
-      await fsp.writeFile(
-        getCurrentManifestPath(),
-        `${JSON.stringify(manifest, null, 2)}\n`,
-        'utf8'
-      );
+      captured?.assertCurrent();
+      await atomicWriteAsync(getCurrentManifestPath(), `${JSON.stringify(manifest, null, 2)}\n`, {
+        durability: 'strict',
+        syncDirectory: true,
+      });
 
-      const status: CodexRuntimeStatus = {
-        installed: true,
+      if (captured) {
+        const acquired = captureAppManagedCodexRuntime();
+        if (
+          acquired.binaryPath !== manifest.binaryPath ||
+          !acquired.matches(`${JSON.stringify(manifest, null, 2)}\n`)
+        )
+          throw new Error('The original Codex installation manifest changed.');
+        captured.acceptAcquired(acquired);
+        captured.assertCurrent();
+      }
+      const status = codexRuntimeInstalledStatus(
         binaryPath,
-        version: stdout.trim() || manifest.platformVersion,
-        latestVersion: normalizeVersion(rootMetadata.version!),
-        updateAvailable: false,
-        source: 'app-managed',
-        state: 'ready',
-        progress: {
-          phase: 'ready',
-          percent: 100,
-          detail: `Installed Codex ${stdout.trim() || manifest.platformVersion}`,
-        },
-      };
-      this.publish(status);
+        stdout.trim() || manifest.platformVersion,
+        normalizeVersion(rootMetadata.version!)
+      );
+      if (captured) captured.onProgress(status);
+      else this.publish(status);
       return status;
     } catch (error) {
       if (tempDir) {
         await fsp.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
       }
-      const status: CodexRuntimeStatus = {
-        ...(previousStatus ?? {
-          installed: false,
-          latestVersion: null,
-          updateAvailable: false,
-          source: 'missing' as const,
-        }),
-        state: 'failed',
-        error: getErrorMessage(error),
-        progress: {
-          phase: 'failed',
-          detail: getErrorMessage(error),
-        },
-      };
+      const status = codexRuntimeFailedStatus(previousStatus, error);
       logger.error('Failed to install Codex runtime:', status.error);
-      this.publish(status);
+      if (captured) {
+        try {
+          captured.onProgress(status);
+        } catch {
+          /* Retain the original acquisition failure. */
+        }
+        throw error;
+      } else this.publish(status);
       return status;
     }
   }

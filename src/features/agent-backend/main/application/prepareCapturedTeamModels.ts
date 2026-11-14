@@ -12,6 +12,7 @@ import type {
   BackendLaunchModelSelection,
 } from '../../contracts/launch';
 import type { AgentBackendApi } from '../../contracts/operations';
+import type { LocalModelReadinessContext } from '../infrastructure/CapturedLocalModelReadiness';
 import type { TeamModelProbeIntents } from './TeamModelProbeIntents';
 import type {
   TeamProviderId,
@@ -40,7 +41,7 @@ const unavailable = (message: string): TeamProvisioningPrepareResult => ({
   ready: false,
   message,
 });
-function commandId(handle: BackendHandle, selection: BackendLaunchModelSelection): string {
+export function capturedTeamModelProbeRootId(handle: BackendHandle, selection: BackendLaunchModelSelection): string {
   // This is a single check of one captured launch selection, including across reload.
   // The Host's existing durable probe journal owns all outcomes. No second journal.
   return `team-preflight-${createHash('sha256')
@@ -60,7 +61,7 @@ function configurationFingerprint(view: ModelView): string {
 
 /** Existing dialog model preflight. Never allocates member sessions or reads fork/global defaults. */
 export async function prepareCapturedTeamModels(options: {
-  backend: Pick<AgentBackendApi, 'invoke'>;
+  backend: { invoke(input: Parameters<AgentBackendApi['invoke']>[0], readiness?: LocalModelReadinessContext): ReturnType<AgentBackendApi['invoke']> };
   handle: BackendHandle;
   request: CapturedTeamModelRequest;
   isCurrent(): boolean;
@@ -82,14 +83,12 @@ export async function prepareCapturedTeamModels(options: {
   const invoke = (
     action: 'start' | 'read' | 'cancel',
     selection: BackendLaunchModelSelection,
-    id: string
-  ) =>
-    options.backend.invoke({
-      handle,
-      commandId: id,
-      operation: `team.launch.probe.${action}`,
-      payload: selection,
-    });
+    id: string,
+    readiness?: LocalModelReadinessContext
+  ) => {
+    const input = { handle, commandId: id, operation: `team.launch.probe.${action}` as const, payload: selection };
+    return readiness ? options.backend.invoke(input, readiness) : options.backend.invoke(input);
+  };
   async function readConfiguration(): Promise<ModelView> {
     if (!alive()) throw new Error('Team context changed.');
     const result = await options.backend.invoke({
@@ -335,7 +334,7 @@ export async function prepareCapturedTeamModels(options: {
       return unavailable('Some selected model checks have no Team member destination.');
     for (const selection of selected) {
       if (!alive()) throw new Error('Team context changed.');
-      const rootId = commandId(handle, selection);
+      const rootId = capturedTeamModelProbeRootId(handle, selection);
       const retained =
         request.preparationId && options.intents
           ? await options.intents.read(rootId, request.preparationId)
@@ -385,11 +384,15 @@ export async function prepareCapturedTeamModels(options: {
       }
       if (!result.ok)
         return unavailable('The original Team model check is unavailable. It was not resubmitted.');
+      const member = view.members.find(row => row.memberId === selection.memberId);
+      const connected = selection.draft ? selection.draft.providerId === 'opencode' : member?.selected?.provider === 'opencode';
+      const preparationDeadline = connected ? Date.now() + 100000 : undefined;
       if (result.value === null) {
         // Current Host durable absence proves this exact intent has not been admitted.
-        result = await invoke('start', selection, id);
+        result = await invoke('start', selection, id, preparationDeadline === undefined ? undefined
+          : { view, remainingMs: () => preparationDeadline - Date.now() });
       }
-      const deadline = Date.now() + 100000;
+      const deadline = preparationDeadline ?? Date.now() + 100000;
       for (;;) {
         if (!alive()) throw new Error('Team context changed.');
         if (
@@ -443,6 +446,7 @@ export async function prepareCapturedTeamModels(options: {
                 limitContext: request.limitContext,
               }),
               expiresAt: Math.min(...completed.map((probe) => probe.expiresAt)),
+              selections: structuredClone(selected),
             },
           }
         : {}),

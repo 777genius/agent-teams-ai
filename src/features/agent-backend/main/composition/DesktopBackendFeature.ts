@@ -5,6 +5,7 @@ import {
   crossTeamOwnerResourceRef,
   crossTeamTeamResourceRef,
 } from '@agent-teams/legacy-agent-host/cross-team';
+import { captureManagedProviderRuntimePreferences } from '@features/runtime-provider-management/main';
 import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 
 import { BackendOperationsFacade } from '../adapters/input/BackendOperationsFacade';
@@ -17,9 +18,14 @@ import { BackendOwnerRouter } from '../application/BackendOwnerRouter';
 import { createCapturedHostBackup } from '../application/createCapturedHostBackup';
 import { prepareCreatedHostTeam } from '../application/createdHostTeam';
 import { ForegroundModelChecks } from '../application/ForegroundModelChecks';
+import { prepareCapturedTeamModels } from '../application/prepareCapturedTeamModels';
+import { refreshCapturedRuntimeConfiguration } from '../application/refreshCapturedRuntimeConfiguration';
 import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
+import { captureCreatedTeamConversation, requestWithLocalModelReadiness } from '../infrastructure/CapturedLocalModelReadiness';
 import { captureProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import { CapturedRosterCommands } from '../infrastructure/CapturedRosterCommands';
+import { captureRuntimeSources } from '../infrastructure/CapturedRuntimeSources';
+import { CapturedScheduledRuns } from '../infrastructure/CapturedScheduledRuns';
 import { CapturedTeamRegistry } from '../infrastructure/CapturedTeamRegistry';
 import { FileHandleBindingStore } from '../infrastructure/FileHandleBindingStore';
 import { loadDesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
@@ -34,16 +40,18 @@ import type {
   HandleBindingStore,
 } from '../application/backendBinding';
 import type { CapturedBackendOwner } from '../application/BackendOwnerRouter';
+import type { CapturedTeamModelRequest } from '../application/prepareCapturedTeamModels';
+import type { TeamModelProbeIntents } from '../application/TeamModelProbeIntents';
 import type { CapturedProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import type {
   DesktopBackendDescriptor,
   DesktopBackendDescriptorSelection,
 } from '../infrastructure/loadDesktopBackendDescriptor';
+import type { RuntimeSourceSummary } from '@agent-teams/legacy-agent-host/runtime-sources';
 import type {
   CreateTeamRegistryPayload,
   TeamRegistryRecord,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
-import type { CreateTeamLaunchPreparationInput } from '@agent-teams/legacy-agent-host/team-registry/create-launch-contracts';
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';
 import type { TeamCreateRequest } from '@shared/types/team';
 
@@ -67,6 +75,7 @@ export interface DesktopBackendFeatureOptions {
   bindings?: HandleBindingStore;
   /** Existing durable Main ledger is supplied before renderer work admission. */
   commandRunner?: () => ApplicationCommandRunner | null;
+  modelIntents?: TeamModelProbeIntents;
 }
 
 export class DesktopBackendFeature {
@@ -108,10 +117,16 @@ export class DesktopBackendFeature {
       assertBackendRequestGuard(guard);
       return this.router;
     };
+    const rosterCommands = options.commandRunner ? new CapturedRosterCommands(options.commandRunner) : undefined;
     this.facade = new BackendOperationsFacade(
       {
-        request: async (handle, command) =>
-          (await target(handle, command.guard)).request(handle, command),
+        request: (handle, command) => {
+          const definition = this.handleDefinitions().find(row => row.handleId === handle.handleId);
+          return requestWithLocalModelReadiness(() => target(handle, command.guard), handle, command, definition, {
+            requestTimeoutMs: definition ? this.clients.get(ownerKey(definition.owner))?.client.profile.requestTimeoutMs : undefined,
+            intents: this.options.modelIntents, rosterCommands,
+          });
+        },
         requestPair: async (source, destination, command) => {
           const router = await target(source, command.guard);
           const original = this.handleDefinitions().find(
@@ -124,7 +139,7 @@ export class DesktopBackendFeature {
         lookup: async (handle, commandId, method, guard) =>
           (await target(handle, guard)).lookup(handle, commandId, method, guard),
       },
-      options.commandRunner ? new CapturedRosterCommands(options.commandRunner) : undefined
+      rosterCommands
     );
   }
 
@@ -379,27 +394,19 @@ export class DesktopBackendFeature {
   /** Captures one creation owner for preparation, polling and original cleanup. */
   async captureTeamCreation(contextId: string, guard: BackendRequestGuard) {
     const target = await this.registry(contextId, guard);
-    return {
-      prepare: (
-        action: 'prepare' | 'probe.read' | 'probe.cancel',
-        input: CreateTeamLaunchPreparationInput
-      ) => {
-        if (input.draft.contextId !== contextId) throw new BackendRoutingError('forbidden');
-        return target.client.prepareCreation(
-          action,
-          input,
-          action === 'probe.cancel' ? undefined : guard
-        );
-      },
-      submit: async (commandId: string, input: CreateTeamLaunchPreparationInput) => {
-        if (input.draft.contextId !== contextId) throw new BackendRoutingError('forbidden');
-        const result = await target.client.submitCreation(commandId, input, guard);
-        if (result.creation.commandId !== commandId || result.creation.phase !== 'published')
-          throw new BackendRoutingError('hold', 'unknown');
-        await this.registerDynamic(result.creation.record, target.owner, contextId, guard);
-        return result;
-      },
-    };
+    const captured = this.clients.get(ownerKey(target.owner));
+    if (!this.router || !captured) throw new BackendRoutingError('unavailable');
+    return captureCreatedTeamConversation({
+      ...target, router: this.router, contextId, guard, requestTimeoutMs: captured.client.profile.requestTimeoutMs,
+      refreshSources: cwd => this.refreshLaunchConfiguration(contextId, cwd, guard),
+      register: record => this.registerDynamic(record, target.owner, contextId, guard),
+    });
+  }
+
+  prepareCapturedModels(handle: BackendHandle, request: CapturedTeamModelRequest, guard: BackendRequestGuard) {
+    return prepareCapturedTeamModels({ handle, request, isCurrent: () => guard.isCurrent(), intents: this.options.modelIntents,
+      backend: { invoke: (input, readiness) => this.facade.invoke(input,
+        input.operation === 'team.launch.probe.cancel' ? undefined : guard, readiness) } });
   }
 
   prepareCreatedTeam(
@@ -425,6 +432,26 @@ export class DesktopBackendFeature {
         guard: current,
       });
     });
+  }
+
+  /** Restored background schedules retain this exact owner/router independently of the visible tab. */
+  async captureScheduledRuns(contextId: string, handle: BackendHandle, scheduleId: string, guard: BackendRequestGuard) {
+    handle = Object.freeze({ ...handle });
+    assertBackendRequestGuard(guard);
+    await this.initialize();
+    assertBackendRequestGuard(guard);
+    const router = this.router, definition = this.handleDefinitions().find(row => row.handleId === handle.handleId);
+    if (!router || !definition || this.sealed || !this.authorizeHandle(contextId, handle))
+      throw new BackendRoutingError('forbidden');
+    await router.startOwner(definition.owner);
+    const owned = { isCurrent: () => !this.sealed && this.router === router && this.authorizeHandle(contextId, handle) };
+    const current = { isCurrent: () => owned.isCurrent() && guard.isCurrent() };
+    assertBackendRequestGuard(current);
+    return new CapturedScheduledRuns((operation, runId, payload) => router.request(handle, {
+      commandId: operation === 'start' ? runId : `${runId}:${operation}`,
+      method: `schedule.run.${operation}`, payload, control: operation !== 'start',
+      guard: operation === 'cancel' ? owned : current,
+    }), scheduleId);
   }
 
   /** Existing backup scheduler captures one exact foreground owner set per invocation. */
@@ -529,7 +556,47 @@ export class DesktopBackendFeature {
         entry.contextId === contextId &&
         entry.projectPath === selectedPath
     );
-    return this.captureManagementTarget(selected, guard);
+    return this.captureCurrentManagementTarget(selected, guard);
+  }
+
+  /** Main-only installer/config publication; renderer input cannot supply a grant or owner. */
+  async captureRuntimeSources(
+    contextId: string,
+    projectPath: string | null,
+    runtimeId: 'opencode' | 'codex' | 'claude',
+    guard?: BackendRequestGuard
+  ) {
+    if (projectPath !== null && (!isAbsolute(projectPath) || projectPath.includes('\0')))
+      throw new BackendRoutingError('invalid-binding');
+    await this.initialize();
+    const selected = this.descriptor?.management?.find(
+      (entry) =>
+        entry.runtimeId === runtimeId &&
+        entry.contextId === contextId &&
+        entry.projectPath === (projectPath === null ? null : resolve(projectPath))
+    );
+    const target = await this.captureSourceTarget(selected, guard);
+    if (!target) throw new BackendRoutingError('unavailable');
+    return target;
+  }
+
+  /** New preflight only; retained read/cancel/submit keep their original source revision. */
+  async refreshLaunchConfiguration(contextId: string, projectPath: string, guard: BackendRequestGuard,
+    handle?: BackendHandle): Promise<void> {
+    if (!isAbsolute(projectPath) || projectPath.includes('\0')) throw new BackendRoutingError('invalid-binding');
+    await this.initialize();
+    assertBackendRequestGuard(guard);
+    const owner = handle
+      ? this.handleDefinitions().find(row => row.handleId === handle.handleId && row.contextId === contextId)?.owner
+      : this.descriptor?.creation?.owner;
+    if (!owner || (handle && !this.authorizeHandle(contextId, handle))) throw new BackendRoutingError('forbidden');
+    const available = this.descriptor?.management?.filter(row => row.contextId === contextId &&
+      row.runtimeId === 'opencode' && ownerKey(row.owner) === ownerKey(owner)) ?? [];
+    const selected = available.find(row => row.projectPath === resolve(projectPath)) ??
+      available.find(row => row.projectPath === null);
+    if (!selected) return;
+    const sources = await this.captureSourceTarget(selected, guard);
+    if (sources) await refreshCapturedRuntimeConfiguration(sources, selected);
   }
 
   /** Main Skills choices derive solely from the original authorized descriptor, including optional runtimes. */
@@ -561,10 +628,12 @@ export class DesktopBackendFeature {
       { rootKind: 'agents' as const, selected: common },
       { rootKind: 'cursor' as const, selected: common },
     ];
-    return choices.map(({ rootKind, selected }) => ({
-      rootKind,
-      owner: this.captureManagementTarget(selected, guard),
-    }));
+    return Promise.all(
+      choices.map(async ({ rootKind, selected }) => ({
+        rootKind,
+        owner: await this.captureCurrentManagementTarget(selected, guard),
+      }))
+    );
   }
 
   /** Restore an original private intent; a changed descriptor cannot silently retarget it. */
@@ -578,6 +647,17 @@ export class DesktopBackendFeature {
     const selected = this.descriptor?.management?.find(
       (entry) => this.managementTargetId(entry) === targetId
     );
+    if (!selected) {
+      for (const original of this.descriptor?.management ?? []) {
+        if (original.contextId !== contextId) continue;
+        const sources = await this.captureSourceTarget(original);
+        if (!sources) continue;
+        for (const retained of await sources.retained()) {
+          const capture = this.captureManagementTarget(original, guard, retained);
+          if (capture.targetId === targetId) return capture;
+        }
+      }
+    }
     return this.captureManagementTarget(selected, {
       isCurrent: () => selected?.contextId === contextId && (guard?.isCurrent() ?? true),
     });
@@ -595,18 +675,22 @@ export class DesktopBackendFeature {
 
   private captureManagementTarget(
     selected: NonNullable<DesktopBackendDescriptor['management']>[number] | undefined,
-    guard?: BackendRequestGuard
+    guard?: BackendRequestGuard,
+    revision?: RuntimeSourceSummary
   ): CapturedProviderManagement {
     const router = this.router;
     if (this.state !== 'ready' || !selected || !router)
       throw new BackendRoutingError('unavailable');
     const owner = this.clients.get(ownerKey(selected.owner));
     if (!owner) throw new BackendRoutingError('hold');
+    const profileId = revision?.profileId ?? selected.profileId;
+    const configRevision = revision?.configRevision ?? selected.configRevision;
     return captureProviderManagement({
-      targetId: this.managementTargetId(selected),
-      profileId: selected.profileId,
-      configRevision: selected.configRevision,
+      targetId: this.managementTargetId({ ...selected, profileId, configRevision }),
+      profileId,
+      configRevision,
       ...(selected.preferences ? { preferences: selected.preferences } : {}),
+      refreshConfiguration: () => this.captureCurrentManagementTarget(selected, guard),
       client: owner.client,
       start: () => router.startOwner(selected.owner),
       ownerAvailable: () =>
@@ -614,6 +698,71 @@ export class DesktopBackendFeature {
         this.state === 'ready' &&
         this.clients.get(ownerKey(selected.owner)) === owner,
       foregroundCurrent: () => guard?.isCurrent() ?? true,
+    });
+  }
+
+  private async captureCurrentManagementTarget(
+    selected: NonNullable<DesktopBackendDescriptor['management']>[number] | undefined,
+    guard?: BackendRequestGuard
+  ): Promise<CapturedProviderManagement> {
+    const sources = await this.captureSourceTarget(selected, guard);
+    return this.captureManagementTarget(
+      selected,
+      guard,
+      sources ? await refreshCapturedRuntimeConfiguration(sources, selected) : undefined
+    );
+  }
+
+  private async captureSourceTarget(
+    selected: NonNullable<DesktopBackendDescriptor['management']>[number] | undefined,
+    guard?: BackendRequestGuard
+  ) {
+    assertBackendRequestGuard(guard);
+    const router = this.router;
+    if (this.sealed || this.state !== 'ready' || !selected || !router)
+      throw new BackendRoutingError('unavailable');
+    const owner = this.clients.get(ownerKey(selected.owner));
+    if (!owner) throw new BackendRoutingError('hold');
+    const handshake = await router.startOwner(selected.owner);
+    assertBackendRequestGuard(guard);
+    if (this.sealed || this.clients.get(ownerKey(selected.owner)) !== owner)
+      throw new BackendRoutingError('unavailable');
+    if (!handshake.capabilities.includes('runtime.sources')) return undefined;
+    const teamScopes = [...new Map((this.descriptor?.handles ?? [])
+      .filter(
+        (entry) =>
+          entry.contextId === selected.contextId &&
+          ownerKey(entry.owner) === ownerKey(selected.owner)
+      )
+      .map(({ scope }) => [JSON.stringify([scope.teamId, scope.projectId, scope.workspaceId]), {
+        teamId: scope.teamId,
+        projectId: scope.projectId,
+        workspaceId: scope.workspaceId,
+      }] as const)).values()];
+    return captureRuntimeSources({
+      grant: {
+        targetId: this.managementTargetId(selected),
+        ownerId: selected.owner.ownerId,
+        ownerRevision: selected.owner.revision,
+        contextId: selected.contextId,
+        projectPath: selected.projectPath,
+        runtimeId: selected.runtimeId,
+        profileId: selected.profileId,
+        configRevision: selected.configRevision,
+        teamScopes,
+      },
+      client: owner.client,
+      start: () => router.startOwner(selected.owner),
+      ownerAvailable: () =>
+        !this.sealed &&
+        this.state === 'ready' &&
+        this.clients.get(ownerKey(selected.owner)) === owner,
+      foregroundCurrent: () => guard?.isCurrent() ?? true,
+      ...(selected.runtimeId === 'opencode' && selected.preferences ? {
+        capturePreferences: () => captureManagedProviderRuntimePreferences(selected.preferences!, () =>
+          !this.sealed && this.state === 'ready' && this.clients.get(ownerKey(selected.owner)) === owner &&
+          (guard?.isCurrent() ?? true)),
+      } : {}),
     });
   }
 

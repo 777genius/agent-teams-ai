@@ -340,7 +340,7 @@ export class RuntimeOwner {
       if (!this.options.canDispatch?.(binding, input.intent)) throw new RuntimeOwnerError('hold');
       const selected = this.options.prepareInput?.(binding, {
         sessionRef: record.sessionRef!, inputId: input.intent.inputId, operationRef: input.operationRef,
-        intentFingerprint: input.fingerprint, originalContentBytes: Buffer.byteLength(input.intent.content), epochs: structuredClone(record.contextEpochs ?? []),
+        intentFingerprint: input.fingerprint, originalContent: input.intent.content, originalContentBytes: Buffer.byteLength(input.intent.content), epochs: structuredClone(record.contextEpochs ?? []),
         priorProofs: record.inputs.flatMap(value => value.preparation ? [preparedInputProof(value.preparation)] : []),
       });
       if (selected) input.preparation = prepareRuntimeInput(binding, input, selected, this.maxBytes);

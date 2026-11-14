@@ -3,10 +3,17 @@ import { settledRuntimeInput } from '../runtime/settledRuntimeInput.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import { memberBinding } from '../team/DeliveryRecovery.js';
 import { runtimeDigest } from '../runtime/identity.js';
+import { TeamLaunchError } from '../team-launch/contracts.js';
+import { runtimeLaunchMembers } from './runtimeLaunchMembers.js';
 import type { TeamMember } from '../team/contracts.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { MemberEntry, HostedTeam } from './MemberEntry.js';
+export interface RetainedLaunchInspection {
+  team: HostedTeam;
+  launch: TeamLaunchOwner;
+  entries?: readonly MemberEntry[];
+}
 
 /** A static native capture must not silently launch old options after a saved roster edit. */
 export function assertCapturedRosterCurrent(team: HostedTeam, principalId?: string): void {
@@ -41,8 +48,9 @@ export function assertRosterEditable(options: {
   entries: readonly MemberEntry[];
   launch: TeamLaunchOwner;
   runtime: RuntimeOwner;
+  action?: 'read' | 'control';
 }): void {
-  const summary = options.launch.read('control');
+  const summary = options.launch.read(options.action ?? 'control');
   for (const member of options.members) {
     if (options.launch.memberActions().pending(member.memberId).length)
       throw new TeamOwnerError('hold');
@@ -74,4 +82,48 @@ export function assertRosterEditable(options: {
     )
       throw new TeamOwnerError('hold');
   }
+}
+
+function neverStarted(summary: ReturnType<TeamLaunchOwner['read']>): boolean {
+  return summary.admission === undefined && summary.startedAtMs === null &&
+    summary.members.every(member => !member.attempt.claimed);
+}
+
+/** Original Create recovery reads only its own complete capture, never a later Team run. */
+export function readCreatedLaunchAdmission(options: {
+  selected: RetainedLaunchInspection;
+  entries: readonly MemberEntry[];
+  runtime: RuntimeOwner;
+  commandId: string;
+}) {
+  const { selected, runtime, commandId } = options;
+  if (!selected.team.capture) throw new TeamLaunchError('hold', 'creation-capture-pending');
+  const admitted = selected.launch.readOriginalStart(commandId);
+  if (admitted) return { launch: admitted };
+  const launch = selected.launch.read();
+  if (!neverStarted(launch)) throw new TeamLaunchError('hold', 'creation-launch-unresolved');
+  const entries = selected.entries ?? options.entries.filter(entry => entry.team === selected.team);
+  assertRosterEditable({ members: runtimeLaunchMembers(selected.team, entries), entries,
+    launch: selected.launch, runtime, action: 'read' });
+  return { launch, partialCreated: true as const };
+}
+
+/** A prospective model check is available only before any admission on the current complete capture. */
+export function isUnstartedCaptureEditable(options: {
+  team: HostedTeam | undefined;
+  launch: TeamLaunchOwner | undefined;
+  retainedLaunches: ReadonlyMap<string, RetainedLaunchInspection>;
+  entries: readonly MemberEntry[];
+  runtime: RuntimeOwner;
+}): boolean {
+  const { team, launch } = options;
+  if (!team?.capture || !launch || !neverStarted(launch.read())) return false;
+  assertCapturedRosterCurrent(team);
+  for (const retained of options.retainedLaunches.values()) {
+    if (retained.team.definition.binding.teamId !== team.definition.binding.teamId) continue;
+    const entries = retained.entries ?? options.entries.filter(entry => entry.team === retained.team);
+    assertRosterEditable({ members: runtimeLaunchMembers(retained.team, entries), entries,
+      launch: retained.launch, runtime: options.runtime, action: 'read' });
+  }
+  return true;
 }

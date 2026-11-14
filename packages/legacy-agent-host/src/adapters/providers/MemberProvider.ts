@@ -1,5 +1,5 @@
 import type { NativeAttachmentCapabilities } from '../../attachments/attachmentTypes.js';
-import type { ClaudeConfig } from '@agent-teams/provider-implementations/claude';
+import type { ClaudeConfig, ClaudeDriverHost } from '@agent-teams/provider-implementations/claude';
 import type {
   RegisteredProcessRootSource,
   RegisteredProcessCapture,
@@ -12,6 +12,7 @@ import type { RuntimeMemberProfile } from '../../composition/runtimeProfile.js';
 import type { ToolEvidenceCapture } from '../../evidence/captureContracts.js';
 import type { CodexEvidenceCapture } from '../../evidence/codexCaptureContracts.js';
 import type { OpenCodeEvidenceCapture } from '../../evidence/opencodeCaptureContracts.js';
+import type { NativeSessionCommandCapability } from '../../team/nativeSessionCommand.js';
 
 export interface MemberProviderContext {
   profile: RuntimeMemberProfile;
@@ -27,15 +28,20 @@ export interface MemberProviderContext {
   opencodeEvidence?: OpenCodeEvidenceCapture;
   isCurrent(): boolean;
   canAllocate(): boolean;
+  /** Exact consumed preparation's private credential commitment; checkpoint continuation uses its original scope. */
+  assertReadinessCredential?(scopeDigest: string): void;
   /** Team-fenced physical capture; original Runtime input is checked by the outer MCP wrapper. */
   canCaptureRegisteredProcess?(): boolean;
   readCheckpoint(reference: string, request: OpenConfig): Promise<unknown>;
+  readCheckpointSource?: NonNullable<ClaudeDriverHost['readCheckpointSource']>;
   onProgress(): void;
 }
 
 export interface MemberProvider {
   factory: DriverFactory;
   readonly attachmentCapabilities?: Readonly<NativeAttachmentCapabilities>;
+  /** Live captured provider capability, never a renderer-declared provider or arbitrary skill path. */
+  sessionCommands?(): readonly NativeSessionCommandCapability[];
   captureRegisteredProcess?(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture;
   isReady(): boolean;
   /** Installed exact initial context, acknowledged through successful D native configuration/readiness. */

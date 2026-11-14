@@ -15,8 +15,11 @@ import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/comp
 import { prepareNativeReviewWorkspace } from './desktop-native-review-fixture.ts';
 import { prepareDesktopReviewLedger } from './desktop-review-fixture.ts';
 import { prepareDesktopStoppedImport } from './desktop-stopped-import-fixture.ts';
-import { desktopOpenCodeV2ManagementProfile, prepareDesktopOpenCodeV2Recipe } from './desktop-opencode-v2-fixture.ts';
+import { desktopBackendEnvironment, desktopRuntimeSourceEnvironment, prepareDesktopRuntimeProfile, readDesktopLinuxChildExecInput } from './desktop-runtime-source-fixture.ts';
+import type { DesktopOpenCodeSourceSelection } from './desktop-runtime-source-fixture.ts';
+export { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
+import { DESKTOP_MCP_MEMBERS, prepareDesktopCapturedMcpRecipes } from './desktop-opencode-v2-mcp-fixture.ts';
 
 export const digest = (bytes: Uint8Array | string): string =>
   createHash('sha256').update(bytes).digest('hex');
@@ -46,12 +49,27 @@ process.stdout.write(frame?'\0'+frame[1]+'_START\0'+dump+'\0'+frame[1]+'_END\0':
   );
 }
 
+/** Generated metadata/refusal bytes shared by the original private TEST sentinels. */
+export function desktopAgentSentinelSource(
+  node: string, sentinelLog: string, version: string,
+  mode: 'metadata' | 'refused' | 'donor-saved-only'
+): string {
+  return `${desktopNodeScriptHeader(node)}import {appendFileSync} from 'node:fs';
+import {basename} from 'node:path';
+const args=process.argv.slice(2),allowed=${mode === 'refused' ? 'false' : "args.length===1&&args[0]==='--version'"};
+appendFileSync(${JSON.stringify(sentinelLog)},JSON.stringify({executable:basename(process.argv[1]),allowed,argc:args.length,command:args.length===1&&args[0]==='app-server'?'app-server':null,flags:args.filter(x=>x.startsWith('-')).map(x=>x.split('=')[0]).slice(0,16)})+'\\n',{mode:0o600});
+if(allowed){${mode === 'donor-saved-only' ? "if(basename(process.argv[1])==='codex')process.exit(78);" : ''}console.log(${JSON.stringify(version + ' (TEST sentinel)')});process.exit(0)}
+process.stderr.write('TEST sentinel refuses native agent invocation\\n');process.exit(78);
+`;
+}
+
 /** Creates only private TEST files. It neither launches the Host nor opens a provider. */
 export async function prepareDesktopBackendFixture(
   repo: string,
   options: {
     candidateRuntime?: CandidateRuntimePaths;
     diagnosticHostEntry?: { path: string; sha256: string };
+    claudeCheckpointDonor?: { repo: string; hostEntrySha256: string };
     approvalUi?: boolean;
     nativeChatAttachments?: boolean;
     nativeGroupChats?: boolean;
@@ -60,26 +78,49 @@ export async function prepareDesktopBackendFixture(
     seedUiPreferences?: boolean;
     seedCodexApiKey?: boolean;
     launchDialog?: boolean;
+    configuredLaunchSetup?: true;
     creation?: boolean;
     reviewUi?: boolean;
     nativeReviewUi?: boolean;
     stoppedImportUi?: boolean;
+    donorSavedOnly?: true;
     pnpmEntry: string;
     nativeCodex?: { path: string; sha256: string };
     nativeClaude?: { path: string; sha256: string; modelUrl?: string };
     nativeOpenCodeV2?: DesktopOpenCodeV2Selection;
+    nativeOpenCodeSourceSelection?: DesktopOpenCodeSourceSelection;
+    capturedMcpNonce?: string;
   }
 ) {
   if (options.nativeOpenCodeV2 && (options.nativeClaude || options.nativeCodex || options.candidateRuntime || options.nativeGroupChats))
     throw new Error('Embedded V2 requires its explicit captured TEST fixture');
+  if (options.nativeOpenCodeSourceSelection && (options.nativeOpenCodeV2 || options.nativeClaude ||
+    options.nativeCodex || options.candidateRuntime || options.nativeGroupChats || options.launchDialog ||
+    options.nativeReviewUi || options.capturedMcpNonce || options.creation !== true))
+    throw new Error('Native source selection requires its original V1 Create fixture');
+  if (options.claudeCheckpointDonor && (!options.nativeClaude?.modelUrl || options.launchDialog !== true ||
+    options.nativeCodex || options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ||
+    options.candidateRuntime || options.diagnosticHostEntry || options.creation || options.nativeGroupChats ||
+    options.nativeReviewUi || options.reviewUi || options.stoppedImportUi || options.approvalUi ||
+    options.nativeChatAttachments || options.capturedMcpNonce ||
+    options.claudeCheckpointDonor.repo !== join(repo, '.stage1-checkpoint-donor')))
+    throw new Error('Checkpoint upgrade requires its exact original Claude Launch fixture');
+  if (options.donorSavedOnly && (options.stoppedImportUi !== true || options.creation !== true ||
+    options.launchDialog !== true || !options.nativeClaude || options.candidateRuntime ||
+    options.nativeCodex || options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ||
+    options.claudeCheckpointDonor || options.diagnosticHostEntry || options.capturedMcpNonce ||
+    options.nativeGroupChats || options.nativeChatAttachments || options.nativeReviewUi || options.reviewUi || options.approvalUi))
+    throw new Error('Saved-only donor requires its original isolated Claude Create fixture');
+  const linuxChildExec = readDesktopLinuxChildExecInput();
   const node =
     options.candidateRuntime?.nodeExecutable ??
-    (await realpath(options.nativeOpenCodeV2 ? process.execPath :
+    (await realpath(options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? process.execPath :
       join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
   const hostEntry =
     options.candidateRuntime?.hostEntry ??
     (await realpath(
-      options.diagnosticHostEntry?.path ?? join(repo, 'packages/legacy-agent-host/dist/cli.js')
+      options.diagnosticHostEntry?.path ??
+        join(options.claudeCheckpointDonor?.repo ?? repo, 'packages/legacy-agent-host/dist/cli.js')
     ));
   if (
     options.diagnosticHostEntry &&
@@ -91,6 +132,8 @@ export async function prepareDesktopBackendFixture(
     throw new Error('Invalid TEST diagnostic Host entry');
   const nodeSha256 = await fileDigest(node);
   const hostEntrySha256 = await fileDigest(hostEntry);
+  if (options.claudeCheckpointDonor && hostEntrySha256 !== options.claudeCheckpointDonor.hostEntrySha256)
+    throw new Error('Original compiled donor Host changed');
   const pnpmEntry = await realpath(options.pnpmEntry);
   const corepackPackagePath = join(dirname(pnpmEntry), '../package.json');
   const corepackLibraryPath = join(dirname(pnpmEntry), 'lib/corepack.cjs');
@@ -198,7 +241,7 @@ export async function prepareDesktopBackendFixture(
           {
             memberId: 'alice-id',
             name: 'alice',
-            role: options.nativeChatAttachments || options.nativeGroupChats ? 'lead' : 'member',
+            role: options.configuredLaunchSetup || options.nativeChatAttachments || options.nativeGroupChats ? 'lead' : 'member',
           },
         ],
         grants: [
@@ -461,24 +504,12 @@ export async function prepareDesktopBackendFixture(
       },
     ];
   }
-  if (options.nativeOpenCodeV2) {
-    const member = await prepareDesktopOpenCodeV2Recipe({ repo, root, node,
-      selection: options.nativeOpenCodeV2,
-      identity: { teamId: scope.teamId, memberId: 'alice-id', principalId: 'alice-session',
-        sessionId: 'TEST-native-opencode-v2', generation: 1, configRevision: 'TEST-opencode-v2-config' },
-    });
-    const team = profile.teams[0]!;
-    team.members[0]!.delivery = { ...team.binding, runId: scope.runId,
-      memberId: member.memberId, generation: String(member.generation) };
-    team.grants.push({ principalId: member.principalId, memberName: 'alice',
-      permissions: ['read', 'task.write', 'message.write'] });
-    team.savedSettings = { cwd: member.cwd, providerId: 'opencode',
-      model: `${member.nativeOptions.providerId}/${member.model}`, skipPermissions: options.nativeReviewUi === true };
-    if (options.launchDialog) team.members[0]!.role = 'lead';
-    profile.runtime = { members: [member],
-      ...(options.creation ? { providerTemplates: [structuredClone(member)] } : {}) };
-    profile.management = [desktopOpenCodeV2ManagementProfile(member,
-      options.nativeOpenCodeV2.managementEndpoint, 'TEST-opencode-v2-management')];
+  if (options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection)
+    await prepareDesktopRuntimeProfile({ repo, root, node, profile, scope, options });
+  if (options.capturedMcpNonce !== undefined) {
+    if (!options.nativeOpenCodeV2 || !options.launchDialog || options.creation)
+      throw new Error('Captured MCP requires the original V2 Launch fixture');
+    await prepareDesktopCapturedMcpRecipes({ profile, root, node, nonce: options.capturedMcpNonce });
   }
   let uiSeed:
     | {
@@ -576,9 +607,9 @@ export async function prepareDesktopBackendFixture(
     await prepareDesktopReviewLedger(root, uiSeed.taskId);
   }
   if (options.nativeReviewUi) await prepareNativeReviewWorkspace(root, options.nativeOpenCodeV2 ? 'opencode-v2' : 'claude');
-  if (options.stoppedImportUi)
+  if (options.stoppedImportUi && process.env.LEGACY_DESKTOP_DONOR_SAVED_ONLY !== '1' &&
+      process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH !== '1')
     await prepareDesktopStoppedImport(root, {
-      priorRun: process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1',
       node,
     });
   const profilePath = join(root, 'host-profile.json');
@@ -610,7 +641,7 @@ export async function prepareDesktopBackendFixture(
           ...(options.reviewUi || options.nativeReviewUi ? { reviewTransport: 'review-v1' } : {}),
           nodeExecutable: node,
           nodeVersion: options.candidateRuntime?.nodeVersion ??
-            (options.nativeOpenCodeV2 ? process.version : 'v24.21.0'),
+            (options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? process.version : 'v24.21.0'),
           nodeSha256,
           hostEntry,
           hostEntrySha256,
@@ -634,17 +665,18 @@ export async function prepareDesktopBackendFixture(
         },
       },
     ],
-    ...(options.nativeCodex || options.launchDialog || options.nativeOpenCodeV2
+    ...(options.nativeCodex || options.launchDialog || options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection
       ? {
           management: (options.nativeOpenCodeV2 ? [null, join(root, 'workspace')] : [null]).map(
             (projectPath) => ({
-              runtimeId: options.nativeOpenCodeV2 ? 'opencode' : options.launchDialog ? 'claude' : 'codex',
+              runtimeId: options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? 'opencode' : options.launchDialog ? 'claude' : 'codex',
               owner: ownerRef,
               contextId: 'local',
               projectPath,
-              profileId: options.nativeOpenCodeV2 ? 'TEST-opencode-v2-management' :
+              profileId: options.nativeOpenCodeSourceSelection ? 'TEST-opencode-source-management' :
+                options.nativeOpenCodeV2 ? 'TEST-opencode-v2-management' :
                 options.launchDialog ? 'TEST-claude-management' : 'TEST-codex-metadata',
-              configRevision: options.nativeOpenCodeV2 ? 'TEST-opencode-management' : options.launchDialog
+              configRevision: options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? 'TEST-opencode-management' : options.launchDialog
                 ? 'TEST-claude-management-config'
                 : 'TEST-codex-config',
             })
@@ -659,6 +691,7 @@ export async function prepareDesktopBackendFixture(
         label: 'TEST private backend',
         members: [
           { memberId: 'alice-id', label: 'alice' },
+          ...(options.capturedMcpNonce ? DESKTOP_MCP_MEMBERS.map(row => ({ memberId: row.memberId, label: row.name })) : []),
           ...(options.nativeGroupChats ? [{ memberId: 'bob-id', label: 'bob' }] : []),
           ...(options.taskBoardGroup
             ? [{ memberId: 'TEST-board-peer-id', label: 'board-peer' }]
@@ -677,13 +710,8 @@ export async function prepareDesktopBackendFixture(
   };
   const sentinelLog = join(root, 'sentinel-invocations.ndjson');
   // No inherited environment or user config. The sentinel can never run an agent.
-  const sentinelSource = `${desktopNodeScriptHeader(node)}import {appendFileSync} from 'node:fs';
-import {basename} from 'node:path';
-const args=process.argv.slice(2),allowed=${options.candidateRuntime ? 'false' : "args.length===1&&args[0]==='--version'"};
-appendFileSync(${JSON.stringify(sentinelLog)},JSON.stringify({executable:basename(process.argv[1]),allowed,argc:args.length,flags:args.filter(x=>x.startsWith('-')).map(x=>x.split('=')[0]).slice(0,16)})+'\\n',{mode:0o600});
-if(allowed){console.log(${JSON.stringify(lock.cliVersion + ' (TEST sentinel)')});process.exit(0)}
-process.stderr.write('TEST sentinel refuses native agent invocation\\n');process.exit(78);
-`;
+  const sentinelSource = desktopAgentSentinelSource(node, sentinelLog, lock.cliVersion,
+    options.candidateRuntime ? 'refused' : options.donorSavedOnly ? 'donor-saved-only' : 'metadata');
   for (const name of [
     'claude',
     'codex',
@@ -691,13 +719,14 @@ process.stderr.write('TEST sentinel refuses native agent invocation\\n');process
     'gemini',
     'claude-multimodel',
     'terminal-daemon',
-  ])
+  ].filter(name => !options.nativeOpenCodeSourceSelection || name !== 'opencode'))
     await writeFile(join(root, 'bin', name), sentinelSource, { mode: 0o700 });
   // cliPathMerge prefers this selected TEST vendor directory even before the
   // shell environment cache is warm; keep cold discovery behind the same guard.
   const vendorBin = join(root, 'claude/local/node_modules/.bin');
   await mkdir(vendorBin, { recursive: true, mode: 0o700 });
-  for (const name of ['claude', 'codex', 'opencode', 'gemini', 'claude-multimodel'])
+  for (const name of ['claude', 'codex', 'opencode', 'gemini', 'claude-multimodel']
+    .filter(name => !options.nativeOpenCodeSourceSelection || name !== 'opencode'))
     await writeFile(join(vendorBin, name), sentinelSource, { mode: 0o700 });
   // Startup's shell environment resolver may otherwise source login files and
   // replace the isolated PATH/HOME. This TEST executable performs no shell eval.
@@ -707,6 +736,7 @@ process.stderr.write('TEST sentinel refuses native agent invocation\\n');process
     root,
     node,
     hostEntry,
+    ...(linuxChildExec ? { linuxChildExec } : {}),
     handleId,
     sentinelLog,
     uiSeed,
@@ -729,54 +759,9 @@ process.stderr.write('TEST sentinel refuses native agent invocation\\n');process
     },
     descriptorPath,
     profilePath,
-    appEnvironment: desktopBackendEnvironment(root, node, descriptorPath, digest(descriptorBytes)),
+    appEnvironment: desktopRuntimeSourceEnvironment(
+      desktopBackendEnvironment(root, node, descriptorPath, digest(descriptorBytes), linuxChildExec), root, node,
+      options.nativeOpenCodeSourceSelection),
   };
 }
 
-export function desktopBackendEnvironment(
-  root: string,
-  node: string,
-  descriptorPath: string,
-  descriptorSha256: string
-) {
-  return {
-    HOME: join(root, 'home'),
-    TMPDIR: join(root, 'tmp'),
-    XDG_CONFIG_HOME: join(root, 'config'),
-    // Chromium's macOS GetHomeDir uses NSHomeDirectory, not getenv(HOME).
-    // Apple's CFPlatform.c prioritizes this override before the passwd home.
-    CFFIXED_USER_HOME: join(root, 'home'),
-    MAC_CHROMIUM_TMPDIR: join(root, 'tmp'),
-    XDG_DATA_HOME: join(root, 'data'),
-    XDG_CACHE_HOME: join(root, 'cache'),
-    PATH: `${join(root, 'bin')}:${dirname(node)}:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin`,
-    SHELL: join(root, 'bin/shell-env'),
-    NODE_ENV: 'development',
-    NO_COLOR: '1',
-    // A TEST HOME changes pnpm's store lookup. Report drift without installing
-    // into the frozen worktree; the harness verifies its selected archive bytes.
-    pnpm_config_verify_deps_before_run: 'warn',
-    TERM: 'dumb',
-    AGENT_TEAMS_ELECTRON_USER_DATA_DIR: join(root, 'userData'),
-    AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: join(root, 'claude'),
-    CLAUDE_ROOT: join(root, 'claude'),
-    CLAUDE_CONFIG_DIR: join(root, 'claude'),
-    CODEX_HOME: join(root, 'config/codex'),
-    OPENCODE_CONFIG_DIR: join(root, 'config/opencode'),
-    AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH: descriptorPath,
-    AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256: descriptorSha256,
-    CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: join(root, 'bin/claude-multimodel'),
-    CLAUDE_CLI_PATH: join(root, 'bin/claude'),
-    CODEX_CLI_PATH: join(root, 'bin/codex'),
-    OPENCODE_CLI_PATH: join(root, 'bin/opencode'),
-    CLAUDE_TERMINAL_DAEMON_BINARY: join(root, 'bin/terminal-daemon'),
-    CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: join(root, 'bin/opencode'),
-    OPENCODE_BIN_PATH: join(root, 'bin/opencode'),
-    CLAUDE_DEV_RUNTIME_DISABLE_GH: '1',
-    CLAUDE_DEV_RUNTIME_CACHE_ROOT: join(root, 'cache/runtime'),
-    NODE_BINARY: node,
-    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
-    DISABLE_AUTOUPDATER: '1',
-    DISABLE_TELEMETRY: '1',
-  };
-}

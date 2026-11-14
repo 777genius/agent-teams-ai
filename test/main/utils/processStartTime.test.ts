@@ -1,6 +1,9 @@
 // @vitest-environment node
 import { createProcessStartTimeCache, readProcessStartTimeMs } from '@main/utils/processStartTime';
 import * as childProcess from 'child_process';
+import { EventEmitter } from 'node:events';
+import { PassThrough } from 'node:stream';
+import * as launchSelection from '@main/utils/linuxChildLaunchSelection';
 import { afterEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 vi.mock('child_process', async (importOriginal) => {
@@ -8,6 +11,7 @@ vi.mock('child_process', async (importOriginal) => {
   return {
     ...actual,
     execFile: vi.fn(),
+    spawn: vi.fn(),
   };
 });
 
@@ -160,6 +164,27 @@ describe('processStartTime', () => {
     recordProbes({ error: new Error('spawn ps ETIMEDOUT') });
 
     await expect(readProcessStartTimeMs(4321, 'linux', 2_000)).resolves.toBeNull();
+
+    const selection = vi.spyOn(launchSelection, 'selectedLinuxChildExecutable').mockReturnValue('/TEST/helper');
+    const status = new PassThrough(), stdout = new PassThrough(), stderr = new PassThrough();
+    const allocated = Object.assign(new EventEmitter(), { pid: 901, stdout, stderr,
+      stdio: [null, stdout, stderr, status], kill: vi.fn() });
+    vi.mocked(childProcess.spawn).mockReturnValue(allocated as unknown as childProcess.ChildProcess);
+    try {
+      let finished = false;
+      const pending = readProcessStartTimeMs(4321, 'linux', 250);
+      void pending.then(() => { finished = true; });
+      const frame = Buffer.alloc(12);
+      frame.writeUInt32BE(0x41544c58, 0); frame[4] = 1; frame[5] = 3; frame.writeUInt32LE(2, 8);
+      status.end(frame); await new Promise<void>(resolve => setImmediate(resolve));
+      expect(finished).toBe(false);
+      expect(allocated.kill).toHaveBeenCalledOnce();
+      expect(childProcess.spawn).toHaveBeenCalledWith('/TEST/helper',
+        ['--linux-child-exec-v1', 'ps', 'ps', '-p', '4321', '-o', 'lstart='],
+        expect.objectContaining({ env: expect.objectContaining({ LC_ALL: 'C' }) }));
+      allocated.emit('close', 111, null);
+      await expect(pending).resolves.toBeNull();
+    } finally { selection.mockRestore(); }
   });
 
   it('refuses to build a Windows probe script from a pid that is not a positive integer', async () => {

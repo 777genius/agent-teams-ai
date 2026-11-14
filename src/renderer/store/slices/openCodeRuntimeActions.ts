@@ -94,7 +94,19 @@ export function createOpenCodeRuntimeActions(
     });
   };
   return {
-    applyOpenCodeRuntimeProgress: applyProgress,
+    applyOpenCodeRuntimeProgress: (status) =>
+      applyProgress(
+        installInFlight && status.state === 'ready'
+          ? {
+              ...status,
+              state: 'checking',
+              progress: {
+                phase: 'checking',
+                detail: 'Confirming the selected OpenCode runtime...',
+              },
+            }
+          : status
+      ),
     fetchOpenCodeRuntimeStatus: async () => {
       if (!api.openCodeRuntime) return;
       if (installInFlight) return installInFlight;
@@ -201,9 +213,11 @@ export function createOpenCodeRuntimeActions(
       installInFlight = request;
       return request;
     },
-    invalidateOpenCodeRuntimeStatus: async () => {
+    invalidateOpenCodeRuntimeStatus: async (mode) => {
       const current = invalidateReads();
-      await api.openCodeRuntime?.invalidateStatus();
+      await (mode === undefined
+        ? api.openCodeRuntime?.invalidateStatus()
+        : api.openCodeRuntime?.invalidateStatus(mode));
       if (current === revision && !installInFlight)
         set({ openCodeRuntimeStatus: null, openCodeRuntimeStatusLoading: false });
     },

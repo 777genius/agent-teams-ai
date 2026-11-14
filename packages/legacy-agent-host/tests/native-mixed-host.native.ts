@@ -31,6 +31,7 @@ import { fileHash, startHost, tick, treeHash } from './fixtures/native-host.ts';
 import { captureCodexNativeInputs } from './fixtures/codex-native-closure.ts';
 import { FileCheckpointStorage } from '../dist/adapters/runtime/FileCheckpointStorage.js';
 import { readdir } from 'node:fs/promises';
+import { captureInitialRuntimeModelAdmission, type InitialRuntimeModelAction } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 
 const digest = (bytes: string) => createHash('sha256').update(bytes).digest('hex');
@@ -128,6 +129,7 @@ test(
         `${name}/cache`,
         `${name}/workspace`,
       ]),
+      'carol/config/opencode',
     ])
       await mkdir(join(root, directory), { mode: 0o700 });
     const crossSourcePinsBefore = exerciseCrossTeam
@@ -378,6 +380,24 @@ stream_max_retries = 0
       },
     };
     if (crossModel) await addNativeCrossTeamTarget(profile, root, crossModel.url);
+    const initialLaunch = {
+      method: 'team.launch.start', teamId: scope.teamId, commandId: 'TEST-launch',
+      payload: {
+        configuration: {
+          members: [
+            {
+              memberId: 'alice-id',
+              model: 'claude-opus-4-6',
+              effort: 'medium',
+              fastMode: false,
+              permissions: 'bypass',
+              context: 'model-default',
+            },
+          ],
+        },
+      },
+    } satisfies InitialRuntimeModelAction;
+    profile.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(profile, initialLaunch)];
     const profilePath = join(root, 'profile.json');
     const profileBytes = JSON.stringify(profile);
     await writeFile(profilePath, profileBytes, { mode: 0o600 });
@@ -426,21 +446,10 @@ stream_max_retries = 0
       );
       const launched = await current.rpc(
         'team.launch.start',
-        envelope('TEST-launch', {
+        envelope(initialLaunch.commandId, {
           launchId: initial.launchId,
           rosterRevision: initial.rosterRevision,
-          configuration: {
-            members: [
-              {
-                memberId: 'alice-id',
-                model: 'claude-opus-4-6',
-                effort: 'medium',
-                fastMode: false,
-                permissions: 'bypass',
-                context: 'model-default',
-              },
-            ],
-          },
+          ...initialLaunch.payload,
         })
       );
       assert.equal(launched.ok, true);

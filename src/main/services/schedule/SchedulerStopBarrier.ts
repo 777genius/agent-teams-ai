@@ -5,11 +5,32 @@
 const STOP_DRAIN_TIMEOUT_MS = 15_000;
 
 export class SchedulerStopBarrier {
+  private readonly admissions = new Map<string, Set<{ current: boolean }>>();
   private readonly finalizations = new Set<Promise<void>>();
   private readonly retryDelays = new Set<{
     timer: ReturnType<typeof setTimeout>;
     finish: () => void;
   }>();
+
+  async withAdmission<T>(scheduleId: string, action: (isCurrent: () => boolean) => Promise<T>): Promise<T> {
+    const marker = { current: true };
+    let pending = this.admissions.get(scheduleId);
+    if (!pending) {
+      pending = new Set();
+      this.admissions.set(scheduleId, pending);
+    }
+    pending.add(marker);
+    try {
+      return await action(() => marker.current);
+    } finally {
+      pending.delete(marker);
+      if (pending.size === 0) this.admissions.delete(scheduleId);
+    }
+  }
+
+  cancelAdmissions(scheduleId: string): void {
+    for (const marker of this.admissions.get(scheduleId) ?? []) marker.current = false;
+  }
 
   beginFinalization(): () => void {
     let resolve!: () => void;

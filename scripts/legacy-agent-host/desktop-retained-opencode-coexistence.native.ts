@@ -53,6 +53,13 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
   execFileSync(process.execPath, ['agent-teams-controller/scripts/build.mjs'], { cwd: repo, timeout: 30_000 });
   execFileSync(process.execPath, ['node_modules/tsup/dist/cli-default.js'], { cwd: join(repo, 'mcp-server'), timeout: 60_000 });
   const node = await realpath(process.execPath);
+  if (process.env.OPENCODE_V1_UI_SOURCE_SELECTION_GO === '1' ||
+      process.env.OPENCODE_V2_UI_SOURCE_SELECTION_GO === '1') {
+    const { runDesktopRuntimeSourceSelection } = await import('./desktop-runtime-source-selection.ts');
+    await runDesktopRuntimeSourceSelection({ repo, sourceHead: head, build, node, receiptPath,
+      processBaseline, assertSource: source });
+    return;
+  }
   const v1 = await realpath(process.env.OPENCODE_V1_V2_RETAINED_BINARY!);
   const fork = await realpath(process.env.OPENCODE_V1_V2_RETAINED_RUNTIME!);
   const bun = await realpath(process.env.OPENCODE_V2_EMBEDDED_BUN!);
@@ -313,10 +320,14 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     steps.push({ observed: 'retained_legacy_fork_owner_before_new_Host_runtime', runId: retainedLaunch.runId, legacyProcesses });
     const selection = await host('team.launch.read', 'TEST-coexist-launch-read', {}); assert.equal(selection.ok, true);
     const launch = record(selection.value);
-    const started = await host('team.launch.start', 'TEST-coexist-launch-once', {
-      launchId: launch.launchId, rosterRevision: launch.rosterRevision,
-      configuration: { members: [{ memberId: 'alice-id', model: 'test-local/TEST-model', permissions: 'bypass' }] },
-    }); assert.equal(started.ok, true, JSON.stringify(started));
+    const preparation = model.armHostPreparation('TEST-coexist-launch-once');
+    try {
+      const started = await host('team.launch.start', 'TEST-coexist-launch-once', {
+        launchId: launch.launchId, rosterRevision: launch.rosterRevision,
+        configuration: { members: [{ memberId: 'alice-id', model: 'test-local/TEST-model', permissions: 'bypass' }] },
+      }); assert.equal(started.ok, true, JSON.stringify(started));
+      assert.equal(preparation.consumed, 1, 'the original Main launch performs exactly one Host preparation');
+    } finally { preparation.disarm(); }
     await waitFor(async () => { const value = await host('runtime.read', 'TEST-coexist-native-read', { memberId: 'alice-id' });
       assert.equal(value.ok, true); return record(value.value).nativeReady === true ? value : null;
     }, 'new actual Host V2 runtime ready', 90_000);

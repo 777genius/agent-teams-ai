@@ -27,6 +27,10 @@ import type {
   StoredManagementCommand,
 } from '../../management/commandRecords.js';
 
+const ordinaryReceiptBytes = 64 * 1024;
+// The source snapshot retains up to 256 original descriptor scopes; JSON string escaping can double it.
+const sourceReceiptBytes = 4 * 1024 * 1024 + ordinaryReceiptBytes;
+
 /** One profile writer lease owns these atomic, private receipts. No auth values or native URLs. */
 export class FileManagementCommandStore implements ManagementCommandStore {
   private readonly directory: string;
@@ -71,6 +75,11 @@ export class FileManagementCommandStore implements ManagementCommandStore {
     // A retained path must remain a valid receipt; never overwrite a symlink/corrupt record.
     this.read(body.commandId);
     const bytes = JSON.stringify({ ...body, digest: managementDigest(body) }, null, 2);
+    if (
+      Buffer.byteLength(bytes) >
+      (body.kind === 'runtime.source' ? sourceReceiptBytes : ordinaryReceiptBytes)
+    )
+      throw new ManagementCommandError('held');
     const temporary = join(this.directory, `.tmp-${randomUUID()}`);
     try {
       const fd = openSync(
@@ -138,9 +147,9 @@ export class FileManagementCommandStore implements ManagementCommandStore {
     try {
       fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
       const before = fstatSync(fd);
-      if (!before.isFile() || before.size > 64 * 1024 || (before.mode & 0o077) !== 0)
+      if (!before.isFile() || before.size > sourceReceiptBytes || (before.mode & 0o077) !== 0)
         throw new ManagementCommandError('held');
-      const buffer = Buffer.alloc(64 * 1024 + 1);
+      const buffer = Buffer.alloc(before.size + 1);
       let length = 0,
         count = 0;
       do {
@@ -148,12 +157,18 @@ export class FileManagementCommandStore implements ManagementCommandStore {
         length += count;
       } while (count && length < buffer.length);
       const after = fstatSync(fd);
-      if (length > 64 * 1024 || before.size !== after.size || before.mtimeMs !== after.mtimeMs)
+      if (
+        length > sourceReceiptBytes ||
+        before.size !== after.size ||
+        before.mtimeMs !== after.mtimeMs
+      )
         throw new ManagementCommandError('held');
       const raw = JSON.parse(
         new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, length))
       ) as Record<string, unknown>;
       const { digest, ...body } = raw;
+      if (body.kind !== 'runtime.source' && length > ordinaryReceiptBytes)
+        throw new ManagementCommandError('held');
       if (digest !== managementDigest(body)) throw new ManagementCommandError('held');
       return storedManagementCommandSchema.parse(body);
     } catch (error) {

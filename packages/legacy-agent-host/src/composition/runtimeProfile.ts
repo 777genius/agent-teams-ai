@@ -3,18 +3,16 @@ import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementa
 import { capturedMcpSourceSchema } from '../mcp-catalog/capturedSource.js';
 import { z } from 'zod';
 
-import { nativeProcessProfileSchema } from './nativeProcessProfile.js';
+import { nativeProcessProfileSchema, nativeProfilePathSchema } from './nativeProcessProfile.js';
 import { hasUntrustedOpenCodeBinaryOverride } from './openCodeV2Environment.js';
 import { isCanonicalOpenCodeV2Directory } from './openCodeV2StaticPreflight.js';
 import { openCodeV2EmbeddedProfileSchema } from './openCodeV2EmbeddedProfile.js';
 import { capturedMcpServersSchema } from '../mcp-catalog/capturedServer.js';
+import { openCodeManagedPreferencesSchema } from './openCodeManagedPreferences.js';
+import { initialRuntimeModelAdmissionSchema } from './initialRuntimeModelAdmission.js';
 
 const id = z.string().min(1).max(256);
-const path = z
-  .string()
-  .min(1)
-  .max(8192)
-  .refine((value) => value.startsWith('/'));
+const path = nativeProfilePathSchema;
 const boundedStrings = z.array(z.string().min(1).max(256)).max(256);
 
 const common = nativeProcessProfileSchema.extend({
@@ -110,7 +108,7 @@ const codex = common
       })
       .transform((value) => captureCodexConfiguredMcpCatalog(value))
       .optional(),
-    protocolRevision: z.literal('0.162.0'),
+    protocolRevision: z.enum(['0.162.0', '0.169.0']),
     // D passes this budget into pinned CodexAppServerClient.maxTextBytes (1 MiB ceiling).
     limits: common.shape.limits
       .extend({ outputBytes: z.number().int().min(1).max(1_048_576) })
@@ -137,9 +135,8 @@ const codex = common
   })
   .strict();
 
-// V2's native paths are OS-specific. Keep the historical POSIX-only V1
-// capture intact, but admit canonical Windows paths for a separately selected V2
-// engine; the common nativeProcessProfileSchema remains unchanged for others.
+// V2 additionally validates its captured engine selection. Every native path
+// stays in the current Host OS; Windows legacy launches require the private broker.
 const opencode = common
   .extend({
     cwd: z.string().min(1).max(8192),
@@ -152,6 +149,7 @@ const opencode = common
     protocolRevision: z.enum(['1.18.35', '1.19.4', '2.0.0', '2.0.21', '2.1.4']),
     nativeGeneration: z.literal('v2').optional(),
     embedded: openCodeV2EmbeddedProfileSchema.optional(),
+    managedPreferences: openCodeManagedPreferencesSchema.optional(),
     mcpPolicyPlugin: z
       .object({ path, sha256: z.string().regex(/^[a-f0-9]{64}$/) })
       .strict()
@@ -173,8 +171,8 @@ const opencode = common
           .max(256 * 1024),
       })
       .strict(),
-    // Validate HOME/XDG together with nativeGeneration below, not with the
-    // POSIX-only common path rule. Windows V2 cannot use a fake /cwd alias.
+    // Validate HOME/XDG together with nativeGeneration below. Windows cannot use
+    // a fake /cwd alias for either generation.
     environment: common.shape.environment,
     nativeOptions: z
       .object({
@@ -219,8 +217,16 @@ export const runtimeProfileSchema = z
     members: z.array(runtimeMemberProfileSchema).max(256),
     /** Explicit trusted defaults for fresh members/provider changes, never inferred from members. */
     providerTemplates: z.array(runtimeMemberProfileSchema).max(3).optional(),
+    /** Original native bootstrap intent, captured before this private profile is hashed. */
+    initialModelAdmissions: z.array(z.lazy(() => initialRuntimeModelAdmissionSchema)).max(256).optional(),
   })
   .strict()
+  .refine(value => {
+    const keys = value.initialModelAdmissions?.flatMap(row => row.targets.map(target =>
+      JSON.stringify([row.action.method, row.action.commandId, row.action.teamId, target.memberId]))) ?? [];
+    return new Set(keys).size === keys.length &&
+      Buffer.byteLength(JSON.stringify(value.initialModelAdmissions ?? [])) <= 256 * 1024;
+  }, 'Initial native admissions must be finite and unique')
   .refine((value) => value.members.length + (value.providerTemplates?.length ?? 0) > 0)
   .refine(
     (value) =>
@@ -237,9 +243,8 @@ export const runtimeProfileSchema = z
            member.embedded === undefined && !!member.nativeSessionId)) &&
           !hasUntrustedOpenCodeBinaryOverride(member.environment) &&
           member.mcpPolicyPlugin === undefined &&
-          member.capturedMcpServers === undefined &&
-          member.capturedMcpSource === undefined &&
-          member.mcpCatalogSource === undefined &&
+          (member.embedded !== undefined || (member.capturedMcpServers === undefined &&
+            member.capturedMcpSource === undefined && member.mcpCatalogSource === undefined)) &&
           (member.embedded !== undefined || member.nativeOptions.toolApprovalMode === undefined) &&
           (member.extraArgs?.length ?? 0) === 0
         : member.embedded === undefined &&

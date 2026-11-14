@@ -37,7 +37,7 @@ import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberAvatarMap, buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { getSuggestedSlashCommandsForProvider } from '@renderer/utils/providerSlashCommands';
-import { buildSlashCommandSuggestions } from '@renderer/utils/skillCommandSuggestions';
+import { buildCapturedSlashCommandSuggestions, buildSlashCommandSuggestions } from '@renderer/utils/skillCommandSuggestions';
 import {
   extractTaskRefsFromText,
   stripEncodedTaskReferenceMetadata,
@@ -450,12 +450,9 @@ const MemberMessageComposer = ({
       })),
     [members, colorMap]
   );
-  const leadProviderId = useMemo(() => {
-    const lead = members.find((member) => isLeadMember(member));
-    return (
-      normalizeOptionalTeamProviderId(lead?.providerId) ?? inferTeamProviderIdFromModel(lead?.model)
-    );
-  }, [members]);
+  const commandLead = useMemo(() => members.find(member => isLeadMember(member)), [members]);
+  const leadProviderId = normalizeOptionalTeamProviderId(commandLead?.providerId) ??
+    inferTeamProviderIdFromModel(commandLead?.model);
 
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName, {
     enabled: teamSuggestionDataEnabled,
@@ -479,21 +476,23 @@ const MemberMessageComposer = ({
 
   // Fetch the catalog only when slash suggestions are actually needed.
   useEffect(() => {
-    if (!slashCommandDataEnabled) return;
+    if (!slashCommandDataEnabled || commandLead?.runtimeOwner === 'captured-host') return;
     void fetchSkillsCatalog(projectPath ?? undefined);
-  }, [fetchSkillsCatalog, projectPath, slashCommandDataEnabled]);
+  }, [fetchSkillsCatalog, projectPath, slashCommandDataEnabled, commandLead?.runtimeOwner]);
 
   const slashCommandSuggestions = useMemo<MentionSuggestion[]>(
     () =>
-      slashCommandDataEnabled
-        ? buildSlashCommandSuggestions(
-            getSuggestedSlashCommandsForProvider(leadProviderId),
-            projectSkills,
-            userSkills,
-            leadProviderId
-          )
-        : EMPTY_MENTION_SUGGESTIONS,
-    [leadProviderId, projectSkills, slashCommandDataEnabled, userSkills]
+      commandLead?.runtimeOwner === 'captured-host'
+        ? buildCapturedSlashCommandSuggestions(commandLead.sessionCommands)
+        : slashCommandDataEnabled
+          ? buildSlashCommandSuggestions(
+              getSuggestedSlashCommandsForProvider(leadProviderId),
+              projectSkills,
+              userSkills,
+              leadProviderId
+            )
+          : EMPTY_MENTION_SUGGESTIONS,
+    [leadProviderId, projectSkills, slashCommandDataEnabled, userSkills, commandLead]
   );
 
   const trimmed = stripEncodedTaskReferenceMetadata(draft.text).trim();
@@ -587,6 +586,9 @@ const MemberMessageComposer = ({
           ? t('messageComposer.slash.restrictions.notLead')
           : !isTeamAlive
             ? t('messageComposer.slash.restrictions.leadOffline')
+            : selectedMember?.runtimeOwner === 'captured-host' &&
+              !selectedMember.sessionCommands?.some(command => command.name === standaloneSlashCommand.name)
+              ? t('modelSelector.unavailableInRuntime')
             : null
     : null;
   const canSend =
@@ -1134,6 +1136,7 @@ const MemberMessageComposer = ({
           maxLength={MAX_TEXT_LENGTH}
           hintText={crossTeamHintText}
           showHint={!isCompactLayout && composerFocus.isComposerFocused}
+          footerClassName={!isCompactLayout ? 'empty:flex' : undefined}
           cornerActionLeft={
             <ActionModeSelector
               value={actionMode}

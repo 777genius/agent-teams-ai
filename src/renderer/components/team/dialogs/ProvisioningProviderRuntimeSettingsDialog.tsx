@@ -5,6 +5,10 @@ import {
   getProviderTerminalCommand,
   getProviderTerminalLogoutCommand,
 } from '@renderer/components/runtime/providerTerminalCommands';
+import {
+  type NativeClaudeAuthenticationAction,
+  useProviderAuthenticationActions,
+} from '@renderer/components/runtime/useProviderAuthenticationActions';
 import { TerminalModal } from '@renderer/components/terminal/TerminalModal';
 import { useStore } from '@renderer/store';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
@@ -39,6 +43,8 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
   onProviderRuntimeChanged,
 }: ProvisioningProviderRuntimeSettingsDialogProps): React.JSX.Element | null => {
   const [providerTerminal, setProviderTerminal] = useState<ProviderTerminalState | null>(null);
+  const [nativeClaudeAuthAction, setNativeClaudeAuthAction] =
+    useState<NativeClaudeAuthenticationAction | null>(null);
   const {
     appConfig,
     bootstrapCliStatus,
@@ -72,6 +78,20 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
       updateConfig: s.updateConfig,
     }))
   );
+
+  const openNativeAuthentication = useCallback(
+    (providerId: CliProviderId, action: NativeClaudeAuthenticationAction) => {
+      setNativeClaudeAuthAction(action);
+      onOpenProviderIdChange(providerId);
+    },
+    [onOpenProviderIdChange]
+  );
+  const requestProviderAction = useProviderAuthenticationActions({
+    providers,
+    projectPath,
+    openNative: openNativeAuthentication,
+    openLegacy: setProviderTerminal,
+  });
 
   const selectedProviderId = useMemo<CliProviderId | null>(() => {
     if (!openProviderId || providers.length === 0) {
@@ -172,20 +192,22 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
         open={Boolean(openProviderId)}
         onOpenChange={(open) => {
           if (!open) {
+            setNativeClaudeAuthAction(null);
             onOpenProviderIdChange(null);
           }
         }}
+        nativeClaudeAuthAction={nativeClaudeAuthAction}
         providers={providers}
         projectPath={projectPath}
         initialProviderId={selectedProviderId}
         providerStatusLoading={cliProviderStatusLoading}
-        disabled={disabled || cliStatusLoading || !cliStatus?.binaryPath}
+        disabled={disabled || cliStatusLoading || !cliStatus?.installed}
         codexRuntimeStatus={codexRuntimeStatus}
         codexRuntimeStatusLoading={codexRuntimeStatusLoading}
         onInstallCodexRuntime={() => installCodexRuntime()}
         onSelectBackend={handleProviderBackendChange}
         onRefreshProvider={handleProviderRefresh}
-        onRequestLogin={(providerId) => setProviderTerminal({ providerId, action: 'login' })}
+        onRequestLogin={(providerId) => void requestProviderAction(providerId, 'login')}
       />
       {providerTerminal && cliStatus?.binaryPath && (
         <TerminalModal

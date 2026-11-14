@@ -1,5 +1,6 @@
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
+import { parseNativeSessionCommand } from '../team/nativeSessionCommand.js';
 import type { RuntimeBinding, RuntimeOwnerOptions } from '../runtime/contracts.js';
 import type { MemberEntry } from './MemberEntry.js';
 
@@ -18,6 +19,9 @@ export function createTeamContextPreparation(options: {
   return {
     prepareInput(binding, request) {
       const entry = entryFor(binding);
+      // Native slash parsing needs the command at byte zero. Captured system/MCP configuration
+      // remains installed; the durable team reminder is still pending for the next ordinary input.
+      if (parseNativeSessionCommand(request.originalContent)) return undefined;
       return entry.team.owner.contextReminders.prepare(options.principalId, {
         ...request,
         binding,

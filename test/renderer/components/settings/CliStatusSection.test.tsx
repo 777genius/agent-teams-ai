@@ -265,6 +265,8 @@ describe('Settings OpenCode project status', () => {
   });
 
   it('updates a V2 Test proof in the dialog without advertising a credential or team launch', async () => {
+    globalStatus = { ...globalStatus, binaryPath: null };
+    publish({ cliStatus: globalStatus });
     const status = provider('free');
     status.statusCheckOutcome = 'model_only';
     publishScope('/TEST/A', status);
@@ -278,6 +280,25 @@ describe('Settings OpenCode project status', () => {
       },
     });
     await act(async () => root.render(<CliStatusSection />));
+    expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith('opencode', {
+      silent: true,
+      checkReason: 'launch_preflight',
+      projectPath: '/TEST/A',
+    });
+    const manage = () =>
+      [...host.querySelectorAll<HTMLButtonElement>('button')].filter(
+        (button) => button.textContent === 'cliRuntime.actions.manage'
+      );
+    expect(manage()).toHaveLength(1);
+    expect(manage()[0]!.disabled).toBe(false);
+    await act(async () => manage()[0]!.click());
+    expect(mocks.dialog).toMatchObject({
+      open: true,
+      initialProviderId: 'opencode',
+      projectPath: '/TEST/A',
+      disabled: false,
+    });
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
     mocks.fetch.mockImplementation(
       async (_id: CliProviderId, options: CliProviderStatusFetchOptions) => {
         const verified = structuredClone(status);
@@ -298,6 +319,18 @@ describe('Settings OpenCode project status', () => {
     expect(displayed.capabilities.teamLaunch).toBe(false);
     expect(host.textContent).not.toContain('Connected via');
     expect(host.textContent).not.toContain('GLOBAL');
+    await act(async () => publish({ cliStatusLoading: true }));
+    expect(manage()[0]!.disabled).toBe(true);
+    expect(mocks.dialog!.disabled).toBe(true);
+    await act(async () =>
+      publish({ cliStatusLoading: false, cliStatus: { ...globalStatus, installed: false } })
+    );
+    expect(manage()).toHaveLength(0);
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+    expect(mocks.fetch).toHaveBeenLastCalledWith('opencode', {
+      checkReason: 'provider_change',
+      projectPath: '/TEST/A',
+    });
   });
 
   it('masks unknown project B and ignores a late update for project A', async () => {

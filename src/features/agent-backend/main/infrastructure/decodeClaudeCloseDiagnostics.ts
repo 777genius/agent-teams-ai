@@ -12,6 +12,15 @@ const stages = new Set([
   'capture-close-completed',
   'capture-close-error',
 ]);
+const metadataPrefix = 'legacy-agent-host: opencode-metadata ';
+export interface OpenCodeMetadataDiagnostic {
+  readonly profileHash: string;
+  readonly mode: 'directory' | 'provider';
+  readonly providerHash: string | null;
+  readonly pid: number;
+  readonly startIdentity: string;
+  readonly stage: 'ready' | 'released' | 'cleanup-unknown';
+}
 const managementPrefix = 'legacy-agent-host: claude-management ';
 const managementStages = new Set([
   'auth-cleanup',
@@ -81,13 +90,37 @@ const safeId = (value: unknown): value is string =>
 /** Private stderr is untrusted: discard everything except this bounded, fixed record shape. */
 export function decodeClaudeCloseDiagnostics(
   retain: (value: ClaudeCloseDiagnostic) => void | Promise<void>,
-  retainManagement?: (value: ClaudeManagementDiagnostic) => void | Promise<void>
+  retainManagement?: (value: ClaudeManagementDiagnostic) => void | Promise<void>,
+  retainMetadata?: (value: OpenCodeMetadataDiagnostic) => void | Promise<void>
 ): (chunk: Buffer) => void {
   let pending = Buffer.alloc(0);
   let discard = false;
   const emit = (line: Buffer): void => {
     try {
       const text = new TextDecoder('utf-8', { fatal: true }).decode(line);
+      if (text.startsWith(metadataPrefix)) {
+        if (!retainMetadata) return;
+        const value: unknown = JSON.parse(text.slice(metadataPrefix.length));
+        if (
+          !exact(value, ['profileHash', 'mode', 'providerHash', 'pid', 'startIdentity', 'stage']) ||
+          !hash(value.profileHash) ||
+          !(value.mode === 'directory' || value.mode === 'provider') ||
+          !(value.providerHash === null || hash(value.providerHash)) ||
+          ((value.mode === 'directory') !== (value.providerHash === null)) ||
+          typeof value.pid !== 'number' || !Number.isSafeInteger(value.pid) || value.pid <= 1 ||
+          !safeId(value.startIdentity) ||
+          !(value.stage === 'ready' || value.stage === 'released' || value.stage === 'cleanup-unknown')
+        )
+          return;
+        const diagnostic: OpenCodeMetadataDiagnostic = Object.freeze({
+          profileHash: value.profileHash, mode: value.mode, providerHash: value.providerHash,
+          pid: value.pid, startIdentity: value.startIdentity, stage: value.stage,
+        });
+        void Promise.resolve(retainMetadata(diagnostic)).catch(() => {
+          /* A private observation never changes transport or cleanup outcomes. */
+        });
+        return;
+      }
       if (text.startsWith(managementPrefix)) {
         if (!retainManagement) return;
         const value: unknown = JSON.parse(text.slice(managementPrefix.length));

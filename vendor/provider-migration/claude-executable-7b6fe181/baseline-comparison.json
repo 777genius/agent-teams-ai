@@ -1,0 +1,19 @@
+{
+  "provider-implementations": {
+    "oldSha256": "9ec9000471ce7beb1d8e2501f361a5d4d9d9c25465dacf99bda506105d1eb739",
+    "newSha256": "c035a09d5b6795e5f440b0d5ffef52d23604f31618232a36356c7133f63b11e6",
+    "changed": [
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.js"
+    ],
+    "added": [],
+    "removed": []
+  },
+  "provider-session-contracts": {
+    "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+    "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+    "changed": [],
+    "added": [],
+    "removed": []
+  }
+}

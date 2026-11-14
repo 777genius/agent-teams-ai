@@ -1,4 +1,5 @@
 import { validateNativeLaunchAdditions } from '../../team-launch/nativeLaunchAddition.js';
+import { validateLaunchRecord } from '../../team-launch/validateLaunchRecord.js';
 import { validateMemberSelectionChain } from '../../team-launch/memberActions.js';
 import type { ActionLaunchRecord } from '../../team-launch/memberActions.js';
 import {
@@ -7,14 +8,15 @@ import {
 } from '../../runtime/identity.js';
 import { TeamOwnerError } from '../../team/contracts.js';
 import { validateRestoreJournal } from '../../team-launch/validateRestoreJournal.js';
-import { validateLaunchPreparation } from '../../team-launch/launchPreparation.js';
+import { validateLiveLaunchPreparation, liveRosterSegment, liveRosterMemberBlocked,
+  liveRosterValidationRecord } from '../../team-launch/liveRosterMembership.js';
 import type { RuntimeMemberBinding } from '../../team/contracts.js';
 import type {
   TeamRuntimeBindings,
   TeamRuntimeSelection,
   TeamStore,
 } from '../../team/ports.js';
-import type { TeamLaunchRecord } from '../../team-launch/contracts.js';
+import type { ExpectedLaunchMember, LaunchAttempt, TeamLaunchRecord } from '../../team-launch/contracts.js';
 
 /** Read-only projection of the one authoritative launch record, never a second registry. */
 export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
@@ -35,7 +37,7 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
       validateNativeLaunchAdditions(row);
       validateRestoreJournal(row);
       validateMemberSelectionChain(row as ActionLaunchRecord);
-      validateLaunchPreparation(row);
+      validateLiveLaunchPreparation(row);
     } catch {
       throw new TeamOwnerError('hold');
     }
@@ -49,16 +51,28 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
       value.memberId === initial.memberId
     );
   }
-  current(initial: RuntimeMemberBinding): TeamRuntimeSelection | undefined {
+  current(initial: RuntimeMemberBinding, checkpointRef?: string): TeamRuntimeSelection | undefined {
     const row = this.read(initial);
-    if (!row) return undefined;
-    const member = row.definition.members.find((value) => value.memberId === initial.memberId);
+    if (!row) {
+      if (checkpointRef !== undefined) throw new TeamOwnerError('hold');
+      return undefined;
+    }
+    // Team may have published this exact delivery immediately before launch selection.
+    // Its captured metadata permits the original authority read, never work or a checkpoint.
+    const pending = (row.liveMembership ?? []).filter(value =>
+      ['captured', 'held'].includes(value.phase) && value.selected?.binding &&
+      runtimeDigest(value.selected.binding) === runtimeDigest(normalizeBinding(initial)));
+    if (pending.length > 1 || pending.length && checkpointRef !== undefined)
+      throw new TeamOwnerError('hold');
+    const segment = pending.length === 1 ? { member: pending[0]!.selected!, current: false }
+      : liveRosterSegment(row, normalizeBinding(initial));
+    const member = segment?.member ?? row.definition.members.find((value) => value.memberId === initial.memberId);
     if (!member?.binding || !this.sameMember(initial, member.binding))
       throw new TeamOwnerError('hold');
     // Predecessor records did not contain a numeric runtime generation. They may
     // describe their original selection, but cannot introduce a replacement.
     if (member.runtimeGeneration === undefined) {
-      if (runtimeDigest(member.binding) !== runtimeDigest(initial))
+      if (checkpointRef !== undefined || runtimeDigest(member.binding) !== runtimeDigest(initial))
         throw new TeamOwnerError('hold');
       return undefined;
     }
@@ -106,12 +120,13 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
         member.restore.commandId.length > 256)
     )
       throw new TeamOwnerError('hold');
-    const prepared = row.preparation?.members.find((item) => item.memberId === member.memberId);
+    const prepared = row.preparation?.members.find((item) => item.memberId === member.memberId &&
+      item.baseConfigurationDigest === member.baseConfigurationDigest && item.configRevision === member.configRevision);
     return structuredClone({
       binding,
       skipped: member.skipped,
       workAllowed:
-        !member.skipped &&
+        !member.skipped && segment?.current !== false && !liveRosterMemberBlocked(row, member.memberId) &&
         !actions.some(
           (a) =>
             a.input.memberId === member.memberId &&
@@ -122,7 +137,106 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
       baseConfigurationDigest: member.baseConfigurationDigest!,
       ...(prepared ? { configuration: prepared.configuration } : {}),
       ...(member.restore ? { restore: member.restore } : {}),
+      ...(checkpointRef === undefined ? {} : {
+        checkpointSource: this.checkpointSource(row, member, binding, checkpointRef),
+      }),
     });
+  }
+  private checkpointSource(
+    row: TeamLaunchRecord,
+    member: ExpectedLaunchMember,
+    binding: RuntimeMemberBinding,
+    reference: string
+  ): NonNullable<TeamRuntimeSelection['checkpointSource']> {
+    try {
+      validateLaunchRecord(liveRosterValidationRecord(row), row.fingerprint, row.definition.members.length);
+      const restore = member.restore;
+      if (!restore || restore.reference !== reference || !/^cp1-[a-f0-9]{64}$/.test(reference))
+        throw new Error();
+      const matches = (row.restorations ?? []).filter(item =>
+        item.commandId === restore.commandId && item.member.memberId === member.memberId &&
+        item.member.restore?.reference === reference &&
+        runtimeDigest(item.member.binding) === runtimeDigest(binding));
+      if (matches.length !== 1 ||
+          runtimeDigest(matches[0]!.member.restore) !== runtimeDigest(restore))
+        throw new Error();
+      const selected = matches[0]!.member;
+      if (selected.baseConfigurationDigest !== member.baseConfigurationDigest ||
+          selected.configurationDigest !== member.configurationDigest)
+        throw new Error();
+      const sourceBinding = normalizeBinding(restore.sourceBinding);
+      const attempts = row.members.find(item => item.memberId === member.memberId)!.attempts;
+      const targetIndex = attempts.findIndex(item =>
+        item.attemptId === 'restore-' + runtimeDigest(restore.commandId));
+      if (targetIndex < 1) throw new Error();
+      this.validateHistoricalAttempt(attempts[targetIndex]!);
+      // selectRestore appends the target and its row atomically. Its immediate predecessor
+      // was the source's current attempt; a shared Host nonce alone is not that proof.
+      let sourceIndex = targetIndex - 1;
+      let source = attempts[sourceIndex]!;
+      for (let traversed = 0; traversed < attempts.length; traversed++) {
+        this.validateHistoricalAttempt(source);
+        const skips = (row.memberActions ?? []).filter(action =>
+          action.phase === 'selected' && action.input.action === 'skip' &&
+          action.input.memberId === member.memberId &&
+          source.attemptId === 'action-' + runtimeDigest(action.input.commandId));
+        if (!skips.length) break;
+        if (skips.length !== 1 || source.claimed ||
+            runtimeDigest(skips[0]!.source.binding) !== runtimeDigest(sourceBinding) ||
+            runtimeDigest(skips[0]!.selected.binding) !== runtimeDigest(sourceBinding))
+          throw new Error();
+        const previous = attempts.findIndex(item => item.attemptId === skips[0]!.sourceAttemptId);
+        if (previous < 0 || previous >= sourceIndex) throw new Error();
+        sourceIndex = previous;
+        source = attempts[sourceIndex]!;
+      }
+      if (!source.claimed || source.noAllocation || !source.hostIncarnation) throw new Error();
+      // Reuse original effective digests only where the retained journal actually stored them.
+      const selections = [
+        ...(row.restorations ?? []).map(item => item.member),
+        ...(row.memberActions ?? []).flatMap(item => [item.source, item.selected]),
+        ...(row.nativeAdditions ?? []).map(item => item.member),
+        ...(row.liveMembership ?? []).flatMap(item =>
+          [item.intent.source, item.selected].filter((value): value is ExpectedLaunchMember => value != null)),
+      ].filter(item => item.memberId === member.memberId &&
+        runtimeDigest(item.binding) === runtimeDigest(sourceBinding));
+      if (selections.some(item =>
+        item.baseConfigurationDigest !== selected.baseConfigurationDigest ||
+        item.configRevision !== selected.configRevision ||
+        !/^[a-f0-9]{64}$/.test(item.configurationDigest ?? '') ||
+        !Number.isSafeInteger(item.runtimeGeneration) || item.runtimeGeneration! < 0))
+        throw new Error();
+      const digests = new Set(selections.map(item => item.configurationDigest!));
+      const generations = new Set(selections.map(item => item.runtimeGeneration!));
+      if (digests.size > 1 || generations.size > 1) throw new Error();
+      const prepared = row.preparation?.members.find(item => item.memberId === member.memberId &&
+        item.baseConfigurationDigest === selected.baseConfigurationDigest && item.configRevision === selected.configRevision);
+      const configurationDigest = selections[0]?.configurationDigest ?? prepared?.configurationDigest;
+      const generation = selections[0]?.runtimeGeneration;
+      return {
+        commandId: restore.commandId, reference, sourceBinding,
+        attemptId: source.attemptId, hostIncarnation: source.hostIncarnation,
+        baseConfigurationDigest: selected.baseConfigurationDigest!,
+        ...(configurationDigest === undefined ? {} : { configurationDigest }),
+        ...(generation === undefined ? {} : { generation }),
+      };
+    } catch {
+      throw new TeamOwnerError('hold');
+    }
+  }
+  private validateHistoricalAttempt(attempt: LaunchAttempt): void {
+    if (!attempt || typeof attempt.attemptId !== 'string' || !attempt.attemptId ||
+        attempt.attemptId.length > 256 || typeof attempt.hostIncarnation !== 'string' ||
+        !attempt.hostIncarnation || attempt.hostIncarnation.length > 256 ||
+        !['not-started', 'pending-bootstrap', 'pending-human', 'ready', 'failed', 'unknown', 'skipped']
+          .includes(attempt.status) ||
+        ['claimed', 'nativeReady', 'contextApplied', 'everReady', 'usable', 'controlAvailable', 'noAllocation']
+          .some(key => typeof attempt[key as 'claimed'] !== 'boolean') ||
+        !Number.isSafeInteger(attempt.startedAtMs) || attempt.startedAtMs < 0 ||
+        !Number.isSafeInteger(attempt.deadlineMs) || attempt.deadlineMs < attempt.startedAtMs ||
+        attempt.deadlineMs > 8_640_000_000_000_000 ||
+        typeof attempt.reason !== 'string' || attempt.reason.length > 128)
+      throw new Error();
   }
   retained(initial: RuntimeMemberBinding, binding: RuntimeMemberBinding): boolean {
     if (!this.sameMember(initial, binding)) return false;
@@ -136,7 +250,10 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
           item.member.memberId === initial.memberId &&
           item.member.restore &&
           runtimeDigest(item.member.restore.sourceBinding) === runtimeDigest(binding)
-      )
+      ) ||
+      !!row?.liveMembership?.some(item => ['selected', 'removed', 'compensated'].includes(item.phase) &&
+        [item.intent.source?.binding, item.selected?.binding].some(value =>
+          value != null && runtimeDigest(normalizeBinding(value)) === runtimeDigest(normalizeBinding(binding))))
     );
   }
 }

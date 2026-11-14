@@ -23,7 +23,7 @@ export function verifyNativeV1VersionReceipt(
     'kind', 'sourceHead', 'platform', 'status', 'cleanup', 'selectedCliVersion', 'nativeVersion',
     'nativeDigest', 'nativeIntegrity', 'wireProtocolRevision', 'nodeVersion', 'nodeDigest',
     'providerDigest', 'hostSourceDigest', 'hostDistDigest', 'steps', 'hosts', 'modelOrigin',
-    'modelRequests', 'vendorAuthQualified', 'desktopQualified', 'releaseQualified',
+    'modelRequests', 'coordination', 'preferencesSelection', 'vendorAuthQualified', 'desktopQualified', 'releaseQualified',
     ...(expectedUpdate ? ['managedUpdate'] : []),
   ];
   assert.deepEqual(Object.keys(r).sort(), keys.sort(), 'no missing proof or extra private diagnostics');
@@ -54,6 +54,10 @@ export function verifyNativeV1VersionReceipt(
   ]);
   assert.equal(r.modelOrigin, 'localhost-scripted');
   assert.equal(r.modelRequests, 8);
+  assert.deepEqual(r.coordination, { status: 'unqualified', cleanup: null });
+  assert.deepEqual(r.preferencesSelection, {
+    defaultModelId: 'TEST-local/TEST-model-B', contextTokens: 64000, outputTokens: 1024,
+  });
   assert.equal(r.vendorAuthQualified, false);
   assert.equal(r.desktopQualified, false);
   assert.equal(r.releaseQualified, false);

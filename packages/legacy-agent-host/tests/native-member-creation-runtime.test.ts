@@ -5,6 +5,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { RuntimeTeamCoordinator } from '../dist/composition/RuntimeTeamCoordinator.js';
+import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
+import { preflightNativeMemberModel } from '../dist/composition/preflightNativeMemberModel.js';
+import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
+import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
+import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { normalizeBinding } from '../dist/runtime/identity.js';
@@ -21,10 +26,12 @@ import type { MemberProviderContext } from '../dist/adapters/providers/MemberPro
 import type { OwnerState } from '../dist/team/ownerState.js';
 import type { TeamLaunchRecord } from '../dist/team-launch/contracts.js';
 import type { NativeMemberModelPreflight } from '../dist/composition/createRuntimeNativeMemberCreation.js';
+import type { ProviderManagementProfile } from '../dist/management/profile.js';
 
 class ControlledSession implements Session {
   readonly sessionRef: string;
   readonly submits: Input[] = [];
+  closed = false;
   private done = false;
   private waiting: ((r: IteratorResult<Event>) => void) | undefined;
   constructor(id: string) {
@@ -69,6 +76,7 @@ class ControlledSession implements Session {
     value: undefined,
   });
   close: Session['close'] = async () => {
+    this.closed = true;
     this.done = true;
     this.waiting?.({ done: true, value: undefined });
     return { logicallyClosed: true, cleanup: 'confirmed' };
@@ -250,11 +258,34 @@ async function fixture(
   const contexts: MemberProviderContext[] = [],
     sessions: ControlledSession[] = [];
   let probe = 0;
+  const probeStore = new FileManagementCommandStore(root);
+  const targets = new ProviderManagementCoordinator([], () => {}, root);
+  const selectedProfiles = new Map<string, ProviderManagementProfile>();
+  const probeAdmissions: { opens: number; closed: number }[] = [];
+  const probes = new ModelProbeOwner({ store: probeStore,
+    fence: new ManagementResourceFence(probeStore.list()), assertWriter() {},
+    select(profileId, configRevision) {
+      const selected = selectedProfiles.get(profileId);
+      assert.ok(selected?.provider === 'opencode' && selected.configRevision === configRevision);
+      return targets.readinessTarget(selected);
+    },
+    prepare() { return { timeoutMs: 90000,
+      async run() { probeAdmissions.push({ opens: contexts.length, closed: sessions.filter(row => row.closed).length }); return true; },
+      async close() { return true; } }; },
+  });
+  const modelReadiness = { probes,
+    admitTeamProbeProfile(selected: ProviderManagementProfile) {
+      selectedProfiles.set(selected.profileId, structuredClone(selected));
+      targets.admitTeamProbeProfile(selected);
+    },
+    readinessTarget: targets.readinessTarget.bind(targets),
+  };
   const store = new TeamOwnerStore(root, binding.teamName);
   let path = `launches/${runtimeDigest('TEST-run')}.json`;
   const create = () =>
     new RuntimeTeamCoordinator({
       profile,
+      modelReadiness,
       teams: new Map([[binding.teamId, team]]),
       assertWriter() {},
       nativeMemberModelPreflight: async (input) => {
@@ -270,6 +301,8 @@ async function fixture(
         assert.ok(store.read<OwnerState>('state.json')!.members.at(-1)?.delivery);
         await preflight?.(input);
         input.assertCurrent();
+        if (input.profile.provider === 'opencode')
+          return preflightNativeMemberModel({ ...input, management: modelReadiness });
       },
       createProvider(context) {
         contexts.push(context);
@@ -302,6 +335,8 @@ async function fixture(
   coordinator = create();
   t.after(async () => {
     await coordinator.close();
+    await probes.close();
+    await targets.close();
     rmSync(root, { recursive: true, force: true });
   });
   if (!crossProviderMcp) {
@@ -358,6 +393,8 @@ async function fixture(
     tool,
     input,
     profile,
+    probeStore,
+    probeAdmissions,
     probe: () => probe,
     coordinator: () => coordinator,
     async cold() {
@@ -559,6 +596,30 @@ test('cross-provider creation inherits original lead A and original locator; tar
     'lead native catalog must never become target native census'
   );
   assert.equal(ambientReads, 0);
+  const original = f.store.read<TeamLaunchRecord>(f.path)!;
+  const consumer = original.readiness?.consumers.find(row => row.memberId === target.memberId);
+  assert.equal(consumer?.disposition, 'consumed', 'actual native Create factory consumes its original ordinary receipt');
+  const sourceProbe = f.probeStore.read(consumer!.groupCommandId!);
+  assert.ok(sourceProbe?.kind === 'model.probe');
+  assert.equal(sourceProbe.purpose, undefined, 'Host-only native Create does not acquire Main-local authority');
+  assert.equal(sourceProbe.localModelReadinessOrigin, undefined);
+  assert.equal(sourceProbe.readinessScope?.kind, 'native');
+  assert.deepEqual(f.probeAdmissions, [{ opens: 2, closed: 0 }]);
+  const restart = { commandId: 'TEST-native-created-restart', launchId: original.definition.launchId,
+    rosterRevision: original.definition.rosterRevision, memberId: target.memberId,
+    expectedGeneration: f.contexts[2]!.endpoint.binding.generation, action: 'restart' };
+  await f.tool.callAsync('team_member_action_prepare', restart);
+  assert.equal(f.probeAdmissions.length, 1, 'prepare is metadata only');
+  await f.tool.callAsync('team_member_action_execute', restart);
+  assert.deepEqual(f.probeAdmissions, [{ opens: 2, closed: 0 }, { opens: 3, closed: 1 }],
+    'same-target native Restart prepares only after original physical closure and before the successor factory');
+  assert.equal(f.contexts.length, 4);
+  assert.equal(f.sessions[2]!.closed, true);
+  await f.tool.callAsync('team_member_action_execute', restart);
+  assert.equal(f.probeAdmissions.length, 2, 'same-ID replay never renews the original action proof');
+  assert.equal(f.contexts.length, 4);
+  const retained = f.store.read<TeamLaunchRecord>(f.path)!;
+  assert.equal(retained.readiness?.consumers.find(row => row.actionId === restart.commandId)?.disposition, 'consumed');
 });
 
 test('lead MCP source changing A to C during native model preflight holds before target allocation, preserving original A in its receipt', async (t) => {

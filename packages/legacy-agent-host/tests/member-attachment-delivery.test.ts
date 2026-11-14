@@ -496,6 +496,14 @@ test('native attachment capability projection requires the exact attached curren
     textFiles: false,
     privatePath: '/TEST-private-capability-path',
   };
+  const { claudeSessionCommands } = await import('../dist/adapters/providers/claudeSessionCommands.js');
+  const nativeReview = { name: 'code-review', description: 'TEST native fork description', argumentHint: 'TEST native flags',
+    builtin: true as const, aliases: ['review'], compatibility: { invocation: 'review' as const,
+      execution: 'legacy-inline-review-v1' as const, description: 'Review a pull request in the current conversation.', argumentHint: '[pr number]' } };
+  const review = claudeSessionCommands([nativeReview]);
+  assert.deepEqual(review, [{ name: 'review', description: nativeReview.compatibility.description }]);
+  assert.deepEqual(claudeSessionCommands([nativeReview, { name: 'review', description: 'TEST exact custom review', argumentHint: '<file>' }]),
+    [{ name: 'review', description: 'TEST exact custom review' }], 'exact custom precedence does not inherit builtin compatibility');
   entry.provider = {
     factory: {
       async open() {
@@ -506,6 +514,7 @@ test('native attachment capability projection requires the exact attached curren
     seal() {},
     cleanup: async () => true,
     attachmentCapabilities: capabilities,
+    sessionCommands: () => [{ name: 'cost', description: 'TEST native cost', privatePath: '/TEST-private-command-path' }, ...review],
   };
   const options = {
     entry,
@@ -523,6 +532,9 @@ test('native attachment capability projection requires the exact attached curren
     textFiles: false,
   });
   assert.equal(JSON.stringify(positive).includes('TEST-private-capability-path'), false);
+  assert.deepEqual(positive.sessionCommands, [{ name: 'cost', description: 'TEST native cost' }, ...review]);
+  assert.equal(JSON.stringify(positive).includes('TEST-private-command-path'), false);
+  assert.equal(JSON.stringify(positive).includes('legacy-inline-review-v1'), false, 'only existing public name/description leave the adapter');
   assert.doesNotThrow(() => assertSafeRuntimeProjection(positive));
   for (const overridden of [
     { isCurrent: () => false },
@@ -535,11 +547,13 @@ test('native attachment capability projection requires the exact attached curren
     const projection = projectRuntimeMember({ ...options, ...overridden });
     assert.ok(projection && typeof projection === 'object' && !Array.isArray(projection));
     assert.equal(projection.attachmentCapabilities, undefined);
+    assert.equal(projection.sessionCommands, undefined);
   }
   ready = false;
   const stopped = projectRuntimeMember(options);
   assert.ok(stopped && typeof stopped === 'object' && !Array.isArray(stopped));
   assert.equal(stopped.attachmentCapabilities, undefined);
+  assert.equal(stopped.sessionCommands, undefined);
 });
 
 test('native Host fixture admits only exact boolean attachment capability projections', () => {
@@ -571,4 +585,11 @@ test('native Host fixture admits only exact boolean attachment capability projec
     ...safe, inputs: [{ inputId: 'TEST-input', operationRef: 'TEST-private' }],
   }));
   assert.throws(() => assertSafeRuntimeProjection({ ...safe, diagnostic: 'Bearer TEST-private' }));
+  assert.doesNotThrow(() => assertSafeRuntimeProjection({ ...safe, sessionCommands: [] }));
+  assert.throws(() => assertSafeRuntimeProjection({ ...safe,
+    sessionCommands: [{ name: 'cost', description: 'TEST cost', nativePath: '/TEST-private' }],
+  }));
+  assert.throws(() => assertSafeRuntimeProjection({ ...safe,
+    sessionCommands: [{ name: 'cost', description: 'TEST cost' }, { name: 'cost', description: 'duplicate' }],
+  }));
 });

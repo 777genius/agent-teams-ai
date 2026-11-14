@@ -27,6 +27,7 @@ import type {
   OpenCodeRuntimeDeliveryStatus,
   SendMessageResult,
   TeamCreateRequest,
+  TeamCreateResponse,
   TeamLaunchRequest,
   TeamProviderId,
   TeamProvisioningProgress,
@@ -8061,6 +8062,12 @@ describe('ipc teams handlers', () => {
           ],
         });
 
+        const response: TeamCreateResponse = {
+          runId: 'run-unconfirmed',
+          teamName: 'draft-team',
+          launchStatus: 'unconfirmed',
+        };
+        teamHandlerMocks.createTeam.mockResolvedValueOnce(response);
         const handler = handlers.get(TEAM_LAUNCH)!;
         const result = (await handler({ sender: { send: vi.fn() } } as never, {
           teamName: 'draft-team',
@@ -8068,9 +8075,10 @@ describe('ipc teams handlers', () => {
           effort: 'high',
         })) as { success: boolean };
 
-        expect(result.success).toBe(true);
+        expect(result).toEqual({ success: true, data: response });
         expect(computeTeamWatchScope()?.has('draft-team')).toBe(true);
         expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+        expect(teamHandlerMocks.createTeam).toHaveBeenCalledTimes(1);
         expect(teamHandlerMocks.createTeam).toHaveBeenCalledWith(
           {
             teamName: 'draft-team',

@@ -115,6 +115,8 @@ try { await runOpenCodeV2EmbeddedHostNative(scenario, cancellation.signal); }
 finally { process.stdin.pause(); }`,
   resolveDir: repo, sourcefile: 'TEST-packaged-v2-host-entry.ts', loader: 'ts',
 }, bundle: true, platform: 'node', format: 'esm', target: 'node24', outfile: harness,
+  // Bundle this package's official ESM entry; its UMD wrapper keeps a dynamic relative require.
+  alias: { 'jsonc-parser': require.resolve('jsonc-parser/lib/esm/main.js') },
   sourcemap: false, logLevel: 'warning' });
 const manifest: PackagedOpenCodeV2Manifest = {
   schemaVersion: 1, kind: 'TEST_PACKAGED_OPENCODE_V2_INPUTS', sourceHead, platform,

@@ -6,9 +6,11 @@ import type {
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { ChildProcess } from 'node:child_process';
+import { WindowsCapturedProcess } from './WindowsCapturedProcess.js';
 
-import type { ChildProcess, ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { NativeProcessProfile } from '../../composition/nativeProcessProfile.js';
+import type { ObservableNativeProcess } from '../../owned-process/processFacade.js';
 
 /** Process custody needs native selection only, independent of a Team member/session. */
 export type CapturedProcessProfile = NativeProcessProfile & {
@@ -19,7 +21,7 @@ const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 20));
 
 /** Own only handles returned by this launch. A PID or an old record is never adopted. */
 export interface CapturedProcessPort {
-  launch(request: CapturedProcessLaunch): ChildProcessWithoutNullStreams;
+  launch(request: CapturedProcessLaunch): ObservableNativeProcess;
   captureRegisteredProcess?(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture;
   seal(): void;
   isRunning(): boolean;
@@ -61,6 +63,7 @@ export class CapturedProcess implements CapturedProcessPort {
   private readonly failed = new Set<ChildProcess>();
   private readonly retired = new Set<ChildProcess>();
   private readonly nativeTrees = new Map<ChildProcess, CapturedProcessTree>();
+  private readonly windows: WindowsCapturedProcess | undefined;
   private sealed = false;
 
   constructor(
@@ -70,8 +73,16 @@ export class CapturedProcess implements CapturedProcessPort {
     private readonly canCaptureRegisteredProcess: () => boolean = canAllocate,
     private readonly processTreeSource?: CapturedProcessTreeSource
   ) {
+    this.profile = { provider: profile.provider, cwd: profile.cwd,
+      environment: { ...profile.environment }, executable: { ...profile.executable },
+      ...(profile.windowsBroker ? { windowsBroker: { ...profile.windowsBroker } } : {}) };
     this.verifyExecutable();
     this.verifyDirectories();
+    this.windows = process.platform === 'win32' && !processTreeSource
+      ? new WindowsCapturedProcess(this.profile, () => !this.sealed && this.canAllocate(), () => {
+          this.verifyExecutable(); this.verifyDirectories();
+        })
+      : undefined;
   }
 
   private verifyDirectories(): void {
@@ -90,9 +101,10 @@ export class CapturedProcess implements CapturedProcessPort {
 
   seal(): void {
     this.sealed = true;
+    this.windows?.seal();
   }
 
-  readonly launch = (request: CapturedProcessLaunch): ChildProcessWithoutNullStreams => {
+  readonly launch = (request: CapturedProcessLaunch): ObservableNativeProcess => {
     if (
       this.sealed ||
       !this.canAllocate() ||
@@ -102,6 +114,7 @@ export class CapturedProcess implements CapturedProcessPort {
       throw new Error('Native launch unavailable');
     this.verifyExecutable();
     this.verifyDirectories();
+    if (this.windows) return this.windows.launch(request);
     const child = spawn(request.command, request.args, {
       cwd: this.profile.cwd,
       env: { ...this.profile.environment },
@@ -145,8 +158,8 @@ export class CapturedProcess implements CapturedProcessPort {
     return child;
   };
 
-  readNativeExecutable(child: ChildProcess): ReturnType<CapturedProcessTree['readExecutable']> {
-    if (this.sealed || !this.canCaptureRegisteredProcess() || !this.children.has(child) || this.exited(child))
+  readNativeExecutable(child: ObservableNativeProcess): ReturnType<CapturedProcessTree['readExecutable']> {
+    if (!(child instanceof ChildProcess) || this.sealed || !this.canCaptureRegisteredProcess() || !this.children.has(child) || this.exited(child))
       throw new Error('Native executable observation unavailable');
     const tree = this.nativeTrees.get(child);
     if (!tree) throw new Error('Native executable observation unavailable');
@@ -169,16 +182,19 @@ export class CapturedProcess implements CapturedProcessPort {
   }
 
   isRunning(): boolean {
+    if (this.windows) return this.windows.isRunning();
     return [...this.children].some((child) => child.pid !== undefined && !this.exited(child));
   }
 
   /** Read only the retained original tree; never issue another termination. */
   observeStopped(): boolean {
+    if (this.windows) return this.windows.observeStopped();
     return [...this.children].every((child) => this.exited(child) && !this.groupPresent(child));
   }
 
   async confirmStopped(): Promise<boolean> {
     this.seal();
+    if (this.windows) return this.windows.confirmStopped();
     if (await this.wait(1500)) return true;
     this.signal('SIGTERM');
     if (await this.wait(1000)) return true;

@@ -52,6 +52,14 @@
       "types": "./dist/runtime/contracts.d.ts",
       "import": "./dist/runtime/contracts.js"
     },
+    "./runtime-sources": {
+      "types": "./dist/composition/runtimeSourceContracts.d.ts",
+      "import": "./dist/composition/runtimeSourceContracts.js"
+    },
+    "./scheduled-runs": {
+      "types": "./dist/composition/scheduledRunContracts.d.ts",
+      "import": "./dist/composition/scheduledRunContracts.js"
+    },
     "./runtime/filesystem": {
       "types": "./dist/adapters/runtime/FileRuntimeStore.d.ts",
       "import": "./dist/adapters/runtime/FileRuntimeStore.js"
@@ -251,6 +259,10 @@
     "./group-chats/public-values": {
       "types": "./dist/group-chats/publicValues.d.ts",
       "import": "./dist/group-chats/publicValues.js"
+    },
+    "./owned-process": {
+      "types": "./dist/owned-process/index.d.ts",
+      "import": "./dist/owned-process/index.js"
     }
   },
   "bin": {
@@ -260,7 +272,7 @@
     "build": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
     "typecheck": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json --noEmit",
     "typecheck:test": "node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json",
-    "test": "pnpm build && pnpm typecheck:test && node --test tests/*.test.ts tests/fixtures/native-claude-team/model.test.ts tests/fixtures/native-opencode-team/model.test.ts tests/fixtures/native-codex-team/model.test.ts",
+    "test": "pnpm build && pnpm typecheck:test && node --test --test-concurrency=1 tests/*.test.ts tests/fixtures/native-claude-team/model.test.ts tests/fixtures/native-opencode-team/model.test.ts tests/fixtures/native-codex-team/model.test.ts",
     "test:native:claude": "node --test tests/native-claude-team.native.ts",
     "prebuild": "pnpm --filter @agent-teams/task-change-ledger build"
   },
@@ -269,7 +281,7 @@
     "@typescript/native": "npm:typescript@7.0.2"
   },
   "dependencies": {
-    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-implementations-0.0.0.tgz",
+    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/opencode-selected-file-key-421fee9/agent-teams-provider-implementations-0.0.0.tgz",
     "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz",
     "@modelcontextprotocol/sdk": "1.32.0",
     "agent-teams-controller": "workspace:*",

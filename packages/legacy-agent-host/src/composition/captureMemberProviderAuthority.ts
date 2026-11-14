@@ -11,10 +11,11 @@ export function captureMemberProviderAuthority(options: {
   profileId: string;
   hostIncarnation: string;
   assertAllocation?: () => void;
+  beforeTeamAuthority?: () => void;
   assertCurrent(): void;
   readRuntime(): { record: RuntimeSessionRecord | undefined; attached: boolean };
 }) {
-  const { entry } = options;
+  const { entry, beforeTeamAuthority } = options;
   const original = {
     team: entry.team,
     binding: runtimeDigest(entry.binding),
@@ -26,7 +27,7 @@ export function captureMemberProviderAuthority(options: {
     fingerprint: runtimeDigest({ profileId: options.profileId, config: options.request }),
   };
   // No Runtime lookup here: called inside Runtime/Team fences as well as native callbacks.
-  function assertCurrent() {
+  function assertCapturedCurrent() {
     options.assertCurrent();
     if (
       entry.team !== original.team ||
@@ -34,11 +35,17 @@ export function captureMemberProviderAuthority(options: {
       runtimeDigest(entry.delivery) !== original.delivery ||
       runtimeDigest(entry.profile) !== original.profile ||
       runtimeDigest(entry.config) !== original.config ||
-      entry.profile.principalId !== original.principalId ||
-      !entry.team.owner.authorizeMemberBinding(entry.binding, 'admit') ||
-      !entry.team.owner.authorizeRuntimeAccess(original.principalId, entry.binding, 'control')
+      entry.profile.principalId !== original.principalId
     )
       throw new RuntimeOwnerError('forbidden');
+  }
+  function assertCurrent() {
+    if (beforeTeamAuthority) beforeTeamAuthority();
+    else assertCapturedCurrent();
+    if (!original.team.owner.authorizeRuntimeAccess(
+      original.principalId, entry.binding, 'provider',
+      beforeTeamAuthority ? assertCapturedCurrent : undefined
+    )) throw new RuntimeOwnerError('forbidden');
   }
   function isCurrent() {
     try {

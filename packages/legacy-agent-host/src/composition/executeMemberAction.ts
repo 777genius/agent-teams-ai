@@ -10,8 +10,15 @@ import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { ExpectedLaunchMember } from '../team-launch/contracts.js';
 import { transitionRuntimeMember } from './transitionRuntimeMember.js';
 import type { createLaunchMemberActions, MemberActionInput } from '../team-launch/memberActions.js';
+import { attachMemberModelReadiness, captureActionModelReadiness,
+  captureNativeRestartReadiness } from './prepareTeamModelReadiness.js';
+import type { LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
+import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
+import type { ModelReadinessReference } from '../management/commandRecords.js';
+import { captureInitialRuntimeRestart } from './initialRuntimeModelAdmission.js';
 
-type Launch = Pick<TeamLaunchOwner, 'read' | 'startMember'> & {
+type Launch = Pick<TeamLaunchOwner, 'read' | 'startMember' | 'readModelReadinessAction' |
+  'readModelReadiness' | 'readModelReadinessSource' | 'attachModelReadiness' | 'retireModelReadiness'> & {
   memberActions(): ReturnType<typeof createLaunchMemberActions>;
 };
 export function parseMemberAction(commandId: string, raw: unknown): MemberActionInput {
@@ -53,6 +60,7 @@ export function executeMemberAction(
     entry: MemberEntry;
     launch: Launch;
     runtime: RuntimeOwner;
+    modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget' | 'admitTeamProbeProfile'>;
     principalId: string;
     assertWriter(): void;
     isSealed(): boolean;
@@ -63,10 +71,13 @@ export function executeMemberAction(
   },
   operation: 'prepare' | 'execute',
   commandId: string,
-  raw: unknown
+  raw: unknown,
+  readiness?: LocalModelReadinessAction
 ) {
   const input = parseMemberAction(commandId, raw),
     { entry, launch } = options;
+  if (readiness && (operation !== 'execute' || input.action !== 'restart' || options.admission))
+    throw new RuntimeOwnerError('invalid');
   options.assertWriter();
   if (options.isSealed()) throw new RuntimeOwnerError('hold');
   if (options.admission) options.admission.assertRosterCurrent();
@@ -139,6 +150,41 @@ export function executeMemberAction(
       assertWriter: options.assertWriter,
       isSealed: options.isSealed,
     });
+  const current = () => {
+    assertGrant();
+    assertOriginal();
+    if (digest(entry.profile) !== source.configurationDigest || digest(entry.binding) !== digest(sourceBinding))
+      throw new RuntimeOwnerError('conflict');
+  };
+  const isCurrent = () => { try { current(); return true; } catch { return false; } };
+  const authorized = options.admission
+    ? <T>(operation: () => T) => options.admission!.journalAuthority.authorized('control', operation)
+    : undefined;
+  const actorDigest = digest(known!.actor);
+  let prepared: ReturnType<typeof captureActionModelReadiness> | undefined;
+  let initialRestart: ReturnType<typeof captureInitialRuntimeRestart>;
+  let reference: ModelReadinessReference | undefined;
+  if (entry.profile.provider === 'opencode' && input.action === 'restart') {
+    if (profile.provider !== 'opencode') throw new RuntimeOwnerError('hold');
+    if (options.admission && authorized) initialRestart = captureInitialRuntimeRestart({
+      launch, entry, input, actorDigest, profile, binding, assertCurrent: current, authorized });
+    if (!initialRestart) {
+      if (!options.modelReadiness) throw new RuntimeOwnerError('hold');
+      const nativeSource = options.admission ? captureNativeRestartReadiness({
+        management: options.modelReadiness, launch, entry, isCurrent,
+      }) : undefined;
+      prepared = captureActionModelReadiness({ management: options.modelReadiness, launch,
+        targets: [{ entry, profile, binding }], commandId, payload: raw, actorDigest,
+        ...(readiness ? { readiness } : {}), ...(nativeSource ? { nativeSource } : {}),
+        ...(authorized ? { authorized } : {}), assertCurrent: current,
+      });
+    }
+  } else if (entry.profile.provider === 'opencode') launch.retireModelReadiness(input.memberId);
+  const cancelOriginalPreparation = async () => {
+    if (entry.profile.provider === 'opencode' && options.modelReadiness)
+      await options.modelReadiness.probes.cancelTeamPreparations(digest(entry.team.definition.binding),
+        undefined, digest({ launchId: sourceBinding.runId, memberId: input.memberId }));
+  };
   let selectedAuthority: (() => void) | undefined;
   return transitionRuntimeMember({
     input,
@@ -157,16 +203,22 @@ export function executeMemberAction(
     verifyNewWorkAllowed() {
       return options.verifyNewWorkAllowed(entry);
     },
+    ...(prepared ? { async prepareSelected() {
+      reference = (await prepared!.prepare()).get(input.memberId);
+      if (!reference) throw new RuntimeOwnerError('hold');
+    } } : {}),
     async retireUnallocated() {
       if (originalProvider) return false;
       originalEndpoint?.revoke();
       await originalEndpoint?.close();
+      await cancelOriginalPreparation();
       return true;
     },
     async retireOriginal() {
       if (originalProvider && !(await originalProvider.cleanup())) return false;
       originalEndpoint?.revoke();
       await originalEndpoint?.close();
+      await cancelOriginalPreparation();
       return true;
     },
     installSelected() {
@@ -200,6 +252,17 @@ export function executeMemberAction(
           assertWriter: options.assertWriter,
           isSealed: options.isSealed,
         });
+      if (prepared) {
+        if (!reference) throw new RuntimeOwnerError('hold');
+        selectedAuthority();
+        attachMemberModelReadiness({ launch, entry, reference, commandId, actorDigest,
+          inputDigest: prepared.inputDigest, cutoff: prepared.cutoff,
+          ...(authorized ? { authorized } : {}) });
+      }
+      if (initialRestart) {
+        selectedAuthority();
+        initialRestart.attach();
+      }
     },
     startSelected() {
       assertGrant();

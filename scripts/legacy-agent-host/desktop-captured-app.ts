@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
 import { execFileSync, type ChildProcess } from 'node:child_process';
-import { realpathSync } from 'node:fs';
+import { constants, realpathSync } from 'node:fs';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
+import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
-import { lstat, readFile, realpath, writeFile } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { isDeepStrictEqual } from 'node:util';
+import { checkpoint } from './desktop-resume-records.ts';
+import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
+import { assertFirstResumeMetadataAbsent, observeDesktopMetadataClose } from './desktop-opencode-v2-cold-metadata.ts';
 import { bounded } from './desktop-proof-bounds.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable, selectedCdpPort, compiledBundleHashes, getTargets, portOccupied,
@@ -13,6 +18,7 @@ import { assertOwnedCdpListener, command, processTable, selectedCdpPort, compile
 import type { ProcessIdentity } from './desktop-backend-observations.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { readCapturedCandidateElectron } from './candidate-electron.ts';
+import type { DesktopClaudeCheckpointUpgrade } from './desktop-claude-checkpoint-upgrade.ts';
 export interface DesktopCdpPort {
   on(method: string, listener: (value: unknown) => void): void;
   send(method: string, params?: Record<string, unknown>, timeoutMs?: number): Promise<unknown>;
@@ -28,6 +34,59 @@ const object = (value: unknown): Evidence => {
   return value as Evidence;
 };
 const tick = () => new Promise<void>(done => setTimeout(done, 100));
+
+/** Read-only census of one explicitly selected TEST executable; paths confer no signal authority. */
+export function selectedDesktopRuntime(executable: string): ProcessIdentity[] {
+  return execFileSync('/bin/ps', ['-ax', '-o', 'pid=,ppid=,pgid=,comm='], {
+    encoding: 'utf8', timeout: 3000,
+  }).trim().split('\n').flatMap((line) => {
+    const found = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(.+)$/.exec(line);
+    return found?.[4] === executable
+      ? [{ pid: Number(found[1]), ppid: Number(found[2]), pgid: Number(found[3]) }] : [];
+  });
+}
+
+/** Existing producer witness, shared by saved-only and original-Stop source epochs. */
+export function captureDesktopNativeExecutable(executable: string, group: number) {
+  const originals = new Map<string, ProcessIdentity & { birth: string; ancestry: number[] }>();
+  const birth = (pid: number): string | undefined => {
+    try {
+      return execFileSync('/bin/ps', ['-p', String(pid), '-o', 'lstart='], {
+        encoding: 'utf8', timeout: 3000,
+      }).trim() || undefined;
+    } catch (error) {
+      if (!processTable().some((entry) => entry.pid === pid)) return undefined;
+      throw error;
+    }
+  };
+  return {
+    observe() {
+      const table = processTable(), roots = new Set(table.filter((entry) => entry.pgid === group).map((entry) => entry.pid));
+      for (const child of selectedDesktopRuntime(executable)) {
+        const started = birth(child.pid);
+        if (!started) continue;
+        const key = String(child.pid) + ':' + started;
+        if (originals.has(key)) continue;
+        let parent = child.ppid;
+        const ancestry: number[] = [];
+        while (parent && !roots.has(parent) && ancestry.length < 64) {
+          ancestry.push(parent);
+          parent = table.find((entry) => entry.pid === parent)?.ppid ?? 0;
+        }
+        assert.ok(roots.has(parent), 'new TEST runtime child descends from the original app, never path-only adoption');
+        ancestry.push(parent);
+        assert.equal(birth(child.pid), started, 'same original child before and after ancestry read');
+        originals.set(key, { ...child, birth: started, ancestry });
+        assert.ok(originals.size <= 32, 'finite original runtime child census');
+      }
+    },
+    captured: () => [...originals.values()],
+    remaining() {
+      const present = new Set(processTable().map((entry) => entry.pid));
+      return [...originals.values()].filter((child) => present.has(child.pid) && birth(child.pid) === child.birth);
+    },
+  };
+}
 /** Existing bounded startup and CDP ownership checks shared by two captured TEST epochs. */
 export async function connectCapturedDesktopApp(options: {
   app: ChildProcess; group: number; spawnError(): boolean; packed: Packed;
@@ -121,6 +180,7 @@ export async function connectCapturedDesktopApp(options: {
 export async function verifyCapturedDesktopBinding(options: {
   cdp: DesktopCdpPort; mode: string; fixture: Fixture; evidence: Evidence; repo: string; packed: Packed;
   remainingStartupMs?: number;
+  savedTeamBindings?: { handleId: string; original: readonly Evidence[] };
 } & ({ group: number; assertOwnedRenderer?: never } | { group?: never; assertOwnedRenderer(): void })): Promise<void> {
   const { cdp, group, mode, fixture, evidence, repo, packed } = options;
   const assertCurrent = options.assertOwnedRenderer ?? (() => { assert.ok(group !== undefined); assertOwnedCdpListener(group); });
@@ -148,7 +208,21 @@ export async function verifyCapturedDesktopBinding(options: {
   assert.ok(connections, 'read-only backend discovery became available within its bound');
   assert.equal(connections.state, 'ready');
   assert.ok(Array.isArray(connections.bindings));
-  assert.equal(connections.bindings.length, ['task-board-cross-team-ui', 'cross-team-ui'].includes(mode) ? 3 : 1);
+  if (options.savedTeamBindings) {
+    assert.equal(mode, 'native-mixed-create-launch-ui');
+    const { handleId, original } = options.savedTeamBindings;
+    assert.notEqual(handleId, fixture.handleId);
+    assert.equal(original.length, 2);
+    assert.deepEqual(connections.bindings.map(value => object(object(value).handle).handleId).sort(),
+      [fixture.handleId, handleId].sort(), 'exact original fixture and created Team handles');
+    for (const retained of original) {
+      const matches: unknown[] = connections.bindings.filter(value =>
+        object(object(value).handle).handleId === object(retained.handle).handleId);
+      assert.equal(matches.length, 1); assert.deepEqual(matches[0], retained);
+    }
+  } else {
+    assert.equal(connections.bindings.length, ['task-board-cross-team-ui', 'cross-team-ui'].includes(mode) ? 3 : 1);
+  }
   const binding = object(connections.bindings.find((value) => object(object(value).handle).handleId === fixture.handleId));
   assert.deepEqual(binding.handle, { handleId: fixture.handleId });
   assert.deepEqual(Object.keys(binding).sort(), ['handle', 'label', 'members', 'ownerResourceRef', 'teamResourceRef']);
@@ -397,4 +471,283 @@ export async function cleanupCapturedDesktopApp(options: {
       error instanceof Error ? error.message.slice(0, 4000) : 'unclassified cleanup failure';
   }
   return { remaining, cleanupFailure, capturedHostAbsent, hostPid };
+}
+
+/** Original guarded same-profile cold startup. The caller immediately retains every new ChildProcess. */
+export async function restartCapturedDesktopApp(options: {
+  app: ChildProcess; cdp: DesktopCdpPort; group: number; fixture: Fixture; repo: string; mode: string;
+  evidence: Evidence; cdpLibrary: DesktopCdpLibrary;
+  provider: 'claude' | 'codex' | 'opencode';
+  model: { observations: readonly unknown[]; failures: readonly string[] };
+  boundary: 'resume-after-stop' | 'extensions-before-launch' | 'settings-saved-before-launch' | 'live-membership-after-stop';
+  createdHandleId?: string;
+  afterOriginalSettingsQuit?(): Promise<void>;
+  afterOriginalMembershipQuit?(): Promise<void>;
+  checkpointUpgrade?: DesktopClaudeCheckpointUpgrade;
+  markQuitRequested(): void;
+  adoptRenderer(cdp: DesktopCdpPort | undefined, hostPid?: number): void;
+  spawnNext(fixture: Fixture): { app: ChildProcess; group: number; identity: string; invocation: readonly string[];
+    spawnError(): boolean };
+}): Promise<DesktopCdpPort> {
+  const { app, cdp, group, fixture, repo, mode, evidence, provider, model, cdpLibrary } = options;
+  const settings = options.boundary === 'settings-saved-before-launch';
+  const extensions = options.boundary === 'extensions-before-launch';
+  const membership = options.boundary === 'live-membership-after-stop';
+  const initial = extensions || settings;
+  if (options.checkpointUpgrade) {
+    assert.equal(membership, false);
+    assert.equal(initial, false); assert.equal(provider, 'claude');
+    assert.equal(options.checkpointUpgrade.kind, 'same-owner-claude-checkpoint');
+    assert.equal(options.checkpointUpgrade.original, fixture);
+  }
+  assert.equal(mode, settings || membership ? 'native-mixed-create-launch-ui' : initial ? 'native-launch-ui' : 'native-resume-ui');
+  if (settings || membership) {
+    assert.ok(options.createdHandleId && (membership ? options.afterOriginalMembershipQuit : options.afterOriginalSettingsQuit));
+    assert.notEqual(options.createdHandleId, fixture.handleId);
+  } else {
+    assert.equal(options.createdHandleId, undefined);
+    assert.equal(options.afterOriginalSettingsQuit, undefined);
+  }
+  if (membership) {
+    assert.equal(process.env.LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI, '1'); assert.equal(provider, 'opencode');
+    assert.equal(options.afterOriginalSettingsQuit, undefined);
+  } else assert.equal(options.afterOriginalMembershipQuit, undefined);
+  if (extensions) {
+    assert.equal(process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI, '1');
+    assert.equal(provider, 'claude');
+  }
+  const hosts = groupMembers(group).filter(row => command(row.pid) === fixture.node + ' ' + fixture.hostEntry);
+  assert.equal(hosts.length, 1, 'capture original Host before guarded cold startup Quit');
+  const originalHost = hosts[0]!;
+  options.adoptRenderer(cdp, originalHost.pid);
+  const proof: Evidence = { status: 'INCOMPLETE', provider,
+    scope: membership ? 'Guarded same-profile cold history after Add, Remove, Restore and exact Team Stop'
+      : settings ? 'Guarded same-profile cold startup after Settings and one saved Team, before native Launch'
+      : initial ? 'Guarded same-profile cold startup after extension/skill mutations, before any native Launch'
+      : 'Guarded app Quit and captured same-profile cold startup before explicit Resume',
+    firstEpoch: { app: evidence.app, startup: evidence.startup, startupOutcome: evidence.startupOutcome,
+      rendererTarget: evidence.rendererTarget, compiledBundleHashesAfterStartup: evidence.compiledBundleHashesAfterStartup,
+      discovery: evidence.discovery, homePathProof: evidence.homePathProof, host: originalHost } };
+  evidence[membership ? 'coldMembershipBoundary' : settings ? 'coldSettingsBoundary' : initial ? 'coldExtensionBoundary' : 'coldResumeBoundary'] = proof;
+  let savedTeamBindings: { handleId: string; original: readonly Evidence[] } | undefined;
+  if (settings || membership) {
+    const observed = await readRendererBackendConnections(cdp);
+    assert.equal(observed.kind, 'read');
+    const selected = object(observed.kind === 'read' ? observed.value : undefined);
+    assert.equal(selected.state, 'ready');
+    assert.ok(Array.isArray(selected.bindings));
+    const bindings = selected.bindings.map(object);
+    assert.deepEqual(bindings.map(row => object(row.handle).handleId).sort(),
+      [fixture.handleId, options.createdHandleId!].sort());
+    for (const row of bindings) {
+      assert.deepEqual(Object.keys(row).sort(), ['handle', 'label', 'members', 'ownerResourceRef', 'teamResourceRef']);
+      assert.match(String(row.ownerResourceRef), /^[a-f0-9]{64}$/);
+      assert.match(String(row.teamResourceRef), /^[a-f0-9]{8}-[a-f0-9]{4}-5[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
+      assert.deepEqual(Object.keys(object(row.handle)), ['handleId']);
+      assert.equal(typeof row.label, 'string');
+      assert.ok(Array.isArray(row.members));
+      assert.equal(row.members.length, object(row.handle).handleId === fixture.handleId ? 1 : 3);
+      const memberIds = row.members.map(value => {
+        const member = object(value);
+        assert.deepEqual(Object.keys(member).sort(), ['label', 'memberId']);
+        assert.equal(typeof member.memberId, 'string');
+        assert.equal(typeof member.label, 'string');
+        return member.memberId;
+      });
+      assert.equal(new Set(memberIds).size, memberIds.length);
+    }
+    assert.equal(bindings[0]!.ownerResourceRef, bindings[1]!.ownerResourceRef);
+    assert.notEqual(bindings[0]!.teamResourceRef, bindings[1]!.teamResourceRef);
+    savedTeamBindings = { handleId: options.createdHandleId!, original: structuredClone(bindings) };
+    proof.originalSavedTeamBindings = savedTeamBindings.original;
+  }
+  const readSessions = () => readDesktopNativeStopSessions(fixture.root).catch(
+    (error: NodeJS.ErrnoException & { path?: string }) => {
+      if (initial && error.code === 'ENOENT' && error.path === join(fixture.root, 'hoststore/runtime-sessions'))
+        return [];
+      throw error;
+    });
+  const before = await readSessions();
+  const sources = before.filter(row => Array.isArray(row.inputs) && row.inputs.length === 1);
+  const profile = object(JSON.parse(await readFile(fixture.profilePath, 'utf8')));
+  const definition = object((profile.teams as unknown[])[0]);
+  if (initial || membership) assert.equal((definition.members as unknown[]).length, 1);
+  else assert.equal(sources.length, 1);
+  const member = object(initial || membership ? (definition.members as unknown[])[0]
+    : (definition.members as unknown[]).find(value =>
+      object(value).memberId === object(sources[0]!.binding).memberId));
+  const { teamName: _teamName, ...descriptorBinding } = object(member.delivery);
+  const assertNeverOpened = (row: Evidence) => {
+    assert.deepEqual(row.binding, descriptorBinding);
+    assert.deepEqual(row.inputs, []); assert.deepEqual(row.interactions, []);
+    assert.equal(row.config, null); assert.equal(row.openFingerprint, null); assert.equal(row.nativeReady, false);
+  };
+  let membershipHistory: Evidence | undefined;
+  const readMembershipHistory = async () => {
+    const directory = join(fixture.root, 'hoststore/teams/test-created-native-mixed/.host-owner');
+    const read = async (path: string) => {
+      const stat = await lstat(path); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 1024 * 1024);
+      const bytes = await readFile(path); assert.equal(bytes.length, stat.size); return object(JSON.parse(bytes.toString('utf8')));
+    };
+    const state = await read(join(directory, 'state.json'));
+    assert.ok(Array.isArray(state.runtimeCaptures) && state.runtimeCaptures.length === 1);
+    assert.ok(Array.isArray(state.rosterCommands) && Array.isArray(state.members) && state.members.length === 3);
+    const commands = state.rosterCommands.map(object).filter(row => row.liveMembership !== undefined);
+    assert.equal(commands.length, 3);
+    assert.deepEqual(commands.map(row => object(object(row.liveMembership).delta).kind), ['add', 'remove', 'restore']);
+    assert.ok(commands.every(row => object(row.liveMembership).phase === 'completed'));
+    const launch = await read(join(directory, 'launches', runtimeDigest(object(state.runtimeCaptures[0]).launchId) + '.json'));
+    return { members: state.members, removedMembers: state.removedMembers ?? [], runtimeCaptures: state.runtimeCaptures,
+      rosterCommands: state.rosterCommands, launch };
+  };
+  if (membership) {
+    membershipHistory = await readMembershipHistory();
+    const allocated = before.filter(row => row.config !== null), never = before.filter(row => row.config === null);
+    assert.equal(allocated.length, 4); assert.ok(never.length <= 1); never.forEach(assertNeverOpened);
+    assert.ok(allocated.every(row => row.phase === 'closed' && row.custody === 'released' && row.openFingerprint));
+    const carol = (membershipHistory.members as unknown[]).map(object).filter(row => row.name === 'carol');
+    assert.equal(carol.length, 1);
+    const targets = allocated.filter(row => object(row.binding).memberId === carol[0]!.memberId);
+    assert.equal(targets.length, 2); assert.equal(sources.length, 2);
+    assert.equal(new Set(targets.map(row => runtimeDigest(row.binding))).size, 2);
+    assert.equal(new Set(targets.map(row => object(row.config).sessionId)).size, 2);
+    for (const row of allocated) {
+      assert.ok(Array.isArray(row.inputs)); const target = targets.includes(row);
+      assert.equal(row.inputs.length, target ? 1 : 0);
+      if (target) { assert.equal(object(row.inputs[0]).phase, 'terminal'); assert.equal(object(row.inputs[0]).terminal, 'succeeded'); }
+    }
+    proof.originalHistoryDigest = runtimeDigest(membershipHistory);
+  } else if (initial) {
+    assert.ok(before.length <= 1, 'only the never-opened original static descriptor may exist');
+    for (const row of before) assertNeverOpened(row);
+    // Completed management mutations may be followed by finite metadata reads.
+    // No Runtime session/input is opened; original Quit below must close the entire captured group.
+    assert.equal(sources.length, 0);
+  } else {
+    assert.ok(before.length > 0 && before.every(row => row.phase === 'closed' && row.custody === 'released'));
+    assert.equal(sources.length, 1);
+    assert.equal(object(sources[0]!.binding).memberId, member.memberId);
+  }
+  const originalCheckpoint = initial || membership ? undefined : await checkpoint(fixture.root, sources[0]!, provider);
+  if (originalCheckpoint) proof.beforeQuitCheckpoint = { reference: originalCheckpoint.payload.reference,
+    payloadFileSha256: originalCheckpoint.payloadFileSha256, historySha256: originalCheckpoint.historySha256 };
+  if (options.checkpointUpgrade) {
+    assert.ok(originalCheckpoint);
+    await options.checkpointUpgrade.beforeQuit(sources[0]!, originalCheckpoint);
+  }
+  const managementRecords = async () => {
+    const directory = join(fixture.root, 'hoststore/management-commands');
+    const names = (await readdir(directory)).filter(name => /^[a-f0-9]{64}\.json$/u.test(name)).sort();
+    assert.ok(names.length <= 16);
+    return Promise.all(names.map(async name => ({ name, sha256: await fileDigest(join(directory, name)) })));
+  };
+  const originalMutations = extensions ? await managementRecords() : undefined;
+  if (originalMutations) assert.equal(originalMutations.length, 4, 'one plugin install and three skill mutations');
+  const bundleDirectory = join(fixture.root, membership ? 'cold-membership-epoch1-bundles' : settings ? 'cold-settings-epoch1-bundles'
+    : initial ? 'cold-extension-epoch1-bundles' : 'cold-resume-epoch1-bundles');
+  const bundlePins = evidence.compiledBundleHashesAfterStartup;
+  assert.ok(Array.isArray(bundlePins) && bundlePins.length > 0 && bundlePins.length <= 4096);
+  for (const raw of bundlePins) {
+    const pin = object(raw), relative = String(pin.path), sha = String(pin.sha256);
+    assert.ok(!relative.startsWith('/') && !relative.split('/').includes('..'));
+    assert.match(relative, /\.(?:cjs|js)$/); assert.match(sha, /^[a-f0-9]{64}$/);
+    const source = join(repo, 'dist-electron', relative), target = join(bundleDirectory, relative);
+    assert.equal(await fileDigest(source), sha);
+    await mkdir(dirname(target), { recursive: true, mode: 0o700 });
+    await copyFile(source, target, constants.COPYFILE_EXCL);
+    assert.equal(await fileDigest(target), sha); assert.equal(await fileDigest(source), sha);
+  }
+  proof.epoch1BundleSnapshot = { directory: bundleDirectory, files: bundlePins };
+  assert.equal(model.observations.length, membership ? 4 : initial ? 0 : 8);
+  assertOwnedCdpListener(group);
+  options.markQuitRequested(); // One original public Quit, fenced before its uncertain reply.
+  const quitObservation: Evidence = { attempted: true }; proof.firstQuit = quitObservation;
+  try {
+    await bounded(cdp.evaluate('window.electronAPI.windowControls.close()'), 3000, 'original same-profile Quit');
+    quitObservation.reply = 'acknowledged';
+  } catch (error) {
+    quitObservation.reply = 'unconfirmed';
+    quitObservation.reason = /timed out/i.test(String(error)) ? 'timeout' : 'closed-or-rejected';
+  }
+  const until = Date.now() + 30_000;
+  while (Date.now() < until && (app.exitCode === null || groupMembers(group).length)) await tick();
+  const remaining = groupMembers(group), hostAbsent = !processTable().some(row => row.pid === originalHost.pid);
+  const writerReleased = await lstat(join(fixture.root, 'hoststore/.legacy-agent-host-writer.lock'))
+    .then(() => false, (error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return true; throw error; });
+  proof.firstCleanup = { appExitCode: app.exitCode, appSignalCode: app.signalCode,
+    remaining, capturedHostAbsent: hostAbsent, writerLockReleased: writerReleased };
+  assert.equal(app.exitCode, 0, 'captured app exits normally before second spawn');
+  assert.equal(app.signalCode, null);
+  assert.deepEqual(remaining, [], 'no group cleanup fallback before cold startup');
+  assert.equal(hostAbsent, true); assert.equal(writerReleased, true);
+  if (!initial && !membership) {
+    await observeDesktopMetadataClose(fixture.root, evidence, true);
+    assertFirstResumeMetadataAbsent(evidence);
+  }
+  const postQuit = await readSessions();
+  if (!initial) for (const original of before.filter(row => !membership || row.config !== null)) {
+    const matches = postQuit.filter(row => isDeepStrictEqual(row.binding, original.binding));
+    assert.equal(matches.length, 1); assert.deepEqual(matches[0], original);
+  }
+  const added = initial ? postQuit : membership ? postQuit.filter(row => !before.some(original =>
+    original.config !== null && isDeepStrictEqual(row.binding, original.binding))) : postQuit.filter(row =>
+    !before.some(original => isDeepStrictEqual(row.binding, original.binding)));
+  assert.ok(added.length <= 1, 'only one exact static descriptor tombstone may be added');
+  for (const row of added) {
+    assertNeverOpened(row);
+    assert.equal(row.phase, 'closed'); assert.equal(row.custody, 'released'); assert.equal(row.sealed, true);
+  }
+  assert.equal(model.observations.length, membership ? 4 : initial ? 0 : 8, 'Quit cannot release a native input');
+  if (settings) await options.afterOriginalSettingsQuit!();
+  if (membership) {
+    assert.deepEqual(await readMembershipHistory(), membershipHistory);
+    await options.afterOriginalMembershipQuit!();
+  }
+  await bounded(cdp.close(), 3000, 'disconnect original renderer');
+  options.adoptRenderer(undefined);
+  assert.equal(await portOccupied(), false);
+  for (const [path, sha] of [[fixture.node, fixture.pins.nodeSha256], [fixture.hostEntry, fixture.pins.hostEntrySha256],
+    [fixture.profilePath, fixture.pins.profileSha256], [fixture.descriptorPath, fixture.pins.descriptorSha256]])
+    assert.equal(await fileDigest(path!), sha, 'same captured fixture pin before cold startup');
+  const second: Evidence = { status: 'INCOMPLETE' }; proof.secondEpoch = second;
+  const nextFixture = options.checkpointUpgrade ? await options.checkpointUpgrade.afterOriginalQuit() : fixture;
+  const next = options.spawnNext(nextFixture); // Caller adopts before any fallible startup observation.
+  assert.ok(next.group > 0 && next.group !== group);
+  second.app = { pid: next.app.pid, processGroup: next.group, identity: next.identity, invocation: next.invocation };
+  const connected = await connectCapturedDesktopApp({
+    app: next.app, group: next.group, spawnError: next.spawnError, packed: undefined, cdpLibrary, evidence: second });
+  options.adoptRenderer(connected.cdp);
+  await attachRendererDiagnostics(connected.cdp, String(connected.target.url), second, {
+    remainingMs: connected.startupBudgetMs - (performance.now() - connected.startupStarted),
+    assertOwnedRenderer: () => assertOwnedCdpListener(next.group) });
+  await verifyCapturedDesktopBinding({ cdp: connected.cdp, group: next.group, mode, fixture: nextFixture, evidence: second,
+    repo, packed: undefined, ...(savedTeamBindings ? { savedTeamBindings } : {}) });
+  const currentHosts = groupMembers(next.group).filter(row => command(row.pid) === nextFixture.node + ' ' + nextFixture.hostEntry);
+  assert.equal(currentHosts.length, 1, 'one new standalone Host after cold discovery');
+  assert.notEqual(currentHosts[0]!.pid, originalHost.pid);
+  options.adoptRenderer(connected.cdp, currentHosts[0]!.pid); second.host = currentHosts[0];
+  assert.deepEqual(await readSessions(), postQuit);
+  if (originalCheckpoint) {
+    const cold = await checkpoint(fixture.root, sources[0]!, provider);
+    assert.equal(cold.payloadFileSha256, originalCheckpoint.payloadFileSha256);
+    assert.equal(cold.historySha256, originalCheckpoint.historySha256);
+    second.checkpointAndHistoryUnchanged = true;
+  }
+  if (originalMutations) {
+    assert.deepEqual(await managementRecords(), originalMutations);
+    second.originalMutationRecordsUnchanged = originalMutations;
+  }
+  if (membership) {
+    assert.deepEqual(await readMembershipHistory(), membershipHistory);
+    second.originalHistoryDigest = runtimeDigest(membershipHistory);
+  }
+  assert.equal(model.observations.length, membership ? 4 : initial ? 0 : 8, 'cold startup cannot release a prompt');
+  assert.deepEqual(model.failures, []);
+  if (options.checkpointUpgrade) {
+    assert.deepEqual(object(second.discovery).bindings, object(object(proof.firstEpoch).discovery).bindings);
+    await options.checkpointUpgrade.afterColdDiscovery();
+    proof.originalBindingRetained = true;
+  }
+  second.status = 'PASS'; proof.status = 'PASS';
+  return connected.cdp;
 }

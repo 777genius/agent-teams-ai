@@ -26,15 +26,16 @@ export async function runMixedEditTeamUi(
     assertOwnedRenderer(): void;
     assertNoNativeInputs(): void;
     step(row: Record<string, unknown>): void;
+    restartSameProfile(): Promise<UiCdpPort>;
   }
 ) {
   const proof: Record<string, unknown> = {
     status: 'INCOMPLETE',
     scope:
-      'Existing stopped mixed Team Detail Edit → description input → one Save → same original Host roster receipt/settings → renderer reload → same Edit hydration/Cancel; zero native inputs',
+      'Existing stopped mixed Team Detail Edit → description input → one Save → same original Host roster receipt/settings → guarded same-profile cold startup → same Edit hydration/Cancel; zero native inputs',
   };
   options.evidence.editTeam = proof;
-  const ui = createDesktopUiControls(cdp, {
+  let ui = createDesktopUiControls(cdp, {
     assertOwnedRenderer: options.assertOwnedRenderer,
     step: options.step,
   });
@@ -136,13 +137,11 @@ export async function runMixedEditTeamUi(
     'owner-issued member identity/settings remain unchanged apart from revision tokens'
   );
   options.assertNoNativeInputs();
-  const timeOrigin = await cdp.evaluate('performance.timeOrigin');
-  await cdp.send('Page.reload', { ignoreCache: false });
-  await ui.waitRead(
-    `performance.timeOrigin!==${desktopJsLiteral(timeOrigin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`,
-    'real renderer reload after Edit save',
-    90_000
-  );
+  cdp = await options.restartSameProfile();
+  ui = createDesktopUiControls(cdp, {
+    assertOwnedRenderer: options.assertOwnedRenderer,
+    step: options.step,
+  });
   await ui.observeInput();
   await ui.waitRead(
     `Boolean(document.querySelector('button[aria-label="More actions"]'))`,
@@ -190,7 +189,8 @@ export async function runMixedEditTeamUi(
     savedSettings: configuration.savedSettings,
     originalOwner: after.binding,
     settingsRetainedAfterReload: true,
+    settingsRetainedAfterColdStartup: true,
     noNativeCapture: true,
   });
-  return { proof, state: after };
+  return { proof, state: after, cdp };
 }

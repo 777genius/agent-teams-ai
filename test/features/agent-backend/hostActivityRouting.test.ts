@@ -197,7 +197,8 @@ it('routes actual Team Logs/Stats envelopes before member parsing without alloca
     ok: true,
     value: {
       kind: 'team-activity-logs',
-      logs: [{ memberName: 'alice', generation: '1', events: [] }],
+      logs: [{ memberName: 'alice', generation: null, events: [],
+        gaps: ['No retained runtime activity is available for this selection.'] }],
     },
   });
   expect(await f.rpc('team.activity.stats.read', { memberName: 'alice' })).toMatchObject({
@@ -206,7 +207,7 @@ it('routes actual Team Logs/Stats envelopes before member parsing without alloca
       kind: 'team-activity-stats',
       stats: {
         memberName: 'alice',
-        generations: 1,
+        generations: 0,
         inputTokens: null,
         outputTokens: null,
         costUsd: null,

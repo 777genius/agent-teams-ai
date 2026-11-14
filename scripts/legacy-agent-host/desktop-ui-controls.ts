@@ -46,6 +46,83 @@ export function createDesktopUiControls(
       window.__TEST_desktopInputEvents=[];
       window.__TEST_desktopDragEvents=[];
       const describe=el=>el instanceof Element?{tag:el.tagName,id:el.id,ariaLabel:el.getAttribute('aria-label'),className:String(el.className).slice(0,120)}:null;
+      const taskClarification=e=>{
+        try{
+          const target=e.target instanceof Element?e.target:null,dialog=target?.closest('[role="dialog"]');
+          if(!dialog||!dialog.getClientRects().length)return null;
+          const buttons=dialog.querySelectorAll('button');if(buttons.length>128)return null;
+          const matches=[...buttons].filter(button=>button.textContent?.trim()==='Mark resolved');
+          if(matches.length!==1||!(matches[0] instanceof HTMLButtonElement))return null;
+          const control=matches[0],rect=control.getBoundingClientRect();
+          const point=Number.isFinite(e.clientX)&&Number.isFinite(e.clientY);
+          const geometry=[rect.left,rect.right,rect.top,rect.bottom,rect.width,rect.height].every(Number.isFinite);
+          const hit=point?document.elementFromPoint(e.clientX,e.clientY):null;
+          const pointer=getComputedStyle(control).pointerEvents;
+          const facts={
+            targetIsControl:target===control||control.contains(target),
+            targetIsControlParent:target===control.parentElement,
+            pointInsideControl:point&&geometry?rect.width>0&&rect.height>0&&e.clientX>=rect.left&&e.clientX<rect.right&&e.clientY>=rect.top&&e.clientY<rect.bottom:null,
+            pointHitsControl:point?hit===control||control.contains(hit):null,
+            controlConnected:control.isConnected,controlDisabled:control.disabled,
+            pointerEvents:pointer==='auto'||pointer==='none'?pointer:typeof pointer==='string'&&pointer?'other':null,
+            renderedOwner:null,storedSurfaceMatches:null,storedRevisionMatches:null,
+            contextMatches:null,selectedTeamMatches:null,detailPhase:null,
+            detailLoading:null,detailRefreshPending:null,deletionIntentPresent:null
+          };
+          const finish=()=>JSON.stringify(facts).length<=768?facts:null;
+          const own=(value,key)=>{
+            if(!value||(typeof value!=='object'&&typeof value!=='function'))return undefined;
+            const descriptor=Object.getOwnPropertyDescriptor(value,key);
+            return descriptor&&'value' in descriptor?descriptor.value:undefined;
+          };
+          const text=value=>typeof value==='string'&&value.length>0;
+          const bool=value=>typeof value==='boolean'?value:null;
+          const currentFiber=node=>{
+            const keys=Object.keys(node).filter(key=>key.startsWith('__reactFiber$'));
+            if(keys.length!==1)return null;const fiber=own(node,keys[0]);
+            for(const candidate of [fiber,own(fiber,'alternate')]){
+              if(!candidate)continue;let root=candidate,depth=0;
+              while(own(root,'return')&&depth++<256)root=own(root,'return');
+              if(!own(root,'return')&&own(own(root,'stateNode'),'current')===root)return candidate;
+            }
+            return null;
+          };
+          const controllers=new Set();let ambiguous=false,fiber=currentFiber(dialog),depth=0;
+          for(;fiber&&depth<128;fiber=own(fiber,'return'),depth++){
+            const props=own(fiber,'memoizedProps'),controller=own(props,'sessionController');
+            if(own(props,'open')!==true||controller===undefined)continue;
+            const identity=own(controller,'identity'),team=own(props,'teamName'),task=own(own(props,'task'),'id');
+            if(!text(team)||!text(task)||!text(own(identity,'contextId'))||
+              own(identity,'teamName')!==team||own(identity,'taskId')!==task||!text(own(controller,'surfaceId'))){
+              ambiguous=true;continue;
+            }
+            controllers.add(controller);
+          }
+          if(fiber||ambiguous||controllers.size!==1)return finish();
+          const controller=[...controllers][0],identity=own(controller,'identity'),surface=own(controller,'surfaceId');
+          facts.renderedOwner=bool(own(controller,'isOwner'));
+          const getState=own(own(window,'__agentTeamsDevStore'),'getState');
+          if(typeof getState!=='function')return finish();const state=getState();
+          const context=own(identity,'contextId'),team=own(identity,'teamName'),task=own(identity,'taskId');
+          const key=JSON.stringify([context,team,task]);
+          const session=own(own(state,'taskDetailSessionById'),key),renderedSession=own(controller,'session');
+          const storedSurface=own(session,'ownerSurfaceId');
+          facts.storedSurfaceMatches=storedSurface===null||text(storedSurface)?storedSurface===surface:null;
+          const storedRevision=own(session,'ownerRevision'),renderedRevision=own(renderedSession,'ownerRevision');
+          facts.storedRevisionMatches=Number.isSafeInteger(storedRevision)&&storedRevision>=0&&Number.isSafeInteger(renderedRevision)&&renderedRevision>=0?storedRevision===renderedRevision:null;
+          const activeContext=own(state,'activeContextId'),switching=own(state,'isContextSwitching'),selectedTeam=own(state,'selectedTeamName');
+          facts.contextMatches=text(activeContext)&&typeof switching==='boolean'?!switching&&activeContext===context:null;
+          facts.selectedTeamMatches=selectedTeam===null||text(selectedTeam)?selectedTeam===team:null;
+          const detail=own(own(state,'taskDetailById'),key),detailIdentity=own(detail,'identity');
+          if(own(detailIdentity,'contextId')===context&&own(detailIdentity,'teamName')===team&&own(detailIdentity,'taskId')===task){
+            const phase=own(detail,'phase'),deletion=own(detail,'deletionIntent');
+            facts.detailPhase=['hydrating','ready','missing','deleted','provisioning','unavailable'].includes(phase)?phase:null;
+            facts.detailLoading=bool(own(detail,'loading'));facts.detailRefreshPending=bool(own(detail,'refreshPending'));
+            facts.deletionIntentPresent=deletion===null?false:deletion==='deleting'||deletion==='restoring'?true:null;
+          }
+          return finish();
+        }catch{return null;}
+      };
       for(const type of ['pointerdown','pointerup','pointercancel','pointermove','click','keydown','keyup','focusin','focusout'])document.addEventListener(type,e=>{
         if(type==='pointermove'&&!e.buttons)return;
         const dragging=type==='pointermove'||type==='pointercancel';
@@ -58,6 +135,7 @@ export function createDesktopUiControls(
           taskId:e.target instanceof Element?e.target.closest('.kanban-task-card')?.getAttribute('data-task-id')??null:null,
           activeSortable:[...document.querySelectorAll('[aria-roledescription="sortable"][aria-pressed="true"]')].map(el=>({taskId:el.querySelector('.kanban-task-card')?.getAttribute('data-task-id'),transform:el.style.transform})),
           dragAnnouncement:[...document.querySelectorAll('[id^="DndLiveRegion-"]')].map(el=>el.textContent)};
+        if(type==='pointerdown'||type==='pointerup'||type==='click')row.taskClarification=taskClarification(e);
         rows.push(row);queueMicrotask(()=>{row.defaultPreventedAfterMicrotask=e.defaultPrevented;row.focusAfterMicrotask=describe(document.activeElement);
           setTimeout(()=>{row.defaultPreventedAfterDispatch=e.defaultPrevented;row.focusAfterDispatch=describe(document.activeElement);},0);});
       },{capture:true,passive:true});return true;
@@ -71,14 +149,15 @@ export function createDesktopUiControls(
   const waitRead = async (
     expression: string,
     label: string,
-    timeoutMs = 30_000
+    timeoutMs = 30_000,
+    isReady: (value: unknown) => boolean = Boolean
   ): Promise<unknown> => {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       options.assertOwnedRenderer();
       try {
         const value = await cdp.evaluate(expression);
-        if (value) return value;
+        if (isReady(value)) return value;
       } catch (error) {
         if (
           !/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(
@@ -96,10 +175,14 @@ export function createDesktopUiControls(
     const elements = [...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e => {
       const r=e.getBoundingClientRect(); return r.width>0&&r.height>0${text === undefined ? '' : `&&e.textContent.trim()===${desktopJsLiteral(text)}`};
     });
-    if(elements.length!==1)return null;
+    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};
     const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;
-    const hit=document.elementFromPoint(x,y);
-    if(!hit||!(hit===e||e.contains(hit))||e.matches(':disabled'))return null;
+    const hit=document.elementFromPoint(x,y), disabled=e.matches(':disabled');
+    if(!hit||!(hit===e||e.contains(hit))||disabled)return {
+      unavailableTarget:true,matches:1,disabled,ariaDisabled:e.getAttribute('aria-disabled')==='true',
+      pointerEventsNone:getComputedStyle(e).pointerEvents==='none',
+      centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)
+    };
     return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};
   })()`;
   const clickExpression = async (
@@ -109,7 +192,73 @@ export function createDesktopUiControls(
     text?: string
   ): Promise<void> => {
     await cdp.send('Page.bringToFront');
-    let point = record(await waitRead(expression, label));
+    // Reuse the original passive reads and deadline. Retain only closed facts,
+    // never DOM text, attributes, HTML or another request after a failed click.
+    const readPoint = async (phase: string): Promise<Record<string, unknown>> => {
+      const bootstrapRead = phase === label && label === 'open existing More menu' &&
+        selector === 'button[aria-label="More actions"]';
+      const readExpression = bootstrapRead
+        ? `(() => {
+            const point = ${expression};
+            if (!point || point.unavailableTarget !== true) return point;
+            try {
+              const root = document.getElementById('root'), splash = document.getElementById('splash');
+              const bounds = splash?.getBoundingClientRect(), child = root?.firstElementChild;
+              return { ...point, bootstrapFacts: {
+                rawMatches: Math.min(document.querySelectorAll(${desktopJsLiteral(selector)}).length, 256),
+                rootPresent: root !== null, rootChildren: Math.min(root?.childElementCount ?? 0, 16),
+                uiInitialized: window.__claudeTeamsUiDidInit === true,
+                splashPresent: splash !== null, splashPositiveSize: Boolean(bounds && bounds.width > 0 && bounds.height > 0),
+                splashError: splash?.classList.contains('splash-status-error') === true,
+                splashSlow: splash?.classList.contains('splash-status-slow') === true,
+                documentComplete: document.readyState === 'complete',
+                languageEnglish: document.documentElement.lang === 'en',
+                languageEmpty: document.documentElement.lang === '',
+                rootFallbackShape: Boolean(root?.childElementCount === 1 &&
+                  child?.matches('div.flex.h-screen.flex-col.items-center.justify-center') &&
+                  child.querySelector(':scope > div > h1.text-2xl.font-semibold') &&
+                  child.querySelector(':scope > div > svg.size-10.text-red-500'))
+              } };
+            } catch { return point; }
+          })()`
+        : expression;
+      let facts: Record<string, boolean | number> | undefined;
+      try {
+        return record(await waitRead(readExpression, phase, 30_000, value => {
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            const row = value as Record<string, unknown>;
+            if (row.unavailableTarget === true) {
+              facts = {
+                matches: Number.isSafeInteger(row.matches) && Number(row.matches) >= 0
+                  ? Math.min(Number(row.matches), 256) : 0,
+                disabled: row.disabled === true, ariaDisabled: row.ariaDisabled === true,
+                pointerEventsNone: row.pointerEventsNone === true,
+                centerInViewport: row.centerInViewport === true, hitPresent: row.hitPresent === true,
+              };
+              if (bootstrapRead && row.bootstrapFacts && typeof row.bootstrapFacts === 'object' &&
+                  !Array.isArray(row.bootstrapFacts)) {
+                const bootstrap = row.bootstrapFacts as Record<string, unknown>;
+                for (const key of ['rootPresent', 'uiInitialized', 'splashPresent', 'splashPositiveSize',
+                  'splashError', 'splashSlow', 'documentComplete', 'languageEnglish', 'languageEmpty',
+                  'rootFallbackShape']) {
+                  if (typeof bootstrap[key] === 'boolean') facts[key] = bootstrap[key];
+                }
+                for (const [key, limit] of [['rawMatches', 256], ['rootChildren', 16]] as const) {
+                  if (Number.isSafeInteger(bootstrap[key]) && Number(bootstrap[key]) >= 0)
+                    facts[key] = Math.min(Number(bootstrap[key]), limit);
+                }
+              }
+              return false;
+            }
+          }
+          return Boolean(value);
+        }));
+      } catch (error) {
+        if (facts) throw new Error(`UI target read failed: ${phase}; facts=${JSON.stringify(facts)}`, { cause: error });
+        throw error;
+      }
+    };
+    let point = await readPoint(label);
     options.assertOwnedRenderer();
     step({ action: 'mouseMoved', label: 'hover ' + label, selector, target: point });
     await cdp.send('Input.dispatchMouseEvent', {
@@ -117,13 +266,13 @@ export function createDesktopUiControls(
       x: point.x,
       y: point.y,
     });
-    point = record(await waitRead(expression, label + ' after pointer enter'));
+    point = await readPoint(label + ' after pointer enter');
     // Async Host hydration can shift the DOM after hover. Check the original
     // target is stable before ONE physical click, never replay an uncertain click.
     let stableSamples = 0;
     for (let sample = 0; sample < 15 && stableSamples < 2; sample++) {
       await new Promise<void>((done) => setTimeout(done, 100));
-      const next = record(await waitRead(expression, label + ' stable target'));
+      const next = await readPoint(label + ' stable target');
       stableSamples =
         next.x === point.x && next.y === point.y && next.tag === point.tag
           ? stableSamples + 1
@@ -160,6 +309,26 @@ export function createDesktopUiControls(
   };
   const click = (selector: string, label: string, text?: string): Promise<void> =>
     clickExpression(target(selector, text), label, selector, text);
+  const hoverExpression = async (expression: string, label: string): Promise<void> => {
+    let previous: { x: number; y: number } | undefined, stable = 0;
+    // Canonical effects can settle before their renderer layout. Sample the
+    // original eligible target within one read deadline, then move only once.
+    const point = record(await waitRead(expression, label, 30_000, value => {
+      const row = value && typeof value === 'object' && !Array.isArray(value)
+        ? value as Record<string, unknown> : undefined;
+      if (!row || row.unavailableTarget === true || typeof row.x !== 'number' ||
+          typeof row.y !== 'number' || !Number.isFinite(row.x) || !Number.isFinite(row.y)) {
+        previous = undefined; stable = 0;
+        return false;
+      }
+      stable = previous?.x === row.x && previous?.y === row.y ? stable + 1 : 1;
+      previous = { x: row.x, y: row.y };
+      return stable >= 3;
+    }));
+    options.assertOwnedRenderer();
+    step({ action: 'mouseMoved', label, target: point });
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+  };
   const scrollTo = async (
     selector: string, label: string, text?: string, maxWheelEvents = 12
   ): Promise<void> => {
@@ -273,5 +442,5 @@ export function createDesktopUiControls(
     });
     await click('[role="dialog"] button', 'Open team', 'Open team');
   };
-  return { observeInput, waitRead, click, clickExpression, clickSidebar, scrollTo };
+  return { observeInput, waitRead, click, clickExpression, clickSidebar, scrollTo, hoverExpression };
 }

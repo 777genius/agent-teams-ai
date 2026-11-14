@@ -8,12 +8,16 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { test } from 'node:test';
 
+import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
+import type { NativeCoordinationFixture } from './fixtures/native-opencode-team/coordination-probe.ts';
 import { record } from './fixtures/native-claude-team/model.ts';
 import { fileHash, startHost, tick, treeHash } from './fixtures/native-host.ts';
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
 import { prepareNativeOpenCodeInstaller } from './fixtures/native-opencode-installer.ts';
 import { assertNativeV1Build } from './opencode-v1-version-source.ts';
+import { applyOpenCodeRuntimeSource } from '../dist/composition/applyOpenCodeRuntimeSource.js';
+import { applyLaunchConfiguration } from '../dist/composition/launchConfiguration.js';
 
 const enabled = process.env.OPENCODE_V1_VERSION_HOST_GO === '1';
 const activeUpdate = process.env.OPENCODE_V1_TEST_ACTIVE_UPDATE === '1';
@@ -62,12 +66,13 @@ async function runtimeStatePath(root: string): Promise<string> {
 
 test('selected stable V1 executes native tools through Host and retains cold receipts', {
   timeout: activeUpdate ? 420_000 : 180_000, skip: !enabled,
-}, async () => {
+}, async (testContext) => {
   assert.equal(process.platform, 'linux');
   assert.equal(process.arch, 'x64');
   assert.equal(process.version, 'v24.21.0', 'use the pinned TEST Node, not ambient developer Node');
   const sourceHead = process.env.OPENCODE_V1_TEST_SOURCE_HEAD ?? '';
   const version = process.env.OPENCODE_V1_TEST_EXPECTED_VERSION ?? '';
+  const qualifyCoordination = !activeUpdate && version === '1.19.4';
   if (activeUpdate) assert.equal(version, '1.19.4');
   assert.match(sourceHead, /^[a-f0-9]{40}$/);
   assert.match(version, /^1\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/);
@@ -101,6 +106,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
   const steps: string[] = [];
   let host: ReturnType<typeof startHost> | undefined;
   let model: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
+  let coordination: NativeCoordinationFixture | undefined;
   let installer: Awaited<ReturnType<typeof prepareNativeOpenCodeInstaller>> | undefined;
   let managedUpdate: Record<string, unknown> | undefined;
   const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
@@ -176,7 +182,8 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     assert.deepEqual({ hostSourceDigest, hostDistDigest, providerDigest }, expectedBuild);
     steps.push('native_version_package_integrity_and_source_measured');
 
-    model = await startOpenCodeModel();
+    model = await startOpenCodeModel({ selectedModel: { id: 'TEST-model-B' }, selectedOutputTokens: 1024,
+      ...(qualifyCoordination ? { coordinationProof: true as const, localReadinessProof: true as const } : {}) });
     const reservation = createServer();
     await new Promise<void>((done) => reservation.listen(0, '127.0.0.1', done));
     const address = reservation.address();
@@ -216,8 +223,9 @@ test('selected stable V1 executes native tools through Host and retains cold rec
           permission: { '*': 'deny', bash: 'ask' }, compaction: { auto: false },
           agent: { title: { disable: true }, summary: { disable: true }, 'TEST-member': { mode: 'primary' } },
           provider: { 'TEST-local': { npm: '@ai-sdk/openai-compatible', name: 'TEST local',
-            options: { baseURL: `${model.url}/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
-            models: { 'TEST-model': { name: 'TEST-model', limit: { context: 200000, output: 2000 } } },
+            options: { baseURL: `${model.url}/v1`, ...(qualifyCoordination ? {} : { apiKey: 'TEST-LOCALHOST-ONLY' }) },
+            models: Object.fromEntries(['TEST-model', 'TEST-model-B'].map(id =>
+              [id, { name: id, limit: { context: 200000, output: 2000 } }])),
           } },
         }) },
         nativeOptions: { providerId: 'TEST-local', agent: 'TEST-member',
@@ -226,16 +234,39 @@ test('selected stable V1 executes native tools through Host and retains cold rec
           outputEvents: 1500, pendingInteractions: 4, timeoutMs: activeUpdate ? 180_000 : 45_000 },
       }] },
     };
+    const member = profile.runtime!.members[0]!;
+    assert(member.provider === 'opencode');
+    profile.runtime!.members[0] = applyLaunchConfiguration(applyOpenCodeRuntimeSource(member, {
+      sourceKind: 'captured', executable: member.executable,
+      openCodePreferences: { defaultModelId: 'TEST-local/TEST-model-B', modelLimitOverrides: {
+        'TEST-local/TEST-model-B': { contextTokens: 64000, outputTokens: 1024 },
+        'TEST-local/TEST-model': { contextTokens: 32000, outputTokens: 512 },
+      } },
+    }), {});
+    if (qualifyCoordination) {
+      const { captureNativeCoordinationFixture } = await import('./fixtures/native-opencode-team/coordination-probe.ts');
+      coordination = captureNativeCoordinationFixture(profile, { contextTokens: 64000, outputTokens: 1024 });
+    }
+    const initialOpen = { commandId: 'TEST-open', payload: { memberId: 'carol-id' } };
+    profile.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(profile, {
+      method: 'runtime.open', teamId: scope.teamId, ...initialOpen,
+      ...(coordination ? { prepared: [coordination.initialReadiness] } : {}),
+    })];
     const profilePath = join(root, 'profile.json');
     const profileBytes = JSON.stringify(profile);
     await writeFile(profilePath, profileBytes, { mode: 0o600 });
     const profileHash = createHash('sha256').update(profileBytes).digest('hex');
+    if (coordination) {
+      await coordination.run({ profilePath, profileSha256: profileHash, model, signal: testContext.signal });
+      assert.equal(coordination.evidence.status, 'PASS'); assert.equal(coordination.evidence.cleanup, true);
+      steps.push('original_native_coordination_and_cleanup_before_business_host');
+    }
     const start = () => startHost({ node, entry, root, profile: profilePath, profileHash });
     const binding = { schemaVersion: 1, handleId: `TEST-handle-${namespace}`, owner, scope };
     const envelope = (commandId: string, payload: unknown) => ({ commandId, binding, payload });
     host = start();
     await host.rpc('host.handshake', { protocolVersion: 1 });
-    const opened = await host.rpc('runtime.open', envelope('TEST-open', { memberId: 'carol-id' }));
+    const opened = await host.rpc('runtime.open', envelope(initialOpen.commandId, initialOpen.payload));
     assert.equal(opened.ok, true);
     assert.equal(record(opened.value).nativeReady, true);
     steps.push('original_host_native_runtime_and_mcp_ready');
@@ -341,6 +372,11 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     assert.equal(replies.size, 1);
     assert.deepEqual(model.failures, []);
     assert.equal(model.observations.length, 8, 'seven actual tools followed by one terminal model response');
+    assert.equal(model.coordination?.observations.length ?? 0, qualifyCoordination ? 3 : 0);
+    assert.equal(model.localReadiness?.ordinary.length ?? 0, qualifyCoordination ? 1 : 0);
+    assert.equal(model.localReadiness?.inventoryReads ?? 0, qualifyCoordination ? 1 : 0);
+    assert.ok(model.observations.length + (model.coordination?.observations.length ?? 0) +
+      (model.localReadiness?.ordinary.length ?? 0) <= 16);
     assert.ok(model.observations.every(row => row.contextEffective));
     assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\n');
     const listed = await host.rpc('team.tasks.list', envelope('TEST-tasks', null));
@@ -381,6 +417,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     await host.close(); hosts.push(host.facts()); host = undefined;
     assert.deepEqual(model.failures, [], 'cold readback must not trigger rejected model requests');
     assert.equal(model.observations.length, callsBefore);
+    assert.ok(model.observations.every(row => row.requestedModel === 'TEST-model-B' && row.requestedOutputTokens === 1024));
     assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\n');
     assert.equal(await fileHash(binary), nativeDigest);
     assert.equal(await treeHash(join(pkg, 'src'), '.ts'), hostSourceDigest);
@@ -398,6 +435,8 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     catch (error) { cleanupErrors.push(error); }
     try { await installer?.close(); }
     catch (error) { cleanupErrors.push(error); }
+    if (coordination?.evidence.status === 'INCOMPLETE' && coordination.evidence.cleanup !== true)
+      cleanupErrors.push(new Error('Original coordination cleanup unconfirmed'));
     cleanup = cleanupErrors.length === 0;
     try {
       await writeFile(receiptPath, JSON.stringify({
@@ -408,6 +447,8 @@ test('selected stable V1 executes native tools through Host and retains cold rec
         providerDigest, hostSourceDigest, hostDistDigest, steps,
         hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({ exitCode, signalCode, stdoutValid })),
         modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0,
+        coordination: coordination?.evidence ?? { status: 'unqualified', cleanup: null },
+        preferencesSelection: { defaultModelId: 'TEST-local/TEST-model-B', contextTokens: 64000, outputTokens: 1024 },
         vendorAuthQualified: false, desktopQualified: false, releaseQualified: false,
         ...(managedUpdate ? { managedUpdate } : {}),
       }, null, 2) + '\n', { mode: 0o600 });

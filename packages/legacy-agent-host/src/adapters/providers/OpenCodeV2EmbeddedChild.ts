@@ -3,6 +3,9 @@ import { lstat, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { verifyOpenCodeV2EmbeddedGraph } from './OpenCodeV2EmbeddedGraph.js';
+import { bindOpenCodeV2ConfiguredPackages } from './OpenCodeV2ConfiguredPackages.js';
+import { createOpenCodeV2NativeFileTransform } from './OpenCodeV2NativeFileKey.js';
+import type { OpenCodeV2SelectedFileMode } from './OpenCodeV2SelectedFileKey.js';
 
 import type { OpenCodeV2EmbeddedSelection } from './OpenCodeV2EmbeddedGraph.js';
 
@@ -83,7 +86,8 @@ interface EffectRuntime {
   Exit: { void: unknown };
 }
 interface EngineRuntime {
-  start(options: unknown): { pipe(map: (effect: unknown) => unknown): unknown };
+  start(options: unknown, lifecycle?: undefined, transform?: (app: unknown) => unknown):
+    { pipe(map: (effect: unknown) => unknown): unknown };
 }
 
 async function canonicalDirectory(value: unknown): Promise<string> {
@@ -137,6 +141,19 @@ async function start(value: unknown): Promise<void> {
   );
   if (process.versions.bun !== graph.requiredBunVersion) return fail();
   controller.signal.throwIfAborted();
+  stage = 'configuration';
+  const nativeConfig = await bindOpenCodeV2ConfiguredPackages(config, graph);
+  let selectedFileTransform: ((app: unknown) => unknown) | undefined;
+  if (input.selectedFile !== undefined) {
+    const selected = record(input.selectedFile);
+    if (Object.keys(selected).length !== 2 || !Object.hasOwn(selected, 'descriptor') ||
+        !['fresh', 'restore', 'catalog'].includes(String(selected.mode))) return fail();
+    selectedFileTransform = await createOpenCodeV2NativeFileTransform({
+      descriptor: selected.descriptor, mode: selected.mode as OpenCodeV2SelectedFileMode,
+      nonce: input.nonce, password: input.password, graph, signal: controller.signal,
+    });
+  }
+  controller.signal.throwIfAborted();
   stage = 'effect';
   const { Effect, Scope, Exit } = (await import(
     pathToFileURL(graph.effectPath).href
@@ -158,10 +175,10 @@ async function start(value: unknown): Promise<void> {
         app: { name: 'agent-teams-stage1-host', version: '2.1.4' },
         database: { path: input.databasePath },
         events: { persist: true },
-        config: { directory: configDirectory, project: false, content: JSON.stringify(config) },
+        config: { directory: configDirectory, project: false, content: JSON.stringify(nativeConfig) },
         models: { fetch: false, snapshot: true },
         fs: { filewatcher: false, fff: false },
-      })
+      }, undefined, selectedFileTransform)
       .pipe(Effect.provideService(Scope.Scope, scope)),
     { signal: controller.signal }
   );

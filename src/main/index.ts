@@ -233,6 +233,7 @@ import { createDesktopProviderManagementFeatures } from './composition/createDes
 import {
   captureDesktopAgentBackendHttpScope,
   captureDesktopStatusRequest,
+  desktopHostSchedules,
   getDesktopProviderStatusPort,
   isDesktopAgentBackendSelected,
   configureDesktopBackendPersistence,
@@ -2112,7 +2113,8 @@ async function initializeServices(): Promise<void> {
   schedulerService = createSchedulerService(
     teamIpcHandlerApis,
     teamDataService,
-    teamProvisioningService
+    teamProvisioningService,
+    desktopHostSchedules
   );
   // Extension Store services
   const pluginCatalogService = new PluginCatalogService();

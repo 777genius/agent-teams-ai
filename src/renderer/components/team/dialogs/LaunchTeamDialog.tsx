@@ -43,7 +43,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
-import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
@@ -68,6 +67,7 @@ import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvaila
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { getAnthropicRuntimeDefaultLaunchModel } from '@shared/utils/providerDefaultModel';
+import { supportsScheduleExecutionLimits } from '@shared/utils/scheduleLimits';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { bindTeamProvisioningContext } from '@shared/utils/teamProvisioningContext';
 import {
@@ -83,6 +83,7 @@ import {
   markScheduleProviderSwitch,
   resolveScheduleLaunchConfig,
 } from '../schedule/resolveScheduleLaunchConfig';
+import { ScheduleExecutionLimits } from '../schedule/ScheduleExecutionLimits';
 import { SmartScheduleFields } from '../schedule/SmartScheduleFields';
 import { useSavedPromptReview } from '../schedule/useSavedPromptReview';
 import { validateScheduleForm } from '../schedule/validateScheduleForm';
@@ -421,6 +422,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const isTeamSchedule = isSchedule && scheduleExecutionMode === 'team';
   const isTaskFirstSchedule = isSchedule && (schedule?.taskFirst === true || !isEditing);
   const usesSavedTeamRuntime = isTeamSchedule || isTaskFirstSchedule;
+  const supportsScheduleLimits = supportsScheduleExecutionLimits(isHostTeamSelectionKey(effectiveTeamName), selectedProviderId);
   const scheduleRuntimeEditedRef = useRef({ provider: false, model: false, effort: false, fastMode: false, skipPermissions: false });
   const [savedPromptReview, setSavedPromptReview] = useSavedPromptReview({
     open, enabled: isTaskFirstSchedule, teamName: effectiveTeamName,
@@ -836,7 +838,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setCronExpression(schedule.cronExpression);
       setTimezone(schedule.timezone);
       setWarmUpMinutes(schedule.warmUpMinutes);
-      setMaxTurns(schedule.maxTurns);
+      setMaxTurns(schedule.maxTurns ?? 50);
       setMaxBudgetUsd(schedule.maxBudgetUsd != null ? String(schedule.maxBudgetUsd) : '');
       promptDraft.setValueRaw(schedule.launchConfig.prompt);
       setCustomCwd(schedule.launchConfig.cwd);
@@ -2279,7 +2281,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             () =>
               submitTeam(
                 props,
-                launchSubmission.request,
+                capturedReadiness.captureForSubmit(launchSubmission.request),
                 launchSubmission.members,
                 effectiveSelectedModel,
                 api.teams.replaceMembers,
@@ -2356,6 +2358,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             },
           });
 
+          if (!usesSavedTeamRuntime && !supportsScheduleLimits) {
+            launchConfig.allowedTools = []; launchConfig.disallowedTools = [];
+          }
+
           if (isEditing && schedule) {
             const patch: UpdateSchedulePatch = {
               ...(scheduleExecutionMode !== 'legacy'
@@ -2365,8 +2371,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               cronExpression: cronExpression.trim(),
               timezone,
               warmUpMinutes: scheduleExecutionMode === 'legacy' ? warmUpMinutes : 0,
-              maxTurns: isTaskFirstSchedule ? schedule.maxTurns : maxTurns,
-              maxBudgetUsd: isTaskFirstSchedule ? schedule.maxBudgetUsd : parsedBudget,
+              maxTurns: usesSavedTeamRuntime ? schedule.maxTurns : supportsScheduleLimits ? maxTurns : null,
+              maxBudgetUsd: usesSavedTeamRuntime ? schedule.maxBudgetUsd : supportsScheduleLimits ? parsedBudget ?? null : null,
               launchConfig,
               ...(reviewedSavedPrompt && { reviewedSavedPrompt: true as const }),
             };
@@ -2382,8 +2388,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               cronExpression: cronExpression.trim(),
               timezone,
               warmUpMinutes: scheduleExecutionMode === 'legacy' ? warmUpMinutes : 0,
-              maxTurns: isTaskFirstSchedule ? 50 : maxTurns,
-              maxBudgetUsd: isTaskFirstSchedule ? undefined : parsedBudget,
+              maxTurns: isTaskFirstSchedule ? 50 : supportsScheduleLimits ? maxTurns : undefined,
+              maxBudgetUsd: isTaskFirstSchedule || !supportsScheduleLimits ? undefined : parsedBudget,
               launchConfig,
             };
             await createSchedule(input);
@@ -2971,50 +2977,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           )}
 
           {isSchedule && !usesSavedTeamRuntime ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label
-                  htmlFor="schedule-max-turns"
-                  className="text-[11px] text-[var(--color-text-muted)]"
-                >
-                  {t('launch.schedule.maxTurns')}
-                </Label>
-                <Input
-                  id="schedule-max-turns"
-                  type="number"
-                  min={1}
-                  max={500}
-                  className="h-8 text-xs"
-                  value={maxTurns}
-                  onChange={(e) => setMaxTurns(Math.max(1, parseInt(e.target.value) || 50))}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label
-                  htmlFor="schedule-max-budget"
-                  className="text-[11px] text-[var(--color-text-muted)]"
-                >
-                  {t('launch.schedule.maxBudgetUsd')}
-                </Label>
-                <Input
-                  id="schedule-max-budget"
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  className="h-8 text-xs"
-                  value={maxBudgetUsd}
-                  onChange={(e) => setMaxBudgetUsd(e.target.value)}
-                  placeholder={t('launch.schedule.noLimit')}
-                />
-              </div>
-              <p className="col-span-2 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
-                {t('launch.schedule.executionLimitsNote', {
-                  defaultValue:
-                    'These limits apply only to standalone one-shot runs. Tasks assigned to a running team do not use them.',
-                })}
-              </p>
-            </div>
+            <ScheduleExecutionLimits supported={supportsScheduleLimits} maxTurns={maxTurns}
+              maxBudgetUsd={maxBudgetUsd} onMaxTurns={setMaxTurns} onMaxBudgetUsd={setMaxBudgetUsd} />
           ) : null}
         </fieldset>
         {/* Error display */}

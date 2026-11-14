@@ -33,7 +33,6 @@ import {
 } from '@features/runtime-provider-management/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import atlasCloudLogo from '@renderer/assets/atlascloud-logo.svg';
-import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import {
   CodexLoginLinkCopyButton,
@@ -65,10 +64,9 @@ import {
   getProviderRuntimeBackendSummary,
 } from '@renderer/components/runtime/ProviderRuntimeBackendSelector';
 import {
-  getProviderTerminalCommand,
-  getProviderTerminalCommandById,
-  getProviderTerminalLogoutCommand,
-} from '@renderer/components/runtime/providerTerminalCommands';
+  type NativeClaudeAuthenticationAction,
+  useProviderAuthenticationActions,
+} from '@renderer/components/runtime/useProviderAuthenticationActions';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
 import {
   loadDashboardCliStatusBannerCollapsed,
@@ -177,6 +175,11 @@ const TerminalLogPanel = lazy(() =>
 const TerminalModal = lazy(() =>
   import('@renderer/components/terminal/TerminalModal').then((module) => ({
     default: module.TerminalModal,
+  }))
+);
+const ProviderAuthenticationTerminal = lazy(() =>
+  import('@renderer/components/runtime/ProviderAuthenticationTerminal').then((module) => ({
+    default: module.ProviderAuthenticationTerminal,
   }))
 );
 
@@ -1094,7 +1097,10 @@ const InstalledBanner = ({
       {showExpandedContent && detailedProviders.length > 0 && (
         <div className="mt-3">
           {detailedProviders.map((provider) => {
-            const actionDisabled = isBusy || !cliStatus.binaryPath;
+            const hostActionDisabled = isBusy || cliStatusLoading || !cliStatus.installed;
+            const actionDisabled =
+              hostActionDisabled ||
+              (!cliStatus.binaryPath && provider.nativeAuthManagement !== 'claude');
             const runtimeSummary = isConnectionManagedRuntimeProvider(provider)
               ? getProviderCurrentRuntimeSummary(provider, settingsT)
               : getProviderRuntimeBackendSummary(provider, runtimeBackendSummaryText);
@@ -1316,7 +1322,7 @@ const InstalledBanner = ({
                               <CodexLoginLinkCopyButton
                                 authUrl={codexLoginAuthUrl}
                                 userCode={codexLoginUserCode}
-                                disabled={codexReconnectBusy || actionDisabled}
+                                disabled={codexReconnectBusy || hostActionDisabled}
                                 size="xs"
                               />
                               <CodexLoginUserCodeBadge userCode={codexLoginUserCode} />
@@ -1324,7 +1330,7 @@ const InstalledBanner = ({
                                 <button
                                   type="button"
                                   onClick={onCodexDeviceCodeLogin}
-                                  disabled={codexReconnectBusy || actionDisabled}
+                                  disabled={codexReconnectBusy || hostActionDisabled}
                                   className="shrink-0 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                                   style={{
                                     borderColor: 'rgba(245, 158, 11, 0.22)',
@@ -1344,7 +1350,7 @@ const InstalledBanner = ({
                                   }
                                   onCodexReconnect();
                                 }}
-                                disabled={codexReconnectBusy || actionDisabled}
+                                disabled={codexReconnectBusy || hostActionDisabled}
                                 className="shrink-0 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                                 style={{
                                   borderColor: 'rgba(245, 158, 11, 0.28)',
@@ -1429,7 +1435,7 @@ const InstalledBanner = ({
                     <button
                       data-testid={`runtime-manage-${provider.providerId}`}
                       onClick={() => onProviderManage(provider.providerId)}
-                      disabled={actionDisabled}
+                      disabled={isBusy || cliStatusLoading || !cliStatus.installed}
                       className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                       style={{
                         borderColor: 'var(--color-border)',
@@ -1502,7 +1508,7 @@ const InstalledBanner = ({
                 SHOW_ATLAS_CLOUD_OPENCODE_BANNER &&
                 provider.providerId === 'opencode' ? (
                   <OpenCodeAtlasCloudBanner
-                    disabled={actionDisabled}
+                    disabled={hostActionDisabled}
                     onConnect={() => onOpenCodeProviderConnect(ATLAS_CLOUD_OPENCODE_PROVIDER_ID)}
                   />
                 ) : null}
@@ -1585,6 +1591,8 @@ export const CliStatusBanner = ({
     providerId: CliProviderId;
     action: 'login' | 'logout';
   } | null>(null);
+  const [nativeClaudeAuthAction, setNativeClaudeAuthAction] =
+    useState<NativeClaudeAuthenticationAction | null>(null);
   const [manageProviderId, setManageProviderId] = useState<CliProviderId>('anthropic');
   const [manageRuntimeProviderId, setManageRuntimeProviderId] = useState<string | null>(null);
   const [manageRuntimeProviderAction, setManageRuntimeProviderAction] = useState<
@@ -1915,36 +1923,29 @@ export const CliStatusBanner = ({
     openCodeDashboardCatalog.refresh,
   ]);
 
-  const handleProviderLogin = useCallback((providerId: CliProviderId) => {
-    setProviderTerminal({ providerId, action: 'login' });
-  }, []);
-
-  const handleProviderLogout = useCallback(
-    (providerId: CliProviderId) => {
-      void (async () => {
-        const provider =
-          effectiveCliStatus?.providers.find((entry) => entry.providerId === providerId) ?? null;
-        const disconnectAction = provider ? getProviderDisconnectAction(provider, settingsT) : null;
-        if (!disconnectAction) {
-          return;
-        }
-
-        const confirmed = await confirm({
-          title: disconnectAction.title,
-          message: disconnectAction.message,
-          confirmLabel: disconnectAction.confirmLabel,
-          cancelLabel: t('cliStatus.actions.cancel'),
-          variant: 'danger',
-        });
-
-        if (!confirmed) {
-          return;
-        }
-
-        setProviderTerminal({ providerId, action: 'logout' });
-      })();
+  const openNativeAuthentication = useCallback(
+    (providerId: CliProviderId, action: NativeClaudeAuthenticationAction) => {
+      setNativeClaudeAuthAction(action);
+      setManageProviderId(providerId);
+      setManageRuntimeProviderId(null);
+      setManageRuntimeProviderAction(null);
+      setManageDialogOpen(true);
     },
-    [effectiveCliStatus?.providers, settingsT, t]
+    []
+  );
+  const requestProviderAction = useProviderAuthenticationActions({
+    providers: effectiveCliStatus?.providers,
+    projectPath: selectedProjectPath,
+    openNative: openNativeAuthentication,
+    openLegacy: setProviderTerminal,
+  });
+  const handleProviderLogin = useCallback(
+    (providerId: CliProviderId) => void requestProviderAction(providerId, 'login'),
+    [requestProviderAction]
+  );
+  const handleProviderLogout = useCallback(
+    (providerId: CliProviderId) => void requestProviderAction(providerId, 'logout'),
+    [requestProviderAction]
   );
 
   const handleProviderManage = useCallback((providerId: CliProviderId) => {
@@ -1995,6 +1996,7 @@ export const CliStatusBanner = ({
     (open: boolean) => {
       setManageDialogOpen(open);
       if (!open) {
+        setNativeClaudeAuthAction(null);
         if (manageProviderId === 'opencode') {
           setProviderQuickConnectRefreshKey((current) => current + 1);
         }
@@ -2073,18 +2075,6 @@ export const CliStatusBanner = ({
 
   const variant = getVariant();
   const styles = VARIANT_STYLES[variant];
-  const activeTerminalProvider = providerTerminal
-    ? (effectiveCliStatus?.providers.find(
-        (provider) => provider.providerId === providerTerminal.providerId
-      ) ?? null)
-    : null;
-  const providerTerminalCommand = providerTerminal
-    ? activeTerminalProvider
-      ? providerTerminal.action === 'login'
-        ? getProviderTerminalCommand(activeTerminalProvider)
-        : getProviderTerminalLogoutCommand(activeTerminalProvider)
-      : getProviderTerminalCommandById(providerTerminal.providerId, providerTerminal.action)
-    : null;
   const installedAuxiliaryUi =
     renderCliStatus !== null ? (
       <>
@@ -2129,6 +2119,7 @@ export const CliStatusBanner = ({
             <ProviderRuntimeSettingsDialog
               open={manageDialogOpen}
               onOpenChange={handleManageDialogOpenChange}
+              nativeClaudeAuthAction={nativeClaudeAuthAction}
               providers={visibleCliProviders}
               projectPath={selectedProjectPath}
               initialProviderId={
@@ -2139,42 +2130,27 @@ export const CliStatusBanner = ({
               initialRuntimeProviderId={manageRuntimeProviderId}
               initialRuntimeProviderAction={manageRuntimeProviderAction}
               providerStatusLoading={cliProviderStatusLoading}
-              disabled={isBusy || cliStatusLoading || !renderCliStatus.binaryPath}
+              disabled={isBusy || cliStatusLoading || !renderCliStatus.installed}
               codexRuntimeStatus={codexRuntimeStatus}
               codexRuntimeStatusLoading={codexRuntimeStatusLoading}
               onInstallCodexRuntime={() => installCodexRuntime()}
               onSelectBackend={handleProviderBackendChange}
               onRefreshProvider={handleProviderRefresh}
-              onRequestLogin={(providerId) => setProviderTerminal({ providerId, action: 'login' })}
+              onRequestLogin={handleProviderLogin}
             />
           </Suspense>
         )}
-        {providerTerminal && renderCliStatus.binaryPath && (
+        {providerTerminal && (
           <Suspense fallback={null}>
-            <TerminalModal
-              title={`${getHumanRuntimeDisplayName(renderCliStatus, multimodelEnabled)} ${
-                providerTerminal.action === 'login'
-                  ? t('cliStatus.labels.loginTitle')
-                  : t('cliStatus.labels.logoutTitle')
-              }: ${getProviderLabel(providerTerminal.providerId)}`}
-              command={renderCliStatus.binaryPath}
-              args={providerTerminalCommand?.args}
-              env={providerTerminalCommand?.env}
+            <ProviderAuthenticationTerminal
+              status={renderCliStatus}
+              multimodelEnabled={multimodelEnabled}
+              request={providerTerminal}
+              label={getProviderLabel(providerTerminal.providerId)}
               onClose={() => {
                 setProviderTerminal(null);
                 recheckAuthState();
               }}
-              autoCloseOnSuccessMs={3000}
-              successMessage={
-                providerTerminal.action === 'login'
-                  ? t('cliStatus.labels.loginAuthUpdated')
-                  : t('cliStatus.labels.loggedOut')
-              }
-              failureMessage={
-                providerTerminal.action === 'login'
-                  ? t('cliStatus.labels.loginAuthFailed')
-                  : t('cliStatus.labels.logoutFailed')
-              }
             />
           </Suspense>
         )}

@@ -3,6 +3,7 @@ import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import {
   capturedRuntimeMcpReferencesSchema,
   loadCapturedRuntimeMcpRecipe,
+  validateCapturedRuntimeMcpRecipe,
 } from './capturedRuntimeMcpRecipes.js';
 import {
   capturedWorktreesSchema,
@@ -18,11 +19,14 @@ import { captureClaudeSettingSources } from './claudeSettingSources.js';
 import { captureRuntimeMcp } from './captureRuntimeMcp.js';
 import { captureRuntimeExtraArgs } from './runtimeExtraArgs.js';
 import { runtimeMemberProfileSchema } from './runtimeProfile.js';
-import { resolveRuntimeRecipe, runtimeProviderId } from './runtimeRecipe.js';
+import { resolveCapturedRuntimeRecipe, resolveRuntimeRecipe, runtimeProviderId } from './runtimeRecipe.js';
+import { runtimeSourceReferenceSchema } from './runtimeSourceContracts.js';
+import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
+import type { RuntimeRecipeSources, RuntimeSourceTeamScope } from './runtimeSourceContracts.js';
 import type { RuntimeMemberProfile } from './runtimeProfile.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { HostedTeam } from './MemberEntry.js';
-import type { TeamRosterConfiguration } from '../team/rosterContracts.js';
+import type { TeamMemberSettings, TeamRosterConfiguration } from '../team/rosterContracts.js';
 import type { TeamRuntimeCapture } from '../team/runtimeRegistrationContracts.js';
 
 const id = z
@@ -38,6 +42,7 @@ export const runtimeCaptureSourceSchema = z
     configurationRevision: hash,
     mcpCaptureVersion: z.literal(1).optional(),
     mcpRecipeReferences: capturedRuntimeMcpReferencesSchema.optional(),
+    recipeSources: z.array(runtimeSourceReferenceSchema.extend({ memberId: id }).strict()).min(1).max(256).optional(),
     savedSettings: savedTeamSettingsSchema,
     members: z
       .array(
@@ -60,6 +65,34 @@ export const runtimeCaptureSourceSchema = z
   .strict();
 export type RuntimeCaptureSource = z.infer<typeof runtimeCaptureSourceSchema>;
 
+/** Logical member names compare a Create preflight with its later registry-assigned member IDs. */
+export function runtimeCaptureSourceSelections(source: RuntimeCaptureSource) {
+  return (source.recipeSources ?? []).map(({ memberId, ...reference }) => {
+    const member = source.members.find(row => row.memberId === memberId);
+    if (!member) throw new TeamLaunchError('hold', 'capture-source-references');
+    return { memberName: member.name, ...reference };
+  }).sort((a, b) => a.memberName.localeCompare(b.memberName));
+}
+
+/** Validate every original MCP artifact before a restore can refuse a missing current template. */
+export function validateRuntimeCaptureMcpArtifacts(
+  profile: TeamHostProfile,
+  team: Pick<HostedTeam, 'definition'>,
+  source: RuntimeCaptureSource
+): void {
+  const references = source.mcpRecipeReferences;
+  if (!references) return;
+  if (references.length !== source.members.length ||
+      references.some(reference => !source.members.some(member => member.memberId === reference.memberId)))
+    refuse('capture-mcp-references');
+  const store = new TeamOwnerStore(profile.owner.storageRoot, team.definition.binding.teamName);
+  for (const member of source.members) {
+    const reference = references.find(row => row.memberId === member.memberId);
+    if (!reference) refuse('capture-mcp-references');
+    validateCapturedRuntimeMcpRecipe(store, source.commandId, reference, runtimeCaptureCwd(source, member));
+  }
+}
+
 function refuse(reason: string): never {
   throw new TeamLaunchError('invalid', reason);
 }
@@ -71,13 +104,16 @@ function recipes(
     commandId?: string;
     mcpCaptureVersion?: 1 | undefined;
     mcpRecipeReferences?: RuntimeCaptureSource['mcpRecipeReferences'];
+    recipeSources?: RuntimeCaptureSource['recipeSources'];
     worktrees?: RuntimeCaptureSource['worktrees'];
     members: readonly Pick<
       RuntimeCaptureSource['members'][number],
       'memberId' | 'role' | 'settings'
     >[];
   },
-  teamName?: string
+  teamName?: string,
+  selection?: { sources: RuntimeRecipeSources; scope: RuntimeSourceTeamScope },
+  restoring = false
 ): RuntimeMemberProfile[] {
   if (
     source.savedSettings.runtimeSelectionVersion === 1 &&
@@ -87,23 +123,28 @@ function recipes(
   const leads = source.members.filter((member) => member.role === 'lead');
   if (leads.length !== 1) refuse('capture-lead');
   const lead = leads[0]!;
-  const leadRecipe = resolveRuntimeRecipe(
-    profile.runtime,
-    teamId,
-    lead.memberId,
-    source.savedSettings.providerId ?? lead.settings.providerId
-  );
+  if (source.recipeSources && (new Set(source.recipeSources.map(row => row.memberId)).size !== source.recipeSources.length ||
+      source.recipeSources.some(row => !source.members.some(member => member.memberId === row.memberId))))
+    refuse('capture-source-references');
+  if (restoring) for (const reference of source.recipeSources ?? []) {
+    if (!selection) throw new TeamLaunchError('hold', 'runtime-source-unavailable');
+    const member = source.members.find(row => row.memberId === reference.memberId)!;
+    selection.sources.assertReferenceAvailable?.(reference, selection.scope,
+      runtimeCaptureCwd({ savedSettings: source.savedSettings }, member));
+  }
+  const resolvePrivate = (memberId: string, providerId?: TeamMemberSettings['providerId']) =>
+    resolveRuntimeRecipe(profile.runtime, teamId, memberId, providerId, restoring);
+  const leadRecipe = resolvePrivate(lead.memberId,
+    source.savedSettings.providerId ?? lead.settings.providerId);
   const leadProvider = runtimeProviderId(leadRecipe);
   const selected = captureRuntimeExtraArgs(
-    source.members.map((member) =>
+    source.members.map((member) => resolveCapturedRuntimeRecipe(
       member === lead
         ? leadRecipe
-        : resolveRuntimeRecipe(
-            profile.runtime,
-            teamId,
-            member.memberId,
-            member.settings.providerId ?? leadProvider
-          )
+        : resolvePrivate(member.memberId, member.settings.providerId ?? leadProvider),
+      source.recipeSources?.find(row => row.memberId === member.memberId), selection?.scope,
+      runtimeCaptureCwd({ savedSettings: source.savedSettings }, member), selection?.sources
+    )
     ),
     source.savedSettings.extraCliArgs
   );
@@ -126,7 +167,8 @@ function recipes(
           ...recipe,
           cwd: runtimeCaptureCwd(source, member),
         },
-        reference
+        reference,
+        restoring
       );
     });
   }
@@ -158,9 +200,14 @@ export function captureRuntimeSource(
     mcpRecipeReferences?: RuntimeCaptureSource['mcpRecipeReferences'];
     worktreeIntentDigest?: string;
     worktreeBindings?: RuntimeCaptureSource['worktreeBindings'];
+    sources?: RuntimeRecipeSources;
+    /** Even an empty array means keep the already captured seed selection. */
+    sourceReferences?: NonNullable<RuntimeCaptureSource['recipeSources']>;
   } = {}
 ): RuntimeCaptureSource {
   if (!roster.savedSettings) refuse('saved-configuration-unavailable');
+  const sourceReferences = context.sourceReferences ??
+    captureRuntimeRecipeSources(profile, team, roster, context.sources);
   const selectedRecipes = recipes(
     profile,
     team.definition.binding.teamId,
@@ -170,9 +217,11 @@ export function captureRuntimeSource(
       ...(!context.deferMcp ? { mcpCaptureVersion: 1 as const } : {}),
       ...(context.worktrees ? { worktrees: context.worktrees } : {}),
       ...(context.mcpRecipeReferences ? { mcpRecipeReferences: context.mcpRecipeReferences } : {}),
+      ...(sourceReferences.length ? { recipeSources: sourceReferences } : {}),
       members: roster.members,
     },
-    team.definition.binding.teamName
+    team.definition.binding.teamName,
+    context.sources ? { sources: context.sources, scope: team.definition.scope } : undefined
   );
   return runtimeCaptureSourceSchema.parse({
     commandId,
@@ -180,6 +229,7 @@ export function captureRuntimeSource(
     configurationRevision: roster.revision,
     ...(!context.deferMcp ? { mcpCaptureVersion: 1 as const } : {}),
     ...(context.mcpRecipeReferences ? { mcpRecipeReferences: context.mcpRecipeReferences } : {}),
+    ...(sourceReferences.length ? { recipeSources: sourceReferences } : {}),
     savedSettings: roster.savedSettings,
     members: roster.members.map((member, index) => ({
       memberId: member.memberId,
@@ -199,11 +249,13 @@ export function compileRuntimeCapture(
   profile: TeamHostProfile,
   team: Pick<HostedTeam, 'definition'>,
   raw: RuntimeCaptureSource,
-  mode: 'launch' | 'model-preflight' = 'launch'
+  mode: 'launch' | 'model-preflight' | 'restore' = 'launch',
+  sources?: RuntimeRecipeSources
 ) {
   const source = runtimeCaptureSourceSchema.parse(raw);
   if (Buffer.byteLength(JSON.stringify(source)) > 512 * 1024) refuse('capture-budget');
-  if (mode === 'launch') validateWorktreeMembers(source);
+  if (mode !== 'model-preflight') validateWorktreeMembers(source);
+  if (mode === 'restore') validateRuntimeCaptureMcpArtifacts(profile, team, source);
   const launchId = effectId('team-launch', team.definition.binding.teamId, source.commandId);
   const lead = source.members.find((member) => member.role === 'lead');
   if (!lead || source.members.filter((member) => member.role === 'lead').length !== 1)
@@ -214,7 +266,9 @@ export function compileRuntimeCapture(
       profile,
       team.definition.binding.teamId,
       source,
-      team.definition.binding.teamName
+      team.definition.binding.teamName,
+      sources ? { sources, scope: team.definition.scope } : undefined,
+      mode === 'restore'
     );
   } catch (error) {
     if (error instanceof TeamLaunchError)
@@ -224,7 +278,10 @@ export function compileRuntimeCapture(
   const leadProvider = runtimeProviderId(selectedRecipes[source.members.indexOf(lead)]!);
   const profiles = source.members.map((member, index) => {
     const base = selectedRecipes[index]!;
-    if (runtimeDigest(base) !== member.recipeDigest) throw new TeamLaunchError('hold', 'capture-recipe-changed');
+    if (runtimeDigest(base) !== member.recipeDigest) {
+      if (mode === 'restore') throw new RuntimeSourceUnavailable();
+      throw new TeamLaunchError('hold', 'capture-recipe-changed');
+    }
     return compileRuntimeMemberProfile(base, source, member, leadProvider, launchId);
   });
   const registration = runtimeCaptureRegistration(team, source);
@@ -274,9 +331,8 @@ export function compileRuntimeMemberProfile(
     // is not an explicit catalog selection and must not be passed as a bare ID.
     ...(base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
         selectedModel === undefined ? {} : { model }),
-    // A saved V2 variant is already bound to its native session. Repeated
-    // inherited effort does not select a new variant; let native admission
-    // attest it. Any differing effort remains an unsupported V2 override.
+    // Preserve the historical unchanged variant mapping. A changed embedded
+    // selection is attested against its native catalog before session creation.
     ...(effort === undefined ||
       (base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
        effort === base.nativeOptions.variant) ? {} : { effort }),
@@ -436,9 +492,10 @@ function validateWorktreeMembers(source: RuntimeCaptureSource): void {
 export function runtimeCaptureRecipeCandidates(
   profile: TeamHostProfile,
   teamId: string,
-  source: RuntimeCaptureSource
+  source: RuntimeCaptureSource,
+  selection?: { sources: RuntimeRecipeSources; scope: RuntimeSourceTeamScope }
 ): RuntimeMemberProfile[] {
-  const selected = runtimeCaptureBaseRecipes(profile, teamId, source);
+  const selected = runtimeCaptureBaseRecipes(profile, teamId, source, selection);
   return source.mcpCaptureVersion === 1
     ? captureRuntimeMcp({
         recipes: selected,
@@ -461,14 +518,31 @@ export function runtimeCaptureRecipeCandidates(
 export function runtimeCaptureBaseRecipes(
   profile: TeamHostProfile,
   teamId: string,
-  source: RuntimeCaptureSource
+  source: RuntimeCaptureSource,
+  selection?: { sources: RuntimeRecipeSources; scope: RuntimeSourceTeamScope }
 ): RuntimeMemberProfile[] {
   return recipes(profile, teamId, {
     savedSettings: source.savedSettings,
     members: source.members,
+    ...(source.recipeSources ? { recipeSources: source.recipeSources } : {}),
     ...(source.worktrees ? { worktrees: source.worktrees } : {}),
-  }).map((recipe, index) => ({
+  }, undefined, selection).map((recipe, index) => ({
     ...recipe,
     cwd: runtimeCaptureCwd(source, source.members[index]!),
   }));
+}
+
+/** Reads only current source pointers; callers pin this result before any asynchronous preparation. */
+export function captureRuntimeRecipeSources(profile: TeamHostProfile, team: Pick<HostedTeam, 'definition'>,
+  roster: Pick<TeamRosterConfiguration, 'savedSettings' | 'members'>, sources?: RuntimeRecipeSources
+): NonNullable<RuntimeCaptureSource['recipeSources']> {
+  if (!sources) return [];
+  if (!roster.savedSettings) refuse('saved-configuration-unavailable');
+  const source = { savedSettings: roster.savedSettings, members: roster.members };
+  const selected = recipes(profile, team.definition.binding.teamId, source);
+  return selected.flatMap((recipe, index) => {
+    const reference = sources.currentForRecipe(team.definition.scope,
+      runtimeCaptureCwd(source, source.members[index]!), recipe);
+    return reference ? [{ ...reference, memberId: roster.members[index]!.memberId }] : [];
+  });
 }

@@ -1,0 +1,48 @@
+{
+  "sourceCommit": "7b6fe18170ee51bf7d679a9ba85801963e07271a",
+  "sourceTree": "dac7ea5730ddb3e4cb3f8a93b7cfc6aa7fa0474b",
+  "sourceWorkingTreeClean": true,
+  "toolchain": {
+    "node": "24.21.0",
+    "pnpm": "11.18.0"
+  },
+  "fullChecks": [
+    {
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "log": "parity-claude-executable-check24.log"
+    },
+    {
+      "node": "26.11.1",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "log": "parity-claude-executable-check26.log"
+    }
+  ],
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "recipe": "pnpm check; AGENT_TEAMS_PROVIDER_PACK_TEST_RETAIN_DIR=<archives> pnpm --filter @agent-teams/provider-implementations test:package",
+  "packages": {
+    "provider-implementations": {
+      "oldSha256": "9ec9000471ce7beb1d8e2501f361a5d4d9d9c25465dacf99bda506105d1eb739",
+      "newSha256": "c035a09d5b6795e5f440b0d5ffef52d23604f31618232a36356c7133f63b11e6",
+      "changed": [
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.d.ts",
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.js"
+      ],
+      "added": [],
+      "removed": []
+    },
+    "provider-session-contracts": {
+      "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "changed": [],
+      "added": [],
+      "removed": []
+    }
+  }
+}

@@ -1,8 +1,8 @@
-import type { ChildProcessWithoutNullStreams } from 'node:child_process';
+import type { ObservableNativeProcess } from '../../owned-process/processFacade.js';
 import type { CodexAppServerTransport } from '@agent-teams/provider-implementations/codex';
 
 /** Byte IO only; do not parse, correlate, inspect or dispatch native frames here. */
-export function codexByteTransport(child: ChildProcessWithoutNullStreams): CodexAppServerTransport {
+export function codexByteTransport(child: Pick<ObservableNativeProcess, 'stdin' | 'stdout'>): CodexAppServerTransport {
   // Writes report errors through their callback; a late pipe error must not crash the Host.
   child.stdin.on('error', () => {});
   return {

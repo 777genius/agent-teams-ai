@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { promises as fs } from 'fs';
 import { chmod, mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
@@ -32,6 +33,7 @@ vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnvBestEffort: resolveInteractiveShellEnvBestEffortMock,
 }));
 
+import { runtimeSourceNativeExecutableDigest } from '@agent-teams/legacy-agent-host/runtime-sources';
 import {
   createCodexRuntimeInstallerFeature,
   extractCodexRuntimePackageFilesFromTarball,
@@ -41,6 +43,31 @@ import {
   verifyCodexRuntimePackageIntegrity,
 } from '@features/codex-runtime-installer/main';
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
+
+import { CapturedCodexRuntimeInstaller } from '../../../../src/features/codex-runtime-installer/main/application/CapturedCodexRuntimeInstaller';
+import { captureCodexNativeSelection } from '../../../../src/features/codex-runtime-installer/main/infrastructure/captureCodexNativeSelection';
+import {
+  captureAppManagedCodexRuntime,
+  CodexRuntimeInstallerService,
+} from '../../../../src/features/codex-runtime-installer/main/infrastructure/CodexRuntimeInstallerService';
+
+import type {
+  RuntimeSourcePublication,
+  RuntimeSourceSummary,
+} from '@agent-teams/legacy-agent-host/runtime-sources';
+import type { CapturedRuntimeSources } from '@features/agent-backend/main';
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
+import type { CapturedCodexResolver } from '@main/services/infrastructure/codexAppServer/CodexBinaryResolver';
+
+function deferred<T>() {
+  let resolve: (value: T) => void = () => {
+    throw new Error('TEST deferred not initialized');
+  };
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
 
 let tempRoot: string | null = null;
 const originalPath = process.env.PATH;
@@ -80,6 +107,46 @@ function createTarball(entries: { name: string; data: string }[]): Buffer {
       Buffer.alloc(1024),
     ])
   );
+}
+
+function createRuntimePackage(marker: 'A' | 'B') {
+  const selected = getCodexRuntimePlatformCandidates()[0];
+  const suffix = process.platform === 'win32' ? '.exe' : '';
+  const files = [
+    { relativePath: `codex/codex${suffix}`, data: `TEST ${marker} codex` },
+    { relativePath: `path/rg${suffix}`, data: `TEST ${marker} rg` },
+    { relativePath: `codex/TEST-sandbox-helper${suffix}`, data: `TEST ${marker} helper` },
+  ];
+  return {
+    files,
+    tarball: createTarball(
+      files.map(({ relativePath, data }) => ({
+        name: `package/vendor/${selected.vendorTarget}/${relativePath}`,
+        data,
+      }))
+    ),
+  };
+}
+
+async function snapshotRuntimePackage(binaryPath: string, files: { relativePath: string }[]) {
+  const root = path.dirname(path.dirname(binaryPath));
+  const directory = await fs.stat(root);
+  return {
+    directory: { dev: directory.dev, ino: directory.ino, mode: directory.mode },
+    files: await Promise.all(
+      files.map(async ({ relativePath }) => {
+        const filePath = path.join(root, relativePath);
+        const identity = await fs.stat(filePath);
+        return {
+          relativePath,
+          bytes: await fs.readFile(filePath, 'utf8'),
+          dev: identity.dev,
+          ino: identity.ino,
+          mode: identity.mode,
+        };
+      })
+    ),
+  };
 }
 
 describe('CodexRuntimeInstallerService resolver', () => {
@@ -129,28 +196,259 @@ describe('CodexRuntimeInstallerService resolver', () => {
   it.each([172_854_349, 192 * 1024 * 1024])(
     'admits advertised package size %s and completes verified fixture installation',
     async (advertisedBytes) => {
-      const selected = getCodexRuntimePlatformCandidates()[0];
-      const binaryName = process.platform === 'win32' ? 'codex.exe' : 'codex';
-      const tarball = createTarball([
-        {
-          name: `package/vendor/${selected.vendorTarget}/codex/${binaryName}`,
-          data: 'TEST binary',
-        },
-      ]);
+      const firstPackage = createRuntimePackage('A');
       // Exercise the observed official header and exact policy boundary without
       // downloading or allocating a production-sized package. Integrity and
       // extraction still run against a complete small fixture payload.
       const fetch = stubPackageDownload(
-        new Response(new Uint8Array(tarball), {
+        new Response(new Uint8Array(firstPackage.tarball), {
           headers: { 'content-length': String(advertisedBytes) },
         }),
-        tarball
+        firstPackage.tarball
       );
-      const status = await createCodexRuntimeInstallerFeature().install();
+      const feature = createCodexRuntimeInstallerFeature();
+      const status = await feature.install();
       expect(status).toMatchObject({ installed: true, state: 'ready', source: 'app-managed' });
       expect(resolveAppManagedCodexRuntimeBinaryPath()).toBe(status.binaryPath);
       expect(fetch).toHaveBeenCalledTimes(3);
-      expect(execCliMock).toHaveBeenCalled();
+      expect(execCliMock).toHaveBeenCalledTimes(1);
+      if (!status.binaryPath) throw new Error('TEST first package has no binary path');
+      const firstSnapshot = await snapshotRuntimePackage(status.binaryPath, firstPackage.files);
+
+      const secondPackage = createRuntimePackage('B');
+      const secondFetch = stubPackageDownload(
+        new Response(new Uint8Array(secondPackage.tarball)),
+        secondPackage.tarball
+      );
+      const repaired = await feature.install();
+      expect(repaired).toMatchObject({ installed: true, state: 'ready', source: 'app-managed' });
+      if (!repaired.binaryPath) throw new Error('TEST repaired package has no binary path');
+      expect(repaired.binaryPath).not.toBe(status.binaryPath);
+      expect(resolveAppManagedCodexRuntimeBinaryPath()).toBe(repaired.binaryPath);
+      expect(await snapshotRuntimePackage(status.binaryPath, firstPackage.files)).toEqual(
+        firstSnapshot
+      );
+      const secondSnapshot = await snapshotRuntimePackage(repaired.binaryPath, secondPackage.files);
+      expect(
+        secondSnapshot.files.map(({ relativePath, bytes }) => ({ relativePath, bytes }))
+      ).toEqual(
+        secondPackage.files.map(({ relativePath, data }) => ({ relativePath, bytes: data }))
+      );
+      if (process.platform !== 'win32') {
+        expect(firstSnapshot.files.map(({ mode }) => mode & 0o777)).toEqual([0o755, 0o755, 0o755]);
+        expect(secondSnapshot.files.map(({ mode }) => mode & 0o777)).toEqual([0o755, 0o755, 0o755]);
+      }
+      expect(secondFetch).toHaveBeenCalledTimes(3);
+      expect(execCliMock).toHaveBeenCalledTimes(2);
+
+      const heldPublication = deferred<void>(),
+        entered = deferred<void>();
+      const native = new CodexRuntimeInstallerService({
+        resolveLatestVersion: async () => '1.0.0',
+      });
+      const progress: CodexRuntimeStatus[] = [];
+      vi.spyOn(native, 'publishCapturedStatus').mockImplementation((status) => {
+        progress.push(status);
+      });
+      let selected: RuntimeSourceSummary = {
+        sourceId: 'a'.repeat(64),
+        revision: 'b'.repeat(64),
+        sourceKind: 'app-managed',
+        profileId: 'TEST-original',
+        configRevision: 'TEST-original',
+        cliVersion: '1.0.0',
+        nativeExecutableDigest: runtimeSourceNativeExecutableDigest({
+          path: repaired.binaryPath,
+          sha256: createHash('sha256')
+            .update(await fs.readFile(repaired.binaryPath))
+            .digest('hex'),
+        }),
+      };
+      let published: RuntimeSourcePublication | null = null;
+      const sources: CapturedRuntimeSources = {
+        current: async () => structuredClone(selected),
+        retained: async () => [structuredClone(selected)],
+        recover: async () => null,
+        refreshConfiguration: async () => {
+          throw new Error('TEST wrong operation');
+        },
+        lookup: vi.fn(async (commandId) => (published?.commandId === commandId ? published : null)),
+        publish: vi.fn(async (input) => {
+          entered.resolve();
+          await heldPublication.promise;
+          expect(input.expectedRevision).toBe('b'.repeat(64));
+          const chosen = input.nativeSelection;
+          if (!chosen) throw new Error('TEST requires the original native selection');
+          selected = {
+            ...selected,
+            revision: 'c'.repeat(64),
+            sourceKind: chosen.sourceKind,
+            profileId: 'TEST-published',
+            configRevision: 'TEST-published',
+            nativeExecutableDigest: runtimeSourceNativeExecutableDigest(
+              chosen.nativeCli.executable
+            ),
+          };
+          return (published = {
+            commandId: input.commandId,
+            phase: 'published',
+            selection: structuredClone(selected),
+          });
+        }),
+      };
+      const capture = () => {
+        let manifest = captureAppManagedCodexRuntime();
+        const resolver: CapturedCodexResolver = {
+          fingerprint: manifest.fingerprint,
+          assertAuthority: () => {},
+          assertCurrent: () => manifest.assertCurrent(),
+          acceptAcquired: (value) => {
+            manifest = value;
+          },
+          resolve: async () => {
+            if (!manifest.binaryPath)
+              throw new Error('TEST expected the complete acquired package');
+            const original = await captureCodexNativeSelection(manifest.binaryPath, () =>
+              manifest.assertCurrent()
+            );
+            return {
+              selection: {
+                sourceKind: 'app-managed',
+                nativeCli: {
+                  executable: original.executable,
+                  version: '1.0.0',
+                },
+              },
+              assertCurrent: original.assertCurrent,
+            };
+          },
+        };
+        return { sources: Promise.resolve(sources), resolver };
+      };
+      const installer = new CapturedCodexRuntimeInstaller(native);
+      const thirdFetch = stubPackageDownload(
+        new Response(new Uint8Array(secondPackage.tarball)),
+        secondPackage.tarball
+      );
+      const installing = installer.install(capture());
+      await entered.promise;
+      try {
+        expect(
+          progress.some((value) => value.state === 'ready' || value.progress?.phase === 'ready')
+        ).toBe(false);
+        expect(progress.at(-1)).toMatchObject({
+          state: 'installing',
+          sourceRevision: 'b'.repeat(64),
+        });
+        expect(progress.every((value) => value.binaryPath === undefined)).toBe(true);
+        expect(sources.publish).toHaveBeenCalledTimes(1);
+        expect(thirdFetch).toHaveBeenCalledTimes(3);
+        expect(await snapshotRuntimePackage(status.binaryPath, firstPackage.files)).toEqual(
+          firstSnapshot
+        );
+      } finally {
+        heldPublication.resolve();
+      }
+      const final = await installing;
+      expect(final).toMatchObject({
+        state: 'ready',
+        sourceRevision: 'c'.repeat(64),
+        version: '1.0.0',
+      });
+      expect(progress.at(-1)).toEqual(final);
+      expect(final.binaryPath).toBeUndefined();
+      expect(await installer.selectInstalled(capture())).toEqual(final);
+      const cold = new CapturedCodexRuntimeInstaller(native);
+      expect(await cold.selectInstalled(capture())).toEqual(final);
+      expect(await cold.getStatus(capture())).toMatchObject({
+        sourceRevision: final.sourceRevision,
+        version: '1.0.0',
+      });
+      expect(sources.publish).toHaveBeenCalledTimes(1);
+      expect(thirdFetch).toHaveBeenCalledTimes(3);
+      expect(execCliMock).toHaveBeenCalledTimes(3);
+    }
+  );
+
+  it.each(['verification', 'manifest-before-commit', 'manifest-after-commit'] as const)(
+    'retains the original full package after %s failure without rolling back publication',
+    async (stage) => {
+      const firstPackage = createRuntimePackage('A');
+      stubPackageDownload(new Response(new Uint8Array(firstPackage.tarball)), firstPackage.tarball);
+      const feature = createCodexRuntimeInstallerFeature();
+      const first = await feature.install();
+      expect(first.state).toBe('ready');
+      if (!first.binaryPath) throw new Error('TEST original package has no binary path');
+      const original = await snapshotRuntimePackage(first.binaryPath, firstPackage.files);
+      const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'codex');
+      const manifestPath = path.join(runtimeRoot, 'current.json');
+      const originalManifest = await fs.readFile(manifestPath, 'utf8');
+      const secondPackage = createRuntimePackage('B');
+      const fetch = stubPackageDownload(
+        new Response(new Uint8Array(secondPackage.tarball)),
+        secondPackage.tarball
+      );
+      const fault = Object.assign(new Error(`TEST ${stage}`), { code: 'EIO' });
+      const originalRename = fs.rename;
+      const originalOpen = fs.open;
+      let manifestCommitted = false;
+      let packageDirectory: string | null = null;
+      // Only the selected filesystem boundary fails; extraction, rename and
+      // atomic manifest publication otherwise use the real TEST filesystem.
+      const rename = vi.spyOn(fs, 'rename').mockImplementation(async (source, target) => {
+        if (target === manifestPath && stage === 'manifest-before-commit') throw fault;
+        await originalRename(source, target);
+        if (target === manifestPath) manifestCommitted = true;
+        else if (typeof target === 'string') packageDirectory = target;
+      });
+      const open = vi.spyOn(fs, 'open').mockImplementation(async (...args) => {
+        if (manifestCommitted && args[0] === runtimeRoot && stage === 'manifest-after-commit') {
+          throw fault;
+        }
+        return originalOpen(...args);
+      });
+      try {
+        if (stage === 'verification') execCliMock.mockRejectedValueOnce(fault);
+        await expect(feature.install()).resolves.toMatchObject({
+          installed: true,
+          binaryPath: first.binaryPath,
+          state: 'failed',
+          error: fault.message,
+        });
+      } finally {
+        rename.mockRestore();
+        open.mockRestore();
+      }
+      expect(await snapshotRuntimePackage(first.binaryPath, firstPackage.files)).toEqual(original);
+      expect(manifestCommitted).toBe(stage === 'manifest-after-commit');
+      if (stage === 'manifest-after-commit') {
+        expect(packageDirectory).not.toBeNull();
+        const secondPath = path.join(packageDirectory!, secondPackage.files[0].relativePath);
+        expect(resolveAppManagedCodexRuntimeBinaryPath()).toBe(secondPath);
+        expect(JSON.parse(await fs.readFile(manifestPath, 'utf8'))).toMatchObject({
+          schemaVersion: 1,
+          binaryPath: secondPath,
+        });
+      } else {
+        expect(await fs.readFile(manifestPath, 'utf8')).toBe(originalManifest);
+        expect(resolveAppManagedCodexRuntimeBinaryPath()).toBe(first.binaryPath);
+      }
+      if (packageDirectory) {
+        const retained = await snapshotRuntimePackage(
+          path.join(packageDirectory, secondPackage.files[0].relativePath),
+          secondPackage.files
+        );
+        expect(retained.files.map(({ bytes }) => bytes)).toEqual(
+          secondPackage.files.map((file) => file.data)
+        );
+      } else {
+        expect(stage).toBe('verification');
+      }
+      expect(
+        (await fs.readdir(runtimeRoot)).filter((name) => /^(installing-|\.tmp\.)/.test(name))
+      ).toEqual([]);
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect(execCliMock).toHaveBeenCalledTimes(2);
     }
   );
 

@@ -91,7 +91,8 @@ async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A'
     store = new TeamOwnerStore(root, 'TEST-team'),
     runtimeStore = new FileRuntimeStore(root),
     sessions = new Map<string, ControlledSession>(),
-    opens = new Map<string, number>();
+    opens = new Map<string, number>(),
+    observationReads = new Map<string, number>();
   const configured = new Set(members),
     observationFailure = new Set<string>(),
     failBeforeRuntime = new Set<string>(),
@@ -158,6 +159,7 @@ async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A'
         }),
       runtime: {
         read: (id) => {
+          observationReads.set(id, (observationReads.get(id) ?? 0) + 1);
           if (observationFailure.has(id)) throw new Error('TEST observation unavailable');
           const current = runtime.readSession(binding(id)),
             proof = evidence(id);
@@ -198,6 +200,7 @@ async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A'
     runtimeStore,
     sessions,
     opens,
+    observationReads,
     configured,
     observationFailure,
     failBeforeRuntime,
@@ -332,6 +335,42 @@ test('source launch times retain original admission across read/replay/reconstru
   assert.equal(f.make('next-host').launch.read().startedAtMs, admitted.startedAtMs);
 });
 
+test('initial prompt belongs to the original launch intent across a lost reply and restart', async (t) => {
+  for (const prompt of [undefined, null, 'TEST scheduled instructions']) {
+    await t.test(String(prompt), async (t) => {
+      const f = await setup(t, ['A']);
+      const original = f.make();
+      let callbacks = 0;
+      if (prompt === 'TEST scheduled instructions') {
+        const path = `launches/${runtimeDigest(f.definition.launchId)}.json`;
+        const before = f.store.read(path);
+        assert.throws(() => original.launch.start('TEST-schedule-start', undefined,
+          () => { callbacks++; }, 'TEST invalid\0prompt'),
+        error => error instanceof TeamLaunchError && error.code === 'invalid');
+        assert.deepEqual(f.store.read(path), before, 'invalid prompt cannot persist a start intent');
+        assert.equal(callbacks, 0);
+        assert.equal(f.opens.size, 0);
+      }
+      assert.throws(() => original.launch.start('TEST-schedule-start', undefined, () => {
+        callbacks++;
+        throw new Error('TEST lost reply before native allocation');
+      }, prompt), /TEST lost reply/);
+      assert.equal(f.opens.size, 0);
+      original.launch.seal();
+      const recovered = f.make('TEST-next-host');
+      const changed = prompt === null ? 'TEST changed task' : null;
+      assert.throws(() => recovered.launch.start('TEST-schedule-start', undefined,
+        () => { callbacks++; }, changed), /conflict/);
+      assert.equal(callbacks, 1, 'conflicting prompt cannot reach the task/native effect');
+      recovered.launch.start('TEST-schedule-start', undefined, () => { callbacks++; }, prompt);
+      await settle(recovered.launch);
+      assert.equal(callbacks, 2);
+      assert.equal(f.opens.get('A'), 1);
+      recovered.launch.seal();
+    });
+  }
+});
+
 test('ready launch retains policy-skipped members without waiting for their native allocation', async (t) => {
   const f = await setup(t, ['A', 'skipped']);
   f.definition.members[1]!.skipped = true;
@@ -377,7 +416,19 @@ test('ambiguous preparation publication allocates nothing and the original inten
     f.store.write = write;
   }
   assert.equal(f.opens.size, 0, 'no factory effect follows uncertain configuration publication');
+  const held = (error: unknown): boolean => error instanceof TeamLaunchError && error.code === 'hold';
+  const recordName = `launches/${runtimeDigest('TEST-run')}.json`;
+  const ambiguousBytes = await readFile(join(f.store.directory, recordName), 'utf8');
+  assert.throws(() => first.launch.read(), held, 'ordinary read cannot adopt an unacknowledged selection');
+  assert.throws(() => first.launch.prepare(input), held, 'ordinary replay cannot replace the pending witness');
+  assert.throws(() => first.launch.start(input.commandId, launchPreparationFingerprint(input)), held);
+  assert.equal(f.opens.size, 0);
+  assert.equal(await readFile(join(f.store.directory, recordName), 'utf8'), ambiguousBytes);
   first.launch.seal();
+  assert.equal(await readFile(join(f.store.directory, recordName), 'utf8'), ambiguousBytes,
+    'sealing the original no-readiness record does not repair or republish it');
+  assert.throws(() => first.launch.read(), held, 'cleanup does not adopt the selection for ordinary reads');
+  assert.throws(() => first.launch.start(input.commandId, launchPreparationFingerprint(input)), held);
   const record = f.store.read<TeamLaunchRecord>(`launches/${runtimeDigest('TEST-run')}.json`)!;
   Object.assign(f.definition, record.definition);
   const recovered = f.make('host-after-publication');
@@ -390,6 +441,64 @@ test('ambiguous preparation publication allocates nothing and the original inten
   assert.throws(() => recovered.launch.prepare(input), /forbidden/, 'replay still requires current authority');
   recovered.launch.seal();
   await recovered.runtime.stopCapturedSession(binding('A'));
+
+  for (const boundary of ['before-write', 'foreign-definition', 'malformed-record'] as const) {
+    const scoped = await setup(t, ['A']);
+    scoped.definition.members[0]!.baseConfigurationDigest = 'a'.repeat(64);
+    scoped.definition.members[0]!.runtimeGeneration = 1;
+    const original = scoped.make();
+    const request = { ...input, sourceRosterRevision: original.launch.read().rosterRevision };
+    const path = join(scoped.store.directory, recordName);
+    const beforeBytes = await readFile(path, 'utf8');
+    const originalWrite = scoped.store.write.bind(scoped.store);
+    let publicationAttempts = 0;
+    scoped.store.write = (name, value) => {
+      const preparing = !!(value as TeamLaunchRecord).preparation;
+      if (preparing) publicationAttempts++;
+      if (preparing && boundary === 'before-write') throw new Error('TEST-before-write');
+      originalWrite(name, value);
+      if (preparing) throw new Error('TEST-fsync-observation-lost');
+    };
+    try {
+      assert.throws(() => original.launch.prepare(request),
+        boundary === 'before-write' ? /TEST-before-write/ : /TEST-fsync-observation-lost/);
+      if (boundary === 'before-write') {
+        assert.equal(original.launch.read().expected, 1, 'the unchanged original record remains readable');
+        assert.throws(() => original.launch.prepare(request), /TEST-before-write/,
+          'the original ordinary retry still reaches its original write boundary');
+        assert.equal(publicationAttempts, 2);
+      }
+    } finally {
+      scoped.store.write = originalWrite;
+    }
+    assert.equal(scoped.opens.size, 0);
+    if (boundary === 'before-write') {
+      assert.equal(await readFile(path, 'utf8'), beforeBytes);
+      original.launch.seal();
+      assert.equal(await readFile(path, 'utf8'), beforeBytes, 'sealing prefers the unchanged original tuple');
+      assert.throws(() => original.launch.start(request.commandId), held);
+      continue;
+    }
+    const changed = scoped.store.read<TeamLaunchRecord>(recordName)!;
+    if (boundary === 'foreign-definition') {
+      const member = changed.definition.members[0]!;
+      assert.ok(member.binding);
+      member.binding = { ...member.binding, teamId: 'TEST-foreign-team' };
+      changed.definition.rosterRevision = runtimeDigest({
+        scope: changed.definition.rosterScope ?? changed.definition.launchId,
+        members: changed.definition.members,
+      });
+      changed.fingerprint = runtimeDigest(changed.definition);
+    } else {
+      changed.members[0]!.attempts = [];
+    }
+    originalWrite(recordName, changed);
+    const invalidBytes = await readFile(path, 'utf8');
+    assert.throws(() => original.launch.seal(), held, 'only a fully validated original expected tuple may retire');
+    assert.equal(await readFile(path, 'utf8'), invalidBytes, 'a refused record is never repaired');
+    assert.throws(() => original.launch.start(request.commandId), held, 'ingress remains sealed after refusal');
+    assert.equal(scoped.opens.size, 0);
+  }
 });
 
 test('whole expected roster persists before allocation; partial launch and scoped no-allocation retry preserve healthy/pending members', async (t) => {
@@ -642,23 +751,68 @@ test('missing/skipped members remain in the persisted expected roster; changed d
 });
 
 test('current authorization gates read/retry and corrupt expected roster is HOLD instead of a smaller launch', async (t) => {
-  const f = await setup(t, ['A']);
+  const f = await setup(t, ['A', 'B']);
   const { launch } = f.make();
   launch.start('launch-command');
   await settle(launch);
-  f.revoke();
-  assert.throws(
-    () => launch.read(),
-    (error) => error instanceof TeamLaunchError && error.code === 'forbidden'
-  );
   const path = join(f.store.directory, 'launches', `${runtimeDigest(f.definition.launchId)}.json`),
-    record = JSON.parse(await readFile(path, 'utf8')) as { members: unknown[] };
+    originalBytes = await readFile(path, 'utf8');
+  const original = launch.read();
+  const selection = {
+    launchId: original.launchId,
+    rosterRevision: original.rosterRevision,
+    memberIds: original.members.map(({ memberId }) => memberId),
+  };
+  f.observationFailure.add('A');
+  f.observationReads.clear();
+  assert.deepEqual(launch.readModelProbeSelection('control'), selection);
+  assert.deepEqual(launch.readModelProbeSelection('read'), selection);
+  assert.equal(f.observationReads.size, 0, 'model selection does not inspect native observations');
+  const observed = launch.read();
+  assert.equal(observed.members.find((member) => member.memberId === 'A')?.attempt.status, 'unknown');
+  assert.equal(observed.members.find((member) => member.memberId === 'B')?.attempt.status, 'ready');
+  assert.deepEqual(
+    [...f.observationReads.keys()],
+    ['A', 'B'],
+    'public read still observes both originals'
+  );
+  assert.deepEqual(
+    {
+      launchId: observed.launchId,
+      rosterRevision: observed.rosterRevision,
+      memberIds: observed.members.map(({ memberId }) => memberId),
+    },
+    selection
+  );
+  assert.equal(await readFile(path, 'utf8'), originalBytes, 'inspection leaves the original launch bytes');
+  assert.equal(f.opens.get('A'), 1);
+  assert.equal(f.opens.get('B'), 1);
+  assert.ok([...f.sessions.values()].every((session) => session.submits.length === 0));
+
+  const record = JSON.parse(originalBytes) as { members: unknown[] };
   record.members = [];
   await writeFile(path, JSON.stringify(record));
+  assert.throws(
+    () => launch.readModelProbeSelection('read'),
+    (error) => error instanceof TeamLaunchError && error.code === 'hold'
+  );
   assert.throws(
     () => launch.refresh(),
     (error) => error instanceof TeamLaunchError && error.code === 'hold'
   );
+  await writeFile(path, originalBytes);
+  f.revoke();
+  f.observationReads.clear();
+  assert.throws(
+    () => launch.readModelProbeSelection('control'),
+    (error) => error instanceof TeamLaunchError && error.code === 'forbidden'
+  );
+  assert.throws(
+    () => launch.read(),
+    (error) => error instanceof TeamLaunchError && error.code === 'forbidden'
+  );
+  assert.equal(f.observationReads.size, 0, 'revocation refuses before any Runtime observation');
+  assert.equal(await readFile(path, 'utf8'), originalBytes);
   launch.seal();
 });
 

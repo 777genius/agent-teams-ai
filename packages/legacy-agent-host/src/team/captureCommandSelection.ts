@@ -1,5 +1,6 @@
 import { TeamOwnerError } from './contracts.js';
 import { isUserTaskStartIntent } from './taskStartIntent.js';
+import { nativeCommandMessage } from './nativeSessionCommand.js';
 import type { TeamMember, TeamCommand, CommandReceipt, TeamGrant } from './contracts.js';
 /** Current role/binding and original task audience jointly determine receipt identity. */
 export function captureCommandSelection(
@@ -12,6 +13,10 @@ export function captureCommandSelection(
     command.operation === 'message.send'
       ? members.find((member) => member.name === command.payload.to)
       : undefined;
+  const native = nativeCommandMessage(command);
+  if (native && (grant.memberName !== 'user' || messageRecipient?.role !== 'lead' ||
+    (command.operation === 'message.send' && command.payload.attachments?.length)))
+    throw new TeamOwnerError('forbidden');
   if (
     command.operation === 'message.send' &&
     grant.memberName === 'user' &&
@@ -22,7 +27,7 @@ export function captureCommandSelection(
   const messageRecipientRole = receipt
     ? receipt.messageRecipientRole
     : command.operation === 'message.send' &&
-        (command.payload.messageId !== undefined ||
+        (native !== undefined || command.payload.messageId !== undefined ||
           command.payload.summary !== undefined ||
           command.payload.actionMode !== undefined)
       ? messageRecipient?.role

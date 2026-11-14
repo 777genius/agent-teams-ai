@@ -3,7 +3,7 @@ import { pageOwnerMessages } from './pageOwnerMessages.js';
 import { pageOwnerTaskDetail } from './pageOwnerTaskDetail.js';
 import { pageOwnerKanban } from './pageOwnerKanban.js';
 import { pageOwnerSnapshot } from './pageOwnerSnapshot.js';
-import { executeTeamCommand } from './executeTeamCommand.js';
+import { executeTeamCommand, resumeHostCostCommands } from './executeTeamCommand.js';
 import { captureCommandSelection } from './captureCommandSelection.js';
 import { teamCommandFingerprint } from './teamCommandFingerprint.js';
 import { validateCommandAttachments } from './validateCommandAttachments.js';
@@ -95,7 +95,8 @@ export interface TeamOwnerOptions {
 export class TeamOwner {
   /** Trusted composition only; never exposed on connect/MCP. */
   readonly contextReminders: TeamContextReminders;
-  readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent'>;
+  readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent' | 'liveMembership'>;
+  readonly hasRetainedRuntime = () => this.runtimeRegistration.hasRetained();
   private readonly commandAccess: ReturnType<typeof createTeamCommandAccess>;
   private readonly productChanges = new TeamProductChanges();
   /** Volatile key: continuation cursors expire on owner recreation. */
@@ -285,8 +286,9 @@ export class TeamOwner {
     return this.deliveryRecovery.resume(runtime);
   }
 
-  /** Trusted startup continuation; it reuses prepared Task facts, never canonical handlers. */
-  resumeTaskCommands(runtime?: TeamRuntimeDeliveryPort) {
+  /** Trusted continuation of prepared Task facts and saved Host replies. */
+  async resumeTaskCommands(runtime?: TeamRuntimeDeliveryPort) {
+    resumeHostCostCommands(this.store, receipt => this.execute(receipt.principalId, receipt.command));
     return this.taskRecovery.resume(runtime);
   }
   lookupTaskStartCause(principalId: string, raw: ImmutableDelivery) {
@@ -369,12 +371,12 @@ export class TeamOwner {
     );
   }
   /** Trusted composition reads the launch-owned current technical selection, never native tokens. */
-  runtimeSelection(principalId: string, memberId: string) {
+  runtimeSelection(principalId: string, memberId: string, checkpointRef?: string) {
     return this.store.fenced(() => {
       this.authorize(principalId, 'read');
       const member = this.state().members.find((item) => item.memberId === memberId);
       if (!member?.delivery) throw new TeamOwnerError('invalid');
-      return this.runtimeBindings?.current(memberBinding(member.delivery));
+      return this.runtimeBindings?.current(memberBinding(member.delivery), checkpointRef);
     });
   }
 
@@ -391,11 +393,9 @@ export class TeamOwner {
   }
 
   authorizeRuntimeAccess(
-    principalId: string,
-    binding: RuntimeMemberBinding,
-    action: 'read' | 'control'
+    ...args: Parameters<ReturnType<typeof createTeamDeliveryAuthority>['runtimeAccess']>
   ): boolean {
-    return this.deliveryAuthority.runtimeAccess(principalId, binding, action);
+    return this.deliveryAuthority.runtimeAccess(...args);
   }
   authorizeMemberBinding(
     binding: RuntimeMemberBinding,
@@ -432,7 +432,8 @@ export class TeamOwner {
   connect(principalId: string) {
     validateTeamText(principalId);
     return Object.freeze({
-      execute: (command: TeamCommand) => this.execute(principalId, command),
+      execute: (command: TeamCommand, prepare?: Parameters<typeof executeTeamCommand>[5]) =>
+        this.execute(principalId, command, undefined, undefined, prepare),
       lookup: (commandId: string, expected?: TeamCommand) => this.lookupCommand(principalId, commandId, expected),
       getTask: (taskId: string) => this.getTask(principalId, taskId),
       readTaskPage: (taskId: string, cursor?: string) => this.store.fenced(() => {
@@ -496,7 +497,8 @@ export class TeamOwner {
       const selection = captureCommandSelection(expected, receipt, this.state().members, grant);
       if (teamCommandFingerprint({ binding: this.binding, principalId, command: expected,
         deliveryBinding: selection.deliveryBinding, taskRecipients: selection.taskRecipients,
-        messageRecipientRole: selection.messageRecipientRole, taskStartLeadName: selection.taskStartLeadName }) !== receipt.fingerprint)
+        messageRecipientRole: selection.messageRecipientRole, taskStartLeadName: selection.taskStartLeadName,
+        ...(receipt.hostCommand ? { hostCommand: receipt.hostCommand } : {}) }) !== receipt.fingerprint)
         throw new TeamOwnerError('conflict');
       if (receipt.messageRecipientRole !== undefined && receipt.messageRecipientRole !== selection.messageRecipient?.role)
         throw new TeamOwnerError('hold');
@@ -770,7 +772,8 @@ export class TeamOwner {
     principalId: string,
     rawCommand: TeamCommand,
     crossTeam?: CapturedCrossTeamIntent,
-    group?: CapturedGroupIntent
+    group?: CapturedGroupIntent,
+    prepareHostCost?: Parameters<typeof executeTeamCommand>[5]
   ): CommandReceipt {
     return executeTeamCommand(
       {
@@ -789,7 +792,7 @@ export class TeamOwner {
       principalId,
       rawCommand,
       crossTeam,
-      group
+      group, prepareHostCost
     );
   }
 }

@@ -5,30 +5,35 @@ import {
   resolveTeamModelProbeRecipe,
   applyTeamModelProbeSelection,
 } from './teamModelProbeRecipe.js';
-import { captureRuntimeSource, compileRuntimeCapture } from './runtimeCaptureSource.js';
+import { captureRuntimeSource, compileRuntimeCapture, runtimeCaptureSourceSchema } from './runtimeCaptureSource.js';
 import {
   captureTeamModelProbe,
   teamModelProbeProfile,
   teamModelProbeEffort,
   teamModelProbeContext,
 } from './teamLaunchModelProbe.js';
-import { assertCapturedRosterCurrent } from './teamRoster.js';
+import { assertCapturedRosterCurrent, isUnstartedCaptureEditable } from './teamRoster.js';
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { TeamHostProfile } from './TeamHost.js';
+import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
 import type { JsonValue } from '../contracts.js';
+import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
+import type { RetainedLaunchInspection } from './teamRoster.js';
 
 const prefix = 'saved-model-';
 export const isSavedTeamModelSource = (sourceId: string) => sourceId.startsWith(prefix);
 export const savedTeamModelContext = teamModelProbeContext;
 type Options = {
   profile: TeamHostProfile;
+  sources?: RuntimeRecipeSources;
   team: HostedTeam;
   assertCurrent(): void;
+  assertRuntimeHistory?(): void;
 };
 
-/** Pure compilation of a never-captured canonical roster. No registrations, grants or launch records. */
+/** Model-only compilation of saved choices; retained history requires its original offline proof. */
 function source(options: Options) {
   options.assertCurrent();
   const { profile, team } = options;
@@ -40,17 +45,20 @@ function source(options: Options) {
   if (
     team.owner.runtimeCaptures(profile.principalId).length ||
     team.definition.members.some((member) => member.delivery)
-  )
-    throw new TeamLaunchError('hold', 'saved-model-runtime-history');
+  ) {
+    if (!options.assertRuntimeHistory) throw new TeamLaunchError('hold', 'saved-model-runtime-history');
+    options.assertRuntimeHistory();
+  }
   const roster = team.connection.readRoster();
   const captured = captureRuntimeSource(
     profile,
     team,
     'model-preflight',
     'model-preflight',
-    roster
+    roster,
+    options.sources ? { sources: options.sources } : {}
   );
-  const compiled = compileRuntimeCapture(profile, team, captured, 'model-preflight');
+  const compiled = compileRuntimeCapture(profile, team, captured, 'model-preflight', options.sources);
   const sourceId = `${prefix}${runtimeDigest({ owner: profile.owner, authority, captured })}`;
   options.assertCurrent();
   return { sourceId, captured, profiles: compiled.profiles };
@@ -129,6 +137,8 @@ export function captureSavedTeamModelProbe(
       team,
       input,
       saved: saved.profiles.find((member) => member.memberId === input.memberId),
+      ...(options.sources ? { sources: options.sources } : {}),
+      sourceReference: saved.captured.recipeSources?.find(reference => reference.memberId === input.memberId),
     });
   const selected = recipe();
   const selectionDigest = runtimeDigest(selected);
@@ -149,6 +159,11 @@ export function captureSavedTeamModelProbe(
   };
   return {
     profile: teamModelProbeProfile(effective.provider === 'claude' ? selected : effective),
+    provenance: { teamBindingDigest: runtimeDigest(team.definition.binding),
+      selectionDigest: runtimeDigest(input), sourceRevision: input.launchId, rosterRevision: input.rosterRevision,
+      destinationKeys: [runtimeDigest(input.draft?.target ?? { launchId: input.launchId, memberId: input.memberId })] },
+    readinessCapture: undefined,
+    assertReadinessCapture: undefined,
     context,
     model: effective.model,
     providerId:
@@ -176,10 +191,13 @@ export function isCurrentCapturedTeam(team: HostedTeam | undefined): boolean {
 /** The Runtime coordinator supplies its exact owners; saved inspection never becomes a capture. */
 export function captureTeamModelProbeSelection(options: {
   profile: TeamHostProfile;
+  sources?: RuntimeRecipeSources;
   team: HostedTeam | undefined;
   capturedTeam: HostedTeam | undefined;
   launch: TeamLaunchOwner | undefined;
   entries: readonly MemberEntry[];
+  runtime: RuntimeOwner;
+  retainedLaunches: ReadonlyMap<string, RetainedLaunchInspection>;
   input: TeamModelProbeSelection;
   action: 'start' | 'read' | 'cancel';
   assertCurrent(): void;
@@ -200,13 +218,20 @@ export function captureTeamModelProbeSelection(options: {
   }
   if (!team || !launch || isSavedTeamModelSource(input.launchId)) {
     if (!options.team) throw new TeamLaunchError('invalid', 'team');
-    return captureSavedTeamModelProbe({ ...options, team: options.team });
+    return captureSavedTeamModelProbe({ ...options, team: options.team,
+      assertRuntimeHistory: () => {
+        if (!isUnstartedCaptureEditable({ ...options, team: options.capturedTeam }))
+          throw new TeamLaunchError('hold', 'saved-model-runtime-history');
+      } });
   }
   if (action !== 'cancel') assertCapturedRosterCurrent(team);
   return captureTeamModelProbe({
     launch,
     team,
     runtime: options.profile.runtime,
+    ...(options.sources ? { sources: options.sources } : {}),
+    sourceReference: team.capture === undefined ? undefined : runtimeCaptureSourceSchema.parse(team.capture)
+      .recipeSources?.find(reference => reference.memberId === input.memberId),
     input,
     action,
     principalId: options.profile.principalId,

@@ -6,6 +6,7 @@ import { CapturedProcess } from './CapturedProcess.js';
 import { codexByteTransport } from './codexByteTransport.js';
 import { ManagementCommandError } from '../../management/commandRecords.js';
 import { codexManagementProfileSchema } from '../../management/profile.js';
+import { qualifiedCodexProtocolRevision } from '../../composition/runtimeSourceQualification.js';
 
 import type { CapturedProcessPort } from './CapturedProcess.js';
 import type { CodexManagementProfile } from '../../management/profile.js';
@@ -32,6 +33,7 @@ export class CodexManagementHost {
   ) {
     const parsed = codexManagementProfileSchema.safeParse(profile);
     if (!parsed.success) throw new ManagementCommandError('invalid');
+    qualifiedCodexProtocolRevision(parsed.data.protocolRevision);
     this.profile = structuredClone(parsed.data);
     for (const root of [
       this.profile.cwd,
@@ -108,10 +110,18 @@ export class CodexManagementHost {
         }
       }
       if (!this.current()) throw new ManagementCommandError('held');
+      const apiKeyName = (['CODEX_API_KEY', 'OPENAI_API_KEY'] as const).find(
+        (name) => Boolean(this.profile.environment[name]?.trim())
+      );
       const snapshot: CodexMetadataSnapshot = {
         profileId: this.profile.profileId,
         configRevision: this.profile.configRevision,
         ...account,
+        apiKey: {
+          available: apiKeyName !== undefined || account.account?.type === 'apiKey',
+          source: apiKeyName ? 'environment' : null,
+          sourceLabel: apiKeyName ? `Detected from ${apiKeyName}` : null,
+        },
         rateLimits,
         configuration,
         models,

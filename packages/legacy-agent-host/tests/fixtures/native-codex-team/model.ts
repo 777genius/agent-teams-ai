@@ -116,6 +116,8 @@ export interface CaptureFileUpdateScenario {
 }
 export async function startCodexModel(
   options: {
+    candidate169?: { selectedModel(): string };
+    sourceSelection?: true;
     nativeMessageImage?: boolean;
     mixedGroups?: boolean;
     mixedTaskNotifications?: MixedTaskNoticeReader;
@@ -131,7 +133,8 @@ export async function startCodexModel(
   } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate), 'one bounded fixture scenario');
-  if (options.memberName || options.uiGeneratedMessageIds || options.captureHistoryMarkers)
+  if (options.candidate169) assert.deepEqual(Object.keys(options), ['candidate169'], 'one explicit candidate scenario');
+  if (options.memberName || options.uiGeneratedMessageIds || options.captureHistoryMarkers || options.sourceSelection)
     assert.ok(
       !options.mixedGroups &&
         !options.mixedTaskNotifications &&
@@ -174,6 +177,9 @@ export async function startCodexModel(
   const issued = new Map<string, RecordValue>();
   const requests: ReturnType<typeof retainUiRequest>[] = [];
   let taskId: string | undefined;
+  let candidateFinalHeld = false;
+  let heldFirst: { send(): void; live(): boolean } | undefined;
+  let firstFinalReleased = false;
   const server = createServer((request, response) => {
     void (async () => {
       assert.equal(failures.length, 0, 'oracle seals after its first protocol failure');
@@ -203,13 +209,23 @@ export async function startCodexModel(
       if (!options.mixedTaskNotifications)
         assert.ok(observations.length < (options.peerMessaging ? 48 : 16));
       const body = record(JSON.parse(raw.toString('utf8')) as unknown);
+      if (options.candidate169) {
+        const selected = options.candidate169.selectedModel();
+        assert.ok(selected.length > 0, 'actual catalog selected before inference');
+        assert.equal(body.model, selected, 'actual inference consumes the original native model selection');
+      }
       const input = (Array.isArray(body.input) ? body.input : []).map(record);
-      const palette = options.uiGeneratedMessageIds ? uiPalette(body) : undefined;
+      const palette = options.uiGeneratedMessageIds || options.candidate169 || options.sourceSelection ? uiPalette(body) : undefined;
       if (
         options.allowModelProbes &&
         isCodexModelProbeInput(input, options.modelProbeWorkspace?.())
       ) {
         assert.ok(probes.length < 8, 'bounded original-dialog model probes');
+        if (options.sourceSelection) {
+          assert.ok(probes.length < 2, 'only the two original Launch probes');
+          assert.equal(observations.length, probes.length === 0 ? 0 : 8);
+          assert.equal(firstFinalReleased, probes.length === 1);
+        }
         // Native Codex may advertise built-in read-only tools; the scripted
         // preflight emits text only and never invents a tool outcome.
         probes.push({
@@ -298,6 +314,15 @@ export async function startCodexModel(
       }
       assert.ok(turn, 'actual native request retains deliberate TEST input');
       const step = counts.get(turn) ?? 0;
+      if (options.sourceSelection) {
+        assert.equal(probes.length, turn === 'CODEX_TEAM_ONE' ? 1 : 2);
+        if (turn === 'CODEX_TEAM_TWO') {
+          assert.equal(firstFinalReleased, true, 'original A response released before fresh B');
+          assert.equal(counts.get('CODEX_TEAM_ONE'), 8);
+          assert.equal(JSON.stringify(input).includes('CODEX_TEAM_ONE'), false, 'fresh B has no A context');
+          assert.deepEqual(originalCallIds(input), [], 'fresh B has no A native tool history');
+        }
+      }
       const previousId = `native_${turn}_${step - 1}`;
       const previous =
         palette && step > 0
@@ -315,7 +340,7 @@ export async function startCodexModel(
                 : input.filter((item) => item.type === 'function_call_output').at(-1)?.output
             );
       if (
-        (options.mixedTaskNotifications || options.uiGeneratedMessageIds) &&
+        (options.mixedTaskNotifications || options.uiGeneratedMessageIds || options.candidate169 || options.sourceSelection) &&
         /_TEAM_(ONE|TWO)$/.test(turn)
       )
         assert.ok(
@@ -328,7 +353,11 @@ export async function startCodexModel(
         turnText.includes('Do not reuse the incoming messageId as a reply commandId') &&
         typeof incomingMessageId === 'string' &&
         /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(incomingMessageId);
-      if (options.uiGeneratedMessageIds && turn === 'CODEX_TEAM_TWO')
+      if (options.sourceSelection && turn === 'CODEX_TEAM_TWO') {
+        assert.equal(incomingMessageId, undefined, 'fresh Launch has no incoming Composer message');
+        assert.equal(visibleReplyContract, false);
+      }
+      if (options.uiGeneratedMessageIds && turn === 'CODEX_TEAM_TWO' && !options.sourceSelection)
         assert.ok(
           visibleReplyContract,
           'original Composer reply contract reaches the actual native request'
@@ -404,6 +433,9 @@ export async function startCodexModel(
             palette.exec !== undefined,
             turn === 'CODEX_TEAM_ONE' ? 7 : 0
           ) !== 0;
+      if (options.candidate169 && turn === 'CODEX_TEAM_TWO')
+        assert.deepEqual(originalCallIds(input), Array.from({ length: 7 }, (_, index) => 'native_CODEX_TEAM_ONE_' + index),
+          'genuine cold thread retains every original ONE tool and output');
       if (mixedGroup && step > 0) {
         const last = input.filter((item) => item.type === 'function_call_output').at(-1);
         assertMixedGroupReceipt(
@@ -446,7 +478,7 @@ export async function startCodexModel(
         contextEffective,
         priorTurn: JSON.stringify(input).includes('CODEX_TEAM_ONE'),
         tools,
-        ...(options.uiGeneratedMessageIds
+        ...(options.uiGeneratedMessageIds || options.sourceSelection
           ? {
               ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
               ...(typeof record(body.reasoning).effort === 'string'
@@ -457,7 +489,8 @@ export async function startCodexModel(
               ...(incomingMessageId === undefined ? {} : { incomingMessageId }),
             }
           : {}),
-        ...(options.captureHistoryMarkers
+        ...(options.candidate169 ? { requestedModel: String(body.model), toolResultError } : {}),
+        ...(options.captureHistoryMarkers || options.candidate169 || options.sourceSelection
           ? {
               priorNativeToolIds: palette
                 ? originalCallIds(input)
@@ -488,6 +521,8 @@ export async function startCodexModel(
           name: 'exec_command',
           input: {
             cmd: "printf 'ONE\\n' >> native-effect.txt; exit 7",
+            ...(options.candidate169 ? { sandbox_permissions: 'require_escalated',
+              justification: 'TEST one-shot original command approval before the ONE effect' } : {}),
             yield_time_ms: 1000,
             max_output_tokens: 500,
           },
@@ -602,6 +637,12 @@ export async function startCodexModel(
         assert.equal(issued.has(String(output.call_id)), false);
         issued.set(String(output.call_id), output);
       }
+      if (options.candidate169 && turn === 'CODEX_TEAM_TWO' && step === 2) {
+        assert.equal(action, undefined);
+        assert.equal(candidateFinalHeld, false, 'only the original final HTTP response is held');
+        candidateFinalHeld = true;
+        return;
+      }
       const id = `TEST-codex-response-${observations.length + notificationObservations.length}`;
       const events = [
         { type: 'response.created', response: { id } },
@@ -620,10 +661,19 @@ export async function startCodexModel(
           },
         },
       ];
-      response.writeHead(200, { 'content-type': 'text/event-stream' });
-      response.end(
-        events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join('')
-      );
+      const send = () => {
+        response.writeHead(200, { 'content-type': 'text/event-stream' });
+        response.end(
+          events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join('')
+        );
+      };
+      if (options.sourceSelection && turn === 'CODEX_TEAM_ONE' && step === 7) {
+        assert.equal(action, undefined);
+        assert.equal(heldFirst, undefined, 'only the original A final HTTP response is held');
+        heldFirst = { send, live: () => !response.destroyed && !response.writableEnded };
+        return;
+      }
+      send();
     })().catch((error) => {
       failures.push(error instanceof Error ? error.message : 'fixture-failed');
       if (!response.headersSent) response.writeHead(400);
@@ -637,6 +687,14 @@ export async function startCodexModel(
   return {
     url: `http://127.0.0.1:${address.port}`,
     observations,
+    candidateFinalHeld: () => candidateFinalHeld,
+    firstFinalHeld: () => heldFirst?.live() === true && !firstFinalReleased,
+    releaseFirstFinal: () => {
+      assert.equal(failures.length, 0, 'oracle seals after its first protocol failure');
+      assert.ok(heldFirst && heldFirst.live() && !firstFinalReleased, 'original live final response released once');
+      heldFirst.send();
+      firstFinalReleased = true;
+    },
     ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     probes,
     failures,

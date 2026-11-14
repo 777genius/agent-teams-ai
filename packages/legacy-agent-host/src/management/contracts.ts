@@ -35,6 +35,8 @@ export interface ProviderCredentialReceipt {
   kind: 'credential.set' | 'credential.forget' | 'credential.refresh';
   providerId: string;
   phase: 'completed' | 'held';
+  /** Native failed terminal and original cleanup were confirmed; the saved key remains unverified. */
+  reason?: 'verification-rejected';
 }
 
 export interface ProviderModelProbeLimits {
@@ -58,6 +60,14 @@ export interface ProviderModelProbeSnapshot {
   expiresAt: number;
 }
 
+/** Private Host→Main authorization only. Never journal or emit as OAuth progress. */
+export interface ProviderOAuthAuthorization {
+  authorizationUrl: string;
+  instructions: string;
+  browserOwner?: 'native';
+  userCode?: string;
+}
+
 /** Safe progress only. Authorization URLs/codes and native instructions are Main-only. */
 export interface ProviderOAuthSnapshot {
   operationId: string;
@@ -73,11 +83,12 @@ export interface ProviderOAuthSnapshot {
     | 'cancelling'
     | 'completed'
     | 'cancelled'
+    | 'failed'
     | 'held';
   completionMethod: 'auto' | 'code' | null;
   sequence: number;
   expiresAt: number;
-  reason?: 'cancelled' | 'expired' | 'native-outcome-unknown' | 'owner-changed';
+  reason?: 'cancelled' | 'expired' | 'native-rejected' | 'native-outcome-unknown' | 'owner-changed';
 }
 
 export interface ProviderManagementCatalog {
@@ -134,7 +145,12 @@ export interface CodexMetadataSnapshot {
   };
   profileId: string;
   configRevision: string;
-  account: { type: 'apiKey' } | { type: 'chatgpt'; email: string; planType: string } | null;
+  account: { type: 'apiKey' } | { type: 'chatgpt'; email: string | null; planType: string } | null;
+  apiKey?: {
+    available: boolean;
+    source: 'environment' | null;
+    sourceLabel: 'Detected from CODEX_API_KEY' | 'Detected from OPENAI_API_KEY' | null;
+  };
   requiresOpenaiAuth: boolean;
   configuration: {
     model: string | null;

@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { basename, join, resolve } from 'node:path';
+import type { ChildProcess } from 'node:child_process';
+import { createReadStream } from 'node:fs';
+import { lstat, mkdir, mkdtemp, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
+import { tmpdir, userInfo } from 'node:os';
+import { basename, dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
@@ -12,10 +14,11 @@ import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
 import { deliveryFingerprint } from '../dist/runtime/identity.js';
 import { startTeamMcpEndpoint } from '../dist/mcp/index.js';
-import { cleanupCapturedCodexChild, nativeCodexDriver } from './fixtures/native-codex-team/driver.ts';
+import { cleanupCapturedCodexChild, nativeCodexDriver, projectCodexMetadataObservation } from './fixtures/native-codex-team/driver.ts';
 import { record, startCodexModel } from './fixtures/native-codex-team/model.ts';
 import type { CommandReceipt, DeliveryBinding, TeamCommand } from '../dist/team/contracts.js';
 import type { RuntimeBinding, RuntimeSessionRecord } from '../dist/runtime/contracts.js';
+import type { Event, Input, Session } from '@agent-teams/provider-session-contracts';
 
 const hash = async (path: string) =>
   createHash('sha256')
@@ -27,6 +30,9 @@ test(
   'native Codex + authoritative Team MCP + durable Runtime dispatch: two business messages',
   { timeout: 180_000 },
   async (t) => {
+    const candidateDeadline = performance.now() + 180_000;
+    const candidateVersion = process.env.LEGACY_CODEX_CANDIDATE_VERSION;
+    assert.ok(candidateVersion === undefined || candidateVersion === '0.169.0', 'finite explicit candidate mode');
     assert.equal(
       process.env.LEGACY_CODEX_TEAM_GO,
       '1',
@@ -136,8 +142,19 @@ test(
       isCurrentBinding: current,
     });
     setupCleanup.push(() => endpoint.close());
-    const model = await startCodexModel();
+    let candidateModel = '';
+    const model = await startCodexModel(candidateVersion ? { candidate169: { selectedModel: () => candidateModel } } : {});
     setupCleanup.push(() => model.close());
+    if (candidateVersion) {
+      assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
+      assert.equal(process.version, 'v24.21.0');
+      assert.equal(expectedProviderSha, '91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94');
+      await runCodexCandidate({ root, selectedNode, providerArtifact, deadline: candidateDeadline,
+        owner, delivery, endpoint, model, selectModel: value => { candidateModel = value; },
+        current: () => current(delivery), cleanup: setupCleanup,
+        onDisposed: () => { setupComplete = true; } });
+      return;
+    }
     const binary = '/Users/belief/.codex/packages/standalone/releases/0.162.0-aarch64-apple-darwin/bin/codex';
     const binarySha = await hash(binary);
     assert.equal(binarySha, '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57');
@@ -403,3 +420,371 @@ test(
     }
   }
 );
+
+const candidateArchive = {
+  name: 'codex-npm-darwin-arm64-0.169.0.tgz', bytes: 153831622,
+  sha256: 'd67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d',
+};
+async function candidateDigest(path: string): Promise<string> {
+  const digest = createHash('sha256');
+  for await (const chunk of createReadStream(path)) digest.update(chunk as Buffer);
+  return digest.digest('hex');
+}
+async function readCodexCandidateInputs() {
+  const supplied = process.env.LEGACY_CODEX_CANDIDATE_INPUTS;
+  assert.ok(supplied && supplied.endsWith('/codex-0.169.0/input-pins.json'));
+  const receiptPath = await realpath(supplied);
+  assert.equal(receiptPath, supplied, 'original canonical private TEST inputs');
+  const stage = dirname(receiptPath);
+  assert.match(stage, /^\/private\/tmp\/TEST-stage1-inputs-[^/]+\/codex-0\.169\.0$/);
+  const stageStat = await lstat(stage);
+  assert.ok(stageStat.isDirectory() && (stageStat.mode & 0o777) === 0o700 && stageStat.uid === process.getuid?.());
+  const archive = join(stage, candidateArchive.name);
+  const archiveStat = await lstat(archive);
+  assert.ok(archiveStat.isFile() && archiveStat.nlink === 1);
+  assert.equal(archiveStat.size, candidateArchive.bytes);
+  assert.equal(await candidateDigest(archive), candidateArchive.sha256, 'official full package before parsing');
+  const receiptStat = await lstat(receiptPath);
+  assert.ok(receiptStat.isFile() && receiptStat.nlink === 1 && receiptStat.size <= 256 * 1024);
+  const bytes = await readFile(receiptPath);
+  const pins = record(JSON.parse(bytes.toString('utf8')) as unknown);
+  assert.deepEqual(Object.keys(pins).sort(), ['archive', 'files', 'kind', 'target', 'version']);
+  assert.equal(pins.kind, 'TEST_CODEX_CANDIDATE_INPUTS_V1');
+  assert.equal(pins.version, '0.169.0');
+  assert.equal(pins.target, 'aarch64-apple-darwin');
+  assert.deepEqual(pins.archive, candidateArchive);
+  assert.ok(Array.isArray(pins.files) && pins.files.length > 0 && pins.files.length <= 512);
+  const rows = pins.files.map(record);
+  const names = rows.map(row => {
+    assert.deepEqual(Object.keys(row).sort(), ['bytes', 'mode', 'path', 'sha256']);
+    assert.ok(typeof row.path === 'string' && row.path.startsWith('package/') &&
+      row.path.length <= 4096 && !/[\\\0-\x1f\x7f]/.test(row.path) &&
+      row.path.split('/').every(part => part.length > 0 && part !== '.' && part !== '..'));
+    assert.ok(Number.isSafeInteger(row.bytes) && Number(row.bytes) >= 0 && Number(row.bytes) <= 1024 ** 3);
+    assert.ok(Number.isSafeInteger(row.mode) && Number(row.mode) >= 0 && Number(row.mode) <= 0o777);
+    assert.match(String(row.sha256), /^[a-f0-9]{64}$/);
+    return row.path;
+  });
+  assert.deepEqual(names, [...new Set(names)].sort(), 'complete canonical ordered package manifest');
+  assert.ok(rows.reduce((total, row) => total + Number(row.bytes), 0) <= 2 * 1024 ** 3);
+  const verify = async () => {
+    assert.equal(await hash(receiptPath), createHash('sha256').update(bytes).digest('hex'));
+    const actual: string[] = [];
+    let visited = 0;
+    const walk = async (path: string): Promise<void> => {
+      assert.ok(++visited <= 1024 && path.split('/').length <= 16, 'bounded complete package inventory');
+      const info = await lstat(join(stage, path));
+      assert.equal(await realpath(join(stage, path)), join(stage, path), 'no redirected package member');
+      if (info.isDirectory()) {
+        for (const name of (await readdir(join(stage, path))).sort()) await walk(path + '/' + name);
+      } else {
+        assert.ok(info.isFile() && info.nlink === 1, 'regular original package member');
+        assert.ok(actual.length < 512);
+        actual.push(path);
+      }
+    };
+    await walk('package');
+    assert.deepEqual(actual.sort(), names);
+    for (const row of rows) {
+      const path = join(stage, String(row.path)), info = await lstat(path);
+      assert.equal(info.mode & 0o7000, 0);
+      assert.equal(info.size, row.bytes);
+      assert.equal(info.mode & 0o777, row.mode);
+      assert.equal(await candidateDigest(path), row.sha256);
+    }
+  };
+  await verify();
+  const target = 'package/vendor/aarch64-apple-darwin/';
+  const npm = record(JSON.parse(await readFile(join(stage, 'package/package.json'), 'utf8')) as unknown);
+  assert.equal(npm.name, '@openai/codex');
+  assert.equal(npm.version, '0.169.0-darwin-arm64');
+  assert.deepEqual(npm.os, ['darwin']); assert.deepEqual(npm.cpu, ['arm64']);
+  const layout = record(JSON.parse(await readFile(join(stage, target, 'codex-package.json'), 'utf8')) as unknown);
+  assert.equal(layout.layoutVersion, 1); assert.equal(layout.version, '0.169.0');
+  assert.equal(layout.target, 'aarch64-apple-darwin'); assert.equal(layout.variant, 'codex');
+  assert.equal(layout.entrypoint, 'bin/codex');
+  assert.equal(layout.resourcesDir, 'codex-resources'); assert.equal(layout.pathDir, 'codex-path');
+  for (const executable of ['bin/codex', 'bin/codex-code-mode-host', 'codex-path/rg'])
+    assert.ok(names.includes(target + executable) && ((await lstat(join(stage, target, executable))).mode & 0o111) !== 0);
+  return { binary: join(stage, target, 'bin/codex'), verify,
+    evidence: { ...pins, manifestSha256: createHash('sha256').update(bytes).digest('hex') } };
+}
+
+async function runCodexCandidate(options: {
+  root: string; selectedNode: string; providerArtifact: string; deadline: number;
+  owner: ReturnType<typeof createFilesystemTeamOwner>; delivery: DeliveryBinding;
+  endpoint: Awaited<ReturnType<typeof startTeamMcpEndpoint>>;
+  model: Awaited<ReturnType<typeof startCodexModel>>; selectModel(model: string): void;
+  current(): boolean; cleanup: (() => void | Promise<void>)[]; onDisposed(): void;
+}) {
+  const { root, owner, model } = options;
+  const workspace = join(root, 'workspace'), effect = join(workspace, 'native-effect.txt');
+  const remaining = (cap = 30_000) => {
+    const value = Math.min(cap, Math.ceil(options.deadline - performance.now()));
+    assert.ok(value > 0, 'original 180s candidate budget remains');
+    return value;
+  };
+  const within = async <T>(work: () => Promise<T>, cap = 30_000): Promise<T> => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const until = performance.now() + remaining(cap);
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('TEST original candidate deadline')), Math.max(1, until - performance.now()));
+      });
+      const result = await Promise.race([work(), timeout]);
+      assert.ok(performance.now() < until, 'late completion cannot renew the original phase budget');
+      remaining();
+      return result;
+    } finally { if (timer !== undefined) clearTimeout(timer); }
+  };
+  const children: ChildProcess[] = [];
+  const drivers: Awaited<ReturnType<typeof nativeCodexDriver>>[] = [];
+  const sessions: Session[] = [];
+  const consumers: Promise<void>[] = [];
+  const business: CommandReceipt[] = [];
+  const closes: unknown[] = [];
+  let pins: Awaited<ReturnType<typeof readCodexCandidateInputs>> | undefined;
+  let catalog: unknown, chosen = '', nativeVersion = '', originalShell = '', checkpointEvidence: unknown, permission: unknown, interruption: unknown;
+  let firstFailure: unknown, passed = false, approvalCount = 0, checkpointReads = 0;
+  let observationFailure: unknown;
+  const human = owner.connect('human'), bob = owner.connect('bob-session');
+  const make = async (candidate: NonNullable<Parameters<typeof nativeCodexDriver>[0]['candidate']>) => {
+    assert.ok(pins);
+    remaining(); await pins.verify(); remaining();
+    const driver = await nativeCodexDriver({ root, binary: pins.binary, modelUrl: model.url,
+      endpoint: options.endpoint, currentBinding: options.current, candidate,
+      onCapturedChild: child => { children.push(child); options.cleanup.push(() => cleanupCapturedCodexChild(child)); } });
+    drivers.push(driver);
+    remaining();
+    return driver;
+  };
+  const originalInput = (label: 'ONE' | 'TWO'): Input => {
+    remaining(); assert.equal(options.current(), true);
+    const receipt = human.execute({ commandId: 'human-candidate-' + label.toLowerCase(),
+      operation: 'message.send', payload: { to: 'bob', text: 'CODEX_TEAM_' + label } });
+    assert.equal(receipt.phase, 'completed'); assert.equal(receipt.principalId, 'human');
+    const intent = human.pendingDeliveries().find(item => item.messageId === receipt.effects.messageId);
+    assert.ok(intent && owner.authorizeDeliveryIntent(intent));
+    assert.equal(intent.inputId, receipt.effects.deliveryId);
+    business.push(receipt);
+    return { inputId: intent.inputId, operationRef: 'TEST-candidate-operation-' + label,
+      content: 'CODEX_TEAM_' + label };
+  };
+  const observe = (session: Session, native: (typeof drivers)[number], input: Input, label: 'ONE' | 'TWO', deadline: number) => {
+    let terminal: Extract<Event, { kind: 'result' }> | undefined;
+    const consume = (async () => {
+      for await (const event of session.observe()) {
+        assert.equal(event.sessionRef, session.sessionRef);
+        if (event.operationRef !== undefined) {
+          assert.equal(event.operationRef, input.operationRef); assert.equal(event.inputId, input.inputId);
+        }
+        if (event.kind === 'interaction') {
+          assert.equal(label, 'ONE'); assert.equal(approvalCount, 0);
+          assert.equal(event.operationRef, input.operationRef); assert.equal(event.inputId, input.inputId);
+          if (event.request.kind !== 'permission') throw new Error('TEST candidate requires original permission');
+          assert.equal(event.request.tool, 'Bash');
+          const actual = record(event.request.input), original = native.candidateWire.approvals[0];
+          assert.ok(original && native.candidateWire.approvals.length === 1);
+          assert.equal(original.kind, 'command');
+          assert.equal(original.threadId, native.facts.threadId);
+          assert.equal(original.turnId, native.candidateWire.turns[0]);
+          assert.ok(original.itemId.length > 0);
+          assert.equal(actual.provider, 'codex');
+          assert.equal(actual.providerRequestId, original.providerRequestId);
+          assert.equal(actual.command, original.command);
+          assert.equal(actual.cwd, workspace); assert.equal(original.cwd, workspace);
+          // 0.169 get_command + shlex1.3 preserve this exact three-argument login-shell invocation.
+          assert.equal(userInfo().shell, originalShell);
+          assert.equal(original.command, originalShell + ' -lc ' + JSON.stringify("printf 'ONE\\n' >> native-effect.txt; exit 7"));
+          await assert.rejects(readFile(effect), { code: 'ENOENT' });
+          assert.equal((await within(() => Promise.resolve(session.respondToInteraction(event.interactionRef,
+            { kind: 'permission', decision: 'allow' })), deadline - performance.now())).ok, true);
+          approvalCount += 1;
+          permission = { sessionRef: event.sessionRef, inputId: event.inputId, operationRef: event.operationRef,
+            interactionRef: event.interactionRef, native: original, effectBefore: 'absent', allowed: true };
+        }
+        if (event.kind === 'result') {
+          assert.equal(event.operationRef, input.operationRef); assert.equal(event.inputId, input.inputId);
+          assert.equal(terminal, undefined, 'one original terminal');
+          terminal = event;
+        }
+      }
+    })().catch((error: unknown) => { observationFailure ??= error; });
+    consumers.push(consume);
+    return () => terminal;
+  };
+  const wait = async (predicate: () => boolean, deadline: number) => {
+    while (!predicate() && performance.now() < deadline) {
+      if (observationFailure !== undefined) throw observationFailure;
+      assert.deepEqual(model.failures, []); remaining(); await tick();
+    }
+    if (observationFailure !== undefined) throw observationFailure;
+    assert.deepEqual(model.failures, []); remaining();
+    assert.ok(performance.now() < deadline, 'original input deadline remains');
+    assert.equal(predicate(), true, 'original bounded native phase completed');
+  };
+  const open = async (native: (typeof drivers)[number], checkpointRef?: string) => {
+    const opened = await within(() => native.factory.open({ ...native.config.binding,
+      configRevision: native.config.configRevision,
+      requiredCapabilities: ['text', 'tools', 'permission', 'interrupt', 'checkpoint'],
+      ...(checkpointRef === undefined ? {} : { checkpointRef }) }).then(value => {
+        sessions.push(value.driver); return value;
+      }));
+    assert.equal((await within(() => opened.driver.checkReadiness())).ok, true);
+    assert.equal(native.canDispatch(), true);
+    return opened.driver;
+  };
+  const close = async (session: Session, native: (typeof drivers)[number]) => {
+    const receipt = await within(() => session.close());
+    closes.push(receipt);
+    assert.deepEqual(receipt, { logicallyClosed: true, cleanup: 'confirmed' });
+    assert.ok(native.childFacts().every(child => child.exitCode !== null || child.signalCode !== null));
+  };
+  try {
+    assert.ok(process.getuid && process.geteuid);
+    assert.equal(process.getuid(), process.geteuid(), 'Node and native passwd lookups identify the same account');
+    const shell = userInfo().shell;
+    assert.ok(typeof shell === 'string' && /^\/bin\/(?:sh|bash|zsh)$/.test(shell));
+    originalShell = shell; // Read-only native default-shell fact; SHELL env is not its selector.
+    pins = await readCodexCandidateInputs(); remaining();
+    nativeVersion = execFileSync(pins.binary, ['--version'], { encoding: 'utf8', timeout: remaining(10_000),
+      env: { HOME: join(root, 'home'), CODEX_HOME: join(root, 'codex-home'),
+        TMPDIR: join(root, 'tmp'), PATH: '/usr/bin:/bin' } }).trim();
+    assert.equal(nativeVersion, 'codex-cli 0.169.0');
+    const metadata = await make({ version: '0.169.0', phase: 'catalog', deadline: options.deadline });
+    const discovered = await within(() => metadata.readCandidateCatalog());
+    assert.ok(metadata.childFacts().every(child => child.exitCode !== null || child.signalCode !== null));
+    assert.equal(model.observations.length, 0); assert.equal(business.length, 0);
+    const visible = discovered.page.data.filter(row => !row.hidden && row.inputModalities.includes('text'));
+    const selected = visible.find(row => row.isDefault) ?? visible[0];
+    assert.ok(selected, 'actual bounded native catalog contains a visible text model');
+    chosen = selected.model; options.selectModel(chosen); catalog = { ...discovered, originalChildExited: true };
+    const first = await make({ version: '0.169.0', phase: 'start', model: chosen,
+      previousConfigSha256: metadata.configSha256, deadline: options.deadline });
+    const c1 = await open(first);
+    const oneDeadline = Math.min(options.deadline, performance.now() + 60_000);
+    const one = originalInput('ONE'), oneTerminal = observe(c1, first, one, 'ONE', oneDeadline);
+    const handedOne = await within(() => c1.submit(one), oneDeadline - performance.now());
+    assert.deepEqual(handedOne, { ok: true, value: { inputId: one.inputId, operationRef: one.operationRef,
+      delivery: 'client-consumed', providerAcceptance: 'unknown' } });
+    await wait(() => oneTerminal() !== undefined, oneDeadline);
+    assert.equal(oneTerminal()?.outcome, 'succeeded'); assert.equal(approvalCount, 1);
+    assert.equal(await readFile(effect, 'utf8'), 'ONE\n'); assert.equal(model.observations.length, 8);
+    assert.ok(first.events.some(event => event.kind === 'tool-result' && event.isError));
+    const checkpoint = c1.checkpoint();
+    if (!checkpoint.ok) throw new Error('TEST original native checkpoint unavailable');
+    const payload = JSON.stringify(checkpoint.value); assert.ok(payload && Buffer.byteLength(payload) <= 1_000_000);
+    const checkpointRef = 'TEST-original-codex-checkpoint-' + basename(root);
+    const checkpointSha = createHash('sha256').update(payload).digest('hex');
+    const checkpointPath = join(root, 'candidate-checkpoint.json');
+    await writeFile(checkpointPath, payload, { mode: 0o600, flag: 'wx' });
+    checkpointEvidence = { checkpointRef, sha256: checkpointSha, nativeThreadId: first.facts.threadId };
+    assert.equal(record(checkpoint.value).nativeThreadId, first.facts.threadId);
+    await close(c1, first);
+    const second = await make({ version: '0.169.0', phase: 'resume', model: chosen,
+      previousConfigSha256: first.configSha256, deadline: options.deadline,
+      async readCheckpoint(reference, request) {
+        assert.equal(reference, checkpointRef); assert.equal(checkpointReads, 0);
+        assert.deepEqual(request, { ...first.config.binding, generation: 2,
+          configRevision: first.config.configRevision,
+          requiredCapabilities: ['text', 'tools', 'permission', 'interrupt', 'checkpoint'], checkpointRef });
+        const original = await readFile(checkpointPath, 'utf8');
+        assert.equal(createHash('sha256').update(original).digest('hex'), checkpointSha);
+        checkpointReads += 1;
+        return JSON.parse(original) as unknown;
+      } });
+    const c2 = await open(second, checkpointRef);
+    assert.equal(checkpointReads, 1); assert.equal(second.config.binding.generation, 2);
+    assert.equal(first.facts.sentMethods.filter(method => method === 'thread/start').length, 1);
+    assert.equal(first.facts.sentMethods.includes('thread/resume'), false);
+    assert.equal(second.facts.sentMethods.includes('thread/start'), false);
+    assert.equal(second.facts.sentMethods.filter(method => method === 'thread/resume').length, 1);
+    assert.equal(second.facts.threadId, first.facts.threadId);
+    assert.equal(second.submitted.length, 0); assert.equal(model.observations.length, 8);
+    assert.equal(await readFile(effect, 'utf8'), 'ONE\n'); assert.equal(bob.lookup('codex-reply-two'), undefined);
+    const twoDeadline = Math.min(options.deadline, performance.now() + 60_000);
+    const two = originalInput('TWO'), twoTerminal = observe(c2, second, two, 'TWO', twoDeadline);
+    const handedTwo = await within(() => c2.submit(two), twoDeadline - performance.now());
+    assert.deepEqual(handedTwo, { ok: true, value: { inputId: two.inputId, operationRef: two.operationRef,
+      delivery: 'client-consumed', providerAcceptance: 'unknown' } });
+    await wait(model.candidateFinalHeld, twoDeadline);
+    assert.equal(await readFile(effect, 'utf8'), 'ONE\nTWO\n');
+    assert.equal(bob.lookup('codex-reply-two')?.phase, 'completed');
+    assert.equal(twoTerminal(), undefined, 'held actual response precedes explicit original interrupt');
+    interruption = await within(() => c2.interrupt(two.operationRef), twoDeadline - performance.now());
+    assert.deepEqual(interruption, { ok: true, value: { requested: true, terminal: 'unconfirmed' } });
+    await wait(() => twoTerminal() !== undefined, twoDeadline);
+    assert.equal(twoTerminal()?.outcome, 'cancelled');
+    assert.equal(first.submitted.length, 1); assert.equal(second.submitted.length, 1);
+    assert.equal(first.candidateWire.turns.length, 1); assert.equal(second.candidateWire.turns.length, 1);
+    assert.equal(new Set([one.inputId, two.inputId]).size, 2);
+    assert.equal(new Set([one.operationRef, two.operationRef]).size, 2);
+    assert.equal(second.candidateWire.approvals.length, 0);
+    for (const id of ['codex-task-create', 'codex-task-assign', 'codex-task-start', 'codex-task-comment',
+      'codex-task-complete', 'codex-reply-one', 'codex-reply-two']) {
+      const receipt = bob.lookup(id); assert.ok(receipt);
+      assert.equal(receipt.phase, 'completed'); assert.equal(receipt.principalId, 'bob-session');
+      assert.deepEqual(receipt.binding, { backendId: options.delivery.backendId,
+        teamId: options.delivery.teamId, teamName: options.delivery.teamName });
+    }
+    const tasks = human.listTasks(); assert.equal(tasks.length, 1);
+    assert.equal(tasks[0]?.status, 'completed'); assert.equal(tasks[0]?.owner, 'bob');
+    const inbox = JSON.parse(await readFile(join(root, 'store/teams/test-codex-team/inboxes/user.json'), 'utf8')) as unknown[];
+    assert.deepEqual(inbox.map(item => [record(item).from, record(item).text]),
+      [['bob', 'REPLY_CODEX_ONE'], ['bob', 'REPLY_CODEX_TWO']]);
+    assert.equal(new Set(inbox.map(item => record(item).messageId)).size, 2);
+    assert.equal(model.observations.length, 11); assert.deepEqual(model.failures, []);
+    assert.equal(model.probes.length, 0);
+    assert.ok(model.observations.every(row => row.contextEffective && row.requestedModel === chosen));
+    assert.ok(model.observations.filter(row => row.turn === 'CODEX_TEAM_TWO')
+      .every(row => row.priorTurn && row.priorNativeToolIds?.length === 7));
+    assert.equal([...first.events, ...second.events].filter(event => event.kind === 'tool' && event.name === 'Bash').length, 2);
+    await close(c2, second);
+    await Promise.all(consumers);
+    if (observationFailure !== undefined) throw observationFailure;
+    assert.equal(children.length, 3);
+    assert.equal(await hash(checkpointPath), checkpointSha);
+    passed = true;
+  } catch (error) { firstFailure = error; }
+  const cleanupFailures: unknown[] = [];
+  for (const session of sessions) {
+    try { await session.close(); } catch (error) { cleanupFailures.push(error); }
+  }
+  for (const cleanup of options.cleanup.toReversed()) {
+    try { await cleanup(); } catch (error) { cleanupFailures.push(error); }
+  }
+  options.onDisposed();
+  try { if (pins) await pins.verify(); } catch (error) { cleanupFailures.push(error); }
+  passed = passed && cleanupFailures.length === 0;
+  const metadataObservation = projectCodexMetadataObservation(drivers[0]?.metadataObservation());
+  const receiptPath = join(root, 'receipt.json');
+  await writeFile(receiptPath, JSON.stringify({
+    status: passed ? 'PASS' : 'INCOMPLETE', scope: 'public-D Codex 0.169.0 candidate Darwin ARM64',
+    artifacts: { inputs: pins?.evidence, node: { version: process.version, sha256: await hash(options.selectedNode) },
+      provider: { sha256: await hash(options.providerArtifact), entry: import.meta.resolve('@agent-teams/provider-implementations/codex') } },
+    nativeVersion, originalShell, selectedModel: chosen, catalog, metadataObservation,
+    permission, checkpoint: checkpointEvidence, checkpointReads,
+    businessReceipts: business, interruption, closes, native: drivers.map((driver, index) => ({
+      role: ['metadata', 'C1', 'C2'][index], facts: { ...driver.facts, errors: driver.facts.errors.map(row =>
+        ({ method: row.method, code: typeof row.code === 'number' && Number.isFinite(row.code) ? row.code : 'unknown' })) }, wire: driver.candidateWire,
+      inputs: driver.submitted, children: driver.childFacts(), configSha256: driver.configSha256,
+      terminals: driver.events.filter(event => event.kind === 'result'),
+    })), modelObservations: model.observations, modelFailures: model.failures,
+    cleanup: cleanupFailures.length === 0 && children.every(child => child.exitCode !== null || child.signalCode !== null),
+    firstFailure: firstFailure === undefined ? null : { kind: firstFailure instanceof Error && firstFailure.name === 'AssertionError' ? 'assertion' : 'error' },
+    cleanupFailures: cleanupFailures.length,
+    excluded: ['Host/source eligibility', 'Desktop/installer', 'cross-version restore', 'descendant custody', 'durable Runtime dispatch'],
+  }, null, 2), { mode: 0o600 });
+  console.log(JSON.stringify({ status: passed ? 'PASS' : 'INCOMPLETE', scope: 'codex-0.169.0-candidate', receipt: receiptPath }));
+  if (!passed) {
+    try {
+      const observation = projectCodexMetadataObservation(metadataObservation);
+      if (observation) {
+        const line = JSON.stringify({ kind: 'TEST_CODEX_METADATA_CALLBACKS', observation });
+        if (Buffer.byteLength(line + '\n', 'utf8') <= 2048) console.log(line);
+      }
+    } catch { /* Passive diagnostics cannot replace the original failure or cleanup evidence. */ }
+  }
+  if (!passed)
+    throw new AggregateError([...(firstFailure === undefined ? [] : [firstFailure]), ...cleanupFailures], 'TEST candidate original failure/cleanup');
+}

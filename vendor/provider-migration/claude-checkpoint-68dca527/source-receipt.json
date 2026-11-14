@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "68dca527b779ebb82923f30d7b08441085d8b579",
+  "sourceTree": "7288b9065a24b6e825f23c843177092c0f579c01",
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "fullChecks": [
+    {
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43479531998,
+      "jobId": 132072089600,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43479531998/job/132072089600"
+    },
+    {
+      "node": "26.11.1",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43479531998,
+      "jobId": 132072089683,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43479531998/job/132072089683"
+    }
+  ],
+  "checkedArtifact": {
+    "id": 14062879890,
+    "name": "opencode-v2-spi-consumer-checked-68dca527b779ebb82923f30d7b08441085d8b579",
+    "bytes": 184234,
+    "sha256": "854f74916005deb7e5a9f23fed41a99605bfb5757c24c269c0b573ff4374d822",
+    "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43479531998/artifacts/14062879890"
+  },
+  "packages": {
+    "provider-implementations": {
+      "file": "agent-teams-provider-implementations-0.0.0.tgz",
+      "oldSha256": "f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2",
+      "newSha256": "07241cca756e69aa6001df41d6a7408aad5d8ab4c8277f9d70f35d0d66736c73",
+      "bytes": 177100,
+      "integrity": "sha512-RdXbo97Amr2CMjqfe8HxzrB02WwwZqzGEWhixzgHqCEqTOdQ11CZ/vTW77SRCJGhbwXTZ5SuQzBnpJVEMX4baA=="
+    },
+    "provider-session-contracts": {
+      "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+      "existingPath": "../opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "bytes": 6220,
+      "integrity": "sha512-DnVXK40iBmyDx/lRRGYPY65Ek6yCbyncbqMs8Ridcc7kXthAl/aAc4wO4idedyNDKm1QG/tgxYJb9YVMqs4KMw=="
+    }
+  }
+}

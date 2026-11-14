@@ -1,7 +1,8 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { TeamCreationRefusal } from '@features/agent-backend/contracts';
+import { hostTeamSelectionKey, TeamCreationRefusal } from '@features/agent-backend/contracts';
+import { hostTeamRunId } from '@features/agent-backend/contracts/teamRunSelection';
 import { createLaunchGuard } from '@renderer/components/team/dialogs/providerLaunchAuthority';
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { updateProviderCheck } from '@renderer/components/team/dialogs/provisioningProviderChecks';
@@ -9,6 +10,7 @@ import { __resetRetainedCreateSubmissionForTests } from '@renderer/components/te
 import { useCreateConfigSubmission } from '@renderer/components/team/dialogs/useCreateConfigSubmission';
 import { useCreatedTeamLaunchReadiness } from '@renderer/components/team/dialogs/useCreatedTeamLaunchReadiness';
 import { useCreateTeamSubmission } from '@renderer/components/team/dialogs/useCreateTeamSubmission';
+import { createHostTeamFromDialog } from '@renderer/store/team/createHostTeamFromDialog';
 import {
   invalidateContextScopedRequestEpoch,
   resetContextScopedRequestEpochForTests,
@@ -17,23 +19,26 @@ import { IpcError } from '@renderer/utils/unwrapIpc';
 import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { TeamSlice } from '@renderer/store/slices/teamSlice';
 import type { CreatedTeamReadiness, TeamCreateRequest, TeamProviderId } from '@shared/types/team';
 
-const { context, createConfig } = vi.hoisted(() => ({
+const { context, createConfig, createTeam } = vi.hoisted(() => ({
   context: { activeContextId: 'TEST-local' },
   createConfig: vi.fn(),
+  createTeam: vi.fn(),
 }));
 vi.mock('@renderer/store', () => ({
   useStore: Object.assign((select: (value: unknown) => unknown) => select(context), {
     getState: () => context,
   }),
 }));
-vi.mock('@renderer/api', () => ({ api: { teams: { createConfig } } }));
+vi.mock('@renderer/api', () => ({ api: { teams: { createConfig, createTeam } } }));
 let dispose = () => {};
 afterEach(() => {
   dispose();
   context.activeContextId = 'TEST-local';
   createConfig.mockReset();
+  createTeam.mockReset();
   __resetRetainedCreateSubmissionForTests();
   resetContextScopedRequestEpochForTests();
   vi.useRealTimers();
@@ -328,6 +333,49 @@ describe('original Create launch flow scoped evidence', () => {
       expect(calls[1]!.command!.commandId).not.toBe(calls[0]!.command!.commandId);
     }
   );
+  it('opens a recovered saved Team and frees Create without polling an unconfirmed launch', async () => {
+    const f = mount(),
+      poll = vi.fn();
+    const state: Pick<
+      TeamSlice,
+      'subscribeProvisioningProgress' | 'fetchTeams' | 'getProvisioningStatus'
+    > = {
+      subscribeProvisioningProgress: vi.fn(),
+      fetchTeams: vi.fn(async () => {}),
+      getProvisioningStatus: vi.fn(async () => {
+        throw new Error('Unexpected unconfirmed launch poll');
+      }),
+    };
+    const partial = {
+      teamName: hostTeamSelectionKey('TEST-handle'),
+      runId: hostTeamRunId('TEST-handle', 'TEST-capture-B', 'TEST-roster-B'),
+      launchStatus: 'unconfirmed' as const,
+    };
+    createTeam
+      .mockRejectedValueOnce(new Error('original outcome unknown'))
+      .mockResolvedValue(partial);
+    const create = async (request: TeamCreateRequest) =>
+      (await createHostTeamFromDialog(request, () => state as TeamSlice, poll)).teamName!;
+    await expect(f.submit()(f.input.request, create)).rejects.toThrow('original outcome unknown');
+    expect(console.error).toHaveBeenCalledExactlyOnceWith(
+      '[Renderer:unwrapIpc]',
+      '[team:create] original outcome unknown'
+    );
+    vi.mocked(console.error).mockClear();
+    f.unmount();
+    f.render();
+    await expect(f.submit()(f.input.request, create)).resolves.toBe(partial.teamName);
+    expect(createTeam.mock.calls[1]![0].command).toEqual(createTeam.mock.calls[0]![0].command);
+    await expect(f.submit()({ ...f.input.request, teamName: 'TEST-next' }, create)).resolves.toBe(
+      partial.teamName
+    );
+    expect(createTeam.mock.calls[2]![0].command.commandId).not.toBe(
+      createTeam.mock.calls[0]![0].command.commandId
+    );
+    expect(state.fetchTeams).toHaveBeenCalledTimes(2);
+    expect(state.getProvisioningStatus).not.toHaveBeenCalled();
+    expect(poll).not.toHaveBeenCalled();
+  });
   it('keeps an uncertain save-only command after ordinary untyped rejection and clears on its positive receipt', async () => {
     const f = mount();
     createConfig.mockRejectedValueOnce(new Error('invalid text is not definitive proof'));
