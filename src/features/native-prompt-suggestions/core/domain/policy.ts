@@ -14,7 +14,7 @@ const SAME_ORIGIN_FIELDS = [
 function validIdentity(candidate: NativeNextPromptCandidate): boolean {
   return SAME_ORIGIN_FIELDS.every((key) => {
     const value = candidate[key];
-    return typeof value === 'string' && value.length > 0 && value.length <= 256;
+    return typeof value === 'string' && value.length > 0 && value.length <= (key === 'ownerHandle' ? 512 : 256);
   });
 }
 

@@ -80,6 +80,19 @@ describe('native teammate next-prompt policy', () => {
     expect(canDisplayNativeNextPrompt(candidate, { ...view, ...mutation })).toBe(false);
   });
 
+  it('keeps Main-projected owner handles within the same bounded UI policy', () => {
+    const selected = 'host-team:' + 'a'.repeat(450);
+    expect(canDisplayNativeNextPrompt(
+      { ...candidate, ownerHandle: selected },
+      { ...view, ownerHandle: selected },
+    )).toBe(true);
+    const oversized = 'host-team:' + 'a'.repeat(503);
+    expect(canDisplayNativeNextPrompt(
+      { ...candidate, ownerHandle: oversized },
+      { ...view, ownerHandle: oversized },
+    )).toBe(false);
+  });
+
   it('rejects invalid, control-character, overlong and stale provider candidates', () => {
     expect(canDisplayNativeNextPrompt({ ...candidate, text: '   ' }, view)).toBe(false);
     expect(canDisplayNativeNextPrompt({ ...candidate, text: '\u0000danger' }, view)).toBe(false);
