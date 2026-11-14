@@ -84,10 +84,15 @@ export type TeamHostProfile = z.infer<typeof teamHostProfileSchema>;
 export function createTeamHost(
   rawProfile: TeamHostProfile,
   streams: Pick<HostServerOptions, 'input' | 'output' | 'limits'>,
-  composition?: { createProvider(context: MemberProviderContext): MemberProvider;
-    createScheduledProvider?(context: ScheduledRunProviderContext): ScheduledRunProvider }
+  composition?: { createProvider?(context: MemberProviderContext): MemberProvider;
+    createScheduledProvider?(context: ScheduledRunProviderContext): ScheduledRunProvider;
+    /** Separate captured app preference, evaluated only when the Host is constructed. */
+    promptSuggestionsEnabled?: boolean }
 ): HostServer {
   const profile = structuredClone(teamHostProfileSchema.parse(rawProfile));
+  // CLI/Main owns this app-level preference. Profile remains digest-bound and
+  // existing sessions are never interrupted to apply a change.
+  const promptSuggestionsEnabled = composition?.promptSuggestionsEnabled ?? profile.promptSuggestions?.enabled ?? false;
   assertAccountNamespaces([
     ...(profile.runtime?.members ?? []),
     ...(profile.runtime?.providerTemplates ?? []),
@@ -282,11 +287,11 @@ export function createTeamHost(
         crossTeam: (team, principal, binding, current) =>
           crossTeam.memberPort(team, principal, binding, current),
         assertWriter: () => lease.assertCurrent(),
-        ...(profile.promptSuggestions?.enabled === true
+        ...(promptSuggestionsEnabled
           ? { promptSuggestionsEnabled: true, onPromptSuggestion: (notice: CapturedPromptSuggestionNotice) =>
               emitPromptSuggestion?.(notice) }
           : {}),
-        ...(composition ? { createProvider: composition.createProvider } : {}),
+        ...(composition?.createProvider ? { createProvider: composition.createProvider } : {}),
       });
     const creationLaunch =
       registry && runtime && management
@@ -769,7 +774,7 @@ export function createTeamHost(
     };
     emitPromptSuggestion = (notice) => {
       // Auxiliary, bounded, best-effort notification; never changes Team/Runtime result.
-      if (!sealed && profile.promptSuggestions?.enabled === true)
+      if (!sealed && promptSuggestionsEnabled)
         server.notifyData('runtime.prompt-suggestion.updated', json(notice));
     };
     runtime?.kick(); // Resume original durable obligations on startup, without opening/adopting native sessions.
