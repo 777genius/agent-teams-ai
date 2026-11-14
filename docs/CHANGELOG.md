@@ -11,6 +11,11 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 - GPT-5.6 Sol, Terra, and Luna fallback selection for Codex teams, dynamic future-model efforts, and in-app Codex CLI updates.
 - Traditional Chinese (Taiwan, `zh-TW`) app language with Taiwan terminology. Traditional Chinese system locales (zh-TW, zh-HK, zh-MO, zh-Hant) select it automatically, missing keys fall back to English instead of Simplified Chinese, and cron schedule descriptions use cronstrue's `zh_TW`.
 
+### Fixed
+
+- Windows: teammates no longer pop up a new terminal window for every Bash, git, or PowerShell tool call. Direct-process teammates are no longer spawned detached on Windows, so they keep the app's hidden console. As a result, Windows teammates now exit with the app if it crashes or is force-killed, matching the lead.
+- Windows: ccusage/tokscale token-usage importers no longer flash a console window on each refresh.
+
 ## [1.2.0] - 2026-03-31
 
 ### Added
