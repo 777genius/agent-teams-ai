@@ -13,6 +13,23 @@ import {
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
 
+function hasCapturedV1MissingMaintenance(
+  status: OpenCodeRuntimeStatus | CodexRuntimeStatus | null
+): boolean {
+  return (
+    status !== null &&
+    'nativeGeneration' in status &&
+    status.nativeGeneration === 'v1' &&
+    status.source === 'captured-host' &&
+    status.version === undefined &&
+    Boolean(status.sourceRevision) &&
+    isOpenCodeRuntimeUsable(status) &&
+    status.v1Maintenance?.installed === false &&
+    status.v1Maintenance.source === 'missing' &&
+    status.v1Maintenance.state === 'idle'
+  );
+}
+
 export function shouldShowOpenCodeInstallAction(
   provider: CliProviderStatus,
   showSkeleton: boolean,
@@ -34,7 +51,8 @@ export function shouldShowOpenCodeInstallAction(
   return (
     !showSkeleton &&
     canManagedInstallChangeOpenCodeRuntime(status) &&
-    (status.updateAvailable === true ||
+    (hasCapturedV1MissingMaintenance(status) ||
+      status.updateAvailable === true ||
       isOpenCodeFreeTierVersionOutdated(status.version) ||
       (!providerReady && !isOpenCodeRuntimeUsable(status)) ||
       isOpenCodeProviderOAuthBridgeOutdated(status))
@@ -73,6 +91,8 @@ export function getRuntimeInstallLabel(
     return supportPrefix + t('cliStatus.runtimeInstall.installing');
   if (status?.state === 'checking') return supportPrefix + t('cliStatus.runtimeInstall.checking');
   if (status?.state === 'failed') return t('cliStatus.runtimeInstall.retryInstall');
+  if (hasCapturedV1MissingMaintenance(status))
+    return `${t('cliStatus.runtimeInstall.install')} OpenCode V1`;
   if (status && !status.installed && 'compatibleV2Version' in status)
     return `${t('cliStatus.runtimeInstall.install')} OpenCode V1`;
   if (status?.updateAvailable && status.latestVersion) {

@@ -329,7 +329,7 @@ export async function runDesktopRuntimeSourceSelection(input: {
         const s=window.__agentTeamsDevStore?.getState().openCodeRuntimeStatus;
         return s?{installed:s.installed,source:s.source,state:s.state,version:s.version??null,
           sourceRevision:s.sourceRevision??null,updateAvailable:s.updateAvailable??false,
-          engineVersion:s.engineVersion??null,v2Support:s.v2Support??null,maintenance:s.v2Maintenance??null,
+          engineVersion:s.engineVersion??null,v2Support:s.v2Support??null,maintenance:s.v2Maintenance??s.v1Maintenance??null,
           loading:window.__agentTeamsDevStore.getState().openCodeRuntimeStatusLoading,
           scopeRevision:window.__agentTeamsDevStore.getState().cliProviderStatusScopeRevision}:null})()`);
           try { lastStatus = closedStatus(value, purpose, attempt, expectedRevision); } catch { lastStatus = null; }
@@ -657,7 +657,7 @@ export async function runDesktopRuntimeSourceSelection(input: {
       if (initial === 'missing') {
         if (!v2) await openSettings();
         const missing = await poll(() => status('missing-before-install'), value => v2 ? value?.maintenance != null && record(value.maintenance).kind === 'missing' :
-          value?.installed === false && value.source === 'missing', 'original stock discovery is missing before Install');
+          value?.maintenance != null && record(value.maintenance).installed === false && record(value.maintenance).source === 'missing', 'original stock discovery is missing before Install');
         phase.before = missing; await observe();
         await maintenance(v2 ? 'Install V2 2.1.4' : 'Install OpenCode V1');
         const selected = await selection(versionB, v2 ? 2 : 1); phase.publication = selected;
@@ -671,8 +671,8 @@ export async function runDesktopRuntimeSourceSelection(input: {
           await maintenance('Finish OpenCode V2 setup');
         } else {
           await prepareCreate('test-source-path-a');
-          phase.before = await poll(() => status('path-before-refresh'), value => value?.installed === true && value.source === 'path' &&
-            value.version === versionA, 'original PATH A is Ready before healthy Refresh');
+          phase.before = await poll(() => status('path-before-refresh'), value => value?.maintenance != null && record(value.maintenance).installed === true &&
+            record(value.maintenance).source === 'path' && record(value.maintenance).version === versionA, 'original PATH A is Ready before healthy Refresh');
           await observe();
           const refresh = '[data-testid="create-team-page"] [data-testid="team-model-selector-refresh-providers"]';
           await ui.scrollTo(refresh, 'original healthy Create Refresh');
