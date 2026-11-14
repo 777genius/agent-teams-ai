@@ -34,7 +34,7 @@ export interface CapturedPromptSuggestionNotice {
 
 // Never let an untrusted provider observation manufacture a native Codex turn
 // from a Host operation ID. This boundary is deliberately stricter than TS types.
-const invalidSuggestionControl = /[\\u0000-\\u001f\\u007f]/u;
+const invalidSuggestionControl = /[\u0000-\u001f\u007f]/u;
 function boundedNativeReference(value: unknown): value is string {
   return typeof value === 'string' &&
     value.length > 0 && value.length <= 256 &&
