@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createCapturedPromptSuggestionBinding } from '../src/composition/createCapturedPromptSuggestionBinding.ts';
+import { createCapturedPromptSuggestionBinding } from '../dist/composition/createCapturedPromptSuggestionBinding.js';
 
 import type { CapturedPromptSuggestion, CapturedPromptSuggestionNotice } from '../src/composition/createCapturedPromptSuggestionBinding.ts';
 import type { MemberEntry } from '../src/composition/MemberEntry.ts';
@@ -38,7 +38,10 @@ function harness(provider: 'claude' | 'codex' = 'claude') {
   const entry = {
     binding,
     profile: { provider, sessionId: candidate.sessionRef },
-    team: { owner: { isOriginalHumanDirectDelivery: () => human } },
+    team: {
+      definition: { members: [{ memberId: binding.memberId, name: 'alice', role: 'member' }] },
+      owner: { isOriginalHumanDirectDelivery: () => human },
+    },
   } as unknown as MemberEntry;
   const source = createCapturedPromptSuggestionBinding({
     entry,
