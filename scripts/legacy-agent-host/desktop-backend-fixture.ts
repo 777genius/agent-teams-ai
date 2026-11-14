@@ -51,6 +51,20 @@ process.stdout.write(frame?'\0'+frame[1]+'_START\0'+dump+'\0'+frame[1]+'_END\0':
   );
 }
 
+/** Generated metadata/refusal bytes shared by the original private TEST sentinels. */
+export function desktopAgentSentinelSource(
+  node: string, sentinelLog: string, version: string,
+  mode: 'metadata' | 'refused' | 'donor-saved-only'
+): string {
+  return `${desktopNodeScriptHeader(node)}import {appendFileSync} from 'node:fs';
+import {basename} from 'node:path';
+const args=process.argv.slice(2),allowed=${mode === 'refused' ? 'false' : "args.length===1&&args[0]==='--version'"};
+appendFileSync(${JSON.stringify(sentinelLog)},JSON.stringify({executable:basename(process.argv[1]),allowed,argc:args.length,command:args.length===1&&args[0]==='app-server'?'app-server':null,flags:args.filter(x=>x.startsWith('-')).map(x=>x.split('=')[0]).slice(0,16)})+'\\n',{mode:0o600});
+if(allowed){${mode === 'donor-saved-only' ? "if(basename(process.argv[1])==='codex')process.exit(78);" : ''}console.log(${JSON.stringify(version + ' (TEST sentinel)')});process.exit(0)}
+process.stderr.write('TEST sentinel refuses native agent invocation\\n');process.exit(78);
+`;
+}
+
 /** Creates only private TEST files. It neither launches the Host nor opens a provider. */
 export async function prepareDesktopBackendFixture(
   repo: string,
@@ -71,6 +85,7 @@ export async function prepareDesktopBackendFixture(
     reviewUi?: boolean;
     nativeReviewUi?: boolean;
     stoppedImportUi?: boolean;
+    donorSavedOnly?: true;
     pnpmEntry: string;
     nativeCodex?: { path: string; sha256: string };
     nativeClaude?: { path: string; sha256: string; modelUrl?: string };
@@ -92,6 +107,12 @@ export async function prepareDesktopBackendFixture(
     options.nativeChatAttachments || options.capturedMcpNonce ||
     options.claudeCheckpointDonor.repo !== join(repo, '.stage1-checkpoint-donor')))
     throw new Error('Checkpoint upgrade requires its exact original Claude Launch fixture');
+  if (options.donorSavedOnly && (options.stoppedImportUi !== true || options.creation !== true ||
+    options.launchDialog !== true || !options.nativeClaude || options.candidateRuntime ||
+    options.nativeCodex || options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ||
+    options.claudeCheckpointDonor || options.diagnosticHostEntry || options.capturedMcpNonce ||
+    options.nativeGroupChats || options.nativeChatAttachments || options.nativeReviewUi || options.reviewUi || options.approvalUi))
+    throw new Error('Saved-only donor requires its original isolated Claude Create fixture');
   const linuxChildExec = readDesktopLinuxChildExecInput();
   const node =
     options.candidateRuntime?.nodeExecutable ??
@@ -692,13 +713,8 @@ export async function prepareDesktopBackendFixture(
   };
   const sentinelLog = join(root, 'sentinel-invocations.ndjson');
   // No inherited environment or user config. The sentinel can never run an agent.
-  const sentinelSource = `${desktopNodeScriptHeader(node)}import {appendFileSync} from 'node:fs';
-import {basename} from 'node:path';
-const args=process.argv.slice(2),allowed=${options.candidateRuntime ? 'false' : "args.length===1&&args[0]==='--version'"};
-appendFileSync(${JSON.stringify(sentinelLog)},JSON.stringify({executable:basename(process.argv[1]),allowed,argc:args.length,command:args.length===1&&args[0]==='app-server'?'app-server':null,flags:args.filter(x=>x.startsWith('-')).map(x=>x.split('=')[0]).slice(0,16)})+'\\n',{mode:0o600});
-if(allowed){console.log(${JSON.stringify(lock.cliVersion + ' (TEST sentinel)')});process.exit(0)}
-process.stderr.write('TEST sentinel refuses native agent invocation\\n');process.exit(78);
-`;
+  const sentinelSource = desktopAgentSentinelSource(node, sentinelLog, lock.cliVersion,
+    options.candidateRuntime ? 'refused' : options.donorSavedOnly ? 'donor-saved-only' : 'metadata');
   for (const name of [
     'claude',
     'codex',
