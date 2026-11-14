@@ -21,6 +21,7 @@ export interface CapturedPromptSuggestionNotice {
   readonly teamId: string;
   readonly runId: string;
   readonly memberId: string;
+  readonly memberName: string;
   readonly generation: string;
   readonly suggestionId: string;
   readonly messageId: string;
@@ -94,11 +95,14 @@ export function createCapturedPromptSuggestionBinding(input: {
     }
     if (found.selected.phase !== 'terminal' || found.selected.terminal !== 'succeeded') return;
     if (!current()) return;
+    const member = entry.team.definition.members.find(row => row.memberId === binding.memberId);
+    if (!member) return;
     input.publish(Object.freeze({
       provider: candidate.provider,
       teamId: binding.teamId,
       runId: binding.runId,
       memberId: binding.memberId,
+      memberName: member.name,
       generation: binding.generation,
       suggestionId: randomUUID(),
       messageId: found.selected.intent.messageId,
