@@ -591,3 +591,46 @@ P06 §25.17 requires an exact pre-App original-child witness for the independent
 This is a platform-neutral internal construction port, not common activation of W01's retained Windows owner chain. Native-first Windows source/qualification requirements, broker HANDLE/registered-root authority, callback/environment joins and §16.8's physical/model arithmetic remain unchanged. No Windows control, admission, release or native-result claim follows from this propagation or from C10's separate Darwin proof. Preserve the current native implementation if W01 has already published the identical port; root composes the common delta once.
 
 The source-only C10 fixture wrapper delegates to the same original CapturedProcess and immediately observes the actual returned handle/PID/birth through the existing read-only captured-app helper; it cannot grant ownership from a path or replace cleanup. P06 §25.17 retains unconditional original cleanup and fails an absent/ambiguous witness. The catalog port is the only production path added to C10's previously reviewed scope. No source change or execution is performed by this plan amendment; the existing W01 native gates remain required.
+
+## 17. W01: восстановить исходную compiler boundary и три original-deadline callbacks
+
+**План до source.** Prefix этого appendix — P08 `32bef8ff8309ca3f44bd1429a0c4427a42cbe4cd`. Область — четыре существующих TEST/build-scope файла native-ветки; production, зависимости, native protocol, модели и workflow не меняются. Windows same-Main product Retry / Processes UI остаётся отдельным ещё не разрешённым source cut.
+
+### 17.1. Наблюдённый первый отказ и предел доказательства
+
+Original run `43594548604`, Windows x64 job `132446162113`, exact head `c04761a8b45e31ff0c08e69fe5c628b9d555f528` остановился 2026-11-14 12:50:19 UTC на **первой** исходной команде `node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json`. Host build перед ней завершился; последующий retained-host compiler, protocol tests, broker build и actual Windows native cases не начались. Полный original log — blob `e80d16e82ec1d5e4163ab29ea6cebb6c9e665f1e`; compact evidence — `d146741105cb336fca97a246f39cbea620685ee7`. Artifact `14114403121` содержит только `source-sha.txt`: ZIP 186 bytes, SHA256 `af5b52581a31e096e8a527fd42c271991e098c15f7b85d60c83ff3accf12ec57`, independently downloaded/hash-checked and read. Native receipt отсутствует; этот отказ ничего не доказывает о Windows runtime/custody.
+
+Исходный low-level config `55bf5418` включает `*.ts` и уже исключает две Main integration entry points — `nativeRetainedHostGate.ts` и `nativeRetainedServiceScenario.ts`. Новый `nativeRetainedProviderFixture.ts` забыли исключить: он стал самостоятельным root и втянул application graph под чужие `noUncheckedIndexedAccess` / ambient types. Отсюда одновременно появились Main/shared diagnostics. Это не основание менять application types или compiler flags.
+
+Отдельный исходный `tsconfig.retained-host.json` blob `b9399da33bc4da55ac819f266cf6f279ab057d7a` уже включает обе retained entry points и их обычные imports: Gate → Scenario → новый helper. Он остаётся побайтно неизменным и обязательным. Отдельно actual log показал четыре ошибки helper: dependency resolution, optional `memberTools`, переданный number вместо deadline callback и generic member union без `protocolRevision`. Source-backed проверка обнаружила такие же number/callback ошибки ещё в Gate и Scenario; они являются **предсказанными следующими diagnostics**, а не результатом ещё не выполненного второго compiler.
+
+### 17.2. Exact write scope
+
+| Existing native path | Exact preimage | Разрешённое изменение |
+| --- | --- | --- |
+| `tools/owned-process-broker/tsconfig.json` | `55bf54184ebf52a5bb25ab85da64d8208aad2019` | Добавить только `nativeRetainedProviderFixture.ts` в существующий список integration exclusions. |
+| `tools/owned-process-broker/nativeRetainedProviderFixture.ts` | `9c20baafaa3cdf4cc35b47bd9541ab63fd2e50ef` | Правильный public installed dependency entry; точный прежний empty TEST catalog; реальные narrowing guards; original deadline callback. |
+| `tools/owned-process-broker/nativeRetainedHostGate.ts` | `f239988b353cdd924dd78587249776673a40f90d` | Только уже условный `remainingMs` становится функцией того же захваченного `deadline`. |
+| `tools/owned-process-broker/nativeRetainedServiceScenario.ts` | `ece47cb1e0a0912e5271c9bbff0d497b1f92f361` | Только provider-fixture `remainingMs` становится функцией того же захваченного `deadline`. |
+
+Других writable paths и новых файлов нет. Native-first P08 delivery сохраняется: parent/qualification не получают отсутствующий у них W01 helper или частичный перенос Windows activation. Root сверяет current native preimages перед publication.
+
+### 17.3. Public dependency и прежняя synthetic recipe
+
+Bare `@agent-teams/provider-implementations/codex` из root-level `tools/` не разрешается: эта frozen dependency принадлежит `packages/legacy-agent-host`. Использовать её установленный **public entry target** `../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/codex.js`, с существующими TypeScript declarations. Это ровно `./codex` import target из поставленного package exports, не private internal decoder. Никакого нового root dependency, paths alias, symlink, package pin или provider implementation change.
+
+Дополнительно checked D `91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94` не экспортирует `decodeCodexConfiguredMcpCatalog` через public entry. Public package / JS / declarations blobs — `edb720f302f8835b431e6a5ed259c27f7ee665d7`, `5ff2d27bb1169626dd4efdbbeda41503ca80687e`, `d44e683c5bb3d12030230e512010550077e694eb`; все равны соответствующим bytes исходного pinned TGZ. Decoder source `43d0fc9353d9ef580ba3c27cfa7e1ef0788d273f` показывает: literal `[]` даёт ровно `{digest: sha256('[]'), servers: []}`.
+
+В прежнем synthetic fixture месте `capturedMcpCatalog: decodeCodexConfiguredMcpCatalog('[]')` использовать уже public `captureCodexConfiguredMcpCatalog({digest: hash('[]'), servers: []})`. Сохраняются metadata/digest до original profile hash, frozen empty server list, existing public `captureCodexMcpPolicy` и `codexMcpPolicyArgs`. Эта TEST recipe не выдаётся за actual native census: прежние реальные metadata/catalog roots, argv, configured policy, tool/result, absence и cleanup assertions остаются без изменений. Private decoder не экспортируется и его реализация не копируется.
+
+### 17.4. Narrowings и один исходный clock
+
+В helper после original `selectedMember && selectedProfile` guard явно проверить `provider === 'codex' || provider === 'opencode'` до возврата member. Это уже единственные два construction arms W01; narrow inferred return type сохраняет runtime refusal остальных variants и делает receipt `protocolRevision` корректным. Для tool iteration положительно проверить сам исходный `memberTools` перед прежними includes/MCP checks и циклом. Не использовать `any`, отключение strict flags, assertion cast или non-null assertion вместо реальной проверки.
+
+У `CapturedHostClient.request` original options контракт — `remainingMs?: () => number` (native blob `2b947608`, request264–284): функция читается непосредственно при admission и ограничивает исходный request timeout. Во всех трёх W01 callers вернуть функцию, вычисляющую остаток **того же уже захваченного absolute deadline**. Helper — `() => remaining(deadline)`; Gate — `() => Math.floor(deadline - performance.now())` внутри прежнего `originalDeadline !== undefined` arm; Scenario — `() => remaining(deadline)` внутри прежнего `providerFixture` arm. Deadline creation, original before/after guards, outer timeout, source recipe, count ledgers и cleanup не меняются. Никаких новых clocks, повторных model inputs, root allocations, retries или увеличения 45s/35s/10s budget.
+
+### 17.5. Проверка и публикация
+
+До source нужны root + independent bounded plan review и plan publication. Source freeze содержит четыре полных файла, exact forward/inverse diffs и line counts; все старые case names/assertions и Claude/default branches сохраняются. Новых unit cases не добавляется: это correction реально остановившегося original compiler gate и его уже существующих consumers, а не новый behavior framework.
+
+Root последовательно выполняет original low-level compiler, неизменный retained-host compiler и исходный protocol test command, затем только требуемые существующие focused/script/size guards. Обе compiler команды и все их strict options остаются обязательными; отсутствие helper в low-level project не означает отсутствие проверки helper. Source PASS/локальный compiler PASS не равен Windows qualification: actual W01 x64 и ARM64 cases должны пройти в следующем обычном CI на соответствующих exact heads, без rerun текущего run, изменения workflow/deadline или превращения отсутствующего native receipt в PASS.
