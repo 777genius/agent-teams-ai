@@ -93,7 +93,7 @@ describe('Codex runtime update UI', () => {
       });
     await render(pending, true);
     expect(document.body.textContent).toContain('confirming the runtime selection');
-    expect(document.body.textContent).not.toContain('Update ready');
+    expect(document.body.textContent).not.toContain('Update Ready');
     const waitingButton = Array.from(
       document.body.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')
     ).find((button) => button.disabled && button.textContent?.includes('Updating'));
@@ -109,7 +109,7 @@ describe('Codex runtime update UI', () => {
       progress: { phase: 'failed', detail: 'TEST original source publication held' },
     });
     expect(document.body.textContent).toContain('TEST original source publication held');
-    expect(document.body.textContent).not.toContain('Update ready');
+    expect(document.body.textContent).not.toContain('Update Ready');
     await render({
       ...pending,
       state: 'ready',
@@ -118,7 +118,7 @@ describe('Codex runtime update UI', () => {
       sourceRevision: 'b'.repeat(64),
       progress: { phase: 'ready', percent: 100, detail: 'Codex is ready for new launches.' },
     });
-    expect(document.body.textContent).toContain('Update ready');
+    expect(document.body.textContent).toContain('Update Ready');
     expect(document.body.textContent).toContain('Codex is ready for new launches.');
     expect(onInstall).toHaveBeenCalledTimes(2);
     await act(async () => root.unmount());

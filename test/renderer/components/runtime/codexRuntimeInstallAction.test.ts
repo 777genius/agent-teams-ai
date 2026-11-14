@@ -177,6 +177,12 @@ describe('codexRuntimeInstallAction', () => {
     );
     runtime.install.mockRejectedValueOnce(failed);
     await store.getState().installCodexRuntime();
+    expect(console.error).toHaveBeenCalledExactlyOnceWith(
+      '[Store:cliInstaller]',
+      'Failed to install Codex runtime:',
+      failed
+    );
+    vi.mocked(console.error).mockClear();
     expect(runtime.install).toHaveBeenCalledTimes(2);
     expect(runtime.invalidateStatus).toHaveBeenCalledTimes(1);
     expect(runtime.invalidateProvider).toHaveBeenCalledTimes(1);
