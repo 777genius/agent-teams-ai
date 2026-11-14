@@ -58,9 +58,11 @@ interface Selection {
 type Case = 'graceful' | 'crash' | 'natural-services' | 'scoped-services' |
   'codex-scoped-services' | 'opencode-v1-scoped-services';
 
-function prepareProfile(originalSandbox: string, broker: string, selected: Selection, url: string, mode: Case,
-  configure?: (profile: TeamHostProfile, selected: Selection) => void) {
+export function prepareProfile(originalSandbox: string, broker: string, selected: Selection, url: string, mode: Case,
+  configure?: (profile: TeamHostProfile, selected: Selection) => void,
+  packaged?: { nodeExecutable: string; nodeVersion: string; hostEntry: string }) {
   const root = realpathSync.native(originalSandbox);
+  const node = packaged?.nodeExecutable ?? process.execPath;
   const services = mode === 'natural-services' || mode.endsWith('scoped-services');
   const systemRoot = process.env.SystemRoot;
   assert.ok(systemRoot && /^[a-z]:\\/i.test(systemRoot));
@@ -79,7 +81,7 @@ function prepareProfile(originalSandbox: string, broker: string, selected: Selec
     ComSpec: join(systemRoot, 'System32/cmd.exe'),
     PATH: [
       dirname(selected.bash.path),
-      dirname(process.execPath),
+      dirname(node),
       join(systemRoot, 'System32'),
     ].join(delimiter),
     CLAUDE_CODE_GIT_BASH_PATH: selected.bash.path,
@@ -103,7 +105,7 @@ function prepareProfile(originalSandbox: string, broker: string, selected: Selec
   };
   const hostEntry = join(root, 'TEST-original-host.mjs'),
     crash = join(root, 'TEST-crash-original-host');
-  const cli = realpathSync(
+  const cli = packaged?.hostEntry ?? realpathSync(
     fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url))
   );
   // No provider fake: this small wrapper imports the original public CLI, and only supplies a TEST crash barrier.
@@ -128,7 +130,7 @@ function prepareProfile(originalSandbox: string, broker: string, selected: Selec
       profileId,
       protocolVersion: 1,
       buildId: 'TEST-main-retained-1',
-      nodeSha256: hash(process.execPath),
+      nodeSha256: hash(node),
       hostEntrySha256: hash(hostEntry),
     },
     principalId: 'human',
@@ -208,8 +210,8 @@ function prepareProfile(originalSandbox: string, broker: string, selected: Selec
   writeFileSync(source, JSON.stringify(profile), { flag: 'wx' });
   const host: SelectedHostProfile = {
     profileId,
-    nodeExecutable: realpathSync.native(process.execPath),
-    nodeVersion: process.version,
+    nodeExecutable: realpathSync.native(node),
+    nodeVersion: packaged?.nodeVersion ?? process.version,
     nodeSha256: profile.owner.nodeSha256,
     hostEntry: realpathSync.native(hostEntry),
     hostEntrySha256: profile.owner.hostEntrySha256,

@@ -12,7 +12,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { assertDesktopMetadataLineageReleased, desktopMetadataProfileHash,
   readDesktopMetadataLineage } from '../../../scripts/legacy-agent-host/desktop-opencode-metadata-lineage';
 import {
-  type CapturedHostClient,
+  CapturedHostClient,
   createCapturedHostClient,
   type SelectedHostProfile,
 } from '../../../src/features/agent-backend/main';
@@ -139,8 +139,9 @@ async function fixture(
   };
 }
 
-function client(profile: SelectedHostProfile, owner?: HostCustodyOwner): CapturedHostClient {
-  const instance = createCapturedHostClient(profile, owner);
+function client(profile: SelectedHostProfile, owner?: HostCustodyOwner, remaining?: () => number): CapturedHostClient {
+  const instance = remaining
+    ? new CapturedHostClient(profile, owner, remaining) : createCapturedHostClient(profile, owner);
   clients.push(instance);
   return instance;
 }
@@ -163,9 +164,20 @@ describe('captured legacy host client over real subprocess stdio', () => {
       createPort: () => primitive.port,
     });
     const original = client(profile, owner);
+    const foreignOwner = new RetainedWindowsCustody({
+      profileId: profile.profileId, profileDigest: capturedHostProfileDigest(profile),
+      selectBroker() { throw new Error('TEST foreign owner must not allocate'); },
+      async verifyLaunch() { throw new Error('TEST foreign owner must not launch'); },
+    });
+    const neverStarted = client(profile, owner);
     let successor: CapturedHostClient | undefined;
     try {
+      expect(original.recoveryState(owner)).toBe('held');
+      expect((await neverStarted.shutdown()).childExit).toBe('confirmed');
+      expect(neverStarted.recoveryState(owner)).toBe('held');
       await original.start();
+      expect(original.recoveryState(owner)).toBe('ready');
+      expect(original.recoveryState(foreignOwner)).toBe('held');
       expect(await original.request('launch')).toBe(true);
       const first = await original.request('capture') as { intent: JsonValue; initial: JsonValue };
       expect(first.initial).toEqual({ state: 'unknown' });
@@ -178,10 +190,15 @@ describe('captured legacy host client over real subprocess stdio', () => {
         .toMatchObject({ state: 'observed', observation: 'same-live' });
       await expect(original.request('crash')).rejects.toMatchObject({ outcome: 'unknown' });
       expect((await original.shutdown()).childExit).toBe('confirmed');
+      expect(original.recoveryState(owner)).toBe('closed');
+      expect(original.recoveryState(foreignOwner)).toBe('held');
       expect(primitive.calls.stopped).toBe(0);
       current = false; // Changed source cannot discard original capture/control authority.
       successor = client(profile, owner);
+      expect(successor.recoveryState(owner)).toBe('held');
       await successor.start();
+      expect(successor.recoveryState(owner)).toBe('ready');
+      expect(original.recoveryState(owner)).toBe('closed');
       expect(await successor.request('serializedRun', first.intent)).toEqual({ state: 'unknown' });
       expect(await successor.request('lookup', first.intent)).toEqual(captured);
       const stopped = await successor.request('stop', captured.capture) as { intent: JsonValue; initial: JsonValue };
@@ -198,6 +215,7 @@ describe('captured legacy host client over real subprocess stdio', () => {
       expect(primitive.calls).toMatchObject({ stopped: 1, released: 1 });
     } finally {
       await original.shutdown(); await successor?.shutdown(); await owner.close();
+      expect(await foreignOwner.close()).toBe(true);
     }
   });
 
@@ -843,6 +861,55 @@ describe('captured legacy host client over real subprocess stdio', () => {
       code: 'shutting-down',
       outcome: 'not-dispatched',
     });
+
+    // The same trusted budget reaches the actual Node version subprocess.
+    const validationProfile = await fixture();
+    const originalLimit = validationProfile.startupTimeoutMs - 1;
+    let remaining = originalLimit, observedVersion = '';
+    let observedTimeout: number | undefined;
+    const execute = linuxLaunch.execFileWithLinuxChildLaunch;
+    const version = vi.spyOn(linuxLaunch, 'execFileWithLinuxChildLaunch')
+      .mockImplementation((command, args, options, callback, deadline, onFailure) => {
+        observedTimeout = options.timeout;
+        return execute(command, args, options, (error, stdout, stderr) => {
+          observedVersion = String(stdout).trim();
+          remaining = 0;
+          callback(error, stdout, stderr);
+        }, deadline, onFailure);
+      });
+    const validation = client(validationProfile, undefined, () => remaining);
+    try {
+      await expect(validation.start()).rejects.toMatchObject({
+        code: 'request-timeout', outcome: 'not-dispatched',
+      });
+      expect(observedVersion).toBe(nodeVersion);
+      expect(observedTimeout).toBe(originalLimit);
+      expect(Object.getOwnPropertyDescriptor(validation, 'child')?.value).toBeUndefined();
+      expect((await validation.shutdown()).childExit).toBe('confirmed');
+    } finally { version.mockRestore(); }
+
+    // Expiration after a genuine Host spawn keeps cleanup on that actual child.
+    const spawnProfile = await fixture();
+    let spawnRemaining = spawnProfile.startupTimeoutMs, observedClose = false;
+    let allocated: ChildProcess | undefined;
+    const observeFailure = linuxLaunch.observeLinuxChildLaunchFailure;
+    const observe = vi.spyOn(linuxLaunch, 'observeLinuxChildLaunchFailure')
+      .mockImplementation((child, listener) => {
+        allocated = child;
+        child.once('close', () => { observedClose = true; });
+        spawnRemaining = 0;
+        return observeFailure(child, listener);
+      });
+    const spawned = client(spawnProfile, undefined, () => spawnRemaining);
+    try {
+      await expect(spawned.start()).rejects.toMatchObject({
+        code: 'request-timeout', outcome: 'not-dispatched',
+      });
+      expect(allocated?.pid).toBeGreaterThan(0);
+      expect((await spawned.shutdown()).childExit).toBe('confirmed');
+      expect(observedClose).toBe(true);
+      expect(allocated?.exitCode !== null || allocated?.signalCode !== null).toBe(true);
+    } finally { observe.mockRestore(); }
   });
 
   it('shutdown does not kill an unrelated captured test child', async () => {
