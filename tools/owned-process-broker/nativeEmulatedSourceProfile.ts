@@ -43,9 +43,13 @@ export async function prepareEmulatedSourceProfile(sandbox: string, broker: stri
     const path = fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
     assert.equal(realpathSync(path), path); return { path, sha256: fileHash(path) };
   });
+  if (provider === 'opencode') {
+    const path = fileURLToPath(new URL('../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js', import.meta.url));
+    assert.equal(realpathSync(path), path); helpers.push({ path, sha256: fileHash(path) });
+  }
   const entries = join(root, 'source-entries.ndjson'), effects = join(peerRoot, 'effects.ndjson');
   const versions = { A: provider === 'codex' ? '0.162.0' : provider === 'claude' ? '2.1.34' : '1.19.4',
-    B: provider === 'codex' ? '0.169.0' : provider === 'claude' ? '2.1.34' : '1.19.4' };
+    B: provider === 'codex' ? '0.162.0' : provider === 'claude' ? '2.1.34' : '1.19.4' };
   const images = {} as Record<'A' | 'B', { path: string; sha256: string; entry: { path: string; sha256: string } }>;
   for (const source of ['A', 'B'] as const) {
     const entry = join(root, 'bin', `TEST-source-${source}.mjs`);
@@ -91,9 +95,11 @@ if(argv.length===1&&argv[0]==='--version'){
     TEST_PEER_ROLE: role, TEST_DESKTOP_PEER_ROOT: peerRoot, TEST_DESKTOP_PEER_WORKSPACE: workspace, TEST_PEER_EFFECTS: effects,
     ...(provider !== 'claude' ? { TEST_PEER_HELPER_SHA256: helpers[1]!.sha256 } : {}),
     ...(provider === 'opencode' ? {
+      TEST_PEER_MCP_POLICY_SHA256: helpers[2]!.sha256,
       OPENCODE_CONFIG_CONTENT: JSON.stringify({ autoupdate: false, share: 'disabled',
-        model: 'TEST-provider/TEST-model', small_model: 'TEST-provider/TEST-model', provider: { 'TEST-provider': {
-          npm: '@ai-sdk/openai-compatible', name: 'TEST provider', options: { baseURL: 'http://127.0.0.1:19999/TEST-no-network' },
+        model: 'test-provider/TEST-model', small_model: 'test-provider/TEST-model', provider: { 'test-provider': {
+          npm: '@ai-sdk/openai-compatible', name: 'TEST provider',
+          options: { baseURL: 'http://127.0.0.1:19999/TEST-no-network', apiKey: 'TEST-LOCALHOST-ONLY' },
           models: { 'TEST-model': { name: 'TEST model', limit: { context: 4096, output: 1024 },
             variants: { low: { reasoningEffort: 'low' }, high: { reasoningEffort: 'high' } } } } } },
         agent: { build: { mode: 'primary' } }, compaction: { auto: false } }),
@@ -103,7 +109,7 @@ if(argv.length===1&&argv[0]==='--version'){
   const nonce = randomUUID(), ownerId = `TEST-source-${provider}-${nonce}`, contextId = 'TEST-source-context';
   const providerId = provider === 'claude' ? 'anthropic' : provider, model = provider === 'claude' ? 'sonnet' : 'TEST-model';
   const savedSettings: NonNullable<TeamHostProfile['teams'][number]['savedSettings']> = {
-    cwd: workspace, providerId, model: provider === 'opencode' ? 'TEST-provider/TEST-model' : model,
+    cwd: workspace, providerId, model: provider === 'opencode' ? 'test-provider/TEST-model' : model,
     prompt: '', skipPermissions: false, syncModelsWithLead: true,
     ...(provider === 'claude' ? { effort: 'low' as const, fastMode: 'off' as const } : {}) };
   const teams = (['A', 'B'] as const).map((source): TeamHostProfile['teams'][number] => {
@@ -124,7 +130,7 @@ if(argv.length===1&&argv[0]==='--version'){
     ...(provider === 'claude' ? { configNamespace: 'custom-directory', nativeTools: ['Read', 'Write', 'AskUserQuestion'], autoAllowedTools: [],
       nativeOptions: { permissionMode: 'default', settingSources: [], effort: 'low', fastMode: false } }
       : provider === 'codex' ? { protocolRevision: '0.162.0', nativeOptions: { approvalPolicy: 'on-request', sandbox: 'read-only' } }
-      : { protocolRevision: '1.19.4', endpoint: await endpoint(), nativeOptions: { providerId: 'TEST-provider', agent: 'build', toolApprovalMode: 'manual' } }),
+      : { protocolRevision: '1.19.4', endpoint: await endpoint(), nativeOptions: { providerId: 'test-provider', agent: 'build', toolApprovalMode: 'manual' } }),
     limits: { queuedInputs: 2, inputBytes: 65536, outputBytes: 1_000_000, outputEvents: 1500, pendingInteractions: 4, timeoutMs: 90000 },
   })));
   const management = providerManagementProfileSchema.parse({ provider, profileId: `TEST-source-${provider}-management`,

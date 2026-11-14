@@ -14,12 +14,30 @@ import { assertDesktopV2ManagementSourceHistory, bindDesktopV2ManagementReceipt,
 import type { StoredRuntimeSourceCommand } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
 import type { PublishRuntimeSource } from '../../packages/legacy-agent-host/dist/composition/runtimeSourceContracts.js';
 
-async function retained() {
+async function retainedEvidence() {
   const bytes = await readFile(new URL('./fixtures/c226-opencode-v2-management.json', import.meta.url));
   assert.equal(createHash('sha256').update(bytes).digest('hex'), 'f3720ccacff5f36965ed38f018da34e6427eac53249e3da7cafc857b9e202ce2');
   const evidence = JSON.parse(bytes.toString('utf8'));
   assert.equal(evidence.provenance.artifactId, 14132244497);
   assert.equal(evidence.provenance.artifactSha256, '0bf8c381830ba401266d2702081e2a0a425e27838ead18b5bbedd34b14d94d44');
+  assert.equal(evidence.profile.management[0].embedded.platform, 'linux');
+  assert.equal(evidence.profile.management[0].embedded.arch, 'x64');
+  return evidence;
+}
+
+/** Pure archived-record assertions only: no filesystem or native operation under this tuple. */
+function withTuple<T>(platform: 'linux' | 'darwin', arch: 'x64' | 'arm64', work: () => T): T {
+  const original = { platform: Object.getOwnPropertyDescriptor(process, 'platform')!,
+    arch: Object.getOwnPropertyDescriptor(process, 'arch')! };
+  assert.ok(original.platform && original.arch);
+  try {
+    Object.defineProperties(process, { platform: { ...original.platform, value: platform },
+      arch: { ...original.arch, value: arch } });
+    return work();
+  } finally { Object.defineProperties(process, original); }
+}
+
+function decodeRetained(evidence: Awaited<ReturnType<typeof retainedEvidence>>) {
   const profile = teamHostProfileSchema.parse(evidence.profile);
   const commands = evidence.commandFiles.map((file: { name: string; envelope: Record<string, unknown> }) => {
     const { digest, ...body } = file.envelope;
@@ -34,8 +52,12 @@ async function retained() {
   return { evidence, profile, commands, publication, command, authority };
 }
 
-test('retained c226 original rejected-key receipt joins its published seed and exact observed native probe', async () => {
-  const { evidence, profile, commands, publication, command, authority } = await retained();
+async function retained(assertions: (fixture: ReturnType<typeof decodeRetained>) => void) {
+  const evidence = await retainedEvidence();
+  withTuple('linux', 'x64', () => assertions(decodeRetained(evidence)));
+}
+
+test('retained c226 original rejected-key receipt joins its published seed and exact observed native probe', () => retained(({ evidence, profile, commands, publication, command, authority }) => {
   // The old seed-only comparison is the actual recorded CI failure, before any second intent.
   assert.throws(() => assert.equal(command.profileId, profile.management![0]!.profileId));
   const selected = bindDesktopV2ManagementReceipt(authority, commands, command, 'reject-key');
@@ -54,10 +76,9 @@ test('retained c226 original rejected-key receipt joins its published seed and e
     commandId: command.openCodeV2!.verification!.commandId }).slice(0, 16) + '-';
   assert.ok(basename(evidence.probe.dataRoot).startsWith(prefix));
   assert.equal(prefix, 'agent-teams-v2-probe-c66864101ac6d673-');
-});
+}));
 
-test('V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable', async () => {
-  const { commands, command, authority } = await retained();
+test('V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable', () => retained(({ commands, command, authority }) => {
   for (const field of ['profileId', 'configRevision'] as const)
     assert.throws(() => bindDesktopV2ManagementReceipt(authority, commands,
       { ...command, [field]: 'runtime-source:' + 'f'.repeat(64) }, 'reject-key'));
@@ -74,10 +95,9 @@ test('V2 receipt binding rejects foreign revisions, scope, seed owner, engine an
     const changed = structuredClone(authority); mutate(changed);
     assert.throws(() => bindDesktopV2ManagementReceipt(changed, commands, command, 'reject-key'));
   }
-});
+}));
 
-test('V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable', async () => {
-  const { publication, authority } = await retained();
+test('V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable', () => retained(({ publication, authority }) => {
   for (const mutate of [
     (input: PublishRuntimeSource) => { input.grant.ownerId = 'TEST-foreign-owner'; },
     (input: PublishRuntimeSource) => { input.grant.contextId = 'TEST-foreign-context'; },
@@ -90,10 +110,9 @@ test('V2 publication rejects an internally rehashed foreign descriptor grant or 
         grant: input.grant, candidate: input.candidate, intent: input.intent }) };
     assert.throws(() => readDesktopV2ManagementPublication(authority, changed));
   }
-});
+}));
 
-test('V2 source history accounts for every publication and the exact retained current chain', async () => {
-  const { publication, authority, commands, command } = await retained();
+test('V2 source history accounts for every publication and the exact retained current chain', () => retained(({ publication, authority, commands, command }) => {
   const input = JSON.parse(publication.publicationJson!);
   const body = { schemaVersion: 1, records: [{ previousRevision: input.expectedRevision,
     commandId: input.commandId, grant: input.grant, candidate: input.candidate, intent: input.intent,
@@ -110,10 +129,9 @@ test('V2 source history accounts for every publication and the exact retained cu
     { ...rewritten, digest: runtimeDigest(rewritten) }));
   assert.throws(() => assertDesktopV2ManagementSourceHistory(authority, commands,
     { ...index, digest: 'f'.repeat(64) }));
-});
+}));
 
-test('original Host rejects old other-project cwd and accepts only its separate exact private-account seed', async () => {
-  const { authority, evidence, profile } = await retained();
+test('original Host rejects old other-project cwd and accepts only its separate exact private-account seed', () => retained(({ authority, evidence, profile }) => {
   const foreignCwd = authority.grants.find(row => row.projectPath === join(evidence.root, 'workspace-other'))!;
   assert.throws(() => selectRuntimeSourceSeed(profile, foreignCwd));
   const other = { ...structuredClone(profile.management![0]!), profileId: 'TEST-v2-settings-management-other',
@@ -125,4 +143,28 @@ test('original Host rejects old other-project cwd and accepts only its separate 
   assert.deepEqual(other.environment, profile.management![0]!.environment);
   assert.deepEqual(other.executable, profile.management![0]!.executable);
   assert.equal(other.accountBinding, profile.management![0]!.accountBinding);
+}));
+
+test('archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal', async () => {
+  const evidence = await retainedEvidence();
+  const original = () => ({ platform: Object.getOwnPropertyDescriptor(process, 'platform'),
+    arch: Object.getOwnPropertyDescriptor(process, 'arch') });
+  const before = original();
+  const refused = () => {
+    const result = teamHostProfileSchema.safeParse(evidence.profile);
+    assert.equal(result.success, false);
+    if (result.success) assert.fail('Foreign archived tuple must remain inadmissible');
+    assert.ok(result.error.issues.some(issue => issue.message === 'OpenCode V2 delivery must match the native platform' &&
+      JSON.stringify(issue.path) === JSON.stringify(['management', 0, 'embedded'])));
+  };
+  if (process.platform !== 'linux' || process.arch !== 'x64') refused();
+  withTuple('darwin', 'arm64', refused);
+  withTuple('linux', 'arm64', refused);
+  assert.deepEqual(original(), before);
+  const failure = new Error('TEST pure archived assertion failure');
+  assert.throws(() => withTuple('linux', 'x64', () => {
+    assert.equal(teamHostProfileSchema.safeParse(evidence.profile).success, true);
+    throw failure;
+  }), error => error === failure);
+  assert.deepEqual(original(), before, 'failed assertions also restore exact original property descriptors');
 });

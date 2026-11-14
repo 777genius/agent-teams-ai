@@ -106,7 +106,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
           if (result.operation === 'prepare') {
             assert.equal(job.root, undefined); job.root = result.root;
             // Capture the original suspended root HANDLE before forwarding preparation to Host/resume.
-            job.witness = await capturedQueryableWitness(actor, result.root.pid, result.root.birth, track, events);
+            job.witness = await capturedQueryableWitness(actor, result.root.pid, result.root.birth, track, events,
+              'query-wait-gated');
           }
           if (result.operation === 'resume') job.resumed = true;
           if (result.operation === 'stop' && result.state === 'confirmed') job.stopped = true;
@@ -291,7 +292,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     assert.equal(metadata.profileId, b.source.profileId); assert.equal(metadata.configRevision, b.source.configRevision);
     if (provider === 'codex') assert.ok(rows(metadata.models).some(value => value.id === 'TEST-model'));
     else if (provider === 'claude') assert.ok(rows(metadata.models).some(value => value.modelId === 'sonnet' && value.resolvedModel === 'TEST-claude-sonnet'));
-    else assert.ok(rows(metadata.providers).some(value => value.providerId === 'TEST-provider' &&
+    else assert.ok(rows(metadata.providers).some(value => value.providerId === 'test-provider' &&
       rows(value.models).some(model => model.modelId === 'TEST-model')));
     const metadataJobs = first.jobs.slice(metadataBefore);
     assertSourceJobs(metadataJobs, b.source, 'B', 'management'); noTeamConnection(metadataJobs);
@@ -301,7 +302,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     } else assert.ok(quiescent(metadataJobs));
     stage('B-probe'); const probeBefore = first.jobs.length;
     const probeInputBefore = inputs().length;
-    const probe = { commandId: 'TEST-source-probe-B', providerId: provider === 'opencode' ? 'TEST-provider' : fixture.providerId,
+    const probe = { commandId: 'TEST-source-probe-B', providerId: provider === 'opencode' ? 'test-provider' : fixture.providerId,
       modelId: fixture.model, ...(provider === 'claude' ? { effort: 'low' } : {}) };
     unwrap(await management.request('probe.start', probe));
     await poll(async () => {

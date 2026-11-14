@@ -84,13 +84,14 @@ export async function capturedWitness(
 /** TEST-only fresh zero-time observations of one HANDLE retained before provider resume. */
 export async function capturedQueryableWitness(
   fixture: string, pid: number, birth: string, track: (child: ChildProcess) => void,
-  events: NativeGateEvents
+  events: NativeGateEvents,
+  mode: 'vendor-query-wait-gated' | 'query-wait-gated' = 'vendor-query-wait-gated'
 ): Promise<{
   process: ChildProcess;
   observe(): Promise<'alive' | 'absent'>;
   wait(): Promise<number | null>;
 }> {
-  const child = spawn(fixture, ['vendor-query-wait-gated', String(pid), birth], {
+  const child = spawn(fixture, [mode, String(pid), birth], {
     stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
   });
   track(child);

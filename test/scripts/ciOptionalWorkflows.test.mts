@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
+  HOST_EMULATED_SUPERSESSION_GROUP,
   RUN_SUPERSESSION_POLICY,
   SUPERSESSION_CANCEL,
   SUPERSESSION_GROUP,
@@ -75,6 +76,15 @@ test('automatic checks use the canonical run supersession policy verbatim', () =
     const trigger = workflow(name).split('\njobs:')[0];
     assert.ok(trigger.includes(canonicalConcurrency), `${name}: non-canonical concurrency`);
   }
+});
+
+test('only Host Desktop retains its exact isolated v2 namespace and canonical cancellation', () => {
+  assert.deepEqual(RUN_SUPERSESSION_POLICY.isolatedV2, ['host-emulated-acceptance']);
+  const trigger = workflow('host-emulated-acceptance').split('\njobs:')[0]
+    .replace(/^ {2}#[^\n]*\n/gm, '');
+  const isolatedConcurrency = `\nconcurrency:\n  group: ${HOST_EMULATED_SUPERSESSION_GROUP}\n  cancel-in-progress: ${SUPERSESSION_CANCEL}\n`;
+  assert.ok(trigger.includes(isolatedConcurrency), 'Host Desktop must retain the one exact migrated namespace');
+  assert.ok(!trigger.includes(canonicalConcurrency), 'the obsolete v1 group must not be restored');
 });
 
 test('policy tests run before main CI planning, without dependency installation', () => {

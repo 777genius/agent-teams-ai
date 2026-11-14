@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   clearOpenCodeRuntimeBinaryResolverCache,
+  getOpenCodeRuntimePlatformCandidates,
   OpenCodeRuntimeInstallerService,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from '../../../../src/main/services/infrastructure/OpenCodeRuntimeInstallerService';
@@ -74,12 +75,14 @@ describePosix('OpenCode nvm runtime resolution safe e2e', () => {
       binaryPath
     );
 
-    await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
+    await expect(withRegistryMetadata(() => new OpenCodeRuntimeInstallerService().getStatus())).resolves.toMatchObject({
       installed: true,
       source: 'path',
       state: 'ready',
       binaryPath,
       version: '1.18.3',
+      latestVersion: '1.18.3',
+      updateAvailable: false,
     });
 
     const bridgeEnv: NodeJS.ProcessEnv = { PATH: '' };
@@ -232,13 +235,15 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
       nativeBinaryPath
     );
 
-    const status = await new OpenCodeRuntimeInstallerService().getStatus();
+    const status = await withRegistryMetadata(() => new OpenCodeRuntimeInstallerService().getStatus());
     expect(status).toMatchObject({
       installed: true,
       source: 'path',
       state: 'ready',
       binaryPath: nativeBinaryPath,
       version: '1.18.3',
+      latestVersion: '1.18.3',
+      updateAvailable: false,
     });
 
     const bridgeEnv: NodeJS.ProcessEnv = { PATH: '' };
@@ -258,6 +263,28 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
     expect(version.stdout.trim()).toBe('1.18.3');
   }, 120_000);
 });
+
+/** Only release metadata is controlled; the original resolver and native version processes execute. */
+async function withRegistryMetadata<T>(readStatus: () => Promise<T>): Promise<T> {
+  const packageName = getOpenCodeRuntimePlatformCandidates()[0]!.packageName;
+  const rootUrl = 'https://registry.npmjs.org/opencode-ai/latest';
+  const nativeUrl = `https://registry.npmjs.org/${encodeURIComponent(packageName)}/1.18.3`;
+  const requests: string[] = [];
+  const dist = { tarball: 'https://example.test/TEST-not-downloaded.tgz', integrity: 'sha512-TEST-no-download' };
+  const registry = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    requests.push(url);
+    if (url === rootUrl) return Response.json({ name: 'opencode-ai', version: '1.18.3',
+      optionalDependencies: { [packageName]: '1.18.3' }, dist });
+    if (url === nativeUrl) return Response.json({ name: packageName, version: '1.18.3', dist });
+    throw new Error(`Unexpected release metadata or download request: ${url}`);
+  });
+  try {
+    const status = await readStatus();
+    expect(requests).toEqual([rootUrl, nativeUrl]);
+    return status;
+  } finally { registry.mockRestore(); }
+}
 
 function restoreEnvValue(name: string, value: string | undefined): void {
   if (value === undefined) {

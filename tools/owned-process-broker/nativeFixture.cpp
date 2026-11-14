@@ -45,7 +45,12 @@ int wmain(int argc,wchar_t** argv) {
     CloseHandle(marker); if(!written||count!=sizeof(nonce)) return 34;
   }
   if(mode==L"wait"||mode==L"wait-gated"||mode==L"query-wait-gated") {
-    if(mode==L"query-wait-gated"&&!vendorHeld) return 54;
+    if(mode==L"query-wait-gated"&&!vendorHeld) {
+      // The finite source gate uses its original outer Job, without vendor admission.
+      // Keep the ordinary 15s native wait; vendor actors retain their separate guard.
+      BOOL inJob=FALSE;
+      if(!IsProcessInJob(GetCurrentProcess(),nullptr,&inJob)||!inJob) return 54;
+    }
     if(argc!=4) return 23;
     DWORD pid=static_cast<DWORD>(wcstoul(argv[2],nullptr,10));
     uint64_t expected=_wcstoui64(argv[3],nullptr,16);

@@ -74,8 +74,8 @@ test('a Team model probe binds its context and cannot publish a result after its
   assert.equal(privateProbe.runs(), 1);
 });
 async function until(check: () => boolean) {
-  const end = Date.now() + 2000;
-  while (!check() && Date.now() < end) await new Promise<void>((done) => setImmediate(done));
+  const end = performance.now() + 2000;
+  while (!check() && performance.now() < end) await new Promise<void>((done) => setImmediate(done));
   assert.ok(check());
 }
 function fixture(
@@ -420,22 +420,31 @@ test('expiry and orderly shutdown cancel only their original probe', async (t) =
   second.owner.start(start);
   await second.owner.close();
   assert.equal(second.base.read(start.commandId)?.phase, 'cancelled');
+  // Keep admission independent of durable-file latency; expire the original 20ms proof below.
+  const admittedAt = Date.now();
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: admittedAt });
   const stronger = fixture({ timeoutMs: 20, blockClose: true });
   t.after(stronger.cleanup);
   const input = { ...start, context: 'e'.repeat(64) };
   const admitted = stronger.owner.startNativeCoordination(input, () => true);
+  assert.equal(admitted.expiresAt, admittedAt + 20);
+  assert.equal(stronger.runs(), 1);
   stronger.result.resolve(true);
   await until(() => stronger.closes() === 1);
-  await until(() => Date.now() >= admitted.expiresAt);
+  t.mock.timers.tick(19);
+  assert.equal(stronger.owner.read(lookup)?.phase, 'running');
+  assert.equal(stronger.base.read(start.commandId)?.resourceHeld, true);
+  t.mock.timers.tick(1);
   stronger.close.resolve(true);
   await until(() => stronger.owner.read(lookup)?.phase === 'cancelled');
   assert.equal(stronger.owner.read(lookup)?.ok, false);
+  assert.equal(stronger.base.read(start.commandId)?.resourceHeld, false);
   assert.throws(() => stronger.owner.readNativeCoordination({ ...lookup, context: input.context }), { code: 'held' });
   assert.deepEqual(stronger.deadlines, ['run', 'close'].map(phase => ({ phase, deadline: admitted.expiresAt })));
   // A delayed timer callback must not let an already resolved cleanup Promise renew the deadline.
   const deadline = Date.now() + 5;
   const late = closeCoordinationByDeadline(Promise.resolve(true), deadline);
-  while (Date.now() <= deadline) { /* Keep this one timer callback pending. */ }
+  t.mock.timers.setTime(deadline + 1); // Move Date without dispatching the queued timer callback.
   assert.equal(await late, false);
 });
 

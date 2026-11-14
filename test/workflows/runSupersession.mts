@@ -17,6 +17,12 @@ export const SUPERSESSION_GROUP = `\${{ github.workflow }}-\${{ github.event_nam
 
 export const SUPERSESSION_CANCEL = `\${{ github.event_name == 'pull_request' || ${SUPERSEDABLE_PUSH} }}`;
 
+// Host Desktop moved off an obsolete aggregate that could retain the old group after cancellation.
+// Only its namespace changes; every original event identity and cancellation rule stays exact.
+export const HOST_EMULATED_SUPERSESSION_GROUP = SUPERSESSION_GROUP.replace(
+  '${{ github.workflow }}-', '${{ github.workflow }}-v2-'
+);
+
 // Every workflow file must be classified; a new workflow fails until its policy is chosen.
 export const RUN_SUPERSESSION_POLICY = {
   // Automatic checks: the canonical expression, verbatim.
@@ -28,6 +34,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'codex-runtime-smoke',
     'dependency-review',
     'electron-dev-profile-cross-platform',
+    'host-process-acceptance',
     'kanban-table-desktop-e2e',
     'landing-hetzner-release',
     'opencode-desktop-e2e',
@@ -44,6 +51,8 @@ export const RUN_SUPERSESSION_POLICY = {
     'updater-windows-ota',
     'windows-backfill-diagnostic',
   ],
+  // One closed migration exception, with the exact v2 group and canonical cancellation.
+  isolatedV2: ['host-emulated-acceptance'],
   // Canonical group plus isolated PR edits for the required check.
   ci: ['ci'],
   // PR-only packaged gate with isolated title/body edits.
