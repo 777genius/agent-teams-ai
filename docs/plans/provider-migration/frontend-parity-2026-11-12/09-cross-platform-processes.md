@@ -5431,3 +5431,84 @@ Keep the existing member-provider-authority cases and their final admission-vers
 After independent source review, root runs the existing authority/refusal scopes, original Create case/file, normal Host build/types/source gates and the unchanged complete serialized Host suite. The complete ordinary suite must pass while preserving those two timely opens; source review or an isolated PASS does not close the original failure. This is a source-backed elimination of duplicate work, with no guaranteed millisecond saving. If the original full failure persists, retain its new actual evidence before selecting another cut; no retry-until-green, timer increase, synthetic clock, cache, earlier timestamp, skipped provider or weakened oracle is authorized.
 
 Freeze the full two-file/variant diffs, exact forward/inverse checks, all current preimages, old case/assertion preservation and the private callback's closed call graph. Source remains zero until this appendix is published and root grants SOURCE GO.
+
+## 111. Keep one original authority/allocation pair at the post-endpoint readiness boundary
+
+### 111.1. Preserve both actual outcomes and the measured boundary
+
+After the §110 candidate was applied, root's original focused three-file run reported44 tests,43 pass and one fail. Full log `a2b06a599ad16e02acd2a8a7c163e5097b0afa16` retains the same Create/OpenCode/worktree assertion: allocation must precede its own original deadline. The lead was claimed at1794687798466 with deadline1794687799466 and was first observed at1794687799547 (1081ms after claim,81ms late). The worker was claimed at1794687798539 with deadline1794687799539 and observed at1794687799216 (677ms after claim,323ms before cutoff). Both controlled providers opened; all four original probes completed successfully with resourceHeld=false. The late member differs from the earlier qualification run's worker+39ms.
+
+These timestamps remain the first original controlled driver.checkReadiness observations after Runtime's allocated publication. They do not identify native spawn time, the first provider-factory entry, or which synchronous/await stage consumed the excess interval. No new profiler, timer, run or diagnostic overlay was used for this appendix.
+
+Root's already-started complete ordinary serialized Host suite subsequently reported1247 tests,1245 pass, zero fail and two existing skips in338993.52839ms; its original Create case passed in3458.562885ms. Full log `1588a0fe785a3d9aa97bea0c9cec021d54964138` is retained alongside the focused failure. The full PASS does not erase that failure or establish stable deadline closure or a causal speedup from §110.
+
+Disposition and exact source joins are frozen in `acab1c8e0e8cbdc7d69b5bde5e476356305bf042`. The previous successful whole-child CPU profile (`1509c58bc565e6c50f33183361f10726e4ad819b` run manifest; attribution `66393e533b4278f9e70de2c983cb004dbca95d1e`) shows aggregate Team state/fence and provider-current work, but has no failed allocation window. Its readiness source89c3d125 already includes §31; current24de03c9 differs only by the separate §33 ordinary product action-digest bridge. Its overlapping inclusive samples cannot be added together or assigned to the new81ms. This proposal removes one source-established duplicate; it promises no millisecond saving.
+
+### 111.2. One closed construction, three mandatory readiness arms
+
+In createRuntimeMemberProviderFactory, the factory-local readiness const is constructed before the original endpoint await. The non-OpenCode branch returns undefined. An OpenCode entry without its original launch is refused there. Otherwise a static import of consumeMemberModelReadiness receives the factory's own closure:
+
+```ts
+assertCurrent: () => { authority.assertCurrent(); assertAllocation(); }
+```
+
+consumeMemberModelReadiness calls the static inspectMemberModelReadiness with phase allocation, performs the original consumer transition and returns that captured object. It has no option for an injected readiness implementation. Its result always contains a required assertCurrent method; the optional assertReadinessCredential method is a separate field.
+
+Every actual returned arm starts its current closure with the exact supplied options.assertCurrent call:
+
+| Arm | Exact source and entry | Checks following the unchanged first pair |
+| --- | --- | --- |
+| preparation | prepareTeamModelReadiness.ts24de03c9,291–310 | Current selected consumer/base, original reference and cutoff, account/configuration/policy observations, exact reference comparison and final authority/allocation pair. |
+| checkpoint continuation | The same current closure,291–300 | Exact original restore reference and source binding before its existing return. |
+| ordinary initial profile | initialRuntimeModelAdmission.tse709df02,287–305 | Original source/provenance, consumer, attempt and host joins; allocation phase retains the actual claimed attempt and original deadline refusal. |
+
+The preparation/continuation function returns a plain literal with assertCurrent:current at312–321; the initial function returns its corresponding literal at305. The factory keeps this result local. readinessLaunch selects a TeamLaunchOwner; it cannot supply the returned current method. modelReadiness supplies the original probe/target owners, not a replacement method. The optional createProvider is invoked later, after this boundary, and does not receive the mutable readiness object. The endpoint retains its existing canAllocate closure, not an override port. There is no defined readiness arm with an absent, optional or caller-supplied assertCurrent that can bypass the original authority/allocation pair.
+
+### 111.3. Exactly one adjacent duplicate after the existing await
+
+Immediately after the original await startTeamMcpEndpoint and entry.endpoint assignment, the existing try begins with:
+
+```ts
+authority.assertCurrent();
+assertAllocation();
+readiness?.assertCurrent();
+```
+
+For every defined readiness above, that third statement begins by executing the same two calls with the same captured objects and arguments. Between the preceding pair and this repeated closure entry there is no await, native/provider/resource action, publication, policy observation, clock renewal or other externally supplied callback. No intermediate successful result is used.
+
+Replace only those three statements with the explicit closed conditional:
+
+```ts
+if (readiness) {
+  readiness.assertCurrent();
+} else {
+  authority.assertCurrent();
+  assertAllocation();
+}
+```
+
+The defined arm still executes authority first and allocation second, before any readiness source/reference work. If authority throws, allocation and the later checks remain unreachable; if allocation throws, the readiness body remains unreachable. The undefined non-OpenCode arm retains the original pair. No optional chaining is introduced on the required method. No new catch, error conversion, fallback, retained boolean or authority mode is added. The enclosing existing revoke/close/error path remains byte-identical.
+
+Leave the earlier post-worktree guards, original readiness consumption, all internal readiness/currentness checks, endpoint lifecycle/current callbacks, provider construction and factory open, Runtime allocation publication, attempt claims, timers and all clock/deadline calculations unchanged. In particular, do not apply this omission to lifetime canAllocate/setupCurrent or other callers. TeamOwner state/recovery is not described as globally pure or cacheable; the surviving checks still execute those original reads and recovery under their existing fences. The original final member-admission and principal-control gates remain untouched.
+
+### 111.4. Sole writable path and native composition
+
+The only writable path is packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts.
+
+| Branch | Exact read head | Preimage | Original guard lines / physical size |
+| --- | --- | --- | --- |
+| parent | 1a4d5911569161fc38f0319a22ede68137171806 | 733d5cff8e132a566fe7e99cb476ee38942b9a18 |191–193 /284 lines |
+| qualification | c4a13b92e1638bba46120151dfba73cd8849206f | 733d5cff8e132a566fe7e99cb476ee38942b9a18 |191–193 /284 lines |
+| native | 1d3d4c43e634f94666684f0bc2a678e987faef99 | 68b9f85d56306e623497943828a7ee7296fd1def |197–199 /293 lines |
+
+The same six-line conditional adds three lines in each variant. Preserve the complete existing Windows import/option, process-registration and retainedWindowsLaunch provider branches; the original nine-line native delta must remain identical. No imports, helper, interface, schema, source roster, workflow, package, test file or dependency is writable.
+
+The current readiness24de03c9, initial admissione709df02, authoritye6dc0dea and unchanged Create testcda90ace were separately read and matched across all three heads. §110's separate Coordinator/currentness and existing-test changes do not touch this factory preimage; compose sequentially, and root rechecks currentness before applying this one-file cut.
+
+### 111.5. Existing acceptance and source gate
+
+Keep every existing test declaration and assertion unchanged. The original Create file cda90acefb509bbc43fa4205da18f50fc35ee2dd retains the same three variants, two genuine controlled opens, four released worktree probes, exact member identities, first checkReadiness timestamps, own1000ms deadlines and strict inequality. No new test case, test-only bypass, callback-count assertion, synthetic clock, cache, retry, earlier observation or deadline extension is part of this scope.
+
+Root owns the existing member-provider-authority and runtime-team-host authority/refusal/initial/continuation scopes, unchanged Create file, normal build/types/lint and original complete serialized Host suite. Record original results accurately; a source review, isolated/full PASS or reduced static call count is not proof of stable timing. If the original failure persists, preserve its actual evidence before selecting any further change.
+
+Freeze the exact full variant sources and diffs, unique three-line replacement, forward/inverse checks, all three current preimages and unchanged native variant delta. No source is authorized until this appendix is independently reviewed and published and root explicitly grants SOURCE GO. This appendix is plan-only; the author ran no product, native, test or profiling process.
