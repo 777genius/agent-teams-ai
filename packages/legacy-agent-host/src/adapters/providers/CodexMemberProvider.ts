@@ -165,6 +165,7 @@ export function createCodexMemberProvider(
         protocolRevision: profile.protocolRevision,
         ...(evidence ? { capture: evidence } : {}),
         ...(context.attachments ? { attachments: context.attachments } : {}),
+        ...(context.promptSuggestions ? { promptSuggestions: context.promptSuggestions } : {}),
         trustedBinding: `${context.endpoint.binding.backendId}/${context.endpoint.binding.teamId}/${context.endpoint.binding.runId}/${profile.memberId}`,
         accountBinding: profile.accountBinding,
         transport: codexByteTransport(child),
