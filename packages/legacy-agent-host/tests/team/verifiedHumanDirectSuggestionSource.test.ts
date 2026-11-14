@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { verifiedHumanDirectSuggestionSource } from '../../src/team/verifiedHumanDirectSuggestionSource.ts';
+import { verifiedHumanDirectSuggestionSource } from '../../dist/team/verifiedHumanDirectSuggestionSource.js';
 
 import type {
   CommandReceipt, DeliveryIntent, TeamGrant, TeamMember,
@@ -56,7 +56,7 @@ function matches(overrides: {
   receipt?: CommandReceipt;
   grant?: TeamGrant;
   members?: TeamMember[];
-  inbox?: typeof inbox;
+  inbox?: Array<(typeof inbox)[number] & { groupChatId?: string }>;
 } = {}) {
   return verifiedHumanDirectSuggestionSource({
     intent: overrides.intent ?? intent,
