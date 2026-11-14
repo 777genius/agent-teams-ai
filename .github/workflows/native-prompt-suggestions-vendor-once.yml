@@ -404,3 +404,159 @@ jobs:
             ${{ runner.temp }}/native-next-prompt-electron-ui.log
             ${{ runner.temp }}/native-next-prompt-electron-evidence.json
             ${{ runner.temp }}/native-next-prompt-*.png
+
+  captured-original-codex-after-pin:
+    needs: stage-exact-archive
+    permissions:
+      contents: read
+    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
+    timeout-minutes: 35
+    env:
+      TMPDIR: /private/tmp
+      LEGACY_CODEX_TEAM_GO: "1"
+      LEGACY_CODEX_CANDIDATE_VERSION: "0.169.0"
+      LEGACY_CODEX_CANDIDATE_NATIVE_SUGGESTIONS: "1"
+    steps:
+      - name: Checkout exact published provider-consumer SHA without write credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.stage-exact-archive.outputs.pinned_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Reject wrong architecture or provider/commit substitution
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = arm64
+          test "$(git rev-parse HEAD)" = '${{ needs.stage-exact-archive.outputs.pinned_sha }}'
+          archive=vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
+          echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $archive" | shasum -a 256 -c -
+          test -f vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json
+      - name: Cache exact pinned standalone Node before building Host
+        uses: actions/cache@v5
+        with:
+          path: .legacy-host-download/node-v24.21.0-darwin-arm64.tar.gz
+          key: legacy-host-node-darwin-arm64-24.21.0-bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057
+      - name: Stage and validate pinned Host Node
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/prefill-legacy-host-macos-node.mts
+          node scripts/legacy-agent-host/stage-node.ts --platform darwin-arm64
+      - name: Install frozen provider/Host workspace and compile with native TypeScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/install-dependencies-with-retry.mjs
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter @agent-teams/legacy-agent-host typecheck:test
+      - name: Download and inventory exact Codex 0.169.0 native CLI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          selected="$(mktemp -d /private/tmp/TEST-stage1-inputs-XXXXXX)"
+          candidate="$selected/codex-0.169.0"
+          mkdir "$candidate"
+          gh release download rust-v0.169.0 --repo openai/codex --pattern codex-npm-darwin-arm64-0.169.0.tgz --dir "$candidate"
+          archive="$candidate/codex-npm-darwin-arm64-0.169.0.tgz"
+          test "$(stat -f %z "$archive")" = 153831622
+          echo "d67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d  $archive" | shasum -a 256 -c -
+          tar -xzf "$archive" -C "$candidate"
+          CODEX_CANDIDATE_STAGE="$candidate" node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { createReadStream } from 'node:fs';
+          import { lstat, readdir, realpath, writeFile } from 'node:fs/promises';
+          import { join } from 'node:path';
+          const stage = process.env.CODEX_CANDIDATE_STAGE;
+          assert.ok(stage && stage.startsWith('/private/tmp/TEST-stage1-inputs-'));
+          assert.equal(await realpath(stage), stage);
+          const files = []; let visited = 0, total = 0;
+          const walk = async path => {
+            assert.ok(++visited <= 1024 && path.split('/').length <= 16);
+            const full = join(stage, path), info = await lstat(full);
+            assert.equal(await realpath(full), full);
+            if (info.isDirectory()) {
+              for (const name of (await readdir(full)).sort()) await walk(path + '/' + name);
+              return;
+            }
+            assert.ok(info.isFile() && info.nlink === 1 && files.length < 512);
+            assert.equal(info.mode & 0o7000, 0);
+            assert.ok(info.size <= 1024 ** 3 && (total += info.size) <= 2 * 1024 ** 3);
+            const digest = createHash('sha256');
+            for await (const bytes of createReadStream(full)) digest.update(bytes);
+            files.push({ path, bytes: info.size, mode: info.mode & 0o777,
+              sha256: digest.digest('hex') });
+          };
+          await walk('package');
+          files.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+          await writeFile(join(stage, 'input-pins.json'), JSON.stringify({
+            kind: 'TEST_CODEX_CANDIDATE_INPUTS_V1', version: '0.169.0',
+            target: 'aarch64-apple-darwin',
+            archive: { name: 'codex-npm-darwin-arm64-0.169.0.tgz', bytes: 153831622,
+              sha256: 'd67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d' },
+            files,
+          }, null, 2), { mode: 0o600, flag: 'wx' });
+          JS
+          printf 'LEGACY_CODEX_CANDIDATE_INPUTS=%s\n' "$candidate/input-pins.json" >> "$GITHUB_ENV"
+      - name: Real native Codex 0.1690 completed-turn prompt sampling and original Team effects
+        env:
+          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
+          LEGACY_NATIVE_PROVIDER_SHA256: c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a
+        shell: bash
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" --test packages/legacy-agent-host/tests/native-codex-team.native.ts 2>&1 |
+            tee "$RUNNER_TEMP/native-codex-suggestions-0169.log"
+      - name: Assert native evidence and original input lineage without replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'native-codex-suggestions-0169.log'), 'utf8');
+          assert.ok(Buffer.byteLength(log) < 8 * 1024 * 1024);
+          const matches = [...log.matchAll(/\{"status":"PASS","scope":"codex-0\.169\.0-candidate","receipt":"([^"]+)"\}/g)];
+          assert.equal(matches.length, 1);
+          const file = realpathSync(matches[0][1]);
+          assert.match(file, /^\/private\/tmp\/TEST-native-codex-team-[^/]+\/receipt\.json$/);
+          const proof = JSON.parse(readFileSync(file, 'utf8'));
+          assert.equal(proof.status, 'PASS');
+          assert.equal(proof.nativeVersion, 'codex-cli 0.169.0');
+          assert.equal(proof.artifacts.provider.sha256,
+            'c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a');
+          assert.equal(proof.nativePromptSuggestions.enabled, true);
+          assert.equal(proof.nativePromptSuggestions.offers.length, 1);
+          assert.equal(proof.nativePromptSuggestions.auxiliaryModelRequests.length, 1);
+          assert.equal(proof.nativePromptSuggestions.originalHumanInputs, 2);
+          assert.equal(proof.nativePromptSuggestions.offers[0].provider, 'codex');
+          assert.equal(proof.nativePromptSuggestions.offers[0].inputId, proof.native[1].inputs[0].inputId);
+          assert.equal(proof.nativePromptSuggestions.offers[0].nativeTurnRef, proof.native[1].wire.turns[0]);
+          assert.deepEqual(proof.native.map(row => row.role), ['metadata','C1','C2']);
+          assert.deepEqual(proof.native[2].terminals.map(row => row.outcome), ['cancelled']);
+          assert.equal(proof.modelObservations.length, 11);
+          assert.deepEqual(proof.modelFailures, []);
+          assert.equal(proof.cleanup, true);
+          writeFileSync(join(process.env.RUNNER_TEMP, 'native-codex-suggestions-0169-proof.json'),
+            JSON.stringify({ publishedSource: process.env.GITHUB_SHA, proof }, null, 2));
+          JS
+      - name: Retain native Codex 0.1690 prompt-suggestion proof
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-codex-suggestions-${{ needs.stage-exact-archive.outputs.pinned_sha }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/native-codex-suggestions-0169.log
+            ${{ runner.temp }}/native-codex-suggestions-0169-proof.json

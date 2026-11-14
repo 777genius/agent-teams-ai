@@ -32,6 +32,9 @@ test(
   async (t) => {
     const candidateDeadline = performance.now() + 180_000;
     const candidateVersion = process.env.LEGACY_CODEX_CANDIDATE_VERSION;
+    const nativeSuggestions = process.env.LEGACY_CODEX_CANDIDATE_NATIVE_SUGGESTIONS === '1';
+    assert.ok(!nativeSuggestions || candidateVersion === '0.169.0',
+      'native Codex suggestions require the selected compatible binary');
     assert.ok(candidateVersion === undefined || candidateVersion === '0.169.0', 'finite explicit candidate mode');
     assert.equal(
       process.env.LEGACY_CODEX_TEAM_GO,
@@ -143,15 +146,21 @@ test(
     });
     setupCleanup.push(() => endpoint.close());
     let candidateModel = '';
-    const model = await startCodexModel(candidateVersion ? { candidate169: { selectedModel: () => candidateModel } } : {});
+    const model = await startCodexModel(candidateVersion ? {
+      candidate169: { selectedModel: () => candidateModel,
+        ...(nativeSuggestions ? { nativeSuggestions: true } : {}) },
+    } : {});
     setupCleanup.push(() => model.close());
     if (candidateVersion) {
       assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
       assert.equal(process.version, 'v24.21.0');
-      assert.equal(expectedProviderSha, '91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94');
+      assert.equal(expectedProviderSha, nativeSuggestions
+        ? 'c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a'
+        : '91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94');
       await runCodexCandidate({ root, selectedNode, providerArtifact, deadline: candidateDeadline,
         owner, delivery, endpoint, model, selectModel: value => { candidateModel = value; },
         current: () => current(delivery), cleanup: setupCleanup,
+        nativeSuggestions,
         onDisposed: () => { setupComplete = true; } });
       return;
     }
@@ -516,6 +525,7 @@ async function runCodexCandidate(options: {
   endpoint: Awaited<ReturnType<typeof startTeamMcpEndpoint>>;
   model: Awaited<ReturnType<typeof startCodexModel>>; selectModel(model: string): void;
   current(): boolean; cleanup: (() => void | Promise<void>)[]; onDisposed(): void;
+  nativeSuggestions: boolean;
 }) {
   const { root, owner, model } = options;
   const workspace = join(root, 'workspace'), effect = join(workspace, 'native-effect.txt');
@@ -547,12 +557,24 @@ async function runCodexCandidate(options: {
   let catalog: unknown, chosen = '', nativeVersion = '', originalShell = '', checkpointEvidence: unknown, permission: unknown, interruption: unknown;
   let firstFailure: unknown, passed = false, approvalCount = 0, checkpointReads = 0;
   let observationFailure: unknown;
+  let originalSuggestionInput: Input | undefined;
+  const nativeOffers: Array<{
+    provider: 'claude' | 'codex'; sessionRef: string; inputId: string;
+    operationRef: string; nativeSessionRef: string; nativeTurnRef?: string; text: string;
+  }> = [];
+  const suggestionBinding = options.nativeSuggestions ? {
+    eligible: (input: Readonly<{inputId: string; operationRef: string}>) =>
+      originalSuggestionInput?.inputId === input.inputId &&
+      originalSuggestionInput?.operationRef === input.operationRef,
+    offer: (value: (typeof nativeOffers)[number]) => { nativeOffers.push(value); },
+  } : undefined;
   const human = owner.connect('human'), bob = owner.connect('bob-session');
   const make = async (candidate: NonNullable<Parameters<typeof nativeCodexDriver>[0]['candidate']>) => {
     assert.ok(pins);
     remaining(); await pins.verify(); remaining();
     const driver = await nativeCodexDriver({ root, binary: pins.binary, modelUrl: model.url,
       endpoint: options.endpoint, currentBinding: options.current, candidate,
+      ...(suggestionBinding && candidate.phase === 'start' ? { promptSuggestions: suggestionBinding } : {}),
       onCapturedChild: child => { children.push(child); options.cleanup.push(() => cleanupCapturedCodexChild(child)); } });
     drivers.push(driver);
     remaining();
@@ -664,11 +686,31 @@ async function runCodexCandidate(options: {
     const c1 = await open(first);
     const oneDeadline = Math.min(options.deadline, performance.now() + 60_000);
     const one = originalInput('ONE'), oneTerminal = observe(c1, first, one, 'ONE', oneDeadline);
+    if (options.nativeSuggestions) originalSuggestionInput = one;
     const handedOne = await within(() => c1.submit(one), oneDeadline - performance.now());
     assert.deepEqual(handedOne, { ok: true, value: { inputId: one.inputId, operationRef: one.operationRef,
       delivery: 'client-consumed', providerAcceptance: 'unknown' } });
     await wait(() => oneTerminal() !== undefined, oneDeadline);
     assert.equal(oneTerminal()?.outcome, 'succeeded'); assert.equal(approvalCount, 1);
+    if (options.nativeSuggestions) {
+      await wait(() => nativeOffers.length === 1, oneDeadline);
+      assert.deepEqual(nativeOffers.map(({ provider, sessionRef, inputId, operationRef,
+        nativeSessionRef, nativeTurnRef, text }) => ({
+        provider, sessionRef, inputId, operationRef, nativeSessionRef, nativeTurnRef, text,
+      })), [{
+        provider: 'codex', sessionRef: c1.sessionRef, inputId: one.inputId,
+        operationRef: one.operationRef, nativeSessionRef: first.facts.threadId,
+        nativeTurnRef: first.candidateWire.turns[0],
+        text: 'TEST_CODEX_NATIVE_NEXT_PROMPT',
+      }], 'one native candidate has original human input and actual completed native turn');
+      assert.equal(model.suggestionRequests.length, 1, 'one ephemeral native sample request');
+      assert.equal(model.suggestionRequests[0]?.originalContext, true,
+        'native sampling receives the original completed user context');
+      assert.ok(Number.isSafeInteger(model.suggestionRequests[0]?.tools) &&
+        model.suggestionRequests[0]!.tools >= 0 && model.suggestionRequests[0]!.tools <= 128,
+        'native sample tool declarations are bounded; unchanged original MCP effects prove no execution');
+      assert.equal(first.submitted.length, 1, 'sampling cannot admit a new user input');
+    }
     assert.equal(await readFile(effect, 'utf8'), 'ONE\n'); assert.equal(model.observations.length, 8);
     assert.ok(first.events.some(event => event.kind === 'tool-result' && event.isError));
     const checkpoint = c1.checkpoint();
@@ -734,6 +776,10 @@ async function runCodexCandidate(options: {
       [['bob', 'REPLY_CODEX_ONE'], ['bob', 'REPLY_CODEX_TWO']]);
     assert.equal(new Set(inbox.map(item => record(item).messageId)).size, 2);
     assert.equal(model.observations.length, 11); assert.deepEqual(model.failures, []);
+    assert.equal(model.suggestionRequests.length, options.nativeSuggestions ? 1 : 0,
+      'interrupted second turn cannot create a native prompt suggestion');
+    assert.equal(nativeOffers.length, options.nativeSuggestions ? 1 : 0,
+      'native suggestion offers cannot outlive their original completed turn');
     assert.equal(model.probes.length, 0);
     assert.ok(model.observations.every(row => row.contextEffective && row.requestedModel === chosen));
     assert.ok(model.observations.filter(row => row.turn === 'CODEX_TEAM_TWO')
@@ -764,6 +810,11 @@ async function runCodexCandidate(options: {
       provider: { sha256: await hash(options.providerArtifact), entry: import.meta.resolve('@agent-teams/provider-implementations/codex') } },
     nativeVersion, originalShell, selectedModel: chosen, catalog, metadataObservation,
     permission, checkpoint: checkpointEvidence, checkpointReads,
+    nativePromptSuggestions: {
+      enabled: options.nativeSuggestions,
+      offers: nativeOffers, auxiliaryModelRequests: model.suggestionRequests,
+      originalHumanInputs: business.length,
+    },
     businessReceipts: business, interruption, closes, native: drivers.map((driver, index) => ({
       role: ['metadata', 'C1', 'C2'][index], facts: { ...driver.facts, errors: driver.facts.errors.map(row =>
         ({ method: row.method, code: typeof row.code === 'number' && Number.isFinite(row.code) ? row.code : 'unknown' })) }, wire: driver.candidateWire,
