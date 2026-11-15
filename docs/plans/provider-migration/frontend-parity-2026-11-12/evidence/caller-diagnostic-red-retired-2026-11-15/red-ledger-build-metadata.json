@@ -1,0 +1,69 @@
+{
+  "stage": "red-ledger-build",
+  "sourceHead": "924fbd1d8a28ca845d7c6c2c35aa88e084d089d2",
+  "sourceTree": "2a15debbadbea50a9a44b59b54ad48b399bb78cb",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/task-change-ledger",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "node_modules/@typescript/native/bin/tsc",
+    "-p",
+    "tsconfig.json"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T20:05:24.001275+00:00",
+  "finishedAtUTC": "2026-11-15T20:05:24.422030+00:00",
+  "elapsedSeconds": 0.42073196900309995,
+  "exitCode": 0,
+  "preflightMetadataSHA256": "bbad07f93145ca3f529afcb2b5a656b369636128822d1ebe7986eca42cafe9ce",
+  "logBytes": 0,
+  "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "sourceHeadAfter": "924fbd1d8a28ca845d7c6c2c35aa88e084d089d2",
+  "statusAfter": "",
+  "postflightExact": true,
+  "builtOutputsAfter": [
+    {
+      "path": "packages/task-change-ledger/dist/index.js",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/task-change-ledger/dist/index.js",
+      "bytes": 211,
+      "sha256": "1ce49dfb30b0d3e69024559da9e36060c81e8fd3fb90300102a57858f85f5353",
+      "mtimeNs": 1794773124371119442
+    },
+    {
+      "path": "packages/task-change-ledger/dist/index.d.ts",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/task-change-ledger/dist/index.d.ts",
+      "bytes": 389,
+      "sha256": "65e66b5400b23fa250f9a3a561a37d48af38b65d8ca27a6bd72fb1de289e9b01",
+      "mtimeNs": 1794773124371119442
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js",
+      "bytes": 41256,
+      "sha256": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f",
+      "mtimeNs": 1794763703179571930
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.d.ts",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.d.ts",
+      "bytes": 24704,
+      "sha256": "51e0261e5ce70209c7b9e90136b356befe7330745b1886f6f0b48053a89779b3",
+      "mtimeNs": 1794763703195571904
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/createRuntimeMemberProviderFactory.js",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/legacy-agent-host/dist/composition/createRuntimeMemberProviderFactory.js",
+      "bytes": 13101,
+      "sha256": "772ed80938bf9774982065155371a6a4d4b3afcb8381c52ef966df42ea841434",
+      "mtimeNs": 1794763703403571565
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/createRuntimeMemberProviderFactory.d.ts",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/legacy-agent-host/dist/composition/createRuntimeMemberProviderFactory.d.ts",
+      "bytes": 3451,
+      "sha256": "5ae958e1c33c6f51ffea53164846d0dfb57b0e4acaff374b56cedffebbad416b",
+      "mtimeNs": 1794763703407571558
+    }
+  ],
+  "freshSelectedOutputs": true
+}
