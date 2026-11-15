@@ -1,6 +1,6 @@
+import type { ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import type { ChildProcess } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 
