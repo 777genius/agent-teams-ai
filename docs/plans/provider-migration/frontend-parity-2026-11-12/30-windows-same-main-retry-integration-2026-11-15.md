@@ -1,0 +1,78 @@
+# P08 same-Main Windows Retry: recover the published cut and qualify finite peers
+
+## 1. Current source and the missed integration
+
+This amendment applies to Draft PR [#1192](https://github.com/777genius/agent-teams-ai/pull/1192), initially at `59fe8dc8210d01a2b5e9c67438442c6b1c3428ae`, after plans 26–29. Preserve its current frontend baseline `7408b30b34d2ff280a429766fdbb51976d899af8` and every subsequent reviewed correction. It does not authorize a main merge, release, default activation, Stage 2 work, real Claude/Codex execution, or a change to P09 §75.
+
+The source inventory found a real integration gap in [P08 §18](08-windows-provider-runtime.md): this branch has no `host.recovery.capture/start`, `recoverCapturedHost` or `HostBackendRetryAction`. The complete 25-path implementation was already published as merge [729980e](https://github.com/777genius/agent-teams-ai/commit/729980e77ab7d23787267522e7881bfbed547f27) on the native branch and remains in [#1188](https://github.com/777genius/agent-teams-ai/pull/1188), head `f5440463cf8030bd3ac47f549f8d94b4ef6375a2`. It is not an ancestor of the current integration branch. No removal/revert of the helper was found. A prior patch-ID comparison omitted the independently introduced delta of this merge commit; it was insufficient evidence that every applicable native change had been integrated.
+
+Port that existing cohesive cut with its history and original tests. Do not recreate the recovery design or replace current files wholesale. A trial merge-tree of #1188 identifies overlapping later native/source work and vendor-only fixtures: those older variants cannot replace the current finite-peer source, current Electron Node selection, captured runtime-source grants, prospective OpenCode preparation, or source/cleanup corrections. Record the selected per-file resolution and retain the merge provenance. The other original #1188/#1187 deltas must be compared by tree and behavior, including merge-introduced changes; patch IDs alone are not a completion check.
+
+## 2. Product contract remains P08 §18.2–.4 and .9–.11
+
+Keep the two closed existing-transport operations, one original handle and command ID, an opaque lowercase UUID-v4 capability, and the closed `BackendHostRecoveryResult` (`phase: ready` or `phase: captured` plus capability). Preserve the already-published internal `BackendHostRecoveryRequest`, optional facade `recoverHost(request, guard)` callback, Router `recover`, and thin stateless composition helper. Do not add parallel capture/start owners or a generic retry service. The facade returns only the closed Main projection and never forwards these operations into Host RPC.
+
+Recovery requires the actual original child to have had a PID and emitted its own close event, a sealed/native-aborted predecessor, the same retained physical Windows custody, and the complete still-current descriptor/owner/handle/profile/source tuple. Missing/alive/uncertain observations, stale scope, a changed source, a foreign capability, or a new timeout refuse. Same-command continuation joins one candidate/flight. A ready lost acknowledgement performs no allocation. One captured startup cutoff covers source reads, original Node validation, spawn, handshake and native bind. Shutdown fences publication and joins the admitted candidate before closing the same physical owner.
+
+Preserve the original user-facing sequence: Windows Electron canonical Host Team with retained data exposes Refresh; Refresh performs only the original metadata read. Either exact existing unavailable error then exposes a separate Retry. Retry performs the closed capture/start sequence once and refreshes metadata once after ready. No runtime launch, input, model proof or prior command is replayed. Keep the original context/epoch/mount/selection guards and one synchronous pending gate. The published dependency-injection shape already avoids store/API value-import cycles; do not replace it with eager reads, dynamic imports or lint exemptions.
+
+Compose the Main cut with current source explicitly. The Windows custody parser must retain the current runtime-source grants/association checks and support current runtime-source-only owners; do not restore the old `selected.length > 0` assumption. Keep current `resolveElectronNodeLaunch` and check the same remaining startup cutoff after its asynchronous validation. Existing caps remain: new files <=800, CapturedHostClient <=800, Feature <=800, TeamDetail <=3750, teamSlice <=5020. Any simplification must be within the touched cohesive code and preserve authority checks; no cap-only relocation, packed statements, cap increase or disabled checks.
+
+## 3. Bounded finite-provider amendment to the previously published Windows app proof
+
+The old §18.6–.7 fixture selects a real Claude/Bash binary and four synthetic-model HTTP turns. Current owner instructions forbid every real Claude/Codex invocation, including version commands. Preserve the actual packaged Main/renderer/Node/Host/D/scoped broker and native process proof, but use the already existing finite Codex protocol peer from `nativeEmulatedProfile.ts` / `fixtures/providerPeer.mjs`. This changes only this not-yet-integrated P08 app scenario's controlled provider recipe. It does not qualify vendor behavior or alter any original W01/native/desktop oracle.
+
+Reuse the published `nativeWindowsAppFixture.ts` and `nativeWindowsAppGate.mjs`, retaining their actual UI Refresh, separate Retry, two Processes Kill actions, writer/source joins, independent family census, screenshots and product Quit. Reuse existing profile generation through one optional, closed packaged-input selection before its original profile/hash capture: the already verified packaged Node/CLI, private Host storage/UI seed, and original one-shot Host-A crash barrier. Old `prepareEmulatedProfile` calls retain their exact default recipe. The permitted peer executes through actual pinned D and Main-retained custody; it registers two real selected native fixture children through the actual Team MCP `process_register`. No native registration receipt or service capture is fabricated.
+
+The finite recipe has exactly one Runtime generation, one initial Open and one original business input, two actual MCP registrations, one explicit metadata Refresh, one explicit Retry and one Host successor, and two actual scoped UI Stops/settlements. It has zero model HTTP requests, zero model probes, zero real vendor executions and zero inputs/new provider or service allocations after Host-A loss; the one explicit successor Host is the only new Host allocation. Finite peer effects, original stored command/runtime receipts and complete native service captures must agree. Use the existing exact registration IDs/labels of that peer. Its original child lifetime is unchanged; do not extend the actor TTL to make a late UI flow pass. Each original service must have exactly one matching peer `service-exit` event with exit code1 after its own UI Stop; natural leaf expiry returns0 and must refuse qualification even if a later Stop observes absence. Read that existing event only within the same original Stop phase. There is no model-notification protocol in this finite peer: do not substitute fabricated acknowledgements for the old vendor-model assertions, and do not claim vendor notification qualification.
+
+Retain the original three query/synchronize-only HANDLE witnesses: provider, primary and neighbor. Derive them from the two original registration captures, never from guessed PID metadata. Explicitly select the existing finite `query-wait-gated` mode rather than the helper's vendor default; no vendor opt-in is supplied. All three retain their original maximum four zero-time observations and one wait, clipped by the existing phase. After original Host-A PID/birth absence, the actual product capability additionally requires Main's own ChildProcess-close event. Same Main PID/birth/mainEpoch, original physical custody/captures and writer ownership must survive recovery. Primary absence must precede neighbor Stop while neighbor/provider remain alive; neighbor absence and original provider/Host/App exit must be confirmed before PASS. Unknown cleanup remains INCOMPLETE, including on failure. Fallback kill/taskkill, broad cleanup or process-table absence alone cannot qualify native ownership.
+
+Keep the original 300-second outer case cutoff and phase maxima (startup120s, Open45s, bootstrap35s, Host-exit plus explicit Refresh10s, Retry10s, each Stop10s, Quit30s with <=3s acknowledgement). Clip all reads/actions to the same active phase/outer cutoffs. Preserve actual packaged closure and manifest verification, unchanged source/Node/Host/broker/fixture/peer hashes before and after execution, and original complete process/listener census. No retry click, successor, command replay, timeout increase, relaxed assertion or synthetic ready state is allowed after a failure.
+
+## 4. Exact current file scope
+
+These are current preimages at `59fe8dc`. They describe the published 25-path cut plus the single existing finite profile generator needed by the owner restriction. The two existing app-driver files are absent only on this integration branch; their published originals are at merge729. No additional product transport, native C++/broker protocol, new test framework, workflow or job is authorized.
+
+| Path | Current blob | Physical lines |
+| --- | --- | ---: |
+| `.github/workflows/electron-packaged-ci.yml` | `7aa8ea4407272f3e75f1dc935917753aadac6838` | 238 |
+| `scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts` | `78e5445f30a23aa36a2e5d77c489583178977cd2` | 198 |
+| `src/features/agent-backend/contracts/operations.ts` | `31db672efac0bf96cbb00bb8a8b3a319afd17023` | 510 |
+| `src/features/agent-backend/main/adapters/input/BackendOperationsFacade.ts` | `b99b2b26e5727cf458cb993befd4bc2abbc5af3b` | 210 |
+| `src/features/agent-backend/main/adapters/input/validateBackendOperation.ts` | `eab2e2bb61eae5ad3f1ebcce32712fbde7f51f5d` | 367 |
+| `src/features/agent-backend/main/application/BackendOwnerRouter.ts` | `ca56af0e2b3a706d02189103e65e5410f8116ec6` | 352 |
+| `src/features/agent-backend/main/composition/DesktopBackendFeature.ts` | `b6fe4327425758e77a22cb2308645bb566ac4573` | 773 |
+| `src/features/agent-backend/main/composition/recoverCapturedHost.ts` | `absent` | 0 |
+| `src/features/agent-backend/main/infrastructure/CapturedHostClient.ts` | `f113c3055697bf39828c3513751400ee94997929` | 790 |
+| `src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts` | `ff9c27fd9f15bdeb4c55578ac6aa2b8d999d093d` | 142 |
+| `src/features/agent-backend/main/infrastructure/selectedHostProfile.ts` | `f11cbd2846aa77bd6bcdbb1c0a483441eaf21de2` | 114 |
+| `src/features/agent-backend/renderer/HostBackendRetryAction.tsx` | `absent` | 0 |
+| `src/features/agent-backend/renderer/createHostBackendRenderer.ts` | `baddadb15ab013f923036718dc1aec88744a69d2` | 130 |
+| `src/features/agent-backend/renderer/index.ts` | `014444eba8be98681ffb69763556f804a235dd5c` | 22 |
+| `src/renderer/components/team/TeamDetailView.tsx` | `b009c986172915e8017beb3501f8bdb21cfa4984` | 3744 |
+| `src/renderer/store/slices/teamSlice.ts` | `18c1b1e647ea733a51e58892f35daa931040e206` | 4992 |
+| `test/features/agent-backend/backendOwnerRouter.test.ts` | `974999b069a67b2d7c988a92a44a8b64440f3b04` | 444 |
+| `test/features/agent-backend/capturedHostClient.test.ts` | `9924da01dc0f5953bfddc71ea9758176dc57b52a` | 953 |
+| `test/features/agent-backend/desktopBackendFeature.test.ts` | `eb9deeb54fdf78e1572084a683d3ca2b0d74779f` | 989 |
+| `test/renderer/store/teamSlice.test.ts` | `7542c53238ca24abea5d4115402cc5ec8e7e825c` | 9248 |
+| `tools/owned-process-broker/nativeRetainedHostGate.ts` | `d94742582f0cc937118db5ed82c7ffef27bc9d50` | 611 |
+| `tools/owned-process-broker/nativeWindowsAppFixture.ts` | `absent` | 0 |
+| `tools/owned-process-broker/nativeWindowsAppGate.mjs` | `absent` | 0 |
+| `tools/owned-process-broker/tsconfig.json` | `78b9d37e3f3801a6d3226f961dd0de4bcd1d533b` | 6 |
+| `tools/owned-process-broker/tsconfig.retained-host.json` | `ee4e772a70ffef6dabb1a02d370fb726ed7738b3` | 6 |
+| `tools/owned-process-broker/nativeEmulatedProfile.ts` | `9faefcc254a27d0c77b31aaf0605396593d7972b` | 85 |
+
+For the original `nativeRetainedHostGate.ts`, preserve the already published narrow optional packaged selection/export if required by the integrated native source; do not call its real-vendor preparation in the finite app case. Preserve its original defaults/oracles. Existing unrelated finite/vendor source and matrix entries are not replaced. Add only the new app fixture to the existing low-level exclusion/retained-host inclusion; both unchanged strict compiler commands remain gates. Keep all existing source-roster arrays/order and append the separate finite Windows retry roster, including the reused peer/profile and exact four Main/Team-slice test files.
+
+The Windows x64/ARM64 additions stay within the existing `electron-packaged-ci` rows and original90-minute budget, after original packaged V2 qualification. Build/stage the existing `service-scopes-v1` broker using the same trusted build selector and put its original manifest/binary into the candidate resources before packaging. The new app case selects only finite TEST inputs, so it does not need a vendor permission opt-in or Ready promotion; keep the PR Draft. Do not activate the old real Claude/Bash staging commands from merge729. Upload the original bounded receipt, app log and screenshots through the existing evidence step.
+
+## 5. Review and verification
+
+Before production edits, root and independent owners review this exact amendment/preimages and publish it. SOURCE GO then permits only this bounded composition. Preserve the full before/after diffs, resolved-source provenance and original case declarations/assertions. Extend only the already approved existing three Main test files and two Team-slice cases; preserve the current additional incomplete-history regression and every current negative/native-currentness case.
+
+Run the original affected Main/renderer cases, scoped source checks, both existing broker compiler projects, original protocol cases, app-driver parser check, source-size and provisioning guards. Full workspace types/typed lint remain mandatory; resource-limited local compiler interruption is not PASS. Native Windows same-Main UI acceptance requires the original W01 provider/custody gates and the new finite packaged scenario on both architectures, at the published exact head. No historical/Linux/new-Main receipt substitutes for those gates.
+
+Current baseline observations are separately bounded: exact59 affected finite suites16/16 and scoped fast lint passed; both source guards passed. The original scoped TS7 command passed with local GOMAXPROCS=2/GOMEMLIMIT=768MiB, but full workspace still ended137/Killed without type diagnostics. Original [Teams creation](https://github.com/777genius/agent-teams-ai/actions/runs/43666974947) passed all three platforms and its artifacts were independently digest/source/receipt/screenshot reviewed. This proves that development-Electron creation journey only. The current Darwin V2 business receipt passed, while the separate unchanged POSIX image gate still failed; P09§75 and all other incomplete gates stay open.
+
+P09§75.7–.8 remains a separate owner-policy decision concerning an already-permitted selected-source writer and later executable/script consumption. This amendment neither changes that boundary nor treats any failed adversarial image case as PASS. Continue the independent authorized product work; no main/release/default activation follows from source or local tests.
