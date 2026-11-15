@@ -143,10 +143,14 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   };
   const logFactSelector = (scope: string, event: Row) => `${scope} [data-host-log-event-id=${literal(event.eventId)}]`;
   const visibleLogFact = async (scope: string, event: Row) => {
-    const selector = logFactSelector(scope, event), text = String(record(event.data).text);
-    assert.ok(['text', 'process-output'].includes(String(record(event.data).kind)));
+    const selector = logFactSelector(scope, event), data = record(event.data), text = String(data.text);
+    assert.ok(['text', 'thinking', 'process-output'].includes(String(data.kind)));
+    const identity = data.kind === 'process-output' ? event.eventId
+      : JSON.stringify([event.inputId ?? null, null, data.kind, data.messageRef, data.block]);
+    const anchor = JSON.stringify(['host-activity-' + leadSourceId, identity]);
     await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll(${literal(selector)})];return rows.length===1&&
-      rows[0].dataset.hostLogSequence===${literal(String(event.sequence))}&&rows[0].dataset.hostLogKind===${literal(record(event.data).kind)}})()`,
+      rows[0].dataset.hostLogSequence===${literal(String(event.sequence))}&&rows[0].dataset.hostLogKind===${literal(data.kind)}&&
+      rows[0].dataset.hostLogAnchor===${literal(anchor)}})()`,
       'exact original retained Logs event identity');
     if (!await cdp.evaluate(`Boolean(document.querySelector(${literal(selector + ' [data-host-log-content]')}))`)) {
       await ui.scrollTo(selector + ' [role="button"]', 'original output disclosure');
@@ -160,26 +164,52 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
       return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim()}})()`,
       'actual retained output is visible inside Logs'));
   };
-  const leadActivityPath = join(fixture.root, 'hoststore/runtime-events', runtimeDigest(record((await session()).binding)) + '.json');
+  const leadBinding = record((await session()).binding), leadSourceId = runtimeDigest(leadBinding);
+  const leadActivityPath = join(fixture.root, 'hoststore/runtime-events', leadSourceId + '.json');
   const stream = await send('TEST_UI_STREAM');
   await visible('TEST stream partial');
   assert.equal(await cdp.evaluate('document.body.innerText.includes("TEST stream partial complete")'), false);
   assert.notEqual(array((await session()).inputs).find(row => record(row.intent).inputId === stream.inputId)?.phase, 'terminal');
   proof.partialScreenshot = await screenshot('partial');
-  const streamEvent = async (text: string) => {
-    const event = await poll(async () => array((await json(leadActivityPath)).events).filter(row =>
-      row.inputId === stream.inputId && record(row.data).kind === 'text' && record(row.data).text === text).at(-1),
+  const streamEvent = async (text: string, kind: 'text' | 'thinking' = 'text') => {
+    const event = await poll(async () => {
+      const retained = await json(leadActivityPath), { digest, ...body } = retained;
+      assert.equal(runtimeDigest(body), digest); assert.deepEqual(retained.binding, leadBinding);
+      return array(retained.events).filter(row => row.inputId === stream.inputId &&
+        record(row.data).kind === kind && record(row.data).text === text).at(-1);
+    },
     value => value !== undefined, 'original stream fact retained before Logs observation');
-    assert.ok(event); return event;
+    assert.ok(event);
+    const input = array((await session()).inputs).find(row => record(row.intent).inputId === stream.inputId);
+    assert.ok(input); assert.equal(event.operationRef, input.operationRef); return event;
   };
   await openLeadLogs();
   const partialEvent = await streamEvent('TEST stream partial');
   const partialLog = await visibleLogFact(leadLogs, partialEvent);
+  const partialThought = provider === 'codex' ? null : await streamEvent('TEST stream thought partial', 'thinking');
+  if (partialThought) {
+    assert.equal(record(partialThought.data).phase, 'snapshot');
+    await visibleLogFact(leadLogs, partialThought);
+  }
+  assert.notEqual(array((await session()).inputs).find(row => record(row.intent).inputId === stream.inputId)?.phase, 'terminal');
   await writeFile(join(fixture.emulatedRuntime.peers[0]!.root, 'release-stream'), 'TEST release once\n', { mode: 0o600, flag: 'wx' });
   await terminal(stream.inputId); await visible('TEST stream partial complete');
   proof.completedScreenshot = await screenshot('completed');
   const completeEvent = await streamEvent('TEST stream partial complete');
   const completeLog = await visibleLogFact(leadLogs, completeEvent);
+  const completeThought = partialThought ? await streamEvent('TEST stream thought complete', 'thinking') : null;
+  if (completeThought && partialThought) {
+    assert.equal(record(completeThought.data).phase, 'complete');
+    for (const key of ['messageRef', 'block'])
+      assert.equal(record(completeThought.data)[key], record(partialThought.data)[key]);
+    await visibleLogFact(leadLogs, completeThought);
+    await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, partialThought))})`,
+      'completed Thinking replaces only the original partial block');
+    for (const key of ['messageRef', 'block'])
+      assert.equal(record(completeEvent.data)[key], record(partialEvent.data)[key]);
+    await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, partialEvent))})`,
+      'completed output replaces the original partial block');
+  }
   const stderrText = 'TEST selected member stderr';
   const stderrEvent = provider === 'opencode' ? null : await poll(async () =>
     array((await json(leadActivityPath)).events).find(event => record(event.data).kind === 'process-output' &&
@@ -219,6 +249,11 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   await filterLogs(); await ui.click('#filter-kind-output', 'exclude Output');
   await ui.click('[data-radix-popper-content-wrapper] button', 'save original content filter', 'Save');
   await ui.waitRead(`!document.querySelector(${literal(leadLogs + ' [data-host-log-kind="text"]')})`, 'Output filter applies to actual facts');
+  if (completeThought) await visibleLogFact(leadLogs, completeThought);
+  await filterLogs(); await ui.click('#filter-kind-thinking', 'exclude Thinking independently');
+  await ui.click('[data-radix-popper-content-wrapper] button', 'save original Thinking filter', 'Save');
+  if (completeThought) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, completeThought))})`,
+    'Thinking filter excludes actual retained thought');
   await filterLogs(); await ui.click('[data-radix-popper-content-wrapper] button', 'reset original Logs filters', 'Reset');
   await ui.click('[data-radix-popper-content-wrapper] button', 'close restored Logs filters', 'Save');
   const fullscreenEvent = stderrEvent ?? completeEvent, fullscreenText = String(record(fullscreenEvent.data).text);
@@ -246,6 +281,8 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   assert.deepEqual(await commandRows(), beforeLogControls.commands);
   assert.equal((await effects()).filter(row => row.event === 'input').length, beforeLogControls.inputEffects);
   proof.leadLogs = { partial: partialLog, complete: completeLog, fullscreen: fullscreenLog, actualClipboard: true,
+    thinking: completeThought ? { partialEventId: partialThought!.eventId, completeEventId: completeThought.eventId,
+      messageRef: record(completeThought.data).messageRef, block: record(completeThought.data).block } : null,
     stderr: stderrEvent ? { eventId: stderrEvent.eventId, sequence: stderrEvent.sequence, text: stderrText, inputId: null } : null,
     defaultLeadRoute: true, filtersAndSearch: true, addedInputs: 0, addedBusinessCommands: 0 };
   const sheet = 'div.fixed.bottom-4';
@@ -261,6 +298,41 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     const path = join(fixture.emulatedRuntime.peers[0]!.root, 'approved-effect.txt');
     if (allowed) assert.equal(await readFile(path, 'utf8'), provider === 'claude' ? 'TEST approved effect\n' : 'TEST approved once\n');
     else await assert.rejects(readFile(path), { code: 'ENOENT' });
+  }
+  if (provider !== 'codex') {
+    const allowed = commands.find(row => row.text === 'TEST_UI_APPROVAL_ALLOW'); assert.ok(allowed);
+    const retained = await json(leadActivityPath), { digest, ...body } = retained;
+    assert.equal(runtimeDigest(body), digest); assert.deepEqual(retained.binding, leadBinding);
+    const source = array((await session()).inputs).find(row => record(row.intent).inputId === allowed.inputId); assert.ok(source);
+    const events = array(retained.events).filter(row => row.inputId === allowed.inputId && row.operationRef === source.operationRef);
+    const result = events.filter(row => record(row.data).kind === 'tool-result').at(-1); assert.ok(result);
+    const toolRef = record(result.data).toolRef;
+    const tool = events.filter(row => record(row.data).kind === 'tool' && record(row.data).toolRef === toolRef).at(-1); assert.ok(tool);
+    const before = { inputs: structuredClone((await session()).inputs), commands: await commandRows(), effects: await effects() };
+    await openLeadLogs(); await filterLogs();
+    await ui.click('#filter-kind-output', 'show Tools without Output'); await ui.click('#filter-kind-thinking', 'show Tools without Thinking');
+    await ui.click('[data-radix-popper-content-wrapper] button', 'save original Tools-only filter', 'Save');
+    for (const event of [tool, result]) {
+      const anchor = JSON.stringify(['host-activity-' + leadSourceId,
+        JSON.stringify([allowed.inputId, null, record(event.data).kind, toolRef])]);
+      await ui.scrollTo(logFactSelector(leadLogs, event) + ' [role="button"]', 'original approval tool fact');
+      await ui.waitRead(`(()=>{const e=document.querySelector(${literal(logFactSelector(leadLogs, event))});return e&&
+        e.dataset.hostLogAnchor===${literal(anchor)}&&e.dataset.hostLogSequence===${literal(String(event.sequence))}&&
+        e.innerText.includes(${literal(record(tool.data).name)})&&e.getClientRects().length})()`, 'original tool/result identity and name are visible');
+    }
+    await ui.waitRead(`!document.querySelector(${literal(leadLogs + ' [data-host-log-kind="text"]')})&&
+      !document.querySelector(${literal(leadLogs + ' [data-host-log-kind="thinking"]')})`, 'Tools-only excludes Output and Thinking');
+    await filterLogs(); await ui.click('#filter-kind-output', 'restore Output before excluding Tools');
+    await ui.click('#filter-kind-tool', 'exclude actual Tools');
+    await ui.click('[data-radix-popper-content-wrapper] button', 'save original Tools exclusion', 'Save');
+    await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, tool))})&&
+      !document.querySelector(${literal(logFactSelector(leadLogs, result))})`, 'Tools exclusion hides the actual call and result');
+    await filterLogs(); await ui.click('[data-radix-popper-content-wrapper] button', 'restore original Logs controls', 'Reset');
+    await ui.click('[data-radix-popper-content-wrapper] button', 'close original restored filters', 'Save');
+    assert.deepEqual((await session()).inputs, before.inputs); assert.deepEqual(await commandRows(), before.commands);
+    assert.deepEqual(await effects(), before.effects);
+    proof.leadLogTools = { inputId: allowed.inputId, toolRef, eventIds: [tool.eventId, result.eventId],
+      addedInputs: 0, addedBusinessCommands: 0, addedProviderActions: 0 };
   }
   if (provider !== 'opencode') for (const [marker, allow] of [['TEST_UI_QUESTION', true], ['TEST_UI_QUESTION_DECLINE', false]] as const) {
     const sent = await send(marker);
@@ -374,6 +446,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   await openLeadLogs();
   proof.leadLogsAfterReload = await visibleLogFact(leadLogs, completeEvent);
   if (stderrEvent) proof.stderrLogsAfterReload = await visibleLogFact(leadLogs, stderrEvent);
+  if (completeThought) proof.thinkingLogsAfterReload = await visibleLogFact(leadLogs, completeThought);
   assert.deepEqual((await session()).inputs, reloadInputs); assert.equal((await effects()).filter(row => row.event === 'input').length, reloadEffects);
   proof.reloadedScreenshot = await screenshot('reloaded'); proof.reloadWithoutReplay = true;
 

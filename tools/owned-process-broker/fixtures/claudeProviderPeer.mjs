@@ -210,12 +210,19 @@ const partial = (input, text) => {
   frame({ type: 'message_start', message: message(input.messageId, []) });
   frame({ type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } });
   frame({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } });
+  if (input.marker === 'TEST_UI_STREAM') {
+    frame({ type: 'content_block_start', index: 1, content_block: { type: 'thinking', thinking: '' } });
+    frame({ type: 'content_block_delta', index: 1,
+      delta: { type: 'thinking_delta', thinking: 'TEST stream thought partial' } });
+  }
   effect({ event: 'partial', inputId: input.id, marker: input.marker, text });
 };
 function finish(input, text, { interrupted = false, localCommand } = {}) {
   assert.equal(active, input, 'authority');
   clearTimeout(streamTimer); streamTimer = undefined;
-  if (!interrupted && !localCommand) assistant(input, [{ type: 'text', text }]);
+  if (!interrupted && !localCommand) assistant(input, [{ type: 'text', text },
+    ...(input.marker === 'TEST_UI_STREAM' ? [{ type: 'thinking', thinking: 'TEST stream thought complete',
+      signature: 'TEST_SIGNATURE_NOT_LOGGED' }] : [])]);
   const counted = localCommand !== 'usage';
   if (counted) resultCount++;
   const cost = Number((resultCount * 0.0123).toFixed(4));

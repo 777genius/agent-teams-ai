@@ -246,3 +246,31 @@ This reviewed candidate still uses the installed checked Session SPI:
 remain unchanged. Current-source producer-to-renderer Thinking qualification
 and the actual Desktop/native gates remain on HOLD until their real results.
 No queued, cancelled, skipped or source-reviewed job is counted as PASS.
+
+## Checked producer follow-up on the published Logs implementation
+
+The follow-up preserves `27b1acf48278dcd0fb348c626696eac2dc64de73` and its
+original Logs/read-side implementation. Both provider archives now come from
+the checked `9423f600dfb04d04448326dbced89919924b0b5f` source: Node24 and26
+source/packed-consumer checks pass, and all53 original OpenCode jobs finish
+(51 positive receipts, two expected HOLD controls). The adjacent original
+artifact/source receipts bind their exact bytes and scope. Dependencies are
+unchanged; the previously merged opt-in prompt-suggestions binding stays off.
+
+Host now accepts the original typed `thinking` event. The original finite
+Claude/V1 stream turns expose partial and completed Thinking through the same
+input/message/block; the Desktop assertions inspect these actual Logs rows,
+completed-over-partial replacement, filters and reload without new effects.
+Codex makes no unsupported Thinking claim. Same-source fullscreen preserves
+viewport state; selecting another source resets it. The existing failed-tool
+and child proofs retain their original event identity and full visible content.
+
+Controlled follow-up evidence: the final seven Host suites pass106/106 with
+zero skips; the five focused renderer suites pass57/57, and the existing team
+read suite passes5/5. Host build/test types, scoped renderer/script/feature
+TypeScript7, source-size and diff gates pass. Four renderer lint warnings and
+one native Codex fixture warning already exist at27b1; no suppression or new
+warning is added. Full workspace typecheck remains unqualified after its
+earlier environment OOM. Actual resulting-source Electron/native acceptance
+is still required; neither the provider receipts nor27b1 Desktop results
+qualify this follow-up.

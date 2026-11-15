@@ -145,7 +145,11 @@ export const MemberLogsTab = ({
     },
   });
   const logs = summary.value ?? EMPTY_LOGS;
-  const viewport = useHostLogViewport(hostView, logs);
+  const viewport = useHostLogViewport(
+    hostView,
+    logs,
+    JSON.stringify([scope.key, summaryPresentationKey])
+  );
   const [initialNow] = useState(() => Date.now());
   const summaryNow = summary.settledAt ?? initialNow;
   const loading = summary.loading;

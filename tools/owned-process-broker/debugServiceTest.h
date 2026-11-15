@@ -77,8 +77,8 @@ inline void admissionBarrier(HANDLE child) {
   writeAdmissionBarrier(L".dispatched",admissionNonce,36);
   waitAdmissionBarrier(L".dispatch-continue");
   const auto pending=scopes.query(key);
-  if(pending.queryError||!pending.active||!scopes.testOriginalDispatch(key,child))
-    throw DWORD{ERROR_INVALID_DATA}; // Pending CREATE cannot be retired as an empty original Job.
+  if(pending.queryError||owned_service::absent(pending)||!scopes.testOriginalDispatch(key,child))
+    throw DWORD{ERROR_INVALID_DATA}; // Pending CREATE cannot complete the original scope.
   checkAdmissionDeadline();
 }
 inline void admittedBarrier(const owned_service::Scope& child) {

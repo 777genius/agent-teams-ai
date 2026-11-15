@@ -234,3 +234,29 @@ Ordinary process facts do not alter messages, usage, previews, conversation,
 readiness or custody. An explicit oversized/storage gap retains the existing
 uncertainty policy, including unknown cost when evidence is incomplete.
 Preserve that policy rather than inventing a diagnostic-specific exemption.
+
+## Bounded capture follow-up on27b1
+
+The published adapter hook, source-grant callback and full config/incarnation
+fence are preserved. The follow-up reuses the existing escaped-assignment
+redactor by moving it byte-for-byte to the browser-safe Host diagnostics
+export; its old app module is a re-export. Three original consumer suites
+pass107/107 with zero skips. No second parser or credential lookup is added.
+
+Independent source review found and closed short-secret masking that could
+destroy credential syntax, transformed held-secret fragments, overlapping
+exact values, and an ANSI dump opener crossing the existing24KiB discard
+boundary. Syntax is classified before exact masking; original and sanitized
+held-value forms are masked in one union of spans. Unclassified ANSI loss
+fails closed until the existing dump boundary. The24KiB capture/output and
+32KiB serialized journal budgets remain unchanged, as do custody and stdout.
+All seven published framing cases remain; the extended helper suite passes
+19/19. The final seven-suite Host run passes106/106, zero skips.
+
+The original Runtime-team composition tests additionally cover diagnostics
+before SessionRef, failed open, permitted closing and rejected stale/revoked/
+sealed grants. An actual Claude SDK launches only the finite TEST Node child
+through the original CapturedProcess and retains startup plus final stderr
+on failed startup; cleanup is checked. The six focused composition/outer-hook
+cases pass with zero skips. No real Claude/Codex executable was invoked.
+Resulting-source graphical/native gates remain required and unqualified here.

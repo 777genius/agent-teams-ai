@@ -128,3 +128,99 @@ test('a bounded escape-heavy line remains subject to the existing serialized jou
   }, []);
   assert.equal(withoutObserver.child.stderr.listenerCount('data'), 0);
 });
+
+test('held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes', async () => {
+  const f = fixture(), secret = 'alpha"TEST_PRIVATE_SUFFIX';
+  observeMemberProcessStderr(f.child, {
+    ...f.context, endpoint: { ...f.context.endpoint, url: 'http://127.0.0.1:12345/TEST-private' },
+    profile: { ...f.context.profile, environment: { API_KEY: secret,
+      AUTH_TOKEN: 'TEST_PRIVATE_FIRST\nTEST_PRIVATE_SECOND', PASSWORD: 'TEST  SPACED  SECRET' } },
+  }, []);
+  const output = ['TEST ordinary diagnostic', 'opaque=' + JSON.stringify(secret),
+    'opaque=' + encodeURIComponent(secret), 'TEST_PRIVATE_FIRST\nTEST_PRIVATE_SECOND',
+    'TEST  SPACED  SECRET', 'http://127.0.0.1:12345/TEST-private',
+    'password=' + JSON.stringify('TEST_UNHELD_PREFIX"TEST_UNHELD_SUFFIX')].join('\n');
+  for (let at = 0; at < output.length; at += 7) f.child.stderr.write(output.slice(at, at + 7));
+  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+  const retained = JSON.stringify(f.observations);
+  assert.ok(retained.includes('TEST ordinary diagnostic'));
+  for (const fragment of ['alpha', 'TEST_PRIVATE_SUFFIX', 'TEST_PRIVATE_FIRST', 'TEST_PRIVATE_SECOND',
+    'SPACED', 'SECRET', '127.0.0.1:12345', 'TEST_UNHELD_PREFIX', 'TEST_UNHELD_SUFFIX'])
+    assert.equal(retained.includes(fragment), false, fragment);
+});
+
+for (const [secret, output] of [['ABABAB', 'ABABABAB'], ['a', 'aaaa']] as const) {
+  test(`overlapping held values are masked in one pass: ${secret}`, async () => {
+    const f = fixture();
+    observeMemberProcessStderr(f.child, { ...f.context,
+      profile: { ...f.context.profile, environment: { API_KEY: secret } } }, []);
+    f.child.stderr.write(output + '\n');
+    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+    assert.deepEqual(f.observations, [{ kind: 'process-output', stream: 'stderr', text: '[redacted]' }]);
+  });
+}
+
+for (const oversized of [false, true]) {
+  test(`long split ANSI does not lose a dump opener before ${oversized ? 'discard' : 'flush'}`, async () => {
+    const f = fixture(); f.attach();
+    f.child.stderr.write('environment\u001b[' + '1;'.repeat(300));
+    f.child.stderr.write('m dump ' + (oversized ? 'x'.repeat(25 * 1024) : '') + '\n');
+    f.child.stderr.write('TEST_DUMP_CONTINUATION_CANARY\n--- End ---\nTEST safe\n');
+    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+    assert.equal(JSON.stringify(f.observations).includes('TEST_DUMP_CONTINUATION_CANARY'), false);
+    assert.equal(f.observations.at(-1)?.kind, 'process-output');
+    assert.ok(f.observations.some(value => value.kind === 'process-output' && value.text === 'TEST safe'));
+  });
+}
+
+test('dump detection continues through already discarded oversized fragments', async () => {
+  const f = fixture(); f.attach();
+  f.child.stderr.write('x'.repeat(25 * 1024));
+  f.child.stderr.write(' environ'); f.child.stderr.write('ment dump\nTEST_DISCARDED_DUMP_CANARY\n');
+  f.child.stderr.write('--- End ---\nTEST safe\n');
+  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+  assert.equal(JSON.stringify(f.observations).includes('TEST_DISCARDED_DUMP_CANARY'), false);
+  assert.ok(f.observations.some(value => value.kind === 'process-output' && value.text === 'TEST safe'));
+});
+
+for (const [secret, text] of [
+  ['s', 'password="TEST_UNHELD_CANARY"'],
+  ['a', 'Bearer TEST_UNHELD_CANARY'],
+  ['h', 'http://user:TEST_UNHELD_CANARY@example.invalid/visible'],
+] as const) {
+  test(`a short held value cannot destroy sensitive syntax before classification: ${secret}`, async () => {
+    const f = fixture();
+    observeMemberProcessStderr(f.child, { ...f.context,
+      profile: { ...f.context.profile, environment: { API_KEY: secret } } }, []);
+    f.child.stderr.write(text + '\n');
+    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+    assert.equal(JSON.stringify(f.observations).includes('TEST_UNHELD_CANARY'), false);
+  });
+}
+
+test('syntax redaction cannot expose fragments of a transformed held value', async () => {
+  const f = fixture();
+  observeMemberProcessStderr(f.child, { ...f.context,
+    endpoint: { ...f.context.endpoint, url: 'http://127.0.0.1:12345/TEST_PRIVATE_PATH?token=TEST_PRIVATE_QUERY' },
+    profile: { ...f.context.profile, environment: { API_KEY: 'TEST_PREFIX password=TEST_INNER TEST_SUFFIX', SHORT_TOKEN: 'a' } },
+  }, []);
+  f.child.stderr.write('url http://127.0.0.1:12345/TEST_PRIVATE_PATH?token=TEST_PRIVATE_QUERY\n');
+  f.child.stderr.write('opaque TEST_PREFIX password=TEST_INNER TEST_SUFFIX\n');
+  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+  const retained = JSON.stringify(f.observations);
+  for (const canary of ['127.0.0.1:12345', 'TEST_PRIVATE_PATH', 'TEST_PRIVATE_QUERY', 'TEST_PREFIX', 'TEST_INNER', 'TEST_SUFFIX'])
+    assert.equal(retained.includes(canary), false, canary);
+  assert.equal(retained.includes('[red[redacted]'), false, 'existing markers are not expanded by short held values');
+});
+
+for (const alreadyDiscarded of [false, true]) {
+  test(`an ANSI prefix larger than the line budget remains fail-closed (${alreadyDiscarded})`, async () => {
+    const f = fixture(); f.attach();
+    if (alreadyDiscarded) f.child.stderr.write('x'.repeat(25 * 1024));
+    f.child.stderr.write('environment\u001b[' + '1;'.repeat(13 * 1024));
+    f.child.stderr.write('m dump\nTEST_LONG_CSI_DUMP_CANARY\n--- End ---\nTEST safe\n');
+    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+    assert.equal(JSON.stringify(f.observations).includes('TEST_LONG_CSI_DUMP_CANARY'), false);
+    assert.ok(f.observations.some(value => value.kind === 'process-output' && value.text === 'TEST safe'));
+  });
+}
