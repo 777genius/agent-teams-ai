@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -283,7 +284,26 @@ export async function runDesktopEmulatedCollaborationUi(cdp: UiCdpPort, options:
   assert.deepEqual(stopped.map(row => array(row.inputs).length).sort(), [1, 2, 2, 3]);
   assert.ok(stopped.every(row => array(row.inputs).every(input => input.phase === 'terminal' && input.terminal === 'succeeded')));
   const originalBirths = [...initialPhysical.values(), addedReady.physical, restoredReady.physical];
-  await poll(async () => processFacts(), values => originalBirths.every(birth => !values.some(row => row.pid === birth.pid)), 'all original Runtime processes absent');
+  await poll(async () => {
+    const values = await processFacts();
+    if (!originalBirths.every(birth => !values.some(row => row.pid === birth.pid))) return false;
+    return cdp.evaluate(`(() => {
+      const visible = e => { const r = e.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility === 'visible'; };
+      const teams = [...document.querySelectorAll('[data-team-name]')].filter(e =>
+        e.getAttribute('data-team-name') === ${literal(hostTeamSelectionKey(fixture.handleId))} &&
+        e.querySelector('[data-section-id="team"]') && visible(e));
+      if (teams.length !== 1) return false;
+      const banners = [...teams[0].querySelectorAll(':scope > [role="status"]')];
+      if (banners.length !== 1) return false;
+      const banner = banners[0], progress = banner.nextElementSibling;
+      const launches = [...banner.querySelectorAll('button')].filter(e => e.textContent.trim() === 'Launch');
+      return visible(banner) && [...banner.querySelectorAll(':scope > span')].some(e =>
+        e.textContent.trim() === 'Team is offline') && launches.length === 1 &&
+        !launches[0].disabled && visible(launches[0]) && progress?.tagName === 'DIV' &&
+        !progress.querySelector('button[aria-label="Copy diagnostics"], button[aria-label="Diagnostics copied"]');
+    })()`);
+  }, value => value === true, 'all original Runtime processes absent and original Team offline without launch progress');
   await observeCollaborationPeers(fixture, []);
   proof.stopped = { sessions: stopped, originalBirths, originalProcessesAbsent: true, screenshot: await screenshot('stopped') };
   const snapshot = async () => ({ owner: await records.owner(), commands: await records.commands(), sessions: await sessions(),
