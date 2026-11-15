@@ -581,6 +581,17 @@ describe('ProviderModelBadges', () => {
   });
 
   it('does not exceed React update depth with a crowded provider catalog', () => {
+    const observerTargets: Element[] = [];
+    const originalResizeObserver = globalThis.ResizeObserver;
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(target: Element) {
+          observerTargets.push(target);
+        }
+        disconnect() {}
+      }
+    );
     const originalOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
     Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
       configurable: true,
@@ -614,10 +625,14 @@ describe('ProviderModelBadges', () => {
       }).not.toThrow();
       expect(host.querySelectorAll('button')).toHaveLength(1);
       expect(host.textContent).toContain('+115 more');
+      const list = host.firstElementChild?.firstElementChild as HTMLElement | null;
+      expect(list?.className).toContain('w-full');
+      expect(observerTargets).toEqual([list?.parentElement]);
     } finally {
       act(() => {
         root.unmount();
       });
+      vi.stubGlobal('ResizeObserver', originalResizeObserver);
       if (originalOffsetTop) {
         Object.defineProperty(HTMLElement.prototype, 'offsetTop', originalOffsetTop);
       } else {
