@@ -3602,3 +3602,16 @@ source-size guard. Await both original resulting-source Windows jobs. The
 result must determine the next correction; this diagnostic cut itself cannot
 qualify P08/P09. No source oracle, provider invocation policy, workflow selection,
 Draft/base, main, release or activation change is included.
+
+### Exact source review and local checks
+
+Independent reviewer `/root/p09_review` accepted the three-file diff over
+published plan `3957f2b28417647578d71a465cd61d4e09b5deb9`: nativeFixture
+`579a7aadf70a284cb44f7ec3690dab32c4d76e92`, scenario
+`f8eb84e20fb323e5838b918a7934853785ab9ee5`, nativeGate
+`17f5e7b66605bd4d28cf3935b7fa73ea2933a21d` (the final source tree is authoritative).
+The existing owned-process helper suite passed53/53 with no skips; scoped
+TypeScript7.0.2 and the complete legacy-host-scripts compiler, focused lint, source-size and diff checks passed.
+The full-workspace typecheck was terminated with code137, including a separate
+memory-bounded invocation; neither is a PASS. Both actual Windows native runs
+remain required, and no product fix or P08/P09 acceptance is asserted.

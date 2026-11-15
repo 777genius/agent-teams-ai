@@ -124,7 +124,30 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
     phase('resume');
     await request(Op.resume, Op.resumed, Buffer.alloc(0));
     phase('child-lines');
-    await waitFor(() => output.children.length === 4 && output.childrenOf(rootPid).length === 2, 10000, events);
+    try {
+      await waitFor(() => output.children.length === 4 && output.childrenOf(rootPid).length === 2, 10000, events);
+    } catch (error) {
+      // Read only the original bounded stdout; incomplete/ambiguous records carry no diagnosis.
+      try {
+        const lines = text.split('\n'), tail = lines.pop()!;
+        const key = '"TEST_SERVICE_PAIR_PREREQUISITE"';
+        const records = lines.filter(line => line.includes(key));
+        const match = records.length === 1 && tail.length === 0
+          ? /^\{"TEST_SERVICE_PAIR_PREREQUISITE":\{"stage":([1-9]|1[0-9])(?:,"result":(0|[1-9][0-9]{0,9}))?\}\}\r?$/.exec(records[0]!)
+          : null;
+        const result = match?.[2] === undefined ? undefined : Number(match[2]);
+        const prerequisite = match && (result === undefined || result <= 0xffffffff)
+          ? { stage: Number(match[1]), ...(result === undefined ? {} : { result }) } : 'unknown';
+        console.error(JSON.stringify({ nativeServiceReadinessFailure: {
+          rootExitCode: readRootExit()?.payload.readUInt32LE(0) ?? null,
+          rootCount: output.root ? 1 : 0, childCount: output.children.length,
+          rootChildCount: output.childrenOf(rootPid).length,
+          wow64Completed: text.includes('{"wow64StartupAndApplicationBreakpoints":true}'),
+          churnCompleted: text.includes('{"retiredChildren":80}'), prerequisite,
+        } }));
+      } catch { /* Diagnostic failure cannot replace the original readiness refusal. */ }
+      throw error;
+    }
     if (mode === 'service-pair') {
       assert.ok(text.includes('{"retiredChildren":80}'),
         'actual cumulative child churn exceeded64 without exhausting live scope custody');

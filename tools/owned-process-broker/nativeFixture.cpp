@@ -29,6 +29,19 @@ static bool applicationBreakpoint(DWORD code) {
   }
   return delivered;
 }
+enum class PrerequisiteStage : DWORD {
+  RootBreakpoint=1, RootWow64Breakpoint, Wow64Module, Wow64QueryEntry, Wow64Path,
+  Wow64Query, Wow64Architecture, Wow64Wait, Wow64ExitRead, Wow64ExitCode,
+  Wow64HandleClose, Wow64PublicationOpen, Wow64PublicationWrite, Wow64PublicationCount,
+  Wow64PublicationClose, ApplicationWait, ApplicationExitRead, ApplicationExitCode,
+  ApplicationHandleClose
+};
+static bool prerequisiteFailure(PrerequisiteStage stage,const DWORD* result=nullptr) {
+  if(result) std::printf("{\"TEST_SERVICE_PAIR_PREREQUISITE\":{\"stage\":%lu,\"result\":%lu}}\n",
+    static_cast<DWORD>(stage),*result);
+  else std::printf("{\"TEST_SERVICE_PAIR_PREREQUISITE\":{\"stage\":%lu}}\n",static_cast<DWORD>(stage));
+  std::fflush(stdout); return false;
+}
 static std::wstring wow64Command() {
   const auto module=GetModuleHandleW(L"Kernel32.dll");
   if(!module) return {};
@@ -42,31 +55,46 @@ static std::wstring wow64Command() {
 }
 static bool wow64Startup() {
   const auto module=GetModuleHandleW(L"Kernel32.dll");
-  if(!module) return false;
+  if(!module) return prerequisiteFailure(PrerequisiteStage::Wow64Module);
   const auto machine=reinterpret_cast<BOOL (WINAPI*)(HANDLE,USHORT*,USHORT*)>(
     GetProcAddress(module,"IsWow64Process2"));
   const auto executable=wow64Command();
-  if(!machine||executable.empty()) return false;
+  if(!machine) return prerequisiteFailure(PrerequisiteStage::Wow64QueryEntry);
+  if(executable.empty()) return prerequisiteFailure(PrerequisiteStage::Wow64Path);
   // This finite Windows component is explicitly verified as x86 on both hosts.
   // Its ordinary loader must survive the real native + WOW64 startup events.
   const auto process=child(executable,L"/d /c exit 0");
   USHORT architecture=IMAGE_FILE_MACHINE_UNKNOWN;
   DWORD code=MAXDWORD;
-  const bool passed=machine(process.hProcess,&architecture,nullptr)&&
-    architecture==IMAGE_FILE_MACHINE_I386&&
-    WaitForSingleObject(process.hProcess,5000)==WAIT_OBJECT_0&&
-    GetExitCodeProcess(process.hProcess,&code)&&code==0;
-  if(!CloseHandle(process.hProcess)||!passed) return false;
+  auto stage=PrerequisiteStage::Wow64Query;
+  DWORD result=0;
+  const bool passed=[&] {
+    result=machine(process.hProcess,&architecture,nullptr); if(!result) return false;
+    stage=PrerequisiteStage::Wow64Architecture; result=architecture;
+    if(result!=IMAGE_FILE_MACHINE_I386) return false;
+    stage=PrerequisiteStage::Wow64Wait; result=WaitForSingleObject(process.hProcess,5000);
+    if(result!=WAIT_OBJECT_0) return false;
+    stage=PrerequisiteStage::Wow64ExitRead; result=GetExitCodeProcess(process.hProcess,&code);
+    if(!result) return false;
+    stage=PrerequisiteStage::Wow64ExitCode; result=code; return result==0;
+  }();
+  const bool processClosed=CloseHandle(process.hProcess)!=FALSE;
+  if(!passed) return prerequisiteFailure(stage,&result);
+  if(!processClosed) return prerequisiteFailure(PrerequisiteStage::Wow64HandleClose);
   // The next original-root scenario consumes this exact verified path in the
   // same controller-created cwd. CREATE_NEW refuses stale or repeated publication.
   HANDLE file=CreateFileW(L"TEST-wow64-command.utf16",GENERIC_WRITE,0,nullptr,CREATE_NEW,
     FILE_ATTRIBUTE_NORMAL,nullptr);
-  if(file==INVALID_HANDLE_VALUE) return false;
+  if(file==INVALID_HANDLE_VALUE) return prerequisiteFailure(PrerequisiteStage::Wow64PublicationOpen);
   const auto length=static_cast<DWORD>(executable.size()*sizeof(wchar_t));
   DWORD count=0;
-  const bool written=WriteFile(file,executable.data(),length,&count,nullptr)&&count==length;
+  const bool wrote=WriteFile(file,executable.data(),length,&count,nullptr)!=FALSE;
+  const bool written=wrote&&count==length;
   const bool closed=CloseHandle(file)!=FALSE;
-  return written&&closed;
+  if(!written) return prerequisiteFailure(wrote?PrerequisiteStage::Wow64PublicationCount:
+    PrerequisiteStage::Wow64PublicationWrite,wrote?&count:nullptr);
+  if(!closed) return prerequisiteFailure(PrerequisiteStage::Wow64PublicationClose);
+  return true;
 }
 int wmain(int argc,wchar_t** argv) {
   if(argc<2) return 22;
@@ -211,13 +239,28 @@ int wmain(int argc,wchar_t** argv) {
   if(!branch) std::printf("{\"root\":{\"pid\":%lu,\"birth\":\"%016llx\"}}\n",
     GetCurrentProcessId(),static_cast<unsigned long long>(birth(GetCurrentProcess())));
   if(mode==L"service-pair") {
-    if(!applicationBreakpoint(EXCEPTION_BREAKPOINT)||!applicationBreakpoint(0x4000001f)||
-      !wow64Startup()) return 62;
+    if(!applicationBreakpoint(EXCEPTION_BREAKPOINT)) {
+      prerequisiteFailure(PrerequisiteStage::RootBreakpoint); return 62;
+    }
+    if(!applicationBreakpoint(0x4000001f)) {
+      prerequisiteFailure(PrerequisiteStage::RootWow64Breakpoint); return 62;
+    }
+    if(!wow64Startup()) return 62;
     const auto application=child(executable,L"application-breakpoints");
     DWORD applicationCode=MAXDWORD;
-    const bool applicationPassed=WaitForSingleObject(application.hProcess,5000)==WAIT_OBJECT_0&&
-      GetExitCodeProcess(application.hProcess,&applicationCode)&&applicationCode==0;
-    if(!CloseHandle(application.hProcess)||!applicationPassed) return 63;
+    auto stage=PrerequisiteStage::ApplicationWait;
+    DWORD result=WaitForSingleObject(application.hProcess,5000);
+    bool applicationPassed=result==WAIT_OBJECT_0;
+    if(applicationPassed) {
+      stage=PrerequisiteStage::ApplicationExitRead; result=GetExitCodeProcess(application.hProcess,&applicationCode);
+      applicationPassed=result!=0;
+    }
+    if(applicationPassed) {
+      stage=PrerequisiteStage::ApplicationExitCode; result=applicationCode; applicationPassed=result==0;
+    }
+    const bool closed=CloseHandle(application.hProcess)!=FALSE;
+    if(!applicationPassed) { prerequisiteFailure(stage,&result); return 63; }
+    if(!closed) { prerequisiteFailure(PrerequisiteStage::ApplicationHandleClose); return 63; }
     std::puts("{\"wow64StartupAndApplicationBreakpoints\":true}"); std::fflush(stdout);
     // Sequential original HANDLE exits exceed the debug registry's64 live cap.
     // This is cumulative churn, never80 simultaneously owned live children.
