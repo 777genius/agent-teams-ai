@@ -430,8 +430,14 @@ try {
     'const buttons=[...surface.querySelectorAll("button")]; if(errors.length!==1||!buttons.some(b=>b.textContent.trim()==="Refresh"&&!b.disabled)' +
     '||!buttons.some(b=>b.textContent.trim()==="Retry"&&!b.disabled))return null;return errors[0];})()',
   'genuine closed Host read marker with separate controls', remaining());
-  for (const row of original.rows)
-    assert.equal(object(await ui.waitRead(processOwner(row), 'original rows retained during outage', remaining())).process.processRef, row.processRef);
+  const retainedRows = await ui.waitRead('(() => { const rows=[' +
+    original.rows.map(row => processOwner(row)).join(',') +
+    ']; return rows.every(Boolean) ? rows : null; })()',
+  'original rows retained during outage', remaining());
+  assert.ok(Array.isArray(retainedRows));
+  assert.equal(retainedRows.length, original.rows.length);
+  for (const [index, row] of original.rows.entries())
+    assert.equal(object(retainedRows[index]).process.processRef, row.processRef);
 
   assertHostBirths();
   begin('one-explicit-same-Main-Retry', 10000);
