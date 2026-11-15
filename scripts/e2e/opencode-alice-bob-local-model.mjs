@@ -276,13 +276,15 @@ async function run() {
   assert(typeof creationResponse?.runId === 'string' && creationResponse.runId,
     'Real createTeam IPC did not return a runId');
   launched = true;
-  const snapshot = await wait('two distinct original OpenCode runtime lanes', async () => {
+  const snapshot = await wait('two distinct original OpenCode runtime sessions', async () => {
     const value = await api(`window.electronAPI.teams.getTeamAgentRuntime(${literal(teamName)})`);
     latestRuntime = value;
     const a = value?.members?.alice, b = value?.members?.bob;
+    // A homogeneous all-OpenCode team uses ONE primary lane by design;
+    // its two distinct model sessions must still be independently committed.
     return a?.alive && b?.alive && a.historicalBootstrapConfirmed && b.historicalBootstrapConfirmed &&
       a.laneId && b.laneId && a.runtimeSessionId && b.runtimeSessionId &&
-      a.runtimeSessionId !== b.runtimeSessionId && a.laneId !== b.laneId
+      a.runtimeSessionId !== b.runtimeSessionId
       ? value : false;
   }, 240_000);
   await client.screenshot(screenshot);
