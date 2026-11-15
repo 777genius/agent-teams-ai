@@ -12,15 +12,18 @@ inline bool runDebugLoop(DWORD rootPid,HANDLE root,HANDLE outer,
     if(reporter) reporter(stage,error,event);
   };
   HANDLE observedRoot=nullptr,observedOuter=nullptr;
+  StartupBreakpoints rootStartup;
   Stage stage=Stage::RetainRoot;
   // The ordinary watcher closes its root handle on exit. Retain both originals
   // while the existing admission lock still prevents observer/release races.
-  try { observedRoot=duplicate(root); stage=Stage::RetainJob; observedOuter=duplicate(outer); }
+  try {
+    observedRoot=duplicate(root); rootStartup.capture(observedRoot);
+    stage=Stage::RetainJob; observedOuter=duplicate(outer);
+  }
   catch(DWORD error) { failure(stage,error); if(observedRoot) CloseHandle(observedRoot); return false; }
   catch(...) { failure(stage,ERROR_INVALID_DATA); if(observedRoot) CloseHandle(observedRoot); return false; }
   stateLock.unlock();
   bool ok=true;
-  bool rootInitialBreakpoint=false;
   for(;;) {
     DEBUG_EVENT event{};
     if(!WaitForDebugEvent(&event,100)) {
@@ -52,15 +55,16 @@ inline bool runDebugLoop(DWORD rootPid,HANDLE root,HANDLE outer,
         stage=Stage::DllClose;
         if(event.u.LoadDll.hFile&&!CloseHandle(event.u.LoadDll.hFile)) throw GetLastError();
       } else if(event.dwDebugEventCode==EXCEPTION_DEBUG_EVENT) {
-        // Only the ordinary initial loader breakpoint is handled here;
+        // Only the original native/WOW64 loader startup sequence is handled here;
         // every other exception remains the native application's exception.
         bool initial=false;
-        if(event.u.Exception.ExceptionRecord.ExceptionCode==EXCEPTION_BREAKPOINT) {
+        if(event.u.Exception.ExceptionRecord.ExceptionCode==EXCEPTION_BREAKPOINT||
+          event.u.Exception.ExceptionRecord.ExceptionCode==0x4000001f) {
           const DWORD rootState=WaitForSingleObject(observedRoot,0);
           if(rootState==WAIT_FAILED) throw GetLastError();
           if(event.dwProcessId==rootPid&&rootState==WAIT_TIMEOUT) {
-            initial=!rootInitialBreakpoint; rootInitialBreakpoint=true;
-          } else initial=scopes.firstBreakpoint(event.dwProcessId);
+            initial=rootStartup.accept(event.u.Exception);
+          } else initial=scopes.firstBreakpoint(event.dwProcessId,event.u.Exception);
         }
         if(!initial) continuation=DBG_EXCEPTION_NOT_HANDLED;
       } else if(event.dwDebugEventCode==RIP_EVENT) { stage=Stage::Rip; throw event.u.RipInfo.dwError; }

@@ -117,19 +117,25 @@ jobs:
             packages/legacy-agent-host/tests/opencode-configuration-source.test.ts \
             scripts/e2e/opencode-diagnostics/platform.mjs \
             scripts/e2e/opencode-diagnostics/platform.test.mjs \
+            scripts/legacy-agent-host/desktop-backend-fixture.ts \
             scripts/legacy-agent-host/desktop-backend-observations.test.ts \
+            scripts/legacy-agent-host/desktop-captured-app.ts \
             scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts \
+            scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts \
             scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts \
+            scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts \
             scripts/legacy-agent-host/desktop-emulated-selection-ui.ts \
             scripts/legacy-agent-host/desktop-native-process-ui.test.ts \
             scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts \
             scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts \
             scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts \
+            scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts \
             scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts \
             scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts \
             scripts/legacy-agent-host/desktop-task-comment-input-target.ts \
             scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts \
             scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts \
+            scripts/legacy-agent-host/qualify-linux-process-sdk.ts \
             scripts/legacy-agent-host/run-packaged-opencode-v2.ts \
             src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts \
             src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts \

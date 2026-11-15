@@ -45,12 +45,41 @@ inline bool sameObject(HANDLE first,HANDLE second) {
   return compare(first,second)!=FALSE;
 }
 
+struct StartupBreakpoints {
+  bool wow64=false, nativeSeen=false, wow64Seen=false;
+  void capture(HANDLE original) {
+    static const auto query=[] {
+      const auto module=GetModuleHandleW(L"Kernel32.dll");
+      if(!module) throw GetLastError();
+      const auto address=GetProcAddress(module,"IsWow64Process2");
+      if(!address&&GetLastError()!=ERROR_PROC_NOT_FOUND) throw GetLastError();
+      return reinterpret_cast<decltype(&IsWow64Process2)>(address);
+    }();
+    // Older native64 Windows keeps its original startup handling. An unavailable
+    // architecture query never authorizes the additional x86-only exception.
+    if(!query) return;
+    USHORT processMachine=IMAGE_FILE_MACHINE_UNKNOWN;
+    if(!query(original,&processMachine,nullptr)) throw GetLastError();
+    wow64=processMachine==IMAGE_FILE_MACHINE_I386;
+  }
+  bool accept(const EXCEPTION_DEBUG_INFO& event) noexcept {
+    if(!event.dwFirstChance) return false;
+    const DWORD code=event.ExceptionRecord.ExceptionCode;
+    if(code==EXCEPTION_BREAKPOINT&&!nativeSeen) { nativeSeen=true; return true; }
+    // A native debugger sees the x86 loader breakpoint after the native one.
+    // The two startup events never authorize later application breakpoints.
+    if(code==0x4000001f&&wow64&&nativeSeen&&!wow64Seen) { wow64Seen=true; return true; }
+    return false;
+  }
+};
+
 struct Scope {
   HANDLE process=nullptr, job=nullptr;
   DWORD pid=0;
   uint64_t birth=0;
   Key key=0;
-  bool initialBreakpoint=false, registered=false, stopping=false;
+  StartupBreakpoints startup;
+  bool registered=false, stopping=false, terminationDispatched=false, inheritedTermination=false;
   Scope()=default;
   Scope(const Scope&)=delete;
   Scope& operator=(const Scope&)=delete;
@@ -92,11 +121,32 @@ class Scopes {
   std::map<DWORD,Key> currentPids;
   Key next=1;
   const size_t limit;
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE)
+  void (*testAdmissionBarrier)(HANDLE)=nullptr;
+  void (*testAdmittedBarrier)(const Scope&)=nullptr;
+#endif
 
   std::shared_ptr<Scope> find(Key key) {
     const auto found=records.find(key);
     if(!key||found==records.end()) throw DWORD{ERROR_NOT_FOUND};
     return found->second;
+  }
+  std::shared_ptr<Scope> findService(Key key) {
+    const auto selected=find(key);
+    if(selected->inheritedTermination) throw DWORD{ERROR_NOT_FOUND};
+    return selected;
+  }
+  /** Any one proven original terminating Job suffices, including nested/duplicate
+   * witnesses: the inherited debug record grants no public service authority. */
+  std::shared_ptr<Scope> terminatingOwner(HANDLE process) {
+    for(const auto& item:records) {
+      const auto& selected=item.second;
+      if(!selected->terminationDispatched) continue;
+      BOOL member=FALSE;
+      if(!IsProcessInJob(process,selected->job,&member)) throw GetLastError();
+      if(member) return selected; // Includes debug-only duplicates of this same original Job.
+    }
+    return {};
   }
   void finishStop(const std::shared_ptr<Scope>& selected) noexcept {
     std::lock_guard<std::mutex> lock(mutex);
@@ -111,10 +161,32 @@ public:
   explicit Scopes(size_t liveLimit):limit(liveLimit) {
     if(!limit||limit>4096) throw DWORD{ERROR_INVALID_PARAMETER};
   }
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE)
+  void setTestAdmissionBarriers(void (*before)(HANDLE),void (*after)(const Scope&)) {
+    testAdmissionBarrier=before; testAdmittedBarrier=after;
+  }
+  Key testRegisteredAncestor(HANDLE child) {
+    std::lock_guard<std::mutex> lock(mutex);
+    for(const auto& item:records) {
+      if(!item.second->registered||item.second->inheritedTermination) continue;
+      BOOL member=FALSE;
+      if(!IsProcessInJob(child,item.second->job,&member)) throw GetLastError();
+      if(member) return item.first;
+    }
+    return 0;
+  }
+  bool testOriginalDispatch(Key key,HANDLE child) {
+    std::lock_guard<std::mutex> lock(mutex);
+    const auto selected=findService(key);
+    BOOL member=FALSE;
+    if(!IsProcessInJob(child,selected->job,&member)) throw GetLastError();
+    if(!member) throw DWORD{ERROR_INVALID_DATA};
+    return selected->terminationDispatched;
+  }
+#endif
 
   /** Only the creating debugger thread may admit this original prebirth event. */
   void capture(const DEBUG_EVENT& event,HANDLE originalRoot,HANDLE outer,Stage& stage) {
-    stage=Stage::Retire; retire();
     const HANDLE original=event.u.CreateProcessInfo.hProcess;
     if(!original) throw DWORD{ERROR_INVALID_HANDLE};
     auto selected=std::make_shared<Scope>();
@@ -125,11 +197,20 @@ public:
     if(selected->pid!=event.dwProcessId||!sameObject(original,selected->process)||
       sameObject(original,originalRoot)) throw DWORD{ERROR_INVALID_DATA};
     selected->birth=birthOf(selected->process);
+    selected->startup.capture(selected->process);
     stage=Stage::OuterMembership; BOOL member=FALSE;
     if(!IsProcessInJob(selected->process,outer,&member)) throw GetLastError();
     if(!member) throw DWORD{ERROR_INVALID_DATA};
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE)
+    if(testAdmissionBarrier) testAdmissionBarrier(selected->process); // No registry/state lock is held.
+#endif
 
-    std::lock_guard<std::mutex> lock(mutex);
+    // Pin the original termination fact before this capture can retire an empty
+    // public scope. The pin lasts only for this admission, never as history.
+    std::shared_ptr<Scope> inherited;
+    { std::lock_guard<std::mutex> lock(mutex); inherited=terminatingOwner(selected->process); }
+    stage=Stage::Retire; retire();
+    std::unique_lock<std::mutex> lock(mutex);
     stage=Stage::Registry;
     if(records.size()>=limit||!next) throw DWORD{ERROR_TOO_MANY_OPEN_FILES};
     const auto previous=currentPids.find(selected->pid);
@@ -142,7 +223,20 @@ public:
     }
     stage=Stage::CreateJob; selected->job=owned_job::create();
     stage=Stage::AssignJob;
-    if(!AssignProcessToJobObject(selected->job,selected->process)) throw GetLastError();
+    if(!AssignProcessToJobObject(selected->job,selected->process)) {
+      const DWORD assignmentError=GetLastError();
+      try {
+        if(!inherited) inherited=terminatingOwner(selected->process);
+        member=FALSE;
+        if(!inherited||!inherited->terminationDispatched||
+          !IsProcessInJob(selected->process,inherited->job,&member)||!member) throw assignmentError;
+        const HANDLE retained=duplicate(inherited->job);
+        if(!CloseHandle(selected->job)) { CloseHandle(retained); throw assignmentError; }
+        selected->job=retained;
+        selected->inheritedTermination=true;
+        selected->terminationDispatched=true;
+      } catch(...) { throw assignmentError; } // Preserve the first native failure if proof is incomplete.
+    }
     stage=Stage::VerifyJob;
     if(!IsProcessInJob(selected->process,selected->job,&member)) throw GetLastError();
     if(!member) throw DWORD{ERROR_INVALID_DATA};
@@ -150,6 +244,10 @@ public:
     next=next==UINT64_MAX?0:next+1;
     records.emplace(selected->key,selected);
     currentPids[selected->pid]=selected->key;
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE)
+    lock.unlock();
+    if(testAdmittedBarrier) testAdmittedBarrier(*selected); // Registration probes must acquire mutex.
+#endif
   }
 
   /** First admission selects only the current live prebirth capture of this broker.
@@ -159,7 +257,7 @@ public:
     if(!pid) throw DWORD{ERROR_INVALID_PARAMETER};
     const auto indexed=currentPids.find(pid);
     if(indexed==currentPids.end()) throw DWORD{ERROR_NOT_FOUND};
-    const auto selected=find(indexed->second);
+    const auto selected=findService(indexed->second);
     if(selected->pid!=pid||selected->key!=indexed->second)
       throw DWORD{ERROR_INVALID_DATA};
     const DWORD waited=WaitForSingleObject(selected->process,0);
@@ -176,6 +274,7 @@ public:
     std::lock_guard<std::mutex> lock(mutex);
     std::shared_ptr<Scope> selected;
     for(const auto& item:records) {
+      if(item.second->inheritedTermination) continue;
       if(item.second->pid!=pid||item.second->birth!=birth) continue;
       if(selected) throw DWORD{ERROR_INVALID_DATA};
       selected=item.second;
@@ -188,17 +287,16 @@ public:
   /** Read-only facts from the same retained record, never a signal or tree receipt. */
   Facts query(Key key) {
     std::shared_ptr<Scope> selected;
-    { std::lock_guard<std::mutex> lock(mutex); selected=find(key); }
+    { std::lock_guard<std::mutex> lock(mutex); selected=findService(key); }
     return observe(*selected);
   }
 
-  bool firstBreakpoint(DWORD pid) {
+  bool firstBreakpoint(DWORD pid,const EXCEPTION_DEBUG_INFO& event) {
     std::lock_guard<std::mutex> lock(mutex);
     const auto found=currentPids.find(pid);
     if(found==currentPids.end()) throw DWORD{ERROR_NOT_FOUND};
     auto selected=find(found->second);
-    if(selected->initialBreakpoint) return false;
-    selected->initialBreakpoint=true; return true;
+    return selected->startup.accept(event);
   }
 
   /** The existing broker frame cache owns attempt deduplication, not this record. */
@@ -209,7 +307,7 @@ public:
     std::shared_ptr<Scope> selected;
     {
       std::lock_guard<std::mutex> lock(mutex);
-      selected=find(key);
+      selected=findService(key);
       if(!selected->registered) throw DWORD{ERROR_INVALID_STATE};
       if(selected->stopping) throw DWORD{ERROR_BUSY};
       selected->stopping=true;
@@ -220,7 +318,17 @@ public:
     if(!budget||GetTickCount64()>=deadline) {
       facts.queryError=queryError?queryError:WAIT_TIMEOUT; return facts;
     }
-    if(!absent(facts)&&!TerminateJobObject(selected->job,1)) dispatchError=GetLastError();
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      // Admission may have held the registry lock: its delay consumes this same budget.
+      if(GetTickCount64()>=deadline) {
+        facts.queryError=queryError?queryError:WAIT_TIMEOUT; return facts;
+      }
+      if(!absent(facts)) {
+        if(TerminateJobObject(selected->job,1)) selected->terminationDispatched=true;
+        else dispatchError=GetLastError();
+      }
+    }
     for(;;) {
       facts=observe(*selected);
       if(facts.queryError&&!queryError) queryError=facts.queryError;
@@ -240,7 +348,7 @@ public:
   void releaseRegistration(Key key) {
     {
       std::lock_guard<std::mutex> lock(mutex);
-      const auto selected=find(key);
+      const auto selected=findService(key);
       if(!selected->registered||selected->stopping||!absent(observe(*selected)))
         throw DWORD{ERROR_INVALID_STATE};
       selected->registered=false;
