@@ -1,0 +1,39 @@
+{
+  "kind": "DESKTOP_OBSERVER_ACTUAL_OLD_PRODUCER_RED",
+  "sourceHead": "c98577887509e49d6dddeb5426eb4d18d88e4675",
+  "sourceTree": "da04645d894fb14edebb201821585c510c7b45d6",
+  "test": "b47e3a6e0227e2c3521a4e0124074ce6ec94bae8",
+  "producer": "f2f299ea2457ce60a5044c44d190ad8e71c1e234",
+  "prerequisite": "Fresh original Host build exit0; captured Node24.21.0 SHA7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c and repo-pinned pnpm11.22.0. Clean source before/after. Original complete Node file, no filter or new option.",
+  "actual": {
+    "tests": 41,
+    "passed": 34,
+    "failed": 7,
+    "skipped": 0,
+    "cancelled": 0,
+    "todo": 0,
+    "exitCode": 1
+  },
+  "specificPositiveFailures": [
+    {
+      "mode": "later-row",
+      "assertion": "Original peer birth under this captured Host",
+      "producerLine": 225
+    },
+    {
+      "mode": "exit",
+      "assertion": "Only an exact pinned TEST executable from the original seed or stock installation",
+      "producerLine": 224
+    }
+  ],
+  "additionalFailureModes": [
+    "reuse",
+    "reparent",
+    "argv",
+    "duplicate",
+    "late"
+  ],
+  "additionalFailure": "All five reach Missing expected rejection in the new test because original observer resolves. Later per-case assertions are not marked executed after that rejection assertion fails.",
+  "passing": "All25 original cases, all8 empty-state journal guard cases, and missing-launch refusal pass.",
+  "scope": "Substantive old-producer REDs reached through actual exported observer/fixture verification, not import/setup/extraction failure. Requires independent evidence acceptance before source repair; no resulting-source GREEN/compiler/CI/native/DesktopUI claim."
+}

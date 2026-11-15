@@ -1,0 +1,141 @@
+{
+  "kind": "CAPACITY_GREEN_WINDOWS_ORIGINAL_CI_ASSESSMENT",
+  "sourceHead": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+  "runId": 43763317915,
+  "attempt": 1,
+  "scope": "Frozen capacity-only head; this evidence does not qualify later reservation, Desktop or native changes.",
+  "artifacts": {
+    "fullTextProjectionMembers": 32,
+    "bytes": 698300,
+    "sha256": "e2fd7cdb4f1b22b0211e2888fd2b0d82ec8508f1cac784180dcb72e9ff4e6dac",
+    "verification": "Root downloaded actual ZIPs; exact API size/digest, CRC of all members, unique safe names, no symlinks and bounded full extraction verified. Original UTF8 contents roundtrip without omitted members."
+  },
+  "environment": {
+    "unavailableAt": "2026-11-15 22:06 UTC",
+    "restoredAt": "2026-11-15 22:08 UTC",
+    "newTestAttemptsDuringOutage": 0,
+    "archiveDownloadInitialResult": "HTTP403 on previous temporary references; raw logs retained and verified. Fresh download references succeeded with same artifact IDs and required digests. Not a test execution or retry."
+  },
+  "common": {
+    "main": {
+      "files": 8,
+      "passed": 81,
+      "failed": 0
+    },
+    "nativeNodeAndElectron": "Original complete old 56-helper nativeGate results and drained rootExit0/active0 on both tuples; no added Stop/WOW64 cases in this frozen head.",
+    "finiteProviderReceipt": "PASS on both tuples; realProviderExecuted=false, desktopQualified=false, releaseQualified=false."
+  },
+  "arm64": {
+    "job": 132962734493,
+    "jobConclusion": "failure",
+    "failedStage": "Original Codex source Team-A readiness",
+    "readCount": 109,
+    "elapsedMs": 14985.4702,
+    "runtimeProjection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false
+    },
+    "projectionLimit": "Postfailure observation bound by same viewDigest; provider and owner operands not evaluated, not false. No atomic-at-failure claim.",
+    "firstRefusal": {
+      "status": "unknown",
+      "reason": "empty"
+    },
+    "cleanup": {
+      "scenario": true,
+      "outerReceipt": true,
+      "jobs": 7,
+      "allResumed": true,
+      "allStopped": true,
+      "allDrained": true,
+      "allReleased": true,
+      "allOriginalHandleAbsent": true,
+      "controllerRootExit": 1,
+      "controllerActive": 0,
+      "sourceControllerExit": 104
+    }
+  },
+  "x64": {
+    "job": 132962734291,
+    "jobConclusion": "failure",
+    "earlierOriginalCodexAndClaude": "Both source receipts PASS at stage complete, original scenario cleanup true, all physical jobs confirmed absent; original source controllers0.",
+    "failedStage": "Original OpenCode source Team-A readiness",
+    "readCount": 59,
+    "elapsedMs": 15004.7893,
+    "read": {
+      "phase": "held",
+      "custody": "unknown",
+      "attached": false,
+      "diagnostic": "open-unknown"
+    },
+    "runtimeProjection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false
+    },
+    "firstRefusal": {
+      "reference": {
+        "phase": "probe-expiry",
+        "probeCutoff": 1794779363553,
+        "probeNow": 1794779363860
+      },
+      "consumer": {
+        "phase": "reference",
+        "reason": "threw",
+        "observedAt": 1794779363464,
+        "cutoff": 1794779363553
+      },
+      "native": {
+        "phase": "resume",
+        "reason": "current-false",
+        "dispatched": true,
+        "staged": true,
+        "rootCaptured": true,
+        "deadlineExpired": null
+      }
+    },
+    "cleanup": {
+      "outerReceipt": true,
+      "scenario": false,
+      "jobs": 3,
+      "preparedNonresumedSlot": 2,
+      "slot2Root": {
+        "pid": 572,
+        "birth": "01dd754b2b194af8"
+      },
+      "slot2": {
+        "resumed": false,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "entryStart": 2,
+        "entryEnd": 2
+      },
+      "controllerRootExit": 1,
+      "controllerActive": 0,
+      "sourceControllerExit": 104
+    },
+    "cleanupLimit": "Prepared nonresumed slot is not a never-prepared reservation. Keep original physical oracle and failed scenario; outer controller drain is not its original HANDLE-absence evidence."
+  },
+  "notQualified": [
+    "Whole Windows source jobs",
+    "Resulting reservation source and Host test-types",
+    "New native Stop/WOW64 cases",
+    "Desktop UI",
+    "P08",
+    "P09",
+    "Full M16",
+    "Real Claude/Codex",
+    "Release"
+  ],
+  "next": "Independent full evidence readback; preserve original deadlines/actions/ownership/refusals. No new source or experiment is authorized by this assessment."
+}

@@ -1,0 +1,55 @@
+{
+  "sourceHead": "c98577887509e49d6dddeb5426eb4d18d88e4675",
+  "sourceTree": "da04645d894fb14edebb201821585c510c7b45d6",
+  "statusBefore": "",
+  "sourceBlobs": {
+    "scripts/legacy-agent-host/desktop-backend-observations.test.ts": "b47e3a6e0227e2c3521a4e0124074ce6ec94bae8",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "f2f299ea2457ce60a5044c44d190ad8e71c1e234",
+    "packages/legacy-agent-host/src/index.ts": "755158699496506a62132c540f19b225c5a6222d",
+    "tools/owned-process-broker/nativeEmulatedSourceProfile.ts": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts": "60548e4b0477924fd2c068283b9372f21946b198",
+    ".github/workflows/host-process-acceptance.yml": "70202d22a5840401a00025cd60b797c514f3e455",
+    ".github/workflows/host-emulated-acceptance.yml": "c956c196e4208c11b421b1eb5b68d4850ac50d43"
+  },
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "AGENT_BACKEND_TEST_NODE": null,
+  "steps": [
+    {
+      "name": "desktop-observer-old-host-build.log",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@agent-teams/legacy-agent-host",
+        "build"
+      ],
+      "startedAt": "2026-11-15T22:15:03.171624+00:00",
+      "completedAt": "2026-11-15T22:15:06.378682+00:00",
+      "exitCode": 0,
+      "bytes": 182,
+      "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789"
+    },
+    {
+      "name": "desktop-observer-red.log",
+      "argv": [
+        "node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts"
+      ],
+      "startedAt": "2026-11-15T22:15:06.379453+00:00",
+      "completedAt": "2026-11-15T22:15:07.381877+00:00",
+      "exitCode": 1,
+      "bytes": 9753,
+      "sha256": "8081b16e6322bf34ba561db56890016e7dce7f1360daa39903aa920ce841de5b"
+    }
+  ],
+  "qualification": "Original complete Desktop observation file with additive tests on unchanged f2f producer. Independent review must establish substantive delayed-row and exited-peer RED; setup failure is not sufficient.",
+  "builtHostCli": {
+    "path": "packages/legacy-agent-host/dist/cli.js",
+    "bytes": 2198,
+    "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add"
+  },
+  "statusAfter": ""
+}

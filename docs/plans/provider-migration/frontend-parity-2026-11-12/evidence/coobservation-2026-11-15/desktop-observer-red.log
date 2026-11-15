@@ -1,0 +1,151 @@
+✔ offline Desktop admission refuses inherited native selections before preparing a fixture (6.170239ms)
+✔ TEST management admission retains only the exact direct detached Host peer without signaling (3.817915ms)
+✔ Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder (9.861311ms)
+✔ Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error (1.666813ms)
+✔ the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads (1.954821ms)
+✔ read-only discovery survives navigation during the actual IPC read, then reads the new context (0.627625ms)
+✔ unregistered initial discovery waits, but owner failures are never hidden as navigation (0.373927ms)
+✔ initial discovery passes only its remaining captured budget to the IPC await (0.183924ms)
+✔ exhausted initial observation never dispatches the backend IPC (0.488508ms)
+✔ other discovery callers retain the default CDP budget (0.159658ms)
+✔ an explicit IPC observation budget lets the same read settle after30s within60s (0.945088ms)
+✔ default CDP evaluations still reject at30s without a resend (0.367798ms)
+✔ macOS original Node zombie is the same unreaped harness child, never a changed live command (0.548597ms)
+✔ live stat can become original defunct before the guard; only original child reap and whole-group absence settle it (1.038557ms)
+✔ changed command/start, wrong child/group and initial descendants never authorize a recovery observation (0.150625ms)
+✔ an already observed original natural exit still requires fresh group and captured Host absence (0.142532ms)
+✔ original crash/signal and process-table failures remain debt (0.200799ms)
+✔ the original deadline is not renewed after initial settlement consumed it (0.187389ms)
+✔ numeric group absence without this original child exit observation expires within the remaining original budget (0.150674ms)
+✔ a process-table read that crosses the original deadline cannot qualify natural exit (0.076384ms)
+✔ an already reaped original child waits for actual descendant and original Host absence (0.462569ms)
+✔ an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget (0.455629ms)
+✔ absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities (0.195601ms)
+✔ a reused leader PID and unavailable full process census retain debt without signaling (0.179056ms)
+✔ absent leader observation never renews the original deadline or accepts a late census (0.183103ms)
+✖ original peer observation accepts later-row only with its retained launch row (42.806609ms)
+✖ original peer observation accepts exit only with its retained launch row (10.308011ms)
+✖ original peer observation refuses reuse without admitting the census PID (4.446122ms)
+✖ original peer observation refuses reparent without admitting the census PID (2.604358ms)
+✖ original peer observation refuses argv without admitting the census PID (2.777917ms)
+✖ original peer observation refuses duplicate without admitting the census PID (2.629075ms)
+✔ original peer observation refuses missing without admitting the census PID (2.144663ms)
+✖ original peer observation refuses late without admitting the census PID (5.609453ms)
+✔ empty peer observation validates the original healthy-empty journal before-first-team-read (5.013417ms)
+✔ empty peer observation validates the original retained-failure journal before-first-team-read (2.710316ms)
+✔ empty peer observation validates the original malformed-json journal before-first-team-read (7.76881ms)
+✔ empty peer observation validates the original wrong-provider journal before-first-team-read (3.887449ms)
+✔ empty peer observation validates the original healthy-empty journal after-team-read (4.685598ms)
+✔ empty peer observation validates the original retained-failure journal after-team-read (7.506048ms)
+✔ empty peer observation validates the original malformed-json journal after-team-read (4.998124ms)
+✔ empty peer observation validates the original wrong-provider journal after-team-read (2.48501ms)
+ℹ tests 41
+ℹ suites 0
+ℹ pass 34
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 935.638424
+
+✖ failing tests:
+
+test at scripts/legacy-agent-host/desktop-backend-observations.test.ts:973:1
+✖ original peer observation accepts later-row only with its retained launch row (42.806609ms)
+  AssertionError [ERR_ASSERTION]: Original peer birth under this captured Host
+      at observeDesktopEmulatedRuntimeChildren (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts:225:12)
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-backend-observations.test.ts:975:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-backend-observations.test.ts:973:1
+✖ original peer observation accepts exit only with its retained launch row (10.308011ms)
+  AssertionError [ERR_ASSERTION]: Only an exact pinned TEST executable from the original seed or stock installation
+      at observeDesktopEmulatedRuntimeChildren (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts:224:12)
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-backend-observations.test.ts:975:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-backend-observations.test.ts:982:1
+✖ original peer observation refuses reuse without admitting the census PID (4.446122ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-backend-observations.test.ts:984:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-backend-observations.test.ts:982:1
+✖ original peer observation refuses reparent without admitting the census PID (2.604358ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-backend-observations.test.ts:984:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-backend-observations.test.ts:982:1
+✖ original peer observation refuses argv without admitting the census PID (2.777917ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-backend-observations.test.ts:984:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-backend-observations.test.ts:982:1
+✖ original peer observation refuses duplicate without admitting the census PID (2.629075ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-backend-observations.test.ts:984:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-backend-observations.test.ts:982:1
+✖ original peer observation refuses late without admitting the census PID (5.609453ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-backend-observations.test.ts:984:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
