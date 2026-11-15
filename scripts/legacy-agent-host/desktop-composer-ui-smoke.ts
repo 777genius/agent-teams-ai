@@ -89,6 +89,31 @@ export async function runDesktopComposerUiSmoke(
     `Boolean(document.querySelector('.message-composer-flat-layout textarea'))`,
     'direct chat Composer is visible'
   );
+  if (nativeNextPromptUi) {
+    // The real Electron config, not the fixture's written file, owns billing opt-in.
+    assert.equal(await cdp.evaluate(`window.electronAPI.config.get().then(
+      config => config.general.nativeNextPromptSuggestionsEnabled === true
+    )`), true, 'original Electron Main config captured native suggestion opt-in');
+    // TEST-only passive observation of the existing scoped preload channel.
+    // Capture booleans, never private suggestion content or credentials.
+    assert.equal(await cdp.evaluate(`(() => {
+      const bridge=window.electronAPI?.nativePromptSuggestions;
+      if(typeof bridge?.onUpdated!=='function')return false;
+      window.__TEST_nativeNextPromptNotices=[];
+      bridge.onUpdated(value=>{
+        const rows=window.__TEST_nativeNextPromptNotices;
+        if(!Array.isArray(rows)||rows.length>=8)return;
+        rows.push({
+          ownerIsHost:typeof value?.ownerHandle==='string'&&value.ownerHandle.startsWith('host-team:'),
+          memberIsAlice:value?.memberId==='alice-id',
+          providerIsClaude:value?.provider==='claude',
+          messageIdPresent:typeof value?.messageId==='string'&&value.messageId.length>0,
+          textIsTestSuggestion:typeof value?.text==='string'&&value.text.startsWith('TEST_NEXT_PROMPT_')
+        });
+      });
+      return true;
+    })()`), true, 'scoped native suggestion preload observable without a new transport');
+  }
   const team = join(options.root, 'hoststore/teams/test-desktop-backend');
   const commands = join(team, '.host-owner/commands');
   const incomingIds: string[] = [];
@@ -220,17 +245,45 @@ export async function runDesktopComposerUiSmoke(
           turn === 'NATIVE_TEAM_THREE',
         'original Claude native conversation only',
       );
-      await qualifyNativeNextPromptUiStep(cdp, ui, {
-        root: options.root,
-        turn,
-        expectedHumanInputs: incomingIds.length,
-        originalHumanSendCount: async () => (await rows(commands)).filter(row =>
-          row.principalId === 'TEST-human' && record(row.command).operation === 'message.send'
-        ).length,
-        modelSampleCount: () => options.model?.suggestionRequests?.length ?? -1,
-        step,
-        evidence: options.evidence,
-      });
+      try {
+        await qualifyNativeNextPromptUiStep(cdp, ui, {
+          root: options.root,
+          turn,
+          expectedHumanInputs: incomingIds.length,
+          originalHumanSendCount: async () => (await rows(commands)).filter(row =>
+            row.principalId === 'TEST-human' && record(row.command).operation === 'message.send'
+          ).length,
+          modelSampleCount: () => options.model?.suggestionRequests?.length ?? -1,
+          step,
+          evidence: options.evidence,
+        });
+      } catch (error) {
+        // Diagnose missing row without another model request or product mutation.
+        const renderer = await cdp.evaluate(`(() => {
+          const state=window.__agentTeamsDevStore?.getState?.();
+          const team=state?.selectedTeamData;
+          const messages=Array.isArray(team?.messages)?team.messages:[];
+          const members=Array.isArray(team?.members)?team.members:[];
+          const alice=members.find(member=>member.name==='alice');
+          const direct=messages.filter(message=>message.from==='user'&&message.to==='alice');
+          const notices=window.__TEST_nativeNextPromptNotices;
+          return {
+            storeAvailable:Boolean(state),
+            selectedHostTeam:typeof state?.selectedTeamName==='string'&&state.selectedTeamName.startsWith('host-team:'),
+            memberCaptured:alice?.runtimeOwner==='captured-host',
+            memberIdMatches:alice?.hostMemberId==='alice-id',
+            originalDirectMessages:Math.min(direct.length,16),
+            latestDirectHasMessageId:typeof direct.at(-1)?.messageId==='string',
+            draftEmpty:document.querySelector('.message-composer-flat-layout textarea')?.value==='',
+            rowCount:Math.min(document.querySelectorAll('[data-testid="native-next-prompt-row"]').length,8),
+            noticed:Array.isArray(notices)?notices.slice(0,8):null
+          };
+        })()`).catch(() => null);
+        const diagnostic = { turn, expectedHumanInputs: incomingIds.length,
+          nativeSampleRequests: options.model?.suggestionRequests?.length ?? -1, renderer };
+        step({ assertion: 'native next prompt missing row diagnostic', ...diagnostic });
+        throw new Error('TEST native suggestion UI incomplete: ' + JSON.stringify(diagnostic), { cause: error });
+      }
     }
   }
   const until = Date.now() + 15_000;
