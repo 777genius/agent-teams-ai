@@ -56,8 +56,8 @@ function journal(path: string): Record<string, unknown>[] {
   assert.ok(value.endsWith('\n'));
   return value.trimEnd().split('\n').map(line => object(JSON.parse(line)));
 }
-async function poll(check: () => Promise<boolean>, message: string, budget = 15000): Promise<void> {
-  const deadline = performance.now() + budget;
+async function poll(check: () => Promise<boolean>, message: string, budget = 15000, absoluteDeadline?: number): Promise<void> {
+  const deadline = absoluteDeadline ?? performance.now() + budget;
   for (;;) {
     assert.ok(performance.now() < deadline, message);
     const ready = await check();
@@ -467,7 +467,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
               sealed: view.sealed, custody: view.custody, nativeReady: view.nativeReady, attached: view.attached,
               ...(view.diagnostic === undefined ? {} : { diagnostic: view.diagnostic }) } });
           return view.nativeReady === true; }, 'Original source Team readiness',
-          memberReadinessDeadline === undefined ? undefined : memberReadinessDeadline - performance.now());
+          undefined, memberReadinessDeadline);
       } finally {
         console.log(JSON.stringify({ kind: 'TEST_SOURCE_READINESS', provider, ...readiness }));
       }
@@ -586,16 +586,16 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const before = first.jobs.length;
       const standaloneStarted = performance.now();
       await first.rpc(1, 'schedule.run.start', scheduled.runId, scheduled);
-      const capture = readScheduledRunCapture(new TeamOwnerStore(fixture.profile.owner.storageRoot,
-        fixture.profile.teams[1]!.binding.teamName), scheduled.runId);
-      assert.ok(capture); assert.deepEqual(capture.input, scheduled); assert.deepEqual(capture.source, sourceRef(b.source));
       let standaloneDeadline: number | undefined;
       if (provider === 'codex') {
-        assert.equal(capture.memberId, 'alice-id');
-        assert.equal(capture.teamScope, runtimeDigest(fixture.profile.teams[1]!.scope));
+        const budgetCapture = readScheduledRunCapture(new TeamOwnerStore(fixture.profile.owner.storageRoot,
+          fixture.profile.teams[1]!.binding.teamName), scheduled.runId);
+        assert.ok(budgetCapture); assert.deepEqual(budgetCapture.input, scheduled); assert.deepEqual(budgetCapture.source, sourceRef(b.source));
+        assert.equal(budgetCapture.memberId, 'alice-id');
+        assert.equal(budgetCapture.teamScope, runtimeDigest(fixture.profile.teams[1]!.scope));
         const recipe = resolveRuntimeRecipe(fixture.profile.runtime, fixture.profile.teams[1]!.binding.teamId,
-          capture.memberId, scheduled.config.providerId);
-        assert.equal(runtimeDigest(recipe), capture.recipeDigest);
+          budgetCapture.memberId, scheduled.config.providerId);
+        assert.equal(runtimeDigest(recipe), budgetCapture.recipeDigest);
         // Bound this TEST observation by the original recipe, including Start and acknowledgement.
         standaloneDeadline = standaloneStarted + recipe.limits.timeoutMs;
       }
@@ -614,12 +614,15 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
                 ? { exitCode: (result as Record<string, unknown>).exitCode } : {}) } });
           return completed.phase === 'completed';
         }, 'Original standalone completion',
-        standaloneDeadline === undefined ? undefined : standaloneDeadline - performance.now());
+        undefined, standaloneDeadline);
       } finally {
         console.log(JSON.stringify({ kind: 'TEST_SOURCE_STANDALONE', provider, ...completion }));
       }
       assert.equal(completed.cleanup, 'confirmed'); assert.equal(object(completed.result).exitCode, 0);
       assert.ok(text(object(completed.result).stdout).includes(provider === 'claude' ? 'TEST standalone complete' : 'OK'));
+      const capture = readScheduledRunCapture(new TeamOwnerStore(fixture.profile.owner.storageRoot,
+        fixture.profile.teams[1]!.binding.teamName), scheduled.runId);
+      assert.ok(capture); assert.deepEqual(capture.input, scheduled); assert.deepEqual(capture.source, sourceRef(b.source));
       const jobs = first.jobs.slice(before); assertSourceJobs(jobs, b.source, 'B', 'runtime', fixture.profile.teams[1]!.binding.teamId);
       noTeamConnection(jobs); assert.ok(quiescent(jobs));
       if (provider === 'codex') assert.deepEqual(jobs.flatMap(job => job.threadEphemeral), [true]);
