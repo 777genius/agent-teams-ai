@@ -317,6 +317,24 @@ async function run() {
   }, 180_000);
   assert(originalMember.creation !== initialMember.creation ||
     originalMember.pid !== initialMember.pid, 'Restart reused original process identity');
+  // The production change lives in the *direct-process manual_restart* lane,
+  // not deterministic initial provisioning. Require its original runtime
+  // process-spawn event, tied to this exact replacement PID and owned team.
+  await wait('original app-managed direct-process restart event', async () => {
+    const filePath = path.join(env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT,
+      'teams', teamName, 'runtime', 'alice.runtime.jsonl');
+    const contents = await readFile(filePath, 'utf8').catch(error => {
+      if (error?.code === 'ENOENT') return '';
+      throw error;
+    });
+    return contents.split('\n').filter(Boolean).some(line => {
+      const event = JSON.parse(line);
+      return event.type === 'process_spawned' &&
+        event.source === 'TeamProvisioningService.direct_process_manual_restart' &&
+        event.teamName === teamName && event.agentName === 'alice' &&
+        event.pid === originalMember.pid;
+    });
+  }, 30_000);
   appManagedRestartConfirmed = true;
   await client.screenshot(screenshot);
   // Establish and pin a focused Electron foreground baseline immediately
@@ -366,7 +384,8 @@ async function run() {
     await rm(marker, { force: true });
   }
   const usageRefresh = await api('window.electronAPI.tokenUsage.refreshSnapshot()');
-  assert(usageRefresh?.success !== false && !usageRefresh?.error,
+  assert(usageRefresh && typeof usageRefresh === 'object' &&
+    usageRefresh.success !== false && !usageRefresh.error,
     'Product token-usage importer refresh IPC failed');
   usageImporterProcesses = [];
   for (const [source, marker] of [
@@ -380,6 +399,10 @@ async function run() {
     usageImporterProcesses.push({ source, pid: entry.pid });
   }
   assert.equal(usageImporterProcesses.length, 2);
+  for (const ownedChild of usageImporterProcesses) {
+    await wait('owned ' + ownedChild.source + ' importer process retired', async () =>
+      (await getProcess(ownedChild.pid)) === null, 20_000);
+  }
   await writeFile(hwndStop, 'stop');
   hwndEvidence = await wait('owned native HWND observer evidence', async () => {
     try { return JSON.parse(await readFile(hwndProof, 'utf8')); }
