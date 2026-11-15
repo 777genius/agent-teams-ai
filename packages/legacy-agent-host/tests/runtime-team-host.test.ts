@@ -23,6 +23,8 @@ import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/O
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { localModelReadinessPreparationSchema } from '../dist/management/commandRecords.js';
 import { managementDigest } from '../dist/management/identity.js';
+import { RetainedWindowsCustody, createWindowsOwnedLaunchPort, sameOwner } from '../dist/owned-process/index.js';
+import type { HostCustodyCall, HostCustodyOwner, HostCustodyResult, PendingOwnedProcess, TreeReceipt } from '../dist/owned-process/index.js';
 
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { MemberEntry } from '../dist/composition/MemberEntry.js';
@@ -3592,5 +3594,277 @@ test('the original passive Runtime projection receiver writes only bounded exit 
       : { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' }, kind);
     assert.doesNotMatch(JSON.stringify(evidence), /TEST-private|PRIVATE-|sessionRef|operationRef/);
     assert.ok(Buffer.byteLength(JSON.stringify(evidence)) <= 512);
+  }
+});
+
+
+async function reservationCleanupFixture(t: TestContext,
+  alter?: (call: HostCustodyCall, result: HostCustodyResult) => HostCustodyResult) {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceScenario.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const part = (begin: string, end: string) => {
+    assert.equal(source.split(begin).length, 2); assert.equal(source.split(end).length, 2);
+    const start = source.indexOf(begin), stop = source.indexOf(end, start); assert.ok(stop > start);
+    return source.slice(start, stop);
+  };
+  let program = part('const custodyTiming =', 'interface Job {') +
+    part('    const observed: HostCustodyOwner =', '    const client = new CapturedHostClient') +
+    'const holder = {\n' + part('      async close() {', '    };\n  };\n  const epochs:') + '\n}; ({ observed, close: holder.close });';
+  for (const [before, after] of [
+    ['(): CustodyTiming =>', '() =>'], ['(): Record<CustodyPhase, CustodyTiming> =>', '() =>'],
+    ['(): Record<StagingPhase, CustodyTiming> =>', '() =>'], ['const observed: HostCustodyOwner =', 'const observed ='],
+    ["'owner' as 'owner' | 'witness' | 'complete'", "'owner'"],
+    ['let result: Awaited<ReturnType<typeof original.handle>>;', 'let result;'],
+    ['timings: timings!', 'timings: timings'], ['const failures: unknown[] =', 'const failures ='],
+  ]) { assert.equal(program.split(before!).length, 2); program = program.replace(before!, after!); }
+  const owner = { teamIncarnation: 'TEST-reservation-team', runId: 'TEST-reservation-run', laneId: 'TEST-reservation-lane',
+    processGeneration: '00000000-0000-4000-8000-000000000001' };
+  const capability = 'TEST-original-reservation', hash = 'a'.repeat(64), originalResults: { call: HostCustodyCall; result: HostCustodyResult }[] = [];
+  let connections = 0, nativePrepares = 0, shutdowns = 0, witnessCaptures = 0;
+  const pending: PendingOwnedProcess[] = [], logs: string[] = [], jobs: Record<string, unknown>[] = [];
+  const native = new RetainedWindowsCustody({ profileId: 'TEST-profile', profileDigest: hash,
+    selectBroker(reference) { assert.equal(reference, hash); return { path: 'must-never-spawn.exe', sha256: hash, arch: 'x64', protocol: 1 }; },
+    async verifyLaunch() { assert.fail('no native launch verification before a staged prepare'); },
+    createPort() {
+      const port = createWindowsOwnedLaunchPort('must-never-spawn.exe', 'job-membership', {
+        available() { assert.fail('no native availability query'); },
+        connect() { connections++; return assert.fail('no native connection'); },
+      });
+      return { allocate(value) { const result = port.allocate(value); pending.push(result); return result; },
+        prepare(value, spec) { nativePrepares++; return port.prepare(value, spec); } };
+    } });
+  t.after(async () => { assert.equal(await native.close(), true); assert.equal(connections, 0); });
+  const physical = { mainEpoch: native.mainEpoch, close: () => native.close(),
+    attach(context: Parameters<HostCustodyOwner['attach']>[0]) {
+      const port = native.attach(context);
+      return { ...port, async handle(call: HostCustodyCall) {
+        const result = await port.handle(call); originalResults.push({ call, result });
+        return alter ? alter(call, result) : result;
+      } };
+    } };
+  const counts = { service: 0 }, client = { shutdown: async () => { shutdowns++; return { childExit: 'confirmed' }; } };
+  const context = { assert, Buffer, AggregateError, performance, structuredClone, sameOwner, physical, client, jobs, counts,
+    phaseClock: performance.now(), firstCloseEntryMs: null, projectionHostExit: null, available: true, closed: false,
+    provider: 'codex', actor: 'TEST-no-actor', events: {}, track() { assert.fail('no observer child'); },
+    entries: () => [], sourceRef: (value: unknown) => value, console: { log: (value: string) => logs.push(value) },
+    capturedQueryableWitness() { witnessCaptures++; return assert.fail('no physical witness before prepare'); } };
+  const evaluated = runInNewContext('"use strict";\n' + program, context) as { observed: HostCustodyOwner; close(): Promise<void> };
+  const port = evaluated.observed.attach({ profileId: 'TEST-profile', signal: new AbortController().signal,
+    binding: { mainEpoch: native.mainEpoch, hostIncarnation: 'TEST-host', profileDigest: hash }, hostExited: new Promise<void>(() => {}) });
+  const send = async (call: HostCustodyCall) => {
+    const result = await port.handle(call); if (!alter) assert.equal(result, originalResults.at(-1)!.result); return result;
+  };
+  await send({ operation: 'allocate', capability, owner: { ...owner }, brokerRef: hash, executableSha256: hash,
+    launchSha256: hash, launchBytes: 1, budgetMs: 20000 });
+  const originalStop = () => {
+    const result = originalResults.findLast(row => row.result.operation === 'stop')?.result;
+    assert.ok(result?.operation === 'stop' && result.state === 'confirmed' && result.receipt && result.receiptRef);
+    return { receipt: result.receipt, receiptRef: result.receiptRef };
+  };
+  return { owner, capability, mainEpoch: native.mainEpoch, jobs, logs, client, counts, send, close: evaluated.close,
+    get stop() { return originalStop(); }, get pending() { assert.equal(pending.length, 1); return pending[0]!; },
+    get totals() { return { connections, nativePrepares, shutdowns, witnessCaptures }; },
+    async finish(options: { omitDrain?: boolean; omitRelease?: boolean } = {}) {
+      await send({ operation: 'stop', capability, attemptRef: 'TEST-original-stop', budgetMs: 1000 });
+      if (!options.omitDrain) await send({ operation: 'drain', capability, budgetMs: 1000 });
+      if (!options.omitRelease) await send({ operation: 'release', capability, receiptRef: originalStop().receiptRef });
+    },
+    project() {
+      const evidence: Record<string, unknown> = {}, projection = part('    evidence.epochs = epochs.map(', '    evidence.cleanup =');
+      runInNewContext(projection, { evidence, epochs: [{ physical, pending: { admitted: 0, revoked: 0 }, counts,
+        firstCloseEntryMs: context.firstCloseEntryMs, jobs }] });
+      return JSON.parse(JSON.stringify(evidence.epochs)) as { jobs: Record<string, unknown>[] }[];
+    } };
+}
+function reservationCleanupEvidence(f: { owner: TreeReceipt['owner']; capability: string; mainEpoch: string;
+  stop: { receipt: TreeReceipt; receiptRef: string } }) {
+  return { kind: 'confirmed-no-local-dispatch', mainEpoch: f.mainEpoch, capability: f.capability, allocatedOwner: { ...f.owner },
+    stop: { state: 'confirmed', attemptRef: 'TEST-original-stop', receiptRef: f.stop.receiptRef, receipt: f.stop.receipt },
+    drain: { state: 'complete', afterStopReceiptRef: f.stop.receiptRef }, release: { state: 'released', receiptRef: f.stop.receiptRef },
+    observedCalls: { allocate: { calls: 1, settled: 1, returned: 1 }, prepare: { calls: 0, settled: 0, returned: 0 },
+      resume: { calls: 0, settled: 0, returned: 0 } }, witnessCaptured: false };
+}
+test('source Scenario distinguishes a genuinely released never-prepared reservation from physical HANDLE proof', async t => {
+  const f = await reservationCleanupFixture(t); await f.finish();
+  assert.deepEqual(f.totals, { connections: 0, nativePrepares: 0, shutdowns: 0, witnessCaptures: 0 });
+  assert.equal(f.stop.receipt.coverage, 'no-local-dispatch'); assert.equal(f.stop.receipt.rootExited, false);
+  await assert.rejects(f.pending.release({ ...f.stop.receipt }, 'job-membership'), /Receipt authority/);
+  await assert.rejects(f.pending.release(f.stop.receipt, 'no-local-dispatch'), /required coverage/);
+  let failure: unknown; try { await f.close(); } catch (error) { failure = error; }
+  if (failure instanceof AggregateError) assert.match(String(failure.errors[0]?.message), /Every original physical Job retains confirmed Stop\/drain\/release/);
+  assert.equal(failure, undefined, 'genuine no-local-dispatch cleanup has no physical root HANDLE to await');
+  const expected = reservationCleanupEvidence(f), row = f.project()[0]!.jobs[0]!;
+  assert.deepEqual(row.cleanupEvidence, expected); assert.ok(Buffer.byteLength(JSON.stringify(row.cleanupEvidence)) <= 4096);
+  assert.equal(row.root, null); assert.equal(row.resumed, false); assert.equal(row.originalHandleAbsent, false);
+  assert.equal(row.stopped, true); assert.equal(row.drained, true); assert.equal(row.released, true);
+  assert.deepEqual(JSON.parse(f.logs.at(-1)!).cleanupEvidence, expected);
+  await f.close(); assert.equal(f.totals.shutdowns, 1);
+  const refusal = async (value: Awaited<ReturnType<typeof reservationCleanupFixture>>) => {
+    await assert.rejects(value.close(), error => error instanceof AggregateError &&
+      error.errors.some(item => item?.code === 'ERR_ASSERTION'));
+    assert.equal(value.jobs[0]!.handleAbsent, false); assert.equal(value.project()[0]!.jobs[0]!.cleanupEvidence, undefined);
+  };
+  for (const mode of ['receipt', 'reference', 'owner', 'attempt', 'foreign-reference', 'coverage', 'unknown-stop', 'incomplete-drain', 'unknown-release', 'receipt-getter'] as const) {
+    const value = await reservationCleanupFixture(t, (_call, result) => {
+      if (result.operation === 'drain' && mode === 'incomplete-drain') return { ...result, state: 'incomplete' };
+      if (result.operation === 'release' && mode === 'unknown-release') return { ...result, state: 'unknown' };
+      if (result.operation !== 'stop' || !result.receipt) return result;
+      if (mode === 'receipt-getter') return Object.defineProperty({ ...result }, 'receipt', { get() { throw new Error('TEST observation getter'); } });
+      if (mode === 'receipt') return { operation: 'stop', state: 'confirmed', receiptRef: result.receiptRef };
+      if (mode === 'reference') return { operation: 'stop', state: 'confirmed', receipt: result.receipt };
+      if (mode === 'unknown-stop') return { operation: 'stop', state: 'unknown' };
+      if (mode === 'foreign-reference') return { ...result, receiptRef: 'TEST-foreign-ref' };
+      const receipt = { ...result.receipt, owner: { ...result.receipt.owner } };
+      if (mode === 'owner') receipt.owner.runId = 'TEST-foreign-run';
+      if (mode === 'attempt') receipt.attemptId = 'TEST-foreign-attempt';
+      if (mode === 'coverage') receipt.coverage = 'job-membership';
+      return { ...result, receipt };
+    });
+    await value.finish(); await refusal(value);
+  }
+  for (const mode of ['missing-drain', 'missing-release', 'drain-before-stop', 'close-only', 'prepare', 'resume']) {
+    const value = await reservationCleanupFixture(t);
+    if (mode === 'prepare' || mode === 'resume') await assert.rejects(value.send({ operation: mode, capability: value.capability }), /Original native custody unavailable/);
+    if (mode === 'drain-before-stop') await value.send({ operation: 'drain', capability: value.capability, budgetMs: 1000 });
+    if (mode !== 'close-only') await value.finish({ omitDrain: mode === 'missing-drain' || mode === 'drain-before-stop', omitRelease: mode === 'missing-release' });
+    await refusal(value); assert.equal(value.totals.nativePrepares, 0);
+  }
+  const foreign = await reservationCleanupFixture(t); await foreign.finish({ omitRelease: true });
+  await assert.rejects(foreign.send({ operation: 'release', capability: 'TEST-foreign-capability', receiptRef: foreign.stop.receiptRef }), /Original native custody unavailable/);
+  await refusal(foreign);
+  const handleError = new Error('TEST original handle rejection');
+  const failed = await reservationCleanupFixture(t, (call, result) => { if (call.operation === 'stop') throw handleError; return result; });
+  await assert.rejects(failed.send({ operation: 'stop', capability: failed.capability, attemptRef: 'TEST-original-stop', budgetMs: 1000 }), error => error === handleError);
+  await refusal(failed);
+  const captured = await reservationCleanupFixture(t, (call, result) => {
+    if (call.operation === 'allocate') call.owner.runId = 'TEST-mutated-after-native-allocation'; return result;
+  });
+  await captured.finish(); await captured.close();
+  assert.deepEqual(captured.project()[0]!.jobs[0]!.cleanupEvidence, reservationCleanupEvidence(captured));
+  for (const mode of ['physical', 'missing-root', 'missing-witness', 'unresumed', 'nonzero-witness', 'rejected-witness']) {
+    const value = await reservationCleanupFixture(t); await value.finish(); let waits = 0;
+    const original = new Error('TEST original HANDLE wait failure'), job = value.jobs[0]!;
+    Object.assign(job, { root: { pid: 4100, birth: '0000000000000001' }, resumed: true, entryStart: 0, entryEnd: 0,
+      witness: { async wait() { waits++; if (mode === 'rejected-witness') throw original; return mode === 'nonzero-witness' ? 1 : 0; } } });
+    if (mode === 'missing-root') delete job.root; if (mode === 'missing-witness') delete job.witness;
+    if (mode === 'unresumed') job.resumed = false;
+    if (mode === 'physical') { await value.close(); assert.equal(job.handleAbsent, true); assert.equal(waits, 1); }
+    else {
+      await assert.rejects(value.close(), error => error instanceof AggregateError &&
+        (mode === 'rejected-witness' ? error.errors.includes(original) : error.errors.some(item => item?.code === 'ERR_ASSERTION')));
+      assert.equal(job.handleAbsent, false); assert.equal(waits, ['nonzero-witness', 'rejected-witness'].includes(mode) ? 1 : 0);
+    }
+    assert.equal(value.project()[0]!.jobs[0]!.cleanupEvidence, undefined);
+  }
+  const shutdown = await reservationCleanupFixture(t); await shutdown.finish(); const original = new Error('TEST original shutdown failure');
+  shutdown.client.shutdown = () => Promise.reject(original);
+  await assert.rejects(shutdown.close(), error => error instanceof AggregateError && error.errors.includes(original));
+});
+
+test('full original Process verifier accepts only authority-bound no-dispatch evidence without losing any jobs', async t => {
+  const f = await reservationCleanupFixture(t); await f.finish();
+  const evidence = reservationCleanupEvidence(f), sourceHead = 'a'.repeat(40);
+  const physical = (capability: string) => ({ capability, root: { pid: 4100, birth: '0000000000000001' },
+    resumed: true, stopped: true, drained: true, released: true, originalHandleAbsent: true,
+    entryStart: 0, entryEnd: 0, threadEphemeral: [] });
+  const reservation = { ...physical(f.capability), root: null, resumed: false, originalHandleAbsent: false,
+    entryStart: null, entryEnd: null, cleanupEvidence: evidence };
+  const makeProof = (provider: string) => {
+    const source = { revision: 'TEST-B' }, cold = { currentB: true, retainedA: true, lookup: true,
+      physicalReplayAllocations: 0, originalInputsReplayed: false, sourcePublishPendingAdmission: { admitted: 1, revoked: 1 },
+      sdkPeerCheckpointRestored: provider === 'claude', originalNativeSessionRetained: true, source: { revision: 'TEST-A' } };
+    return { kind: 'TEST_WINDOWS_EMULATED_SOURCE_PARITY', provider, sourceHead, platform: 'win32-x64', nodeVersion: 'v24.21.0',
+      status: 'PASS', cleanup: true, realProviderExecuted: false, desktopQualified: false, releaseQualified: false,
+      sourceScenarios: [{ provider, status: 'PASS', stage: 'complete', cleanup: true, realProviderExecuted: false,
+        desktopQualified: false, releaseQualified: false, foreignScopeGrantRefusedBeforeAllocation: true,
+        selections: { A: { revision: 'TEST-A' }, B: source }, management: { metadataRead: true, modelProbeCompleted: true,
+          modelProbeInputs: 1, modelProbeReplayAllocated: false, metadataHostRetained: provider === 'opencode' },
+        teams: [{ source: { revision: 'TEST-A' } }, { source }], cold,
+        standalone: { supported: false, phase: 'completed', ephemeral: true, replayAllocated: false, source },
+        epochs: [{ mainEpoch: f.mainEpoch, serviceOperations: 0, jobs: [physical('TEST-physical-A'), physical('TEST-physical-B')] as Record<string, unknown>[] },
+          { mainEpoch: 'TEST-cold-Main', serviceOperations: 0, jobs: [physical('TEST-cold')] as Record<string, unknown>[] }] }] };
+  };
+  const workflow = readFileSync(new URL('../../../.github/workflows/host-process-acceptance.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const section = '      - name: Require completed original platform receipts and unchanged source';
+  const command = "          node --input-type=module <<'NODE'\n", end = '\n          NODE\n';
+  assert.equal(workflow.split(section).length, 2);
+  const start = workflow.indexOf(command, workflow.indexOf(section)), stop = workflow.indexOf(end, start);
+  assert.ok(start >= 0 && stop > start);
+  let script = workflow.slice(start + command.length, stop).split('\n').map(line => line.replace(/^          /, '')).join('\n');
+  for (const declaration of ["import assert from 'node:assert/strict';", "import { readFileSync, writeFileSync } from 'node:fs';", "import { join } from 'node:path';"]) {
+    assert.equal(script.split(declaration).length, 2); script = script.replace(declaration, '');
+  }
+  const run = (proof = makeProof('codex')) => {
+    const files = new Map<string, string>(), writes: Record<string, unknown>[] = [];
+    const put = (name: string, value: unknown) => files.set(join('process-acceptance-evidence', name), JSON.stringify(value));
+    const controller = { gateController: 'drained', rootExitCode: 0, activeProcesses: 0 };
+    for (const name of ['windows-node24.log', 'windows-electron.log']) files.set(join('process-acceptance-evidence', name),
+      JSON.stringify({ gate: 'owned-process-native-scenarios-only', platform: 'win32', arch: 'x64',
+        results: ['captured-provider-native-argv-env-cwd-and-stop', 'TEST-only-debug-service-prebirth-nested-job-feasibility'] }) + '\n' + JSON.stringify(controller));
+    put('windows-emulated-provider-receipt.json', { kind: 'TEST_WINDOWS_EMULATED_PROVIDER_PARITY', status: 'PASS', cleanup: true,
+      sourceHead, platform: 'win32-x64', nodeVersion: 'v24.21.0', realProviderExecuted: false, desktopQualified: false, releaseQualified: false,
+      wrappers: ['npm-node', 'generated-bun', 'opaque-cmd', 'positional-bat', 'npm-native'],
+      providers: ['codex', 'opencode'].map(provider => ({ provider, nativeReady: true, inputCompleted: true,
+        neighborSurvivedPrimary: true, providerSurvivedScopedStops: true, cleanup: true, registeredServices: 2, scopedStops: 2,
+        counts: { allocate: 1, prepare: 1, resume: 1, release: 1, serviceCapture: 2, serviceStop: 2, serviceSettle: 2, stop: 1 } })) });
+    put('windows-emulated-provider.log', controller);
+    for (const provider of ['codex', 'claude', 'opencode']) {
+      put('windows-source-' + provider + '-receipt.json', provider === 'codex' ? proof : makeProof(provider));
+      put('windows-source-' + provider + '.log', controller);
+    }
+    runInNewContext('"use strict";\n' + script, { assert, Buffer, join,
+      process: { platform: 'win32', arch: 'x64', version: 'v24.21.0', env: { HOST_PROCESS_SOURCE_HEAD: sourceHead, HOST_PROCESS_PLATFORM: 'win32-x64' } },
+      readFileSync(path: string, encoding: string) { assert.equal(encoding, 'utf8'); assert.ok(files.has(path)); return files.get(path)!; },
+      writeFileSync(path: string, value: string) { assert.equal(path, join('process-acceptance-evidence', 'scope.json')); writes.push(JSON.parse(value)); } });
+    assert.equal(writes.length, 1); assert.equal(writes[0]!.status, 'PASS'); return writes[0]!;
+  };
+  assert.equal(run().status, 'PASS', 'the complete original all-physical verifier fixture is valid');
+  const valid = makeProof('codex'); valid.sourceScenarios[0]!.epochs[0]!.jobs[1] = reservation;
+  const accepted = run(valid); // Baseline 123e fails here at the original resumed false !== true assertion.
+  const checked = accepted.native as { receipt?: { provider?: string; sourceScenarios: { epochs: { jobs: unknown[] }[] }[] } }[];
+  const preserved = checked.find(item => item.receipt?.provider === 'codex')!.receipt!.sourceScenarios[0]!.epochs[0]!.jobs;
+  assert.equal(preserved.length, 2); assert.deepEqual(preserved[1], reservation);
+  const replace = (root: Record<string, unknown>, path: string[], value: unknown, remove = false) => {
+    let parent = root; for (const key of path.slice(0, -1)) parent = parent[key] as Record<string, unknown>;
+    if (remove) delete parent[path.at(-1)!]; else parent[path.at(-1)!] = value;
+  };
+  const mutations: [string[], unknown, boolean?][] = [
+    [['cleanupEvidence'], null], [['cleanupEvidence'], null, true], [['cleanupEvidence', 'kind'], 'unknown'],
+    [['cleanupEvidence', 'extra'], true], [['cleanupEvidence', 'mainEpoch'], 'TEST-other-Main'],
+    [['cleanupEvidence', 'allocatedOwner', 'teamIncarnation'], 'a'.repeat(129)], [['cleanupEvidence', 'allocatedOwner', 'processGeneration'], 'not-a-uuid'],
+    [['cleanupEvidence', 'stop', 'receipt', 'owner', 'runId'], 'TEST-foreign-receipt-owner'], [['cleanupEvidence', 'stop', 'receipt', 'attemptId'], 'TEST-foreign-receipt-attempt'],
+    [['cleanupEvidence', 'stop', 'receiptRef'], 'TEST non-reference'], [['cleanupEvidence', 'stop', 'state'], 'unknown'],
+    [['cleanupEvidence', 'allocatedOwner', 'runId'], 'a'.repeat(4097)],
+    [['cleanupEvidence', 'capability'], 'TEST-other-capability'], [['cleanupEvidence', 'allocatedOwner', 'runId'], 'TEST-other-owner'],
+    [['cleanupEvidence', 'stop', 'attemptRef'], 'TEST-other-attempt'], [['cleanupEvidence', 'stop', 'receiptRef'], 'TEST-other-ref'],
+    [['cleanupEvidence', 'stop', 'receipt'], null, true], [['cleanupEvidence', 'stop', 'receipt', 'coverage'], 'job-membership'],
+    [['cleanupEvidence', 'stop', 'receipt', 'rootExited'], true], [['cleanupEvidence', 'stop', 'receipt', 'proofDigest'], 'not-a-digest'],
+    [['cleanupEvidence', 'drain', 'state'], 'incomplete'], [['cleanupEvidence', 'drain', 'afterStopReceiptRef'], 'TEST-other-ref'],
+    [['cleanupEvidence', 'release', 'state'], 'unknown'], [['cleanupEvidence', 'release', 'receiptRef'], 'TEST-other-ref'],
+    [['cleanupEvidence', 'observedCalls', 'allocate', 'returned'], 0], [['cleanupEvidence', 'observedCalls', 'prepare', 'calls'], 1],
+    [['cleanupEvidence', 'observedCalls', 'resume', 'calls'], 1], [['cleanupEvidence', 'observedCalls', 'prepare'], null, true],
+    [['cleanupEvidence', 'witnessCaptured'], true], [['root'], physical('TEST-root').root], [['entryStart'], 0], [['entryEnd'], 0],
+    [['resumed'], true], [['originalHandleAbsent'], true], [['stopped'], false], [['drained'], false], [['released'], false],
+  ];
+  for (const [path, value, remove] of mutations) {
+    const proof = JSON.parse(JSON.stringify(valid)) as ReturnType<typeof makeProof>;
+    replace(proof.sourceScenarios[0]!.epochs[0]!.jobs[1]!, path, value, remove);
+    assert.throws(() => run(proof), { code: 'ERR_ASSERTION' }, path.join('.'));
+  }
+  const maximum = JSON.parse(JSON.stringify(valid)) as ReturnType<typeof makeProof>, wide = 'a'.repeat(128);
+  maximum.sourceScenarios[0]!.epochs[0]!.mainEpoch = wide;
+  const maxRow = maximum.sourceScenarios[0]!.epochs[0]!.jobs[1]!; maxRow.capability = wide;
+  for (const path of [['mainEpoch'], ['capability'], ['stop', 'attemptRef'], ['stop', 'receiptRef'], ['stop', 'receipt', 'attemptId'],
+    ['drain', 'afterStopReceiptRef'], ['release', 'receiptRef']]) replace(maxRow, ['cleanupEvidence', ...path], wide);
+  for (const prefix of [['allocatedOwner'], ['stop', 'receipt', 'owner']])
+    for (const key of ['teamIncarnation', 'runId', 'laneId']) replace(maxRow, ['cleanupEvidence', ...prefix, key], wide);
+  assert.equal(Buffer.byteLength(JSON.stringify(maxRow.cleanupEvidence)), 2471); assert.equal(run(maximum).status, 'PASS');
+  for (const field of ['resumed', 'stopped', 'drained', 'released', 'originalHandleAbsent']) {
+    const proof = makeProof('codex'); delete proof.sourceScenarios[0]!.epochs[0]!.jobs[0]![field];
+    assert.throws(() => run(proof), { code: 'ERR_ASSERTION' }, 'ordinary physical ' + field);
+  }
+  for (const field of ['source', 'standalone']) {
+    const unknown = JSON.parse(JSON.stringify(valid)) as ReturnType<typeof makeProof>;
+    if (field === 'source') unknown.sourceScenarios[0]!.status = 'INCOMPLETE'; else unknown.sourceScenarios[0]!.standalone.phase = 'running';
+    assert.throws(() => run(unknown), { code: 'ERR_ASSERTION' }, 'cleanup never promotes the original ' + field + ' failure');
   }
 });
