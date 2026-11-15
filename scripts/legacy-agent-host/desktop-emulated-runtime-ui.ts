@@ -42,10 +42,10 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   options.evidence.emulatedRuntimeUiProof = proof;
   const ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
   const effects = () => readDesktopEmulatedRuntimeEffects(fixture);
-  const poll = async <T>(read: () => Promise<T>, accept: (value: T) => boolean, label: string) => {
+  const poll = async <T>(read: () => Promise<T>, accept: (value: T, observedEffects: Row[]) => boolean, label: string) => {
     const deadline = Date.now() + 75_000;
     for (;;) {
-      await effects(); const value = await read(); if (accept(value)) return value;
+      const observedEffects = await effects(); const value = await read(); if (accept(value, observedEffects)) return value;
       assert.ok(Date.now() < deadline, label + '; original action is never repeated');
       await new Promise<void>(resolve => setTimeout(resolve, 100));
     }
@@ -423,7 +423,9 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   assert.notEqual(automaticRun.linkedTaskId, taskId);
   const automaticTaskId = String(automaticRun.linkedTaskId);
   const automaticTasks = await poll(() => rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend')),
-    values => values.some(row => row.id === automaticTaskId && row.status === 'completed'), 'automatic original MCP task completion');
+    (values, observedEffects) => values.some(row => row.id === automaticTaskId && row.status === 'completed') &&
+      observedEffects.some(row => row.event === (provider === 'claude' ? 'scheduled' : 'scheduled-effect') &&
+        row.taskId === automaticTaskId), 'automatic original MCP task completion');
   assert.equal(automaticTasks.length, beforeTasks.length + 2);
   assert.equal(automaticTasks.find(row => row.id === automaticTaskId)?.owner, 'alice');
   assert.equal((await effects()).filter(row => row.event === 'input' && row.marker === 'TEST_UI_SCHEDULE_DONE').length, 2);

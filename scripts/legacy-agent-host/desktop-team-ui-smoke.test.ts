@@ -14,7 +14,7 @@ import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-commen
 import { runDesktopTaskBoardAttachmentsUi } from './desktop-task-board-attachments-ui.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
-import { projectDesktopCodexInstallerFailure } from './desktop-backend-failures.ts';
+import { projectDesktopCodexInstallerFailure, projectDesktopSelectionTargetFailure } from './desktop-backend-failures.ts';
 import { projectDesktopEmulatedReadinessFailure, projectDesktopProofReceiptSummary, projectDesktopTaskBoardFailure } from './desktop-proof-evidence.ts';
 
 function deferred<T>() {
@@ -970,4 +970,121 @@ test('installer failure projection does not invoke input getters and leaves over
   assert.ok('snapshot' in longText && longText.snapshot); assert.equal(longText.snapshot.readyText, null);
   assert.equal(reads, 0); assert.equal(JSON.stringify(oversized).includes(secret), false);
   assert.ok(Buffer.byteLength(JSON.stringify(oversized)) <= 4096);
+});
+
+test('installer CDP and cleanup projection retains only exact finite observations', () => {
+  const secret = 'TEST-private-token https://TEST-private.example /TEST-private/path';
+  const evidence = { status: 'INCOMPLETE', failure: 'CDP command timed out: Runtime.evaluate',
+    emulatedSelectionUiProof: { steps: [
+      { action: 'mouseClick', label: 'open original Settings menu after Update', state: 'attempted' },
+      { action: 'mouseClick', label: 'expand original provider details after Update', state: 'attempted' }],
+      installer: { status: 'PASS', settings: { status: 'PASS', finalStatus: secret } } },
+    cleanup: { remaining: [{ pid: 123, argv: secret }], appExitCode: 0, appSignalCode: null,
+      capturedHostObserved: true, capturedHostAbsent: false, cleanupFailure: secret },
+    emulatedRuntimeCleanup: { absent: true, observationFailed: false, private: secret },
+    quitRequested: true, failureQuit: { attempted: true, reply: 'unconfirmed', listenerAbsent: false, reason: secret } };
+  const before = JSON.stringify(evidence), result = projectDesktopCodexInstallerFailure(evidence);
+  assert.ok('cdpFailure' in result && 'cleanup' in result);
+  assert.deepEqual(result.cdpFailure, { kind: 'command-timeout', method: 'Runtime.evaluate' });
+  assert.deepEqual(result.failureSite, { operation: null, stage: null }, 'CDP classification does not invent a UI stage');
+  assert.deepEqual(result.steps.last.map(row => row.stage), ['settings-menu', 'settings-details']);
+  assert.deepEqual(result.settingsReceipt, { recorded: true, status: 'PASS' });
+  assert.deepEqual(result.cleanup, { recorded: true, remainingCount: 1, capturedHostObserved: true,
+    capturedHostAbsent: false, failureRecorded: true, appExitCodeZero: true, appSignalPresent: false,
+    peerRecorded: true, peerAbsent: true, peerObservationFailed: false, quitRequested: true,
+    failureQuit: { recorded: true, attempted: true, reply: 'unconfirmed', listenerAbsent: false } });
+  assert.deepEqual(projectDesktopProofReceiptSummary(evidence, { mode: 'emulated-installer-ui',
+    receiptPath: 'TEST-receipt', mixedMode: false }).installerFailure, result);
+  assert.equal(JSON.stringify(evidence), before);
+  assert.doesNotMatch(JSON.stringify(result), /TEST-private|https:|\/TEST-private|argv|pid/);
+  assert.ok(Buffer.byteLength(JSON.stringify(result), 'utf8') <= 4096);
+  for (const [failure, kind, method] of [
+    ['CDP connection closed', 'connection-closed', null], ['Renderer evaluation failed', 'evaluation-failed', null],
+    ['CDP command timed out: Page.captureScreenshot', 'command-timeout', 'Page.captureScreenshot'],
+    ['CDP command timed out: ' + secret, null, null], ['CDP connection closed ' + secret, null, null],
+    ['CDP command timed out: Runtime.evaluate ' + secret, null, null], [secret, null, null],
+  ] as const) {
+    const observed = projectDesktopCodexInstallerFailure({ failure });
+    assert.ok('cdpFailure' in observed);
+    assert.deepEqual(observed.cdpFailure, { kind, method });
+    assert.equal(observed.cleanup.recorded, null); assert.equal(observed.settingsReceipt.recorded, null);
+    assert.equal(JSON.stringify(observed).includes(secret), false);
+  }
+  let reads = 0; const unreadable = () => { reads++; throw new Error(secret); };
+  const guarded = Object.defineProperty({ ...evidence }, 'cleanup', { get: unreadable });
+  Object.defineProperty(guarded, 'failureQuit', { get: unreadable });
+  Object.defineProperty(guarded, 'emulatedRuntimeCleanup', { get: unreadable });
+  const unknown = projectDesktopCodexInstallerFailure(guarded);
+  assert.ok('cleanup' in unknown); assert.equal(unknown.cleanup.recorded, null);
+  assert.equal(unknown.cleanup.failureQuit.recorded, null); assert.equal(unknown.cleanup.peerRecorded, null);
+  for (const [cleanup, expected] of [[{}, false], [{ cleanupFailure: undefined }, false],
+    [Object.defineProperty({}, 'cleanupFailure', { get: unreadable }), null]] as const) {
+    const nested = projectDesktopCodexInstallerFailure({ cleanup });
+    assert.ok('cleanup' in nested); assert.equal(nested.cleanup.failureRecorded, expected);
+  }
+  assert.equal(reads, 0); assert.equal(JSON.stringify(unknown).includes(secret), false);
+});
+
+test('Selection target summaries retain the exact original phase and six closed facts', () => {
+  const facts = { matches: 1, disabled: false, ariaDisabled: true,
+    pointerEventsNone: false, centerInViewport: true, hitPresent: false };
+  for (const [suffix, phase] of [['', 'initial'], [' after pointer enter', 'after-pointer-enter'],
+    [' stable target', 'stable-target']] as const) {
+    const evidence = { status: 'INCOMPLETE', failureSource: { kind: 'error', frames: [] },
+      failure: 'UI target read failed: select original save-only Create' + suffix + '; facts=' + JSON.stringify(facts) };
+    const before = JSON.stringify(evidence), result = projectDesktopSelectionTargetFailure(evidence);
+    assert.deepEqual(result, { schemaVersion: 1, status: 'available', source: 'retained-target-read-failure',
+      atomicWithFailure: false, site: 'save-only-create', phase, facts });
+    assert.ok('facts' in result); assert.notEqual(result.facts, facts);
+    assert.equal(JSON.stringify(evidence), before);
+    assert.ok(Buffer.byteLength(JSON.stringify(result), 'utf8') <= 1024);
+    assert.doesNotMatch(JSON.stringify(result), /select original|facts=|selector|cause/);
+    for (const mode of ['emulated-selection-ui', 'emulated-installer-ui']) {
+      const summary = projectDesktopProofReceiptSummary(evidence, { mode, receiptPath: 'TEST-receipt', mixedMode: false });
+      assert.deepEqual(summary.selectionTargetFailure, result);
+      assert.equal(summary.status, 'INCOMPLETE'); assert.equal(summary.receipt, 'TEST-receipt');
+      assert.deepEqual(summary.failureSource, evidence.failureSource);
+      assert.equal('selectionTargetFailure' in projectDesktopProofReceiptSummary({ ...evidence, status: 'PASS' },
+        { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+    }
+    for (const mode of ['emulated-codex-runtime-ui', 'task-board-cross-team-ui', 'codex-login-ui'])
+      assert.equal('selectionTargetFailure' in projectDesktopProofReceiptSummary(evidence,
+        { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  }
+  for (const matches of [0, 256]) {
+    const selected = { matches, disabled: false, ariaDisabled: false,
+      pointerEventsNone: false, centerInViewport: false, hitPresent: false };
+    const result = projectDesktopSelectionTargetFailure({
+      failure: 'UI target read failed: select original save-only Create; facts=' + JSON.stringify(selected) });
+    assert.ok('facts' in result); assert.deepEqual(result.facts, selected, 'zero/default facts do not infer a cause');
+  }
+});
+
+test('Selection target projection rejects unknown or malformed facts without exposing text or invoking getters', () => {
+  const secret = 'TEST-private-token https://TEST-private.example /TEST-private/path';
+  const facts = { matches: 1, disabled: false, ariaDisabled: false,
+    pointerEventsNone: false, centerInViewport: true, hitPresent: true };
+  const prefix = 'UI target read failed: select original save-only Create; facts=';
+  const badFacts = [null, [], {}, { ...facts, matches: -1 }, { ...facts, matches: 257 },
+    { ...facts, matches: 1.5 }, { ...facts, matches: '1' }, { ...facts, extra: secret },
+    ...['disabled', 'ariaDisabled', 'pointerEventsNone', 'centerInViewport', 'hitPresent']
+      .flatMap(key => [{ ...facts, [key]: undefined }, { ...facts, [key]: secret }])];
+  const messages = [...badFacts.map(row => prefix + JSON.stringify(row)),
+    prefix + '{', prefix + JSON.stringify(facts) + secret,
+    prefix + JSON.stringify(facts).padEnd(1025, ' '),
+    (prefix + JSON.stringify(facts)).padEnd(4001, ' '),
+    'UI target read failed: ' + secret + '; facts=' + JSON.stringify(facts),
+    'UI target read failed: select original save-only Create extra; facts=' + JSON.stringify(facts),
+    'UI read timed out: select original save-only Create; no mutation retry', secret];
+  for (const failure of messages) {
+    const result = projectDesktopSelectionTargetFailure({ failure });
+    assert.deepEqual(result, { schemaVersion: 1, status: 'unavailable', reason: 'unrecognized-target-facts' });
+    assert.equal(JSON.stringify(result).includes(secret), false);
+    assert.ok(Buffer.byteLength(JSON.stringify(result), 'utf8') <= 1024);
+  }
+  let reads = 0;
+  const input = Object.defineProperty({}, 'failure', { get() { reads++; throw new Error(secret); } });
+  for (const value of [input, null, [], {}, { failure: 1 }, Object.create({ failure: prefix + JSON.stringify(facts) })])
+    assert.equal(projectDesktopSelectionTargetFailure(value).status, 'unavailable');
+  assert.equal(reads, 0, 'accessors and inherited values are not retained observations');
 });

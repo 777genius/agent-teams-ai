@@ -278,14 +278,28 @@ export function projectDesktopCodexInstallerFailure(value: unknown) {
       ['selection', ['one selectable second TEST model', 'original second model', 'select original second model', 'select original High effort', 'High remains selected']],
       ['save', ['original save-only Create action', 'save original second selection once', 'original Create closes']],
       ['reload', ['fresh renderer after reload', 'reloaded original menu']],
-      ['settings', ['open original Settings menu after Update', 'open original Settings after Update',
-        'open original Providers settings after Update', 'original Settings Codex provider is ready after Update',
-        'open original Codex Manage after Update', 'original Settings Codex account and runtime healthy', 'close original Settings Codex Manage']],
+      ['settings-menu', ['open original Settings menu after Update']],
+      ['settings-open', ['open original Settings after Update']],
+      ['settings-providers', ['original Providers settings after Update', 'open original Providers settings after Update',
+        'visible original Providers page']],
+      ['settings-details', ['original provider details after Update', 'expand original provider details after Update']],
+      ['settings-provider-ready', ['original Settings Codex provider is ready after Update']],
+      ['settings-manage', ['original Codex Manage after Update', 'open original Codex Manage after Update']],
+      ['settings-account-ready', ['original Settings Codex account and runtime healthy']],
+      ['settings-manage-close', ['close original Settings Codex Manage']],
       ['stop', ['original Team Stop', 'stop original selected Team once']],
     ];
     const stage = (field: unknown) => labels.find(([, names]) =>
       names.some(name => field === name || field === 'hover ' + name))?.[0] ?? null;
     const message = text(own(value, 'failure'), 4000);
+    const methods = ['Runtime.evaluate', 'Runtime.enable', 'Page.enable', 'Page.captureScreenshot',
+      'Page.bringToFront', 'Page.reload', 'Input.dispatchMouseEvent', 'Input.dispatchKeyEvent', 'Input.insertText'];
+    const method = methods.find(name => message === 'CDP command timed out: ' + name) ?? null;
+    const cdpFailure = {
+      kind: method !== null ? 'command-timeout' : message === 'CDP connection closed' ? 'connection-closed' :
+        message === 'Renderer evaluation failed' ? 'evaluation-failed' : null,
+      method,
+    };
     let failureSite: { operation: string | null; stage: string | null } = { operation: null, stage: null };
     for (const [selected, names] of labels) for (const name of names) {
       if (message === 'UI read timed out: ' + name + '; no mutation retry')
@@ -312,8 +326,15 @@ export function projectDesktopCodexInstallerFailure(value: unknown) {
       if (body === null) { readyText = null; break; }
       readyText ||= body.includes('Codex is ready for new launches.');
     }
-    const installer = own(proof, 'installer');
+    const installer = own(proof, 'installer'), settings = own(installer, 'settings');
+    const cleanup = own(value, 'cleanup'), peer = own(value, 'emulatedRuntimeCleanup'), quit = own(value, 'failureQuit');
+    const exitCode = own(cleanup, 'appExitCode'), signalCode = own(cleanup, 'appSignalCode');
+    const cleanupFailureDescriptor = cleanup !== null && typeof cleanup === 'object'
+      ? Object.getOwnPropertyDescriptor(cleanup, 'cleanupFailure') : undefined;
+    const cleanupFailure: unknown = cleanupFailureDescriptor && 'value' in cleanupFailureDescriptor
+      ? cleanupFailureDescriptor.value : undefined;
     const result = { schemaVersion: 1, status: 'available', source: 'retained-installer-observations', atomicWithFailure: false,
+      cdpFailure,
       failureSite, proofRecorded: recorded(proof),
       steps: { count, overflow: Array.isArray(steps) ? count === null : null, last },
       lastLiveObservation: {
@@ -325,8 +346,57 @@ export function projectDesktopCodexInstallerFailure(value: unknown) {
       milestones: { firstRuntimeRecorded: recorded(own(proof, 'a')), savedSelectionRecorded: recorded(own(proof, 'savedSelection')),
         nextRuntimeRecorded: recorded(own(proof, 'b')), completedInstallerReceiptRecorded: recorded(installer) },
       completedInstallerStatus: choice(own(installer, 'status'), ['PASS', 'INCOMPLETE']),
+      settingsReceipt: { recorded: recorded(settings), status: choice(own(settings, 'status'), ['PASS', 'INCOMPLETE']) },
+      cleanup: {
+        recorded: recorded(cleanup), remainingCount: length(own(cleanup, 'remaining'), 256),
+        capturedHostObserved: boolean(own(cleanup, 'capturedHostObserved')),
+        capturedHostAbsent: boolean(own(cleanup, 'capturedHostAbsent')),
+        failureRecorded: typeof cleanupFailure === 'string' ? true :
+          recorded(cleanup) === true && cleanupFailure === undefined &&
+          (cleanupFailureDescriptor === undefined || 'value' in cleanupFailureDescriptor) ? false : null,
+        appExitCodeZero: typeof exitCode === 'number' && Number.isSafeInteger(exitCode) &&
+          exitCode >= 0 && exitCode <= 255 ? exitCode === 0 : null,
+        appSignalPresent: signalCode === null ? false :
+          typeof signalCode === 'string' && signalCode.length > 0 && signalCode.length <= 32 ? true : null,
+        peerRecorded: recorded(peer), peerAbsent: boolean(own(peer, 'absent')),
+        peerObservationFailed: boolean(own(peer, 'observationFailed')), quitRequested: boolean(own(value, 'quitRequested')),
+        failureQuit: { recorded: recorded(quit), attempted: boolean(own(quit, 'attempted')),
+          reply: choice(own(quit, 'reply'), ['acknowledged', 'unconfirmed']), listenerAbsent: boolean(own(quit, 'listenerAbsent')) },
+      },
       snapshot: { recorded: recorded(snapshot), unavailable: boolean(own(snapshot, 'unavailable')), readyText } };
     return Buffer.byteLength(JSON.stringify(result), 'utf8') <= 4096
       ? result : { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
   } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' }; }
+}
+
+/** The last retained target sample is diagnostic only; it does not establish the refusal's cause. */
+export function projectDesktopSelectionTargetFailure(value: unknown) {
+  const unavailable = { schemaVersion: 1, status: 'unavailable', reason: 'unrecognized-target-facts' } as const;
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return unavailable;
+    const descriptor = Object.getOwnPropertyDescriptor(value, 'failure');
+    const message: unknown = descriptor && 'value' in descriptor ? descriptor.value : undefined;
+    if (typeof message !== 'string' || message.length > 4000) return unavailable;
+    const prefix = 'UI target read failed: select original save-only Create';
+    const phases = [['', 'initial'], [' after pointer enter', 'after-pointer-enter'],
+      [' stable target', 'stable-target']] as const;
+    const phase = phases.find(([suffix]) => message.startsWith(prefix + suffix + '; facts='));
+    if (!phase) return unavailable;
+    const encoded = message.slice((prefix + phase[0] + '; facts=').length);
+    if (encoded.length > 1024) return unavailable;
+    const parsed: unknown = JSON.parse(encoded);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return unavailable;
+    const facts = parsed as Record<string, unknown>;
+    const flags = ['disabled', 'ariaDisabled', 'pointerEventsNone', 'centerInViewport', 'hitPresent'] as const;
+    const keys = Object.keys(facts);
+    if (keys.length !== 6 || keys.some(key => key !== 'matches' && !flags.some(flag => key === flag)) ||
+        typeof facts.matches !== 'number' || !Number.isSafeInteger(facts.matches) ||
+        facts.matches < 0 || facts.matches > 256 || flags.some(key => typeof facts[key] !== 'boolean'))
+      return unavailable;
+    const result = { schemaVersion: 1, status: 'available', source: 'retained-target-read-failure',
+      atomicWithFailure: false, site: 'save-only-create', phase: phase[1],
+      facts: { matches: facts.matches, disabled: facts.disabled, ariaDisabled: facts.ariaDisabled,
+        pointerEventsNone: facts.pointerEventsNone, centerInViewport: facts.centerInViewport, hitPresent: facts.hitPresent } };
+    return Buffer.byteLength(JSON.stringify(result), 'utf8') <= 1024 ? result : unavailable;
+  } catch { return unavailable; }
 }

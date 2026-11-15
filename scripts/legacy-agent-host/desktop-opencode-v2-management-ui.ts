@@ -198,7 +198,7 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
     }
     const selected = scope === 'global' ? modelA : modelB;
     await originalStep(scope === 'global' ? 'global-default' : 'project-default',
-      `${dialog} [data-testid=${JSON.stringify('runtime-provider-model-row-' + selected)}] button[aria-label=${JSON.stringify('Select: ' + selected.split('/')[1])}]`,
+      `${dialog} [data-testid=${JSON.stringify('runtime-provider-model-row-' + selected)}] button[aria-label=${JSON.stringify('Select: ' + selected.split('/')[1] + ': Test this model successfully before using it.')}]`,
       'select original ' + scope + ' default once');
   };
   await choose('global'); await modelsTab(); await defaultId('base', modelA); await defaultId('project', modelA);
