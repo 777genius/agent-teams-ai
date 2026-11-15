@@ -262,7 +262,9 @@ export async function runDesktopComposerUiSmoke(
         const renderer = await cdp.evaluate(`(() => {
           const state=window.__agentTeamsDevStore?.getState?.();
           const team=state?.selectedTeamData;
-          const messages=Array.isArray(team?.messages)?team.messages:[];
+          const rawMessages=state?.selectedTeamName &&
+            state.teamMessagesByName?.[state.selectedTeamName]?.canonicalMessages;
+          const messages=Array.isArray(rawMessages)?rawMessages:[];
           const members=Array.isArray(team?.members)?team.members:[];
           const alice=members.find(member=>member.name==='alice');
           const direct=messages.filter(message=>message.from==='user'&&message.to==='alice');

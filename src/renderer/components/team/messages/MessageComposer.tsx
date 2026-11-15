@@ -627,8 +627,13 @@ const MemberMessageComposer = ({
     disabled: isContextSwitching || sending || isLaunchBlocking,
     isCrossTeam,
   });
+  // Only the existing canonical Owner-authorized message cache can identify
+  // the current human DM. TeamViewSnapshot has no message feed; optimistic
+  // editor echoes cannot establish a native suggestion's original source.
   const conversationMessages = useStore(state =>
-    state.selectedTeamName === teamName ? state.selectedTeamData?.messages : undefined
+    state.selectedTeamName === teamName
+      ? state.teamMessagesByName[teamName]?.canonicalMessages
+      : undefined
   );
   const latestDirectMessageId = useMemo(() => {
     const to = normalizeConversationParticipant(effectiveRecipient);
