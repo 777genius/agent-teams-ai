@@ -74,7 +74,7 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
     const before = new Set((await commands()).map(row => row.commandId));
     model.begin(step);
     await ui.scrollTo(selector, label); await ui.click(selector, label);
-    // The original effect is never resent. Only its durable receipt is read until its own deadline.
+    // The original effect is never resent. Default intents also join their existing saving presentation.
     const deadline = Date.now() + 250_000;
     let receipt: Awaited<ReturnType<typeof commands>>[number] | undefined;
     do {
@@ -86,7 +86,21 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
       const selected = current[0];
       if (selected && !selected.resourceHeld && (selected.phase === 'completed' ||
           selected.kind === 'credential.set' && selected.phase === 'held' && selected.terminalRejection === true)) {
-        receipt = selected; break;
+        let intentComplete = true;
+        if (step === 'global-default' || step === 'project-default') {
+          assert.ok(Date.now() < deadline, 'original default intent remains within its deadline');
+          const modelId = step === 'global-default' ? modelA : modelB;
+          const row = dialog + ' [data-testid=' + JSON.stringify('runtime-provider-model-row-' + modelId) + ']';
+          intentComplete = await cdp.evaluate('(() => { const rows=[...document.querySelectorAll(' +
+            desktopJsLiteral(row) + ')]; if(rows.length!==1)return false;' +
+            'const buttons=[...rows[0].querySelectorAll("button[aria-pressed]")]; if(buttons.length!==1)return false;' +
+            'const button=buttons[0], rect=button.getBoundingClientRect();' +
+            'return rect.width>0&&rect.height>0&&button.getAttribute("aria-pressed")==="true"&&' +
+            '!button.querySelector(":scope > svg.animate-spin"); })()') === true;
+          options.assertOwnedRenderer();
+          assert.ok(Date.now() < deadline, 'original default intent completes before its deadline');
+        }
+        if (intentComplete) { receipt = selected; break; }
       }
       await new Promise<void>(resolve => setTimeout(resolve, 100));
     } while (Date.now() < deadline);
