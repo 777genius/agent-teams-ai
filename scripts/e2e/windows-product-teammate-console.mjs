@@ -37,6 +37,7 @@ const proofs = new Map();
 const expected = new Map();
 let app;
 let appBirth;
+let mainBirth;
 let client;
 let mainInspector;
 let model;
@@ -217,6 +218,10 @@ async function run() {
     win.on('blur', () => { globalThis.__winProductFocus.blur++; });
     return true;
   })()`);
+  const actualMainPid = await mainInspector.evaluate('globalThis.__winProductFocus.pid');
+  mainBirth = await getProcess(actualMainPid);
+  assert(mainBirth?.command?.toLowerCase().includes('electron.exe'),
+    'Owned Electron Main Windows process birth/identity unavailable');
   phase = 'real-product-team-create';
   const request = {
     teamName, cwd: projectPath, providerId: 'anthropic', model: 'claude-sonnet-4-6',
@@ -294,17 +299,47 @@ try {
   }
   await mainInspector?.close().catch(() => undefined);
   await client?.close().catch(() => undefined);
-  if (app?.pid && appBirth && await ownedStillAlive(appBirth).catch(() => false)) {
-    const verify = await getProcess(app.pid);
-    if (verify?.creation === appBirth.creation && verify.command.includes('dev-with-runtime.mjs')) {
-      const killed = spawnSync('taskkill.exe', ['/PID', String(app.pid), '/T', '/F'], {
+  let cleanupOk = true;
+  // The dev launcher can exit before Electron or a native teammate does.
+  // Verify each original process birth and command before touching its PID;
+  // never kill unknown/recycled PIDs or discard a still-in-use test profile.
+  for (const { identity, marker } of [
+    { identity: appBirth, marker: 'dev-with-runtime.mjs' },
+    { identity: mainBirth, marker: 'electron.exe' },
+    { identity: originalMember, marker: teamName },
+  ]) {
+    if (!identity) continue;
+    try {
+      const live = await getProcess(identity.pid);
+      if (!live) continue;
+      if (live.creation !== identity.creation ||
+          !live.command.toLowerCase().includes(marker.toLowerCase()))
+        throw new Error('Original Windows process identity changed');
+      const killed = spawnSync('taskkill.exe', ['/PID', String(identity.pid), '/T', '/F'], {
         windowsHide: true, timeout: 15_000, encoding: 'utf8',
       });
-      if (killed.error || killed.status !== 0) process.exitCode = 1;
+      if (killed.error || killed.status !== 0) {
+        if (await ownedStillAlive(identity))
+          throw new Error('Original Windows process tree termination failed');
+      }
+      if (await ownedStillAlive(identity))
+        throw new Error('Original Windows PID survived verified termination');
+    } catch (error) {
+      cleanupOk = false;
+      process.stderr.write('Owned Windows E2E cleanup failed: ' + String(error) + '\\n');
     }
   }
-  await model?.close().catch(() => { process.exitCode = 1; });
-  if (process.env.WINDOWS_PRODUCT_CONSOLE_KEEP !== '1') {
-    await rm(root, { recursive: true, force: true }).catch(() => { process.exitCode = 1; });
+  await model?.close().catch(() => { cleanupOk = false; });
+  if (cleanupOk && process.env.WINDOWS_PRODUCT_CONSOLE_KEEP !== '1') {
+    await rm(root, { recursive: true, force: true }).catch(() => { cleanupOk = false; });
+  }
+  if (!cleanupOk) {
+    process.exitCode = 1;
+    try {
+      const receipt = JSON.parse(await readFile(receiptPath, 'utf8'));
+      await writeFile(receiptPath, JSON.stringify({
+        ...receipt, success: false, cleanupConfirmed: false,
+      }, null, 2) + '\\n');
+    } catch { /* The original failure and process evidence stay in CI logs. */ }
   }
 }
