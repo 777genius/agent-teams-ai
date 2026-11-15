@@ -1,0 +1,49 @@
+✔ ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn (932.481421ms)
+✔ never-opened lead and an original no-allocation Skip retain an empty conversation without creating Runtime state (119.277316ms)
+✔ ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads (711.785593ms)
+✔ task recovery never returns a prior receipt for a changed command with unavailable attachments (99.295115ms)
+✔ mixed Host boots V2 Session SPI profile without invoking V1 management registration (779.123407ms)
+✔ two captured teams may share an original run ID without sharing launch ownership (98.057977ms)
+✔ cold unavailable Team history retains original resources while an independent Team still captures and runs (681.513561ms)
+✔ a superseded unstarted capture cannot inject its prompt into a newer launch with the same product revision (98.974913ms)
+✔ saved configuration captures fresh native identities, preserves historical launches and replays after cold restart (265.759191ms)
+✔ capture rejects stale product sources, missing recipes and protected args before native allocation (32.817472ms)
+✔ NDJSON saved roster edits preserve product APIs across stale runtime capture/restart without allocation (46.659094ms)
+✔ NDJSON roster replacement refuses live allocation, then saves only after confirmed stop (2652.890503ms)
+✔ captured-run OpenCode live Add reaches its original model probe and preserves failed-probe refusal (779.645218ms)
+✔ NDJSON unknown native cleanup keeps the saved roster and its original grants bound (370.496728ms)
+✔ stopped fresh capture admits its exact probe profile and cold replay retains the original check (158.840302ms)
+✔ Team model preflight requires current control authority and exact launch selection before any provider allocation (80.526928ms)
+✔ NDJSON human messages auto-admit once and terminal events pump the next input without dispatch RPC (137.95542ms)
+✔ member HTTP MCP and Desktop transport share canonical Tasks and enforce member/scope authority (157.935644ms)
+✔ runtime projections redact private provider identities; missing human control and revoked member grants refuse allocation (156.902144ms)
+✔ dispose seals a pending provider open before late allocation and retains unknown custody as cleanup debt (51.403689ms)
+✔ pending open cleanup precedes readiness: late-driver (65.672028ms)
+✔ pending open cleanup precedes readiness: unknown-driver (54.833907ms)
+✔ pending open cleanup precedes readiness: factory-rejection (48.816396ms)
+✔ pending provider cleanup survives stop before dispose (55.614499ms)
+✔ pending provider cleanup survives reconcile before dispose (50.183382ms)
+✔ allocated driver checkpoint and close precede captured process cleanup (81.482882ms)
+✔ expired MCP proof holds the next admitted input; disposing a never-opened profile performs no allocation (163.069489ms)
+✔ Codex Host cost reports retained usage once without native dispatch or private snapshot leakage (674.799483ms)
+ℹ TEST restore state: /tmp/TEST-runtime-team-host-JDCb6G
+✔ activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps (624.296882ms)
+✔ activity snapshot/feed recheck current human read grants and reject authority overrides (45.236806ms)
+✔ production aggregate launch RPC preserves configured and missing roster members and idempotent scoped progress (120.749924ms)
+✔ launch options are durably selected before provider creation and replay survives Host restart without new allocation (162.856461ms)
+✔ launch options refuse allocated state and compile every selected provider before any publication or allocation (194.129006ms)
+✔ selected checkpoint resumes through a new Host/generation, retains Team delivery ownership and fences stale controls (944.758199ms)
+ℹ TEST restore state: /tmp/TEST-runtime-team-host-GpoBMn
+ℹ TEST restore state: /tmp/TEST-runtime-team-host-f8vu0l
+✔ Runtime projection privately observes only evaluated readiness operands and preserves the original view and errors (1.552702ms)
+✔ the original passive Runtime projection receiver writes only bounded exit facts and keeps ambiguous evidence unknown (32.012171ms)
+✔ source Scenario distinguishes a genuinely released never-prepared reservation from physical HANDLE proof (55.539327ms)
+✔ full original Process verifier accepts only authority-bound no-dispatch evidence without losing any jobs (50.717773ms)
+ℹ tests 38
+ℹ suites 0
+ℹ pass 38
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12708.839925

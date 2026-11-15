@@ -1,0 +1,12 @@
+
+ RUN  v3.2.6 /workspace/scratch/c714f5bce554/agent-teams-reconciled-local
+
+ ✓ tools/owned-process-broker/nativeGateContext.test.ts (3 tests) 176ms
+ ✓ tools/owned-process-broker/protocol.test.ts (47 tests) 109ms
+ ✓ tools/owned-process-broker/nativeGateEvents.test.ts (3 tests) 4ms
+
+ Test Files  3 passed (3)
+      Tests  53 passed (53)
+   Start at  23:49:51
+   Duration  2.85s (transform 562ms, setup 0ms, collect 1.81s, tests 289ms, environment 1ms, prepare 418ms)
+

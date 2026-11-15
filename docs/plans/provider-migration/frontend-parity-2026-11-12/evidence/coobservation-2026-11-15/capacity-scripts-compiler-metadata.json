@@ -1,0 +1,29 @@
+{
+  "argv": [
+    "pnpm",
+    "typecheck:legacy-host-scripts"
+  ],
+  "cwd": "/workspace/scratch/c714f5bce554/agent-teams-reconciled-local",
+  "sourceHead": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+  "sourceTree": "efc034470cca611cf4ebd4fa5ecb75328c4c94ae",
+  "sourceStatusBefore": "",
+  "node": "v24.21.0",
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpm": "11.22.0",
+  "configBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+  "prerequisites": {
+    "localTransportPassed": 13,
+    "mainCiPassed": 81,
+    "mainCiRun": 43763317915,
+    "mainCiJob": 132962734518,
+    "sameHead": true
+  },
+  "startedAt": "2026-11-15T21:41:24.076187+00:00",
+  "completedAt": "2026-11-15T21:41:26.039902+00:00",
+  "exitCode": 0,
+  "sourceStatusAfter": "",
+  "bytes": 97,
+  "sha256": "497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015",
+  "qualification": "The one further capacity-R1-authorized canonical whole scripts compiler invocation after actual original Host/Main GREEN, on exact9b56. No local Main, workspace or dedicated backend compiler retry."
+}

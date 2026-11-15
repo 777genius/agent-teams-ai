@@ -1,0 +1,9 @@
+$ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content tools/owned-process-broker/nativeEmulatedSourceScenario.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts
+
+/workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/runtime-team-host.test.ts
+  3792:98  error  Spaces are hard to count. Use {10}  no-regex-spaces
+
+✖ 1 problem (1 error, 0 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
+[ELIFECYCLE] Command failed with exit code 1.

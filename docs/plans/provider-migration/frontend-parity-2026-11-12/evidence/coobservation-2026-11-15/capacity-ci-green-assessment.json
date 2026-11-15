@@ -1,0 +1,102 @@
+{
+  "schema": "capacity-main-original-ci-green-assessment-v1",
+  "sourceHead": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+  "sourceTree": "efc034470cca611cf4ebd4fa5ecb75328c4c94ae",
+  "pullRequest": 1207,
+  "runId": 43763317915,
+  "attempt": 1,
+  "event": "pull_request",
+  "jobId": 132962734518,
+  "platform": "darwin-x64",
+  "jobConclusion": "success",
+  "main": {
+    "files": 8,
+    "passed": 81,
+    "failed": 0,
+    "skipped": 0,
+    "capturedClient": {
+      "total": 33,
+      "passed": 33,
+      "failed": 0
+    },
+    "requiredCases": "Both 8/7-slot unusable handshake refusals and reserve+1 real work/control/confirmed-exit case pass"
+  },
+  "hostContracts": {
+    "files": 18,
+    "total": 163,
+    "passed": 161,
+    "failed": 0,
+    "skipped": 2
+  },
+  "protocol": {
+    "files": 3,
+    "passed": 53,
+    "failed": 0,
+    "skipped": 0
+  },
+  "posix": {
+    "passed": 23,
+    "failed": 0,
+    "skipped": 0
+  },
+  "raw": {
+    "bytes": 132033,
+    "sha256": "913c2bd7e4ea5cf9f4b722ba068ad3ff0fe0101511f438abc9893a064880d326"
+  },
+  "artifact": {
+    "id": 14181348063,
+    "bytes": 12411,
+    "sha256": "12f42453f10d90e592cea513e0bb0a1b959306601112929a953a0268e56a15ce",
+    "crc": true,
+    "safeUniquePaths": true,
+    "symlinks": false,
+    "completeMemberCount": 6,
+    "payloadProjectionBytes": 40695,
+    "payloadProjectionSha256": "1c43cc2e9ebc094daa385e4c4eac9b7e96ffa866e3c6974824ecf2d03f18cdcd"
+  },
+  "localTransport": {
+    "sourceHead": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+    "passed": 13,
+    "failed": 0,
+    "skipped": 0,
+    "manifestBlob": "512a1d97f06e2f22a4c95ba323ab35825e69aad5"
+  },
+  "qualification": "Actual original resulting-source full Main GREEN and earlier local full transport GREEN satisfy only the capacity runtime prerequisite for its one further canonical local scripts compiler invocation. No local Main retry was run. This one platform job and scoped artifact do not qualify the other Process tuples, native Windows, Darwin native admission/P09, packaged/Desktop/P08, vendor inference, release or whole M16.",
+  "frozenSources": [
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "sha": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+      "size": 30399
+    },
+    {
+      "path": "packages/legacy-agent-host/src/index.ts",
+      "sha": "755158699496506a62132c540f19b225c5a6222d",
+      "size": 11111
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/transport.test.ts",
+      "sha": "24c83547be0ee43bb6f2481618a4356a3855d832",
+      "size": 23731
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "sha": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+      "size": 32767
+    },
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "sha": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+      "size": 51981
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "sha": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+      "size": 22544
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "sha": "1d1133876a20ca7541d04b4c9d8d86e4e4c599bc",
+      "size": 53900
+    }
+  ]
+}

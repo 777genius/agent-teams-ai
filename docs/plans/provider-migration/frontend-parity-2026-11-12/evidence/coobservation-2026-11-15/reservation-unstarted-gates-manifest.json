@@ -1,0 +1,41 @@
+{
+  "sourceHead": "be75ccfd37531be8bf94bffc6427362df6b9ddca",
+  "sourceTree": "4f332777ae1fd94cf0f3cfe01480e302dbf4666e",
+  "statusBefore": "",
+  "node": "v24.21.0",
+  "pnpm": "11.22.0",
+  "priorManifestSha256": "2e82145045dc97d628b75292a46b36cb5413a2c3b96119375147a7c6f36c2c55",
+  "qualification": "Only the remaining originally authorized gates that never started after Host test-type compiler Killed137. No Host test-type compiler retry or changed flags; that result remains unknown/CI-pending. No extra scripts/workspace/backend compiler or local Main runtime.",
+  "steps": [
+    {
+      "name": "reservation-retained-host-types.log",
+      "argv": [
+        "node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tools/owned-process-broker/tsconfig.retained-host.json"
+      ],
+      "startedAt": "2026-11-15T21:53:21.290411+00:00",
+      "completedAt": "2026-11-15T21:53:22.325159+00:00",
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "reservation-scoped-lint.log",
+      "argv": [
+        "pnpm",
+        "lint:fast:files",
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+      ],
+      "startedAt": "2026-11-15T21:53:22.325701+00:00",
+      "completedAt": "2026-11-15T21:53:25.349184+00:00",
+      "exitCode": 1,
+      "bytes": 571,
+      "sha256": "ee23e7b3214f7dc98580b0da955747e14f4131eda99a1da9d0fcc2d556831906"
+    }
+  ],
+  "statusAfter": ""
+}

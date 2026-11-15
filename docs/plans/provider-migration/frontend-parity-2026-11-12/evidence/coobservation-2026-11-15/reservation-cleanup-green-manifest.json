@@ -1,0 +1,85 @@
+{
+  "sourceHead": "be75ccfd37531be8bf94bffc6427362df6b9ddca",
+  "sourceTree": "4f332777ae1fd94cf0f3cfe01480e302dbf4666e",
+  "statusBefore": "",
+  "sourceBlobs": {
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts": "9f5fb6750f46d7c67d7d5f9c59dbbfe49519f3db",
+    "tools/owned-process-broker/nativeEmulatedSourceProfile.ts": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts": "60548e4b0477924fd2c068283b9372f21946b198",
+    ".github/workflows/host-process-acceptance.yml": "70202d22a5840401a00025cd60b797c514f3e455",
+    "packages/legacy-agent-host/src/index.ts": "755158699496506a62132c540f19b225c5a6222d",
+    "packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts": "10e1a457bb65a136128eb1db5176a4701d2fe4e2",
+    "packages/legacy-agent-host/src/owned-process/windowsBroker.ts": "32b3315f04d91ae6da375bcca710e16948e09ad3"
+  },
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "AGENT_BACKEND_TEST_NODE": null,
+  "steps": [
+    {
+      "name": "reservation-new-producer-host-build.log",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@agent-teams/legacy-agent-host",
+        "build"
+      ],
+      "startedAt": "2026-11-15T21:49:34.537625+00:00",
+      "completedAt": "2026-11-15T21:49:38.590759+00:00",
+      "exitCode": 0,
+      "bytes": 182,
+      "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789"
+    },
+    {
+      "name": "reservation-cleanup-green.log",
+      "argv": [
+        "node",
+        "--test",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+      ],
+      "startedAt": "2026-11-15T21:49:38.591936+00:00",
+      "completedAt": "2026-11-15T21:49:51.358377+00:00",
+      "exitCode": 0,
+      "bytes": 4670,
+      "sha256": "ab009c7a53dc21a5f200f20744e4e29005ac9a979a34d2ca590e1127d9d9e329"
+    },
+    {
+      "name": "reservation-protocol.log",
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--config",
+        "tools/owned-process-broker/vitest.config.ts"
+      ],
+      "startedAt": "2026-11-15T21:49:51.359659+00:00",
+      "completedAt": "2026-11-15T21:49:54.695864+00:00",
+      "exitCode": 0,
+      "bytes": 473,
+      "sha256": "143b695b20a444e8bdc2164764dbb17eb8025a202737d55c8423c53f246e0738"
+    },
+    {
+      "name": "reservation-host-test-types.log",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@agent-teams/legacy-agent-host",
+        "typecheck:test"
+      ],
+      "startedAt": "2026-11-15T21:49:54.696353+00:00",
+      "completedAt": "2026-11-15T21:50:12.350701+00:00",
+      "exitCode": 137,
+      "bytes": 339,
+      "sha256": "e8f2865728f89e4639cb99c2f11d6c567061043ce3d14260191906db87d8abd3"
+    }
+  ],
+  "qualification": "Full original reservation runtime file and published scoped protocol/type/lint gates on the exact two reviewed producer leaves. No local Main, scripts, workspace or dedicated backend compiler attempt.",
+  "builtCustody": {
+    "path": "packages/legacy-agent-host/dist/owned-process/RetainedWindowsCustody.js",
+    "bytes": 19660,
+    "sha256": "b7cfa18b34e4fe8c09e0eedf955dc7bf1d90434934a8b61de248b73140be77ce"
+  },
+  "statusAfter": ""
+}

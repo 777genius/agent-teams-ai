@@ -1,0 +1,52 @@
+{
+  "schema": "reservation-cleanup-partial-green-assessment-v1",
+  "sourceHead": "be75ccfd37531be8bf94bffc6427362df6b9ddca",
+  "sourceTree": "4f332777ae1fd94cf0f3cfe01480e302dbf4666e",
+  "build": {
+    "exitCode": 0
+  },
+  "runtime": {
+    "passed": 38,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "allNewDownstreamNegativeAssertionsCompleted": true,
+    "sha256": "ab009c7a53dc21a5f200f20744e4e29005ac9a979a34d2ca590e1127d9d9e329"
+  },
+  "protocol": {
+    "files": 3,
+    "passed": 53,
+    "failed": 0,
+    "skipped": 0,
+    "sha256": "143b695b20a444e8bdc2164764dbb17eb8025a202737d55c8423c53f246e0738"
+  },
+  "hostTestTypes": {
+    "exitCode": 137,
+    "output": "Killed; no TypeScript diagnostics",
+    "cause": "unknown",
+    "localRetry": false,
+    "qualification": "Unqualified. Preserve the original resulting-source CI gate; no local retry or modified flags."
+  },
+  "retainedHostTypes": {
+    "exitCode": 0,
+    "bytes": 0,
+    "qualification": "Different originally authorized project, first invocation after the earlier pipeline stopped; not a retry of Host test types."
+  },
+  "scopedLint": {
+    "exitCode": 1,
+    "errors": 1,
+    "warnings": 0,
+    "rule": "no-regex-spaces",
+    "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+    "line": 3792,
+    "repairScope": "Replace only the new test's ten literal ASCII spaces in its anchored regex with the equivalent literal-space {10} quantifier. No parser behavior, case, assertion or producer change."
+  },
+  "unstarted": [
+    "guard:source-file-size",
+    "guard:team-provisioning-architecture",
+    "meaningful commit diff check"
+  ],
+  "cleanBefore": true,
+  "cleanAfter": true,
+  "overall": "PARTIAL, not all-gates GREEN. Runtime/protocol and retained-host types are actual successes; Host test-type compiler is unknown and lint requires the narrow reviewed normalization. No native Windows/Desktop/release or readiness-failure promotion."
+}

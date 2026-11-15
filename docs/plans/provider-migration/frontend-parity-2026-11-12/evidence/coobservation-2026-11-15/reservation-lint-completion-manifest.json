@@ -1,0 +1,64 @@
+{
+  "sourceHead": "2f1a2d0573c68a273187fa977835929bf7ea3793",
+  "sourceTree": "4710fbfe357057bf683f30942152e0c0d3ae9822",
+  "statusBefore": "",
+  "node": "v24.21.0",
+  "pnpm": "11.22.0",
+  "qualification": "One reviewed regex spelling correction, same10 ASCII-space removal. Only scoped lint and the three original unstarted guards; no runtime/protocol/type/compiler repeat. Previousbe75runtime38/protocol53/retainedtypesPASS stay source-bound; Hosttesttypes137 remains unknown and has no local retry.",
+  "steps": [
+    {
+      "name": "reservation-scoped-lint-normalized.log",
+      "argv": [
+        "pnpm",
+        "lint:fast:files",
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+      ],
+      "startedAt": "2026-11-15T21:56:52.827811+00:00",
+      "completedAt": "2026-11-15T21:56:55.439421+00:00",
+      "exitCode": 0,
+      "bytes": 226,
+      "sha256": "d5980fc7cf3722511ff7d3f3f4352a21b03ada946b53765c12dac5417912af3a"
+    },
+    {
+      "name": "reservation-source-size.log",
+      "argv": [
+        "pnpm",
+        "guard:source-file-size"
+      ],
+      "startedAt": "2026-11-15T21:56:55.440120+00:00",
+      "completedAt": "2026-11-15T21:56:56.607024+00:00",
+      "exitCode": 0,
+      "bytes": 249,
+      "sha256": "961492c3971768c144057514917b4179f695089b172a31e2d3d3d62b9efdc8f3"
+    },
+    {
+      "name": "reservation-provisioning.log",
+      "argv": [
+        "pnpm",
+        "guard:team-provisioning-architecture"
+      ],
+      "startedAt": "2026-11-15T21:56:56.607781+00:00",
+      "completedAt": "2026-11-15T21:56:57.161777+00:00",
+      "exitCode": 0,
+      "bytes": 245,
+      "sha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c"
+    },
+    {
+      "name": "reservation-source-diff.log",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "94f94994c7a05c16cc4eb10cbb4655e28a6c4c7f",
+        "2f1a2d0573c68a273187fa977835929bf7ea3793"
+      ],
+      "startedAt": "2026-11-15T21:56:57.162321+00:00",
+      "completedAt": "2026-11-15T21:56:57.172043+00:00",
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "statusAfter": ""
+}
