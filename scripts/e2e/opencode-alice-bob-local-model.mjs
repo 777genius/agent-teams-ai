@@ -346,6 +346,7 @@ catch (error) {
   if (launched && !stopSubmitted && client)
     await api(`window.electronAPI.teams.stop(${literal(teamName)})`).catch(() => undefined);
   await client?.close().catch(() => undefined);
+  let processGroupRetired = true;
   if (app?.pid) {
     // detached:true creates this test's own process group. The launcher may exit
     // before Electron/Vite descendants, so inspect the GROUP, not app.signalCode.
@@ -367,11 +368,13 @@ catch (error) {
       await settleGroup(30);
       if (groupAlive()) throw new Error('Test-owned Electron process group did not retire');
     } catch (error) {
+      processGroupRetired = false;
       process.stderr.write('Owned E2E process cleanup failed: ' + String(error) + '\n');
       process.exitCode = 1;
     }
   }
   await model?.close().catch(() => { process.exitCode = 1; });
-  if (process.env.OPENCODE_PEER_E2E_KEEP !== '1')
+  // Never delete the disposable profile while an owned descendant may use it.
+  if (processGroupRetired && process.env.OPENCODE_PEER_E2E_KEEP !== '1')
     await rm(root, { recursive: true, force: true }).catch(() => { process.exitCode = 1; });
 }
