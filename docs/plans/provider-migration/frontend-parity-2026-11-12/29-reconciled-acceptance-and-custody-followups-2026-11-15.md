@@ -2030,3 +2030,53 @@ Root's actual incoming geometry-regression check remains separately scoped: the 
 Publish and fully read back this independently reviewed documentation-only R1 before applying either new hunk. First run the new tests against unchanged4d1 helper and retain their specific owner/cutoff RED. Then apply only the exact one-line correction and require the complete original smoke file, original legacy-host-scripts compiler, focused lint, source-size/provisioning guards and diff check. Independent exact R2 has reviewed the immutable source/test tree; any changed bytes require renewed review before source publication. Local GREEN is limited to tested input admission. Original resulting-source Cross-team/owner-routing, Selection/Installer and every affected shared-helper Desktop/packaged gate still require their actual effects, readback, screenshots and physical cleanup.
 
 Preserve the entire incoming document prefix and all author history. Every commit is immediately pushed with a fresh expected-SHA lease and full readback; later PR integration is an ordinary fast-forward. Retain useful current665 CI while preparing the reviewed continuation. Draft/base, existing source caps/test exemptions, frozen frontend/provider pins, original custody/currentness/deadlines/no-replay, P08/P09 classifications and no-real-Claude-or-Codex/no-main/no-Ready/no-release/no-default-activation/no-Stage2 boundaries remain unchanged.
+
+
+## Further original 665 completion evidence and reviewed continuation
+
+The following records qualify only the original source `665599512298f6de64c73ebbfe325166647d13ff`. They do not transfer PASS to the later reviewed continuation `18eb3615286d8dc7e443987e14859f4c5c0c5fa2`, whose source tree is `724415ec568fdd2889619f81cda940aa4495fd7e`.
+
+### Complete original offline frontend shards
+
+All four original [Host-emulated workflow](https://github.com/777genius/agent-teams-ai/actions/runs/43714348666) shards completed successfully with checkout/source verification, workspace Node26.12.1, captured Host Node24.21.0 and Vitest3.2.6. Their original exclusions and skipped cases remain unqualified.
+
+| Original shard / job | Passing / skipped files | Passing / skipped tests |
+| --- | ---: | ---: |
+| 1 / [132812543216](https://github.com/777genius/agent-teams-ai/actions/runs/43714348666/job/132812543216) | 541 / 0 | 6204 / 6 |
+| 2 / [132812543182](https://github.com/777genius/agent-teams-ai/actions/runs/43714348666/job/132812543182) | 539 / 2 | 6722 / 18 |
+| 3 / [132812542869](https://github.com/777genius/agent-teams-ai/actions/runs/43714348666/job/132812542869) | 538 / 3 | 6251 / 7 |
+| 4 / [132812543148](https://github.com/777genius/agent-teams-ai/actions/runs/43714348666/job/132812543148) | 537 / 2 | 6587 / 7 |
+
+The combined reports contain 2162 distinct file paths: 2155 passing files and seven skipped files; 25,764 passing tests and 38 skipped tests. No failed or aborted/cancelled run is recorded; the text summary does not expose a numeric cancellation counter. These logs have no complete before/after source-freeze manifest. Shard4 includes the original 253-case Team slice suite; shard2 includes all20 aggregate-capacity and36 context-race cases, including the original40-snapshot-call and HOLD/fatal boundaries.
+
+### Original finite Desktop lanes
+
+The four official ZIPs below match their API/upload metadata. Each receipt names a clean665 checkout; all1692 before/after source pins are equal and were independently compared with the corresponding Git bytes, with zero mismatches. No real Claude/Codex executable was invoked.
+
+| Original lane / job | Artifact / ZIP bytes | ZIP SHA256 |
+| --- | --- | --- |
+| Management / [132812543264](https://github.com/777genius/agent-teams-ai/actions/runs/43714348666/job/132812543264) | 14164252267 / 1114706 | `b5121cbc0b1a7ed27ce872afd2929870bda80a5ce8a4f70cfc4ea934aa1461c4` |
+| Collaboration / [132812543188](https://github.com/777genius/agent-teams-ai/actions/runs/43714348666/job/132812543188) | 14163729668 / 1444039 | `5b8d2efc82dde09fc2b7d34c81f880e6a16bf4926d35a3707685b38a2946e5bb` |
+| Claude / [132812543176](https://github.com/777genius/agent-teams-ai/actions/runs/43714348666/job/132812543176) | 14164582334 / 3079674 | `d21ffaa0d666088de5b815a5a8eb57d98be1d9b54a64347ff54872e3888d19dc` |
+| Saved import / [132812543167](https://github.com/777genius/agent-teams-ai/actions/runs/43714348666/job/132812543167) | 14165550258 / 1150323 | `d787037f92b4a615165eaaeeab971f10597d8075f0bfa5f3664e88c9a1d080dc` |
+
+Management completes65 original UI steps, save-only model/effort persistence, one API-key write/forget, and both OAuth cancellations with released resources and no credential. The lazy saved-key detail change is actually present in Settings blob`ddef9d560b53af7c9f4be3af7a65ba841a17f2a7`. All six retained PNGs were inspected; post-cancel model placeholders are not a claim of fully settled model UI. Main exits0/no signal, the original group is empty, the captured Host was observed and is absent, and all three finite-peer PIDs are absent.
+
+Collaboration completes107 original UI steps including Add, group/direct/cross replies, attachment bytes, reactions, Remove, Restore, Stop and reload. All four retained member generations finish closed/released; all eight runtime inputs succeeded. Four model probes are separate, and30 total launches include management/catalog peers rather than30 runtime generations. The four original member PIDs are absent; Main exits0/no signal, the original group is empty, the captured Host was observed and is absent, and all30 finite-peer PIDs are absent. The stopped screenshot simultaneously shows offline/Launch and stale finishing-launch progress; reload clears that progress. Group/restored screenshots already show one member still joining, but the receipt does not retain the renderer-store transition needed to attribute its precise cause. Original665 lacks the later02fd Stop projection and stronger final UI oracle; this PASS does not qualify those corrections.
+
+Claude completes209 original UI steps, including both original Back interactions, streaming, permissions/questions, compaction, skills, Review, cost/statistics and reload without replay. The original real cron tick starts at13:51:23.004 after nextRunAt13:51:23.000, with zero auto Run-now actions, then the schedule is paused and deleted. The active held input remains unknown/terminal-unconfirmed after Stop, while its session is closed/released and original PID5089 is absent. Both standalone PIDs and all eight finite-peer PIDs are absent; Main exits0/no signal, group empty, captured Host observed/absent, no post-Quit sentinel invocation. All21 distinct PNG digests match, with four representative images inspected. The stopped frame still shows the old green launch progress beside offline/Launch; the later Stop correction is not present.
+
+Saved import completes72 original UI steps with the same original import after reload, no Launch Submit, no Team Runtime session/outbox allocation, unchanged seven original archive files, exact image/file/task-attachment bytes and destination/archive/gap Task references. Both finite model preflight probes complete with resourceHeld=false. All five PNG digests match and three representative images were inspected. Main exits0/no signal, original group empty, captured Host observed/absent, all ten finite-peer PIDs absent and zero post-Quit sentinel invocations. This is the legacy-format TEST saved-draft corpus; it does not qualify a genuine historical native donor, previously launched/cold import, M16, real vendor inference or Stage1.
+
+Receipt SHA256s are respectively `df0d4025808dd20fb8e2c2a783870ab5b386c8e833effee380673fae59ef01c6`, `899ba1381ecf33eb3b61c6de32795b05afccdf9c8af286093fa1ee0e87b790d9`, `1cbb9c7cba30224f3bb296fc2b9ebc7a3bb4589f976d0bb9c892dcf5934b8171` and `2673a71acae80d71bae2eb5ba135c4f09ffad34dec8d594a8349efb09e667453`.
+
+### Original packaged Darwin x64
+
+The original [packaged job132822671731](https://github.com/777genius/agent-teams-ai/actions/runs/43714348703/job/132822671731) and artifact14164359236 complete native PASS. ZIP346980bytes has SHA256`4ae7f641e130b9e961105a4f2ebe13d26cdee3a74441ecd2438d34c7eb6ee108`; native receipt SHA256`166b68a2a152da7de6f378178d7afc9086ad1481908645cb966fb2a6aabe113a`, controller `b6db5a6aa3587d7ee1b05f8cde62aa348947795adb5fb1b065ea2efb459d7a7c` and candidate manifest `7842a43f9f5ea4035db1d8cb207d9b42110f4a3cf1a7f696cec4c1ad6422b53a`. All four JSONs bind to665/darwin-x64, original615-file Host source digest`980292f528db3728a12ea0a869b2d73cd83055f2e9c22ac77712c35a109bc2ba`, and the retained candidate/ASAR/harness/Host-entry/Node/Bun/engine/custody/provider joins.
+
+All six original phases complete in197822ms with11 localhost-scripted model requests, no model failure, two clean Host exits, original Stop/released custody, cold restoration to a different generation and no model/tool replay; the tool file remains exactly ONE then TWO. Controller original-child exit0 names the Node harness child, not Electron Main. Source/bundle/legacy runtime restoration is complete. The manifest census contains120packages/8111files; original CI verifies payload bytes, while the retained ZIP does not contain that payload or a fresh independent per-PID census. The four JSONs contain no desktop screenshot or same-Main UI receipt. Keep desktopJourneyQualified/desktopQualified/vendorAuthQualified/releaseQualified false, coordination unqualified and P09 open. Darwin ARM retains its separately documented result and limits.
+
+### Publication and remaining gates
+
+The reviewed continuation from665 through18eb retains sixteen linear commits and every incoming author commit. The bounded integration preflight found13 changed paths, +415/−10, exact append-only plan prefixes and no unexpected source change. The incoming post-await authority guard was independently exercised by the complete original UI helper file:28PASS/0FAIL/0SKIP. P08's final three-source verification is recorded separately in Plan30. These checks authorize neither new scope nor qualification by inference. Keep useful original665 jobs running and preserve their actual results. Fresh remote leases/Draft/base checks and ordinary fast-forward publication remain required before resulting-source CI; original workspace typing/typed lint, affected Desktop/packaged journeys, Windows process/custody/currentness, P08 and P09 remain outstanding.
+
