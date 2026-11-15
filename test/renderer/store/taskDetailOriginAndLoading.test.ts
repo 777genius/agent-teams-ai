@@ -459,6 +459,61 @@ describe('task detail origin and loading postconditions', () => {
     }
   });
 
+  it('retains a visible read demand when its metadata read is superseded by a fresh read', async () => {
+    const store = createTestStore();
+    const teamName = hostTeamSelectionKey('TEST-metadata-handoff');
+    const identity = { contextId: 'local', teamName, taskId: 'X' };
+    const key = taskDetailKey(identity);
+    const base = snapshot('/TEST-metadata-handoff');
+    const metadata: TeamViewSnapshot = {
+      ...base,
+      teamName,
+      config: { ...base.config, name: teamName },
+      kanbanState: { ...base.kanbanState, teamName },
+    };
+    const full = { ...metadata.tasks[0], description: 'TEST retained full Task' };
+    const current = {
+      ...metadata,
+      tasks: [...metadata.tasks, { ...metadata.tasks[0], id: 'Y', subject: 'TEST latest metadata' }],
+    };
+    const first = deferred<TeamViewSnapshot>();
+    const next = deferred<TeamViewSnapshot>();
+    store.setState({ activeContextId: identity.contextId, selectedTeamName: teamName });
+    apiMock.teams.getData
+      .mockResolvedValueOnce(metadata)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(next.promise);
+    apiMock.teams.getTask.mockResolvedValueOnce(full);
+    await store.getState().ensureTaskDetail(identity);
+    expect(store.getState().taskDetailById[key]).toMatchObject({ phase: 'ready', full });
+    store.getState().setTaskDetailSurfaceInterest('TEST-dialog', identity);
+    store.getState().setTaskDetailVisibleResourceDemand('TEST-dialog', identity, 'detail', true);
+    store.getState().updateTaskDetailSessionPart(identity, 'commentText', 'TEST retained draft');
+    const detail = store.getState().ensureTaskDetail(identity);
+    const refresh = store.getState().refreshTeamData(teamName, { withDedup: false });
+    try {
+      first.resolve(metadata);
+      await detail;
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(3);
+      expect(apiMock.teams.getTask).toHaveBeenCalledTimes(1);
+      expect(store.getState().taskDetailById[key].full).toEqual(full);
+      expect(store.getState().taskDetailSessionById[key].commentText).toBe('TEST retained draft');
+      next.resolve(current);
+      await refresh;
+      expect(store.getState().teamDataCacheByName[teamName]?.tasks).toEqual(current.tasks);
+      expect(store.getState().taskDetailById[key].full).toEqual(full);
+      expect(store.getState().taskDetailSessionById[key].commentText).toBe('TEST retained draft');
+      expect(apiMock.teams.getTask).toHaveBeenCalledTimes(1);
+      expect(selectTaskDetailReadDemands(store.getState())).toContainEqual(
+        expect.objectContaining({ ...identity, visible: true, needsRead: true })
+      );
+    } finally {
+      first.resolve(metadata);
+      next.resolve(current);
+      await Promise.allSettled([detail, refresh]);
+    }
+  });
+
   it('waits for queued live metadata before reading a cold task behind a thin selection', async () => {
     const store = createTestStore();
     const identity = { contextId: 'local', teamName: 'shared-team', taskId: 'X' };

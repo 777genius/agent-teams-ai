@@ -446,6 +446,8 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   assert.equal((await rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend'))).find(row => row.id === taskId)?.status, 'completed');
   assert.equal((await rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend'))).find(row => row.id === automaticTaskId)?.status, 'completed');
 
+  await ui.scrollTo('button[aria-label="Back to chats"]', 'original Back to chats before held input');
+  await ui.click('button[aria-label="Back to chats"]', 'return to original chat list before held input');
   await ui.scrollTo('button[aria-label^="alice,"]', 'original lead chat before stop');
   await ui.click('button[aria-label^="alice,"]', 'open original lead chat before stop');
   const held = await send('TEST_UI_HOLD'); await visible('TEST held partial');

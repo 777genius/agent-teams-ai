@@ -649,6 +649,7 @@ jobs:
                 const core = rows.filter(row => !['stdin-ended', 'exited', 'exit', 'managed-configuration-read', 'policy-configured'].includes(row.event));
                 assert.deepEqual(core.map(row => row.event), birth.provider === 'claude'
                   ? ['launch', 'started', 'initialized', 'input', 'terminal'] : ['launch', 'input', 'terminal']);
+                if (birth.provider !== 'claude') assert.equal(event('exit').length, 1);
                 for (const row of rows.filter(row => ['exited', 'exit'].includes(row.event))) {
                   assert.equal(row.code, 0); assert.ok(rows.indexOf(row) > rows.indexOf(terminal));
                 }
@@ -658,6 +659,7 @@ jobs:
                     assert.equal(one(name).sessionId, birth.sessionId); assert.equal(one(name).restored, false);
                   }
                   assert.equal(input.sessionId, birth.sessionId); assert.equal(typeof input.inputId, 'string');
+                  assert.ok(input.inputId.length > 0); assert.equal(input.wrapped, false);
                   assert.equal(terminal.inputId, input.inputId);
                   assert.equal(terminal.marker, 'Reply only OK. Do not use tools, access files or run commands.');
                   assert.equal(terminal.outcome, 'succeeded'); assert.equal(terminal.text, 'OK');
@@ -668,6 +670,7 @@ jobs:
                   assert.equal(terminal.marker, 'TEST_MODEL_PROBE');
                   if (birth.provider === 'codex') {
                     assert.equal(typeof input.turnId, 'string'); assert.equal(terminal.turnId, input.turnId);
+                    assert.ok(input.turnId.length > 0);
                     assert.equal(terminal.status, 'completed');
                     for (const row of event('managed-configuration-read')) {
                       assert.deepEqual(row.selectedServers, []); assert.ok(rows.indexOf(row) < rows.indexOf(input));
@@ -691,9 +694,39 @@ jobs:
                 assert.equal(probe.configRevision, probe.profileId);
                 assert.equal(probe.phase, 'completed'); assert.equal(probe.ok, true); assert.equal(probe.resourceHeld, false);
               }
+              assert.deepEqual(probes.map(row => [row.providerId, row.modelId]).sort(), [
+                ['anthropic', 'sonnet'], ['codex', 'TEST-model'], ['test-provider', 'TEST-model'], ['test-provider', 'TEST-model'],
+              ]);
+              assert.notEqual(proof.added.readiness.probe.commandId, proof.restored.readiness.probe.commandId);
               for (const value of [proof.added, proof.restored]) {
-                const selected = probes.filter(row => row.commandId === value.readiness.probe.commandId);
-                assert.equal(selected.length, 1); assert.deepEqual(selected[0], value.readiness.probe);
+                const { reference, consumer, probe } = value.readiness;
+                const selected = probes.filter(row => row.commandId === probe.commandId);
+                assert.equal(selected.length, 1);
+                const { readinessRetired, ...projected } = selected[0];
+                assert.equal(readinessRetired, true); assert.deepEqual(projected, probe);
+                for (const key of ['commandId', 'profileId', 'configRevision', 'context', 'fingerprint', 'selectionDigest', 'resourceId', 'purpose', 'expiresAt'])
+                  assert.deepEqual(reference[key], probe[key]);
+                const origin = probe.localModelReadinessOrigin, preparation = probe.localModelReadinessPreparation;
+                const scope = probe.readinessScope, capture = value.receipt.liveMembership.capture;
+                assert.equal(probe.purpose, 'native-local-readiness-v1');
+                assert.equal(probe.readiness.context, probe.context); assert.equal(probe.readiness.selectionDigest, probe.selectionDigest);
+                assert.equal(probe.readiness.evidence.ordinary, 'confirmed'); assert.equal(probe.readiness.evidence.decision, 'allow');
+                assert.equal(origin.commandId, value.receipt.commandId); assert.equal(preparation.commandId, origin.commandId);
+                assert.equal(capture.commandId, origin.commandId); assert.equal(value.captured.commandId, origin.commandId);
+                for (const key of ['ownerDigest', 'contextId', 'selectionDigest']) assert.equal(preparation[key], origin[key]);
+                assert.equal(preparation.anchorCommandId, probe.commandId); assert.equal(preparation.expiresAt, probe.expiresAt);
+                assert.equal(scope.kind, 'team'); assert.equal(scope.rosterRevision, capture.expectedRevision);
+                assert.equal(scope.sourceRevision, capture.captureDigest); assert.equal(scope.cutoff, probe.expiresAt);
+                assert.equal(reference.mechanismDigest, scope.mechanismDigest);
+                assert.equal(probe.profileId, 'team-probe-' + value.captured.configurationDigest);
+                assert.equal(probe.configRevision, probe.profileId);
+                assert.equal(consumer.actionId, value.receipt.commandId); assert.equal(consumer.groupCommandId, probe.commandId);
+                assert.equal(consumer.memberId, value.member.memberId); assert.deepEqual(consumer.binding, value.binding);
+                assert.equal(consumer.inputDigest, capture.requestDigest); assert.equal(consumer.cutoff, scope.cutoff);
+                assert.equal(consumer.baseConfigurationDigest, value.captured.configurationDigest);
+                assert.equal(consumer.configurationDigest, value.captured.configurationDigest);
+                assert.equal(value.selection.configurationDigest, value.captured.configurationDigest);
+                assert.equal(consumer.disposition, 'consumed');
               }
               const initialProbes = probes.filter(row => ![proof.added.readiness.probe.commandId, proof.restored.readiness.probe.commandId].includes(row.commandId));
               assert.deepEqual(initialProbes.map(row => [row.providerId, row.modelId, row.effort]).sort(),
