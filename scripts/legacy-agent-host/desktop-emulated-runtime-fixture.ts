@@ -238,6 +238,8 @@ export async function observeDesktopEmulatedRuntimeChildren(group: number,
   };
   const table = census(), hosts = table.filter(row => row.pgid === group && row.command === `${fixture.node} ${fixture.hostEntry}`);
   if (phase === 'before-first-team-read') assert.ok(hosts.length <= 1); else assert.equal(hosts.length, 1);
+  await readDesktopEmulatedRuntimeEffects(fixture);
+  assert.ok(performance.now() < deadline, 'Original peer journal validation exceeded its deadline');
   const installed = fixture.emulatedRuntime.installer ? await readDesktopEmulatedCodexInstallation(fixture.emulatedRuntime.installer) : undefined;
   const prefixes = [fixture.emulatedRuntime.commandPrefix,
     ...(installed ? [`${fixture.node} ${installed.executable.path} `] : [])];
