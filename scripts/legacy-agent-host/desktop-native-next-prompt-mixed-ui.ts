@@ -5,6 +5,7 @@ import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
+import { clearInsertedDraft } from './desktop-native-next-prompt-ui.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type {
@@ -461,9 +462,7 @@ export async function runDesktopNativeNextPromptMixedUi(
       'native candidate inserted after original Runtime validation'
     );
     assert.equal(await totalInputs(), count, 'Insert and Tab never submit a human message');
-    await ui.click(editor, 'clear inserted TEST draft through ordinary keyboard');
-    await key(cdp, 'a', 'KeyA', 65, 4);
-    await key(cdp, 'Backspace', 'Backspace', 8);
+    await clearInsertedDraft(cdp, ui);
     await noOffer('clearing the inserted draft cannot resurrect its offer');
     accepted.push({
       actor: actor.key,

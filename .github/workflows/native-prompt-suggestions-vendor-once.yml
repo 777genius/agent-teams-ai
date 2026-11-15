@@ -526,6 +526,12 @@ jobs:
             [['dark', false], ['dark', false], ['dark', false], ['light', true],
              ['light', false], ['light', false], ['light', false]]);
           JS
+      - name: Full application native TypeScript 7 on the verified source
+        if: ${{ !cancelled() && (steps.native_claude_composer.outcome == 'success' || steps.native_claude_composer.outcome == 'failure') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm typecheck
       - name: Retain actual Electron screenshots, receipt and setup diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

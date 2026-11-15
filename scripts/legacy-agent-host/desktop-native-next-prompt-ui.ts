@@ -35,12 +35,27 @@ async function key(cdp: UiCdpPort, name: string, code: string, virtual: number, 
   });
 }
 
-async function clearInsertedDraft(cdp: UiCdpPort, ui: Ui) {
+export async function clearInsertedDraft(cdp: UiCdpPort, ui: Ui) {
   // The Insert button receives focus on click. Return focus to the actual editor
   // before physical Command+A/Backspace; never mutate React's draft via JS.
   await ui.click('.message-composer-flat-layout textarea', 'focus original editor for physical clear');
-  await key(cdp, 'a', 'KeyA', 65, 4);
-  await key(cdp, 'Backspace', 'Backspace', 8);
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyDown', key: 'a', code: 'KeyA', modifiers: 4, commands: ['selectAll'],
+  });
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyUp', key: 'a', code: 'KeyA', modifiers: 4,
+  });
+  await ui.waitRead(`(() => {
+    const editor=document.querySelector('.message-composer-flat-layout textarea');
+    return editor && document.activeElement===editor &&
+      editor.selectionStart===0 && editor.selectionEnd===editor.value.length;
+  })()`, 'the original editor has its entire draft selected before Backspace');
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyDown', key: 'Backspace', code: 'Backspace',
+  });
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyUp', key: 'Backspace', code: 'Backspace',
+  });
   await ui.waitRead(
     "document.querySelector('.message-composer-flat-layout textarea')?.value === ''",
     'ordinary editor is empty after physical clear',

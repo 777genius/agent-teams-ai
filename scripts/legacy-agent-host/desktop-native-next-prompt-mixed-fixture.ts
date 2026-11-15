@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createFilesystemTeamOwner } from '../../packages/legacy-agent-host/dist/adapters/team/createFilesystemTeamOwner.js';
 import { acquireProfileWriterLease } from '../../packages/legacy-agent-host/dist/adapters/profile/ProfileWriterLease.js';
+import { assertAccountNamespaces } from '../../packages/legacy-agent-host/dist/composition/assertAccountNamespaces.js';
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
@@ -221,6 +222,7 @@ export async function prepareDesktopNativeNextPromptMixedFixture(
           memberId: actor.memberId,
           principalId: actor.principalId,
           sessionId: `TEST-suggestion-${actor.key}-session`,
+          accountBinding: `TEST-no-vendor-auth-${digest(root)}`,
           cwd: join(root, 'workspace'),
           environment: {
             ...originalClaude.environment,
@@ -245,6 +247,11 @@ export async function prepareDesktopNativeNextPromptMixedFixture(
       },
     });
   }
+  assertAccountNamespaces([
+    ...profile.runtime.members,
+    ...(profile.runtime.providerTemplates ?? []),
+    ...(profile.management ?? []),
+  ]);
   const lease = acquireProfileWriterLease(profile.owner.storageRoot);
   try {
     for (const team of teams) {
