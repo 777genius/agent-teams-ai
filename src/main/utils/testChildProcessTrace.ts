@@ -3,16 +3,16 @@ import { errorMonitor, type EventEmitter } from 'node:events';
 import { closeSync, constants, openSync, readSync, writeSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join } from 'node:path';
 
-type Birth = { startTicks: string; parentPid: number; processGroupId: number };
+interface Birth { startTicks: string; parentPid: number; processGroupId: number }
 type ObservedChild = EventEmitter & { pid?: number; spawnfile?: string; spawnargs?: string[] };
-type SyncResult = { pid: number; status: number | null; signal: string | null };
-type TraceOptions = {
+interface SyncResult { pid: number; status: number | null; signal: string | null }
+interface TraceOptions {
   mainPid: number;
   write(line: string): void;
   readBirth?(pid: number): Birth | null;
   linuxChildExecPath?: string;
   limit?: number;
-};
+}
 const PREFIX = '[TEST_MAIN_CHILD_PROCESS] ';
 const MAX_EVENTS = 256;
 const MAX_CHILDREN = 64;
@@ -58,7 +58,7 @@ function readBirth(pidValue: number): Birth | null {
     const fields = text.slice(end + 2).trim().split(/\s+/u);
     if (!/^\d{1,20}$/u.test(fields[19] ?? '')) return null;
     const parentPid = pid(Number(fields[1])), processGroupId = pid(Number(fields[2]));
-    return parentPid && processGroupId ? { startTicks: fields[19]!, parentPid, processGroupId } : null;
+    return parentPid && processGroupId ? { startTicks: fields[19], parentPid, processGroupId } : null;
   } catch { return null; }
   finally { if (fd !== undefined) { try { closeSync(fd); } catch { /* Observation only. */ } } }
 }
