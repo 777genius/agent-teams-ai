@@ -181,7 +181,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     const cost = await readNativeHostCostProof({ teamRoot, commandId: String(costs[0]!.commandId), memberName: 'alice', principalId: 'TEST-human', binding: record((await session()).binding), stats });
     assert.deepEqual((await session()).inputs, inputsBeforeCost);
     assert.equal((await effects()).filter(row => row.event === 'input').length, turnsBeforeCost);
-    assert.equal(typeof cost.reply.messageId, 'string');
+    assert.ok(typeof cost.reply.messageId === 'string' && cost.reply.messageId.length > 0);
     const costCard = `[data-timeline-row-key=${literal(cost.reply.messageId)}] article.activity-timeline-card`;
     const expanded = await ui.waitRead(`(()=>{const rows=document.querySelectorAll(${literal(costCard)});return rows.length===1?rows[0].getAttribute('data-expanded'):null})()`, 'one original Codex /cost report card');
     assert.ok(expanded === 'true' || expanded === 'false');
@@ -191,7 +191,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
       await ui.click(header, 'expand original Codex /cost report once');
       await ui.waitRead(`document.querySelector(${literal(costCard)})?.getAttribute('data-expanded')==='true'`, 'original Codex /cost report expanded');
     }
-    await revealDesktopReply(cdp, String(cost.reply.text), { messageId: String(cost.reply.messageId),
+    await revealDesktopReply(cdp, String(cost.reply.text), { messageId: cost.reply.messageId,
       assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
     proof.costScreenshot = await screenshot('cost'); proof.cost = cost;
   } else if (provider === 'claude') {

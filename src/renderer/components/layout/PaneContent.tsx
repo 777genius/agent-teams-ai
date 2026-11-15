@@ -15,6 +15,7 @@ import { nameColorSet } from '@renderer/utils/projectColor';
 import { useShallow } from 'zustand/react/shallow';
 
 import { DashboardView } from '../dashboard/DashboardView';
+import { SettingsView } from '../settings/SettingsView';
 import { TeamListSkeleton } from '../team/TeamListSkeleton';
 import { TeamLoadingSkeleton } from '../team/TeamLoadingSkeleton';
 
@@ -38,11 +39,6 @@ const SessionReportTab = lazy(() =>
 const SchedulesView = lazy(() =>
   import('../schedules/SchedulesView').then((module) => ({
     default: module.SchedulesView,
-  }))
-);
-const SettingsView = lazy(() =>
-  import('../settings/SettingsView').then((module) => ({
-    default: module.SettingsView,
   }))
 );
 const TeamDetailView = lazy(() =>

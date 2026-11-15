@@ -2145,7 +2145,7 @@ const TerminalMuxTabs = ({
                             <Pencil size={12} className="shrink-0 text-slate-400" />
                             <input
                               ref={renameInputRef}
-                              className="h-5 min-w-0 flex-1 rounded border border-white/15 bg-black/35 px-1 font-mono text-[12px] text-slate-100 outline-none ring-0 focus:border-sky-400/60"
+                              className="h-5 min-w-0 flex-1 rounded border border-white/15 bg-[var(--color-form-control-bg)] px-1 font-mono text-[12px] text-slate-100 outline-none ring-0 focus:border-sky-400/60"
                               value={editingTitle}
                               aria-label={t('terminalWorkspace.editTerminalTabTitle')}
                               data-testid="agent-team-terminal-tab-title-input"
@@ -2493,7 +2493,7 @@ const TerminalWorkspaceSettingsPage = ({
             >
               <SelectTrigger
                 aria-label={t('terminalWorkspace.settingsThemeAria')}
-                className="border-white/10 bg-white/[0.035]"
+                className="border-white/10 bg-[var(--color-form-control-bg)]"
               >
                 <SelectValue placeholder={t('terminalWorkspace.settingsThemePlaceholder')} />
               </SelectTrigger>
@@ -2524,7 +2524,7 @@ const TerminalWorkspaceSettingsPage = ({
                   <SelectTrigger
                     id="terminal-settings-font-preset"
                     aria-label={t('terminalWorkspace.settingsFontPresetAria')}
-                    className="border-white/10 bg-white/[0.035]"
+                    className="border-white/10 bg-[var(--color-form-control-bg)]"
                   >
                     <SelectValue
                       placeholder={t('terminalWorkspace.settingsFontPresetPlaceholder')}
@@ -2550,7 +2550,7 @@ const TerminalWorkspaceSettingsPage = ({
                   min={11}
                   max={24}
                   step={1}
-                  className="border-white/10 bg-white/[0.035] text-right"
+                  className="border-white/10 bg-[var(--color-form-control-bg)] text-right"
                   value={appearanceSettings.fontSizePx}
                   onChange={(event) =>
                     onAppearanceSettingsChange({
@@ -2601,7 +2601,7 @@ const TerminalWorkspaceSettingsPage = ({
                   min={35}
                   max={100}
                   step={1}
-                  className="border-white/10 bg-white/[0.035] text-right"
+                  className="border-white/10 bg-[var(--color-form-control-bg)] text-right"
                   value={appearanceSettings.opacityPercent}
                   onChange={(event) =>
                     onAppearanceSettingsChange({
@@ -2630,7 +2630,7 @@ const TerminalWorkspaceSettingsPage = ({
                     <SelectTrigger
                       id="terminal-settings-background-mode"
                       aria-label={t('terminalWorkspace.settingsBackgroundModeAria')}
-                      className="border-white/10 bg-white/[0.035]"
+                      className="border-white/10 bg-[var(--color-form-control-bg)]"
                     >
                       <SelectValue placeholder={t('terminalWorkspace.settingsBackgroundMode')} />
                     </SelectTrigger>
@@ -2673,7 +2673,7 @@ const TerminalWorkspaceSettingsPage = ({
                     min={0}
                     max={40}
                     step={1}
-                    className="max-w-24 border-white/10 bg-white/[0.035] text-right"
+                    className="max-w-24 border-white/10 bg-[var(--color-form-control-bg)] text-right"
                     value={appearanceSettings.backdropBlurPx}
                     onChange={(event) =>
                       onAppearanceSettingsChange({
@@ -2696,7 +2696,7 @@ const TerminalWorkspaceSettingsPage = ({
                     <Input
                       id="terminal-settings-background-image"
                       type="url"
-                      className="border-white/10 bg-white/[0.035]"
+                      className="border-white/10 bg-[var(--color-form-control-bg)]"
                       placeholder="https://..."
                       value={appearanceSettings.backgroundImageUrl}
                       onChange={(event) =>
@@ -2726,7 +2726,7 @@ const TerminalWorkspaceSettingsPage = ({
                         <SelectTrigger
                           id="terminal-settings-background-fit"
                           aria-label={t('terminalWorkspace.settingsImageFitAria')}
-                          className="border-white/10 bg-white/[0.035]"
+                          className="border-white/10 bg-[var(--color-form-control-bg)]"
                         >
                           <SelectValue placeholder={t('terminalWorkspace.settingsImageFit')} />
                         </SelectTrigger>
@@ -2750,7 +2750,7 @@ const TerminalWorkspaceSettingsPage = ({
                         min={0}
                         max={40}
                         step={1}
-                        className="border-white/10 bg-white/[0.035] text-right"
+                        className="border-white/10 bg-[var(--color-form-control-bg)] text-right"
                         value={appearanceSettings.backdropBlurPx}
                         onChange={(event) =>
                           onAppearanceSettingsChange({

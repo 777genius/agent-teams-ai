@@ -196,8 +196,16 @@ export async function loadOpenCodeScopedCatalog(
   // Separate page requests have no shared generation token in the compatibility
   // contract. Keep their models usable for display, but never grant fresh launch
   // authority to a response that may have crossed catalog generations.
+  // A runtime's fresh snapshot can also expire while its response is in flight.
+  // Do not grant fresh authority or schedule an immediate refresh loop for it.
+  const expiredSnapshot =
+    snapshotFreshUntil !== null && snapshotFreshUntil <= Date.parse(completedAt);
   const catalogState: 'fresh' | 'stale' | null =
-    sawUnknownCatalogState || sawMultiplePages ? null : sawStaleCatalog ? 'stale' : 'fresh';
+    sawUnknownCatalogState || sawMultiplePages
+      ? null
+      : sawStaleCatalog || expiredSnapshot
+        ? 'stale'
+        : 'fresh';
 
   return {
     models: Array.from(modelById.values()),

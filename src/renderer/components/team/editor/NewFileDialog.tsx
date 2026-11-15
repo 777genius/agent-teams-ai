@@ -128,7 +128,7 @@ export const NewFileDialog = ({
               ? t('editor.newFile.placeholders.fileName')
               : t('editor.newFile.placeholders.folderName')
           }
-          className="min-w-0 flex-1 rounded border border-border-emphasis bg-surface px-1.5 py-0.5 text-xs text-text outline-none focus:border-blue-500"
+          className="min-w-0 flex-1 rounded border border-border-emphasis bg-[var(--color-form-control-bg)] px-1.5 py-0.5 text-xs text-text outline-none focus:border-blue-500"
           aria-label={
             type === 'file'
               ? t('editor.newFile.aria.newFileName')

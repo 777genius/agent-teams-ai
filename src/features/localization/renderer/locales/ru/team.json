@@ -2728,6 +2728,7 @@
       "allFlagsValid": "Все флаги корректны",
       "unknownFlags": "Неизвестные: {{flags}}",
       "protectedFlags": "Защищённые: {{flags}}",
+      "missingValue": "Нет значения: {{flags}}",
       "failed": "Проверка не удалась"
     },
     "placeholders": {

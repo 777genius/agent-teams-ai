@@ -20,6 +20,7 @@ export async function prepareDesktopEmulatedClaudeSettingsFixture(
     ? ['tools/owned-process-broker/fixtures/claudeExtensionsPeer.mjs',
       'tools/owned-process-broker/fixtures/claudeProviderPeer.mjs']
     : ['tools/owned-process-broker/fixtures/claudeSavedImportPeer.mjs'];
+  relativeSources.push('tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts');
   const sources = await Promise.all(relativeSources.map(async relative => {
     const path = join(repo, relative);
     assert.equal(await realpath(path), path);
@@ -28,15 +29,18 @@ export async function prepareDesktopEmulatedClaudeSettingsFixture(
   const wrapper = `${desktopNodeScriptHeader(fixture.node)}import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';import {readFileSync,realpathSync} from 'node:fs';
 assert.equal(process.env.TEST_DESKTOP_SETTINGS,${JSON.stringify(kind)});
-assert.equal(process.env.TEST_PEER_ROLE,'management');
+assert.ok(${JSON.stringify(kind === 'saved-import' ? ['management', 'runtime'] : ['management'])}.includes(process.env.TEST_PEER_ROLE));
 for(const source of ${JSON.stringify(sources)}){assert.equal(realpathSync(source.path),source.path);assert.equal(createHash('sha256').update(readFileSync(source.path)).digest('hex'),source.sha256)}
-await import(${kind === 'extensions'
-    ? `['plugin','mcp','auth'].includes(process.argv[2])?${JSON.stringify(pathToFileURL(sources[0]!.path).href)}:${JSON.stringify(pathToFileURL(sources[1]!.path).href)}`
+await import(process.argv[2]==='auth'?${JSON.stringify(pathToFileURL(sources.at(-1)!.path).href)}:${kind === 'extensions'
+    ? `['plugin','mcp'].includes(process.argv[2])?${JSON.stringify(pathToFileURL(sources[0]!.path).href)}:${JSON.stringify(pathToFileURL(sources[1]!.path).href)}`
     : JSON.stringify(pathToFileURL(sources[0]!.path).href)});
 `;
   const executable = { path: join(fixture.root, `bin/TEST-claude-${kind}-peer`), sha256: digest(wrapper) };
   await writeFile(executable.path, wrapper, { mode: 0o700, flag: 'wx' });
-  for (const peer of fixture.emulatedRuntime.peers) peer.environment.TEST_DESKTOP_SETTINGS = kind;
+  for (const peer of fixture.emulatedRuntime.peers) Object.assign(peer.environment, {
+    TEST_DESKTOP_SETTINGS: kind, ANTHROPIC_API_KEY: 'TEST-LOCALHOST-ONLY',
+    ANTHROPIC_BASE_URL: 'http://127.0.0.1:9',
+  });
   const profile = readTeamHostProfile(fixture.profilePath, fixture.pins.profileSha256);
   for (const selected of [...profile.runtime!.members, ...profile.runtime!.providerTemplates!, ...profile.management!]) {
     assert.equal(selected.provider, 'claude');
@@ -47,6 +51,11 @@ await import(${kind === 'extensions'
   assert.equal(management.provider, 'claude');
   if (management.provider !== 'claude') throw new Error('Original Claude management profile required');
   management.settingSources = ['user', 'project', 'local'];
+  for (const selected of [...profile.runtime!.members, ...profile.runtime!.providerTemplates!]) {
+    assert.equal(selected.provider, 'claude');
+    if (selected.provider !== 'claude') throw new Error('Original Claude runtime profile required');
+    selected.nativeOptions = { ...selected.nativeOptions, settingSources: [...management.settingSources] };
+  }
   fixture.emulatedRuntime.sources = sources;
   fixture.emulatedRuntime.executable = executable;
   fixture.emulatedRuntime.commandPrefix = `${fixture.node} ${executable.path} `;

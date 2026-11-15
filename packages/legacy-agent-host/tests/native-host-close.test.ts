@@ -30,7 +30,6 @@ for (const path of ['/api/plugin', '/api/model', '/api/info']) {
 }
 const failedRead = channel('agent-teams:opencode-v2:read-cut-failed');
 const failure = { stage: 'after-session', reason: 'deadline', elapsedMs: 30001, deadlineExpired: true, aborted: false };
-failedRead.publish({ ...failure, error: secret, stack: secret, sessionId: secret, path: ${JSON.stringify(root)} });
 for (const invalid of [{ ...failure, reason: secret }, { ...failure, stage: secret },
   { ...failure, elapsedMs: 60001 }, { ...failure, deadlineExpired: 'true' },
   { ...failure, reason: 'mutable_native_readback' }]) failedRead.publish(invalid);
@@ -46,6 +45,9 @@ failedMetadata.publish(Object.defineProperty({ ...metadata }, 'reason', { get() 
 if (accessorCalls !== 0) process.exit(3);
 for (let index = 0; index < 300; index++) publish('undici:request:create',
   { origin: 'http://127.0.0.1:65530', path: '/api/info?private=' + secret, method: 'GET' });
+failedRead.publish({ ...failure, reason: secret });
+failedRead.publish({ ...failure, error: secret, stack: secret, sessionId: secret, path: ${JSON.stringify(root)} });
+failedRead.publish({ ...failure, reason: 'cleanup_unknown', aborted: true });
 failedMetadata.publish({ ...metadata, error: secret, stack: secret, path: ${JSON.stringify(root)} });
 failedMetadata.publish({ ...metadata, reason: 'deadline', elapsedMs: 30001, deadlineExpired: true });
 const end = Date.now() + 50; while (Date.now() < end) Math.sqrt(Date.now());
@@ -62,16 +64,17 @@ process.stderr.write('', () => process.exit(1));
     assert.equal(code, 1); assert.equal(signal, null);
     await assert.rejects(host.close(), /Host exit zero confirms/);
     await originalClose;
-    assert.deepEqual(originalTrace.entries.slice(0, 8).map(row => [row.event, row.request, row.route]), [
+    assert.deepEqual(originalTrace.entries.slice(0, 7).map(row => [row.event, row.request, row.route]), [
       ['request', 1, 'plugins'], ['request-send-headers', 1, 'plugins'], ['request-body-sent', 1, 'plugins'],
       ['request', 2, 'model-catalog'], ['request-send-headers', 2, 'model-catalog'], ['request-body-sent', 2, 'model-catalog'],
       ['request', 3, 'info'],
-      ['read-cut-failed', null, null],
     ], 'same-object targeted phases appear once; foreign objects and untargeted phases are ignored');
     assert.ok(originalTrace.entries.slice(0, 7).every(row => row.epoch === 1 && row.method === 'GET' &&
       typeof row.atMs === 'number' && (row.event === 'request' ? row.durationMs === null :
         typeof row.durationMs === 'number' && row.durationMs >= 0)));
-    const readFailure = originalTrace.entries.find(row => row.event === 'read-cut-failed')!;
+    const readFailures = originalTrace.entries.filter(row => row.event === 'read-cut-failed');
+    assert.equal(readFailures.length, 1, 'reserved late read failure survives original trace saturation once');
+    const readFailure = readFailures[0]!;
     assert.deepEqual({ epoch: readFailure.epoch, stage: readFailure.stage, code: readFailure.code,
       durationMs: readFailure.durationMs, deadlineExpired: readFailure.deadlineExpired, aborted: readFailure.aborted },
     { epoch: 1, stage: 'after-session', code: 'deadline', durationMs: 30001, deadlineExpired: true, aborted: false });
@@ -83,7 +86,8 @@ process.stderr.write('', () => process.exit(1));
       durationMs: metadataFailure.durationMs, deadlineExpired: metadataFailure.deadlineExpired, aborted: metadataFailure.aborted },
     { epoch: 1, stage: 'directory', code: 'invalid_native_catalog', durationMs: 42, deadlineExpired: false, aborted: false }),
     'first original metadata failure retains only the exact closed fields');
-    assert.equal(originalTrace.entries.at(-1)!.event, 'metadata-read-failed');
+    assert.deepEqual(originalTrace.entries.slice(-3).map(row => row.event),
+      ['trace-limit', 'read-cut-failed', 'metadata-read-failed']);
     assert.equal(originalTrace.entries.filter(row => row.event === 'trace-limit').length, 1);
     assert.equal(originalTrace.limited, true);
     assert.ok(originalTrace.entries.length <= 257);
@@ -331,10 +335,10 @@ process.stderr.write('', () => process.exit(1));
     assert.equal(JSON.stringify(passive.entries).includes(root), false);
 
     // The same synthetic capture spans epochs; UTF-8 bytes and the terminal reservation never reset.
-    const pressure = { event: 'read-cut-failed', atMs: 3_600_000, child: 5, request: 4096,
+    const pressure = { event: 'response', atMs: 3_600_000, child: 5, request: 4096,
       route: 'integration-connect', method: 'DELETE', status: 599, contentEncoding: 'other',
-      stage: 'before-session', reason: 'native_session_binding_mismatch', elapsedMs: 60000,
-      deadlineExpired: false, aborted: false, exitCode: 255, signal: 'SIGSEGV' };
+      stage: 'configuration', code: 'UND_ERR_HEADERS_TIMEOUT', durationMs: 3_600_000,
+      exitCode: 255, signal: 'SIGSEGV' };
     const oversized = prefix + JSON.stringify({ event: 'child-ready', atMs: 1, raw: 'é'.repeat(250) }) + '\n';
     assert.ok(oversized.length <= 513 && Buffer.byteLength(oversized) > 513, 'TEST line differs in UTF-8 byte length');
     passive.accept(Buffer.from(oversized), 1);
@@ -342,24 +346,35 @@ process.stderr.write('', () => process.exit(1));
     for (let index = 0; index < 300; index++) passive.accept(Buffer.from(prefix + JSON.stringify(pressure) + '\n'), index < 150 ? 1 : 2);
     const ordinary = passive.entries.length;
     const beforeBytes = passive.entries.reduce((sum, row) => sum + Buffer.byteLength(JSON.stringify(row)) + 1, 0);
-    assert.ok(ordinary < 255, 'closed-row bytes saturate before ordinary count in this capture');
-    assert.ok(beforeBytes > 64 * 1024 - 3 * 513 && beforeBytes <= 64 * 1024 - 2 * 513);
+    assert.ok(ordinary < 254, 'closed-row bytes saturate before ordinary count in this capture');
+    assert.ok(beforeBytes > 64 * 1024 - 4 * 513 && beforeBytes <= 64 * 1024 - 3 * 513);
     const terminal = { event: 'metadata-read-failed', atMs: 11, stage: 'admission', reason: 'held',
       elapsedMs: 0, deadlineExpired: true, aborted: null, raw: secret };
+    const lateRead = { event: 'read-cut-failed', atMs: 12, stage: 'after-log', reason: 'cleanup_unknown',
+      elapsedMs: 9, deadlineExpired: false, aborted: true, raw: secret };
     passive.accept(Buffer.from(prefix + JSON.stringify({ event: 'trace-limit', atMs: 10 }) + '\n'), 2);
     passive.accept(Buffer.from(prefix + JSON.stringify({ ...terminal, reason: secret }) + '\n'), 2);
     passive.accept(Buffer.from(prefix + JSON.stringify({ ...terminal, stage: 'directory' }) + '\n'), 2);
-    assert.equal(passive.entries.length, ordinary + 1, 'malformed receiver records cannot consume the reserved terminal slot');
+    passive.accept(Buffer.from(prefix + JSON.stringify({ ...lateRead, reason: secret }) + '\n'), 2);
+    passive.accept(Buffer.from(prefix + JSON.stringify({ ...lateRead, aborted: null }) + '\n'), 2);
+    assert.equal(passive.entries.length, ordinary + 1, 'malformed receiver records cannot consume reserved failure slots');
     passive.accept(Buffer.from(prefix + JSON.stringify(terminal) + '\n'), 2);
+    passive.accept(Buffer.from(prefix + JSON.stringify(lateRead) + '\n'), 2);
     passive.accept(Buffer.from(prefix + JSON.stringify({ ...terminal, stage: 'directory', reason: 'deadline', aborted: true }) + '\n'), 1);
+    passive.accept(Buffer.from(prefix + JSON.stringify({ ...lateRead, reason: 'deadline' }) + '\n'), 1);
     passive.accept(Buffer.from(prefix + JSON.stringify({ event: 'trace-limit', atMs: 12 }) + '\n'), 1);
-    assert.equal(passive.entries.length, ordinary + 2, 'epoch changes do not reset either reserved slot');
+    assert.equal(passive.entries.length, ordinary + 3, 'epoch changes do not reset any reserved slot');
     const terminalRows = passive.entries.filter(row => row.event === 'metadata-read-failed');
     assert.equal(terminalRows.length, 1);
     assert.ok(isDeepStrictEqual({ epoch: terminalRows[0]!.epoch, stage: terminalRows[0]!.stage,
       code: terminalRows[0]!.code, aborted: terminalRows[0]!.aborted },
     { epoch: 2, stage: 'admission', code: 'held', aborted: null }),
     'one original pre-signal failure survives across epochs without raw fields');
+    const lateReads = passive.entries.filter(row => row.event === 'read-cut-failed');
+    assert.equal(lateReads.length, 1);
+    assert.deepEqual({ epoch: lateReads[0]!.epoch, stage: lateReads[0]!.stage,
+      code: lateReads[0]!.code, aborted: lateReads[0]!.aborted },
+    { epoch: 2, stage: 'after-log', code: 'cleanup_unknown', aborted: true });
     assert.equal(passive.entries.filter(row => row.event === 'trace-limit').length, 1);
     assert.equal(passive.limited, true);
     assert.ok(passive.entries.length <= 257);

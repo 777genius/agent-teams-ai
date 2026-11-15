@@ -146,11 +146,7 @@ it('only valid current native variants enable the existing effort selector', asy
   }
 });
 
-const VALID_RUNTIME_EVIDENCE: JsonValue[] = [
-  { generation: 'v1' },
-  { generation: 'v2', version: '2.1.4' },
-];
-it.each(VALID_RUNTIME_EVIDENCE)(
+it.each<Record<string, string>>([{ generation: 'v1' }, { generation: 'v2', version: '2.1.4' }])(
   'a validated $generation catalog clears pending errors for selection without granting execution authority',
   async runtime => {
     const f = fixture(runtime);

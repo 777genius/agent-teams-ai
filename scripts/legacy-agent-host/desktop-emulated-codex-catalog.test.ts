@@ -28,8 +28,8 @@ async function fixture(t: TestContext, role: 'runtime' | 'management' = 'runtime
     CODEX_HOME: join(scope, 'config'), TEST_EMULATED_DESKTOP_PROVIDER: '1', TEST_PEER_SCENARIO: 'desktop-ui-v1',
     TEST_PEER_PROVIDER: 'codex', TEST_PEER_ROLE: role, TEST_DESKTOP_PEER_ROOT: scope,
     TEST_DESKTOP_PEER_WORKSPACE: workspace, TEST_PEER_EFFECTS: join(scope, 'effects.ndjson') };
-  const invoke = (args = ['mcp', 'list', '--json'], extra: Record<string, string> = {}) => spawnSync(node,
-    [source, ...args], { cwd: workspace, env: { ...environment, ...extra }, encoding: 'utf8', timeout: 5000, maxBuffer: 65536 });
+  const invoke = (args = ['mcp', 'list', '--json'], extra: Record<string, string> = {}, input?: string) => spawnSync(node,
+    [source, ...args], { cwd: workspace, env: { ...environment, ...extra }, input, encoding: 'utf8', timeout: 5000, maxBuffer: 65536 });
   const effects = async (): Promise<Record<string, unknown>[]> => {
     let bytes: string;
     try { bytes = await readFile(environment.TEST_PEER_EFFECTS, 'utf8'); }
@@ -38,6 +38,41 @@ async function fixture(t: TestContext, role: 'runtime' | 'management' = 'runtime
   };
   return { scope, workspace, node, source, environment, invoke, effects,
     cleanupWith: (callback: () => Promise<void>) => { assert.equal(close, undefined); close = callback; } };
+}
+
+function startPeer(f: Awaited<ReturnType<typeof fixture>>, args: string[], extra: Record<string, string> = {}, expectedExit = 0) {
+  const frames: Record<string, unknown>[] = [];
+  const child = spawn(f.node, [f.source, ...args], { cwd: f.workspace,
+    env: { ...f.environment, ...extra }, stdio: ['pipe', 'pipe', 'pipe'] });
+  const exited = once(child, 'close'); let stderr = '';
+  child.stderr.on('data', bytes => { stderr += bytes; assert.ok(Buffer.byteLength(stderr) <= 65536); });
+  const lines = createInterface({ input: child.stdout });
+  lines.on('line', line => { assert.ok(frames.length < 64); frames.push(JSON.parse(line)); });
+  const closed = async () => {
+    const timeout = setTimeout(() => child.kill('SIGTERM'), 5000); timeout.unref();
+    try { assert.deepEqual(await exited, [expectedExit, null], stderr); }
+    finally { clearTimeout(timeout); lines.close(); }
+  };
+  const finish = () => { if (!child.stdin.writableEnded) child.stdin.end(); return closed(); };
+  f.cleanupWith(finish);
+  const send = (id: number, method: string, params: Record<string, unknown> = {}) => {
+    child.stdin.write(JSON.stringify({ id, method, params }) + '\n');
+  };
+  const until = async (select: () => Record<string, unknown> | undefined) => {
+    const deadline = performance.now() + 5000;
+    for (;;) {
+      assert.ok(performance.now() < deadline, 'original finite protocol deadline');
+      const found = select(); if (found) return found;
+      assert.equal(child.exitCode, null, stderr);
+      await new Promise<void>(resolve => setTimeout(resolve, 10));
+    }
+  };
+  const rpc = async (id: number, method: string, params: Record<string, unknown> = {}) => {
+    send(id, method, params); const frame = await until(() => frames.find(row => row.id === id));
+    assert.equal(frame.error, undefined); return frame.result as Record<string, unknown>;
+  };
+  assert.ok(child.pid);
+  return { rpc, send, until, closed, finish, frames, unstartedThreadId: `TEST-thread-${child.pid}` };
 }
 
 test('finite Codex exact native MCP catalog exits with empty inventory without allocating a Runtime', async t => {
@@ -67,7 +102,7 @@ test('finite Codex catalog refuses changed argv, Runtime authority and nonempty 
 });
 
 test('finite Codex answers the original D managed config before connecting its selected Team on thread start', async t => {
-  const f = await fixture(t), methods: string[] = [], frames: Record<string, unknown>[] = [];
+  const f = await fixture(t), methods: string[] = [];
   const server = createServer(async (request, response) => {
     try {
       assert.equal(request.url, '/TEST-team'); assert.equal(request.headers.authorization, 'Bearer TEST-metadata-only');
@@ -88,26 +123,7 @@ test('finite Codex answers the original D managed config before connecting its s
   const team = { url: `http://127.0.0.1:${address.port}/TEST-team`, bearer_token_env_var: 'LEGACY_AGENT_HOST_TEAM_MCP_TOKEN',
     enabled_tools: [], tools: {}, startup_timeout_sec: 5 };
   const args: string[] = ['app-server', '--listen', 'stdio://', ...codexMcpPolicyArgs({ catalog, selected: { team } })];
-  const child = spawn(f.node, [f.source, ...args], { cwd: f.workspace,
-    env: { ...f.environment, LEGACY_AGENT_HOST_TEAM_MCP_TOKEN: 'TEST-metadata-only' }, stdio: ['pipe', 'pipe', 'pipe'] });
-  const exited = once(child, 'exit'); let stderr = '';
-  child.stderr.on('data', bytes => { stderr += bytes; assert.ok(Buffer.byteLength(stderr) <= 65536); });
-  const lines = createInterface({ input: child.stdout });
-  lines.on('line', line => { assert.ok(frames.length < 64); frames.push(JSON.parse(line)); });
-  f.cleanupWith(async () => {
-    child.stdin.end();
-    const timeout = setTimeout(() => child.kill('SIGTERM'), 5000); timeout.unref();
-    try { assert.deepEqual(await exited, [0, null], stderr); } finally { clearTimeout(timeout); lines.close(); }
-  });
-  const rpc = async (id: number, method: string, params: Record<string, unknown> = {}) => {
-    child.stdin.write(JSON.stringify({ id, method, params }) + '\n'); const deadline = performance.now() + 5000;
-    for (;;) {
-      assert.ok(performance.now() < deadline, 'original finite protocol deadline');
-      assert.equal(child.exitCode, null, stderr); const found = frames.find(row => row.id === id);
-      if (found) { assert.equal(found.error, undefined); return found.result as Record<string, unknown>; }
-      await new Promise<void>(resolve => setTimeout(resolve, 10));
-    }
-  };
+  const { rpc } = startPeer(f, args, { LEGACY_AGENT_HOST_TEAM_MCP_TOKEN: 'TEST-metadata-only' });
   await rpc(1, 'initialize'); assert.deepEqual(methods, []);
   const config = await rpc(2, 'config/read');
   assert.deepEqual(config, { config: { model: 'TEST-model', model_provider: 'TEST-fixture', features: { apps: false },
@@ -133,55 +149,19 @@ test('finite managed Codex policy refuses alternate syntax, extra servers and en
   }
 });
 
-function standalonePeer(f: Awaited<ReturnType<typeof fixture>>, expectedExit = 0) {
-  const args = ['app-server', '--listen', 'stdio://', ...codexMcpPolicyArgs({ catalog, selected: {} })];
-  const child = spawn(f.node, [f.source, ...args], { cwd: f.workspace, env: f.environment,
-    stdio: ['pipe', 'pipe', 'pipe'] });
-  const exited = once(child, 'close'), frames: Record<string, unknown>[] = [];
-  let stderr = '', sequence = 0;
-  child.stderr.on('data', bytes => { stderr += bytes; assert.ok(Buffer.byteLength(stderr) <= 65536); });
-  const lines = createInterface({ input: child.stdout });
-  lines.on('line', line => { assert.ok(frames.length < 64); frames.push(JSON.parse(line)); });
-  const closed = async () => {
-    const timeout = setTimeout(() => child.kill('SIGTERM'), 5000); timeout.unref();
-    try { assert.deepEqual(await exited, [expectedExit, null], stderr); }
-    finally { clearTimeout(timeout); lines.close(); }
-  };
-  const finish = () => { child.stdin.end(); return closed(); };
-  f.cleanupWith(finish);
-  const send = (method: string, params: Record<string, unknown> = {}) => {
-    const id = ++sequence;
-    child.stdin.write(JSON.stringify({ id, method, params }) + '\n');
-    return id;
-  };
-  const until = async (select: () => Record<string, unknown> | undefined) => {
-    const deadline = performance.now() + 5000;
-    for (;;) {
-      assert.ok(performance.now() < deadline, 'original finite protocol deadline');
-      const found = select(); if (found) return found;
-      assert.equal(child.exitCode, null, stderr);
-      await new Promise<void>(resolve => setTimeout(resolve, 10));
-    }
-  };
-  const rpc = async (method: string, params: Record<string, unknown> = {}) => {
-    const id = send(method, params), frame = await until(() => frames.find(row => row.id === id));
-    assert.equal(frame.error, undefined); return frame.result as Record<string, unknown>;
-  };
-  assert.ok(child.pid);
-  return { rpc, send, closed, finish, until, frames, unstartedThreadId: `TEST-thread-${child.pid}` };
-}
-
 test('finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread', async t => {
-  const f = await fixture(t), peer = standalonePeer(f);
-  await peer.rpc('initialize');
-  const config = await peer.rpc('config/read');
+  const f = await fixture(t);
+  const args = ['app-server', '--listen', 'stdio://', ...codexMcpPolicyArgs({ catalog, selected: {} })];
+  const peer = startPeer(f, args);
+  await peer.rpc(1, 'initialize');
+  const config = await peer.rpc(2, 'config/read');
   assert.deepEqual(config, { config: { model: 'TEST-model', model_provider: 'TEST-fixture',
     features: { apps: false }, mcp_servers: {} } });
-  const opened = await peer.rpc('thread/start', { cwd: f.workspace, model: 'TEST-model', ephemeral: true });
+  const opened = await peer.rpc(3, 'thread/start', { cwd: f.workspace, model: 'TEST-model', ephemeral: true });
   const threadId = (opened.thread as { id: string }).id;
   assert.equal(typeof threadId, 'string');
-  assert.deepEqual(await peer.rpc('mcpServerStatus/list', { threadId }), { data: [], nextCursor: null });
-  const accepted = await peer.rpc('turn/start', { threadId, input: [
+  assert.deepEqual(await peer.rpc(4, 'mcpServerStatus/list', { threadId }), { data: [], nextCursor: null });
+  const accepted = await peer.rpc(5, 'turn/start', { threadId, input: [
     { type: 'text', text: 'Reply only OK. Do not use tools, access files or run commands.' },
   ] });
   const turnId = (accepted.turn as { id: string }).id;
@@ -205,19 +185,19 @@ test('finite Codex standalone refuses Team authority, persistent threads and uns
   assert.equal(token.status, 1); assert.equal(token.signal, null); assert.equal(token.error, undefined);
   assert.equal(token.stdout, ''); assert.deepEqual(await tokenFixture.effects(), []);
   for (const mode of ['missing-ephemeral', 'persistent', 'early-status', 'early-input', 'foreign-status', 'foreign-input'] as const) {
-    const f = await fixture(t), peer = standalonePeer(f, 1);
-    await peer.rpc('initialize'); await peer.rpc('config/read');
+    const f = await fixture(t), peer = startPeer(f, args, {}, 1);
+    await peer.rpc(1, 'initialize'); await peer.rpc(2, 'config/read');
     if (mode === 'missing-ephemeral' || mode === 'persistent') {
-      peer.send('thread/start', { cwd: f.workspace, model: 'TEST-model',
+      peer.send(4, 'thread/start', { cwd: f.workspace, model: 'TEST-model',
         ...(mode === 'persistent' ? { ephemeral: false } : {}) });
     } else if (mode === 'early-status' || mode === 'early-input') {
-      peer.send(mode === 'early-status' ? 'mcpServerStatus/list' : 'turn/start', {
+      peer.send(4, mode === 'early-status' ? 'mcpServerStatus/list' : 'turn/start', {
         threadId: peer.unstartedThreadId,
         ...(mode === 'early-input' ? { input: [{ type: 'text', text: 'Reply only OK. Do not use tools, access files or run commands.' }] } : {}),
       });
     } else {
-      await peer.rpc('thread/start', { cwd: f.workspace, model: 'TEST-model', ephemeral: true });
-      peer.send(mode === 'foreign-status' ? 'mcpServerStatus/list' : 'turn/start', {
+      await peer.rpc(3, 'thread/start', { cwd: f.workspace, model: 'TEST-model', ephemeral: true });
+      peer.send(4, mode === 'foreign-status' ? 'mcpServerStatus/list' : 'turn/start', {
         threadId: 'TEST-unselected-thread',
         ...(mode === 'foreign-input' ? { input: [{ type: 'text', text: 'Reply only OK. Do not use tools, access files or run commands.' }] } : {}),
       });

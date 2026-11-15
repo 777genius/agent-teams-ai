@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import {
+  isOpenCodeRuntimeUsable,
+  useOpenCodeDashboardConnectedCountProbe,
   useRuntimeProviderConnectedCount,
   useRuntimeProviderDirectoryCache,
 } from '@features/runtime-provider-management/renderer';
+import { isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { resolveProjectPathById } from '@renderer/utils/projectLookup';
 
@@ -14,19 +17,31 @@ import {
 
 import type { CliInstallationStatus } from '@shared/types';
 
-/** Display-only selector: subscribing to snapshots never starts provider IPC. */
-export function useProviderConnectionSummary(cliStatusOverride?: CliInstallationStatus | null) {
+/** Passive by default; visible Settings may opt into a connected-summary refresh. */
+export function useProviderConnectionSummary(
+  cliStatusOverride?: CliInstallationStatus | null,
+  refreshConnectedCount = false
+) {
   const storedCliStatus = useStore((state) => state.cliStatus);
   const cliStatus = cliStatusOverride === undefined ? storedCliStatus : cliStatusOverride;
   const cliStatusLoading = useStore((state) => state.cliStatusLoading);
   const cliStatusError = useStore((state) => state.cliStatusError);
-  const cliProviderStatusLoading = useStore((state) => state.cliProviderStatusLoading);
+  const rawProviderStatusLoading = useStore((state) => state.cliProviderStatusLoading);
+  const recoveryPending = useStore((state) => state.codexStatusRecoveryPending ?? false);
+  const cliProviderStatusLoading = useMemo(
+    () =>
+      recoveryPending ? { ...rawProviderStatusLoading, codex: true } : rawProviderStatusLoading,
+    [rawProviderStatusLoading, recoveryPending]
+  );
   const openCodeRuntimeStatus = useStore((state) => state.openCodeRuntimeStatus);
   const openCodeRuntimeStatusLoading = useStore((state) => state.openCodeRuntimeStatusLoading);
+  const openCodeRuntimeError = useStore((state) => state.openCodeRuntimeError);
   const selectedProjectId = useStore((state) => state.selectedProjectId);
   const projects = useStore((state) => state.projects);
   const repositoryGroups = useStore((state) => state.repositoryGroups);
-  const multimodelEnabled = useStore((state) => state.appConfig?.general?.multimodelEnabled ?? true);
+  const multimodelEnabled = useStore(
+    (state) => state.appConfig?.general?.multimodelEnabled ?? true
+  );
   const projectPath = useMemo(
     () => resolveProjectPathById(selectedProjectId, projects, repositoryGroups)?.path ?? null,
     [selectedProjectId, projects, repositoryGroups]
@@ -36,12 +51,13 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
   const projectDirectory = useRuntimeProviderDirectoryCache(projectPath);
   const countEvidence = useRuntimeProviderConnectedCount(projectPath);
   const observedOpenCodeCount = countEvidence?.observation ?? null;
-  const openCodeIsChecking = Boolean(
-    countEvidence?.checking ||
-    openCodeRuntimeStatusLoading ||
-    cliProviderStatusLoading?.opencode ||
-    openCodeRuntimeStatus?.state === 'checking'
-  );
+  // Native discovery starts after CLI metadata arrives. Keep that cold-start gap
+  // checking, but don't let an unrelated aggregate refresh override a settled runtime.
+  const openCodeDiscoveryPending =
+    !openCodeRuntimeStatus &&
+    !openCodeRuntimeError &&
+    !cliStatusError &&
+    cliStatus?.installed !== false;
   const [expiryRevision, expire] = useState(0);
   useEffect(() => {
     const snapshots = [
@@ -55,14 +71,27 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
       .map((provider) => Date.parse(provider.modelCatalog?.staleAt ?? ''))
       .filter((time) => Number.isFinite(time) && time > Date.now());
     const expiries = snapshots
-      .map((fetchedAt) => Date.parse(fetchedAt ?? '') + DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS)
+      .flatMap((fetchedAt) => {
+        const freshUntil = Date.parse(fetchedAt ?? '') + DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS;
+        return countEvidence?.checking
+          ? [freshUntil, freshUntil + DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS]
+          : [freshUntil];
+      })
       .filter((time) => Number.isFinite(time) && time > Date.now());
     const deadlines = [...expiries, ...catalogExpiries];
     if (deadlines.length === 0) return;
     const delay = Math.max(1, Math.min(...deadlines) - Date.now() + 10);
     const timer = window.setTimeout(() => expire((n) => n + 1), delay);
     return () => window.clearTimeout(timer);
-  }, [cliStatus, globalDirectory, projectDirectory, projectPath, observedOpenCodeCount, expiryRevision]);
+  }, [
+    cliStatus,
+    globalDirectory,
+    projectDirectory,
+    projectPath,
+    observedOpenCodeCount,
+    countEvidence?.checking,
+    expiryRevision,
+  ]);
 
   const summary = getDashboardConnectionSummary({
     cliStatus,
@@ -73,8 +102,60 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
     projectDirectory,
     observedOpenCodeCount,
     countInvalidated: countEvidence?.invalidated ?? false,
+    countChecking: countEvidence?.checking ?? false,
     runtimeStatus: openCodeRuntimeStatus,
   });
 
-  return { summary, cliStatus, cliStatusLoading, cliStatusError, multimodelEnabled, openCodeIsChecking, projectPath, openCodeRuntimeStatus };
+  const readyCountScope =
+    multimodelEnabled &&
+    cliStatus?.installed === true &&
+    cliStatus.flavor === 'agent_teams_orchestrator' &&
+    openCodeRuntimeStatus?.state === 'ready' &&
+    isOpenCodeRuntimeUsable(openCodeRuntimeStatus)
+      ? JSON.stringify([
+          projectPath,
+          openCodeRuntimeStatus.version,
+          openCodeRuntimeStatus.binaryPath,
+        ])
+      : null;
+  const [countEffectsScope, setCountEffectsScope] = useState<string | null>(null);
+  useEffect(() => setCountEffectsScope(readyCountScope), [readyCountScope]);
+  // Cover the first render before a count probe can publish checking. Once effects
+  // run, only an actual check owns the loader, including after a failed probe.
+  const initialCountPending =
+    summary.openCodeConnected === null &&
+    readyCountScope !== null &&
+    countEffectsScope !== readyCountScope;
+  const openCodeIsChecking = Boolean(
+    openCodeDiscoveryPending ||
+    initialCountPending ||
+    countEvidence?.checking ||
+    openCodeRuntimeStatusLoading ||
+    cliProviderStatusLoading?.opencode ||
+    openCodeRuntimeStatus?.state === 'checking'
+  );
+
+  useOpenCodeDashboardConnectedCountProbe({
+    enabled:
+      refreshConnectedCount &&
+      isElectronMode() &&
+      multimodelEnabled &&
+      cliStatus?.installed === true &&
+      cliStatus.flavor === 'agent_teams_orchestrator',
+    projectPath,
+    runtimeStatus: openCodeRuntimeStatus,
+    connectedCount: summary.openCodeConnected,
+  });
+
+  return {
+    summary,
+    cliStatus,
+    cliStatusLoading,
+    cliStatusError,
+    cliProviderStatusLoading,
+    multimodelEnabled,
+    openCodeIsChecking,
+    projectPath,
+    openCodeRuntimeStatus,
+  };
 }

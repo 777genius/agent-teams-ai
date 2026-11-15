@@ -18,6 +18,7 @@ export const desktopProofManagementSources = [
   'tools/owned-process-broker/fixtures/providerCollaboration.mjs',
   'tools/owned-process-broker/fixtures/claudeExtensionsPeer.mjs',
   'tools/owned-process-broker/fixtures/claudeSavedImportPeer.mjs',
+  'tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts',
   'scripts/legacy-agent-host/desktop-emulated-codex-installer-fixture.ts',
   'scripts/legacy-agent-host/desktop-emulated-codex-installer-ui.ts',
   'tools/owned-process-broker/fixtures/codexInstallerRegistry.cjs',

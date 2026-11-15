@@ -141,3 +141,17 @@ test('selected native Desktop acceptance is required by the existing Full qualif
   assert.match(gate, /run: test "\$CODEX_LOGIN_RESULT" = success/);
   assert.doesNotMatch(account!, /continue-on-error:/);
 });
+
+test('GitHub Pages: production deployment requires the main branch', () => {
+  const source = workflow('landing');
+  const mainOnly = "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'";
+  assert.match(source, / {2}workflow_dispatch:\n/);
+  for (const location of [
+    /- uses: actions\/configure-pages@v6\n\s+if: ([^\n]+)/,
+    /- uses: actions\/upload-pages-artifact@v5\n\s+if: ([^\n]+)/,
+    /\n {2}deploy:\n[\s\S]*?\n {4}if: ([^\n]+)/,
+    /\n {2}smoke:\n[\s\S]*?\n {4}if: ([^\n]+)/,
+  ]) {
+    assert.equal(source.match(location)?.[1], mainOnly);
+  }
+});

@@ -93,7 +93,8 @@ describe('StickyChatAvatar', () => {
     const secondArticle = firstArticle.cloneNode() as HTMLElement;
     const sender = document.createElement('span');
     sender.dataset.chatSender = 'true';
-    const nativeAvatar = document.createElement('img');
+    const nativeAvatar = document.createElement('span');
+    nativeAvatar.dataset.participantAvatar = '';
     sender.appendChild(nativeAvatar);
     secondArticle.appendChild(sender);
     second.appendChild(secondArticle);
@@ -173,7 +174,7 @@ describe('StickyChatAvatar', () => {
       { top: 100, bottom: 220 },
       { top: 220, bottom: 330 },
     ];
-    const nativeAvatars: HTMLImageElement[] = [];
+    const nativeAvatars: HTMLElement[] = [];
     for (let index = 0; index < 3; index += 1) {
       const row = document.createElement('div');
       row.dataset.timelineRowIndex = String(index);
@@ -182,7 +183,8 @@ describe('StickyChatAvatar', () => {
       article.dataset.wideAgent = 'true';
       const sender = document.createElement('span');
       sender.dataset.chatSender = 'true';
-      const nativeAvatar = document.createElement('img');
+      const nativeAvatar = document.createElement('span');
+      nativeAvatar.dataset.participantAvatar = '';
       nativeAvatars.push(nativeAvatar);
       vi.spyOn(nativeAvatar, 'getBoundingClientRect').mockImplementation(() =>
         rect(positions[index].top, positions[index].top + 32)

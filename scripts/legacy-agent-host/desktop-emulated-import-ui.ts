@@ -19,17 +19,18 @@ export function assertDesktopEmulatedImportModelChecks(
     assert.equal(receipt.effort, selected.effort); assert.equal(receipt.phase, 'completed');
     assert.equal(receipt.ok, true); assert.equal(receipt.resourceHeld, false);
   }
-  assert.ok(effects.every(row => row.role === 'management' && row.provider === 'claude'));
+  assert.ok(effects.every(row => (row.role === 'management' || row.role === 'runtime') && row.provider === 'claude'));
   assert.equal(effects.some(row => row.event === 'failure'), false);
   const probes = effects.filter(row => row.event === 'input');
   assert.equal(probes.length, receipts.length, 'one real no-tools input per original model probe command');
   assert.equal(new Set(probes.map(row => row.inputId)).size, probes.length);
   for (const probe of probes) {
+    assert.equal(probe.role, 'runtime', 'Team preflight retains the original runtime-derived selection');
     assert.equal(probe.marker, 'TEST_MODEL_PROBE');
     assert.equal(probe.requestedModel, selected.model); assert.equal(probe.requestedEffort, selected.effort);
     assert.equal(probe.text, 'Reply only OK. Do not use tools, access files or run commands.');
     const launches = effects.filter(row => row.event === 'launch' && row.pid === probe.pid);
-    assert.equal(launches.length, 1); assert.equal(launches[0]!.sessionId, probe.sessionId);
+    assert.equal(launches.length, 1); assert.equal(launches[0]!.role, probe.role); assert.equal(launches[0]!.sessionId, probe.sessionId);
     assert.equal(launches[0]!.requestedModel, selected.model); assert.equal(launches[0]!.requestedEffort, selected.effort);
     const terminals = effects.filter(row => row.event === 'terminal' && row.pid === probe.pid && row.inputId === probe.inputId);
     assert.equal(terminals.length, 1); assert.equal(terminals[0]!.outcome, 'succeeded');

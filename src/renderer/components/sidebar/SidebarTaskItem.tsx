@@ -263,7 +263,7 @@ const SidebarTaskItemContent = ({
                   onRenameCancel?.();
                 }
               }}
-              className="min-w-0 flex-1 border-none bg-transparent p-0 text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight focus:outline-none"
+              className="min-w-0 flex-1 border-none bg-[var(--color-form-control-bg)] p-0 text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight focus:outline-none"
               style={{ color: 'var(--color-text-muted)' }}
               onClick={(e) => e.stopPropagation()}
               onFocus={preloadGlobalTaskDetailDialog}

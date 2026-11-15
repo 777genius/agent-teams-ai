@@ -732,6 +732,48 @@ describe('existing dialog multi-provider preflight', () => {
 });
 
 describe('existing Launch desired roster model preflight', () => {
+  it.each(['targeted', 'untargeted', 'captured-default'] as const)(
+    'retains the unchanged OpenCode destination for the later full roster CAS (%s)',
+    async (mode) => {
+      const f = fixture();
+      f.view.members[0].selected = {
+        provider: 'opencode', workspace: '/TEST/workspace', model: 'test-local/TEST-model',
+        capabilities: ['model'],
+      };
+      const directory = await mkdtemp(join(tmpdir(), 'TEST-opencode-product-roster-'));
+      try {
+        const choice: TeamProvisioningModelCheckRequest = { providerId: 'opencode',
+          model: 'test-local/TEST-model', ...(mode === 'targeted' ? { targets: [{ kind: 'lead' }] } : {}) };
+        const options = { ...f.options, intents: new FileTeamModelProbeIntents(directory),
+          request: { cwd: '/TEST/workspace', providerId: 'opencode' as const,
+            preparationId: 'TEST-original-preparation', modelChecks: mode === 'captured-default' ? [] : [choice] } };
+        const result = await prepareCapturedTeamModels(options);
+        const selection = { launchId: 'TEST-launch', rosterRevision: 'TEST-roster', memberId: 'TEST-member',
+          model: 'test-local/TEST-model', draft: { providerId: 'opencode', target: { kind: 'lead' }, workspace: '/TEST/workspace' } };
+        expect(result.ready).toBe(true);
+        expect(result.capturedTeamReadiness?.selections).toEqual([selection]);
+        expect(f.starts.map(call => call.payload)).toEqual([selection]);
+        expect((await prepareCapturedTeamModels(options)).ready).toBe(true);
+        expect(f.starts).toHaveLength(1);
+      } finally { await rm(directory, { recursive: true, force: true }); }
+    }
+  );
+
+  it.each(['anthropic', 'codex'] as const)('keeps unchanged %s readiness on its existing selection', async providerId => {
+    const f = fixture();
+    f.view.members[0].selected = { provider: providerId === 'anthropic' ? 'claude' : 'codex',
+      workspace: '/TEST/workspace', model: 'TEST-model', capabilities: ['model'] };
+    const directory = await mkdtemp(join(tmpdir(), 'TEST-unchanged-product-roster-'));
+    try {
+      const result = await prepareCapturedTeamModels({ ...f.options, intents: new FileTeamModelProbeIntents(directory),
+        request: { cwd: '/TEST/workspace', providerId, preparationId: 'TEST-original-preparation',
+          modelChecks: [{ providerId, model: 'TEST-model', targets: [{ kind: 'lead' }] }] } });
+      expect(result.ready).toBe(true);
+      expect(f.starts.map(call => call.payload)).toEqual([{ launchId: 'TEST-launch', rosterRevision: 'TEST-roster',
+        memberId: 'TEST-member', model: 'TEST-model' }]);
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  });
+
   it('delegates provider changes, new members and explicit workspaces to the original Host without mutating its roster', async () => {
     const f = fixture();
     const choices: TeamProvisioningModelCheckRequest[] = [

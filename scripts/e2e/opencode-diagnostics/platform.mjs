@@ -93,16 +93,35 @@ export function parseListeners(output) {
   );
   return [...new Set(ids)];
 }
-export function listeners() {
+function assertCdpPort(port) {
+  assert(Number.isSafeInteger(port) && port >= 1024 && port <= 65535, 'Invalid isolated CDP port');
+}
+export async function allocateIsolatedCdpPort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once('error', reject);
+    server.listen({ port: 0, host: '127.0.0.1', exclusive: true }, () => {
+      const address = server.address();
+      server.close((error) => {
+        if (error) return reject(error);
+        if (!address || typeof address === 'string') return reject(new Error('CDP port allocation failed'));
+        assertCdpPort(address.port);
+        resolve(address.port);
+      });
+    });
+  });
+}
+export function listeners(port = 9222) {
+  assertCdpPort(port);
   if (windows)
     return parseListeners(
       powershell(
-        'Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq 9222 | Select-Object -ExpandProperty OwningProcess'
+        `Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq ${port} | Select-Object -ExpandProperty OwningProcess`
       )
     );
   try {
     return parseListeners(
-      execFileSync('lsof', ['-nP', '-t', '-iTCP:9222', '-sTCP:LISTEN'], { encoding: 'utf8' })
+      execFileSync('lsof', ['-nP', '-t', `-iTCP:${port}`, '-sTCP:LISTEN'], { encoding: 'utf8' })
     );
   } catch (e) {
     if (e.status === 1 && !String(e.stdout).trim() && !String(e.stderr).trim()) return [];
@@ -115,8 +134,16 @@ export function assertListenerOwnership(ids, owned) {
     'CDP listener is not a launcher descendant; refusing access'
   );
 }
-export async function assertPortAvailable() {
-  assert.equal(listeners().length, 0, 'Port 9222 already has a listener');
+export async function assertPortAvailable(port = 9222) {
+  assertCdpPort(port);
+  // Electron can release its CDP listener just after the previous owned
+  // fixture has received SIGTERM. Wait briefly, but never connect to, reuse,
+  // or terminate a foreign listener.
+  const deadline = Date.now() + 15_000;
+  while (listeners(port).length > 0 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  assert.equal(listeners(port).length, 0, `Port ${port} already has a listener`);
   for (const host of ['127.0.0.1', '::1']) {
     await new Promise((resolve, reject) => {
       const server = net.createServer();
@@ -124,7 +151,7 @@ export async function assertPortAvailable() {
         if (host === '::1' && ['EAFNOSUPPORT', 'EADDRNOTAVAIL'].includes(error.code)) resolve();
         else reject(error);
       });
-      server.listen({ port: 9222, host, exclusive: true }, () => server.close(resolve));
+      server.listen({ port, host, exclusive: true }, () => server.close(resolve));
     });
   }
 }
@@ -140,13 +167,19 @@ export function fixtureShim(node, script, role, platform = process.platform) {
   const quote = (s) => "'" + s.replaceAll("'", "'\\''") + "'";
   return `#!/bin/sh\nexec ${quote(node)} ${quote(script)} ${role} "$@"\n`;
 }
-export function launchCommand(platform = process.platform) {
+export function launchCommand(platform = process.platform, port = 9222) {
+  assertCdpPort(port);
+  // The dev:mcp shortcut pins port 9222. An isolated test uses the same
+  // underlying dev script with its own explicitly selected debugging port.
+  const args = port === 9222
+    ? ['dev:mcp', '--noSandbox']
+    : ['dev', '--remoteDebuggingPort', String(port), '--noSandbox'];
   return platform === 'win32'
     ? {
         command: process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe',
-        args: ['/d', '/s', '/c', 'pnpm dev:mcp --noSandbox'],
+        args: ['/d', '/s', '/c', 'pnpm ' + args.join(' ')],
       }
-    : { command: 'pnpm', args: ['dev:mcp', '--noSandbox'] };
+    : { command: 'pnpm', args };
 }
 export function isolatedEnvironment(data, inherited = process.env) {
   const env = {};
@@ -231,7 +264,7 @@ export function assertLauncherCommand(launcher) {
     encoding: 'utf8',
   }).trim();
   assert(
-    /\bpnpm(?:\.[cm]?js)?\s+dev:mcp\b/.test(command),
+    /\bpnpm(?:\.[cm]?js)?\s+dev(?::mcp)?\b/.test(command),
     'Launcher command changed; refusing access/cleanup'
   );
 }

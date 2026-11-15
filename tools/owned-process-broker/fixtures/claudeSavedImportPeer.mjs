@@ -9,7 +9,8 @@ import process from 'node:process';
 assert.equal(process.env.TEST_EMULATED_DESKTOP_PROVIDER, '1');
 assert.equal(process.env.TEST_PEER_SCENARIO, 'desktop-ui-v1');
 assert.equal(process.env.TEST_PEER_PROVIDER, 'claude');
-assert.equal(process.env.TEST_PEER_ROLE, 'management');
+const role = process.env.TEST_PEER_ROLE;
+assert.ok(role === 'management' || role === 'runtime');
 assert.equal(process.env.TEST_DESKTOP_SETTINGS, 'saved-import');
 const root = process.env.TEST_DESKTOP_PEER_ROOT;
 assert.ok(root && basename(dirname(root)).startsWith('TEST-desktop-backend-'));
@@ -26,7 +27,7 @@ if (existsSync(effects)) assert.ok(lstatSync(effects).isFile() && !lstatSync(eff
 let effectCount = 0;
 const effect = value => {
   assert.ok(++effectCount <= 32);
-  appendFileSync(effects, JSON.stringify({ provider: 'claude', role: 'management', pid: process.pid, ...value }) + '\n', { mode: 0o600 });
+  appendFileSync(effects, JSON.stringify({ provider: 'claude', role, pid: process.pid, ...value }) + '\n', { mode: 0o600 });
 };
 const model = 'claude-sonnet-4-6', probe = 'Reply only OK. Do not use tools, access files or run commands.';
 const options = {}, flags = new Set(['verbose', 'strict-mcp-config', 'no-session-persistence']);
@@ -61,6 +62,7 @@ assert.ok(options.effort === undefined || options.effort === 'low');
 assert.equal(options.model === undefined, options.effort === undefined, 'saved model and effort travel together');
 assert.equal(options['permission-prompt-tool'], options.model === undefined ? undefined : 'stdio');
 assert.equal(options['session-id'] === undefined, options.model === undefined);
+if (role === 'runtime') assert.equal(options.model, model, 'runtime-derived selection is a finite saved-model probe');
 const session = options['session-id'] ?? randomUUID();
 assert.match(session, /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/iu);
 let initialized = false, inputId, finished = false, failed = false, buffer = '', inputBytes = 0;

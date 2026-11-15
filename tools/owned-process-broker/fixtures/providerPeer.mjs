@@ -9,8 +9,6 @@ import { createRequire } from 'node:module';
 import { createInterface } from 'node:readline';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
-const hostRequire = createRequire(new URL('../../../packages/legacy-agent-host/package.json', import.meta.url));
-
 if (process.env.TEST_EMULATED_DESKTOP_PROVIDER !== undefined) {
   assert.equal(process.env.TEST_EMULATED_DESKTOP_PROVIDER, '1');
   assert.equal(process.env.TEST_EMULATED_WINDOWS_PROVIDER, undefined);
@@ -22,6 +20,7 @@ if (process.env.TEST_EMULATED_DESKTOP_PROVIDER !== undefined) {
   await import(helper.href);
 } else {
 assert.equal(process.env.TEST_EMULATED_WINDOWS_PROVIDER, '1');
+const hostRequire = createRequire(new URL('../../../packages/legacy-agent-host/package.json', import.meta.url));
 const { Client } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/index.js')).href);
 const { StreamableHTTPClientTransport } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/streamableHttp.js')).href);
 const provider = process.env.TEST_PEER_PROVIDER;

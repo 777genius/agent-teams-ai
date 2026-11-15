@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   addCodexAstraUpdatePreview,
   getOpenCodeAuthFilteredModelOptions,
+  getOpenCodeModelGridColumnCount,
   resolveTeamModelSelectorValue,
-  shouldElevateOpenCodeVirtualRow,
   shouldShowOpenCodeNeedsTestBadge,
   shouldShowOpenCodeOverviewStatus,
 } from './teamModelSelectorUi';
@@ -357,25 +357,28 @@ describe('shouldShowOpenCodeNeedsTestBadge', () => {
   });
 });
 
-describe('shouldElevateOpenCodeVirtualRow', () => {
-  it('keeps the active heading below its sticky copy', () => {
-    expect(shouldElevateOpenCodeVirtualRow('heading', 4, 4)).toBe(false);
-  });
-
-  it('raises an incoming heading above the previous sticky heading', () => {
-    expect(shouldElevateOpenCodeVirtualRow('heading', 8, 4)).toBe(true);
-  });
-
-  it('never raises model rows', () => {
-    expect(shouldElevateOpenCodeVirtualRow('models', 5, 4)).toBe(false);
-  });
-});
-
 describe('shouldShowOpenCodeOverviewStatus', () => {
   it('shows overview guidance only on the unfiltered OpenCode tab', () => {
     expect(shouldShowOpenCodeOverviewStatus('opencode', 0, 0)).toBe(true);
     expect(shouldShowOpenCodeOverviewStatus('opencode', 1, 0)).toBe(false);
     expect(shouldShowOpenCodeOverviewStatus('opencode', 0, 1)).toBe(false);
     expect(shouldShowOpenCodeOverviewStatus('anthropic', 0, 0)).toBe(false);
+  });
+});
+
+describe('responsive model grid columns', () => {
+  it.each([
+    [0, 2],
+    [Number.NaN, 2],
+    [Number.POSITIVE_INFINITY, 2],
+    [-100, 2],
+    [200, 2],
+    [431, 2],
+    [432, 3],
+    [577, 3],
+    [578, 4],
+    [1200, 4],
+  ])('maps width %s to %i columns', (width, expectedColumns) => {
+    expect(getOpenCodeModelGridColumnCount(width)).toBe(expectedColumns);
   });
 });

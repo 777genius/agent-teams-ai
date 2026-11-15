@@ -10,8 +10,6 @@ import { createInterface } from 'node:readline';
 import process from 'node:process';
 import { setTimeout } from 'node:timers';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
-const hostRequire = createRequire(new URL('../../../packages/legacy-agent-host/package.json', import.meta.url));
-
 assert.equal(process.env.TEST_EMULATED_DESKTOP_PROVIDER, '1');
 assert.equal(process.env.TEST_EMULATED_WINDOWS_PROVIDER, undefined);
 assert.equal(process.env.TEST_PEER_SCENARIO, 'desktop-ui-v1');
@@ -71,8 +69,9 @@ const managedPolicy = raw => {
   assert.equal(encode(rows), raw, 'only the original canonical managed policy');
   assert.deepEqual(readdirSync(process.env.CODEX_HOME), [], 'only the original empty TEST native catalog');
   if (Object.keys(rows).length === 0) {
+    // Standalone schedules use the captured runtime namespace without any Team authority.
     assert.equal(process.env.LEGACY_AGENT_HOST_TEAM_MCP_TOKEN, undefined);
-    return rows; // Runtime use additionally requires the original ephemeral thread below.
+    return rows;
   }
   assert.deepEqual(Object.keys(rows), ['team']); const team = record(rows.team);
   assert.ok(Object.keys(team).every(key => ['url', 'bearer_token_env_var', 'enabled_tools', 'tools', 'enabled', 'startup_timeout_sec', 'tool_timeout_sec'].includes(key)));
@@ -169,6 +168,7 @@ const connectTeam = async () => {
     assert.equal(tokenName, 'LEGACY_AGENT_HOST_TEAM_MCP_TOKEN'); assert.ok(process.env[tokenName]);
     authorization = `Bearer ${process.env[tokenName]}`;
   }
+  const hostRequire = createRequire(new URL('../../../packages/legacy-agent-host/package.json', import.meta.url));
   const { Client } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/index.js')).href);
   const { StreamableHTTPClientTransport } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/streamableHttp.js')).href);
   mcp = new Client({ name: 'TEST-desktop-provider-peer', version: '1' });
@@ -346,9 +346,9 @@ async function receive(frame) {
       inputModalities: ['text'], supportsPersonality: false })), nextCursor: null }; break;
     case 'thread/start':
       assert.equal(active, undefined); assert.equal(params.cwd, process.cwd()); assert.ok(codexModels.includes(params.model));
+      if (role === 'runtime' && !runtimeMcp) assert.equal(params.ephemeral, true, 'Standalone runtime must remain ephemeral');
       if (managedMcp !== undefined) { assert.equal(managedConfigObserved, true); if (runtimeMcp) await connectTeam(); }
       if (standaloneMcp) {
-        assert.equal(params.ephemeral, true, 'Only the original standalone ephemeral thread');
         assert.equal(standaloneThread, false); standaloneThread = true;
       }
       if (selection !== undefined) {

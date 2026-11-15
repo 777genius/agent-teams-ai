@@ -1,0 +1,1185 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "高階使用者選項：匯出/匯入設定、重設預設值和編輯原始設定。",
+      "label": "高階"
+    },
+    "general": {
+      "description": "核心應用程式偏好設定，例如主題、語言、顯示密度和啟動行為。",
+      "label": "一般"
+    },
+    "infoAriaLabel": "{{label}} 是什麼？",
+    "notifications": {
+      "description": "控制您何時以及如何收到有關代理活動、任務完成和錯誤的通知。",
+      "label": "通知"
+    },
+    "gatewayProviders": {
+      "description": "管理閘道端點，讓每位隊友各自存取模型。",
+      "label": "閘道供應商"
+    }
+  },
+  "view": {
+    "description": "管理您的應用程式偏好設定",
+    "loading": "正在載入設定…",
+    "title": "設定"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "取消",
+      "reconnect": "重新連線",
+      "removeManagedCredential": "移除已儲存的憑證",
+      "replaceCredential": "替換 API 金鑰",
+      "signInAgain": "重新登入",
+      "test": "測試"
+    },
+    "defaults": {
+      "allProjects": "預設模型",
+      "allProjectsHint": "測試使用 {{project}}。除非專案有覆寫設定，否則套用預設值。",
+      "loadingContexts": "正在載入上下文…",
+      "projectHint": "儲存僅覆蓋 {{project}}。",
+      "projectOverrideContext": "專案覆蓋上下文",
+      "scopeDescriptionAllProjects": "每個沒有自己的 OpenCode 覆蓋的專案的預設值。",
+      "scopeDescriptionProject": "僅覆蓋選定的專案。執行團隊沒有變化。",
+      "selectProjectContext": "選擇專案上下文",
+      "selectProjectHint": "在測試本機模型或儲存預設值之前選擇一個專案。",
+      "selectValidationContext": "選擇驗證上下文",
+      "setAllProjectsDefault": "設定所有專案預設值",
+      "setProjectDefault": "設定專案預設值",
+      "thisProject": "此專案",
+      "title": "OpenCode 預設值",
+      "validationContext": "驗證上下文",
+      "inheritanceDescription": "專案會使用此模型，除非選擇其他模型。",
+      "freeRouterAdvisory": "為每個請求選擇一個可用的免費模型。實際使用的模型可能會變化。",
+      "change": "變更",
+      "useAnotherModel": "使用其他模型",
+      "inherits": "使用預設設定",
+      "override": "專案覆蓋設定",
+      "useDefault": "使用預設設定",
+      "choosingAllProjects": "為沒有覆蓋設定的專案選擇模型。",
+      "choosingProject": "僅為 {{project}} 選擇模型。",
+      "cancelChoosing": "取消",
+      "select": "選擇",
+      "selected": "已選擇",
+      "testAndUse": "測試並使用",
+      "testAndUseAllProjects": "為所有專案測試並使用",
+      "testAndUseProject": "為此專案測試並使用"
+    },
+    "diagnostics": {
+      "previousPage": "上一頁",
+      "nextPage": "下一頁",
+      "copied": "已複製診斷資訊",
+      "copiedShort": "已複製",
+      "copy": "複製診斷",
+      "copyAll": "複製所有診斷資訊",
+      "hints": "提示詞",
+      "likelyCause": "可能的原因：",
+      "windowsSymlinkAdminHint": "Windows：以系統管理員身分執行 Agent Teams AI"
+    },
+    "models": {
+      "testingElapsed": "等待測試結果... {{seconds}} 秒",
+      "alreadyDefault": "這已經是選定的 OpenCode 預設值。",
+      "empty": "未找到模型。",
+      "emptyFree": "未找到免費模型。",
+      "emptyRecommended": "未找到推薦模型。",
+      "emptyRecommendedFree": "未找到推薦的免費模型。",
+      "freeOnly": "僅免費",
+      "launchableDescription": "來自 OpenCode 設定、免費內建模型和目前預設值的已知路由。本機路由在準備團隊啟動之前需要成功測試。",
+      "launchableTitle": "OpenCode 模型路由",
+      "loadingRoutes": "正在載入 OpenCode 模型路由…",
+      "noRoutesMatch": "沒有 OpenCode 模型路由與「{{query}}」相符。",
+      "noneReported": "尚未報告 OpenCode 模型路由。在 OpenCode 中設定本機路由或使用「供應商」分頁檢查目錄供應商。",
+      "recommendedOnly": "僅推薦",
+      "searchPlaceholder": "搜尋模型",
+      "selectProjectBeforeTesting": "在測試模型之前選擇專案上下文。",
+      "selectProjectBeforeTestingDefaults": "在測試或儲存 OpenCode 預設值之前選擇專案上下文。",
+      "testInProgress": "模型測試已經開始。",
+      "useInTeamPicker": "儲存用於團隊選擇器",
+      "validationContextRequired": "選擇上面的驗證上下文以啟用測試並設定預設值。儲存團隊選擇器僅儲存新團隊的路由。",
+      "actionsUnavailable": "暫時無法執行操作。",
+      "defaultSaveInProgress": "正在儲存 OpenCode 預設值。",
+      "routeUnavailableAuth": "該供應商需要先進行認證，然後才能使用該模型。",
+      "routeUnavailableFailed": "該模型路由未能通過最後一次執行測試。",
+      "routeUnavailableGeneric": "該模型路由目前無法使用。",
+      "routeUnavailableUnknown": "該模型是目前 OpenCode 預設模型，但在即時目錄中尚不可用。",
+      "shown": "已顯示：{{shown}}",
+      "shownFree": "已顯示的免費模型：{{shown}}",
+      "loaded": "已載入 {{loaded}} / {{total}}",
+      "searchingRemaining": "已載入的模型中尚無符合項目，正在檢查其餘目錄...",
+      "stopTest": "停止",
+      "stoppingTest": "正在停止...",
+      "testCancelled": "測試已停止。",
+      "testCancelFailed": "無法停止測試，請再試一次。",
+      "testCancelUnsupported": "此執行環境不支援停止測試。",
+      "paidRetryNotice": "如果達到免費模型的每日上限，這次測試會自動以 gpt-oss-20b 重試一次。該請求會使用您的 OpenRouter 餘額。",
+      "paidRetryRunning": "已達免費模型上限。正在使用您的 OpenRouter 餘額測試 gpt-oss-20b…",
+      "paidRetryResult": "以 gpt-oss-20b 付費重試",
+      "freeQuotaReached": "已達 OpenRouter 免費模型的每日上限。"
+    },
+    "providers": {
+      "catalog": "OpenCode 供應商目錄",
+      "countFallback": "OpenCode 供應商",
+      "countSummary": "顯示 {{count}} 個",
+      "countSummaryLoading": "顯示 {{count}} 個 · 正在載入完整目錄",
+      "description": "{{count}}。首先顯示已連線和推薦的供應商。",
+      "loadMore": "載入更多供應商",
+      "loading": "載入 OpenCode 供應商",
+      "loadingFullCatalog": "正在載入其餘目錄…",
+      "noMatches": "沒有符合此搜尋的供應商。",
+      "noneReported": "託管執行環境未報告 OpenCode 供應商。",
+      "recommended": "推薦",
+      "refreshCatalog": "重新整理目錄",
+      "searchPlaceholder": "搜尋供應商",
+      "description_few": "{{count}}。首先顯示已連線和推薦的供應商。",
+      "description_many": "{{count}}。首先顯示已連線和推薦的供應商。",
+      "description_one": "{{count}}。首先顯示已連線和推薦的供應商。",
+      "description_other": "{{count}}。首先顯示已連線和推薦的供應商。",
+      "ownership": {
+        "managed": "儲存在此應用程式中",
+        "local": "來自 OpenCode 設定",
+        "env": "來自環境變數",
+        "project": "來自專案設定"
+      }
+    },
+    "reconnect": {
+      "apiDescription": "請輸入新憑證。在新憑證通過模型驗證之前，目前已儲存的憑證將保持有效。",
+      "apiTitle": "替換 {{provider}} 憑證",
+      "continueInBrowser": "在瀏覽器中繼續",
+      "getBrowserCode": "取得瀏覽器程式碼",
+      "oauthDescription": "用於切換帳號或修復授權。如果驗證失敗，將還原目前的登入狀態。",
+      "oauthTitle": "重新登入 {{provider}}",
+      "replaceAndVerify": "替換並驗證"
+    },
+    "setup": {
+      "loading": "正在載入供應商設定…"
+    },
+    "summary": {
+      "defaultModel": "OpenCode 預設：{{model}}",
+      "loading": "正在載入託管 OpenCode 執行環境、連線的供應商和模型預設值…",
+      "source": "來源：{{source}}",
+      "title": "OpenCode 執行環境"
+    },
+    "tabs": {
+      "models": "模型",
+      "providers": "供應商"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "搜尋模型路由"
+    },
+    "badges": {
+      "usedInTeamPicker": "為團隊選擇器儲存",
+      "free": "免費",
+      "local": "本機",
+      "configured": "已設定",
+      "knownRoute": "已知路由",
+      "connected": "已連線",
+      "verified": "已驗證",
+      "needsTest": "需要測試",
+      "failed": "失敗",
+      "unknown": "未知",
+      "default": "預設"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "代理溝通語言",
+      "descriptionWithDetected": "代理溝通語言（偵測到：{{detected}}）",
+      "emptyMessage": "未找到語言。",
+      "label": "語言",
+      "searchPlaceholder": "搜尋語言…",
+      "selectPlaceholder": "選擇語言…",
+      "title": "代理語言"
+    },
+    "appLanguage": {
+      "description": "應用程式介面的語言。",
+      "label": "語言",
+      "title": "應用程式語言"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "開啟記錄或收到新訊息時自動展開每個回應回合",
+        "label": "預設展開 AI 回應"
+      },
+      "nativeTitleBar": {
+        "description": "使用預設的系統視窗框架而不是自訂標題列",
+        "label": "使用原生標題列",
+        "restartConfirm": {
+          "confirmLabel": "重新啟動",
+          "message": "應用程式需要重新啟動才能套用標題列變更。現在重新啟動？",
+          "title": "需要重新啟動"
+        }
+      },
+      "theme": {
+        "description": "選擇您喜歡的顏色主題",
+        "label": "主題",
+        "options": {
+          "dark": "深色",
+          "light": "淺色",
+          "system": "系統"
+        }
+      },
+      "title": "外觀",
+      "customThemes": {
+        "label": "自訂主題",
+        "description": "基於深色或淺色模式的命名 JSON 調色盤。",
+        "none": "內建主題",
+        "edit": "編輯 JSON",
+        "localOnly": "主題、縮放和字型僅儲存在此裝置或瀏覽器中。",
+        "editor": {
+          "title": "編輯主題（JSON）",
+          "description": "最多編輯 8 個具名主題。顏色格式必須為 #RRGGBB；儲存時只會套用有效的 JSON。使用空的 themes 陣列可移除全部主題。",
+          "cancel": "取消",
+          "save": "儲存主題",
+          "conflict": "其他分頁已變更主題。JSON 草稿已保留；請檢查後決定是否明確覆蓋更新的主題。",
+          "overwrite": "覆蓋更新的主題",
+          "invalidJson": "JSON 語法無效",
+          "invalidTheme": "主題調色盤無效。請檢查欄位、顏色和對比度。"
+        }
+      },
+      "uiScale": {
+        "label": "介面縮放",
+        "description": "縮放整個應用程式，而不變更作業系統或瀏覽器的縮放比例。",
+        "reset": "重設"
+      },
+      "fontFamily": {
+        "label": "介面字型",
+        "description": "選擇裝置上已安裝的字型。程式碼編輯器和終端機仍使用各自的字型。",
+        "system": "系統預設",
+        "other": "其他字型…",
+        "placeholder": "已安裝字型名稱",
+        "apply": "套用",
+        "discover": "查詢已安裝字型",
+        "loaded": "已安裝字型已新增到清單。",
+        "unavailable": "此處無法列出字型，請手動輸入字型名稱。",
+        "empty": "未找到已安裝字型。請手動輸入字型名稱。"
+      },
+      "textSize": {
+        "label": "文字大小",
+        "description": "調整介面文字大小，不改變整體縮放比例。",
+        "reset": "重設"
+      }
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "啟動 HTTP 伺服器以從瀏覽器存取 UI 或嵌入 iframe 中",
+        "label": "啟用伺服器模式"
+      },
+      "title": "瀏覽器存取"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "選擇資料夾",
+        "selectFolderManually": "手動選擇資料夾",
+        "useAutoDetect": "使用自動偵測",
+        "useFolder": "使用資料夾",
+        "usePath": "使用路徑",
+        "useThisPath": "使用此路徑",
+        "useWsl": "使用 Linux/WSL？"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "該資料夾不包含「projects」目錄。仍要繼續嗎？",
+          "title": "找不到專案目錄"
+        },
+        "notClaudeDir": {
+          "message": "該資料夾名為「{{folderName}}」，而不是「.claude」。仍要繼續嗎？",
+          "title": "所選資料夾不是 .claude"
+        },
+        "noWslPaths": {
+          "message": "無法自動找到帶有 Claude 資料的 WSL 發行版。手動選擇資料夾？",
+          "title": "未找到 WSL Claude 路徑"
+        },
+        "wslNoProjectsDir": {
+          "message": "「{{path}}」不包含「projects」目錄。仍要繼續嗎？",
+          "title": "WSL 路徑缺少專案目錄"
+        }
+      },
+      "current": {
+        "autoDetected": "自動偵測到：{{path}}",
+        "autoDetectedPath": "使用自動偵測的路徑",
+        "customPath": "使用自訂路徑",
+        "label": "目前本機根"
+      },
+      "description": "選擇將哪個本機資料夾視為您的 Claude 資料根",
+      "errors": {
+        "detectWslFailed": "無法偵測 WSL Claude 根路徑",
+        "loadFailed": "無法載入本機 Claude 根目錄 設定",
+        "updateFailed": "Claude 根目錄更新失敗"
+      },
+      "title": "本機 Claude 根目錄",
+      "wslModal": {
+        "closeAriaLabel": "關閉 WSL 路徑對話方塊",
+        "description": "偵測到的 WSL 發行版和 Claude 根候選",
+        "noProjectsDir": "未偵測到專案目錄",
+        "title": "選擇 WSL Claude 根目錄"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "傳送匿名的當機、效能和產品使用資料，協助改進應用程式。不會錄製工作階段重播。",
+        "label": "傳送匿名遙測資料"
+      },
+      "title": "隱私"
+    },
+    "server": {
+      "runningOn": "執行於",
+      "standaloneModeDescription": "以獨立模式執行。HTTP 伺服器會持續運作。系統通知無法使用，通知觸發條件只會記錄在應用程式內。",
+      "title": "伺服器"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "登入時自動啟動應用程式",
+        "label": "登入時啟動"
+      },
+      "showDockIcon": {
+        "description": "在 Dock 中顯示應用程式圖示 (macOS)",
+        "label": "顯示 Dock 圖示"
+      },
+      "title": "啟動"
+    },
+    "externalAgentConnection": {
+      "title": "外部代理連線",
+      "description": "本機代理可以透過應用程式的 MCP 伺服器建立已儲存的草稿。連線就緒不代表已有外部用戶端連上。雲端代理需要本機執行器。",
+      "localOnly": "外部連線僅在本機桌面應用程式環境中可用。",
+      "status": "MCP：{{mcp}}；控制：{{control}}；Renderer CDP：{{cdp}}",
+      "retry": "重試連線",
+      "retrying": "正在重試...",
+      "cdpLabel": "允許完整的 Renderer 存取（CDP）",
+      "cdpDescription": "授予本機處理程序完整的 Renderer 存取權，包括 preload API。瀏覽器端點可以看到其他應用程式目標。啟用與停用都需要重新啟動應用程式。",
+      "restartRequired": "重新啟動應用程式以套用已儲存的設定。",
+      "stillOpen": "在重新啟動之前，Renderer 存取仍處於開放狀態。",
+      "statuses": {
+        "loading": "載入中",
+        "starting": "啟動中",
+        "ready": "就緒",
+        "error": "錯誤",
+        "stopped": "已停止",
+        "disabled": "已停用",
+        "restart-required": "需要重新啟動"
+      }
+    }
+  },
+  "notifications": {
+    "recovery": {
+      "title": "自動代理恢復",
+      "transient": {
+        "label": "從暫時性執行環境錯誤中復原",
+        "description": "在發生可安全重試的暫時性供應商或網路錯誤後，繼續執行失敗的負責人或隊友回合"
+      },
+      "rateLimits": {
+        "label": "在速率限制有重設時間時自動復原",
+        "description": "在可信的 Retry-After 或重設時間之後繼續，並保留安全緩衝"
+      },
+      "delay": {
+        "label": "初始重試延遲（秒）",
+        "description": "第一次復原嘗試前的基本延遲（15-900 秒）"
+      },
+      "attempts": {
+        "label": "最多復原次數",
+        "description": "每個失敗鏈可接受的執行環境回合數（1-5）"
+      }
+    },
+    "dev": {
+      "descriptionPrefix": "通知在開發模式下可能無法運作。macOS 會將應用程式識別為「Electron」（套件 ID",
+      "descriptionSuffix": "），而不是正式版應用程式名稱。請到「系統設定 > 通知 > Electron」確認權限。",
+      "title": "開發模式"
+    },
+    "ignoredRepositories": {
+      "description": "來自這些儲存庫的通知將被忽略",
+      "empty": "沒有忽略任何儲存庫",
+      "selectPlaceholder": "選擇要忽略的儲存庫…",
+      "title": "忽略的儲存庫"
+    },
+    "settings": {
+      "enabled": {
+        "description": "顯示錯誤和事件的系統通知",
+        "label": "啟用系統通知"
+      },
+      "sound": {
+        "description": "出現通知時播放聲音",
+        "label": "播放聲音"
+      },
+      "subagentErrors": {
+        "description": "偵測並通知子代理工作階段中的錯誤",
+        "label": "包括子代理錯誤"
+      },
+      "title": "通知設定"
+    },
+    "snooze": {
+      "clear": "取消暫停",
+      "description": "暫時暫停通知",
+      "descriptionWithTime": "暫停至 {{time}}",
+      "label": "暫停通知",
+      "options": {
+        "15": "15 分鐘",
+        "30": "30 分鐘",
+        "60": "1 小時",
+        "120": "2 小時",
+        "240": "4 小時",
+        "-1": "直到明天"
+      },
+      "selectDuration": "選擇持續時間…"
+    },
+    "usageBudgets": {
+      "critical": {
+        "description": "已設定的用量預算達到 100% 時建立通知。",
+        "label": "達到 100% 時通知"
+      },
+      "enabled": {
+        "description": "用量預算超過設定的門檻時建立通知。",
+        "label": "啟用預算通知"
+      },
+      "info": "用量預算檢查會在快照重新整理後於主處理程序中執行。API 計價成本只是參考估計值，並非訂閱帳單。",
+      "infoAriaLabel": "用量預算通知詳細資訊",
+      "nativeToast": {
+        "description": "同時顯示作業系統原生通知。關閉時仍會建立應用程式內通知。",
+        "label": "作業系統原生通知"
+      },
+      "title": "用量預算",
+      "warning": {
+        "description": "已設定的用量預算達到 80% 時建立通知。",
+        "label": "達到 80% 時通知"
+      },
+      "editorLink": "在「用量 / 預算」中設定門檻"
+    },
+    "taskCompletion": {
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "當團隊中的每項任務達到完成狀態時發出通知",
+        "label": "所有任務已完成"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "當 Claude 報告重設時間時，在限額重設後為團隊負責人安排後續繼續",
+        "label": "速率限制後自動恢復"
+      },
+      "clarifications": {
+        "description": "當任務需要您的輸入時顯示原生作業系統通知",
+        "label": "任務澄清通知"
+      },
+      "crossTeamMessage": {
+        "description": "當有來自其他團隊的訊息到達時發出通知",
+        "label": "跨團隊訊息通知"
+      },
+      "leadInbox": {
+        "description": "當隊友向團隊負責人傳送訊息時發出通知",
+        "label": "團隊負責人收件箱通知"
+      },
+      "statusChange": {
+        "description": "當任務狀態變更時顯示原生作業系統通知",
+        "label": "任務狀態變更通知",
+        "onlySolo": {
+          "description": "僅當團隊沒有隊友時通知",
+          "label": "僅在單人模式下"
+        },
+        "statuses": {
+          "description": "哪些目標狀態會觸發通知",
+          "label": "通知這些狀態",
+          "options": {
+            "approved": "已核准",
+            "completed": "已完成",
+            "deleted": "已刪除",
+            "in_progress": "進行中",
+            "needsFix": "需要修復",
+            "pending": "待辦的",
+            "review": "審查"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "當代理在任務上留言時顯示原生作業系統通知",
+        "label": "任務留言通知"
+      },
+      "taskCreated": {
+        "description": "建立新任務時顯示原生作業系統通知",
+        "label": "任務建立通知"
+      },
+      "teamLaunched": {
+        "description": "當團隊完成啟動並準備就緒時發出通知",
+        "label": "團隊啟動通知"
+      },
+      "title": "團隊通知",
+      "toolApproval": {
+        "description": "應用程式未在前景時，若工具需要您核准（允許/拒絕）就發出通知",
+        "label": "工具核准通知"
+      },
+      "userInbox": {
+        "description": "當隊友給你傳送訊息時通知",
+        "label": "使用者收件箱通知"
+      }
+    },
+    "test": {
+      "action": "傳送測試",
+      "description": "傳送測試通知以驗證送達情況",
+      "failedToSend": "傳送測試通知失敗",
+      "label": "測試通知",
+      "sending": "正在傳送…",
+      "sent": "傳送！",
+      "unknownError": "未知錯誤"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "應用程式圖示",
+      "description": "組建 AI 代理團隊：可並行自主工作、跨團隊溝通，並在看板上管理任務，同時提供內建程式碼審查、即時處理程序監控與完整的工具可見性。",
+      "standalone": "獨立式",
+      "title": "關於",
+      "version": "版本 {{version}}"
+    },
+    "configuration": {
+      "editConfig": "編輯設定",
+      "exportConfig": "匯出設定",
+      "importConfig": "匯入設定",
+      "openInEditor": "在編輯器中開啟",
+      "resetToDefaults": "重設為預設值",
+      "title": "設定"
+    },
+    "updates": {
+      "available": "v{{version}} 可用",
+      "check": "檢查更新",
+      "checking": "檢查…",
+      "ready": "更新準備就緒",
+      "unknownVersion": "未知",
+      "upToDate": "最新"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "載入設定失敗",
+      "saveFailed": "儲存設定失敗"
+    },
+    "footer": {
+      "autoSave": "變更編輯後自動儲存",
+      "toClose": "關閉",
+      "escapeKey": "Esc 鍵"
+    },
+    "loading": "正在載入設定…",
+    "status": {
+      "invalidJson": "無效的 JSON",
+      "saveFailed": "儲存失敗",
+      "saved": "已儲存",
+      "saving": "儲存…"
+    },
+    "title": "編輯設定"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "取消",
+      "submit": "新增觸發條件",
+      "title": "新增自訂觸發條件"
+    },
+    "builtin": {
+      "description": "應用程式內建的預設觸發條件。您可以啟用或停用它們，並自訂比對模式。",
+      "title": "內建觸發條件"
+    },
+    "card": {
+      "builtinBadge": "內建",
+      "collapseAriaLabel": "摺疊",
+      "deleteAriaLabel": "刪除觸發條件",
+      "editNameAriaLabel": "編輯名稱",
+      "expandAriaLabel": "展開"
+    },
+    "color": {
+      "customHexTitle": "自訂十六進位制顏色",
+      "invalidHex": "無效的十六進位制"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "如果 > 則發出警報",
+      "emptyPatternHint": "留空即符合所有內容。使用 JavaScript 正規表示式語法。",
+      "errorStatusDescription": "當工具執行報告錯誤 (is_error: true) 時觸發。",
+      "tokensUnit": "Token",
+      "matchPatternPlaceholder": "例如，錯誤|失敗|異常"
+    },
+    "custom": {
+      "description": "建立您自己的觸發條件以取得特定模式或工具輸出的通知。",
+      "empty": "尚未設定自訂觸發條件。",
+      "title": "自訂觸發條件"
+    },
+    "errors": {
+      "invalidRegexPattern": "無效的正規表示式模式"
+    },
+    "fields": {
+      "contentType": "內容類型",
+      "matchField": "比對欄位",
+      "matchPattern": "比對模式（正規表示式）",
+      "scopeToolName": "範圍/工具名稱",
+      "scopeToolNameOptional": "範圍/工具名稱（選填）",
+      "threshold": "臨界點",
+      "tokenType": "Token 類型",
+      "triggerNamePlaceholder": "例如，建置失敗警報",
+      "triggerNameRequired": "觸發條件名稱 *"
+    },
+    "ignorePatterns": {
+      "hint": "按 Enter 鍵新增。若符合任一模式，則跳過通知。",
+      "placeholder": "新增忽略正規表示式…",
+      "removeAriaLabel": "刪除忽略模式",
+      "summary": "高階：排除規則",
+      "title": "忽略模式（符合則跳過）"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "文字輸出",
+        "thinking": "思考",
+        "tool_result": "工具結果",
+        "tool_use": "工具使用"
+      },
+      "matchFields": {
+        "args": "引數",
+        "command": "指令",
+        "content": "內容",
+        "description": "描述",
+        "file_path": "檔案路徑",
+        "fullInput": "完整輸入 (JSON)",
+        "glob": "Glob 篩選",
+        "new_string": "新字串",
+        "old_string": "舊字串",
+        "path": "路徑",
+        "pattern": "模式",
+        "prompt": "提示詞",
+        "query": "查詢",
+        "skill": "技能名稱",
+        "subagent_type": "子代理類型",
+        "text": "文字內容",
+        "thinking": "思考內容",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "內容模式",
+        "error_status": "執行錯誤",
+        "token_threshold": "高 Token 使用率"
+      },
+      "tokenTypes": {
+        "input": "輸入 Token",
+        "output": "輸出 Token",
+        "total": "Token 總數"
+      },
+      "toolNames": {
+        "anyTool": "任何工具"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "測試觸發條件",
+      "detectedSuffix": "錯誤將會被偵測到",
+      "more": "…以及 {{count}} 更多",
+      "more_few": "…以及 {{count}} 更多",
+      "more_many": "…以及 {{count}} 更多",
+      "more_one": "…以及 {{count}} 更多",
+      "more_other": "…以及 {{count}} 更多",
+      "testTrigger": "測試觸發條件",
+      "testing": "測試…",
+      "title": "預覽",
+      "truncatedWarning": "搜尋提前停止（逾時或達到數量上限）。實際符合項目可能更多。",
+      "viewSession": "檢視工作階段"
+    },
+    "repositoryScope": {
+      "empty": "未選擇儲存庫 - 觸發條件適用於所有儲存庫",
+      "hint": "選擇儲存庫後，此觸發條件只會在這些儲存庫發生錯誤時觸發。",
+      "placeholder": "選擇要新增的儲存庫…",
+      "summary": "高階：儲存庫範圍",
+      "title": "限制儲存庫（僅適用於選定的儲存庫）"
+    },
+    "sections": {
+      "configuration": "設定",
+      "dotColor": "點顏色",
+      "generalInfo": "一般資訊",
+      "triggerCondition": "觸發條件"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "新增設定檔",
+      "cancel": "取消",
+      "deleteProfile": "刪除設定檔",
+      "editProfile": "編輯設定檔",
+      "save": "儲存"
+    },
+    "authMethods": {
+      "agent": "SSH Agent",
+      "auto": "自動（來自 SSH 設定）",
+      "password": "密碼",
+      "privateKey": "私鑰"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "刪除",
+      "message": "您確定要刪除「{{name}}」嗎？此操作無法復原。",
+      "title": "刪除設定檔"
+    },
+    "description": "儲存 SSH 連線設定檔以便快速重新連線",
+    "empty": {
+      "description": "新增 SSH 設定檔以快速連線",
+      "title": "沒有儲存的設定檔"
+    },
+    "form": {
+      "authentication": "認證",
+      "host": "主機",
+      "name": "名稱",
+      "passwordPrompt": "連線時系統會提示您輸入密碼。",
+      "port": "埠",
+      "privateKeyPath": "私鑰路徑",
+      "username": "使用者名稱",
+      "namePlaceholder": "我的伺服器",
+      "hostPlaceholder": "主機名稱或 IP",
+      "usernamePlaceholder": "使用者"
+    },
+    "loading": "正在載入設定檔…",
+    "title": "工作區設定檔"
+  },
+  "connection": {
+    "actions": {
+      "connect": "連線",
+      "connecting": "正在連線…",
+      "disconnect": "斷開",
+      "testConnection": "測試連線",
+      "testing": "測試…"
+    },
+    "currentMode": {
+      "description": "工作階段檔案的資料來源",
+      "label": "目前模式",
+      "local": "本機 ({{path}})"
+    },
+    "description": "連線到遠端計算機以檢視在那裡執行的 Claude Code 工作階段",
+    "form": {
+      "authentication": "認證",
+      "host": "主機",
+      "password": "密碼",
+      "port": "埠",
+      "privateKeyPath": "私鑰路徑",
+      "username": "使用者名稱",
+      "hostPlaceholder": "主機名稱或 SSH 設定別名",
+      "usernamePlaceholder": "使用者"
+    },
+    "savedProfiles": {
+      "title": "儲存的設定檔"
+    },
+    "ssh": {
+      "title": "SSH 連線"
+    },
+    "status": {
+      "connectedTo": "連線到 {{host}}",
+      "remoteSessions": "透過 SSH 檢視遠端工作階段"
+    },
+    "test": {
+      "failed": "連線失敗：{{error}}",
+      "success": "連線成功",
+      "unknownError": "未知錯誤"
+    },
+    "title": "遠端連線"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "取消",
+      "cancelLogin": "取消登入",
+      "connectChatGpt": "連線 ChatGPT",
+      "delete": "刪除",
+      "disable": "停用",
+      "disconnectAccount": "斷開帳號連線",
+      "generateLink": "生成連結",
+      "openLogin": "開啟登入",
+      "reconnectAnthropic": "重新連線 Anthropic",
+      "refresh": "重新整理",
+      "replaceKey": "更換金鑰",
+      "saveEndpoint": "儲存端點",
+      "saveKey": "儲存金鑰",
+      "saving": "儲存…",
+      "setApiKey": "設定 API 金鑰",
+      "updateKey": "更新金鑰",
+      "useCode": "使用程式碼"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "正在載入儲存的憑證…",
+      "projectScope": "專案",
+      "scope": "範圍",
+      "storedIn": "儲存在 {{backend}} 中",
+      "userScope": "使用者",
+      "storedInApp": "儲存在應用程式中",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API 金鑰",
+          "title": "API 金鑰",
+          "description": "使用直接 Anthropic API 金鑰進行 API 計費存取。當您切換回來時，您的 Anthropic 訂閱工作階段仍然可用。",
+          "placeholder": "sk-ant-…"
+        },
+        "codex": {
+          "name": "Codex API 金鑰",
+          "title": "API 金鑰",
+          "description": "使用 OpenAI API 金鑰作為 Codex 的次要認證方式。如果您將 Codex 切換到 API 金鑰模式，應用程式會在原生啟動時將 OPENAI_API_KEY 同步到 CODEX_API_KEY。",
+          "placeholder": "sk-proj-…"
+        },
+        "gemini": {
+          "name": "Gemini API 金鑰",
+          "title": "API 存取",
+          "description": "對 Gemini API 後端使用「GEMINI_API_KEY」。CLI SDK 和 ADC 不需要它。",
+          "placeholder": "AIza…"
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "app-server：{{state}}",
+        "connected": "已連線",
+        "description": "管理本機 Codex app-server 的帳號工作階段，供以訂閱為基礎的原生啟動使用。",
+        "loginInProgress": "登入正在進行中",
+        "plan": "方案：{{plan}}",
+        "reconnectRequired": "需要重新連線",
+        "title": "ChatGPT 帳號",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Auto 將繼續使用偵測到的 API 金鑰，直到連線 ChatGPT。",
+          "detectedApiKeyNeedsApiMode": "{{message}} 偵測到的 API 金鑰僅在您將 Codex 切換到 API 金鑰模式後使用。",
+          "localArtifactsNoSession": "Codex CLI 目前報告沒有有效的 ChatGPT 帳號。本機 Codex 帳號資料存在，但未選擇有效的託管工作階段。僅當 Codex CLI 看到用量限制後，此處才會顯示用量限制。",
+          "noActiveAccount": "Codex CLI 目前報告沒有有效的 ChatGPT 帳號。僅當 Codex CLI 看到用量限制後，此處才會顯示用量限制。",
+          "reconnectBeforeUsage": "Codex 有一個本機選擇的 ChatGPT 帳號，但目前工作階段需要重新連線才能在此處載入用量限制。",
+          "usageLimitsAfterReport": "Codex 報告連線的 ChatGPT 帳號的用量限制後，此處會顯示用量限制。"
+        }
+      },
+      "install": {
+        "checking": "檢查",
+        "downloading": "正在下載",
+        "installCli": "安裝 Codex CLI",
+        "installing": "安裝中",
+        "retryInstall": "重試安裝",
+        "title": "將 Codex CLI 安裝到應用程式資料中"
+      },
+      "rateLimits": {
+        "credits": "點數",
+        "creditsDescription": "點數與以時間區間計算的訂閱用量分開顯示，以方案為基礎的 ChatGPT 工作階段可能無法使用。",
+        "noSecondaryWindow": "Codex 未傳回此帳號快照的次要時間區間。",
+        "notReported": "未報道",
+        "primaryReset": "主要重設",
+        "primaryUsed": "主要使用",
+        "primaryWindow": "主視窗",
+        "remainingLeft": "{{value}} 左",
+        "remainingUnknown": "仍未知",
+        "secondaryReset": "次要時間區間重設",
+        "secondaryUsed": "次要時間區間已用",
+        "secondaryWindow": "輔助視窗",
+        "usedQuotaNote": "這些百分比顯示已用配額，而不是剩餘配額。",
+        "weeklyReset": "每週重設",
+        "weeklyUsed": "每週使用",
+        "weeklyUsedOneWeek": "每週使用（1w）",
+        "weeklyWindow": "每週視窗",
+        "secondaryFallback": "輔助",
+        "secondaryWindowNote": "每週限制單獨顯示在 {{window}} 視窗中。",
+        "usageExplanationGeneric": "顯示已用配額，而不是剩餘配額。",
+        "usageExplanationWindowOnly": "顯示目前 {{window}} 視窗中已使用的配額，而不是剩餘配額。",
+        "usageExplanationWithRemaining": "已使用 {{used}}；目前 {{window}} 視窗約剩餘 {{remaining}}。"
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "認證 Token",
+      "authTokenMissing": "未設定認證 Token。",
+      "baseUrl": "基本 URL",
+      "description": "使用與 Anthropic 相容的本機執行環境端點。",
+      "keepSavedToken": "留空以保留儲存的 Token",
+      "title": "本機/相容端點",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "基本 URL 為必填項",
+        "firstPartyAnthropic": "對第一方 Anthropic 使用自動、訂閱或 API 金鑰",
+        "httpRequired": "基本 URL 必須使用 http:// 或 https://",
+        "invalidUrl": "無效 URL",
+        "noCredentials": "基本 URL 不得包含憑證"
+      },
+      "status": {
+        "endpointSaved": "端點已儲存",
+        "endpointSavedTokenMissing": "端點已儲存。未設定認證 Token。",
+        "notActiveUntilSaved": "尚未啟用。儲存端點以進行切換；在此之前啟動將使用先前的連線方式。"
+      }
+    },
+    "connection": {
+      "authenticationMethod": "認證方式",
+      "descriptions": {
+        "anthropic": "選擇由應用程式啟動的 Anthropic 工作階段要使用的認證方式。",
+        "codex": "選擇原生執行環境啟動時，Codex 要優先使用您的 ChatGPT 訂閱還是 API 金鑰。",
+        "gemini": "設定選用的 API 存取。CLI SDK 和 ADC 仍會自動偵測。",
+        "opencode": "OpenCode 認證和供應商庫存由 OpenCode 執行環境管理。"
+      },
+      "method": "連線方式",
+      "mode": "模式：{{mode}}",
+      "selected": "已選擇",
+      "switching": "切換…",
+      "title": "連線"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API 金鑰"
+      },
+      "anthropic": {
+        "apiKeyDescription": "使用 ANTHROPIC_API_KEY 和 Anthropic API 計費。",
+        "autoDescription": "使用 Anthropic 執行環境預設值和可用的最佳本機憑證。",
+        "hint": "Auto 使 Anthropic 保持其預設的本機憑證解析。",
+        "subscriptionDescription": "使用您本機的 Anthropic 登入工作階段和訂閱存取。",
+        "subscriptionTitle": "Anthropic 訂閱"
+      },
+      "auto": {
+        "title": "自動"
+      },
+      "codex": {
+        "apiKeyDescription": "使用 OPENAI_API_KEY 和 CODEX_API_KEY 計費進行本機 Codex 啟動。",
+        "autoDescription": "優先使用您的 ChatGPT 帳號和訂閱。僅在需要時使用 API 金鑰模式。",
+        "chatgptDescription": "使用您連線的 ChatGPT 帳號和 Codex 訂閱。",
+        "chatgptTitle": "ChatGPT 帳號",
+        "hint": "Codex 一律透過原生執行環境執行。Auto 會優先使用您的 ChatGPT 帳號，必要時才改用 API 金鑰憑證。"
+      }
+    },
+    "description": "管理每個供應商的連線方式，以及在支援時多模型執行環境應使用哪個後端。",
+    "fastMode": {
+      "defaultOff": "預設關閉",
+      "description": "當解析出的模型和執行環境允許時，新的 Anthropic 團隊啟動預設套用 Claude Code Fast 模式。",
+      "disabledHint": "除非團隊明確啟用 Fast 模式，否則新啟動的 Anthropic 團隊會維持一般速度。",
+      "enabledHint": "當解析出的模型支援 Fast 模式時，新的 Anthropic 啟動預設會要求 Fast 模式。",
+      "notExposed": "此 Anthropic 執行環境未提供 Fast 模式。",
+      "preferFast": "喜歡快",
+      "title": "預設 Fast 模式",
+      "unavailableForRuntime": "此 Anthropic 執行環境目前無法使用 Fast 模式。"
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "已選擇 API 金鑰模式，但尚無可用的 Anthropic API 憑證。",
+      "anthropicStoredKeyAvailable": "已有儲存的 API 金鑰，但由應用程式啟動的 Anthropic 工作階段只有在您切換到 API 金鑰模式後才會使用它。",
+      "anthropicSubscriptionMissing": "已選擇 Anthropic 訂閱模式。請登入 Anthropic 以使用此供應商。",
+      "authTokenMissing": "未設定認證 Token。許多本機 Anthropic 相容端點需要非空 Token。",
+      "chatgptLoginPending": "等待 ChatGPT 帳號登入完成…",
+      "chatgptLoginStarting": "正在開始 ChatGPT 登入…",
+      "codexApiKeyMissing": "選擇了 API 金鑰模式，但尚無可用的 OPENAI_API_KEY 或 CODEX_API_KEY 憑證。",
+      "codexLocalArtifactsNoSession": "Codex CLI 目前沒有有效的 ChatGPT 帳號。本機 Codex 帳號資料存在，但未選擇有效的託管工作階段。",
+      "codexNeedsReconnect": "Codex 有一個本機選擇的 ChatGPT 帳號，但目前工作階段需要重新連線。",
+      "codexNoChatgptAccount": "Codex CLI 目前沒有有效的 ChatGPT 帳號。連線 ChatGPT 以使用您的訂閱。",
+      "codexNoCredential": "尚無可用的 ChatGPT 帳號或 API 金鑰。",
+      "geminiApiUnavailable": "Gemini API 目前不可用。在此處設定「GEMINI_API_KEY」或使用有效的 Google ADC 憑證。",
+      "withApiKeyFallback": "{{message}} 切換到 API 金鑰模式以使用偵測到的 API 金鑰。"
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "強制由應用程式啟動的 Anthropic 工作階段使用 API 金鑰憑證。",
+        "auto": "使用執行環境的預設行為。此應用程式中儲存的 API 金鑰只有在您切換到 API 金鑰模式後才會使用。",
+        "oauth": "強制由應用程式啟動的 Anthropic 工作階段使用本機 Anthropic 訂閱工作階段。"
+      },
+      "codex": {
+        "apiKey": "強制本機 Codex 啟動使用 OPENAI_API_KEY / CODEX_API_KEY 計費。",
+        "auto": "可用時優先使用您的 ChatGPT 帳號。僅在需要時改用 API 金鑰模式。",
+        "chatgpt": "強制本機 Codex 啟動以使用您連線的 ChatGPT 帳號和訂閱。"
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "正在套用連線變更…",
+      "refreshingProviderStatus": "正在重新整理供應商狀態…",
+      "savingCompatibleEndpoint": "正在儲存相容端點…",
+      "switchingAnthropicSubscription": "正在切換到 Anthropic 訂閱…",
+      "switchingApiKey": "正在切換到 API 金鑰…",
+      "switchingApiKeyMode": "正在切換到 API 金鑰模式…",
+      "switchingAuto": "切換到自動…",
+      "switchingChatgpt": "正在切換到 ChatGPT 帳號模式…"
+    },
+    "provider": "供應商",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic 目前沒有單獨的執行環境後端選擇器。",
+        "codex": "Codex 現在僅透過本機執行環境路徑執行。",
+        "gemini": "選擇應使用哪個 Gemini 執行環境後端多模型。",
+        "opencode": "OpenCode 使用自己的託管執行環境主機。桌面目前僅公開狀態。"
+      },
+      "title": "執行環境",
+      "updating": "正在更新執行環境…"
+    },
+    "runtimeSummary": "執行環境：{{runtime}}",
+    "status": {
+      "configured": "已設定",
+      "notConfigured": "未設定",
+      "notSet": "未設定",
+      "unknown": "未知"
+    },
+    "title": "供應商設定",
+    "usage": {
+      "apiKey": "使用 API 金鑰",
+      "apiKeyRequired": "需要 API 金鑰",
+      "compatibleEndpoint": "使用相容端點",
+      "notConnected": "未連線",
+      "usingMethod": "使用 {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API 金鑰已刪除，但無法重新整理供應商狀態。",
+      "apiKeySavedRefreshFailed": "API 金鑰已儲存，但無法重新整理供應商狀態。",
+      "connectionUpdatedRefreshFailed": "連線已更新，但無法重新整理供應商狀態。",
+      "deleteApiKey": "刪除 API 金鑰失敗",
+      "endpointSavedRefreshFailed": "端點已儲存，但無法重新整理供應商狀態。",
+      "refreshCodexAccount": "重新整理 Codex 帳號失敗",
+      "saveApiKey": "無法儲存 API 金鑰",
+      "saveEndpoint": "儲存端點失敗",
+      "updateAnthropicFastMode": "無法更新 Anthropic Fast 模式",
+      "updateConnection": "更新連線失敗",
+      "updateRuntimeBackend": "無法更新執行環境後端",
+      "apiKeyRequired": "需要 API 金鑰"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "自動",
+        "oauth": "訂閱/OAuth",
+        "chatgpt": "ChatGPT 帳號",
+        "apiKey": "API 金鑰",
+        "anthropicSubscription": "Anthropic 訂閱"
+      },
+      "authMethod": {
+        "apiKey": "API 金鑰",
+        "apiKeyHelper": "API 金鑰助手",
+        "oauth": "OAuth",
+        "claudeSubscription": "Claude 訂閱",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Google 帳戶",
+        "serviceAccount": "服務帳戶"
+      },
+      "runtime": {
+        "codexNative": "Codex 本機",
+        "currentRuntime": "目前執行環境",
+        "selectedRuntime": "選定執行環境",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "檢查…",
+        "modelsAvailable": "可選模型",
+        "checked": "已檢查",
+        "providerActivity": "供應商活動",
+        "notConnected": "未連線",
+        "startingChatGptLogin": "正在開始 ChatGPT 登入…",
+        "waitingForChatGptLogin": "正在等待 ChatGPT 帳號登入…",
+        "chatGptVerificationDegraded": "偵測到 ChatGPT 帳號 - 帳號驗證目前已降級。",
+        "chatGptAccountReady": "ChatGPT 帳號已準備就緒",
+        "apiKeyReady": "API 金鑰已準備就緒",
+        "codexLocalAccountNeedsReconnect": "Codex 有一個本機選擇的 ChatGPT 帳號，但目前工作階段需要重新連線。",
+        "codexNoActiveManagedSession": "Codex CLI 報告沒有有效的 ChatGPT 登入。本機 Codex 帳號資料存在，但未選擇有效的託管工作階段。",
+        "codexNoActiveChatGptLogin": "Codex CLI 報告沒有有效的 ChatGPT 登入",
+        "connectChatGptForSubscription": "連線 ChatGPT 帳號以使用您的 Codex 訂閱。",
+        "codexNativeReady": "Codex 原生就緒",
+        "codexNativeUnavailable": "Codex 原生不可用",
+        "unavailableInCurrentRuntime": "目前執行環境不可用",
+        "connectedViaApiKey": "透過 API 金鑰連線",
+        "apiKeyConfiguredNotVerified": "API 金鑰已設定，但尚未驗證",
+        "apiKeyModeMissingCredential": "選擇了 API 金鑰模式，但未設定 API 金鑰",
+        "connectedVia": "透過 {{method}} 連線",
+        "unableToVerify": "無法驗證"
+      },
+      "mode": {
+        "selectedAuth": "所選認證：{{authMode}}",
+        "preferredAuth": "偏好的認證方式：{{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API 金鑰已設定",
+        "savedApiKeyAvailable": "已儲存的 API 金鑰可在「管理」中使用",
+        "apiKeyAlsoConfigured": "API 金鑰也在「管理」中設定",
+        "apiKeyConfiguredInManage": "API 金鑰在管理中設定",
+        "apiKeyFallbackInManage": "API 金鑰也可在「管理」中用作備用",
+        "availableAsFallback": "{{summary}} - 可作為備用",
+        "savedApiKeyAvailableIfSwitch": "如果您切換到 API 金鑰模式，儲存的 API 金鑰可在「管理」中使用",
+        "availableIfSwitch": "{{summary}} - 如果切換到 API 金鑰模式則可用",
+        "autoWillUseUntilChatGpt": "{{summary}} - 自動將使用此直到 ChatGPT 連線"
+      },
+      "actions": {
+        "connect": "連線",
+        "connectAnthropic": "連線 Anthropic",
+        "connectChatGpt": "連線 ChatGPT",
+        "disconnect": "斷開",
+        "openLogin": "開啟登入"
+      },
+      "disconnect": {
+        "anthropicTitle": "斷開 Anthropic 訂閱？",
+        "anthropic": "這將從 Claude CLI 執行環境中刪除本機 Anthropic 訂閱工作階段。",
+        "anthropicWithApiKey": "這將從 Claude CLI 執行環境中刪除本機 Anthropic 訂閱工作階段。管理中儲存的 API 金鑰仍然可用。",
+        "geminiTitle": "斷開 Gemini CLI？",
+        "gemini": "這將清除本機 Gemini CLI 工作階段後設資料。外部 ADC 憑證和儲存的 API 金鑰不會被刪除。"
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "檢查更新",
+      "checking": "檢查…",
+      "extensions": "擴充功能",
+      "installRuntime": "安裝 {{runtime}}",
+      "manage": "管理",
+      "recheck": "重新檢查",
+      "reinstallRuntime": "重新安裝 {{runtime}}",
+      "retry": "重試",
+      "update": "更新"
+    },
+    "installer": {
+      "checkingLatest": "正在檢查最新版本…",
+      "downloading": "正在下載…",
+      "failed": "安裝失敗",
+      "installed": "已安裝 v{{version}}",
+      "installing": "正在安裝…",
+      "latest": "最新的",
+      "verifying": "正在驗證總和檢查碼…"
+    },
+    "labels": {
+      "multimodel": "多模型"
+    },
+    "loading": {
+      "aiProviders": "檢查 AI 供應商…",
+      "claudeCli": "檢查 Claude CLI…"
+    },
+    "provider": {
+      "backend": "後端：{{backend}}",
+      "loadingModels": "正在載入模型…",
+      "modelsUnavailable": "模型不適用於此執行環境建置",
+      "runtime": "執行環境：{{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "認證失敗",
+      "authUpdated": "認證已更新",
+      "loggedOut": "供應商已登出",
+      "login": "登入",
+      "logout": "退出",
+      "logoutFailed": "登出失敗"
+    },
+    "status": {
+      "configuredNotFound": "未找到設定的 {{runtime}}。",
+      "foundButFailed": "找到 {{runtime}} 但啟動失敗",
+      "healthCheckFailed": "設定的 {{runtime}} 未通過啟動健康檢查。",
+      "notInstalled": "{{runtime}} 未安裝"
+    },
+    "title": "CLI 執行環境"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  },
+  "gatewayProviders": {
+    "title": "閘道供應商",
+    "description": "供每位隊友使用閘道模型的閘道端點。API 金鑰在隊友列中輸入，不會儲存在應用程式設定中。",
+    "addProfile": "新增設定檔",
+    "empty": "尚未建立閘道設定檔。",
+    "actions": {
+      "cancel": "取消",
+      "delete": "刪除",
+      "edit": "編輯",
+      "save": "儲存"
+    },
+    "badges": {
+      "privateNetwork": "允許私人網路"
+    },
+    "boundTeammates": "已綁定的隊友：{{total}}",
+    "dialog": {
+      "createTitle": "新增閘道設定檔",
+      "description": "設定檔指向閘道的根 URL。在成員列中探測隊友的 API 金鑰時，會一併檢查連線和金鑰。",
+      "editTitle": "編輯閘道設定檔"
+    },
+    "errors": {
+      "boundUrl": "這個設定檔仍有綁定的隊友。請先解除綁定，或為新的 URL 建立另一個設定檔。",
+      "fieldsRequired": "顯示名稱和閘道 URL 為必填。"
+    },
+    "fields": {
+      "allowPrivateNetwork": "允許私人網路位址",
+      "allowPrivateNetworkHint": "這個閘道在您網路中的另一台電腦上執行。流量會經由區域網路傳送，使用 HTTP 時不會加密。",
+      "baseUrl": "閘道 URL",
+      "baseUrlHint": "閘道根路徑，結尾不含 /v1。",
+      "displayName": "顯示名稱"
+    },
+    "hints": {
+      "deleteKeepsHistory": "刪除設定檔不會從報表和預算中隱藏歷史用量來源。",
+      "probeIsTest": "沒有獨立的連線測試：在成員列中探測隊友的 API 金鑰時就會檢查連線。"
+    }
+  }
+}
