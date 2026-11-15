@@ -21,7 +21,8 @@ import {
   probeOpenCodeBinaryVersion,
 } from '@features/runtime-provider-management/main';
 import { readOpenCodeBinaryOverride } from '@main/services/runtime/openCodeRuntimeBinaryEnv';
-import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { RENAME_PUBLISH_RETRY, retryOnTransientFsError } from '@main/utils/transientFsRetry';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import {
   collectRuntimePathBinaryCandidates,
@@ -90,6 +91,14 @@ const VERSION_PROBE_SUCCESS_CACHE_TTL_MS = 30_000;
 const VERSION_PROBE_FAILURE_CACHE_TTL_MS = 5_000;
 const RUNTIME_STATUS_SUCCESS_CACHE_TTL_MS = 30_000;
 const RUNTIME_STATUS_FAILURE_CACHE_TTL_MS = 5_000;
+
+// Windows can keep a newly probed ~200 MB executable locked during AV/indexer
+// scanning after the version subprocess exits. Extend only this atomic directory
+// publish; persistent EPERM/EACCES/EBUSY still fails with the original error.
+const WINDOWS_OPENCODE_INSTALL_PUBLISH_RETRY = {
+  maxAttempts: 45,
+  delayMs: (attempt: number): number => Math.min(100 + attempt * 15, 350),
+};
 
 interface OpenCodeRuntimeManifest {
   schemaVersion: 1;
@@ -888,7 +897,12 @@ export class OpenCodeRuntimeInstallerService {
         if (!canReuseExistingRuntime) {
           await fsp.rm(versionDir, { recursive: true, force: true });
           await fsp.mkdir(path.dirname(versionDir), { recursive: true });
-          await renamePathWithRetry(tempDir, versionDir);
+          await retryOnTransientFsError(
+            () => fsp.rename(tempDir, versionDir),
+            process.platform === 'win32'
+              ? WINDOWS_OPENCODE_INSTALL_PUBLISH_RETRY
+              : RENAME_PUBLISH_RETRY
+          );
         }
       } finally {
         await fsp.rm(tempDir, { recursive: true, force: true }).catch(() => {});
