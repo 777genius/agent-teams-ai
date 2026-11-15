@@ -206,3 +206,52 @@ evidence resolves them. Bounded diagnostics alone do not close these defects.
 The selected-source writer and script-consumption contract in P09 §75 remains
 unqualified. No writer-policy change, native oracle relaxation, copied/FD-alias
 execution, script refusal or signing restriction is introduced here.
+
+## Original ModelProbe cancellation and admitted HTTP
+
+A separate source review found a concrete cancellation gap in
+`OpenCodeV2ModelProbe`. Its original Host request lease starts before native
+custody measurement and ends only when D finishes the admitted HTTP operation.
+Host close fences admission and aborts the probe, then drains those leases before
+closing the D Session. The D Session's transport has its own cancellation signal.
+Its resolved driver configuration previously forwarded neither the original probe
+signal nor the original close signal to an already-admitted native HTTP request.
+A request waiting for headers could therefore retain the lease until the Host's
+unchanged five-second drain failed.
+
+The existing `fetchImpl` configuration seam now forwards the original request and
+init unchanged, while combining the captured start signal, local close signal
+and D's original init signal. D invokes this fetch only after its original native
+admission completes. Pending custody still follows its original drain; a late
+native callback, failed body/transport release or failed physical stop cannot
+be relabelled as confirmed cleanup. No deadline, admission check, native operation,
+public API, result/error conversion or cleanup assertion changes.
+
+The new `hostOpenCodeV2ModelProbeLifecycle.test.ts` exercises the real ModelProbe,
+both real pinned D clients and global fetch against one finite loopback HTTP
+server. Only native process creation/measurement is a controlled TEST
+precondition. The first original D log preflight is held before response headers,
+before any prompt POST or acknowledged handoff. The four cases require:
+
+- Both original close and parent-signal cancellation close that actual unfinished
+  response before waiting for its lease, with no new request/password read.
+- A pending original native-custody observation remains UNKNOWN after the
+  unchanged five-second drain; a late release cannot repair the cached result.
+- Confirmed HTTP cancellation does not repair an unknown original physical stop.
+
+The response-close witness requires an unfinished ServerResponse; ordinary
+IncomingMessage completion is not used as an abort witness. Original run/close
+settlement, no prompt POST or replay, one original session and one idempotent
+physical stop are retained. These are finite integration regressions, not native
+process or credential qualification. Source and all four cases received
+independent review; no local execution is claimed.
+
+This dataflow correction does not establish the cause of the earlier Linux
+native credential failure. Its existing original native receipt and timeout
+scenario remain necessary to resolve that separate failure.
+
+The four finite lifecycle cases are appended to the existing retained-Main Vitest
+invocation in the process workflow. The same five OS/architecture tuples,
+Node pin, single-worker execution, default test budget and original job deadline
+remain. No additional workflow, matrix, native opt-in or diagnostic dispatch
+is introduced. The complete safe frontend inventory also includes this file.

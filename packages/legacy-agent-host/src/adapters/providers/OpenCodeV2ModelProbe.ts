@@ -285,6 +285,10 @@ export function createOpenCodeV2ModelProbe(
           accountBinding: profile.accountBinding,
           readPassword,
           beforeRequest,
+          // Pending native custody retains its original drain; only admitted HTTP
+          // also observes this probe's original cancellation.
+          fetchImpl: (request, init) => fetch(request, { ...init,
+            signal: AbortSignal.any([signal, abort.signal, ...(init?.signal ? [init.signal] : [])]) }),
           limits: {
             queuedInputs: 1,
             inputBytes: 1024,
