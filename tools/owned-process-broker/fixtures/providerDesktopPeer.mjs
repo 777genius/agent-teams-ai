@@ -277,6 +277,7 @@ async function runTurn(turn) {
     return finish(turn, marker === 'TEST_MODEL_PROBE' ? 'OK' : 'TEST boot ready');
   if (marker === 'TEST_UI_STREAM') {
     // Original Codex exposes completed text items before the enclosing turn terminal.
+    process.stderr.write('TEST selected member stderr\n');
     completeItem(turn, 'TEST stream partial'); effect({ event: 'partial', turnId: turn.id });
     turn.itemId += '-final'; turn.text = '';
     const deadline = Date.now() + 60_000;

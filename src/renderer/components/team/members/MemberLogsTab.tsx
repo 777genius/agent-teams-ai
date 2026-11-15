@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   DetailReadCoordinator,
@@ -34,8 +35,10 @@ import {
   MessageSquare,
 } from 'lucide-react';
 
-import { HostMemberActivityLog } from './HostMemberActivityLog';
+import { HostMemberActivityLog, useHostLogViewport } from './HostMemberActivityLog';
 import { filterChunksByWorkIntervals, getWorkIntervalWindow } from './memberLogWorkIntervals';
+
+import type { HostLogViewOptions } from './HostMemberActivityLog';
 
 export { filterChunksByWorkIntervals } from './memberLogWorkIntervals';
 
@@ -47,6 +50,7 @@ interface MemberLogsTabProps {
   memberName?: string;
   taskId?: string;
   enabled?: boolean;
+  hostView?: HostLogViewOptions;
   /** When viewing task logs: include owner's sessions when task is in_progress */
   taskOwner?: string;
   taskStatus?: string;
@@ -77,6 +81,7 @@ export const MemberLogsTab = ({
   memberName,
   taskId,
   enabled = true,
+  hostView,
   taskOwner,
   taskStatus,
   taskWorkIntervals,
@@ -93,6 +98,7 @@ export const MemberLogsTab = ({
   const isTabActive = tabId ? activeTabId === tabId : true; // default true when no tab context (e.g. standalone dialog)
 
   const scope = useMemberLogReadScope();
+  const isHostTeam = isHostTeamSelectionKey(teamName);
   const active = enabled && isTabActive;
   const intervalsKey = JSON.stringify(taskWorkIntervals ?? null);
   const summaryKey = JSON.stringify([
@@ -123,7 +129,7 @@ export const MemberLogsTab = ({
     presentationKey: summaryPresentationKey,
     showBackgroundErrors: true,
     active,
-    poll: taskId != null && taskStatus === 'in_progress',
+    poll: (taskId == null && isHostTeam) || (taskId != null && taskStatus === 'in_progress'),
     beginRefreshing,
     read: async () => {
       const result =
@@ -139,6 +145,7 @@ export const MemberLogsTab = ({
     },
   });
   const logs = summary.value ?? EMPTY_LOGS;
+  const viewport = useHostLogViewport(hostView, logs);
   const [initialNow] = useState(() => Date.now());
   const summaryNow = summary.settledAt ?? initialNow;
   const loading = summary.loading;
@@ -465,7 +472,7 @@ export const MemberLogsTab = ({
     );
   }
 
-  if (error) {
+  if (error && (logs.length === 0 || !isHostTeam)) {
     return (
       <div className="flex items-center justify-center gap-2 py-8 text-xs text-red-400">
         <AlertCircle size={14} />
@@ -491,7 +498,17 @@ export const MemberLogsTab = ({
   }
 
   return (
-    <div className="w-full min-w-0 space-y-1.5">
+    <div
+      ref={viewport.ref}
+      onScroll={viewport.onScroll}
+      className={'w-full min-w-0 space-y-1.5' + (hostView ? ' min-h-0 flex-1 overflow-auto' : '')}
+      style={hostView ? { maxHeight: hostView.maxHeight } : undefined}
+    >
+      {error && (
+        <p role="status" className="p-2 text-xs text-red-400">
+          {error}
+        </p>
+      )}
       {shouldShowPreview && previewLog && previewMessages.length > 0 ? (
         <SubagentRecentMessagesPreview
           messages={previewMessages}
@@ -508,6 +525,7 @@ export const MemberLogsTab = ({
           detailChunks={expandedId === getRowId(log) ? detailChunks : null}
           detailLoading={expandedId === getRowId(log) && detailLoading}
           onToggle={() => handleExpand(log)}
+          hostView={hostView}
         />
       ))}
     </div>
@@ -520,6 +538,7 @@ interface LogCardProps {
   detailChunks: EnhancedChunk[] | null;
   detailLoading: boolean;
   onToggle: () => void;
+  hostView?: HostLogViewOptions;
 }
 
 const LogCard = ({
@@ -528,6 +547,7 @@ const LogCard = ({
   detailChunks,
   detailLoading,
   onToggle,
+  hostView,
 }: LogCardProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const createdAgo = log.kind === 'host_activity' ? '' : formatRelativeTime(log.startTime);
@@ -546,7 +566,9 @@ const LogCard = ({
   }, [log.memberName]);
 
   if (log.kind === 'host_activity')
-    return <HostMemberActivityLog log={log} expanded={expanded} onToggle={onToggle} />;
+    return (
+      <HostMemberActivityLog log={log} expanded={expanded} onToggle={onToggle} view={hostView} />
+    );
 
   return (
     <div className="min-w-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">

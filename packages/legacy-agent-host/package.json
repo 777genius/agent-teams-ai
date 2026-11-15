@@ -23,6 +23,14 @@
       "types": "./dist/contracts.d.ts",
       "import": "./dist/contracts.js"
     },
+    "./diagnostics/runtime-text": {
+      "types": "./dist/diagnostics/runtimeDiagnosticText.d.ts",
+      "import": "./dist/diagnostics/runtimeDiagnosticText.js"
+    },
+    "./diagnostics/redaction": {
+      "types": "./dist/diagnostics/diagnosticsRedaction.d.ts",
+      "import": "./dist/diagnostics/diagnosticsRedaction.js"
+    },
     "./management/contracts": {
       "types": "./dist/management/contracts.d.ts",
       "import": "./dist/management/contracts.js"

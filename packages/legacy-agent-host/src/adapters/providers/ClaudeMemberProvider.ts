@@ -6,6 +6,7 @@ import { createClaudeDriverFactory } from '@agent-teams/provider-implementations
 
 import { ClaudeSubagentLogProjection } from './ClaudeSubagentLogProjection.js';
 import { CapturedProcess } from './CapturedProcess.js';
+import { observeMemberProcessStderr } from './observeMemberProcessStderr.js';
 import { createClaudeCloseDiagnostic } from './createClaudeCloseDiagnostic.js';
 import { claudeSessionExists } from './claudeSessionExists.js';
 import { claudeMcpServers } from './claudeMcpServers.js';
@@ -107,7 +108,11 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
       if (!directory) return false;
       return claudeSessionExists(directory.normalize('NFC'), profile.cwd, nativeSession);
     },
-    custody: { launch: custody.launch, confirmStopped: () => custody.confirmStopped() },
+    custody: { launch: (request) => {
+      const child = custody.launch(request);
+      observeMemberProcessStderr(child, context, request.args);
+      return child;
+    }, confirmStopped: () => custody.confirmStopped() },
   };
   const native = createClaudeDriverFactory({
     capabilities: ['session.conversation', ...(context.subagents ? ['session.subagents'] : [])],

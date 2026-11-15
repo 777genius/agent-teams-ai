@@ -385,6 +385,7 @@ function input(frame) {
     ...(attached ? { attachments: collaboration.verifyCollaborationAttachments(content) } : {}) })
     .then(reply => finish(selected, reply)).catch(fail);
   else if (text === 'TEST_UI_STREAM') {
+    process.stderr.write('TEST selected member stderr\n');
     partial(selected, 'TEST stream partial');
     const wait = () => {
       if (active !== selected || failed) return;
