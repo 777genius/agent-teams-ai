@@ -3,8 +3,9 @@ import { useCallback, useMemo, useRef } from 'react';
 import { normalizeConversationParticipant } from '@features/team-direct-chats/renderer';
 import { useStore } from '@renderer/store';
 
-import { useNativeNextPrompt } from './useNativeNextPrompt';
 import { NativeNextPromptRow } from '../ui/NativeNextPromptRow';
+
+import { useNativeNextPrompt } from './useNativeNextPrompt';
 
 import type { UseComposerDraftResult } from '@renderer/hooks/useComposerDraft';
 

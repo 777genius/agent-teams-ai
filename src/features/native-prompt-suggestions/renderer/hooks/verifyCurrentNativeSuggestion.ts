@@ -1,7 +1,7 @@
 import { parseHostTeamSelectionKey } from '@features/agent-backend/contracts/teamSelection';
 
-import type { AgentBackendApi } from '@features/agent-backend/contracts/operations';
 import type { NativeNextPromptCandidate } from '../../contracts';
+import type { AgentBackendApi } from '@features/agent-backend/contracts/operations';
 
 /**
  * Acceptance-time read of the original captured Runtime. The candidate is

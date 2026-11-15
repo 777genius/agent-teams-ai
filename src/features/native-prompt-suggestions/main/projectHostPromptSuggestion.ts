@@ -1,5 +1,6 @@
-import type { NativeNextPromptCandidate } from '../contracts';
 import { isNativePromptOwnerHandle } from '../core/domain/ownerHandle';
+
+import type { NativeNextPromptCandidate } from '../contracts';
 
 /** Read-only Main boundary: no provider/session objects or renderer-chosen identity. */
 export function projectHostPromptSuggestion(
@@ -31,10 +32,10 @@ export function projectHostPromptSuggestion(
   const [runId, memberId, generation, suggestionId,
     messageId, operationRef, inputId, completedTurnRef] = all as string[];
   return Object.freeze({
-    ownerHandle, provider, teamId, memberName, runId: runId!,
-    memberId: memberId!, generation: generation!, suggestionId: suggestionId!,
-    messageId: messageId!, inputId: inputId!, operationRef: operationRef!,
-    completedTurnRef: completedTurnRef!, text,
+    ownerHandle, provider, teamId, memberName, runId: runId,
+    memberId: memberId, generation: generation, suggestionId: suggestionId,
+    messageId: messageId, inputId: inputId, operationRef: operationRef,
+    completedTurnRef: completedTurnRef, text,
     conversationRef: `direct:${memberName.trim().toLowerCase()}`,
   });
 }

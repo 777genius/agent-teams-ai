@@ -5,13 +5,11 @@ import {
   crossTeamOwnerResourceRef,
   crossTeamTeamResourceRef,
 } from '@agent-teams/legacy-agent-host/cross-team';
-import { captureManagedProviderRuntimePreferences } from '@features/runtime-provider-management/main';
 import { projectHostPromptSuggestion } from '@features/native-prompt-suggestions/main/projectHostPromptSuggestion';
-import { hostTeamSelectionKey } from '../../contracts/teamSelection';
-
-import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
+import { captureManagedProviderRuntimePreferences } from '@features/runtime-provider-management/main';
 import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 
+import { hostTeamSelectionKey } from '../../contracts/teamSelection';
 import { BackendOperationsFacade } from '../adapters/input/BackendOperationsFacade';
 import {
   assertBackendRequestGuard,
@@ -57,6 +55,7 @@ import type {
   TeamRegistryRecord,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';
+import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
 import type { TeamCreateRequest } from '@shared/types/team';
 
 type InitializationPhase =
