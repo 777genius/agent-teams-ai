@@ -17,7 +17,7 @@ const scalar = (value: unknown): Record<string, unknown> => (
 const sha = (value: string) => createHash('sha256').update(value).digest('hex');
 
 test('original captured Host forwards native Claude follow-up for the exact human DM, never a new user turn', {
-  timeout: 125_000,
+  timeout: 180_000,
 }, async t => {
   assert.equal(process.env.NATIVE_SUGGESTIONS_HOST_GO, '1', 'explicit finite TEST gate');
   const repo = resolve(import.meta.dirname, '../../..');
@@ -32,6 +32,7 @@ test('original captured Host forwards native Claude follow-up for the exact huma
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-followup-host-')));
   const relative = ['workspace','store','home','config','tmp','xdg-config','xdg-data','xdg-cache'];
   for (const p of relative) await mkdir(join(root,p),{recursive:true,mode:0o700});
+  const warmupPrompt = 'TEST_NATIVE_WARMUP_' + randomUUID();
   const prompt = 'TEST_NATIVE_HUMAN_DIRECT_' + randomUUID();
   const received: Record<string, unknown>[] = [];
   const bodies: { inputHasHuman: boolean; kind: string; tools: number }[] = [];
@@ -64,10 +65,10 @@ test('original captured Host forwards native Claude follow-up for the exact huma
           if(buffer.byteLength>1024*1024)throw new Error('TEST input budget exceeded')}
         const data=scalar(JSON.parse(buffer.toString('utf8')));
         const source=JSON.stringify(data.messages??[]);
-        const hasHuman=source.includes(prompt);
+        const hasHuman=source.includes(prompt)||source.includes(warmupPrompt);
         bodies.push({inputHasHuman:hasHuman,kind:hasHuman?'human-context':'unknown',tools:Array.isArray(data.tools)?data.tools.length:0});
         assert.equal(hasHuman,true,'native inference belongs to exact original human message');
-        assert.ok(bodies.length<=5,'do not amplify model calls without user request');
+        assert.ok(bodies.length<=7,'do not amplify model calls without user request');
         frames(res,bodies.length);
       })().catch((err:unknown)=>{
         errors.push(String(err instanceof Error?err.message:'unknown'));
@@ -158,13 +159,39 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     assert.ok(baseline.every(row=>typeof row.inputId==='string'),'native Runtime input IDs are projected');
     const baselineIds=new Set(baseline.map(row=>String(row.inputId)));
     assert.equal(baselineIds.size,baseline.length,'original Runtime inputs are unique');
+    // Native Claude may suppress its first session-turn suggestion. Warm up
+    // through a genuine human DM without manufacturing a provider candidate.
+    const warmupMessageId='TEST-warmup-message-'+namespace;
+    const warmup=await host.rpc('team.execute',envelope(warmupMessageId,{
+      operation:'message.send',payload:{
+        to:'alice',text:warmupPrompt,summary:'TEST native warm-up',messageId:warmupMessageId,actionMode:'do',
+      },
+    }));
+    assert.equal(warmup.ok,true,'original Host accepts native warm-up human DM');
+    assert.equal(scalar(warmup.value).phase,'completed');
+    const warmupDeliveryId=scalar(scalar(warmup.value).effects).deliveryId;
+    assert.ok(typeof warmupDeliveryId==='string'&&warmupDeliveryId.length>0);
+    const warmupDeadline=Date.now()+55_000;
+    let warmupTerminal=false;
+    while(Date.now()<warmupDeadline){
+      assert.deepEqual(errors,[]);
+      const state=await host.rpc('runtime.read',envelope('TEST-warmup-read',{memberId:'alice-id'}));
+      const inputs=(scalar(state.value).inputs as unknown[]|undefined)?.map(scalar)??[];
+      if(inputs.some(row=>row.inputId===warmupDeliveryId&&row.phase==='terminal'&&row.terminal==='succeeded')){
+        warmupTerminal=true;
+        break;
+      }
+      await tick();
+    }
+    assert.equal(warmupTerminal,true,'first original human DM has a durable native terminal');
+
     const messageId='TEST-human-message-'+namespace;
     const sent=await host.rpc('team.execute',envelope(messageId,{
       operation:'message.send',payload:{
         to:'alice',text:prompt,summary:'TEST native human direct',messageId,actionMode:'do',
       },
     }));
-    assert.equal(sent.ok,true,'canonical Team accepted the single human direct user input');
+    assert.equal(sent.ok,true,'canonical Team accepted the qualified second human DM');
     assert.equal(scalar(sent.value).phase,'completed');
     const deliveryId=scalar(scalar(sent.value).effects).deliveryId;
     assert.ok(typeof deliveryId==='string'&&deliveryId.length>0,
@@ -177,8 +204,8 @@ test('original captured Host forwards native Claude follow-up for the exact huma
       const state=await host.rpc('runtime.read',envelope('TEST-read',{memberId:'alice-id'}));
       latestGeneration = scalar(state.value).generation;
       const rows=(scalar(state.value).inputs as unknown[]|undefined)?.map(scalar)??[];
-      if(rows.some(x=>x.phase==='terminal'&&x.terminal==='succeeded'))terminal=true;
-      if(terminal&&received.length>0)break;
+      if(rows.some(x=>x.inputId===deliveryId&&x.phase==='terminal'&&x.terminal==='succeeded'))terminal=true;
+      if(terminal&&received.some(row=>row.messageId===messageId))break;
       await tick();
     }
     assert.equal(terminal,true,'original Runtime persisted terminal success');
@@ -187,12 +214,19 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     const rows=(scalar(afterSend.value).inputs as unknown[]|undefined)?.map(scalar)??[];
     assert.ok(rows.every(row=>typeof row.inputId==='string'),'bounded durable Runtime input list');
     const newInputs=rows.filter(row=>!baselineIds.has(String(row.inputId)));
-    assert.equal(newInputs.length,1,'one new durable input; auxiliary sampling never starts another source turn');
-    assert.equal(newInputs[0]?.inputId,deliveryId,'completed original human input');
-    assert.equal(newInputs[0]?.phase,'terminal');
-    assert.equal(newInputs[0]?.terminal,'succeeded');
-    assert.equal(received.length,1,'one provider candidate reaches original captured Host notification');
-    const event=received[0]!;
+    assert.equal(newInputs.length,2,'two authored human inputs; sampling never starts a source turn');
+    assert.equal(newInputs.filter(row=>row.phase==='terminal'&&row.terminal==='succeeded').length,2);
+    assert.ok(newInputs.some(row=>row.inputId===warmupDeliveryId),'warm-up remains a separate original input');
+    const completed=newInputs.find(row=>row.inputId===deliveryId);
+    assert.equal(completed?.phase,'terminal');
+    assert.equal(completed?.terminal,'succeeded');
+    assert.ok(received.every(row=>[warmupMessageId,messageId].includes(String(row.messageId))),
+      'no foreign message may produce a Host suggestion');
+    const offers=received.filter(row=>row.messageId===messageId);
+    assert.equal(offers.length,1,'exactly one native suggestion for the qualified second human DM');
+    assert.ok(received.filter(row=>row.messageId===warmupMessageId).length<=1,
+      'optional warm-up suggestion must not amplify');
+    const event=offers[0]!;
     assert.equal(event.provider,'claude');
     assert.equal(event.teamId,scope.teamId);
     assert.equal(event.runId,scope.runId);
@@ -202,7 +236,7 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     assert.equal(event.inputId,deliveryId);
     assert.equal(event.completedTurnRef,event.operationRef);
     assert.ok(typeof event.text==='string'&&event.text.length>0);
-    assert.ok(bodies.length>=2,'SDK generated an additional native suggestion inference');
+    assert.ok(bodies.length>=3,'two original turns plus one native suggestion inference');
     assert.deepEqual(errors,[]);
     assert.equal(typeof latestGeneration,'string');
     const originalOperationRef = event.operationRef;
@@ -224,7 +258,7 @@ test('original captured Host forwards native Claude follow-up for the exact huma
       'wrong operation is rejected rather than self-matching browser candidate fields');
     const stopped=await host.rpc('runtime.stop',envelope('TEST-stop',{memberId:'alice-id',expectedGeneration:latestGeneration}));
     assert.equal(stopped.ok,true);
-    receipt={passed:true,nativeSdk:'0.3.305',normalHumanMessages:1,originalHostNotifications:1,
+    receipt={passed:true,nativeSdk:'0.3.305',normalHumanMessages:2,originalHostNotifications:received.length,qualifiedHostNotifications:offers.length,
       localhostModelCalls:bodies.length,allModelCallsContainOriginalHuman:bodies.every(x=>x.inputHasHuman),
       vendorAuth:false,environment:process.platform+'-'+process.arch,nativeCustody:'released'};
   }finally{

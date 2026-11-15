@@ -126,7 +126,8 @@ export async function runDesktopComposerUiSmoke(
     ['NATIVE_TEAM_TWO', 'REPLY_NATIVE_TWO'],
   ] as const;
   const selectedTurns = nativeNextPromptUi
-    ? [...turns, ['NATIVE_TEAM_THREE', 'REPLY_NATIVE_THREE'] as const]
+    ? [...turns, ['NATIVE_TEAM_THREE', 'REPLY_NATIVE_THREE'] as const,
+        ['NATIVE_TEAM_FOUR', 'REPLY_NATIVE_FOUR'] as const]
     : turns;
   for (const [turn, reply] of selectedTurns) {
     await ui.click('.message-composer-flat-layout textarea', 'focus ordinary Composer');
@@ -242,49 +243,56 @@ export async function runDesktopComposerUiSmoke(
     if (nativeNextPromptUi) {
       assert.ok(
         turn === 'NATIVE_TEAM_ONE' || turn === 'NATIVE_TEAM_TWO' ||
-          turn === 'NATIVE_TEAM_THREE',
+          turn === 'NATIVE_TEAM_THREE' || turn === 'NATIVE_TEAM_FOUR',
         'original Claude native conversation only',
       );
-      try {
-        await qualifyNativeNextPromptUiStep(cdp, ui, {
-          root: options.root,
-          turn,
-          expectedHumanInputs: incomingIds.length,
-          originalHumanSendCount: async () => (await rows(commands)).filter(row =>
-            row.principalId === 'TEST-human' && record(row.command).operation === 'message.send'
-          ).length,
-          modelSampleCount: () => options.model?.suggestionRequests?.length ?? -1,
-          step,
-          evidence: options.evidence,
-        });
-      } catch (error) {
-        // Diagnose missing row without another model request or product mutation.
-        const renderer = await cdp.evaluate(`(() => {
-          const state=window.__agentTeamsDevStore?.getState?.();
-          const team=state?.selectedTeamData;
-          const rawMessages=state?.selectedTeamName &&
-            state.teamMessagesByName?.[state.selectedTeamName]?.canonicalMessages;
-          const messages=Array.isArray(rawMessages)?rawMessages:[];
-          const members=Array.isArray(team?.members)?team.members:[];
-          const alice=members.find(member=>member.name==='alice');
-          const direct=messages.filter(message=>message.from==='user'&&message.to==='alice');
-          const notices=window.__TEST_nativeNextPromptNotices;
-          return {
-            storeAvailable:Boolean(state),
-            selectedHostTeam:typeof state?.selectedTeamName==='string'&&state.selectedTeamName.startsWith('host-team:'),
-            memberCaptured:alice?.runtimeOwner==='captured-host',
-            memberIdMatches:alice?.hostMemberId==='alice-id',
-            originalDirectMessages:Math.min(direct.length,16),
-            latestDirectHasMessageId:typeof direct.at(-1)?.messageId==='string',
-            draftEmpty:document.querySelector('.message-composer-flat-layout textarea')?.value==='',
-            rowCount:Math.min(document.querySelectorAll('[data-testid="native-next-prompt-row"]').length,8),
-            noticed:Array.isArray(notices)?notices.slice(0,8):null
-          };
-        })()`).catch(() => null);
-        const diagnostic = { turn, expectedHumanInputs: incomingIds.length,
-          nativeSampleRequests: options.model?.suggestionRequests?.length ?? -1, renderer };
-        step({ assertion: 'native next prompt missing row diagnostic', ...diagnostic });
-        throw new Error('TEST native suggestion UI incomplete: ' + JSON.stringify(diagnostic), { cause: error });
+      // Claude SDK's first native turn may not emit a follow-up. Only
+      // later turns must exercise actual Insert, Escape and Tab in Electron.
+      if (turn === 'NATIVE_TEAM_ONE') {
+        step({ assertion: 'first original Claude turn completed; SDK follow-up optional', turn });
+      } else {
+        try {
+          await qualifyNativeNextPromptUiStep(cdp, ui, {
+            root: options.root,
+            turn,
+            expectedHumanInputs: incomingIds.length,
+            originalHumanSendCount: async () => (await rows(commands)).filter(row =>
+              row.principalId === 'TEST-human' && record(row.command).operation === 'message.send'
+            ).length,
+            modelSampleCount: () => options.model?.suggestionRequests?.length ?? -1,
+            modelSampleCountForTurn: () => options.model?.suggestionRequests?.filter(sample => sample.turn === turn).length ?? -1,
+            step,
+            evidence: options.evidence,
+          });
+        } catch (error) {
+          // Diagnose missing row without another model request or product mutation.
+          const renderer = await cdp.evaluate(`(() => {
+            const state=window.__agentTeamsDevStore?.getState?.();
+            const team=state?.selectedTeamData;
+            const rawMessages=state?.selectedTeamName &&
+              state.teamMessagesByName?.[state.selectedTeamName]?.canonicalMessages;
+            const messages=Array.isArray(rawMessages)?rawMessages:[];
+            const members=Array.isArray(team?.members)?team.members:[];
+            const alice=members.find(member=>member.name==='alice');
+            const direct=messages.filter(message=>message.from==='user'&&message.to==='alice');
+            const notices=window.__TEST_nativeNextPromptNotices;
+            return {
+              storeAvailable:Boolean(state),
+              selectedHostTeam:typeof state?.selectedTeamName==='string'&&state.selectedTeamName.startsWith('host-team:'),
+              memberCaptured:alice?.runtimeOwner==='captured-host',
+              memberIdMatches:alice?.hostMemberId==='alice-id',
+              originalDirectMessages:Math.min(direct.length,16),
+              latestDirectHasMessageId:typeof direct.at(-1)?.messageId==='string',
+              draftEmpty:document.querySelector('.message-composer-flat-layout textarea')?.value==='',
+              rowCount:Math.min(document.querySelectorAll('[data-testid="native-next-prompt-row"]').length,8),
+              noticed:Array.isArray(notices)?notices.slice(0,8):null
+            };
+          })()`).catch(() => null);
+          const diagnostic = { turn, expectedHumanInputs: incomingIds.length,
+            nativeSampleRequests: options.model?.suggestionRequests?.length ?? -1, renderer };
+          step({ assertion: 'native next prompt missing row diagnostic', ...diagnostic });
+          throw new Error('TEST native suggestion UI incomplete: ' + JSON.stringify(diagnostic), { cause: error });
+        }
       }
     }
   }
@@ -360,13 +368,17 @@ export async function runDesktopComposerUiSmoke(
   if (options.model) assert.ok(options.model.observations.every((item) => item.requestedEffort === 'medium'));
   if (nativeNextPromptUi) {
     const proof = record(options.evidence.nativeNextPromptUi);
-    assert.equal(options.model?.suggestionRequests?.length, 3,
-      'three original user turns create three separate native model suggestions');
+    const sampled = options.model?.suggestionRequests ?? [];
+    const qualified = sampled.filter(sample => sample.turn !== 'NATIVE_TEAM_ONE')
+      .map(sample => sample.turn).sort();
+    assert.deepEqual(qualified, ['NATIVE_TEAM_FOUR', 'NATIVE_TEAM_THREE', 'NATIVE_TEAM_TWO'],
+      'three post-warm-up human turns each produce exactly one real native suggestion');
+    assert.ok(sampled.length<=4,'warm-up can optionally produce at most one native suggestion');
     assert.equal(Array.isArray(proof.screenshots) ? proof.screenshots.length : 0, 3,
       'each actual Electron row has a screenshot');
     options.evidence.nativeNextPromptUi = {
       ...proof, status: 'PASS', originalHumanInputs: inputIds.length,
-      nativeSdkSamples: options.model!.suggestionRequests!.length,
+      nativeSdkSamples: sampled.length, qualifiedSamples: qualified.length,
       noAutoSend: true, originalNativeCustodyReleased: true,
     };
   }

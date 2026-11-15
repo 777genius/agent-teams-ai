@@ -43,10 +43,11 @@ export async function qualifyNativeNextPromptUiStep(
   ui: Ui,
   options: {
     root: string;
-    turn: 'NATIVE_TEAM_ONE' | 'NATIVE_TEAM_TWO' | 'NATIVE_TEAM_THREE';
+    turn: 'NATIVE_TEAM_TWO' | 'NATIVE_TEAM_THREE' | 'NATIVE_TEAM_FOUR';
     expectedHumanInputs: number;
     originalHumanSendCount(): Promise<number>;
     modelSampleCount(): number;
+    modelSampleCountForTurn(): number;
     step(row: Record<string, unknown>): void;
     evidence: Record<string, unknown>;
   },
@@ -61,8 +62,10 @@ export async function qualifyNativeNextPromptUiStep(
     'real Host offer visible in selected native teammate composer',
     40_000,
   );
-  assert.equal(options.modelSampleCount(), options.expectedHumanInputs,
-    'one native SDK follow-up inference for each original human input');
+  assert.equal(options.modelSampleCountForTurn(), 1,
+    'exactly one native SDK inference for this qualified original human turn');
+  assert.ok(options.modelSampleCount()<=options.expectedHumanInputs,
+    'at most one native SDK follow-up per human turn, including an optional warm-up');
 
   const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
   const data = screenshot && typeof screenshot === 'object'
@@ -74,7 +77,7 @@ export async function qualifyNativeNextPromptUiStep(
   proof.screenshots.push({ turn: options.turn, path: imagePath, sha256: await fileDigest(imagePath) });
   await ui.click('.message-composer-flat-layout textarea', 'focus ordinary native suggestion editor');
 
-  if (options.turn === 'NATIVE_TEAM_TWO') {
+  if (options.turn === 'NATIVE_TEAM_THREE') {
     await key(cdp, 'Escape', 'Escape', 27);
     await ui.waitRead(
       "document.querySelector('[data-testid=\"native-next-prompt-row\"]') === null",
@@ -86,7 +89,7 @@ export async function qualifyNativeNextPromptUiStep(
       'Escape preserves original empty draft',
     );
   } else {
-    if (options.turn === 'NATIVE_TEAM_ONE') {
+    if (options.turn === 'NATIVE_TEAM_TWO') {
       await ui.click('[data-testid="native-next-prompt-row"] button[aria-label="Insert"]',
         'ordinary Insert click for native suggestion');
     } else {
@@ -110,8 +113,8 @@ export async function qualifyNativeNextPromptUiStep(
   options.step({
     assertion: 'native suggestion physical composer interaction',
     turn: options.turn,
-    action: options.turn === 'NATIVE_TEAM_ONE' ? 'Insert'
-      : options.turn === 'NATIVE_TEAM_TWO' ? 'Escape' : 'Tab',
+    action: options.turn === 'NATIVE_TEAM_TWO' ? 'Insert'
+      : options.turn === 'NATIVE_TEAM_THREE' ? 'Escape' : 'Tab',
     modelSampleCount: options.modelSampleCount(),
     sentHumanMessages: options.expectedHumanInputs,
     screenshotSha256: proof.screenshots.at(-1)?.sha256,

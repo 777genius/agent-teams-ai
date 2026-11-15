@@ -575,7 +575,7 @@ export async function startNativeTeamModel(
                 .map((block) => block.text)
                 .join('\n');
         const group = options.mixedGroups ? readMixedGroupTurn(text, 'team-lead') : undefined;
-        const match = /NATIVE_TEAM_(ONE|TWO|THREE)/.exec(text);
+        const match = /NATIVE_TEAM_(ONE|TWO|THREE|FOUR)/.exec(text);
         const peer = options.peerMessaging ? nativePeerTurn(text, 'alice') : undefined;
         if (options.mixedTaskNotifications) {
           const currentText = text;
@@ -603,7 +603,7 @@ export async function startNativeTeamModel(
       // original finished source turn, never another business tool or user
       // input. The counters are advanced only by real source actions.
       if (options.nativeNextPromptUi &&
-          ['NATIVE_TEAM_ONE', 'NATIVE_TEAM_TWO', 'NATIVE_TEAM_THREE'].includes(turn)) {
+          ['NATIVE_TEAM_ONE', 'NATIVE_TEAM_TWO', 'NATIVE_TEAM_THREE', 'NATIVE_TEAM_FOUR'].includes(turn)) {
         const complete = turn === 'NATIVE_TEAM_ONE' ? 8 : turn === 'NATIVE_TEAM_TWO' ? 3 : 2;
         if (step >= complete) {
           assert.equal(step, complete, 'native suggestion may not replay an original business turn');
@@ -611,7 +611,7 @@ export async function startNativeTeamModel(
           assert.ok(source.includes('NATIVE_TEAM_ONE'), 'native followup inherits original user context');
           assert.ok(source.includes(turn), 'native followup is attached to current source turn');
           suggestionRequests.push({ turn, step, inheritedHumanContext: true });
-          assert.ok(suggestionRequests.length <= 3, 'exactly one auxiliary sample per native turn');
+          assert.ok(suggestionRequests.length <= 4, 'at most one auxiliary sample per original native turn');
           emitResponse(response, ++sequence,
             { type: 'text', text: 'TEST_NEXT_PROMPT_' + turn },
             typeof body.model === 'string' ? body.model : undefined);
@@ -794,10 +794,15 @@ export async function startNativeTeamModel(
         name: 'message_send',
         input: { commandId: 'native-reply-three', to: 'user', text: 'REPLY_NATIVE_THREE' },
       }];
+      const four: { name: string; input: RecordValue }[] = [{
+        name: 'message_send',
+        input: { commandId: 'native-reply-four', to: 'user', text: 'REPLY_NATIVE_FOUR' },
+      }];
       const action = notice
         ? undefined
         : (groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one :
-          turn === 'NATIVE_TEAM_THREE' && options.nativeNextPromptUi ? three : two))[step];
+          turn === 'NATIVE_TEAM_THREE' && options.nativeNextPromptUi ? three :
+          turn === 'NATIVE_TEAM_FOUR' && options.nativeNextPromptUi ? four : two))[step];
       if (!action) {
         counters.set(turn, step + 1);
         emitResponse(
