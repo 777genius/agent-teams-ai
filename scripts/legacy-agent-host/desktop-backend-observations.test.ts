@@ -4,6 +4,13 @@ import { EventEmitter } from 'node:events';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
 import childProcess from 'node:child_process';
 import fs from 'node:fs';
+import fsp from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { performance } from 'node:perf_hooks';
+import type { TestContext } from 'node:test';
+import { digest } from './desktop-backend-fixture.ts';
+import { observeDesktopEmulatedRuntimeChildren } from './desktop-emulated-runtime-fixture.ts';
 import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
 import {
   assertDesktopProofEnvironment,
@@ -874,4 +881,92 @@ test('absent leader observation never renews the original deadline or accepts a 
   const late = await observeExitedAppGroup(exitedGroupInput(), () => { now = 3000; return []; });
   assert.equal(late.settled, false);
   assert.equal(late.reason, 'original-observation-deadline');
+});
+
+function emulatedObserverFixture(t: TestContext, mode: string) {
+  const root = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), 'TEST-peer-observation Я 路径-')));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const executable = { path: join(root, 'TEST-peer.mjs'), sha256: digest('TEST never executed\n') };
+  fs.writeFileSync(executable.path, 'TEST never executed\n');
+  const peers = (['runtime', 'management'] as const).map(role => ({ root, role,
+    environment: { HOME: root, CODEX_HOME: root, TEST_PEER_ROLE: role } }));
+  const member = { provider: 'codex', protocolRevision: '0.162.0', teamId: 'TEST-team', memberId: 'TEST-member',
+    principalId: 'TEST-user', sessionId: 'TEST-session', generation: 1, configRevision: 'TEST-1', model: 'TEST-model',
+    accountBinding: 'TEST-account', cwd: root, executable, environment: peers[0]!.environment,
+    limits: { queuedInputs: 1, inputBytes: 1024, outputBytes: 1024, outputEvents: 16, pendingInteractions: 1, timeoutMs: 1000 },
+    nativeOptions: { approvalPolicy: 'on-request', sandbox: 'read-only' } };
+  const profile = JSON.stringify({ schemaVersion: 1, principalId: 'TEST-user', teams: [],
+    owner: { ownerId: 'TEST-owner', revision: 'TEST-1', storageRoot: root, profileId: 'TEST-profile', protocolVersion: 1,
+      buildId: 'TEST-build', nodeSha256: executable.sha256, hostEntrySha256: executable.sha256 },
+    runtime: { members: [member], providerTemplates: [member] }, management: [{ provider: 'codex', protocolRevision: '0.162.0',
+      profileId: 'TEST-management', configRevision: 'TEST-1', accountBinding: 'TEST-account', cwd: root,
+      executable, environment: peers[1]!.environment, timeoutMs: 1000 }] });
+  const profilePath = join(root, 'profile.json'), descriptorPath = join(root, 'descriptor.json');
+  fs.writeFileSync(profilePath, profile); fs.writeFileSync(descriptorPath, '{}');
+  const fixture = { root, node: '/TEST/node', hostEntry: '/TEST/host.js', profilePath, descriptorPath,
+    pins: { profileSha256: digest(profile), descriptorSha256: digest('{}') },
+    emulatedRuntime: { provider: 'codex', sources: [executable], executable, peers,
+      commandPrefix: `/TEST/node ${executable.path} `, observedPeerPids: [] as number[] } };
+  const originalCommand = fixture.emulatedRuntime.commandPrefix + 'mcp list --json';
+  const launch = { event: 'launch', provider: 'codex', role: 'management', pid: 4200, parentPid: 4101 };
+  const journal = join(root, 'effects.ndjson'), row = JSON.stringify(launch) + '\n';
+  fs.writeFileSync(journal, mode === 'later-row' || mode === 'missing' ? '' : mode === 'duplicate' ? row + row : row);
+  let now = 0, censusReads = 0, journalReads = 0;
+  t.mock.method(performance, 'now', () => now);
+  const readFile = fsp.readFile;
+  t.mock.method(fsp, 'readFile', async (...args: Parameters<typeof readFile>) => {
+    const value = await readFile(...args);
+    if (args[0] === journal) {
+      journalReads++;
+      if (mode === 'later-row' && journalReads === 1) fs.writeFileSync(journal, row);
+      if (mode === 'late' || mode === 'missing' && journalReads === 2) now = 3000;
+    }
+    return value;
+  });
+  const readFileSync = fs.readFileSync;
+  t.mock.method(fs, 'readFileSync', (...args: Parameters<typeof readFileSync>) => {
+    if (String(args[0]).startsWith('/proc/')) throw Object.assign(new Error('TEST no real process read'), { code: 'ENOENT' });
+    return readFileSync(...args);
+  });
+  t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[], options?: { timeout?: number; env?: NodeJS.ProcessEnv }) => {
+    if (file.endsWith('/lsof')) return process.platform === 'linux'
+      ? 'p4100\nf61\ntIPv4\nD0xabcd\ni12345\nPTCP\nTST=LISTEN\nn127.0.0.1:9222\n' : '4100\n';
+    assert.equal(file, '/bin/ps');
+    if (args.includes('pid=,ppid=,pgid=,lstart=,command=')) {
+      censusReads++; assert.ok(options?.timeout && options.timeout <= 3000);
+      assert.equal(options.env?.LC_ALL, process.platform === 'linux' ? 'C.UTF-8' : 'en_US.UTF-8');
+      const host = '4100 4000 4100 Sun Nov 15 00:00:00 2026 /TEST/electron\n4101 4100 4100 Sun Nov 15 00:00:00 2026 /TEST/node /TEST/host.js\n';
+      if (censusReads > 1 && mode === 'exit') return host;
+      const birth = censusReads > 1 && mode === 'reuse' ? '00:00:01' : '00:00:00';
+      const parent = censusReads > 1 && mode === 'reparent' ? 4999 : 4101;
+      const argv = censusReads > 1 && mode === 'argv' ? originalCommand + ' --other' : originalCommand;
+      return host + `4200 ${parent} 4200 Sun Nov 15 ${birth} 2026 ${argv}\n`;
+    }
+    if (args[0] === '-ax') return '4100 4000 4100\n4101 4100 4100\n4200 4101 4200\n';
+    assert.equal(args[0], '-p');
+    return args[1] === '4101' ? '/TEST/node /TEST/host.js' : args[1] === '4200'
+      ? mode === 'exit' ? '' : originalCommand : '/TEST/electron';
+  });
+  t.mock.method(process, 'kill', () => assert.fail('observation never signals or adopts a PID'));
+  syncBuiltinESMExports();
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  return { fixture, observe: () => observeDesktopEmulatedRuntimeChildren(4100,
+    fixture as unknown as Parameters<typeof observeDesktopEmulatedRuntimeChildren>[1], 'after-team-read'),
+    reads: () => ({ censusReads, journalReads }) };
+}
+
+for (const mode of ['later-row', 'exit'])
+test(`original peer observation accepts ${mode} only with its retained launch row`, async t => {
+  const f = emulatedObserverFixture(t, mode);
+  await f.observe();
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, [4200]);
+  assert.ok(f.reads().censusReads >= 2);
+  if (mode === 'later-row') assert.equal(f.reads().journalReads, 2);
+});
+
+for (const mode of ['reuse', 'reparent', 'argv', 'duplicate', 'missing', 'late'])
+test(`original peer observation refuses ${mode} without admitting the census PID`, async t => {
+  const f = emulatedObserverFixture(t, mode);
+  await assert.rejects(f.observe());
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
 });
