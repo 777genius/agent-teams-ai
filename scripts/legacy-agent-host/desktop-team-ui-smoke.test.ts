@@ -1310,3 +1310,44 @@ for (const change of ['owner', 'cutoff'] as const) {
     }
   });
 }
+
+test('original final target refusal retains only its same-read predicate group without input', { timeout: 5000 }, async () => {
+  for (const diagnosticThrows of [false, true]) {
+    const expression = 'TEST_originalClarificationTarget()', finalExpression = 'TEST_sameFinalTargetObservation()';
+    const point = { x: 100, y: 100 }, expressions: string[] = [], dispatched: Record<string, unknown>[] = [];
+    const diagnostics: unknown[] = [], diagnosticError = new Error('TEST diagnostic must not replace refusal');
+    let guards = 0, unretainedReads = 0;
+    const reply = { point: null, refusal: 'detail' };
+    Object.defineProperty(reply, 'unretained', { get() { unretainedReads++; return 'TEST private text'; } });
+    const ui = createDesktopUiControls({
+      async evaluate(actual: string) {
+        expressions.push(actual);
+        if (expressions.length < 5) { assert.equal(actual, expression); return point; }
+        return actual === finalExpression ? reply : null;
+      },
+      async send(method: string, params: Record<string, unknown> = {}) {
+        if (method === 'Input.dispatchMouseEvent') dispatched.push({ ...params });
+        return {};
+      },
+    }, { assertOwnedRenderer() { guards++; }, step() {} });
+    await assert.rejects(Reflect.apply(ui.clickExpression, undefined, [expression,
+      'clear original clarification once', undefined, undefined, { expression: finalExpression,
+        onRefusal(value: unknown) {
+          diagnostics.push(value);
+          if (diagnosticThrows) throw diagnosticError;
+        },
+      }]), error => {
+      assert.ok(error instanceof assert.AssertionError);
+      assert.match(error.message, /value && typeof value === 'object'/);
+      assert.notEqual(error, diagnosticError, 'the original target assertion remains the refusal');
+      return true;
+    });
+    assert.deepEqual(diagnostics, [{ predicateGroup: 'detail' }],
+      'the original fifth observation retains its evaluated group without another read');
+    assert.deepEqual(expressions, [expression, expression, expression, expression, finalExpression]);
+    assert.equal(guards, 6, 'the original refusal still precedes the final post-read guard');
+    assert.equal(unretainedReads, 0, 'diagnostics never inspect arbitrary returned properties');
+    assert.deepEqual(dispatched, [{ type: 'mouseMoved', x: 100, y: 100 }],
+      'no final point retry, physical press, or release after refusal');
+  }
+});
