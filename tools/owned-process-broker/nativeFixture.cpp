@@ -1,4 +1,5 @@
 #define WIN32_LEAN_AND_MEAN
+#define _WIN32_WINNT 0x0A00
 #include <windows.h>
 #include <cstdint>
 #include <cstring>
@@ -43,14 +44,15 @@ static bool prerequisiteFailure(PrerequisiteStage stage,const DWORD* result=null
   std::fflush(stdout); return false;
 }
 static std::wstring wow64Command() {
-  const auto module=GetModuleHandleW(L"Kernel32.dll");
+  // Resolve the documented API-set contract with one bounded module lifetime.
+  const auto module=LoadLibraryExW(L"api-ms-win-core-wow64-l1-1-1.dll",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);
   if(!module) return {};
-  const auto directory=reinterpret_cast<UINT (WINAPI*)(LPWSTR,UINT,WORD)>(
+  const auto directory=reinterpret_cast<decltype(&GetSystemWow64Directory2W)>(
     GetProcAddress(module,"GetSystemWow64Directory2W"));
-  if(!directory) return {};
   wchar_t path[MAX_PATH]{};
-  const auto length=directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386);
-  if(!length||length>=MAX_PATH) return {};
+  const auto length=directory?directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386):0;
+  const bool closed=FreeLibrary(module)!=FALSE;
+  if(!closed||!length||length>=MAX_PATH) return {};
   return std::wstring(path)+L"\\cmd.exe";
 }
 static bool wow64Startup() {
