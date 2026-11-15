@@ -8,6 +8,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
+import { FileRuntimeSourceIndex } from '../../../packages/legacy-agent-host/dist/adapters/profile/FileRuntimeSourceIndex';
 import { FileManagementCommandStore } from '../../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore';
 import { treeHash } from '../../../packages/legacy-agent-host/tests/fixtures/native-host';
 import {
@@ -454,6 +455,19 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
       ).provider?.state
     ).toBe('not-connected');
     const originalCommands = new FileManagementCommandStore(owner.storageRoot, true);
+    const sourceIndex = new FileRuntimeSourceIndex(owner.storageRoot, () => {}, true).read();
+    const selectedSources = sourceIndex.records.filter((record) =>
+      record.grant.runtimeId === 'opencode' && record.grant.projectPath === null &&
+      sourceIndex.current.some((pointer) => pointer.sourceId === record.grant.targetId &&
+        pointer.revision === record.revision));
+    expect(selectedSources).toHaveLength(1);
+    const selectedSource = selectedSources[0]!;
+    expect(selectedSource.grant).toMatchObject({
+      ownerId: owner.ownerId, ownerRevision: owner.revision, contextId: 'local',
+      projectPath: null, runtimeId: 'opencode',
+      profileId: 'TEST-management', configRevision: 'TEST-config',
+    });
+    const selectedIdentity = `runtime-source:${selectedSource.revision}`;
     const nativeEffects = async () => (await readFile(join(root, 'native-effects.ndjson'), 'utf8'))
       .trim().split('\n').map((line) => JSON.parse(line) as {
         event: string; providerId?: string; pid: number;
@@ -475,7 +489,7 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
         expect(callback).toHaveLength(1);
         expect(originalCommands.read(autoInput.oauthOperationId)).toMatchObject({
           kind: 'oauth', commandId: autoInput.oauthOperationId,
-          profileId: 'TEST-management', configRevision: 'TEST-config',
+          profileId: selectedIdentity, configRevision: selectedIdentity,
           providerId: autoInput.providerId, phase: 'completing', completionMethod: 'auto',
           completionCommandId: autoInput.oauthOperationId + ':auto', resourceHeld: true,
         });

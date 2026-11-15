@@ -154,3 +154,97 @@ export function projectDesktopMixedSettingsFailure(value: unknown) {
       ? result : { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
   } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' }; }
 }
+
+/** Existing Taskboard failure observations only; no new read, input, retry or ownership decision. */
+export function projectDesktopTaskBoardFailure(value: unknown) {
+  try {
+    const missing = Symbol('missing');
+    const own = (row: unknown, key: string): unknown => {
+      if (row === null || typeof row !== 'object') return missing;
+      const field = Object.getOwnPropertyDescriptor(row, key);
+      return field && 'value' in field ? field.value : missing;
+    };
+    const record = (row: unknown) => row !== null && typeof row === 'object' && !Array.isArray(row);
+    const text = (field: unknown, maximum = 1024) =>
+      typeof field === 'string' && field.length > 0 && field.length <= maximum ? field : null;
+    const boolean = (field: unknown) => typeof field === 'boolean' ? field : null;
+    const integer = (field: unknown, maximum: number) =>
+      typeof field === 'number' && Number.isSafeInteger(field) && field >= 0 && field <= maximum ? field : null;
+    const choice = (field: unknown, allowed: readonly string[]) =>
+      typeof field === 'string' && allowed.includes(field) ? field : null;
+    const length = (rows: unknown) => Array.isArray(rows) ? integer(own(rows, 'length'), 0xffffffff) : null;
+    const terms = (field: unknown) => {
+      if (typeof field !== 'string') return { recorded: false, bounded: null, terms: [] as string[] };
+      if (field.length > 8000) return { recorded: true, bounded: false, terms: [] as string[] };
+      const lower = field.toLowerCase();
+      return { recorded: true, bounded: true, terms: ['loading', 'not found', 'unavailable', 'deleted',
+        'provisioning', 'read-only', 'comments', 'attachments', 'retry'].filter(term => lower.includes(term)) };
+    };
+    // Decode only the already observed, canonical TaskCommentInput ID format.
+    // These comparisons are diagnostics, never a replacement for the current React owner check.
+    const input = (field: unknown): { surface: string; identity: string } | null => {
+      const id = text(field, 8192), prefix = 'task-comment-input-';
+      if (!id?.startsWith(prefix)) return null;
+      try {
+        const encoded = id.slice(prefix.length), parsed: unknown = JSON.parse(decodeURIComponent(encoded));
+        if (!Array.isArray(parsed) || parsed.length !== 2 || !text(parsed[0]) || !text(parsed[1], 4096) ||
+            encodeURIComponent(JSON.stringify(parsed)) !== encoded) return null;
+        return { surface: parsed[0] as string, identity: parsed[1] as string };
+      } catch { return null; }
+    };
+    const board = own(value, 'taskBoardUiProof'), attachments = own(board, 'attachments');
+    const submitted = own(attachments, 'commentComposerCompleted'), identity = own(submitted, 'identity');
+    const context = text(own(identity, 'contextId')), team = text(own(identity, 'teamName'));
+    const task = text(own(identity, 'taskId')), surface = text(own(submitted, 'surfaceId'));
+    const originalInput = input(own(submitted, 'inputId'));
+    const expected = context !== null && team !== null && task !== null && surface !== null &&
+      own(submitted, 'teamName') === team && own(submitted, 'taskId') === task &&
+      own(own(own(board, 'createReceipt'), 'effects'), 'taskId') === task &&
+      originalInput !== null && originalInput.surface === surface && originalInput.identity === JSON.stringify([context, team, task]);
+    const matches = (field: unknown, original: string | null) =>
+      expected && text(field) !== null && original !== null ? field === original : null;
+    const snapshot = own(value, 'rendererFailureSnapshot'), store = own(snapshot, 'store');
+    const global = own(store, 'globalTaskDetail'), composer = own(snapshot, 'commandComposer');
+    const single = own(composer, 'single'), dialogRows = own(snapshot, 'dialogs'), dialogCount = length(dialogRows);
+    const dialogs = [];
+    if (dialogCount !== null) for (let index = 0; index < Math.min(dialogCount, 3); index++)
+      dialogs.push(terms(own(own(dialogRows, String(index)), 'text')));
+    const eventRows = own(snapshot, 'inputEvents'), eventCount = length(eventRows);
+    const events = [];
+    if (eventCount !== null) for (let index = Math.max(0, eventCount - 8); index < eventCount; index++) {
+      const row = own(eventRows, String(index));
+      const observed = input(own(own(row, 'target'), 'id')) ??
+        input(own(own(row, 'focusAfterDispatch'), 'id')) ?? input(own(own(row, 'focusAfterMicrotask'), 'id'));
+      events.push({ type: choice(own(row, 'type'), ['pointerdown', 'pointerup', 'click', 'focusin', 'focusout', 'keydown', 'keyup']),
+        trusted: boolean(own(row, 'trusted')), cardTaskMatchesOriginal: matches(own(row, 'taskId'), task),
+        inputRecorded: observed !== null, ownerTaskContextMatchesOriginal: expected && observed
+          ? observed.identity === originalInput!.identity : null,
+        sameOriginalSurface: expected && observed ? observed.surface === surface : null });
+    }
+    const cardRows = own(snapshot, 'visibleTaskCardIds'), cardCount = length(cardRows);
+    let originalTaskCardObserved: boolean | null = expected && cardCount !== null ? false : null;
+    if (expected && cardCount !== null) for (let index = 0; index < Math.min(cardCount, 24); index++)
+      if (own(cardRows, String(index)) === task) originalTaskCardObserved = true;
+    const result = { schemaVersion: 1, status: 'available', source: 'retained-failure-snapshot', atomicWithFailure: false,
+      original: { submittedRecorded: record(submitted), identityConsistent: expected,
+        commentReceiptCompleted: own(own(attachments, 'commentReceipt'), 'phase') === 'completed',
+        submittedEmpty: typeof own(submitted, 'commentText') === 'string' ? own(submitted, 'commentText') === '' : null,
+        submitPending: boolean(own(submitted, 'submitPending')) },
+      snapshotRecorded: record(snapshot), snapshotUnavailable: boolean(own(snapshot, 'unavailable')),
+      documentFocused: boolean(own(snapshot, 'documentFocused')),
+      visibility: choice(own(snapshot, 'visibility'), ['visible', 'hidden']),
+      selectedTeamMatchesOriginal: matches(own(store, 'selectedTeamName'), team),
+      selectedTeamError: terms(own(store, 'selectedTeamError')), globalTaskRecorded: record(global),
+      globalTeamMatchesOriginal: matches(own(global, 'teamName'), team),
+      globalTaskMatchesOriginal: matches(own(global, 'taskId'), task), originalTaskCardObserved,
+      dialogs: { count: dialogCount === null ? null : Math.min(dialogCount, 4),
+        overflow: dialogCount === null ? null : dialogCount > 3, items: dialogs },
+      composer: { recorded: record(composer), textareaCount: integer(own(composer, 'textareaCount'), 5),
+        textareaOverflow: boolean(own(composer, 'textareaOverflow')), singleRecorded: record(single),
+        disabled: boolean(own(single, 'disabled')), focused: boolean(own(single, 'focused')),
+        readOnly: boolean(own(single, 'readOnly')), connected: boolean(own(single, 'connected')) },
+      inputEvents: { count: eventCount === null ? null : Math.min(eventCount, 97),
+        overflow: eventCount === null ? null : eventCount > 96, last: events } };
+    return JSON.stringify(result).length <= 4096 ? result : { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
+  } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' }; }
+}

@@ -506,6 +506,23 @@ test('POSIX original-path pre-user image gate keeps explicit mutation counterexa
       } catch (error) {
         failure ??= error;
         if (!item.script) nativeQualified = false;
+        if (!item.script && (item.mode === 'after-check' || item.mode === 'writer-open')) {
+          try {
+            console.log(JSON.stringify({ kind: 'TEST_POSIX_MUTATION_FAILURE', case: label,
+              stage: fact.stage, errno: fact.errno, execErrno: fact.execErrno,
+              stoppedBeforeUser: fact.stoppedBeforeUser,
+              payloadMarkersAbsentBeforeGate: fact.payloadMarkersAbsentBeforeGate,
+              kernelImageObserved: fact.kernelImageObserved, imageMatched: fact.imageMatched,
+              resumed: fact.resumed, mutationAfterCheckErrno: fact.mutationAfterCheckErrno,
+              codeSigningFlags: fact.codeSigningFlags, codeSigningError: fact.codeSigningError,
+              exitCode: fact.exitCode, exitSignal: fact.exitSignal,
+              originalReaped: fact.originalReaped, originalGroupAbsent: fact.originalGroupAbsent,
+              cleanup: fact.cleanup, markers: { count: markerLines.length,
+                library: markerLines.includes('LIB'), constructorA: markerLines.includes('BIN:A'),
+                constructorB: markerLines.includes('BIN:B'), mainA: markerLines.includes('MAIN:A'),
+                mainB: markerLines.includes('MAIN:B') } }));
+          } catch { /* Diagnostics cannot replace the original failing assertion. */ }
+        }
         // Retain every bounded original observation; a failed primitive never becomes a skipped PASS.
       }
     }

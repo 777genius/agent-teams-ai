@@ -14,7 +14,7 @@ import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-commen
 import { runDesktopTaskBoardAttachmentsUi } from './desktop-task-board-attachments-ui.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
-import { projectDesktopEmulatedReadinessFailure, projectDesktopProofReceiptSummary } from './desktop-proof-evidence.ts';
+import { projectDesktopEmulatedReadinessFailure, projectDesktopProofReceiptSummary, projectDesktopTaskBoardFailure } from './desktop-proof-evidence.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -792,4 +792,92 @@ test('finite readiness failure summaries keep only bounded states and never priv
   assert.equal(overflow.provisioning.items.length, 8);
   assert.ok(overflow.provisioning.items.every(row => row.state === null));
   assert.ok(Buffer.byteLength(JSON.stringify(overflow)) <= 8192);
+});
+
+test('Taskboard failure summaries compare retained identities without exposing private snapshot values', () => {
+  const secret = 'TEST-private-value https://TEST-private.example/token /TEST-private/path';
+  const identity = { contextId: 'local', teamName: 'TEST-private-owner', taskId: 'TEST-private-task' };
+  const surface = 'TEST-private-original-surface';
+  const inputId = (selectedSurface: string, selected = identity) =>
+    'task-comment-input-' + encodeURIComponent(JSON.stringify([selectedSurface,
+      JSON.stringify([selected.contextId, selected.teamName, selected.taskId])]));
+  const evidence = { status: 'INCOMPLETE', taskBoardUiProof: {
+    createReceipt: { effects: { taskId: identity.taskId } },
+    attachments: { commentReceipt: { phase: 'completed' }, commentComposerCompleted: {
+      ...identity, identity, surfaceId: surface, inputId: inputId(surface), commentText: '', submitPending: false,
+    } } }, rendererFailureSnapshot: {
+      documentFocused: true, visibility: 'visible',
+      store: { selectedTeamName: identity.teamName, selectedTeamError: 'unavailable ' + secret,
+        globalTaskDetail: { teamName: identity.teamName, taskId: identity.taskId } },
+      dialogs: [{ text: 'Loading task Comments Attachments ' + secret }],
+      visibleTaskCardIds: [identity.taskId],
+      commandComposer: { textareaCount: 1, textareaOverflow: false,
+        single: { disabled: true, focused: false, readOnly: false, connected: true } },
+      inputEvents: [{ type: 'focusin', trusted: true, taskId: identity.taskId,
+        target: { id: inputId('TEST-private-reloaded-surface') } }],
+    } };
+  const before = JSON.stringify(evidence), result = projectDesktopTaskBoardFailure(evidence);
+  assert.ok('original' in result && result.original && 'inputEvents' in result && result.inputEvents);
+  assert.equal(result.original.identityConsistent, true);
+  assert.equal(result.original.commentReceiptCompleted, true);
+  assert.equal(result.selectedTeamMatchesOriginal, true);
+  assert.equal(result.globalTeamMatchesOriginal, true);
+  assert.equal(result.globalTaskMatchesOriginal, true);
+  assert.equal(result.originalTaskCardObserved, true);
+  assert.equal(result.composer.disabled, true);
+  assert.deepEqual(result.dialogs.items[0]?.terms, ['loading', 'comments', 'attachments']);
+  assert.deepEqual(result.inputEvents.last[0], { type: 'focusin', trusted: true,
+    cardTaskMatchesOriginal: true, inputRecorded: true, ownerTaskContextMatchesOriginal: true,
+    sameOriginalSurface: false });
+  for (const mode of ['task-board-ui', 'task-board-cross-team-ui']) {
+    assert.deepEqual(projectDesktopProofReceiptSummary(evidence, {
+      mode, receiptPath: 'TEST-receipt', mixedMode: false }).taskBoardFailure, result);
+    assert.equal('taskBoardFailure' in projectDesktopProofReceiptSummary({ ...evidence, status: 'PASS' },
+      { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  }
+  for (const mode of ['cross-team-ui', 'emulated-import-ui', 'emulated-codex-runtime-ui'])
+    assert.equal('taskBoardFailure' in projectDesktopProofReceiptSummary(evidence,
+      { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  const serialized = JSON.stringify(result);
+  for (const privateValue of [secret, identity.teamName, identity.taskId, surface, 'TEST-private-reloaded-surface', 'https://', '/TEST-private/path'])
+    assert.equal(serialized.includes(privateValue), false);
+  assert.equal(JSON.stringify(evidence), before);
+  assert.notEqual(result.dialogs.items, evidence.rendererFailureSnapshot.dialogs);
+  assert.notEqual(result.inputEvents.last, evidence.rendererFailureSnapshot.inputEvents);
+
+  const foreign = projectDesktopTaskBoardFailure({ ...evidence, rendererFailureSnapshot: {
+    ...evidence.rendererFailureSnapshot, inputEvents: [{ type: 'focusin', trusted: true,
+      target: { id: inputId(surface, { ...identity, taskId: 'TEST-foreign-task' }) } }],
+  } });
+  assert.ok('inputEvents' in foreign && foreign.inputEvents);
+  assert.equal(foreign.inputEvents.last[0]?.ownerTaskContextMatchesOriginal, false);
+  assert.equal(foreign.inputEvents.last[0]?.sameOriginalSurface, true);
+  const inconsistent = projectDesktopTaskBoardFailure({ ...evidence, taskBoardUiProof: {
+    ...evidence.taskBoardUiProof, createReceipt: { effects: { taskId: 'TEST-foreign-created-task' } },
+  } });
+  assert.ok('original' in inconsistent && inconsistent.original);
+  assert.equal(inconsistent.original.identityConsistent, false);
+  assert.equal(inconsistent.selectedTeamMatchesOriginal, null);
+  assert.equal(inconsistent.inputEvents.last[0]?.ownerTaskContextMatchesOriginal, null);
+
+  let getterReads = 0;
+  const unreadable = () => { getterReads++; throw new Error(secret); };
+  projectDesktopTaskBoardFailure(Object.defineProperty({ ...evidence }, 'rendererFailureSnapshot', { get: unreadable }));
+  projectDesktopTaskBoardFailure({ ...evidence, rendererFailureSnapshot: {
+    ...evidence.rendererFailureSnapshot, inputEvents: new Proxy([], { get: unreadable }),
+    dialogs: [Object.defineProperty({}, 'text', { get: unreadable })],
+  } });
+  assert.equal(getterReads, 0);
+  const overflow = projectDesktopTaskBoardFailure({ ...evidence, rendererFailureSnapshot: {
+    ...evidence.rendererFailureSnapshot,
+    inputEvents: Array.from({ length: 200 }, () => ({ type: secret, target: { id: secret } })),
+    dialogs: Array.from({ length: 9 }, () => ({ text: secret })),
+  } });
+  assert.ok('inputEvents' in overflow && overflow.inputEvents);
+  assert.equal(overflow.inputEvents.count, 97); assert.equal(overflow.inputEvents.overflow, true);
+  assert.equal(overflow.inputEvents.last.length, 8);
+  assert.equal(overflow.dialogs.count, 4); assert.equal(overflow.dialogs.overflow, true);
+  assert.equal(overflow.dialogs.items.length, 3);
+  assert.equal(JSON.stringify(overflow).includes(secret), false);
+  assert.ok(JSON.stringify(overflow).length <= 4096);
 });

@@ -73,7 +73,11 @@ it.skipIf(process.platform === 'win32')('selects the finite installer source wit
   const peer = join(root, 'TEST-no-agent.mjs');
   await writeFile(peer, 'throw new Error("No provider invocation is allowed in this test");\n');
   const sources = [{ path: peer, sha256: createHash('sha256').update(await readFile(peer)).digest('hex') }];
-  const fixture = { root, node, appEnvironment: { PATH: join(root, 'bin'), CODEX_CLI_PATH: join(root, 'bin/codex') } as Record<string, string> };
+  const fixture = {
+    root, node,
+    appEnvironment: { PATH: join(root, 'bin'), CODEX_CLI_PATH: join(root, 'bin/codex') } as Record<string, string>,
+    pins: { sentinelSha256: createHash('sha256').update(await readFile(join(vendorBin, 'codex'))).digest('hex') },
+  };
   Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
   Object.defineProperty(process, 'arch', { value: 'arm64', configurable: true });
   const installer = await prepareDesktopEmulatedCodexInstaller(fixture, resolve(import.meta.dirname, '../..'), sources);

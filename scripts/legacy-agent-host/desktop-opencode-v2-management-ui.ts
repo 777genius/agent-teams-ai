@@ -118,7 +118,35 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
   const modelsTab = async () => {
     const selector = `${dialog} [role="tab"][id$="-trigger-models"]`;
     await ui.scrollTo(selector, 'original Models tab'); await ui.click(selector, 'original Models tab');
-    await ui.waitRead(`Boolean(document.querySelector('${dialog} [data-testid="opencode-default-inheritance"]'))`, 'original default inheritance');
+    let last: Record<string, boolean> | null = null;
+    try {
+      await ui.waitRead(`(() => ({
+        inheritanceCard: Boolean(document.querySelector('${dialog} [data-testid="opencode-default-inheritance"]')),
+        modelsTabActive: document.querySelector(${desktopJsLiteral(selector)})?.getAttribute('data-state') === 'active',
+        modelsTabDisabled: Boolean(document.querySelector(${desktopJsLiteral(selector)})?.matches(':disabled')),
+        refreshSpinner: Boolean(document.querySelector('${dialog} button.mb-1 .animate-spin')),
+        legacyModelsPanel: Boolean(document.querySelector('${dialog} [data-testid="runtime-provider-legacy-models"]')),
+        projectContextSelector: Boolean(document.querySelector('${dialog} [data-testid="runtime-provider-project-context-trigger"]')),
+        publicError: Boolean(document.querySelector('${dialog} [data-testid="runtime-provider-error"]')),
+        publicWarning: Boolean(document.querySelector('${dialog} [data-testid="runtime-provider-warning"]'))
+      }))()`, 'original default inheritance', 30_000, value => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+        const observed = (key: string) => Object.getOwnPropertyDescriptor(value, key)?.value === true;
+        last = {
+          inheritanceCard: observed('inheritanceCard'), modelsTabActive: observed('modelsTabActive'),
+          modelsTabDisabled: observed('modelsTabDisabled'), refreshSpinner: observed('refreshSpinner'),
+          legacyModelsPanel: observed('legacyModelsPanel'), projectContextSelector: observed('projectContextSelector'),
+          publicError: observed('publicError'), publicWarning: observed('publicWarning'),
+        };
+        return last.inheritanceCard === true;
+      });
+    } catch (error) {
+      proof.modelsTabFailure = last;
+      try {
+        console.error(JSON.stringify({ kind: 'TEST_V2_MANAGEMENT_MODELS_WAIT_FAILURE', observation: last }));
+      } catch { /* Retain the original failed wait, including its original deadline. */ }
+      throw error;
+    }
   };
   const selectProject = async (name: 'workspace' | 'workspace-other') => {
     const selector = `${dialog} [data-testid="runtime-provider-project-context-trigger"]`;

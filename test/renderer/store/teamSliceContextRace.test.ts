@@ -119,6 +119,7 @@ const runtimeSnapshot = {
 
 vi.mock('@renderer/api', () => ({
   api: apiMock,
+  isElectronMode: () => true,
 }));
 
 function deferred<T>(): {

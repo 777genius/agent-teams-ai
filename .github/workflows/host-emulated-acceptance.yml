@@ -610,14 +610,94 @@ jobs:
               }
               const effects = receipt.emulatedRuntimeCleanup.effects;
               const runtimeBirths = effects.filter(row => row.event === 'launch' && row.role === 'runtime');
+              assert.equal(new Set(runtimeBirths.map(row => row.pid)).size, runtimeBirths.length);
+              const originalPids = proof.stopped.originalBirths.map(row => row.pid);
+              assert.equal(new Set(originalPids).size, 4);
               const catalogBirths = runtimeBirths.filter(birth => effects.some(row => row.pid === birth.pid && row.event === 'mcp-catalog'));
               for (const birth of catalogBirths) {
+                assert.equal(originalPids.includes(birth.pid), false);
                 assert.equal(birth.provider, 'codex'); assert.equal(birth.argc, 3);
-                assert.deepEqual(effects.filter(row => row.pid === birth.pid).map(row => row.event), ['launch', 'mcp-catalog']);
+                const observations = effects.filter(row => row.pid === birth.pid);
+                assert.ok(observations.every(row => row.provider === 'codex' && row.role === 'runtime'));
+                assert.deepEqual(observations.map(row => row.event), ['launch', 'mcp-catalog']);
+                assert.equal(observations[1].configuredServers, 0);
               }
-              const births = runtimeBirths.filter(row => !catalogBirths.includes(row));
+              const births = runtimeBirths.filter(row => originalPids.includes(row.pid));
               assert.deepEqual(births.map(row => row.provider).sort(), ['claude', 'codex', 'opencode', 'opencode']);
-              assert.deepEqual(births.map(row => row.pid).sort(), proof.stopped.originalBirths.map(row => row.pid).sort());
+              assert.deepEqual(births.map(row => row.pid).sort(), [...originalPids].sort());
+              // Derived probe profiles retain their Runtime environment. Every remaining birth must
+              // satisfy the pinned finite probe protocol; unknown children are never discarded.
+              const probeBirths = runtimeBirths.filter(row => !births.includes(row) && !catalogBirths.includes(row));
+              assert.deepEqual(probeBirths.map(row => row.provider).sort(), ['claude', 'codex', 'opencode', 'opencode']);
+              const policyPins = proof.fixturePins.sources.filter(row => row.path.endsWith('/adapters/providers/OpenCodeMcpPolicyPlugin.js'));
+              assert.equal(policyPins.length, 1);
+              for (const birth of probeBirths) {
+                const rows = effects.filter(row => row.pid === birth.pid);
+                assert.ok(rows.every(row => row.provider === birth.provider && row.role === 'runtime'));
+                const event = name => rows.filter(row => row.event === name);
+                const one = name => { const selected = event(name); assert.equal(selected.length, 1); return selected[0]; };
+                assert.equal(one('launch'), birth);
+                const input = one('input'), terminal = one('terminal');
+                assert.equal(input.marker, 'TEST_MODEL_PROBE');
+                const allowed = birth.provider === 'claude'
+                  ? ['launch', 'started', 'initialized', 'input', 'terminal', 'stdin-ended', 'exited']
+                  : birth.provider === 'codex'
+                    ? ['launch', 'managed-configuration-read', 'input', 'terminal', 'exit']
+                    : ['launch', 'policy-configured', 'input', 'terminal', 'exit'];
+                assert.ok(rows.every(row => allowed.includes(row.event)), 'no business, control, MCP or unknown probe effects');
+                for (const name of allowed) assert.ok(event(name).length <= 1);
+                const core = rows.filter(row => !['stdin-ended', 'exited', 'exit', 'managed-configuration-read', 'policy-configured'].includes(row.event));
+                assert.deepEqual(core.map(row => row.event), birth.provider === 'claude'
+                  ? ['launch', 'started', 'initialized', 'input', 'terminal'] : ['launch', 'input', 'terminal']);
+                for (const row of rows.filter(row => ['exited', 'exit'].includes(row.event))) {
+                  assert.equal(row.code, 0); assert.ok(rows.indexOf(row) > rows.indexOf(terminal));
+                }
+                if (birth.provider === 'claude') {
+                  assert.equal(birth.restored, false); assert.equal(typeof birth.sessionId, 'string');
+                  for (const name of ['started', 'initialized']) {
+                    assert.equal(one(name).sessionId, birth.sessionId); assert.equal(one(name).restored, false);
+                  }
+                  assert.equal(input.sessionId, birth.sessionId); assert.equal(typeof input.inputId, 'string');
+                  assert.equal(terminal.inputId, input.inputId);
+                  assert.equal(terminal.marker, 'Reply only OK. Do not use tools, access files or run commands.');
+                  assert.equal(terminal.outcome, 'succeeded'); assert.equal(terminal.text, 'OK');
+                  for (const row of event('stdin-ended')) {
+                    assert.equal(row.active, false); assert.ok(rows.indexOf(row) > rows.indexOf(terminal));
+                  }
+                } else {
+                  assert.equal(terminal.marker, 'TEST_MODEL_PROBE');
+                  if (birth.provider === 'codex') {
+                    assert.equal(typeof input.turnId, 'string'); assert.equal(terminal.turnId, input.turnId);
+                    assert.equal(terminal.status, 'completed');
+                    for (const row of event('managed-configuration-read')) {
+                      assert.deepEqual(row.selectedServers, []); assert.ok(rows.indexOf(row) < rows.indexOf(input));
+                    }
+                  } else {
+                    assert.equal(terminal.outcome, 'succeeded');
+                    for (const row of event('policy-configured')) {
+                      assert.equal(row.pluginSha256, policyPins[0].sha256); assert.ok(rows.indexOf(row) < rows.indexOf(input));
+                    }
+                  }
+                }
+              }
+              // Validate the original durable probe bodies independently of the process effects.
+              // The producer does not persist a PID-to-command join, so no such join is inferred.
+              const { FileManagementCommandStore } = await import('./packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js');
+              const probes = [...new FileManagementCommandStore(join(root, 'hoststore'), true).list()]
+                .filter(row => row.kind === 'model.probe');
+              assert.equal(probes.length, 4); assert.equal(new Set(probes.map(row => row.commandId)).size, 4);
+              for (const probe of probes) {
+                assert.match(probe.profileId, /^team-probe-[a-f0-9]{64}$/u);
+                assert.equal(probe.configRevision, probe.profileId);
+                assert.equal(probe.phase, 'completed'); assert.equal(probe.ok, true); assert.equal(probe.resourceHeld, false);
+              }
+              for (const value of [proof.added, proof.restored]) {
+                const selected = probes.filter(row => row.commandId === value.readiness.probe.commandId);
+                assert.equal(selected.length, 1); assert.deepEqual(selected[0], value.readiness.probe);
+              }
+              const initialProbes = probes.filter(row => ![proof.added.readiness.probe.commandId, proof.restored.readiness.probe.commandId].includes(row.commandId));
+              assert.deepEqual(initialProbes.map(row => [row.providerId, row.modelId, row.effort]).sort(),
+                [['anthropic', 'sonnet', 'low'], ['codex', 'TEST-model', undefined]]);
               assert.equal(proof.reload.historyRetained, true); assert.equal(proof.reload.noEffects, true);
               assert.equal(proof.effects.some(row => row.event === 'failure'), false);
             }
@@ -690,7 +770,7 @@ jobs:
               }
             }
             if (mode === 'emulated-management-ui') {
-              assert.deepEqual(proof.savedSelection, { providerId: 'opencode', model: 'TEST-api/TEST-model', effort: 'high' });
+              assert.deepEqual(proof.savedSelection, { providerId: 'opencode', model: 'local/TEST-model', effort: 'high' });
               assert.equal(proof.selectionRetainedAfterReload, true);
               assert.equal(proof.fixturePins.runtimeConfigured, false);
               assert.equal(proof.fixturePins.managementConfigured, true);

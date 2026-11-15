@@ -30,7 +30,7 @@ import { captureOpenCodeReadinessOrigin, captureReadinessPreparation } from '../
 import { AcceptedOpenCodeV2FileKey, DeferredOpenCodeV2FileKey, createOpenCodeV2FileMaterialization,
   openCodeV2SelectedSourceReference, selectedFilePaths } from '../dist/adapters/providers/OpenCodeV2SelectedFileKey.js';
 import { captureOpenCodeProbeAccount, capturePreparedModelReference, captureNativeRestartReadiness,
-  attachMemberModelReadiness, consumeMemberModelReadiness, captureLaunchModelReadiness } from '../dist/composition/prepareTeamModelReadiness.js';
+  attachMemberModelReadiness, inspectMemberModelReadiness, consumeMemberModelReadiness, captureLaunchModelReadiness } from '../dist/composition/prepareTeamModelReadiness.js';
 import type { LocalModelReadinessTransfer } from '../dist/composition/prepareTeamModelReadiness.js';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { TeamLaunchOwner } from '../dist/team-launch/TeamLaunchOwner.js';
@@ -1533,4 +1533,114 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
     'the original readiness expires exactly at its cutoff without any lease extension');
   assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
   assert.equal(runs, 1); assert.equal(closes, 1); assert.equal(allocations, 0);
+
+  // Exercise the private allocation inspector against the original completed V1
+  // receipt; public capture/transfer alone cannot enter its synchronous bracket.
+  const member = compiled.profiles.find(row => row.memberId === 'alice')!;
+  assert.equal(member.provider, 'opencode');
+  const selectedReference = transferred.groups[0]!, shadowDirectory = join(own.root, 'opencode'),
+    shadow = join(shadowDirectory, 'opencode.json'), consulted = join(own.root, 'opencode.jsonc');
+  const originalProject = readFileSync(join(own.root, 'opencode.json'), 'utf8');
+  let businessOpens = 0;
+  for (const change of ['unchanged', 'shadowed-native', 'main-origin', 'owner', 'expiry', 'credential'] as const) {
+    // Independent observations of the same fixed lease, never an updated receipt.
+    t.mock.timers.setTime(original.expiresAt - 1);
+    const binding = { backendId: own.team.definition.binding.backendId, teamId: member.teamId,
+      runId: 'TEST-private-origin-' + change, memberId: member.memberId, generation: '1' };
+    const entry: MemberEntry = { profile: member, baseProfile: structuredClone(member), team: own.team,
+      binding, delivery: { ...binding, teamName: own.team.definition.binding.teamName },
+      config: { tenantId: own.profile.owner.ownerId, projectId: own.team.definition.scope.projectId,
+        sessionId: member.sessionId, generation: member.generation, configRevision: member.configRevision,
+        requiredCapabilities: ['text'] } };
+    const launch = new TeamLaunchOwner({ definition: { launchId: binding.runId, rosterRevision: published.revision,
+      members: [{ memberId: member.memberId, binding, configurationDigest: runtimeDigest(member),
+        baseConfigurationDigest: runtimeDigest(member), runtimeGeneration: member.generation,
+        contextDigest: runtimeDigest('TEST-no-input'), configRevision: member.configRevision, skipped: false, timeoutMs: 1000 }] },
+      hostIncarnation: 'TEST-retained-host', store: new TeamOwnerStore(own.root, own.team.definition.binding.teamName),
+      authorized: (action, callback) => own.owner.withLaunchAuthority('TEST-human', action, callback),
+      runtime: { read: () => ({ attached: false, nativeReady: false }),
+        open: async () => { businessOpens++; throw Error('TEST no business allocation during readiness inspection'); } } });
+    let active = true, targetReads = 0, changed = false;
+    const manager = { ...management, readinessTarget: (selected: ProviderManagementProfile) => {
+      targetReads++;
+      if (!changed) {
+        changed = true;
+        if (change === 'main-origin') writeFileSync(consulted, '{}', { flag: 'wx', mode: 0o600 });
+        else if (change === 'owner') active = false;
+        else if (change === 'expiry') t.mock.timers.setTime(original.expiresAt);
+      }
+      return target(selected);
+    } };
+    const inspection = { management: manager, launch, entry, hostIncarnation: 'TEST-retained-host',
+      assertCurrent() { if (!active) throw Error('TEST original member owner revoked'); } };
+    const read = () => launch.readModelReadiness({ binding, configRevision: member.configRevision,
+      configurationDigest: runtimeDigest(member) });
+    try {
+      attachMemberModelReadiness({ launch, entry, reference: selectedReference,
+        commandId: 'TEST-private-consume-' + change, actorDigest: runtimeDigest('TEST-original-actor'),
+        inputDigest: runtimeDigest(payload), cutoff: original.expiresAt });
+      const pending = read();
+      assert.equal(pending.consumer.disposition, 'pending');
+      assert.deepEqual(pending.reference, selectedReference);
+      assert.equal(pending.consumer.cutoff, original.expiresAt);
+      if (change === 'main-origin' || change === 'owner' || change === 'expiry') {
+        assert.throws(() => consumeMemberModelReadiness(inspection), { code: 'held' });
+        assert.equal(targetReads, 1, 'the change occurs inside the original target inspection');
+        assert.deepEqual(read(), pending, 'failed final validation never consumes the original reference');
+        if (change === 'expiry') {
+          assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
+          assert.deepEqual(probes.readRetainedProbe(commandId, captured.context), original);
+          assert.equal(runs, 1); assert.equal(closes, 1);
+          assert.equal(allocations, 0); assert.equal(businessOpens, 0);
+          continue; // An expired consumer is never qualified again.
+        }
+        if (change === 'main-origin') rmSync(consulted);
+        active = true;
+      }
+      const inspected = inspectMemberModelReadiness(inspection);
+      assert.equal(inspected.kind, 'preparation');
+      assert.equal(inspected.assertReadinessCredential, undefined, 'V1 configured-key inspection has no file-key capability');
+      assert.deepEqual(inspected.reference, selectedReference);
+      assert.deepEqual(read(), pending, 'readonly inspection leaves consumption to its existing owner');
+      inspected.assertCurrent();
+      if (change === 'shadowed-native') {
+        mkdirSync(shadowDirectory, { mode: 0o700 });
+        const shadowConfig = (key: string) => JSON.stringify({ provider: { [providerId]: {
+          options: { apiKey: key },
+        } } });
+        writeFileSync(shadow, shadowConfig('TEST-shadowed-first'), { flag: 'wx', mode: 0o600 });
+        inspected.assertCurrent();
+        renameSync(shadow, shadow + '.original');
+        writeFileSync(shadow, shadowConfig('TEST-shadowed-replacement'), { flag: 'wx', mode: 0o600 });
+        inspected.assertCurrent();
+        assert.deepEqual(read(), pending, 'fresh native source inspection preserves project precedence');
+      }
+      if (change === 'credential') {
+        writeFileSync(join(own.root, 'opencode.json'),
+          originalProject.replace('TEST-retained-key', 'TEST-changed-key'), { mode: 0o600 });
+        assert.throws(inspected.assertCurrent, { code: 'held' });
+        assert.throws(() => consumeMemberModelReadiness(inspection), { code: 'held' });
+        assert.deepEqual(read(), pending, 'changed original credential cannot consume old evidence');
+      } else {
+        const consumed = consumeMemberModelReadiness(inspection);
+        const committed = read();
+        assert.equal(committed.consumer.disposition, 'consumed');
+        assert.equal(committed.consumer.consumerId, pending.consumer.consumerId);
+        assert.equal(committed.consumer.cutoff, original.expiresAt);
+        assert.deepEqual(committed.reference, selectedReference);
+        consumed.assertCurrent();
+        assert.equal(consumeMemberModelReadiness(inspection).consumerId, consumed.consumerId);
+        assert.deepEqual(read(), committed, 'repeat consumption retains the same original consumer');
+      }
+      assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
+      assert.deepEqual(probes.readRetainedProbe(commandId, captured.context), original);
+      assert.equal(runs, 1); assert.equal(closes, 1);
+      assert.equal(allocations, 0); assert.equal(businessOpens, 0);
+    } finally {
+      launch.seal();
+      if (change === 'shadowed-native') rmSync(shadowDirectory, { recursive: true, force: true });
+      rmSync(consulted, { force: true });
+      t.mock.timers.setTime(original.expiresAt);
+    }
+  }
 }

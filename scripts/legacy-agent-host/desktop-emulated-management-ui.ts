@@ -97,7 +97,7 @@ export async function runDesktopEmulatedManagementUi(
   const ownerPath = join(fixture.root, 'hoststore/teams', teamName, '.host-owner/state.json');
   const owner = await json(ownerPath);
   const saved = record(owner.savedSettings);
-  assert.equal(saved.providerId, 'opencode'); assert.equal(saved.model, 'TEST-api/TEST-model');
+  assert.equal(saved.providerId, 'opencode'); assert.equal(saved.model, 'local/TEST-model');
   assert.equal(saved.effort, 'high'); assert.equal(saved.cwd, join(fixture.root, 'workspace'));
   assert.deepEqual(owner.runtimeCaptures ?? [], [], 'save-only never allocates a Runtime');
   const registryDirectory = join(fixture.root, 'hoststore/.host-team-registry/records');

@@ -1,4 +1,4 @@
-import { projectDesktopMixedSettingsFailure } from './desktop-backend-failures.ts';
+import { projectDesktopMixedSettingsFailure, projectDesktopTaskBoardFailure } from './desktop-backend-failures.ts';
 import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
 import { readDesktopNativeProviderArtifact } from './desktop-native-stop-fixture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -311,7 +311,7 @@ export async function desktopProofEvidence(options: {
   };
 }
 
-export { projectDesktopMixedSettingsFailure };
+export { projectDesktopMixedSettingsFailure, projectDesktopTaskBoardFailure };
 
 export function projectDesktopEmulatedReadinessFailure(value: unknown) {
   try {
@@ -384,5 +384,7 @@ export function projectDesktopProofReceiptSummary(evidence: Record<string, unkno
       ? { mixedSettingsFailure: projectDesktopMixedSettingsFailure(evidence) } : {}),
     ...(['emulated-import-ui', 'emulated-opencode-runtime-ui'].includes(mode) && evidence.status !== 'PASS'
       ? { emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) } : {}),
+    ...(['task-board-ui', 'task-board-cross-team-ui'].includes(mode) && evidence.status !== 'PASS'
+      ? { taskBoardFailure: projectDesktopTaskBoardFailure(evidence) } : {}),
   };
 }

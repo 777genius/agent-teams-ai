@@ -320,8 +320,10 @@ export async function runDesktopNativeExtensionsUiSmoke(
     "close original Plugin detail",
     "Close",
   );
-  if (options.pluginPhase === "uninstall") {
+  if (selected.execution === 'finite-protocol-peer' || options.pluginPhase === "uninstall") {
     await screenshot("native-extensions-plugin-uninstalled.png");
+  }
+  if (options.pluginPhase === "uninstall") {
     await completePluginPhase(2);
     return;
   }

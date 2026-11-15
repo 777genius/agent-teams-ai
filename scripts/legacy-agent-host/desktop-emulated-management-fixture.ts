@@ -54,7 +54,22 @@ export async function prepareDesktopEmulatedManagementFixture(repo: string, pnpm
       XDG_CONFIG_HOME: join(peerRoot, 'config'), XDG_DATA_HOME: join(peerRoot, 'data'),
       XDG_CACHE_HOME: join(peerRoot, 'cache'), PATH: `${dirname(fixture.node)}:/usr/bin:/bin`,
       TEST_MANAGEMENT_FIXTURE_ROOT: peerRoot,
-      OPENCODE_CONFIG_CONTENT: JSON.stringify({ provider: {}, model: 'TEST-api/TEST-model' }),
+      OPENCODE_CONFIG_CONTENT: JSON.stringify({
+        provider: {
+          local: {
+            npm: '@ai-sdk/openai-compatible',
+            options: { baseURL: 'http://127.0.0.1:19999/v1' },
+            models: { 'TEST-model': {
+              name: 'TEST model', limit: { context: 4096, output: 1024 },
+              variants: {
+                low: { reasoningEffort: 'low', privateSetting: 'TEST-private-variant-setting' },
+                high: { reasoningEffort: 'high' },
+              },
+            } },
+          },
+        },
+        model: 'local/TEST-model',
+      }),
     },
   }];
   const profileBytes = JSON.stringify(profile);

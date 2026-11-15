@@ -380,6 +380,8 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   const tasks = await poll(() => rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend')),
     rows => rows.some(row => row.id === taskId && row.status === 'completed'), 'scheduled original MCP task completion');
   assert.equal(tasks.length, beforeTasks.length + 1); assert.equal(tasks.find(row => row.id === taskId)?.owner, 'alice');
+  await ui.scrollTo('button[aria-label="Back to chats"]', 'original scheduled conversation list');
+  await ui.click('button[aria-label="Back to chats"]', 'return to original chats before scheduled reply');
   await ui.scrollTo('button[aria-label^="alice,"]', 'original scheduled lead chat');
   await ui.click('button[aria-label^="alice,"]', 'show original scheduled reply'); await visible('TEST scheduled reply');
   await openSection();

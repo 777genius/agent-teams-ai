@@ -103,15 +103,33 @@ function captureOpenCodeProbeAccountInspection(
   input: Pick<ModelProbeInput, 'providerId' | 'modelId'>,
   ownerCurrent: () => boolean,
   original?: Readonly<StoredModelProbe>,
-  capturedOrigin = original?.localModelReadinessOrigin
+  capturedOrigin = original?.localModelReadinessOrigin,
+  memberTarget?: () => ReturnType<ProviderManagementCoordinator['readinessTarget']>
 ): {
   account: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>>;
   origin: ReturnType<typeof captureOpenCodeReadinessOrigin> | undefined;
+  memberReference?: {
+    target: ReturnType<ProviderManagementCoordinator['readinessTarget']>;
+    originCurrent: boolean; accountDigest: string;
+  };
 } | undefined {
+  // The original declaration is only a hint; the complete source observation below
+  // must confirm it before grouping this private, synchronous, read-only inspection.
+  const workspace = memberTarget && capturedOrigin?.workspaces.find(row => row.path === profile.cwd);
+  const declared = workspace && ((!workspace.project.invalid &&
+    workspace.project.providers.find(row => row.providerId === input.providerId)) ||
+    (!('notConsulted' in workspace.global) &&
+      workspace.global.providers.find(row => row.providerId === input.providerId)));
+  const bracket = memberTarget !== undefined && profile.nativeGeneration !== 'v2' &&
+    original !== undefined && original.nativeFileKeyWitness === undefined &&
+    !!declared && declared.hasConfiguredApiKey === true;
+  const before = bracket && capturedOrigin
+    ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined;
+  if (bracket && before?.policy?.hasConfiguredApiKey !== true) held();
   const source = captureOpenCodeConfigurationSource(profile,
     profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent);
-  const policy = capturedOrigin
-    ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined;
+  const policy = before ?? (capturedOrigin
+    ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined);
   const raw = source.read(), provider = object(raw.provider) ? raw.provider[input.providerId] : undefined;
   const options = object(provider) && object(provider.options) ? provider.options : {};
   const resolve = (value: unknown): unknown => {
@@ -138,11 +156,14 @@ function captureOpenCodeProbeAccountInspection(
     ? configuration?.key ?? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture()
     : undefined;
   let fileProof: AcceptedOpenCodeV2FileKey | undefined;
-  const current = () => {
+  const nativeCurrent = () => {
     try { return ownerCurrent() && source.isCurrent() && (configuration?.isCurrent() ?? true) &&
-      (key?.isCurrent() ?? true) && (fileProof?.filesCurrent() ?? true) && (policy?.isCurrent() ?? true); } catch { return false; }
+      (key?.isCurrent() ?? true) && (fileProof?.filesCurrent() ?? true); } catch { return false; }
   };
-  if (!current()) held();
+  const current = () => {
+    try { return nativeCurrent() && (policy?.isCurrent() ?? true); } catch { return false; }
+  };
+  if (!(bracket ? nativeCurrent() : current())) held();
   if (configuration?.selectedFile) {
     // Initial scope commits the original source/selection but cannot invent its future native key.
     if (!original) return undefined;
@@ -168,6 +189,15 @@ function captureOpenCodeProbeAccountInspection(
     isCurrent: current,
     ...(profile.nativeGeneration === 'v2' && nativeCredentialScopeDigest !== undefined ? { nativeCredentialScopeDigest } : {}),
   };
+  if (bracket) {
+    // No weak currentness facet escapes: only the two intermediate origin reads
+    // are grouped. Native files/account remain freshly captured on every call.
+    if (configuration || key || fileProof || !ownerCurrent() || !nativeCurrent()) held();
+    const target = memberTarget!();
+    return { account, origin: policy, memberReference: {
+      target, originCurrent: policy!.isCurrent() && ownerCurrent(), accountDigest: account.digest,
+    } };
+  }
   return { account, origin: policy };
 }
 
@@ -181,6 +211,11 @@ export function capturePreparedModelReference(options: {
   isCurrent(): boolean;
   observeAccount?(account: ReturnType<typeof captureOpenCodeProbeAccount>): void;
 }): ModelReadinessReference {
+  return readPreparedModelReference(options);
+}
+
+function readPreparedModelReference(options: Parameters<typeof capturePreparedModelReference>[0],
+  memberInspection = false): ModelReadinessReference {
   const original = options.management.probes.readRetainedProbe(options.commandId, options.context);
   const candidate = { ...teamModelProbeProfile(options.profile),
     profileId: original.profileId, configRevision: original.configRevision };
@@ -194,7 +229,13 @@ export function capturePreparedModelReference(options: {
       modelReadinessMechanismDigest(candidate) !== original.readinessScope?.mechanismDigest) held();
   return options.management.probes.captureReadinessReference(options.commandId, options.context, saved => {
     const inspected = saved.readiness || saved.readinessScope?.accountDigest !== undefined || saved.nativeFileKeyWitness !== undefined
-      ? captureOpenCodeProbeAccountInspection(candidate, saved, options.isCurrent, saved) : undefined;
+      ? captureOpenCodeProbeAccountInspection(candidate, saved, options.isCurrent, saved,
+        saved.localModelReadinessOrigin, memberInspection ? () => options.management.readinessTarget(candidate) : undefined)
+      : undefined;
+    if (inspected?.memberReference) {
+      options.observeAccount?.(inspected.account);
+      return inspected.memberReference;
+    }
     const account = inspected?.account;
     const origin = inspected?.origin ?? (saved.localModelReadinessOrigin
       ? captureOpenCodeReadinessOrigin(saved.localModelReadinessOrigin, candidate, saved.providerId,
@@ -303,11 +344,11 @@ export function inspectMemberModelReadiness(options: {
       return;
     }
     if (!options.management || !current.reference || consumer.cutoff === undefined || Date.now() >= consumer.cutoff) held();
-    const observed = capturePreparedModelReference({ management: options.management, profile: entry.profile,
+    const observed = readPreparedModelReference({ management: options.management, profile: entry.profile,
       commandId: current.reference.commandId, context: current.reference.context,
       ...(current.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}),
       observeAccount: value => { if (value) observedAccount.value = value; else delete observedAccount.value; },
-      isCurrent: () => { try { options.assertCurrent(); return true; } catch { return false; } } });
+      isCurrent: () => { try { options.assertCurrent(); return true; } catch { return false; } } }, true);
     if (runtimeDigest(observed) !== runtimeDigest(current.reference)) held();
     options.assertCurrent();
   };

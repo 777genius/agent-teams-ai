@@ -106,6 +106,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
     const source = record(definition.capture), settings = record(source.savedSettings), members = array(source.members);
     assert.equal(members.length, 1); assert.equal(members[0]!.role, 'lead');
     assert.equal(settings.providerId, 'codex'); assert.equal(settings.model, selected.model); assert.equal(settings.effort, selected.effort);
+    assert.equal(settings.skipPermissions, false);
     const pendingSession = async () => {
       const all = (await readDesktopNativeStopSessions(fixture.root)).filter(row => record(row.binding).runId === capture.launchId);
       assert.ok(all.length <= 1, 'one session per original launch');
@@ -167,6 +168,31 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
 
   const bName = 'test-selection-next-team', page = '[data-testid="create-team-page"]';
   await openOriginalCreateForm(cdp, ui, join(fixture.root, 'workspace'), bName);
+  const optionalLaunch = record(await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll('${page} button[aria-controls]')]
+    .filter(e=>e.textContent.includes('Optional launch settings'));
+    return rows.length===1?{id:rows[0].getAttribute('aria-controls'),expanded:rows[0].getAttribute('aria-expanded')}:null})()`, 'original Create launch settings'));
+  if (optionalLaunch.expanded !== 'true') {
+    const toggle = `${page} button[aria-controls=${literal(optionalLaunch.id)}]`;
+    await ui.scrollTo(toggle, 'original Create launch settings');
+    await ui.click(toggle, 'expand original Create launch settings');
+  }
+  await ui.waitRead(`(() => {
+    const rows=[...document.querySelectorAll('${page} .optional-settings-content')]
+      .filter(e=>e.id===${literal(optionalLaunch.id)});
+    if(rows.length!==1)return false;
+    const content=rows[0], rect=content.getBoundingClientRect();
+    return content.getAttribute('data-state')==='open' && rect.width>0 && rect.height>0 &&
+      content.getAnimations().every(animation=>!animation.pending &&
+        (animation.playState==='finished'||animation.playState==='idle'));
+  })()`, 'original expanded Create settings settle');
+  const permissions = `${page} #create-skip-permissions`;
+  const permissionState = await ui.waitRead(`document.querySelector(${literal(permissions)})?.getAttribute('data-state')`, 'original Create approval choice');
+  assert.ok(permissionState === 'checked' || permissionState === 'unchecked');
+  if (permissionState === 'checked') {
+    await ui.scrollTo(permissions, 'original Create approval choice');
+    await ui.click(permissions, 'retain tool confirmations for saved Team');
+  }
+  await ui.waitRead(`document.querySelector(${literal(permissions)})?.getAttribute('data-state')==='unchecked'`, 'original saved Team approval choice');
   await ui.scrollTo(`${page} #launch-team`, 'original immediate-launch checkbox');
   assert.equal(await cdp.evaluate(`document.querySelector('${page} #launch-team')?.getAttribute('data-state')`), 'checked');
   await ui.click(`${page} #launch-team`, 'select original save-only Create');
@@ -194,6 +220,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
   const b = team(bName, String(record(created.binding).handleId), 'TEST-model-next', 'high');
   const bSaved = await b.owner(), saved = record(bSaved.savedSettings);
   assert.equal(saved.providerId, 'codex'); assert.equal(saved.model, b.model); assert.equal(saved.effort, b.effort);
+  assert.equal(saved.skipPermissions, false);
   assert.equal(saved.cwd, join(fixture.root, 'workspace')); assert.deepEqual(bSaved.runtimeCaptures ?? [], []);
   await assertSameLive(liveA, 'after-save-only', true); proof.creation = registry[0]; proof.savedSelection = saved;
 
