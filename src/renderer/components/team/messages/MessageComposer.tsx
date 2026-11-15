@@ -626,6 +626,7 @@ const MemberMessageComposer = ({
     disabled: isContextSwitching || sending || isLaunchBlocking,
     isCrossTeam,
   });
+  const isCompactLayout = layout === 'compact';
   const nativeSuggestion = useComposerNativeNextPrompt({
     teamName, recipient: effectiveRecipient,
     memberId: selectedMember?.runtimeOwner === 'captured-host' ? selectedMember.hostMemberId : undefined,
@@ -863,7 +864,6 @@ const MemberMessageComposer = ({
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const hasAttachmentPreviewContent =
     draft.attachments.length > 0 || Boolean(draft.attachmentError ?? fileRestrictionError);
-  const isCompactLayout = layout === 'compact';
   const floatingAdaptiveStyle = useFloatingComposerWidth({
     enabled: widthMode === 'floating-adaptive',
     text: draft.text,
