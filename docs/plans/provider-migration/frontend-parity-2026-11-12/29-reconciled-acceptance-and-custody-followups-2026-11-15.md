@@ -4246,3 +4246,143 @@ Independent final R2 rehashed all49 resulting files, all12 raw logs and both act
 | `provisioning` |0| `7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c` |
 
 The final source commit adds only this factual Plan29 record to the already validated GREEN code/test tree. No original action,15-second qualifying deadline, provider pin, normalizeActivity/Event, source cap/exception, C++ policy, native fixture or custody/cleanup requirement changed. No real Claude/Codex or local GUI/native execution occurred. These local scoped passes do not replace the original complete workspace/typed-lint, graphical Desktop, native, packaged or genuine-upgrade gates. P08/P09, full incoming C++ reconciliation, checked provider Thinking adoption and resulting-source E2E remain open; Draft/base/no-release/no-activation/no-Stage2 remain unchanged.
+
+## Prospective R1: atomic checked Thinking adoption with the original coordination consumer
+
+This cut starts at private `9acfda52049575055fbd6680c0dc939ac519c356` / tree `be6017dcad0ffefa7ef6fa5f6645813b996b6e7b`, preserving its validated rich Logs, five private Thinking cases, strict anonymous-stderr Task-response refusal and corrected ordinary Desktop source closure. Select32 exact paths: the previously reviewed30-path source cut from public35c, with both plans advanced to the published1f924 amendments, plus the reviewed two-file author coordination companion. Code reference `35cbd6e99b620e9b41802af936143d900f5e2aca` / tree `469ba5da864c690193d68c06c666cd1d40c17131`; latest documentary reference `1f9242563bec2641b25077c3aa83a999bd7f4871` / tree `f1214a8c4c7915ccdf6657ce56f7f8a204a2a9c8`. The coordination source/test were already authored as working changes based on1f924 and are copied exactly; they are not falsely described as published35c code.
+
+Exclude public Plan29 and both native debug TEST files. Those TEST predicate corrections cannot be transplanted onto the older private C++ policy; full native-policy integration remains HOLD. The newly documented scheduled Thinking/stderr lane remains unfinished and outside this atomic source cut. This is selective source adoption, not a merge of public author history or a claim that the remaining histories have been reconciled. The prior30-path R1 was reviewed but never published/applied/executed; this exact companion supersedes that prospective selection before any dependency adoption.
+
+### Exact provider provenance and inactive inherited payload
+
+Provider PR8 is Draft at `9423f600dfb04d04448326dbced89919924b0b5f`, tree `a873a5f9ad8e6da1d8894db22a02d8c8efb37199`. It is a separate continuation from the locally checked05c branch; their results are not combined. Original CI43768692114 attempt1 passed both Node24.21.0/job132979504266 and Node26.11.1/job132979503956 with pinned pnpm11.18.0: each actual log has540 source cases and both packed consumers, zero failures/skips. Root independently read exact-head completed-success run metadata. The original TEST-only V2 workflow43768692096 has53 successful original jobs/selected proof steps with the original53 tuples and artifacts; expected negative controls remain negative controls. Independent review inspected all job/step/artifact metadata, not every native ZIP's inner receipt. Neither provider result qualifies current app/native Host/packaged or genuine upgrade.
+
+Use only the original CI artifact14183890131, `opencode-v2-spi-consumer-checked-9423f600dfb04d04448326dbced89919924b0b5f`: ZIP193146B /SHA256 `01aa79d2dbca55c9dbcb6d271d0ee745339e03c5a226b8f1067b851fbed4ff96`, independently matched to upload/API metadata. Its exact pair and original receipt match the published35c vendor files byte-for-byte. Implementations185996B /SHA256 `24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267`; SessionSPI6230B /SHA256 `0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc`. The original receipt remains schema1/source9423, source-and-packed-consumer-only, nativeHostQualified:false and packagedElectronQualified:false. Do not rebuild, trim, repack or manufacture either package or receipt.
+
+The full installed421→9423 transition contains12 added prompt-suggestion JS/d.ts members and17 changed existing members; runtime dependency membership, versions and engines are unchanged. Preserve this reviewed inherited author payload in the byte-exact archive. The new prompt modules do not start SDKs, sessions, processes, requests or timers on import. Current Host configurations are closed and provide no promptSuggestions binding. Codex exits the optional observer before callbacks/capabilities/sample RPC/timers; the new RPC observation is optional/caught and absent on original calls. Claude has no sampling binding and passes explicit promptSuggestions:false through the existing SDK initialization; this introduces no CLI flag or launch route. Existing checkpoint formats/digests remain unchanged. No prompt-suggestion feature activation or real vendor qualification is authorized.
+
+### Coherent source and pin changes
+
+Adopt both archives with their original checked receipt and source receipt, Host dependencies, workspace override, lockfile and every current-consumer assertion in this published inventory. The general CI file differs only by five current digest and two current archive-path substitutions; selectors, original commands, Draft guards, deadlines, cleanup and historical donor pins stay unchanged. The two native test files change only current artifact SHA assertions, and the existing Windows fixture adds the new Thinking key to its closed event-kind counter. They are static source/type inputs only; none is executed locally.
+
+The normalizer preserves its original message/block/phase/UTF8 bounds while admitting distinct typed Thinking. The existing finite Claude/V1 peers add Thinking only within the original stream/release input; existing Desktop journeys join original binding/input/operation/message/block, snapshots/completion, independent filters and cold readback without new business turns. The viewport reset is scoped to actual owner/source selection, not ordinary polls or task status. Original same-source/fullscreen state, all old actions, negative oracles, no-write/no-replay and cleanup remain required.
+
+The published stderr followup fixes concrete held/escaped/URI/quoted/overlapping-value and discarded ANSI/dump canaries. It classifies sensitive syntax before masking the union of overlapping already-held forms, preserves the24KiB pending/output limits and original serialized journal bound, and keeps its512-character scan tail. The existing pure assignment redactor moves byte-for-byte to the Host with the old public import preserved as a re-export. Original capture/listener order, final-tail-once, source/config/incarnation fences, opening/closing/revocation behavior and custody are unchanged; no invented task/input identity or native observation is introduced.
+
+Two exact preservation compositions are required. Runtime test `576b232167e16f60b28f3417922cafcd9d9939ef` is the entire private1116-line prefix plus the incoming32-line producer case,1148lines total. Roster `d8222627fd9f5ba303d1a2116246d63ba0d67516` is exact private47d1 plus only the five incoming Supplementary entries,320lines. All previous private/published assertions and roster entries/order remain. Twenty-six remaining paths are exact35c bytes, the two plan documents are exact1f924 bytes, and the two coordination paths are the separately reviewed author candidates. The three private team-read/facade/Task test compositions and two-line Main Task guard are untouched.
+
+### Required shared-SPI coordination companion
+
+Published Plan32 amendment71d58a50, retained in1f924, identifies the remaining actual consumer. `OpenCodeCoordinationProbe.observeCoordination` rejects Thinking after all its original scope and event/byte guards. Both read/run coordination entrypoints share that loop. Adopt exactly the one-expression allowance for Thinking alongside usage after currentness/abort/deadline, exact session/input/operation and128-event/32KiB checks. Thinking cannot set hasText, supply either actual MCP effect, alter tool identity or qualify a terminal result.
+
+The existing management-model-probe test owns its inline synthetic Session/MCP helper; no third helper/source file is added. One new top-level registration covers seven finite modes: valid snapshot/complete with actual effects/answer/result; completed effects but no answer; foreign session/input/operation; serialized oversized Thinking; and129 events totaling30702B. Only the first succeeds. The no-answer mode requires both actual finite MCP effects completed while proof remains false; all foreign/budget modes refuse before completion. Preserve all13 original modes, outcomes, deadline and finally cleanup. On the unchanged consumer, the new registration is expected to fail at its first valid-thinking mode; later modes are exercised after correction, not falsely claimed executed in that RED.
+
+The relevant production path is already in the existing Supplementary roster. Preserve original source coverage and current controller semantics. This companion is independent of the newly documented scheduled-log projection; do not call that separate lane complete.
+
+| Selected path | Private before blob | Exact candidate blob | Lines or bytes |
+| --- | --- | --- | ---: |
+| `.github/workflows/ci.yml` | `be8ce36916e7b0def4bb3659be6d92d0356deaf4` | `de7e1b4d8388065a15345cca434f1868ec694fc5` | 2633 |
+| `docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md` | `52227dc108a65347aa5dea7995d0ee6e3f3fbc45` | `2305bbd7b340418f82b39e5bdb28f302735f7237` | 507 |
+| `docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md` | `5fbc886bdd2f4fe9c2914844b94bbd16f3224075` | `f5176d68c3e9fa81472d0a81f0cb324a210a4854` | 435 |
+| `packages/legacy-agent-host/package.json` | `c6248499ad8a3d7355cf3cc51062cc0207fbde04` | `e39cb2ba89c125d850710828a65a30ae25b7344b` | 304 |
+| `packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts` | `2d407fff63c9529c2d5933daeb01b81c08443c8f` | `3b2b960722f878cf60ba94bae27176fb9e7d0bba` | 164 |
+| `packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts` | `absent` | `b82e437c1e8f04726982af5d50fc54394725f138` | 134 |
+| `packages/legacy-agent-host/src/runtime/normalizeActivity.ts` | `195541f5f1e98746728b11844dd68fdf845721b4` | `338f38de5b4ee60d5fa982aa895dd2f71fde981b` | 161 |
+| `packages/legacy-agent-host/tests/captured-claude-process.test.ts` | `9e821dc3669a249411ef7999cb01aa566dc4ddb7` | `f84153e49a9ace1f07a5d1f7bb9cea486f5617af` | 314 |
+| `packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts` | `ddf61eccc2d1385cf1b19c45581594ef49ce01be` | `c640bd2a538f3f063b764174b71d365574925345` | 269 |
+| `packages/legacy-agent-host/tests/member-process-stderr.test.ts` | `dc9658bb5b5802eb9f8e6749b5a09994f1806e8d` | `c073ab7b8c6025313747f75e50e8b0a14985d589` | 226 |
+| `packages/legacy-agent-host/tests/native-claude-host.native.ts` | `c1708d23c9c958f2e0d73c6b3641b93b83ded853` | `b0174217485fa7dadb4ba9692a3056798e2e3e9f` | 518 |
+| `packages/legacy-agent-host/tests/native-codex-team.native.ts` | `23fac76661c04db7514e5f7cb5cb7f0fefe89ab9` | `0b179a8b5fcf089de2f42dd90f8eef9a9160b992` | 790 |
+| `packages/legacy-agent-host/tests/runtime-activity.test.ts` | `ebf0282a8af771eb9024fd34e5bae0a07d5e9b9c` | `576b232167e16f60b28f3417922cafcd9d9939ef` | 1148 |
+| `packages/legacy-agent-host/tests/runtime-team-host.test.ts` | `e77ec01ab472cacba5f73008c2a36abb70220cb1` | `ac07c852895c6cfbabb5015f0c1ef0abe13b3a7c` | 3715 |
+| `pnpm-lock.yaml` | `1d2de1cff41f77932e3fbc6e88a3c4cfdb697cb7` | `924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2` | 26665 |
+| `pnpm-workspace.yaml` | `d93f661224946a540596594db88fe2053a02b5df` | `3999f1f503fc23c84db89cf9e964bcc3164122e5` | 169 |
+| `scripts/legacy-agent-host/desktop-activity-ui-smoke.ts` | `b030c7030ed39b1091c56dca6f1317e0f5372477` | `797cf587243a6c6ba1cd466ed105d5bb6d81772e` | 446 |
+| `scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts` | `cb3974254caf54d40d560eff2ad5419adcedae3c` | `345dc9a6b3fb9d197eaf2982e60840682d7b8fbd` | 739 |
+| `scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts` | `47d1d9520e794ea9048cd98d997e54fa70bfc4b6` | `d8222627fd9f5ba303d1a2116246d63ba0d67516` | 320 |
+| `src/renderer/components/team/members/HostMemberActivityLog.tsx` | `f24568c549ed723ad9f5c228a6b3c6e04771869b` | `b0095b83b3544988b7b6d5ba10163c93411868f5` | 370 |
+| `src/renderer/components/team/members/MemberLogsTab.tsx` | `112623fefdd629c05c414951a57c81afb2f1ca79` | `9aa14dbd08d23f75c91ceb38d25ce5161fc6be37` | 755 |
+| `src/shared/utils/redactDiagnosticAssignments.ts` | `b82e437c1e8f04726982af5d50fc54394725f138` | `0a1bd348ab98e6f33af2577cad33e9f2be44e745` | 1 |
+| `test/renderer/components/team/members/hostLogStatsTabs.test.tsx` | `de455b7999a367b3ed697d6560b408991129c931` | `95bfc28a93043836fc08811dc129fb34492fe0a5` | 586 |
+| `tools/owned-process-broker/fixtures/claudeProviderPeer.mjs` | `1734ab07e519f6c98f2c012718411c78b47f958b` | `6cdba0b52141348d97c593bf2ae6c224cdce5d73` | 458 |
+| `tools/owned-process-broker/fixtures/providerDesktopPeer.mjs` | `5de48ea5710cc24f3a7eb3527934073df0d57e1c` | `76f5d1953816fd125f576a966c42caefcfc297e2` | 562 |
+| `vendor/provider-migration/host-logs-thinking-9423f600/README.md` | `absent` | `70c7bdfb85ea427f0e6ff8df99955a29648ce642` | 7 |
+| `vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz` | `absent` | `7130609dd29851148c9e2106e2764b75982739b1` | 185996B |
+| `vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz` | `absent` | `33c2944ff8a52a9c087fba9d3cab1daffe2604d8` | 6230B |
+| `vendor/provider-migration/host-logs-thinking-9423f600/checked-artifact-receipt.json` | `absent` | `7fe2a65c8281598cc20dbd4f59d445ce18faab40` | 19 |
+| `vendor/provider-migration/host-logs-thinking-9423f600/source-receipt.json` | `absent` | `c8eddea34318da263326df30169b53b8e1f9d07c` | 61 |
+| `packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts` | `ed25bfd57ff19730328fd13c4d338e8a3649e2a3` | `186171f456cc99a18e12f0b87c4bd508936d6243` | 454 |
+| `packages/legacy-agent-host/tests/management-model-probe.test.ts` | `06bdfb8243c035f10f82b6025fbe98e171716831` | `d13aa0c846dbf97aff99786e1165aa214aab93c7` | 850 |
+
+### Local dependency closure, without installation or shared-store writes
+
+The canonical root's existing `.pnpm` link points into a shared older store. Do not run install, update or lifecycle scripts against it, change hoists, or write/chmod any shared package. Read-only review found an already installed9423 pair in the author's separate pnpm store: all253 implementation and12 contract archive members match the original CI tar bytes. One known implementation installation-only extra is the generated `node_modules/.bin/anthropic-ai-sdk` shim (2730B/SHA256 `8078c5df07bffee4cce1a8e5b3bb6d4d73ec9d08f8d79a7dfb0c79f124097df0`); do not execute it. Do not claim that extra is an archive member.
+
+All five direct dependency versions/manifests match the old closure. A read-only recursive runtime/optional/peer audit matched103 package pairs/181 edges, with no version/manifest or one-sided missing difference. The new implementation already resolves the exact new contracts. All current canonical source consumers resolve through the two private Host-local links; there is no other direct provider root to change. The existing root Host link already resolves this canonical checkout. Old donor/packaged roots remain separate.
+
+After publication/readback and with no build/test running, root may replace only these two ignored local symlink entries. Their parent directories are real directories in this checkout. No command runs between the two replacements. Preserve their previous target strings, verify the selected pair and its contracts edge immediately before/after, then recheck all253+12 member bytes after validation. Content-addressed names are not OS immutability; the ordinary755/644 targets are not reclassified or permission-modified. This local closure reuse does not claim a new full frozen install or new provider CI execution.
+
+- Canonical link `/workspace/scratch/c2f5ff7c30ee/agent-teams-reconciled-9a34/packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations`
+  Previous target `/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/@agent-teams+provider-implementations@file+vendor+provider-migration+opencode-selected-_046ca4d607e24622fed40712f11f6a5a/node_modules/@agent-teams/provider-implementations`
+  Selected target `/workspace/scratch/b87c90489dab/agent-teams-migration/node_modules/.pnpm/@agent-teams+provider-implementations@file+vendor+provider-migration+host-logs-thinking_757916da4c4220d9f25063c5507409da/node_modules/@agent-teams/provider-implementations`
+  Archive-member inventory SHA256 `b5f71b1a7d305d3dde68bdca101098697eb9c01c875c85d76c61b3cd219406ac`.
+- Canonical link `/workspace/scratch/c2f5ff7c30ee/agent-teams-reconciled-9a34/packages/legacy-agent-host/node_modules/@agent-teams/provider-session-contracts`
+  Previous target `/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/@agent-teams+provider-session-contracts@file+vendor+provider-migration+opencode-v2-host_ced2ec65b2ef33eee6815320af28a4e4/node_modules/@agent-teams/provider-session-contracts`
+  Selected target `/workspace/scratch/b87c90489dab/agent-teams-migration/node_modules/.pnpm/@agent-teams+provider-session-contracts@file+vendor+provider-migration+host-logs-thinki_94931afbdda23a0eb342fa51cb548ab1/node_modules/@agent-teams/provider-session-contracts`
+  Archive-member inventory SHA256 `c90980caa6bc89836f58499ed3a341aaddddc8977265119883b96cc0717f325f`.
+
+### Prospective counterexamples and finite validation
+
+Publish this documentation-only R1 and immediately push/read back with the expected parent before applying tracked source, changing either local dependency link or executing checks. Independent exact R2 precedes application. Source/pin/package adoption is atomic for the resulting candidate; the temporary RED described below is an explicit uncommitted test state, never a published mixed provider release.
+
+Apply the complete selected candidate and verified pair, but keep the three original production files `normalizeActivity.ts`, `observeMemberProcessStderr.ts` and `OpenCodeCoordinationProbe.ts` for the controlled RED. Build the actual canonical Host against the new checked SPI/archive. Run the complete existing runtime-activity, member-process-stderr and management-model-probe test files with the pinned Node test runner, concurrency1. The new producer Thinking case should fail because the old normalizer emits an unsupported gap; the new held/overlap/syntax/discarded-dump canaries expose the old observer boundaries. The new coordination registration must expose the old rejection of its first valid-thinking mode. Existing cases must remain unchanged and actual failures/counts will be recorded before any qualification. If the observed cause differs, investigate rather than relabel it.
+
+Apply only the exact reviewed helper, normalizer and coordination expression, rebuild the canonical Host, and rerun the same three complete files for GREEN. Then run all ten finite Host suites and the unchanged seven focused renderer/read-side files plus four actual diagnostic consumers below on the complete result. Previous295/author106/107/57 results do not qualify this new source. The ninth OpenCode suite specifically checks the actual updated V1 archive with our retained private adapter/stage diagnostics: its injected ControlledChild/PassThrough, promise-based OwnedProcessFacade and Request/Response transport never spawn native code or perform external HTTP. Keep original built-dist mode and unset LEGACY_PROVIDER_SOURCE_TEST.
+
+For the five roster additions, import only the four pure roster modules with pinned Node, inspect actual exports and require the five inputs plus the previous52 corrected inputs in the ordinary closure, all previous relative order, and unchanged root800lines. The Windows union gains only genuinely new entries among the same five; do not claim its total unchanged if any are new. No scenario entrypoint is imported.
+
+
+Ten complete Host suites:
+
+- `packages/legacy-agent-host/tests/captured-claude-process.test.ts`
+- `packages/legacy-agent-host/tests/codex-member-provider.test.ts`
+- `packages/legacy-agent-host/tests/member-process-stderr.test.ts`
+- `packages/legacy-agent-host/tests/member-provider-authority.test.ts`
+- `packages/legacy-agent-host/tests/owned-process-facade.test.ts`
+- `packages/legacy-agent-host/tests/runtime-activity.test.ts`
+- `packages/legacy-agent-host/tests/team-activity-read.test.ts`
+- `packages/legacy-agent-host/tests/runtime-team-host.test.ts`
+- `packages/legacy-agent-host/tests/opencode-member-provider.test.ts`
+- `packages/legacy-agent-host/tests/management-model-probe.test.ts`
+
+Seven complete focused suites:
+
+- `test/renderer/components/team/ClaudeLogsSection.test.ts`
+- `test/renderer/components/team/members/MemberLogsPolling.test.ts`
+- `test/renderer/components/team/members/hostLogStatsTabs.test.tsx`
+- `test/features/agent-backend/runtimeActivityFacade.test.ts`
+- `test/features/agent-backend/hostTaskActivity.test.ts`
+- `test/renderer/components/team/ClaudeLogsPanel.test.ts`
+- `test/renderer/components/team/useClaudeLogsController.test.tsx`
+
+Four diagnostic consumers:
+
+- `test/main/services/runtime/runtimeStatusCommandDiagnostics.test.ts`
+- `test/renderer/components/team/dialogs/ProvisioningProviderStatusList.test.ts`
+- `test/renderer/utils/memberLaunchDiagnostics.test.ts`
+- `src/shared/utils/__tests__/sentryConfig.test.ts`
+
+The additional original sentryConfig suite reaches the moved assignment function through the actual shared re-export and has no Sentry SDK/network action. Existing fake timers remain limited to finite renderer settlement; no product/native clocks or timestamps are fabricated.
+
+Use strict selected Host configuration (four affected production roots, ten finite suites, three changed native test/fixture roots for static checking only) and app configuration (the prior20 roots plus the existing sentryConfig suite), with inherited original options and declarations. The scratch node_modules link resolves the existing environment; no options/stubs/suppressions or full-workspace/whole-Host-test137 retry. Run original legacy-host-scripts compiler, scoped lint on21 changed code/test paths, original source-size/provisioning guards and source diff verification. Capture commands, source tree, time, complete raw logs and SHA256. Stop optional testing once these concrete gates are resolved.
+
+| Scratch compiler configuration | Blob | SHA256 |
+| --- | --- | --- |
+| `tsconfig.host-selected.json` | `8a39579780a5ea80d7ea3a4986cf92b868fd08be` | `7f018cbc6bf605b6df6327c1611f6633f71ce492adce21c45dc2480cffd5a3a1` |
+| `tsconfig.app-selected.json` | `ed677a90500ffd21e8334d0746785bee6f873d5a` | `19917aa56b36b924135e91e5956be84e82be587237a993586388d1a76380d12d` |
+
+Validation manifest SHA256 `5f118361459afe66945f08f013b9c5912eb8de643e753b51ea6fcb90c9658a01`; dependency-link manifest SHA256 `759068c0ef39681cb8e6346857f6d132f06a90f238ed068ad96c8a3d135653cf`; text-patch SHA256 `21de6f93ce4d82b4bc70b0c00f2ab9967a92f273df92a7418e848aa193a8c85f`.
+
+Use existing Node24.21.0/TypeScript7.0.2/app pnpm11.25.0, AGENT_BACKEND_TEST_NODE pinned to that generic Node, no installs, NODE_OPTIONS/NODE_PATH or vendor TEST GO overrides. The180-second local subprocess ceiling does not extend any product/native deadline. No real Claude/Codex even for version, no SDK CLI/shim, local GUI/native/Xvfb/Electron rebuild, paid inference, ambient credentials or user project. No workflow dispatch/rerun/cancel, matrix/guard/source-cap changes or new exception. All original15-second qualifying deadlines, custody/currentness/source proof and physical cleanup remain.
+
+Resulting-source graphical/native/packaged/full-workspace/typed-lint and genuine donor-upgrade acceptance remain required; static current-provider pin changes are not execution. Full incoming C++ policy, its actual ordered I386 exception and late-handler evidence, P08/P09, M16 and the separately documented scheduled Thinking/stderr implementation stay outside this GO. Keep Draft and the original base; no main merge, release, default activation or Stage2. No canonical source, dependency link, test, compiler or native action was changed/run while preparing this proposal.
