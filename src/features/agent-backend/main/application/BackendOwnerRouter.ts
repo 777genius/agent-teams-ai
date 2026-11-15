@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
+import { crossTeamOwnerResourceRef } from '@agent-teams/legacy-agent-host/cross-team';
+
 import { readinessPreparationWire, readinessRemaining } from '../infrastructure/CapturedLocalModelReadiness';
 import { HostClientError } from '../infrastructure/selectedHostProfile';
 
@@ -149,6 +151,15 @@ export class BackendOwnerRouter {
 
   ownerBinding(owner: BackendOwnerRef): BackendOwnerBinding {
     return this.requireOwner(ownerKey(owner)).binding;
+  }
+
+  /** Opaque display metadata only; no sealed owner gains admission or recovery authority. */
+  ownerDisplayRef(owner: BackendOwnerRef, requireSealed = false): string {
+    this.requireAdmission();
+    const registered = this.owners.get(ownerKey(owner));
+    if (!registered) throw new BackendRoutingError('unavailable');
+    if (requireSealed && !registered.sealed) throw new BackendRoutingError('hold');
+    return crossTeamOwnerResourceRef(registered.binding);
   }
 
 

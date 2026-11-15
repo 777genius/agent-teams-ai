@@ -245,7 +245,64 @@ export function projectDesktopTaskBoardFailure(value: unknown) {
         readOnly: boolean(own(single, 'readOnly')), connected: boolean(own(single, 'connected')) },
       inputEvents: { count: eventCount === null ? null : Math.min(eventCount, 97),
         overflow: eventCount === null ? null : eventCount > 96, last: events } };
-    return JSON.stringify(result).length <= 4096 ? result : { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
+    if (JSON.stringify(result).length > 4096)
+      return { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
+    const observations = own(attachments, 'commentInputObservations');
+    const focus = own(observations, 'after one focus click');
+    if (!record(focus)) {
+      const base: typeof result & { commentInputFocus?: never } = result;
+      return base;
+    }
+    const empty = (field: unknown) => typeof field === 'string' ? field === '' : null;
+    const clear = (field: unknown) => field === null ? true : typeof field === 'string' ? false : null;
+    const zero = (field: unknown) => {
+      const count = integer(field, Number.MAX_SAFE_INTEGER);
+      return count === null ? null : count === 0;
+    };
+    const sameSurface = (probe: unknown) => {
+      const actual = text(own(probe, 'ownerSurfaceId')), reference = text(own(probe, 'expectedSurfaceId'));
+      return actual !== null && reference !== null ? actual === reference : null;
+    };
+    const probe = (row: unknown) => ({
+      present: boolean(own(row, 'present')), connected: boolean(own(row, 'connected')),
+      disabled: boolean(own(row, 'disabled')), focused: boolean(own(row, 'focused')),
+      detailPhase: choice(own(row, 'detailPhase'), ['hydrating', 'ready', 'missing', 'deleted', 'provisioning', 'unavailable']),
+      refreshPending: boolean(own(row, 'refreshPending')), contextSwitching: boolean(own(row, 'contextSwitching')),
+      ownerSurfaceMatchesExpected: sameSurface(row),
+    });
+    const history = own(observations, 'after one focus click transitions'), historyCount = length(history);
+    const transitions = [];
+    if (historyCount !== null) for (let index = 0; index < Math.min(historyCount, 12); index++) {
+      const row = own(history, String(index)), currentProbe = own(row, 'inputProbe');
+      const previousProbe = index === 0 ? missing : own(own(history, String(index - 1)), 'inputProbe');
+      const currentRevision = integer(own(currentProbe, 'ownerRevision'), Number.MAX_SAFE_INTEGER);
+      const previousRevision = integer(own(previousProbe, 'ownerRevision'), Number.MAX_SAFE_INTEGER);
+      transitions.push({ ownerPresent: boolean(own(row, 'ownerPresent')), inputProbe: probe(currentProbe),
+        ownerRevisionChangedFromPrevious: currentRevision !== null && previousRevision !== null
+          ? currentRevision !== previousRevision : null });
+    }
+    const owner = own(focus, 'owner');
+    const commentInputFocus = {
+      source: 'retained-comment-input-observations', stage: 'after-one-focus-click',
+      sample: 'last-observed', atomicWithFailure: false,
+      ownerPresent: record(owner) ? true : owner === null ? false : null,
+      settled: boolean(own(focus, 'settled')), inputEnabled: boolean(own(focus, 'inputEnabled')),
+      focused: boolean(own(focus, 'focused')), documentFocused: boolean(own(focus, 'documentFocused')),
+      visibility: choice(own(focus, 'visibility'), ['visible', 'hidden']),
+      domEmpty: empty(own(focus, 'domValue')), draftEmpty: empty(own(owner, 'commentText')),
+      submitPending: boolean(own(owner, 'submitPending')), canSubmit: boolean(own(owner, 'canSubmit')),
+      submitErrorClear: clear(own(owner, 'submitError')), attachmentErrorClear: clear(own(owner, 'attachmentError')),
+      attachmentsEmpty: zero(own(owner, 'pendingAttachmentCount')), preparationsEmpty: zero(own(owner, 'pendingPreparationCount')),
+      inputProbe: probe(own(focus, 'inputProbe')),
+      transitionsRecorded: historyCount !== null,
+      captureMayBeCapped: historyCount === null ? null : historyCount >= 12,
+      extraRetainedRowsOmitted: historyCount === null ? null : historyCount > 12, transitions,
+    };
+    if (JSON.stringify(commentInputFocus).length > 4096)
+      return { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
+    const enriched = { ...result, commentInputFocus };
+    return JSON.stringify(enriched).length <= 8192 ? enriched
+      : { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
   } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' }; }
 }
 

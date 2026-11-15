@@ -363,3 +363,27 @@ it('checks original read authority on the canonical Trash port after revocation'
   f.human.revoke('human');
   expect(() => f.human.readDeletedTasks()).toThrow();
 });
+
+it('keeps canonical Trash refusal independent of a partial active-task aggregate', async () => {
+  const f = fixture(), { created } = await deletedTask(f);
+  const path = join(f.root, 'tasks', f.binding.teamName, created.id + '.json');
+  const original = readFileSync(path, 'utf8'), invoke = f.backend.invoke;
+  f.backend.invoke = vi.fn<AgentBackendApi['invoke']>(async (request) =>
+    request.operation === 'team.snapshot'
+      ? { ok: false, code: 'unavailable', outcome: 'unknown' }
+      : invoke(request));
+  const aggregate = await f.teams.getAllTasks();
+  if (Array.isArray(aggregate)) throw new Error('Expected the original unavailable Task resource');
+  expect(aggregate).toEqual({ items: [], unavailable: [{
+    kind: 'team', teamName: f.key, displayName: 'TEST Host', code: 'unavailable', outcome: 'unknown',
+  }] });
+  await expect(f.teams.getDeletedTasks(f.key)).rejects.toThrow('Host team read unavailable');
+  expect(f.legacy.getDeletedTasks).not.toHaveBeenCalled();
+  expect(vi.mocked(f.backend.invoke).mock.calls.every(([request]) => request.operation === 'team.snapshot')).toBe(true);
+  expect(readFileSync(path, 'utf8')).toBe(original);
+  f.backend.invoke = invoke;
+  const retained = await f.teams.getDeletedTasks(f.key);
+  expect(retained.map((task) => task.id)).toEqual([created.id]);
+  expect(retained[0]?.comments?.[0]?.text).toBe('TEST retained comment');
+  expect(readFileSync(path, 'utf8')).toBe(original);
+});

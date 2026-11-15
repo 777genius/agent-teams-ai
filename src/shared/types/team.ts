@@ -104,8 +104,23 @@ export interface TeamSummaryMember {
   mcpPolicy?: TeamMemberMcpPolicy;
 }
 
+export type TeamReadUnavailable = {
+  code: 'busy' | 'unavailable' | 'shutting-down';
+  outcome: 'not-dispatched' | 'rejected' | 'unknown';
+} & (
+  | { kind: 'team'; teamName: string; displayName: string }
+  | { kind: 'owner'; ownerResourceRef: string }
+);
+export interface TeamAggregateRead<T> {
+  items: T[];
+  unavailable: TeamReadUnavailable[];
+}
+export type TeamAggregateReadResult<T> = T[] | TeamAggregateRead<T>;
+
 export interface TeamSummary {
   teamName: string;
+  /** Opaque captured owner identity for display and availability only. */
+  ownerResourceRef?: string;
   displayName: string;
   description: string;
   color?: string;
@@ -1562,6 +1577,8 @@ export interface TeamRuntimeState {
 
 export interface GlobalTask extends TeamTaskWithKanban {
   teamName: string;
+  /** Opaque captured owner identity for display and availability only. */
+  ownerResourceRef?: string;
   teamDisplayName: string;
   projectPath?: string;
   /** True when the parent team has been soft-deleted. */

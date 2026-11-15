@@ -90,6 +90,7 @@ import type {
   TaskComment,
   TaskFieldUpdates,
   TeamAgentRuntimeSnapshot,
+  TeamAggregateReadResult,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
@@ -461,7 +462,7 @@ export interface HttpServerAPI {
 
 export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
   readRecovery?: TeamReadRecoveryApi;
-  list: () => Promise<TeamSummary[]>;
+  list: () => Promise<TeamAggregateReadResult<TeamSummary>>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
   setChangePresenceTracking: (teamName: string, enabled: boolean) => Promise<void>;
   setToolActivityTracking: (teamName: string, enabled: boolean) => Promise<void>;
@@ -560,7 +561,7 @@ export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
   ) => Promise<BoardTaskExactLogDetailResult | HostTaskLogDetailResult>;
   getMemberStats: (teamName: string, memberName: string) => Promise<MemberStatsResult>;
   launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;
-  getAllTasks: () => Promise<GlobalTask[]>;
+  getAllTasks: () => Promise<TeamAggregateReadResult<GlobalTask>>;
   updateConfig: (teamName: string, updates: TeamUpdateConfigRequest) => Promise<TeamConfig>;
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
   replaceMembers: (teamName: string, request: ReplaceMembersRequest) => Promise<void>;

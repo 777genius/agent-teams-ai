@@ -59,7 +59,20 @@ export function assertNoNativeHostChildren(group: number, fixture: { node: strin
     const children = table.filter(row => row.ppid === host.pid);
     if (allowedTestPeer) {
       for (const child of children) {
-        assert.ok(child.pgid === child.pid && command(child.pid) === allowedTestPeer.command, 'only the pinned direct Node management peer with its own POSIX process group may run under this Host');
+        const ownProcessGroup = child.pgid === child.pid;
+        const observedCommand = ownProcessGroup ? command(child.pid) : undefined;
+        const commandMatches = ownProcessGroup ? observedCommand === allowedTestPeer.command : null;
+        if (!ownProcessGroup || !commandMatches) {
+          try {
+            console.log('TEST_HOST_CHILD_ADMISSION_FAILURE ' + JSON.stringify({
+              phase, atomic: false, pid: child.pid, ppid: child.ppid, pgid: child.pgid,
+              ownProcessGroup, argvRead: ownProcessGroup,
+              argvState: !ownProcessGroup ? 'not-read' : observedCommand === '' ? 'empty' : 'nonempty',
+              commandMatches,
+            }));
+          } catch { /* Diagnostics never replace the original child-admission assertion. */ }
+        }
+        assert.ok(ownProcessGroup && commandMatches, 'only the pinned direct Node management peer with its own POSIX process group may run under this Host');
         if (!allowedTestPeer.observedPeerPids.includes(child.pid)) allowedTestPeer.observedPeerPids.push(child.pid);
       }
     } else assert.equal(children.length, 0, 'readback never allocates a native child');

@@ -1,7 +1,6 @@
 import { isAbsolute, resolve } from 'node:path';
 
 import {
-  crossTeamOwnerResourceRef,
   crossTeamTeamResourceRef,
 } from '@agent-teams/legacy-agent-host/cross-team';
 import { captureManagedProviderRuntimePreferences } from '@features/runtime-provider-management/main';
@@ -32,7 +31,8 @@ import { prepareMainWindowsRuntimeConfiguration, prepareMainWindowsRuntimeSource
   prepareMainWindowsRuntimeSourceRecovery } from '../infrastructure/CapturedWindowsRuntimeSources';
 import { FileHandleBindingStore } from '../infrastructure/FileHandleBindingStore';
 import { loadDesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
-import { readCapturedTeamRetirements } from '../infrastructure/readCapturedTeamRetirements';
+import { type CapturedConnectionUnavailable, readCapturedConnectionAvailability,
+  readCapturedOwnerAvailability } from '../infrastructure/readCapturedConnectionAvailability';
 import { CapturedStoppedTeamImport } from '../infrastructure/stopped-import/CapturedStoppedTeamImport';
 
 import { recoverCapturedHost } from './recoverCapturedHost';
@@ -94,7 +94,7 @@ export class DesktopBackendFeature {
   private readonly clients = new Map<string, CapturedBackendOwner>();
   private readonly dynamicHandles = new Map<string, DesktopBackendDescriptor['handles'][number]>();
   private readonly retiredHandles = new Set<string>();
-  private readonly registryReads = new Map<string, Promise<void>>();
+  private readonly registryReads = new Map<string, Promise<CapturedConnectionUnavailable[]>>();
   private readonly creationChecks = new ForegroundModelChecks();
 
   constructor(private readonly options: DesktopBackendFeatureOptions) {
@@ -329,58 +329,60 @@ export class DesktopBackendFeature {
   ): Promise<BackendConnectionSnapshot> {
     await this.initialize();
     assertBackendRequestGuard(guard);
-    if (this.descriptor?.creation?.contextIds.includes(contextId)) {
+    if (!this.router || this.state !== 'ready') {
+      if (this.descriptor?.creation?.contextIds.includes(contextId)) await this.registry(contextId, guard);
+      return this.listBindings(contextId);
+    }
+    const router = this.router, clients = new Map(this.clients);
+    const current = () => {
+      assertBackendRequestGuard(guard);
+      if (this.sealed || this.state !== 'ready' || this.router !== router ||
+        [...clients].some(([key, captured]) => this.clients.get(key) !== captured))
+        throw new BackendRoutingError('unavailable');
+    };
+    const capturedGuard = { isCurrent: () => { current(); return true; } };
+    const unavailable = new Map<string, CapturedConnectionUnavailable>();
+    const retain = (rows: CapturedConnectionUnavailable[]) => {
+      current();
+      for (const row of rows) if (!unavailable.has(row.ownerResourceRef))
+        unavailable.set(row.ownerResourceRef, row);
+    };
+    const creation = this.descriptor?.creation;
+    if (creation?.contextIds.includes(contextId)) {
       let reading = this.registryReads.get(contextId);
       if (!reading) {
         reading = (async () => {
-          const target = await this.registry(contextId, guard);
-          const catalog = await target.client.list(contextId, guard);
-          for (const record of catalog.teams)
-            await this.registerDynamic(record, target.owner, contextId, guard);
+          const result = await readCapturedOwnerAvailability({ router, owner: creation.owner,
+            assertCurrent: current, read: async () => {
+              const target = await this.registry(contextId, capturedGuard);
+              return target.client.list(contextId, capturedGuard);
+            } });
+          if ('unavailable' in result) return [result.unavailable];
+          for (const record of result.value.teams) {
+            current();
+            await this.registerDynamic(record, creation.owner, contextId, capturedGuard);
+            current();
+          }
+          return [];
         })();
         this.registryReads.set(contextId, reading);
-        void reading
-          .finally(() => {
-            if (this.registryReads.get(contextId) === reading) this.registryReads.delete(contextId);
-          })
-          .catch(() => undefined);
+        void reading.finally(() => {
+          if (this.registryReads.get(contextId) === reading) this.registryReads.delete(contextId);
+        }).catch(() => undefined);
       }
-      await reading;
+      retain(await reading);
     }
-    assertBackendRequestGuard(guard);
-    await this.refreshRetirements(contextId, guard);
-    return this.listBindings(contextId);
-  }
-
-  private async refreshRetirements(contextId: string, guard?: BackendRequestGuard): Promise<void> {
-    const router = this.router;
-    if (!router || this.sealed || this.state !== 'ready') return;
-    const entries = this.handleDefinitions().filter((entry) => entry.contextId === contextId);
-    const owners = new Map(entries.map((entry) => [ownerKey(entry.owner), entry.owner]));
-    const retired = new Set<string>();
-    for (const [key, owner] of owners) {
-      const captured = this.clients.get(key);
-      if (!captured) throw new BackendRoutingError('hold');
-      const teamIds = await readCapturedTeamRetirements({
-        owner: router.ownerBinding(owner),
-        contextId,
-        client: captured.client,
-        start: () => router.startOwner(owner),
-        available: () =>
-          !this.sealed &&
-          this.state === 'ready' &&
-          this.router === router &&
-          this.clients.get(key) === captured,
-        ...(guard ? { guard } : {}),
-      });
-      for (const entry of entries)
-        if (ownerKey(entry.owner) === key && teamIds.includes(entry.scope.teamId))
-          retired.add(entry.handleId);
-    }
-    assertBackendRequestGuard(guard);
-    if (this.sealed || this.router !== router) throw new BackendRoutingError('unavailable');
-    for (const entry of entries) this.retiredHandles.delete(entry.handleId);
-    for (const handle of retired) this.retiredHandles.add(handle);
+    const entries = this.handleDefinitions().filter(entry => entry.contextId === contextId);
+    const retired = await readCapturedConnectionAvailability({
+      contextId, router, clients, entries, assertCurrent: current, guard: capturedGuard,
+    });
+    retain(retired.unavailable);
+    for (const entry of entries) if (retired.replaced.has(ownerKey(entry.owner)))
+      this.retiredHandles.delete(entry.handleId);
+    for (const handle of retired.retired) this.retiredHandles.add(handle);
+    const snapshot = this.listBindings(contextId);
+    current();
+    return unavailable.size ? { ...snapshot, unavailableOwners: [...unavailable.values()] } : snapshot;
   }
 
   async createConfiguredTeam(
@@ -474,7 +476,8 @@ export class DesktopBackendFeature {
     const selected = await this.discoverBindings(contextId, guard);
     assertBackendRequestGuard(guard);
     const router = this.router;
-    if (selected.state !== 'ready' || !router) throw new BackendRoutingError('hold');
+    if (selected.state !== 'ready' || selected.unavailableOwners?.length || !router)
+      throw new BackendRoutingError('hold');
     const handles = selected.bindings.map((entry) => ({ ...entry.handle }));
     return createCapturedHostBackup({
       handles,
@@ -503,9 +506,9 @@ export class DesktopBackendFeature {
               .map((entry) => ({
                 handle: { handleId: entry.handleId },
                 label: entry.label,
-                ownerResourceRef: crossTeamOwnerResourceRef(router.ownerBinding(entry.owner)),
+                ownerResourceRef: router.ownerDisplayRef(entry.owner),
                 teamResourceRef: crossTeamTeamResourceRef(
-                  crossTeamOwnerResourceRef(router.ownerBinding(entry.owner)),
+                  router.ownerDisplayRef(entry.owner),
                   entry.scope
                 ),
                 members: entry.members.map((member) => ({

@@ -12,6 +12,7 @@ import {
   AGENT_BACKEND_CONNECTIONS_CHANNEL,
   AGENT_BACKEND_CONNECTIONS_ROUTE,
   AGENT_BACKEND_INVOKE_CHANNEL,
+  hostTeamSelectionKey,
 } from '../../../src/features/agent-backend/contracts';
 import {
   DesktopBackendFeature,
@@ -21,6 +22,7 @@ import {
   registerBackendConnectionsHttp,
   registerBackendConnectionsIpc,
 } from '../../../src/features/agent-backend/main';
+import { captureHostScheduleTarget, restoreHostScheduleTarget } from '../../../src/features/agent-backend/main/application/captureHostScheduleTarget';
 import { readinessOriginDigest } from '../../../src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness';
 import { JsonLocalProviderPrivateNetworkApprovalStore } from '../../../src/features/runtime-provider-management/main';
 import { setAppDataBasePath } from '../../../src/main/utils/pathDecoder';
@@ -86,7 +88,7 @@ async function fixture(startup: { block?: boolean; markerDelayMs?: number; close
   for (const ownerId of ['A', 'B']) {
     const storageRoot = await root();
     const hostEntry = join(storageRoot, 'host.mts');
-    const source = `import { writeFileSync, appendFileSync, existsSync } from 'node:fs';
+    const source = `import { writeFileSync, appendFileSync, existsSync, readFileSync } from 'node:fs';
       if (${startup.markerDelayMs ?? 0}) await new Promise(resolve=>setTimeout(resolve,${startup.markerDelayMs ?? 0}));
       if (${startup.closeBeforeMarker ?? false}) process.exit(0);
       writeFileSync(${JSON.stringify(join(storageRoot, 'started'))}, 'started');
@@ -120,7 +122,17 @@ async function fixture(startup: { block?: boolean; markerDelayMs?: number; close
             messageId:request.payload.request.messageId,conversationId:'TEST-conversation',
             toMember:'lead',phase:'completed',deduplicated:false}};
         }},
-        'team.lifecycle.retired.read': { lane:'control', handle: () => ({ok:true,value:{teamIds:[]}}) },
+        'team.registry.list': { lane:'control', handle: () => {
+          appendFileSync(${JSON.stringify(join(storageRoot, 'registry-reads'))}, 'read\\n');
+          if (existsSync(${JSON.stringify(join(storageRoot, 'disconnect-registry'))})) process.exit(0);
+          const registry = ${JSON.stringify(join(storageRoot, 'registry.json'))};
+          return {ok:true,value:existsSync(registry) ? JSON.parse(readFileSync(registry, 'utf8')) : {teams:[],held:[]}};
+        } },
+        'team.lifecycle.retired.read': { lane:'control', handle: () => {
+          appendFileSync(${JSON.stringify(join(storageRoot, 'retirement-reads'))}, 'read\\n');
+          const retired = ${JSON.stringify(join(storageRoot, 'retired.json'))};
+          return {ok:true,value:{teamIds:existsSync(retired) ? JSON.parse(readFileSync(retired, 'utf8')) : []}};
+        } },
         'team.launch.configuration.read': { lane:'control', handle: (request) => {
           appendFileSync(${JSON.stringify(join(storageRoot, 'launch-reads'))}, request.commandId+'\\n');
           if (['initial-launch','initial-missing','initial-expired'].includes(request.payload.launchId))
@@ -860,6 +872,98 @@ it('connection discovery ignores renderer context claims and denies navigation/c
     ],
   ]);
   vi.mocked(console.warn).mockClear();
+});
+
+
+it('keeps healthy owner discovery available after original transport loss', async () => {
+  const setup = await fixture();
+  const contextId = 'TEST-shared-context', a = setup.descriptor.owners[0]!;
+  const b = setup.descriptor.owners[1]!, originalA = setup.descriptor.handles[0]!;
+  const descriptor: DesktopBackendDescriptor = {
+    ...setup.descriptor,
+    creation: { owner: originalA.owner, contextIds: [contextId] },
+    handles: [
+      ...setup.descriptor.handles.map(row => ({ ...row, contextId })),
+      { ...originalA, contextId, handleId: 'TEST-retired-A',
+        scope: { ...originalA.scope, teamId: 'TEST-retired-team-A' } },
+    ],
+  };
+  await writeFile(join(a.storageRoot, 'retired.json'), JSON.stringify(['TEST-retired-team-A']));
+  const desktop = feature({ descriptor: await selected(descriptor),
+    bindingDirectory: setup.bindingDirectory });
+  const handlers = new Map<string, (...args: unknown[]) => Promise<BackendConnectionSnapshot>>();
+  const ipc = { handle: vi.fn((channel, handler) => handlers.set(channel, handler)),
+    removeHandler: vi.fn() } as unknown as Pick<IpcMain, 'handle' | 'removeHandler'>;
+  registerBackendConnectionsIpc(ipc, desktop, () => contextId);
+  const invoke = handlers.get(AGENT_BACKEND_CONNECTIONS_CHANNEL)!;
+  const before = await invoke({});
+  expect(before.state).toBe('ready');
+  expect(before.unavailableOwners).toBeUndefined();
+  expect(before.bindings.map(row => row.handle.handleId)).toEqual(['opaque-A', 'opaque-B']);
+  const guard = { isCurrent: () => true };
+  const targetA = await captureHostScheduleTarget(desktop, contextId, hostTeamSelectionKey('opaque-A'), guard);
+  const targetB = await captureHostScheduleTarget(desktop, contextId, hostTeamSelectionKey('opaque-B'), guard);
+  const bReads = await readFile(join(b.storageRoot, 'retirement-reads'), 'utf8');
+
+  await writeFile(join(a.storageRoot, 'disconnect-registry'), 'TEST original transport close');
+  const partial = await invoke({});
+  expect(partial.bindings).toEqual(before.bindings);
+  expect(partial).toMatchObject({ state: 'ready', unavailableOwners: [{
+    kind: 'owner', ownerResourceRef: targetA.ownerResourceRef,
+    code: 'unavailable', outcome: 'unknown',
+  }] });
+  expect(partial.unavailableOwners).toHaveLength(1);
+  expect(await readFile(join(b.storageRoot, 'retirement-reads'), 'utf8')).toBe(bReads + 'read\n');
+  expect(partial.bindings.some(row => row.handle.handleId === 'TEST-retired-A')).toBe(false);
+  await expect(desktop.captureBackup(contextId, guard)).rejects.toMatchObject({ code: 'hold' });
+  await expect(captureHostScheduleTarget(desktop, contextId, hostTeamSelectionKey('opaque-A'), guard))
+    .rejects.toMatchObject({ code: 'forbidden' });
+  await expect(restoreHostScheduleTarget(desktop, hostTeamSelectionKey('opaque-A'), targetA, () => true))
+    .rejects.toMatchObject({ code: 'unavailable' });
+  const restoredB = await restoreHostScheduleTarget(desktop, hostTeamSelectionKey('opaque-B'), targetB, () => true);
+  expect(restoredB.target).toEqual(targetB);
+  expect(restoredB.isCurrent()).toBe(true);
+  expect(await desktop.facade.invoke(request('opaque-A', 'TEST-no-fallback'), guard))
+    .toMatchObject({ ok: false });
+  expect(await desktop.facade.invoke(request('opaque-B', 'TEST-original-healthy-B'), guard))
+    .toMatchObject({ ok: true });
+  await expect(access(join(a.storageRoot, 'effects'))).rejects.toMatchObject({ code: 'ENOENT' });
+  expect(await readFile(join(b.storageRoot, 'effects'), 'utf8')).toBe('TEST-original-healthy-B\n');
+  expect(desktop.listBindings(contextId).bindings).toEqual(before.bindings);
+  expect(vi.mocked(console.warn).mock.calls).toEqual([]);
+});
+
+it('keeps malformed registry, binding conflicts and stale discovery context fatal', async () => {
+  const setup = await fixture(), contextId = 'TEST-original-context';
+  const originalA = setup.descriptor.handles[0]!, a = setup.descriptor.owners[0]!;
+  const descriptor: DesktopBackendDescriptor = { ...setup.descriptor,
+    creation: { owner: originalA.owner, contextIds: [contextId] },
+    handles: setup.descriptor.handles.map(row => ({ ...row, contextId })),
+  };
+  const desktop = feature({ descriptor: await selected(descriptor),
+    bindingDirectory: setup.bindingDirectory });
+  const guard = { isCurrent: () => true };
+  const before = await desktop.discoverBindings(contextId, guard);
+  const registry = join(a.storageRoot, 'registry.json');
+  await writeFile(registry, JSON.stringify({ teams: 'TEST-malformed', held: [] }));
+  await expect(desktop.discoverBindings(contextId, guard)).rejects.toThrow();
+  expect(desktop.listBindings(contextId)).toEqual(before);
+  await writeFile(registry, JSON.stringify({ held: [], teams: [{
+    contextId, teamId: originalA.scope.teamId, teamName: 'team-A',
+    displayName: originalA.label, members: originalA.members,
+    binding: { schemaVersion: 1, handleId: originalA.handleId,
+      scope: { ...originalA.scope, runId: 'TEST-conflicting-run' } },
+  }] }));
+  await expect(desktop.discoverBindings(contextId, guard))
+    .rejects.toMatchObject({ code: 'binding-conflict' });
+  expect(desktop.listBindings(contextId)).toEqual(before);
+  await rm(registry);
+  let current = true;
+  const pending = desktop.discoverBindings(contextId, { isCurrent: () => current });
+  current = false;
+  await expect(pending).rejects.toMatchObject({ code: 'forbidden' });
+  expect(desktop.listBindings(contextId)).toEqual(before);
+  expect(await desktop.discoverBindings(contextId, guard)).toEqual(before);
 });
 
 it('HTTP discovery uses the same captured context and rejects client context overrides', async () => {

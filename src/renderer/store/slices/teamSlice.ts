@@ -39,6 +39,7 @@ import { DEFAULT_TEAM_GRAPH_LAYOUT_MODE } from '@shared/constants/teamGraphLayou
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
+import { isTeamReadUnavailable, normalizeTeamAggregateRead } from '@shared/utils/normalizeTeamAggregateRead';
 import { calculateTaskImplementationDuration } from '@shared/utils/taskWorkDuration';
 import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultLayout';
 
@@ -261,6 +262,7 @@ import type {
   TeamLaunchRequest,
   TeamMemberActivityMeta,
   TeamProvisioningProgress,
+  TeamReadUnavailable,
   TeamSummary,
   TeamTask,
   TeamTaskStatus,
@@ -1368,6 +1370,7 @@ function isVisibleInActiveTeamSurface(
 
 export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   teams: TeamSummary[];
+  teamsUnavailable: TeamReadUnavailable[];
   /** O(1) lookup to avoid array scans in render-hot paths */
   teamByName: Record<string, TeamSummary>;
   /** O(1) lookup: sessionId -> owning team (lead + history) */
@@ -1377,6 +1380,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   teamsLoading: boolean;
   teamsError: string | null;
   globalTasks: GlobalTask[];
+  globalTasksUnavailable: TeamReadUnavailable[];
   globalTasksLoading: boolean;
   globalTasksInitialized: boolean;
   globalTasksError: string | null;
@@ -1737,6 +1741,7 @@ const failedMessageState = (error: unknown) => ({
 
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get, store) => ({
   teams: [],
+  teamsUnavailable: [],
   teamManagementNoticeByTeam: {},
   teamByName: {},
   teamBySessionId: {},
@@ -1744,6 +1749,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   teamsLoading: false,
   teamsError: null,
   globalTasks: [],
+  globalTasksUnavailable: [],
   globalTasksLoading: false,
   globalTasksInitialized: false,
   globalTasksError: null,
@@ -2069,11 +2075,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       set({ teamsLoading: true, teamsError: null });
     }
     try {
-      const teams = await withTimeout(
+      const { items: teams, unavailable } = normalizeTeamAggregateRead(await withTimeout(
         unwrapIpc('team:list', () => api.teams.list()),
         TEAM_FETCH_TIMEOUT_MS,
         'fetchTeams'
-      );
+      ));
       if (
         !isContextRequestScopeCurrent(get, requestScope) ||
         latestTeamsFetchRequestId !== requestId
@@ -2089,7 +2095,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         });
         const nextTeams = structurallySharePlainValue(state.teams, visibleTeams);
         const indexes = buildTeamSummaryIndexes(nextTeams);
-        const nextTeamByName = structurallySharePlainValue(state.teamByName, indexes.teamByName);
+        const retained = Object.fromEntries(Object.entries(state.teamByName).filter(([name, team]) =>
+          state.teamManagementNoticeByTeam[name] && isTeamReadUnavailable(unavailable, team)));
+        const nextTeamByName = structurallySharePlainValue(state.teamByName, { ...retained, ...indexes.teamByName });
+        const nextUnavailable = structurallySharePlainValue(state.teamsUnavailable, unavailable);
         const nextTeamBySessionId = structurallySharePlainValue(
           state.teamBySessionId,
           indexes.teamBySessionId
@@ -2099,12 +2108,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           nextTeams
         );
 
+        const nextNotices = reconcileTeamManagementNotices(state.teamManagementNoticeByTeam,
+          noticesAtStart, nextTeams, unavailable, state.teamByName);
         if (
-          reconcileTeamManagementNotices(
-            state.teamManagementNoticeByTeam,
-            noticesAtStart,
-            nextTeams
-          ) === state.teamManagementNoticeByTeam &&
+          nextNotices === state.teamManagementNoticeByTeam &&
+          nextUnavailable === state.teamsUnavailable &&
           nextTeams === state.teams &&
           nextTeamByName === state.teamByName &&
           nextTeamBySessionId === state.teamBySessionId &&
@@ -2117,16 +2125,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
         return {
           teams: nextTeams,
+          teamsUnavailable: nextUnavailable,
           teamByName: nextTeamByName,
           teamBySessionId: nextTeamBySessionId,
           teamsLoading: false,
           teamsError: null,
           provisioningSnapshotByTeam: nextSnapshots,
-          teamManagementNoticeByTeam: reconcileTeamManagementNotices(
-            state.teamManagementNoticeByTeam,
-            noticesAtStart,
-            nextTeams
-          ),
+          teamManagementNoticeByTeam: nextNotices,
         };
       });
     } catch (error) {
@@ -2139,13 +2144,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       // On refresh failure, keep existing teams visible
       set({
         teamsLoading: false,
-        teamsError: isInitialLoad
-          ? error instanceof IpcError
-            ? error.message
-            : error instanceof Error
-              ? error.message
-              : 'Failed to fetch teams'
-          : null,
+        teamsError: error instanceof IpcError ? error.message
+          : error instanceof Error ? error.message : 'Failed to fetch teams',
       });
     } finally {
       if (pendingTeamsRefreshScope && isContextRequestScopeCurrent(get, requestScope)) {
@@ -2187,11 +2187,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         inFlightGlobalTasksRefreshScope = requestScope;
         const oldTasks = get().globalTasks;
         try {
-          const tasks = await withTimeout(
+          const { items: tasks, unavailable } = normalizeTeamAggregateRead(await withTimeout(
             unwrapIpc('team:getAllTasks', () => api.teams.getAllTasks()),
             TEAM_FETCH_TIMEOUT_MS,
             'fetchAllTasks'
-          );
+          ));
           if (!isContextRequestScopeCurrent(get, requestScope)) {
             continue;
           }
@@ -2200,6 +2200,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           processGlobalTaskNotifications({
             oldTasks,
             newTasks: tasks,
+            previouslyUnavailable: notificationState.globalTasksUnavailable,
             appConfig: notificationState.appConfig,
             teamByName: notificationState.teamByName,
             isInitialFetch: wasFirst,
@@ -2207,6 +2208,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
           set((state) => ({
             globalTasks: structurallySharePlainValue(state.globalTasks, tasks),
+            globalTasksUnavailable: structurallySharePlainValue(state.globalTasksUnavailable, unavailable),
             globalTasksLoading: false,
             globalTasksInitialized: true,
             globalTasksError: null,
@@ -2218,13 +2220,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           set({
             globalTasksLoading: false,
             globalTasksInitialized: true,
-            globalTasksError: isInitialLoad
-              ? error instanceof IpcError
-                ? error.message
-                : error instanceof Error
-                  ? error.message
-                  : 'Failed to fetch tasks'
-              : null,
+            globalTasksError: error instanceof IpcError ? error.message
+              : error instanceof Error ? error.message : 'Failed to fetch tasks',
           });
         }
       } while (pendingFreshGlobalTasksRefresh);

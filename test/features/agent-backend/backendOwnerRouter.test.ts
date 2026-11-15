@@ -573,6 +573,34 @@ it('keeps response loss UNKNOWN and subsequent owner outage unavailable without 
 
 });
 
+
+it('keeps sealed-owner display metadata separate from dispatch and global admission', async () => {
+  const { router, a, b } = await setup();
+  const handle = await router.createHandle('TEST-display-original-A', scope, a);
+  const original = router.ownerDisplayRef(a);
+  expect(original).toMatch(/^[a-f0-9]{64}$/);
+  expect(original).not.toContain(a.storageRoot);
+  expect(() => router.ownerDisplayRef(a, true)).toThrow('hold');
+  expect(() => router.ownerDisplayRef({ ...a, revision: 'TEST-foreign' }))
+    .toThrow('unavailable');
+  router.setDefault(b);
+  await router.shutdownOwner(a);
+  expect(router.ownerDisplayRef(a)).toBe(original);
+  expect(router.ownerDisplayRef(a, true)).toBe(original);
+  expect(() => router.ownerBinding(a)).toThrow('unavailable');
+  expect(() => router.startOwner(a)).toThrow('unavailable');
+  await expect(router.readHandle(handle.handleId)).rejects.toMatchObject({ code: 'unavailable' });
+  await expect(router.request(handle, {
+    commandId: 'TEST-display-does-not-dispatch', method: 'test.mutate', payload: null,
+  })).rejects.toMatchObject({ code: 'unavailable', outcome: 'not-dispatched' });
+  expect(await effects(a)).toHaveLength(0);
+  expect(await effects(b)).toHaveLength(0);
+  expect(router.ownerDisplayRef(b)).not.toBe(original);
+  await router.shutdown();
+  expect(() => router.ownerDisplayRef(a)).toThrow('shutting-down');
+  expect(() => router.ownerDisplayRef(b, true)).toThrow('shutting-down');
+});
+
 it('shutdown seals requests waiting on storage before any awaited cleanup can allow dispatch', async () => {
   const { router, store, a, b } = await setup();
   const handle = await router.createHandle('pending-read', scope);

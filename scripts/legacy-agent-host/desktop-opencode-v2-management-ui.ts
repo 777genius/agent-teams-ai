@@ -154,8 +154,23 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
     await ui.click('[role="option"]', 'select original TEST project', name);
     await ui.waitRead(`document.querySelector(${desktopJsLiteral(selector)})?.textContent.trim()===${desktopJsLiteral(name)}`, 'selected project retained');
   };
-  const defaultId = (type: 'base' | 'project', value: string) => ui.waitRead(
-    `document.querySelector('${dialog} [data-testid="opencode-default-${type}-model-id"]')?.textContent.trim()===${desktopJsLiteral(value)}`,
+  const defaultId = (type: 'base' | 'project', value: string, project: 'workspace' | 'workspace-other' = 'workspace') => ui.waitRead(
+    `(() => {
+      const cards = document.querySelectorAll('${dialog} [data-testid="opencode-default-inheritance"]');
+      if (cards.length !== 1) return false;
+      const labels = ${desktopJsLiteral(type === 'base' ? ['Change: Default model']
+        : ['Use another model: This project: ' + project, 'Change: This project: ' + project])};
+      const controls = [...cards[0].querySelectorAll('button')].filter(control => labels.includes(control.getAttribute('aria-label')));
+      if (controls.length !== 1) return false;
+      const row = ${type === 'base' ? 'controls[0].parentElement' : 'controls[0].parentElement?.parentElement'};
+      if (!row || !cards[0].contains(row)) return false;
+      const text = row.firstElementChild;
+      const headline = text?.querySelectorAll(':scope > div.mt-1.break-all.text-sm.font-medium');
+      const ids = text?.querySelectorAll(':scope > [data-testid="opencode-default-${type}-model-id"]');
+      if (headline?.length !== 1 || !ids || ids.length > 1) return false;
+      const displayed = ids.length === 1 ? ids[0] : headline[0];
+      return displayed.textContent?.trim() === ${desktopJsLiteral(value)};
+    })()`,
     'original ' + type + ' default');
   const openSettings = async () => {
     await ui.waitRead('Boolean(document.querySelector(\'button[aria-label="More actions"]\'))', 'original application menu');
@@ -211,7 +226,7 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
   const overridden = await preferences();
   assert.equal(overridden[0]!.sha256, global.sha256); assert.equal(overridden[1]!.value.defaultModelId, modelB); assert.equal(overridden[2], null);
   proof.projectScreenshot = await screenshot('ui-v2-management-project-override.png');
-  await selectProject('workspace-other'); await defaultId('project', modelA);
+  await selectProject('workspace-other'); await defaultId('project', modelA, 'workspace-other');
   assert.equal((await preferences())[2], null);
   await selectProject('workspace'); await defaultId('project', modelB);
   const clear = `${dialog} button[aria-label="Use default: This project: workspace"]`;

@@ -92,25 +92,87 @@ test('TEST management admission retains only the exact direct detached Host peer
   const fixture = { node: '/TEST/node', hostEntry: '/TEST/host.js' };
   const peer = { command: '/TEST/node /TEST/peer.ts serve --hostname 127.0.0.1 --port 12345', observedPeerPids: [] as number[] };
   let peerCommand = peer.command, peerGroup = 4200;
+  let peerError: Error | undefined, loggerThrows = false;
+  const calls: string[] = [], statements: string[] = [];
+  t.mock.method(console, 'log', (value: unknown) => {
+    if (loggerThrows) throw new Error('TEST diagnostic sink unavailable');
+    assert.equal(typeof value, 'string'); statements.push(value as string);
+  });
   t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[]) => {
+    calls.push(file === '/bin/ps' ? args[0] === '-ax' ? 'table' : 'argv:' + args[1] : 'listener');
     if (file === (process.platform === 'linux' ? '/usr/bin/lsof' : '/usr/sbin/lsof')) return process.platform === 'linux'
       ? 'p4100\nf61\ntIPv4\nD0xabcd\ni12345\nPTCP\nTST=LISTEN\nn127.0.0.1:9222\n' : '4100\n';
     assert.equal(file, '/bin/ps');
     if (args[0] === '-ax') return `4100 4000 4100\n4101 4100 4100\n4200 4101 ${peerGroup}\n`;
     assert.equal(args[0], '-p');
+    if (args[1] === '4200' && peerError) throw peerError;
     return args[1] === '4101' ? `${fixture.node} ${fixture.hostEntry}` : args[1] === '4200' ? peerCommand : '/TEST/electron';
   });
   t.mock.method(process, 'kill', () => assert.fail('observation never signals or adopts a PID'));
   syncBuiltinESMExports();
   t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  const readOrder = (childArgv: boolean) => assert.deepEqual(calls.splice(0),
+    ['table', 'listener', 'table', 'table', 'argv:4100', 'argv:4101', ...(childArgv ? ['argv:4200'] : [])]);
+  const facts = () => {
+    assert.equal(statements.length, 1, 'only the original first refused child is recorded');
+    const line = statements.shift()!, prefix = 'TEST_HOST_CHILD_ADMISSION_FAILURE ';
+    assert.ok(line.startsWith(prefix)); assert.ok(Buffer.byteLength(line) <= 1024);
+    assert.doesNotMatch(line, /\/TEST|--unselected|TEST-private/u);
+    return JSON.parse(line.slice(prefix.length)) as Record<string, unknown>;
+  };
+  const census = { phase: 'after-team-read', atomic: false, pid: 4200, ppid: 4101 };
   assert.doesNotThrow(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer));
+  readOrder(true); assert.deepEqual(statements, []);
   assert.deepEqual(peer.observedPeerPids, [4200]);
   assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read'), /never allocates/);
+  readOrder(false); assert.deepEqual(statements, []);
   peerGroup = 4100;
   assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer), /own POSIX process group/);
+  // This child was already read by the Host-selection scan; admission must not read it again.
+  readOrder(true);
+  assert.deepEqual(facts(), { ...census, pgid: 4100, ownProcessGroup: false,
+    argvRead: false, argvState: 'not-read', commandMatches: null });
   peerGroup = 4200; peerCommand += ' --unselected';
   assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer), /pinned direct Node/);
+  readOrder(true);
+  assert.deepEqual(facts(), { ...census, pgid: 4200, ownProcessGroup: true,
+    argvRead: true, argvState: 'nonempty', commandMatches: false });
   assert.deepEqual(peer.observedPeerPids, [4200]);
+  peer.observedPeerPids.length = 0;
+  peerGroup = 4300; peerCommand = peer.command;
+  assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer), /own POSIX process group/);
+  readOrder(false);
+  assert.deepEqual(facts(), { ...census, pgid: 4300, ownProcessGroup: false,
+    argvRead: false, argvState: 'not-read', commandMatches: null });
+  assert.deepEqual(peer.observedPeerPids, [], 'a refused child is never admitted');
+
+  peerGroup = 4200;
+  for (const absent of [false, true]) {
+    peerCommand = '';
+    peerError = absent ? Object.assign(new Error('TEST closed absent ps result'),
+      { status: 1, stdout: '', stderr: '' }) : undefined;
+    assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer), /pinned direct Node/);
+    readOrder(true);
+    assert.deepEqual(facts(), { ...census, pgid: 4200, ownProcessGroup: true,
+      argvRead: true, argvState: 'empty', commandMatches: false });
+    assert.deepEqual(peer.observedPeerPids, []);
+  }
+  const originalFailure = new Error('TEST-private argv read failed');
+  peerError = originalFailure;
+  assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer),
+    error => error === originalFailure);
+  readOrder(true); assert.deepEqual(statements, []); assert.deepEqual(peer.observedPeerPids, []);
+  peerError = undefined; peerCommand = peer.command + ' --TEST-private';
+  loggerThrows = true;
+  assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer), {
+    code: 'ERR_ASSERTION',
+    message: 'only the pinned direct Node management peer with its own POSIX process group may run under this Host',
+  });
+  readOrder(true); assert.deepEqual(statements, []); assert.deepEqual(peer.observedPeerPids, []);
+  loggerThrows = false; peerCommand = peer.command;
+  assert.doesNotThrow(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer));
+  readOrder(true); assert.deepEqual(statements, []);
+  assert.deepEqual(peer.observedPeerPids, [4200], 'only the original successful comparison admits the child');
 });
 
 test('Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder', { skip: process.platform !== 'linux' }, (t) => {

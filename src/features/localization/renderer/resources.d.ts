@@ -4707,6 +4707,28 @@ export default interface Resources {
         "stopTeam": "Stop team",
         "stopping": "Stopping..."
       },
+      "aggregate": {
+        "emptyTasks": "No loaded tasks match this view.",
+        "emptyTeams": "No loaded teams match this view.",
+        "loadedCount": "{{count}} loaded",
+        "loadedTasks": "Loaded tasks",
+        "loadedTrash": "Trash ({{count}} loaded)",
+        "openTeam": "Open {{name}}",
+        "partialTasks": "Some tasks could not be loaded",
+        "partialTeams": "Some teams could not be loaded",
+        "refresh": "Refresh",
+        "staleDescription": "Previously loaded results remain visible. Their counts may be out of date.",
+        "staleTasks": "Tasks could not be refreshed",
+        "staleTeams": "Teams could not be refreshed",
+        "tasksDescription": "Showing loaded tasks only. Counts and filters do not include unavailable results.",
+        "teamsDescription": "Showing loaded teams only. Counts and filters do not include unavailable results.",
+        "unavailableOwners_one": "{{count}} unavailable owner; team count unknown",
+        "unavailableOwners_other": "{{count}} unavailable owners; team count unknown",
+        "unavailableTeams_one": "{{count}} unavailable team",
+        "unavailableTeams_other": "{{count}} unavailable teams",
+        "unknown": "Unknown",
+        "unknownTasks": "Task counts unavailable"
+      },
       "deleteDraft": {
         "cancelLabel": "Cancel",
         "confirmLabel": "Delete",

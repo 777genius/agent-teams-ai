@@ -1088,3 +1088,95 @@ test('Selection target projection rejects unknown or malformed facts without exp
     assert.equal(projectDesktopSelectionTargetFailure(value).status, 'unavailable');
   assert.equal(reads, 0, 'accessors and inherited values are not retained observations');
 });
+
+test('Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input', () => {
+  const secret = 'TEST-private-focus https://TEST-private.example/token /TEST-private/path';
+  const stage = 'after one focus click';
+  const inputProbe = { present: true, connected: true, disabled: false, focused: true,
+    ownerSurfaceId: secret, expectedSurfaceId: secret, ownerRevision: 7, detailPhase: 'ready',
+    refreshPending: false, contextSwitching: false, taskId: secret, activeContextId: secret };
+  const owner = { selector: secret, commentText: '', submitPending: false, canSubmit: true,
+    submitError: secret, attachmentError: null, pendingAttachmentCount: 0, pendingPreparationCount: 0 };
+  const focus = { owner, inputProbe, settled: false, inputEnabled: true, focused: true,
+    documentFocused: true, visibility: 'visible', domValue: '', activeElement: { id: secret }, timeMs: 123456 };
+  const transitions = [
+    { ownerPresent: false, inputProbe: { ...inputProbe, ownerRevision: null, focused: false } },
+    { ownerPresent: true, inputProbe },
+    { ownerPresent: true, inputProbe: { ...inputProbe, ownerRevision: 8 } },
+  ];
+  const evidenceFor = (observations: unknown) => ({ status: 'INCOMPLETE',
+    taskBoardUiProof: { attachments: { commentInputObservations: observations } } });
+  const evidence = evidenceFor({ [stage]: focus, [stage + ' transitions']: transitions });
+  const before = JSON.stringify(evidence), result = projectDesktopTaskBoardFailure(evidence);
+  assert.ok('commentInputFocus' in result && result.commentInputFocus);
+  const projected = result.commentInputFocus;
+  assert.equal(projected.source, 'retained-comment-input-observations');
+  assert.equal(projected.sample, 'last-observed'); assert.equal(projected.atomicWithFailure, false);
+  assert.equal(projected.settled, false); assert.equal(projected.focused, true);
+  assert.equal(projected.transitions[2]?.inputProbe.focused, true);
+  assert.equal('settled' in projected.transitions[2]!, false, 'transitions do not contain the complete live predicate');
+  assert.equal(projected.domEmpty, true); assert.equal(projected.draftEmpty, true);
+  assert.equal(projected.submitErrorClear, false); assert.equal(projected.attachmentErrorClear, true);
+  assert.equal(projected.attachmentsEmpty, true); assert.equal(projected.preparationsEmpty, true);
+  assert.equal(projected.inputProbe.ownerSurfaceMatchesExpected, true);
+  assert.deepEqual(projected.transitions.map(row => row.ownerRevisionChangedFromPrevious), [null, null, true]);
+  assert.equal(projected.captureMayBeCapped, false); assert.equal(projected.extraRetainedRowsOmitted, false);
+  assert.equal(result.original.commentReceiptCompleted, false);
+  assert.equal(result.selectedTeamMatchesOriginal, null, 'pre-submit observation does not invent a completed owner identity');
+  for (const mode of ['task-board-ui', 'task-board-cross-team-ui']) {
+    assert.deepEqual(projectDesktopProofReceiptSummary(evidence, { mode, receiptPath: 'TEST-receipt', mixedMode: false }).taskBoardFailure, result);
+    assert.equal('taskBoardFailure' in projectDesktopProofReceiptSummary({ ...evidence, status: 'PASS' },
+      { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  }
+  assert.equal('taskBoardFailure' in projectDesktopProofReceiptSummary(evidence,
+    { mode: 'emulated-import-ui', receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  assert.equal(JSON.stringify(evidence), before);
+  for (const value of [secret, '123456', 'ownerRevision":', 'https://', '/TEST-private/path'])
+    assert.equal(JSON.stringify(result).includes(value), false);
+  assert.notEqual(projected.transitions, transitions);
+  assert.notEqual(projected.transitions[1]?.inputProbe, inputProbe);
+
+  let getterReads = 0;
+  const unreadable = () => { getterReads++; throw new Error(secret); };
+  const baseline = projectDesktopTaskBoardFailure(evidenceFor({}));
+  for (const hidden of [Object.create({ [stage]: focus }), Object.defineProperty({}, stage, { get: unreadable })])
+    assert.deepEqual(projectDesktopTaskBoardFailure(evidenceFor(hidden)), baseline);
+  assert.equal('commentInputFocus' in baseline, false, 'absent own focus data preserves the original output shape');
+  const guarded = projectDesktopTaskBoardFailure(evidenceFor({
+    [stage]: Object.defineProperties({ ...focus }, {
+      owner: { get: unreadable }, inputProbe: { get: unreadable }, domValue: { get: unreadable },
+    }),
+    [stage + ' transitions']: new Proxy([Object.defineProperty({}, 'inputProbe', { get: unreadable })], { get: unreadable }),
+  }));
+  assert.ok('commentInputFocus' in guarded && guarded.commentInputFocus);
+  assert.equal(guarded.commentInputFocus.ownerPresent, null);
+  assert.equal(guarded.commentInputFocus.domEmpty, null);
+  assert.equal(guarded.commentInputFocus.submitErrorClear, null);
+  assert.equal(guarded.commentInputFocus.inputProbe.focused, null);
+  assert.equal(guarded.commentInputFocus.transitions[0]?.inputProbe.detailPhase, null);
+  assert.equal(getterReads, 0);
+
+  const history = Array.from({ length: 20 }, () => ({ ownerPresent: true,
+    inputProbe: { ...inputProbe, detailPhase: secret, ownerSurfaceId: '', expectedSurfaceId: '', ownerRevision: -1 } }));
+  const bounded = projectDesktopTaskBoardFailure({ ...evidenceFor({
+    [stage]: { ...focus, domValue: secret, owner: { ...owner, commentText: secret,
+      pendingAttachmentCount: -1, pendingPreparationCount: 0.5 }, inputProbe: { ...inputProbe, focused: 'true' } },
+    [stage + ' transitions']: history,
+  }), rendererFailureSnapshot: {
+    inputEvents: Array.from({ length: 96 }, () => ({ type: 'pointerdown', trusted: false })),
+    dialogs: [{ text: 'loading comments attachments' }, { text: 'unavailable' }, { text: 'deleted' }],
+  } });
+  assert.ok('commentInputFocus' in bounded && bounded.commentInputFocus);
+  assert.equal(bounded.commentInputFocus.transitions.length, 12);
+  assert.equal(bounded.commentInputFocus.captureMayBeCapped, true);
+  assert.equal(bounded.commentInputFocus.extraRetainedRowsOmitted, true);
+  assert.equal(bounded.commentInputFocus.transitions[0]?.inputProbe.detailPhase, null);
+  assert.equal(bounded.commentInputFocus.transitions[0]?.inputProbe.ownerSurfaceMatchesExpected, null);
+  assert.equal(bounded.commentInputFocus.transitions[1]?.ownerRevisionChangedFromPrevious, null);
+  assert.equal(bounded.commentInputFocus.inputProbe.focused, null);
+  assert.equal(bounded.commentInputFocus.domEmpty, false); assert.equal(bounded.commentInputFocus.draftEmpty, false);
+  assert.equal(bounded.commentInputFocus.attachmentsEmpty, null); assert.equal(bounded.commentInputFocus.preparationsEmpty, null);
+  assert.ok(JSON.stringify(bounded.commentInputFocus).length <= 4096);
+  assert.ok(JSON.stringify(bounded).length > 4096 && JSON.stringify(bounded).length <= 8192);
+  assert.equal(JSON.stringify(bounded).includes(secret), false);
+});

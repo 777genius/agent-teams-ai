@@ -1,4 +1,5 @@
-import { hostTeamRunId } from '@features/agent-backend/contracts';
+import { hostTeamRunId, hostTeamSelectionKey } from '@features/agent-backend/contracts';
+import { isTeamReadUnavailable, normalizeTeamAggregateRead } from '@shared/utils/normalizeTeamAggregateRead';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 
@@ -24,6 +25,7 @@ import {
   getTeamRefreshFanoutSnapshotForTests,
   type TeamRefreshFanoutSnapshot,
 } from '../../../src/renderer/store/teamRefreshFanoutDiagnostics';
+import { getContextScopedTeamResetState } from '../../../src/renderer/store/utils/stateResetHelpers';
 
 import type { TeamSlice } from '../../../src/renderer/store/slices/teamSlice';
 import type { TeamLaunchParams } from '../../../src/renderer/store/team/teamLaunchParams';
@@ -38,6 +40,8 @@ import type {
   TeamAgentRuntimeSnapshot,
   TeamConfig,
   TeamMemberSnapshot,
+  TeamReadUnavailable,
+  TeamSummary,
   TeamTaskWithKanban,
   TeamViewSnapshot,
 } from '../../../src/shared/types';
@@ -298,7 +302,7 @@ function createTeamMemberSnapshotFixture(member: TeamMemberSnapshotFixture): Tea
   };
 }
 
-function createSliceStore() {
+function createSliceStore(aggregateReads = false) {
   return create<TeamSliceHarnessState>()(
     (set, get, store) =>
       ({
@@ -314,8 +318,10 @@ function createSliceStore() {
         getAllPaneTabs: vi.fn(() => []),
         warmTaskChangeSummaries: vi.fn(async () => undefined),
         invalidateTaskChangePresence: vi.fn(),
-        fetchTeams: vi.fn(async () => undefined),
-        fetchAllTasks: vi.fn(async () => undefined),
+        ...(aggregateReads ? {} : {
+          fetchTeams: vi.fn(async () => undefined),
+          fetchAllTasks: vi.fn(async () => undefined),
+        }),
       }) satisfies TeamSliceHarnessState
   );
 }
@@ -617,6 +623,146 @@ describe('teamSlice actions', () => {
   afterEach(() => {
     restoreWindowAnimationFrame();
     vi.useRealTimers();
+  });
+
+
+  it('normalizes complete arrays and matches only the original unavailable Team or owner', () => {
+    const items = [createGlobalTaskFixture({ id: 'TEST-task', teamName: 'TEST-team' })];
+    expect(normalizeTeamAggregateRead(items)).toEqual({ items, unavailable: [] });
+    expect(normalizeTeamAggregateRead(items).items).toBe(items);
+    const unavailable: TeamReadUnavailable[] = [
+      { kind: 'owner', ownerResourceRef: 'TEST-owner-a', code: 'unavailable', outcome: 'unknown' },
+      { kind: 'team', teamName: 'TEST-team-b', displayName: 'Team B', code: 'busy', outcome: 'rejected' },
+    ];
+    const partial = { items, unavailable };
+    expect(normalizeTeamAggregateRead(partial)).toBe(partial);
+    expect(isTeamReadUnavailable(unavailable, { teamName: 'TEST-team-b' })).toBe(true);
+    expect(isTeamReadUnavailable(unavailable, { teamName: 'TEST-team-a', ownerResourceRef: 'TEST-owner-a' })).toBe(true);
+    expect(isTeamReadUnavailable(unavailable, { teamName: 'TEST-team-a' })).toBe(false);
+    expect(isTeamReadUnavailable(unavailable, { teamName: 'TEST-team-a', ownerResourceRef: 'TEST-owner-b' })).toBe(false);
+  });
+
+  it('keeps healthy Teams and the original notice through repeated owner outages and a failed refresh', async () => {
+    const store = createSliceStore(true);
+    const a: TeamSummary = { teamName: 'TEST-team-a', displayName: 'Team A', description: '',
+      memberCount: 1, taskCount: 1, lastActivity: null, ownerResourceRef: 'TEST-owner-a',
+      leadSessionId: 'TEST-session-a' };
+    const b: TeamSummary = { ...a, teamName: 'TEST-team-b', displayName: 'Team B',
+      ownerResourceRef: 'TEST-owner-b', leadSessionId: 'TEST-session-b' };
+    const sibling = { ...a, teamName: 'TEST-team-a-without-notice', leadSessionId: 'TEST-sibling-session' };
+    const notice: TeamSlice['teamManagementNoticeByTeam'][string] = {
+      operationId: 'TEST-original-edit', committedAt: '2026-11-15T00:00:00.000Z',
+      kind: 'edited', changedFields: ['description'],
+      context: { appInstanceId: 'TEST-app', dataRootFingerprint: 'TEST-root', connectionGeneration: 1 },
+    };
+    const unavailable: TeamReadUnavailable[] = [
+      { kind: 'owner', ownerResourceRef: 'TEST-owner-a', code: 'unavailable', outcome: 'unknown' },
+    ];
+    hoisted.list.mockResolvedValueOnce([a, b, sibling]);
+    await store.getState().fetchTeams();
+    store.setState({ selectedTeamName: a.teamName, teamManagementNoticeByTeam: { [a.teamName]: notice } });
+    const publications: { names: string[]; unavailable: TeamReadUnavailable[] }[] = [];
+    const unsubscribe = store.subscribe((state) => publications.push({
+      names: state.teams.map((team) => team.teamName), unavailable: state.teamsUnavailable,
+    }));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      hoisted.list.mockResolvedValueOnce({ items: [b], unavailable });
+      await store.getState().fetchTeams();
+      const accepted = store.getState();
+      expect(accepted.teams).toEqual([b]);
+      expect(accepted.teamsUnavailable).toEqual(unavailable);
+      expect(accepted.teamByName[a.teamName]).toEqual(a);
+      expect(accepted.teamByName[sibling.teamName]).toBeUndefined();
+      expect(accepted.teamBySessionId[a.leadSessionId!]).toBeUndefined();
+      expect(accepted.teamBySessionId[b.leadSessionId!]).toEqual(b);
+      expect(accepted.teamManagementNoticeByTeam[a.teamName]).toBe(notice);
+
+      hoisted.list.mockResolvedValueOnce({ items: [{ ...b }], unavailable: structuredClone(unavailable) });
+      await store.getState().fetchTeams();
+      expect(store.getState().teams).toBe(accepted.teams);
+      expect(store.getState().teamsUnavailable).toBe(accepted.teamsUnavailable);
+      expect(store.getState().teamManagementNoticeByTeam[a.teamName]).toBe(notice);
+
+      hoisted.list.mockRejectedValueOnce(new Error('TEST original registry failed'));
+      await store.getState().fetchTeams();
+      expect(store.getState().teams).toBe(accepted.teams);
+      expect(store.getState().teamsUnavailable).toBe(accepted.teamsUnavailable);
+      expect(store.getState().teamsError).toBe('TEST original registry failed');
+      expect(consoleError).toHaveBeenCalledTimes(1);
+      expect(consoleError).toHaveBeenCalledWith('[Renderer:unwrapIpc]', '[team:list] TEST original registry failed');
+
+      hoisted.list.mockResolvedValueOnce([b]);
+      await store.getState().fetchTeams();
+      expect(store.getState().teamsUnavailable).toEqual([]);
+      expect(store.getState().teamsError).toBeNull();
+      expect(store.getState().teamByName[a.teamName]).toBeUndefined();
+      expect(store.getState().teamManagementNoticeByTeam[a.teamName]).toBeUndefined();
+      expect(store.getState().selectedTeamName).toBe(a.teamName);
+      expect(publications.filter((row) => row.unavailable.length > 0).length).toBeGreaterThanOrEqual(2);
+      for (const publication of publications.filter((row) => row.unavailable.length > 0)) {
+        expect(publication.names).toEqual([b.teamName]);
+      }
+      expect(hoisted.list).toHaveBeenCalledTimes(5);
+    } finally { unsubscribe(); consoleError.mockRestore(); }
+  });
+
+  it('retains only an unknown Host notice when owner membership cannot yet be observed', async () => {
+    const store = createSliceStore(true);
+    const unknown = hostTeamSelectionKey('TEST-never-observed');
+    const foreign = hostTeamSelectionKey('TEST-known-foreign');
+    const legacy = 'TEST-deleted-legacy-team';
+    const foreignSummary: TeamSummary = {
+      teamName: foreign, displayName: 'Known foreign Team', description: '',
+      memberCount: 1, taskCount: 0, lastActivity: null, ownerResourceRef: 'TEST-owner-b',
+    };
+    const legacySummary: TeamSummary = {
+      teamName: legacy, displayName: 'Legacy Team', description: '',
+      memberCount: 1, taskCount: 0, lastActivity: null,
+    };
+    hoisted.list.mockResolvedValueOnce([foreignSummary, legacySummary]);
+    await store.getState().fetchTeams();
+    const notice = (name: string): TeamSlice['teamManagementNoticeByTeam'][string] => ({
+      operationId: 'TEST-edit-' + name, committedAt: '2026-11-15T00:00:00.000Z',
+      kind: 'edited', changedFields: ['description'],
+      context: { appInstanceId: 'TEST-app', dataRootFingerprint: 'TEST-root', connectionGeneration: 1 },
+    });
+    const unknownNotice = notice(unknown);
+    store.setState({ teamManagementNoticeByTeam: {
+      [unknown]: unknownNotice, [foreign]: notice(foreign), [legacy]: notice(legacy),
+    } });
+    const unavailable: TeamReadUnavailable[] = [
+      { kind: 'owner', ownerResourceRef: 'TEST-owner-a', code: 'unavailable', outcome: 'unknown' },
+    ];
+    for (let read = 0; read < 2; read++) {
+      hoisted.list.mockResolvedValueOnce({ items: [], unavailable: structuredClone(unavailable) });
+      await store.getState().fetchTeams();
+      expect(store.getState().teams).toEqual([]);
+      expect(store.getState().teamsUnavailable).toEqual(unavailable);
+      expect(store.getState().teamManagementNoticeByTeam).toEqual({ [unknown]: unknownNotice });
+      expect(store.getState().teamManagementNoticeByTeam[unknown]).toBe(unknownNotice);
+      expect(store.getState().teamByName).toEqual({});
+      expect(store.getState().teamBySessionId).toEqual({});
+    }
+    hoisted.list.mockResolvedValueOnce([]);
+    await store.getState().fetchTeams();
+    expect(store.getState().teamsUnavailable).toEqual([]);
+    expect(store.getState().teamManagementNoticeByTeam).toEqual({});
+    expect(store.getState().teamByName).toEqual({});
+    expect(hoisted.list).toHaveBeenCalledTimes(4);
+  });
+
+  it('clears both unavailable collections through the original context reset', () => {
+    const store = createSliceStore();
+    const unavailable: TeamReadUnavailable[] = [
+      { kind: 'owner', ownerResourceRef: 'TEST-owner', code: 'shutting-down', outcome: 'not-dispatched' },
+    ];
+    store.setState({ teamsUnavailable: unavailable, globalTasksUnavailable: unavailable });
+    store.setState(getContextScopedTeamResetState());
+    expect(store.getState().teamsUnavailable).toEqual([]);
+    expect(store.getState().globalTasksUnavailable).toEqual([]);
+    expect(store.getState().teamsError).toBeNull();
+    expect(store.getState().globalTasksError).toBeNull();
   });
 
   it('keeps an explicit project intent when opening Teams and clears it for generic navigation', () => {

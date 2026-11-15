@@ -9,6 +9,7 @@ import { performance } from 'node:perf_hooks';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { digest, fileDigest } from './desktop-backend-fixture.ts';
 import { captureDesktopOwnerRoutingProduct } from './desktop-owner-routing-product-census.ts';
+import { assertDesktopOwnerRoutingAvailability } from './desktop-owner-routing-availability-ui.ts';
 import {
   assertOwnedCdpListener,
   command,
@@ -234,6 +235,7 @@ export async function runDesktopOwnerRoutingContinuation(
   proof.originalBindings = await bindingSnapshot('original');
   let bHandle: Row | undefined;
   let bPublic: Row | undefined;
+  let bTask: Row | undefined;
   let bBindingBytes: Buffer | undefined;
   let bBindingPath: string | undefined;
   let publishedB: Row | undefined;
@@ -354,7 +356,19 @@ export async function runDesktopOwnerRoutingContinuation(
         );
         const steps: Row[] = [];
         epoch.steps = steps;
-        const ui = createDesktopUiControls(cdp, {
+        let availabilityBound = false;
+        const availabilityCall = async <T>(operation: (timeoutMs: number) => Promise<T>, maximum = 30_000): Promise<T> => {
+          assertCurrent(); const timeoutMs = Math.min(maximum, deadline - Date.now());
+          assert.ok(timeoutMs > 0, 'original availability deadline');
+          const value = await bounded(operation(timeoutMs), timeoutMs, 'original availability observation');
+          assertCurrent(); assertBudget(); return value;
+        };
+        const ui = createDesktopUiControls({
+          evaluate: expression => availabilityBound
+            ? availabilityCall(ms => cdp!.evaluate(expression, ms)) : cdp!.evaluate(expression),
+          send: (method, params) => availabilityBound
+            ? availabilityCall(ms => cdp!.send(method, params, ms)) : cdp!.send(method, params),
+        }, {
           assertOwnedRenderer: assertCurrent,
           step: (value) => steps.push({ monotonicMs: Math.round(performance.now()), ...value }),
         });
@@ -560,6 +574,11 @@ export async function runDesktopOwnerRoutingContinuation(
             true,
             'B Create has no A Team namespace'
           );
+          bTask = await createTask(bHandle, bRoot, teamB, 'TEST original B Task during A outage');
+          epoch.bTask = bTask;
+          const aAfterBTask = await availabilityCall(() => snapshot('default-b-after-b-task-a', fixture.root), Number.MAX_SAFE_INTEGER);
+          assert.deepEqual(aAfterBTask.files, aAfterBCreate.files);
+          epoch.aPreservedThroughBTask = { before: aAfterBCreate, after: aAfterBTask };
         } else if (phase === 'unavailable-a') {
           assert.ok(bHandle && bBindingBytes && bBindingPath);
           assert.equal(await absent(fixture.profilePath), true);
@@ -602,6 +621,19 @@ export async function runDesktopOwnerRoutingContinuation(
             afterB,
             noRetry: true,
           };
+          assert.ok(bTask && bPublic && publishedB);
+          assert.equal(typeof row(publishedB.record).contextId, 'string');
+          availabilityBound = true;
+          await assertDesktopOwnerRoutingAvailability({
+            cdp, ui, evidence: epoch, root: fixture.root, deadline, assertCurrent,
+            discovery: row(discovery), aPublic, bPublic, bTask, contextId: String(row(publishedB.record).contextId),
+            openTeam: () => select(bHandle!),
+          });
+          const observedA = await availabilityCall(() => snapshot('unavailable-a-after-list-reads-a', fixture.root), Number.MAX_SAFE_INTEGER);
+          const observedB = await availabilityCall(() => snapshot('unavailable-a-after-list-reads-b', bRoot), Number.MAX_SAFE_INTEGER);
+          assert.deepEqual(observedA.files, afterA.files);
+          assert.deepEqual(observedB.files, afterB.files);
+          epoch.availabilityProductReadOnly = { beforeA: afterA, afterA: observedA, beforeB: afterB, afterB: observedB };
         } else {
           assert.ok(bHandle && bBindingBytes && bBindingPath);
           const bBefore = await snapshot('rollback-before-a-mutation-b', bRoot);

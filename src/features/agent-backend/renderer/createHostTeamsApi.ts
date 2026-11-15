@@ -28,7 +28,7 @@ import {
 import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
 import { readHostMessagesPage } from './readHostMessagesPage';
-import { readHostPagedSnapshot } from './readHostPagedSnapshot';
+import { HostTeamReadUnavailableError, readHostPagedSnapshot } from './readHostPagedSnapshot';
 import {
   assertMatchingConfiguration,
   readHostRosterConfiguration,
@@ -48,7 +48,7 @@ import type { AgentBackendApi } from '../contracts/operations';
 import type { BackendTeamSnapshot } from '../contracts/teamSnapshot';
 import type { HostActivityReadOptions } from './readHostActivityLogs';
 import type { TeamsAPI } from '@shared/types/api';
-import type { TeamTaskWithKanban, TeamViewSnapshot } from '@shared/types/team';
+import type { TeamReadUnavailable, TeamTaskWithKanban, TeamViewSnapshot } from '@shared/types/team';
 
 export { hostTeamSelectionKey, isHostTeamSelectionKey } from './hostTeamRouting';
 
@@ -173,11 +173,12 @@ export function createHostTeamsApi(
     selectionKey: hostTeamSelectionKey,
     readOrder,
   });
-  async function connections(check: CurrentScope): Promise<Connection[]> {
+  async function connections(check: CurrentScope, unavailable?: TeamReadUnavailable[]): Promise<Connection[]> {
     const state = await backend.getConnections();
     current(check);
     if (state.state !== 'ready' && state.state !== 'unconfigured')
       throw new Error('Host teams unavailable');
+    unavailable?.push(...(state.unavailableOwners ?? []));
     return state.bindings;
   }
   async function snapshot(
@@ -212,14 +213,30 @@ export function createHostTeamsApi(
       assertCurrent: observed.assertCurrent,
     };
   }
+  async function aggregateSnapshot(
+    binding: Connection, check: CurrentScope, observed: (() => void)[], unavailable: TeamReadUnavailable[]
+  ) {
+    try { return await snapshot(binding, check); }
+    catch (error) {
+      if (!(error instanceof HostTeamReadUnavailableError)) throw error;
+      error.assertCurrent();
+      observed.push(error.assertCurrent);
+      unavailable.push({ kind: 'team', teamName: hostTeamSelectionKey(binding.handle.handleId),
+        displayName: binding.label, code: error.code, outcome: error.outcome });
+      return null;
+    }
+  }
   async function list() {
     const check = captureScope();
-    const [oldTeams, bindings] = await Promise.all([legacy.list(), connections(check)]);
+    const unavailable: TeamReadUnavailable[] = [];
+    const [oldTeams, bindings] = await Promise.all([legacy.list(), connections(check, unavailable)]);
+    if (!Array.isArray(oldTeams)) throw new Error('Unexpected legacy Team aggregate');
     const observed: (() => void)[] = [];
     const hostTeams = [];
     // Read one captured Team at a time to leave the finite Host control lane available.
     for (const binding of bindings) {
-      const read = await snapshot(binding, check);
+      const read = await aggregateSnapshot(binding, check, observed, unavailable);
+      if (!read) continue;
       const data = remapSnapshot(
         read.data,
         hostTeamSelectionKey(binding.handle.handleId),
@@ -243,6 +260,7 @@ export function createHostTeamsApi(
       observed.push(read.assertCurrent);
       hostTeams.push({
         teamName: data.teamName,
+        ...(binding.ownerResourceRef === undefined ? {} : { ownerResourceRef: binding.ownerResourceRef }),
         ...(data.lifecycle?.deletedAt ? { deletedAt: data.lifecycle.deletedAt } : {}),
         displayName,
         description,
@@ -266,15 +284,19 @@ export function createHostTeamsApi(
     current(check);
     for (const assertCurrent of observed) assertCurrent();
     // Reserved keys cannot be treated as real legacy filesystem team names.
-    return [...oldTeams.filter((team) => !isHostTeamSelectionKey(team.teamName)), ...hostTeams];
+    const items = [...oldTeams.filter((team) => !isHostTeamSelectionKey(team.teamName)), ...hostTeams];
+    return unavailable.length ? { items, unavailable } : items;
   }
   async function getAllTasks() {
     const check = captureScope();
-    const [oldTasks, bindings] = await Promise.all([legacy.getAllTasks(), connections(check)]);
+    const unavailable: TeamReadUnavailable[] = [];
+    const [oldTasks, bindings] = await Promise.all([legacy.getAllTasks(), connections(check, unavailable)]);
+    if (!Array.isArray(oldTasks)) throw new Error('Unexpected legacy Task aggregate');
     const observed: (() => void)[] = [];
     const hostTasks = [];
     for (const binding of bindings) {
-      const read = await snapshot(binding, check);
+      const read = await aggregateSnapshot(binding, check, observed, unavailable);
+      if (!read) continue;
       const data = remapSnapshot(
         read.data,
         hostTeamSelectionKey(binding.handle.handleId),
@@ -296,16 +318,18 @@ export function createHostTeamsApi(
           ...task,
           teamName: data.teamName,
           teamDisplayName: displayName,
+          ...(binding.ownerResourceRef === undefined ? {} : { ownerResourceRef: binding.ownerResourceRef }),
           ...(projectPath === undefined ? {} : { projectPath }),
         }))
       );
     }
     current(check);
     for (const assertCurrent of observed) assertCurrent();
-    return [
+    const items = [
       ...oldTasks.filter((task) => !isHostTeamSelectionKey(task.teamName)),
       ...hostTasks.flat(),
     ];
+    return unavailable.length ? { items, unavailable } : items;
   }
   const reads = {
     ...createHostTaskReads(backend, (key) => selected(key, captureScope())),

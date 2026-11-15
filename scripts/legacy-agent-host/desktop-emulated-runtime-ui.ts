@@ -42,10 +42,14 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   options.evidence.emulatedRuntimeUiProof = proof;
   const ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
   const effects = () => readDesktopEmulatedRuntimeEffects(fixture);
-  const poll = async <T>(read: () => Promise<T>, accept: (value: T, observedEffects: Row[]) => boolean, label: string) => {
+  const poll = async <T>(read: () => Promise<T>, accept: (value: T, observedEffects: Row[]) => boolean, label: string,
+    canRead?: (observedEffects: Row[]) => boolean) => {
     const deadline = Date.now() + 75_000;
     for (;;) {
-      const observedEffects = await effects(); const value = await read(); if (accept(value, observedEffects)) return value;
+      const observedEffects = await effects();
+      if (!canRead || canRead(observedEffects)) {
+        const value = await read(); if (accept(value, observedEffects)) return value;
+      }
       assert.ok(Date.now() < deadline, label + '; original action is never repeated');
       await new Promise<void>(resolve => setTimeout(resolve, 100));
     }
@@ -378,7 +382,9 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   const runs = await poll(() => history(scheduleId), rows => rows.length === 1 && rows[0]!.status === 'dispatched', 'one original task-first dispatch');
   const taskId = String(runs[0]!.linkedTaskId);
   const tasks = await poll(() => rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend')),
-    rows => rows.some(row => row.id === taskId && row.status === 'completed'), 'scheduled original MCP task completion');
+    rows => rows.some(row => row.id === taskId && row.status === 'completed'), 'scheduled original MCP task completion',
+    observedEffects => observedEffects.some(row => row.event === (provider === 'claude' ? 'scheduled' : 'scheduled-effect') &&
+      row.taskId === taskId));
   assert.equal(tasks.length, beforeTasks.length + 1); assert.equal(tasks.find(row => row.id === taskId)?.owner, 'alice');
   await ui.scrollTo('button[aria-label="Back to chats"]', 'original scheduled conversation list');
   await ui.click('button[aria-label="Back to chats"]', 'return to original chats before scheduled reply');
@@ -425,7 +431,9 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   const automaticTasks = await poll(() => rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend')),
     (values, observedEffects) => values.some(row => row.id === automaticTaskId && row.status === 'completed') &&
       observedEffects.some(row => row.event === (provider === 'claude' ? 'scheduled' : 'scheduled-effect') &&
-        row.taskId === automaticTaskId), 'automatic original MCP task completion');
+        row.taskId === automaticTaskId), 'automatic original MCP task completion',
+    observedEffects => observedEffects.some(row => row.event === (provider === 'claude' ? 'scheduled' : 'scheduled-effect') &&
+      row.taskId === automaticTaskId));
   assert.equal(automaticTasks.length, beforeTasks.length + 2);
   assert.equal(automaticTasks.find(row => row.id === automaticTaskId)?.owner, 'alice');
   assert.equal((await effects()).filter(row => row.event === 'input' && row.marker === 'TEST_UI_SCHEDULE_DONE').length, 2);

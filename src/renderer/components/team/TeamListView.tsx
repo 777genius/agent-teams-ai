@@ -6,7 +6,6 @@ import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/prod
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Badge } from '@renderer/components/ui/badge';
-import { Button } from '@renderer/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
@@ -31,6 +30,7 @@ import {
   isTeamProvisioningActive,
 } from '@renderer/store/slices/teamSlice';
 import { selectRecentManagedTeams } from '@renderer/store/team/teamManagementNotices';
+import { captureContextScopedRequestEpoch, isContextScopedRequestEpochCurrent } from '@renderer/store/utils/contextScopedRequestEpoch';
 import {
   getProjectSelectionResetState,
   getWorktreeNavigationState,
@@ -45,6 +45,7 @@ import { getBaseName } from '@renderer/utils/pathUtils';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
 import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
+import { isTeamReadUnavailable } from '@shared/utils/normalizeTeamAggregateRead';
 import {
   Copy,
   FolderOpen,
@@ -62,6 +63,7 @@ import { CreateTeamPageLoadingFallback } from './dialogs/CreateTeamPageLoadingFa
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { loadExistingTeamLaunchDialog } from './dialogs/stoppedTeamLaunch';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
+import { TeamAggregateReadNotice } from './TeamAggregateReadNotice';
 import { buildCopiedTeamMembers } from './teamCopyData';
 import { TeamDeleteButton } from './TeamDeleteButton';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
@@ -106,6 +108,7 @@ const ImportTeamDialog = lazy(() =>
   import('@features/team-import/renderer').then((m) => ({ default: m.ImportTeamDialog }))
 );
 
+const EMPTY_ALIVE_TEAMS: string[] = [];
 const TEAM_SECTION_INITIAL_VISIBLE_COUNT = 24;
 const TEAM_SECTION_PAGE_SIZE = 24;
 
@@ -219,6 +222,7 @@ interface ActiveTeamCardProps {
   currentProjectPath: string | null;
   branchName?: string;
   taskCounts?: TaskStatusCounts;
+  taskCountsUnknown: boolean;
   launchingTeamName: string | null;
   isStopping: boolean;
   onOpenTeam: (teamName: string, projectPath?: string) => void;
@@ -244,6 +248,7 @@ const ActiveTeamCard = ({
   currentProjectPath,
   branchName,
   taskCounts,
+  taskCountsUnknown,
   launchingTeamName,
   isStopping,
   onOpenTeam,
@@ -415,7 +420,7 @@ const ActiveTeamCard = ({
           )}
         </div>
         <div className="mt-auto">
-          <TeamTaskStatusSummary counts={taskCounts} />
+          <TeamTaskStatusSummary counts={taskCounts} unknown={taskCountsUnknown} />
           {renderTeamRecentPaths(team, status, matchesCurrentProject, isLight, currentProjectPath)}
         </div>
       </div>
@@ -449,15 +454,16 @@ export const TeamListView = memo(function TeamListView({
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<TeamListFilterState>(EMPTY_TEAM_FILTER);
   const [teamPriorityProjectPath, setTeamPriorityProjectPath] = useState<string | null>(null);
-  const [aliveTeams, setAliveTeams] = useState<string[]>([]);
+  const [aliveRead, setAliveRead] = useState<{ names: string[]; contextId: string; epoch: number } | null>(null);
   const [teamSectionVisibleCountByKey, setTeamSectionVisibleCountByKey] = useState<
     Record<string, number>
   >({});
   const {
     teams,
+    teamsUnavailable = [], activeContextId,
     teamsLoading,
     teamManagementNoticeByTeam,
-    teamsError,
+    teamsError = null,
     fetchTeams,
     openTab,
     openTeamTab,
@@ -466,6 +472,7 @@ export const TeamListView = memo(function TeamListView({
     permanentlyDeleteTeam,
     projects,
     globalTasks,
+    globalTasksUnavailable = [], globalTasksError = null, globalTasksInitialized,
     fetchAllTasks,
     repositoryGroups,
     selectedRepositoryId,
@@ -477,6 +484,7 @@ export const TeamListView = memo(function TeamListView({
   } = useStore(
     useShallow((s) => ({
       teams: s.teams,
+      teamsUnavailable: s.teamsUnavailable, activeContextId: s.activeContextId,
       teamManagementNoticeByTeam: s.teamManagementNoticeByTeam,
       teamsLoading: s.teamsLoading,
       teamsError: s.teamsError,
@@ -488,6 +496,8 @@ export const TeamListView = memo(function TeamListView({
       permanentlyDeleteTeam: s.permanentlyDeleteTeam,
       projects: s.projects,
       globalTasks: s.globalTasks,
+      globalTasksUnavailable: s.globalTasksUnavailable, globalTasksError: s.globalTasksError,
+      globalTasksInitialized: s.globalTasksInitialized,
       fetchAllTasks: s.fetchAllTasks,
       repositoryGroups: s.repositoryGroups,
       selectedRepositoryId: s.selectedRepositoryId,
@@ -522,6 +532,10 @@ export const TeamListView = memo(function TeamListView({
     }))
   );
   const canCreate = electronMode && connectionMode === 'local';
+  const aliveKnown = aliveRead !== null && aliveRead.contextId === activeContextId &&
+    isContextScopedRequestEpochCurrent(aliveRead.epoch);
+  const aliveTeams = aliveKnown && aliveRead ? aliveRead.names : EMPTY_ALIVE_TEAMS;
+  const teamsIncomplete = teamsUnavailable.length > 0 || teamsError !== null;
   const provisioningState = useMemo(
     () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
     [currentProvisioningRunIdByTeam, provisioningRuns]
@@ -543,22 +557,21 @@ export const TeamListView = memo(function TeamListView({
     return synthetic.length > 0 ? [...teams, ...synthetic] : teams;
   }, [teams, provisioningTeamNames, provisioningSnapshotByTeam]);
 
-  const fetchAliveTeams = useCallback(async (): Promise<string[] | null> => {
+  const fetchAliveTeams = useCallback(async () => {
     if (!electronMode) return null;
+    const epoch = captureContextScopedRequestEpoch();
     try {
-      return await api.teams.aliveList();
-    } catch {
-      return null;
-    }
-  }, [electronMode]);
+      const names = await api.teams.aliveList();
+      return useStore.getState().activeContextId === activeContextId && isContextScopedRequestEpochCurrent(epoch)
+        ? { names, contextId: activeContextId, epoch } : null;
+    } catch { return null; }
+  }, [activeContextId, electronMode]);
 
   // Fetch alive teams on mount and when teams list changes.
   useEffect(() => {
     let cancelled = false;
     void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
-        setAliveTeams(list);
-      }
+      if (!cancelled) setAliveRead(list);
     });
     return () => {
       cancelled = true;
@@ -583,9 +596,7 @@ export const TeamListView = memo(function TeamListView({
     if (!readyProgressRefreshKey) return;
     let cancelled = false;
     void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
-        setAliveTeams(list);
-      }
+      if (!cancelled) setAliveRead(list);
     });
     return () => {
       cancelled = true;
@@ -596,9 +607,7 @@ export const TeamListView = memo(function TeamListView({
     if (!electronMode || !createPageOpen) return;
     let cancelled = false;
     void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
-        setAliveTeams(list);
-      }
+      if (!cancelled) setAliveRead(list);
     });
     return () => {
       cancelled = true;
@@ -656,11 +665,11 @@ export const TeamListView = memo(function TeamListView({
           t.teamName,
           aliveTeams,
           getCurrentProvisioningProgressForTeam(provisioningState, t.teamName),
-          leadActivityByTeam
+          leadActivityByTeam, undefined, aliveKnown
         );
         const isRunning = isTeamListStatusRunning(status);
         if (filter.selectedStatuses.has('running') && isRunning) return true;
-        if (filter.selectedStatuses.has('offline') && !isRunning) return true;
+        if (filter.selectedStatuses.has('offline') && status !== 'unknown' && !isRunning) return true;
         return false;
       });
     }
@@ -676,7 +685,7 @@ export const TeamListView = memo(function TeamListView({
         aliveTeams,
         getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
         leadActivityByTeam,
-        nowMs
+        nowMs, aliveKnown
       );
 
     result = [...result].sort((a, b) => {
@@ -707,6 +716,7 @@ export const TeamListView = memo(function TeamListView({
     searchQuery,
     currentProjectPath,
     aliveTeams,
+    aliveKnown,
     filter,
     provisioningState,
     leadActivityByTeam,
@@ -902,7 +912,7 @@ export const TeamListView = memo(function TeamListView({
       await teamStopControl.stopTeam(teamName, {
         refresh: async () => {
           const list = await fetchAliveTeams();
-          if (list) setAliveTeams(list);
+          setAliveRead(list);
         },
         onOutcome: (outcome, error) => {
           const success = outcome === 'stopped' || outcome === 'stopped_after_transport_error';
@@ -912,7 +922,7 @@ export const TeamListView = memo(function TeamListView({
             runtimeActive: true,
             errorClass: success ? 'none' : classifyAnalyticsError(error),
           });
-          if (success) setAliveTeams((prev) => prev.filter((name) => name !== teamName));
+          if (success) setAliveRead((prev) => prev && ({ ...prev, names: prev.names.filter((name) => name !== teamName) }));
         },
       });
     },
@@ -1208,6 +1218,7 @@ export const TeamListView = memo(function TeamListView({
       projectPath={currentProjectPath}
       teams={teamsWithProvisioning}
       aliveTeams={aliveTeams}
+      aliveKnown={aliveKnown} incomplete={teamsIncomplete}
       onProjectChange={handleProjectSelectionChange}
       onManagementApplied={handleManagementApplied}
       onManagementSettings={() => useStore.getState().openSettingsTab('externalAgentConnection')}
@@ -1229,26 +1240,9 @@ export const TeamListView = memo(function TeamListView({
   );
 
   const renderContent = (): React.JSX.Element => {
-    if (teamsError) {
-      return (
-        <div className="flex size-full items-center justify-center p-6">
-          <div className="text-center">
-            <p className="text-sm font-medium text-red-400">{t('list.loadFailed')}</p>
-            <p className="mt-2 text-xs text-[var(--color-text-muted)]">{teamsError}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-4"
-              onClick={() => {
-                void fetchTeams();
-              }}
-            >
-              {t('list.actions.retry')}
-            </Button>
-          </div>
-        </div>
-      );
-    }
+    if (teamsIncomplete && teamsWithProvisioning.length === 0) return (
+      <p className="py-8 text-sm text-text-muted">{t('list.aggregate.emptyTeams')}</p>
+    );
 
     if (teamsWithProvisioning.length === 0) {
       return (
@@ -1265,7 +1259,7 @@ export const TeamListView = memo(function TeamListView({
     if (filteredTeams.length === 0 && (searchQuery.trim() || hasActiveFilters)) {
       return (
         <div className="flex items-center justify-center py-12 text-sm text-[var(--color-text-muted)]">
-          {t('list.noMatches')}
+          {teamsIncomplete ? t('list.aggregate.emptyTeams') : t('list.noMatches')}
         </div>
       );
     }
@@ -1342,7 +1336,7 @@ export const TeamListView = memo(function TeamListView({
                         {section.title}
                       </h3>
                       <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-1.5 py-0.5 text-[10px] font-medium leading-none text-[var(--color-text-secondary)]">
-                        {section.teams.length}
+                        {teamsIncomplete ? t('list.aggregate.loadedCount', { count: section.teams.length }) : section.teams.length}
                       </span>
                     </div>
                   ) : null}
@@ -1353,7 +1347,7 @@ export const TeamListView = memo(function TeamListView({
                         team.teamName,
                         aliveTeams,
                         getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
-                        leadActivityByTeam
+                        leadActivityByTeam, undefined, aliveKnown
                       );
                       const teamColorSet = team.color
                         ? getTeamColorSet(team.color)
@@ -1377,6 +1371,7 @@ export const TeamListView = memo(function TeamListView({
                               : undefined
                           }
                           taskCounts={taskCountsByTeam.get(team.teamName)}
+                          taskCountsUnknown={!globalTasksInitialized || globalTasksError !== null || isTeamReadUnavailable(globalTasksUnavailable, team)}
                           launchingTeamName={launchingTeamName}
                           isStopping={teamStopControl.isStopping(team.teamName)}
                           onOpenTeam={openTeamTab}
@@ -1437,7 +1432,7 @@ export const TeamListView = memo(function TeamListView({
             <div className="my-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-[var(--color-border)]" />
               <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-                {t('list.trash', { count: deletedFiltered.length })}
+                {t(teamsIncomplete ? 'list.aggregate.loadedTrash' : 'list.trash', { count: deletedFiltered.length })}
               </span>
               <div className="h-px flex-1 bg-[var(--color-border)]" />
             </div>
@@ -1520,6 +1515,8 @@ export const TeamListView = memo(function TeamListView({
           ) : (
             <>
               {renderHeader()}
+              <TeamAggregateReadNotice surface="teams" unavailable={teamsUnavailable} error={teamsError}
+                loadedCount={teams.length} loading={teamsLoading} onRefresh={() => { void fetchTeams(); }} onOpenTeam={openTeamTab} />
               {renderContent()}
             </>
           )}
