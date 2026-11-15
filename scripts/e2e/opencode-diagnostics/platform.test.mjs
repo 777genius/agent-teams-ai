@@ -288,6 +288,32 @@ test('Windows phase observations use the original phase clocks and cannot bypass
   assert.deepEqual(proof.phases, [{ phase, atMs: 11, budgetMs: 10000 }],
     'a recorded phase does not grant admission or claim completion');
 
+  const firstError = 'Error: TEST original refusal\n' + 'A'.repeat(200);
+  for (const row of [
+    { phase, error: firstError },
+    { phase: 'original-product-Quit', error: firstError, errorPrefix: firstError.slice(0, 160) },
+    { phase: 'original-product-Quit', error: '界'.repeat(160) },
+  ]) {
+    for (const writerThrows of [false, true]) {
+      const calls = [], lines = [], proof = { phases: [], error: row.error };
+      let now = 110;
+      const observed = create(assert, { now: () => { calls.push('clock'); return now++; } }, proof,
+        (fd, line) => {
+          calls.push('write'); assert.equal(fd, 1); lines.push(line);
+          if (writerThrows) throw new Error('TEST original stdout refusal');
+        });
+      observed.begin(row.phase, 10000);
+      assert.deepEqual(calls, ['clock', 'clock', 'write', 'clock']);
+      const expected = { kind: 'TEST_WINDOWS_PACKAGED_UI_PHASE', phase: row.phase, atMs: 11, budgetMs: 10000,
+        ...(row.errorPrefix === undefined ? {} : { errorPrefix: row.errorPrefix }) };
+      assert.deepEqual(lines, [JSON.stringify(expected) + '\n'],
+        'overflow uses the byte-identical original phase line, never a second write');
+      assert(Buffer.byteLength(lines[0], 'utf8') <= 512); assert.equal(lines[0].split('\n').length, 2);
+      assert.deepEqual(proof.phases, [{ phase: row.phase, atMs: 11, budgetMs: 10000 }]);
+      assert.deepEqual(observed.state(), { activeDeadline: 10110, activePhase: row.phase });
+    }
+  }
+
   const oversized = '界'.repeat(180), omitted = [], retained = { phases: [] };
   let clocks = 0;
   const bounded = create(assert, { now: () => { clocks++; return 110; } }, retained,
@@ -296,4 +322,93 @@ test('Windows phase observations use the original phase clocks and cannot bypass
   assert.equal(clocks, 3); assert.deepEqual(omitted, []);
   assert.deepEqual(retained.phases, [{ phase: oversized, atMs: 10, budgetMs: 10000 }],
     'the byte bound changes only the diagnostic output');
+});
+
+test('Windows Retry observations keep original reads, refusals and short-circuit readiness', async () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const section = (start, end) => {
+    assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+    const from = source.indexOf(start), to = source.indexOf(end);
+    assert(to > from); return source.slice(from, to);
+  };
+  const proof = { censusReads: [], censusReadsTruncated: false }, calls = [], original = {};
+  let now = 110;
+  const observe = runInThisContext('(function(performance, proof) {' +
+    "const startedAt=100, activePhase='one-explicit-same-Main-Retry';" +
+    section('const observeCensus = (operation, read) => {', 'const captureCensus = () => {') +
+    'return observeCensus;})')({ now: () => { calls.push('clock'); return now++; } }, proof);
+  assert.equal(observe('process-census', () => { calls.push('read'); return original; }), original);
+  assert.deepEqual(calls, ['clock', 'read', 'clock']);
+  assert.deepEqual(proof.censusReads, [{
+    phase: 'one-explicit-same-Main-Retry', operation: 'process-census', startMs: 10, endMs: 11, returned: true,
+  }]);
+  const refusal = new Error('TEST original census refusal');
+  calls.length = 0;
+  assert.throws(() => observe('process-listener-snapshot', () => {
+    calls.push('read'); throw refusal;
+  }), error => error === refusal);
+  assert.deepEqual(calls, ['clock', 'read', 'clock']); assert.equal(proof.censusReads.at(-1).returned, false);
+  proof.censusReads = Object.freeze([]);
+  assert.throws(() => observe('process-census', () => { throw refusal; }), error => error === refusal);
+  assert.equal(observe('process-census', () => original), original, 'diagnostic failure preserves success too');
+  proof.censusReads = Array(512).fill(null);
+  assert.equal(observe('process-census', () => original), original);
+  assert.equal(proof.censusReads.length, 512); assert.equal(proof.censusReadsTruncated, true);
+
+  const run = runInThisContext('(async function(ui, proof, performance, remaining, desktopJsLiteral) {' +
+    'const startedAt=100, activeDeadline=200, surface=\'[data-testid="host-backend-recovery"]\';' +
+    section('  try {\n    proof.retryUiRead = {', '  await originalBinding();\n  await within(() => fixture.afterRetry(activeDeadline));') +
+    '})');
+  const readProof = {}, reads = [];
+  let query, accept, remainingCalls = 0;
+  await run({ waitRead: async (expression, label, timeout, isReady) => {
+    assert.equal(label, 'original refreshed Team after positive product recovery'); assert.equal(timeout, 17);
+    query = runInThisContext('(function(document) { return ' + expression + '; })'); accept = isReady;
+  } }, readProof, { now: () => 150 }, () => { remainingCalls++; return 17; }, JSON.stringify);
+  assert.equal(remainingCalls, 1);
+  assert.deepEqual(readProof.retryUiRead, { startMs: 50, deadlineMs: 100, completedEvaluations: 0 });
+  const rows = [
+    { present: false, buttons: [], alert: false, facts: { surfacePresent: false }, ready: false, reads: ['surface'] },
+    { present: true, buttons: [['Refresh', true], ['Retry', false]], alert: false,
+      facts: { surfacePresent: true, refreshEnabled: false }, ready: false,
+      reads: ['surface', 'buttons', 'text:Refresh', 'text:Retry'] },
+    { present: true, buttons: [['Refresh', false], ['Retry', false]], alert: false,
+      facts: { surfacePresent: true, refreshEnabled: true, retryPresent: true }, ready: false,
+      reads: ['surface', 'buttons', 'text:Refresh', 'text:Refresh', 'text:Retry'] },
+    ...[true, false].map(alert => ({ present: true, buttons: [['Refresh', false]], alert,
+      facts: { surfacePresent: true, refreshEnabled: true, retryPresent: false, alertPresent: alert },
+      ready: !alert, reads: ['surface', 'buttons', 'text:Refresh', 'text:Refresh', 'alert'] })),
+  ];
+  for (const row of rows) {
+    reads.length = 0;
+    const value = query({ querySelector: selector => {
+      assert.equal(selector, '[data-testid="host-backend-recovery"]'); reads.push('surface');
+      return row.present ? {
+        querySelectorAll: selector => {
+          assert.equal(selector, 'button'); reads.push('buttons');
+          return row.buttons.map(([text, disabled]) => ({
+            get textContent() { reads.push('text:' + text); return text; }, disabled,
+          }));
+        },
+        querySelector: selector => {
+          assert.equal(selector, '[role="alert"]'); reads.push('alert'); return row.alert ? {} : null;
+        },
+      } : null;
+    } });
+    assert.deepEqual(value, row.facts); assert.deepEqual(reads, row.reads);
+    assert.equal(accept(value), row.ready, 'a nonempty observation object is not readiness');
+    assert.deepEqual(readProof.retryUiRead.last, { atMs: 50, facts: row.facts });
+  }
+  assert.equal(readProof.retryUiRead.completedEvaluations, 5);
+  for (const malformed of [{}, { surfacePresent: false, alertPresent: false }, { surfacePresent: true }]) {
+    assert.equal(accept(malformed), false); assert.equal(readProof.retryUiRead.last.facts, null);
+  }
+  Object.freeze(readProof.retryUiRead);
+  assert.equal(accept(rows.at(-1).facts), true, 'a failed diagnostic write does not change readiness');
+  assert.equal(accept(rows[0].facts), false);
+  const noRead = {}, timeout = new Error('TEST original UI read timeout');
+  await assert.rejects(run({ waitRead: async () => { throw timeout; } }, noRead,
+    { now: () => 150 }, () => 17, JSON.stringify), error => error === timeout);
+  assert.equal(noRead.retryUiRead.completedEvaluations, 0);
+  assert.equal(Object.hasOwn(noRead.retryUiRead, 'last'), false);
 });

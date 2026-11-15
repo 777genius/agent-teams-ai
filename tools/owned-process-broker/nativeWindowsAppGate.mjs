@@ -112,6 +112,7 @@ const proof = {
   selectedSourceHashes: sourceHashes, originalInputPins: fixture.pins,
   counts: { mainStarts: 0, initialRuntimeOpen: 0, businessInput: 0, refreshClicks: 0, retryClicks: 0, uiStops: 0, quit: 0 },
   phases: [], uiSteps: [], screenshots: [], appLog: logPath,
+  censusReads: [], censusReadsTruncated: false,
 };
 let app, cdp, appLog, main, hostA, hostB, writerA, exit, exitPromise, binding;
 let lineage = [], startedAt, outerDeadline, activeDeadline, activePhase = 'prepare';
@@ -128,7 +129,14 @@ const begin = (name, milliseconds) => {
   const phase = { phase: name, atMs: performance.now() - startedAt, budgetMs: milliseconds };
   proof.phases.push(phase);
   try {
-    const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_PHASE', ...phase }) + '\n';
+    const originalLine = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_PHASE', ...phase }) + '\n';
+    let line = originalLine;
+    if (name === 'original-product-Quit' && typeof proof.error === 'string') {
+      const observedLine = JSON.stringify({
+        kind: 'TEST_WINDOWS_PACKAGED_UI_PHASE', ...phase, errorPrefix: proof.error.slice(0, 160),
+      }) + '\n';
+      if (Buffer.byteLength(observedLine, 'utf8') <= 512) line = observedLine;
+    }
     if (Buffer.byteLength(line, 'utf8') <= 512) writeSync(1, line);
   } catch { /* The original phase admission remains authoritative. */ }
   remaining();
@@ -178,13 +186,31 @@ const validateCensus = snapshot => {
   remaining();
   return snapshot;
 };
+const observeCensus = (operation, read) => {
+  const phase = activePhase;
+  let from;
+  try { from = performance.now(); } catch { /* Observation only. */ }
+  let returned = false;
+  try {
+    const value = read(); returned = true; return value;
+  } finally {
+    try {
+      if (from !== undefined) {
+        if (proof.censusReads.length < 512) proof.censusReads.push({
+          phase, operation, startMs: from - startedAt, endMs: performance.now() - startedAt, returned,
+        });
+        else proof.censusReadsTruncated = true;
+      }
+    } catch { /* Preserve the original read result or refusal. */ }
+  }
+};
 const captureCensus = () => {
   check();
-  return validateCensus(processes());
+  return validateCensus(observeCensus('process-census', processes));
 };
 const assertOwnedRenderer = () => {
   check();
-  const observation = windowsProcessListenerSnapshot();
+  const observation = observeCensus('process-listener-snapshot', windowsProcessListenerSnapshot);
   const snapshot = validateCensus(observation.processes), ids = observation.listeners;
   assert.ok(ids.length > 0 && ids.every(pid => snapshot.some(current =>
     current.pid === pid && lineage.some(original => original.pid === pid && original.birth === current.birth))),
@@ -396,7 +422,12 @@ try {
     captureCensus().some(current => current.pid === row.pid && current.birth === row.birth)));
   const ui = createDesktopUiControls(port, {
     assertOwnedRenderer,
-    step: value => { assert.ok(proof.uiSteps.length < 128); proof.uiSteps.push({ phase: activePhase, ...value }); },
+    step: value => {
+      assert.ok(proof.uiSteps.length < 128);
+      const entry = { phase: activePhase, ...value };
+      try { entry.atMs = performance.now() - startedAt; } catch { /* Observation only. */ }
+      proof.uiSteps.push(entry);
+    },
   });
   await ui.observeInput();
   await ui.waitRead('Boolean(document.querySelector("#sidebar-tasks-panel"))', 'original sidebar', remaining());
@@ -437,19 +468,42 @@ try {
   begin('one-explicit-same-Main-Retry', 10000);
   proof.counts.retryClicks++;
   await ui.click(surface + ' button', 'explicit product Retry once', 'Retry');
+  try { proof.retryClickCompletedAtMs = performance.now() - startedAt; } catch { /* Observation only. */ }
   const successorWriter = await poll(async () => {
     const writer = readWriter();
     if (!writer || writer.pid === writerA.pid) return false;
     assert.notEqual(writer.token, writerA.token); return writer;
   }, 'actual successor writer acquisition');
+  try { proof.successorWriterObservedAtMs = performance.now() - startedAt; } catch { /* Observation only. */ }
   hostB = assertHost(successorWriter, captureCensus());
   assert.notEqual(hostB.pid, hostA.pid);
   proof.successorHost = { identity: hostB, writer: successorWriter };
   assertHostBirths();
-  await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) + ');if(!s)return false;' +
-    'const b=[...s.querySelectorAll("button")];return b.some(x=>x.textContent.trim()==="Refresh"&&!x.disabled)' +
-    '&&!b.some(x=>x.textContent.trim()==="Retry")&&!s.querySelector(\'[role="alert"]\');})()',
-  'original refreshed Team after positive product recovery', remaining());
+  try {
+    proof.retryUiRead = { startMs: performance.now() - startedAt, deadlineMs: activeDeadline - startedAt, completedEvaluations: 0 };
+  } catch { /* Observation only. */ }
+  await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) + ');' +
+    'const facts={surfacePresent:Boolean(s)};if(!s)return facts;const b=[...s.querySelectorAll("button")];' +
+    'facts.refreshEnabled=b.some(x=>x.textContent.trim()==="Refresh"&&!x.disabled);if(!facts.refreshEnabled)return facts;' +
+    'facts.retryPresent=b.some(x=>x.textContent.trim()==="Retry");if(facts.retryPresent)return facts;' +
+    'facts.alertPresent=Boolean(s.querySelector(\'[role="alert"]\'));return facts;})()',
+  'original refreshed Team after positive product recovery', remaining(), value => {
+    const keys = value && typeof value === 'object' && !Array.isArray(value) ? Object.keys(value) : [];
+    const valid = Boolean(keys.length && Object.hasOwn(value, 'surfacePresent') &&
+      (value.surfacePresent === false ? keys.length === 1 :
+        value.surfacePresent === true && Object.hasOwn(value, 'refreshEnabled') &&
+        (value.refreshEnabled === false ? keys.length === 2 :
+          value.refreshEnabled === true && Object.hasOwn(value, 'retryPresent') &&
+          (value.retryPresent === true ? keys.length === 3 :
+            value.retryPresent === false && keys.length === 4 &&
+            Object.hasOwn(value, 'alertPresent') && typeof value.alertPresent === 'boolean'))));
+    try {
+      proof.retryUiRead.completedEvaluations++;
+      proof.retryUiRead.last = { atMs: performance.now() - startedAt, facts: valid ? { ...value } : null };
+    } catch { /* Observation failure cannot change the original predicate. */ }
+    return valid && value.surfacePresent === true && value.refreshEnabled === true &&
+      value.retryPresent === false && value.alertPresent === false;
+  });
   await originalBinding();
   await within(() => fixture.afterRetry(activeDeadline));
   proof.afterRetryPublic = await readProcesses();
