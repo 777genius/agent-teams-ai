@@ -1404,9 +1404,14 @@ function ownerAvailabilityFixture() {
   const task = { id: 'TEST-task', subject: 'TEST healthy B Task', status: 'pending' };
   type Options = Parameters<typeof assertDesktopOwnerRoutingAvailability>[0];
   const options: Options = {
-    cdp: { async send(method: string) {
-      assert.equal(method, 'Page.captureScreenshot'); screenshots++; throw checkpoint;
-    } } as Options['cdp'],
+    cdp: {
+      on() { assert.fail('unexpected availability CDP listener'); },
+      async send(method: string) {
+        assert.equal(method, 'Page.captureScreenshot'); screenshots++; throw checkpoint;
+      },
+      async evaluate() { assert.fail('unexpected availability CDP evaluation'); },
+      async close() { assert.fail('unexpected availability CDP close'); },
+    },
     ui: {
       async click(_selector: string, label: string) { steps.push(label); },
       async scrollTo(_selector: string, label: string) { steps.push(label); },
