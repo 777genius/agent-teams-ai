@@ -17,7 +17,7 @@ public static class OwnedWinConsoleObserver {
     public string ClassName;
   }
   private delegate bool EnumWindowsCallback(IntPtr hwnd, IntPtr param);
-  [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr param);
+  [DllImport("user32.dll", SetLastError=true)] private static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr param);
   [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hwnd);
   [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
   [DllImport("user32.dll", CharSet=CharSet.Unicode)]
@@ -30,7 +30,7 @@ public static class OwnedWinConsoleObserver {
   }
   public static Window[] VisibleConsoleWindows() {
     var found = new List<Window>();
-    EnumWindows((hwnd, param) => {
+    if (!EnumWindows((hwnd, param) => {
       if (!IsWindowVisible(hwnd)) return true;
       var name = new StringBuilder(256);
       GetClassName(hwnd, name, name.Capacity);
@@ -46,7 +46,8 @@ public static class OwnedWinConsoleObserver {
         ClassName = cls,
       });
       return true;
-    }, IntPtr.Zero);
+    }, IntPtr.Zero))
+      throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
     return found.ToArray();
   }
 }
