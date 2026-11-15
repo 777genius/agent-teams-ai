@@ -1,0 +1,144 @@
+{
+  "schema": "capacity-main-original-ci-red-assessment-v1",
+  "sourceHead": "9efaecc566af48ecb0b9a8249795266192b18f09",
+  "sourceTree": "6ffb8394a4e99eddd4eda1f9dec87faeb8dc32eb",
+  "equivalentExecutableHead": "328c9446be2bb0c55c273449cd19a569c3bfef9c",
+  "runId": 43760057511,
+  "attempt": 1,
+  "event": "pull_request",
+  "pullRequest": 1206,
+  "qualification": "Specific old-producer Main semantic RED on the original complete eight-file CI command; not an overall workflow success, local retry, native Windows qualification, or resolution of any earlier SIGKILL.",
+  "platforms": [
+    {
+      "platform": "win32-arm64",
+      "jobId": 132952626803,
+      "jobConclusion": "failure",
+      "host": {
+        "total": 163,
+        "passed": 160,
+        "failed": 0,
+        "skipped": 3
+      },
+      "protocol": {
+        "files": 3,
+        "passed": 53,
+        "failed": 0,
+        "skipped": 0
+      },
+      "main": {
+        "files": 8,
+        "passedFiles": 7,
+        "failedFiles": 1,
+        "passed": 79,
+        "failed": 2,
+        "skipped": 0,
+        "capturedClient": {
+          "total": 33,
+          "passed": 31,
+          "failed": 2
+        },
+        "durationSeconds": 80.85
+      },
+      "rawLog": {
+        "bytes": 123453,
+        "sha256": "31aa7b7acf1941d810ee2b30d1da0b7d27c509989de13ad981a6d93b1fdd2df4"
+      },
+      "artifactId": 14180271568
+    },
+    {
+      "platform": "darwin-x64",
+      "jobId": 132952626579,
+      "jobConclusion": "failure",
+      "host": {
+        "total": 163,
+        "passed": 161,
+        "failed": 0,
+        "skipped": 2
+      },
+      "protocol": {
+        "files": 3,
+        "passed": 53,
+        "failed": 0,
+        "skipped": 0
+      },
+      "main": {
+        "files": 8,
+        "passedFiles": 7,
+        "failedFiles": 1,
+        "passed": 79,
+        "failed": 2,
+        "skipped": 0,
+        "capturedClient": {
+          "total": 33,
+          "passed": 31,
+          "failed": 2
+        },
+        "durationSeconds": 95.69
+      },
+      "rawLog": {
+        "bytes": 119944,
+        "sha256": "e366c197cd69d5880454d9206fe7d893b8f7ab9be769671c9b201f75c459d053"
+      },
+      "artifactId": 14180004821
+    }
+  ],
+  "failure": {
+    "path": "test/features/agent-backend/capturedHostClient.test.ts",
+    "line": 776,
+    "limits": [
+      8,
+      7
+    ],
+    "assertion": "promise resolved instead of rejecting",
+    "positiveReservePlusOne": "keeps one work output slot alongside the full control reserve passed on both platforms"
+  },
+  "sourceLeaves": [
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "sha": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+      "size": 30399
+    },
+    {
+      "path": "packages/legacy-agent-host/src/index.ts",
+      "sha": "c5ecfd9787e219cb2fe5050c38bbca252e9b1e86",
+      "size": 10917
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/transport.test.ts",
+      "sha": "24c83547be0ee43bb6f2481618a4356a3855d832",
+      "size": 23731
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "sha": "d8270d7ef415dbfaaf5a78bbde59176d07053b93",
+      "size": 32656
+    },
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "sha": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+      "size": 51981
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "sha": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+      "size": 22544
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "sha": "1d1133876a20ca7541d04b4c9d8d86e4e4c599bc",
+      "size": 53900
+    }
+  ],
+  "archiveVerification": {
+    "size": true,
+    "sha256": true,
+    "crc": true,
+    "duplicatePaths": false,
+    "unsafePaths": false,
+    "symlinks": false,
+    "allMembersDecodedUtf8AndRoundTripped": true,
+    "fullPayloadProjectionSha256": "36fd7547f217c31f8c6e2955cd6fc5f36e2227de05c38d49e5551cb36291e20a"
+  },
+  "materializationNote": "A first local artifact-materialization exec request was rejected before process creation because its command argument was too long. The same downloaded artifact references were materialized through a temporary JSON input instead; no build or test was run or retried by this file operation.",
+  "remaining": "Production guards not applied at this evidence cut. Existing PR1206 refs and metadata remain untouched by root while its original useful cohort is active. Both earlier local Main SIGKILL and restricted compiler statuses remain unchanged; no retries or cancellations authorized."
+}
