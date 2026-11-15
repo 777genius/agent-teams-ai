@@ -1,0 +1,586 @@
+{
+  "schemaVersion": 1,
+  "reviewer": "ui_failures",
+  "verdict": "APPROVED",
+  "reviewedAt": "2026-11-15T22:29:15.243021+00:00",
+  "scope": "Independent read-only byte/source/evidence R2 of three frozen checkpoints and their exact appendices; no project/native/provider/test/compiler or CI execution.",
+  "checkpoints": [
+    {
+      "path": "native-audit-4dc/arm-terminal-checkpoint-20261115-2211.json",
+      "bytes": 2574,
+      "gitBlob": "c4245a817d15ccb19b6b6e5c3f128b099037b956",
+      "sha256": "0f887bdaef70757104055e9b335d12a05e7e848048cdf1a7374441d77e306eb8"
+    },
+    {
+      "path": "native-audit-332/process-build-checkpoint-20261115-2219.json",
+      "bytes": 2813,
+      "gitBlob": "b361081877724c714eddaa5bcf22bb77db7c873a",
+      "sha256": "c3ed0a867200430df4faed2e89f68ce381d698e70b064155d6077b0df0d68b17"
+    },
+    {
+      "path": "native-audit-332/v2-x64-checkpoint-20261115-2213.json",
+      "bytes": 1822,
+      "gitBlob": "1b4de46ee2b101802b87fa0669e1f718f4fc84bc",
+      "sha256": "323f09fa65c93993256d509144aff004e4baf7bb19c547ce3b0673dd5d942c7d"
+    }
+  ],
+  "verifiedFiles": [
+    {
+      "path": "native-audit-4dc/arm-terminal-checkpoint-20261115-2211.json",
+      "classification": "frozen checkpoint",
+      "bytes": 2574,
+      "gitBlob": "c4245a817d15ccb19b6b6e5c3f128b099037b956",
+      "sha256": "0f887bdaef70757104055e9b335d12a05e7e848048cdf1a7374441d77e306eb8"
+    },
+    {
+      "path": "native-audit-4dc/4dc-process-win32-arm64.zip",
+      "classification": "selected original payload",
+      "bytes": 14471,
+      "gitBlob": "d82f3e22351e6fb5a5ef16578f27d09994700b60",
+      "sha256": "a064253b68cf1131c90094936a7718c7a44e191de5b2c5bbed5991393ea3457a"
+    },
+    {
+      "path": "native-audit-4dc/4dc-v2-win32-arm64.zip",
+      "classification": "selected original payload",
+      "bytes": 7452,
+      "gitBlob": "a8210dfdae1cfab5148462a27b351aac579c2715",
+      "sha256": "c506eaa1a236d8e614dd349067aac9155fb7a3b0d46544fc6bcbe88886358971"
+    },
+    {
+      "path": "native-audit-4dc/4dc-arm-full-job.log",
+      "classification": "selected original payload",
+      "bytes": 149803,
+      "gitBlob": "c9ce514317b69c907baeac9d0d322a3f609d85e5",
+      "sha256": "b40bfbaff6475e9cf4d05a0cabe663e270d7dacf2e793dfb98956360b3960f38"
+    },
+    {
+      "path": "native-audit-4dc/4dc-v2-arm-full-job.log",
+      "classification": "selected original payload",
+      "bytes": 99483,
+      "gitBlob": "bdafd18cfd945b81a08551fe2dd746e32b1da742",
+      "sha256": "1d40c6aefda602f8d40221bdcd20acbe354ce9838b317c17ff5979ab607e71fe"
+    },
+    {
+      "path": "native-audit-4dc/archive-audit-process_win_arm.json",
+      "classification": "selected original payload",
+      "bytes": 4301,
+      "gitBlob": "444ad6cb5667539d99908b7c3900ac9f953f7f43",
+      "sha256": "0792bd01ee079fac1d817deee11a0744fba97788932e362b709f9d6457218a82"
+    },
+    {
+      "path": "native-audit-4dc/archive-audit-v2_win_arm.json",
+      "classification": "selected original payload",
+      "bytes": 2150,
+      "gitBlob": "ad0406dd1c81f4dc2871d54854ec95ffead3222a",
+      "sha256": "109ad20e3d2df7035bf3fb5333252eb648c9ee63a83ce6fbfe66c92479305c54"
+    },
+    {
+      "path": "native-audit-4dc/receipt-audit-original-arm-complete.json",
+      "classification": "selected original payload",
+      "bytes": 56863,
+      "gitBlob": "7b5b77b5055c3eb8f04ec5b9d127564151d0d0d7",
+      "sha256": "aa2370aa289cf1a085e6993a2717c51390048c4d55f58290d74766688db8ba4b"
+    },
+    {
+      "path": "native-audit-4dc/4dc-terminal-api-evidence.json",
+      "classification": "selected original payload",
+      "bytes": 29557,
+      "gitBlob": "dfe6b01e64eff940976892c225b3caa707f0b538",
+      "sha256": "d3c07241af12ff828f8c02ea81c8ee9d454942ff789e9353129dfd9a12639f8c"
+    },
+    {
+      "path": "native-audit-4dc/plan29-4dc-arm-terminal-evidence-appendix.md",
+      "classification": "selected original payload",
+      "bytes": 7675,
+      "gitBlob": "05c8379b18251a90a8ac79f245c018ada265e9a3",
+      "sha256": "128d566cff416353f9406a5bb8ec9107f0bbc7d11f8832d87ebd1ca30057c749"
+    },
+    {
+      "path": "native-audit-332/process-build-checkpoint-20261115-2219.json",
+      "classification": "frozen checkpoint",
+      "bytes": 2813,
+      "gitBlob": "b361081877724c714eddaa5bcf22bb77db7c873a",
+      "sha256": "c3ed0a867200430df4faed2e89f68ce381d698e70b064155d6077b0df0d68b17"
+    },
+    {
+      "path": "native-audit-332/332-process-win32-x64.zip",
+      "classification": "selected original payload",
+      "bytes": 9691,
+      "gitBlob": "d2351a6d306da55671ef982307a19ab6e5d9a0d9",
+      "sha256": "7d62e776f1594773e418a19dd79a3771d9b85874d4fdcc86de31d1385f6934a0"
+    },
+    {
+      "path": "native-audit-332/332-process-win32-arm64.zip",
+      "classification": "selected original payload",
+      "bytes": 10004,
+      "gitBlob": "02675c175e8d3c8ac7660b1cddaf4ce44022dd7b",
+      "sha256": "81cc2ea667125ab5028ccff9eed5d245d77b01dfbd07447f52034504fb4ce95f"
+    },
+    {
+      "path": "native-audit-332/job-132973378700.log",
+      "classification": "selected original payload",
+      "bytes": 94192,
+      "gitBlob": "2c3063fa4db921167f324a1e87f80bef0795ae89",
+      "sha256": "dd5e6457a7a4d1ddad575e3ca59c4a59197b1ef7f87a7627253c0aa2c8030b79"
+    },
+    {
+      "path": "native-audit-332/job-132973379104.log",
+      "classification": "selected original payload",
+      "bytes": 120277,
+      "gitBlob": "0a24ab51b1ff7428d104e419519a0cfdedb64346",
+      "sha256": "35a82d37a581106c8e2482be5ad05edf3b2c964f2ca994dc7d5d04704d2e177b"
+    },
+    {
+      "path": "native-audit-332/archive-audit-process_win_x64.json",
+      "classification": "selected original payload",
+      "bytes": 2643,
+      "gitBlob": "0603b44f36f7a87edc32cff6e88a41dbc255d9d2",
+      "sha256": "870c8a57c9e4256de17fc9e57149d8c64a736c592a2258f549b5d21197bd169a"
+    },
+    {
+      "path": "native-audit-332/archive-audit-process_win_arm64.json",
+      "classification": "selected original payload",
+      "bytes": 2651,
+      "gitBlob": "c9131822f8a921fb4600d1d04109946e0d7633ea",
+      "sha256": "998d5fa7ff90edb72fa96c3b0498f05a9a05729dc47f38501a939af33535d71f"
+    },
+    {
+      "path": "native-audit-332/receipt-audit-process-build-failures.json",
+      "classification": "selected original payload",
+      "bytes": 28960,
+      "gitBlob": "5b438efb863b1c8fa7f5df45ac3a33f23df71ce3",
+      "sha256": "328dc8d6cb3b08e53b7d29b040829c964e371a3dcf34faf0c3b1cf49d4be274f"
+    },
+    {
+      "path": "native-audit-332/native-jobs-snapshot-20261115-2213.json",
+      "classification": "selected original payload",
+      "bytes": 62308,
+      "gitBlob": "c49f72aa82650d5779743d2dbe492eb591cd0820",
+      "sha256": "a0c1f786e1cfbe051e82701aefde4d89202da4e0fd5283d99bd19031f83e41bf"
+    },
+    {
+      "path": "native-audit-332/v2-terminal-jobs-snapshot-20261115-2218.json",
+      "classification": "selected original payload",
+      "bytes": 34653,
+      "gitBlob": "9270afe90ad761a2c3e96fc4bdbb378160fc9097",
+      "sha256": "4cf38c1a7134550753aa607a45fbc554dcf7017731aeb5bec0c720146f23a86d"
+    },
+    {
+      "path": "native-audit-332/plan29-332-process-build-failures-appendix.md",
+      "classification": "selected original payload",
+      "bytes": 4355,
+      "gitBlob": "587d226653d47012321e1f8dd77b9e9fd0ba99a1",
+      "sha256": "1c523e5696c94ad595abfae56101900c6a6bcce4912cb960d1957c8ff8257fed"
+    },
+    {
+      "path": "native-audit-332/v2-x64-checkpoint-20261115-2213.json",
+      "classification": "frozen checkpoint",
+      "bytes": 1822,
+      "gitBlob": "1b4de46ee2b101802b87fa0669e1f718f4fc84bc",
+      "sha256": "323f09fa65c93993256d509144aff004e4baf7bb19c547ce3b0673dd5d942c7d"
+    },
+    {
+      "path": "native-audit-332/332-v2-win32-x64.zip",
+      "classification": "selected original payload",
+      "bytes": 13207,
+      "gitBlob": "a6a00a0226bd30be97639c4f14bab8c9c7615e81",
+      "sha256": "4b7a4213ae1a685d1c7ae4aa25ed46e59307da0762ec44569d4d44827a857802"
+    },
+    {
+      "path": "native-audit-332/job-132973378423.log",
+      "classification": "selected original payload",
+      "bytes": 87622,
+      "gitBlob": "1e4273c99d287dcd141bd6c1962745b390dd1cd5",
+      "sha256": "79e5e818eca60e60abbf06a452af1c4d773839ccf0ba882482040abad232e565"
+    },
+    {
+      "path": "native-audit-332/job-132973378423.json",
+      "classification": "selected original payload",
+      "bytes": 8365,
+      "gitBlob": "2ae2aeb47a66438c1532507eeca0880a2fbdb1e6",
+      "sha256": "a9ece67ee04eb0e51bc368f8c66521b2d033a0389430d8798d104f4bef4d2d5f"
+    },
+    {
+      "path": "native-audit-332/archive-audit-v2_win_x64.json",
+      "classification": "selected original payload",
+      "bytes": 2438,
+      "gitBlob": "bb5a07ea582d07ad5833c63c17abe09395bb2616",
+      "sha256": "44feedd4d1416fff3a93bd2b80d1b878210341f550733b563b8d7f4d679ed6c7"
+    },
+    {
+      "path": "native-audit-332/receipt-audit-v2-win32-x64.json",
+      "classification": "selected original payload",
+      "bytes": 29578,
+      "gitBlob": "a91c9e4cb848a77dbba93d3e598aba00bbeec0e8",
+      "sha256": "abc36d10fd5efa281979b507ff0a9d13abc8cb89bb6a01c54ec8b7efb9db3f21"
+    },
+    {
+      "path": "native-audit-332/plan29-332-v2-x64-evidence-appendix.md",
+      "classification": "selected original payload",
+      "bytes": 4427,
+      "gitBlob": "faf7ae6cecd66507950f3529c0d79df574f9d993",
+      "sha256": "113b92fa6794a1d744d51c6fc9001288c682b635db1d33c1b3741e0786cb5d27"
+    }
+  ],
+  "verifiedFileCount": 28,
+  "verifiedFileBytes": 894335,
+  "selectedPayloadCount": 25,
+  "selectedPayloadBytes": 887126,
+  "archives": [
+    {
+      "artifact": 14182635455,
+      "path": "native-audit-4dc/4dc-process-win32-arm64.zip",
+      "members": 9,
+      "allMemberBytesCrcAndSafePathsVerified": true,
+      "bytes": 14471,
+      "gitBlob": "d82f3e22351e6fb5a5ef16578f27d09994700b60",
+      "sha256": "a064253b68cf1131c90094936a7718c7a44e191de5b2c5bbed5991393ea3457a"
+    },
+    {
+      "artifact": 14182895280,
+      "path": "native-audit-4dc/4dc-v2-win32-arm64.zip",
+      "members": 3,
+      "allMemberBytesCrcAndSafePathsVerified": true,
+      "bytes": 7452,
+      "gitBlob": "a8210dfdae1cfab5148462a27b351aac579c2715",
+      "sha256": "c506eaa1a236d8e614dd349067aac9155fb7a3b0d46544fc6bcbe88886358971"
+    },
+    {
+      "artifact": 14182688207,
+      "path": "native-audit-332/332-process-win32-x64.zip",
+      "members": 4,
+      "allMemberBytesCrcAndSafePathsVerified": true,
+      "bytes": 9691,
+      "gitBlob": "d2351a6d306da55671ef982307a19ab6e5d9a0d9",
+      "sha256": "7d62e776f1594773e418a19dd79a3771d9b85874d4fdcc86de31d1385f6934a0"
+    },
+    {
+      "artifact": 14182743469,
+      "path": "native-audit-332/332-process-win32-arm64.zip",
+      "members": 4,
+      "allMemberBytesCrcAndSafePathsVerified": true,
+      "bytes": 10004,
+      "gitBlob": "02675c175e8d3c8ac7660b1cddaf4ce44022dd7b",
+      "sha256": "81cc2ea667125ab5028ccff9eed5d245d77b01dfbd07447f52034504fb4ce95f"
+    },
+    {
+      "artifact": 14183136114,
+      "path": "native-audit-332/332-v2-win32-x64.zip",
+      "members": 4,
+      "allMemberBytesCrcAndSafePathsVerified": true,
+      "bytes": 13207,
+      "gitBlob": "a6a00a0226bd30be97639c4f14bab8c9c7615e81",
+      "sha256": "4b7a4213ae1a685d1c7ae4aa25ed46e59307da0762ec44569d4d44827a857802"
+    }
+  ],
+  "archiveMemberCount": 24,
+  "sourceJoins": [
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "blob": "579a7aadf70a284cb44f7ec3690dab32c4d76e92"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "blob": "f8eb84e20fb323e5838b918a7934853785ab9ee5"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "blob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "blob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "blob": "22cf67a484f0a2a5a2b89639e38515cc0242a21a"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "blob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": "tools/owned-process-broker/nativeGateOutput.ts",
+      "blob": "f9e5bb809cc4ae03485e1c55c7d7010322b63ae1"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": "tools/owned-process-broker/gateController.cpp",
+      "blob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+      "blob": "a224b47e942a337e823135d0cfca0fa11cd475bd"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "blob": "625c6ddd74357abbdf565bf386388274cebd4068"
+    },
+    {
+      "head": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "blob": "43603d29138a5c43547f46099c5dad39d3d75815"
+    },
+    {
+      "head": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "path": "tools/owned-process-broker/CMakeLists.txt",
+      "blob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410"
+    },
+    {
+      "head": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "path": "scripts/build/buildOwnedProcessBroker.ts",
+      "blob": "90499776e145f9ffaba230b280d5d9da9e15a8e0"
+    },
+    {
+      "head": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db"
+    },
+    {
+      "head": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+    },
+    {
+      "head": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190"
+    },
+    {
+      "head": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "path": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+      "blob": "a224b47e942a337e823135d0cfca0fa11cd475bd"
+    },
+    {
+      "head": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "blob": "625c6ddd74357abbdf565bf386388274cebd4068"
+    },
+    {
+      "head": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "blob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5"
+    },
+    {
+      "head": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "path": "scripts/legacy-agent-host/prepare-opencode-v2-native.ts",
+      "blob": "b6fef813e23b8f18d7f8ebae5b14f5c0a104a30c"
+    }
+  ],
+  "sourceRowJoinCount": 23,
+  "hostSource": {
+    "path": "packages/legacy-agent-host/src",
+    "gitTree": "92515b1671f7bc02c9fbbde943319b503f7e73de",
+    "files": 615,
+    "bytes": 4084414,
+    "lfSha256": "7a1229966bdf7b230657d9a8e509a3cedfda01419c24d6aa26fbdca7c669f77e",
+    "crlfSha256": "5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052",
+    "algorithm": "sorted relative ASCII name + NUL + exact .ts bytes + NUL"
+  },
+  "method": [
+    "Rehashed all 28 checkpoint/payload files and matched the frozen checkpoint bytes, Git blob and SHA-256 declarations.",
+    "Read all three appendices and complete retained audit objects; inspected complete original logs for original commands, summaries, source checkout, upload joins and first retained failure boundaries.",
+    "Independently checked official archive metadata size/digest, all five ZIPs and 24 members, CRCs, unique safe relative paths, symlink refusal and exact extracted-byte identities.",
+    "Independently joined 23 declared source rows to exact immutable Git head/path bytes; recomputed the complete 615-file Host LF/CRLF digest for the common source tree and confirmed exact tree equality at 332.",
+    "Matched original API terminal step/conclusion/source records, raw native rows and receipt facts; independently recomputed passive trace counts and UTF-8 row/total sizes.",
+    "Matched nine recorded binary digests and both manifests as claims; actual executable/dist bytes are not archived or independently rebuilt."
+  ],
+  "findings": {
+    "4dcProcessArm": {
+      "sourceHead": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "run": 43765103075,
+      "job": 132968371746,
+      "conclusion": "failure",
+      "failedStep": 16,
+      "unexecutedSteps": [
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "originalPrerequisites": {
+        "pass": 294,
+        "skip": 3,
+        "fail": 0
+      },
+      "firstRetainedBoundary": "Native readiness deadline during child-lines; closed prerequisite stage 5 (Wow64Path), retained rootExitCode 62, rootCount 1, childCount 0, rootChildCount 0, wow64Completed false and churnCompleted false.",
+      "sourceInterpretation": "Stage 5 aggregates GetModuleHandle, GetProcAddress and directory-return refusals; no exact inner branch/result/GetLastError was retained. The source rethrows the original wait error after diagnostic capture. The later root-birth equality assertion was not reached.",
+      "cleanup": "13 helpers eventually closed, with SIGTERM cleanup for slots 0/11/12 distinguished from natural exit; original outer controller reports drained, rootExit 1, active 0. No native scenario PASS or Team A/B qualification."
+    },
+    "4dcV2Arm": {
+      "run": 43765103118,
+      "job": 132968322085,
+      "conclusion": "cancelled",
+      "custodySteps": [
+        13,
+        14
+      ],
+      "manualStep": 16,
+      "manualConclusion": "success",
+      "automaticStep": 17,
+      "automaticConclusion": "cancelled",
+      "laterSkippedSteps": [
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "manualReceipt": "Six original completion labels; cleanup true, cancelled false, failureCode null; two Host exits 0/null with valid stdout; 11 localhost-scripted model requests and no model failures.",
+      "trace": {
+        "rows": 254,
+        "ordinary": 253,
+        "bytesWithLf": 54796,
+        "maxBytesWithLf": 229,
+        "epochs": [
+          1
+        ],
+        "lastAtMs": 86461,
+        "completeCleanupOrColdEpochTrace": false
+      },
+      "limit": "Manual custody/Host PASS does not qualify the cancelled automatic command or whole job; no automatic receipt was present."
+    },
+    "332Process": {
+      "sourceHead": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "run": 43766708055,
+      "jobs": [
+        132973378700,
+        132973379104
+      ],
+      "bothConclusion": "failure",
+      "failedStep": 15,
+      "unexecutedSteps": [
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "firstRetainedBoundary": "LNK2019 unresolved __imp_GetSystemWow64Directory2W followed by LNK1120 in the original native build; x64 reference is wow64Startup, ARM reference is wow64Command.",
+      "originalPrerequisitesEach": {
+        "pass": 294,
+        "skip": 3,
+        "fail": 0
+      },
+      "limit": "Neither original native gate, source A/B scenario nor its cleanup executed. Source joins and logs establish the build failure, not absence of every binary or a runtime/native fix."
+    },
+    "332V2X64": {
+      "sourceHead": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "run": 43766707964,
+      "job": 132973378423,
+      "conclusion": "success",
+      "originalCompleteCommands": 4,
+      "tests": {
+        "pass": 60,
+        "skip": 1,
+        "fail": 0,
+        "cancelled": 0
+      },
+      "custodySteps": [
+        13,
+        14
+      ],
+      "manualStep": 16,
+      "automaticStep": 17,
+      "bothReceipts": "Six original completion labels, cleanup true, cancelled false, failureCode null, two Host exits 0/null with valid stdout, 11 localhost-scripted model requests and no model failures; original Stop/cold restore assertions complete.",
+      "elapsedMs": [
+        147164,
+        132189
+      ],
+      "traces": [
+        {
+          "approvalMode": "manual",
+          "rows": 254,
+          "ordinary": 253,
+          "bytesWithLf": 54754,
+          "maxBytesWithLf": 229,
+          "lastAtMs": 47561,
+          "epochs": [
+            1
+          ]
+        },
+        {
+          "approvalMode": "auto",
+          "rows": 254,
+          "ordinary": 253,
+          "bytesWithLf": 54750,
+          "maxBytesWithLf": 229,
+          "lastAtMs": 47705,
+          "epochs": [
+            1
+          ]
+        }
+      ],
+      "skippedBoundaries": [
+        11,
+        12,
+        15,
+        18,
+        19,
+        20,
+        21,
+        22,
+        24
+      ],
+      "limit": "The step 23 label does not widen explicit false product/vendor-auth/desktop/release qualification flags. The changed C++ service-pair/WOW64 prerequisite is not executed by this V2 workflow."
+    }
+  },
+  "terminalSnapshots": {
+    "4dcProcess": {
+      "cancelled": 4,
+      "failure": 1
+    },
+    "4dcV2": {
+      "cancelled": 9
+    },
+    "332Process": {
+      "failure": 2,
+      "cancelled": 3
+    },
+    "332V2": {
+      "success": 2,
+      "cancelled": 7
+    },
+    "cancellationCauseClaimed": false
+  },
+  "qualificationLimits": [
+    "All findings remain bound to their original 4dc or 332 source, job, command and receipt; no transfer to Stage I, planned Stage J, bb48/462 or later source.",
+    "No source fix, permanent failure mechanism, inner stage-5 branch, exact GetLastError or performance cause is inferred.",
+    "Recorded root exit diagnostics do not replace the unreached later root-birth identity assertion.",
+    "Helper/outer cleanup, original manual/automatic Host cleanup and native scenario qualification remain separate.",
+    "Limited epoch-1 passive traces do not prove full cleanup or cold-epoch chronology; existing original assertions/receipts provide the bounded positive result.",
+    "No vendor-auth, Desktop parity, packaged P08, P09, release, skipped-lane or whole-cancelled-job qualification.",
+    "All exact appendices are approved without wording corrections; no source, refs, CI or project execution changed during review."
+  ],
+  "correctionsRequired": []
+}

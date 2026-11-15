@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "artifact": {
+    "id": 14182743469,
+    "name": "host-process-fixtures-win32-arm64-332fbe3420c811c095dac4187d3f9664e8c47179",
+    "size_in_bytes": 10004,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14182743469",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14182743469/zip",
+    "expired": false,
+    "created_at": "2026-11-15T22:12:49Z",
+    "expires_at": "2026-11-29T22:12:48Z",
+    "updated_at": "2026-11-15T22:12:49Z",
+    "digest": "sha256:81cc2ea667125ab5028ccff9eed5d245d77b01dfbd07447f52034504fb4ce95f",
+    "workflow_run": {
+      "id": 43766708055,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179"
+    }
+  },
+  "archive": "332-process-win32-arm64.zip",
+  "archiveIdentity": {
+    "bytes": 10004,
+    "sha256": "81cc2ea667125ab5028ccff9eed5d245d77b01dfbd07447f52034504fb4ce95f",
+    "gitBlob": "02675c175e8d3c8ac7660b1cddaf4ce44022dd7b"
+  },
+  "validation": {
+    "apiSize": true,
+    "apiSha256": true,
+    "allCrc32": true,
+    "safeUniqueRelativeNames": true,
+    "noSymlinks": true
+  },
+  "extract": "process_win_arm64",
+  "fileCount": 4,
+  "members": [
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "crc32": "35fb370b",
+      "compressedBytes": 6316,
+      "bytes": 20053,
+      "sha256": "1580e6721ab584d1e15e2ab901c155417850a4ad6bbf04f5ce624268dc211d9b",
+      "gitBlob": "e4310b08a060a446473b62382c1b50e4b499a05e"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "crc32": "78ac452a",
+      "compressedBytes": 327,
+      "bytes": 757,
+      "sha256": "819d1ee2b5a28b46a0508ab043496bdb13370b221e3686794a5b40f41c8a629b",
+      "gitBlob": "50dca7340988ea744c06e89a63d5063489bfacc8"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "crc32": "22eb3eea",
+      "compressedBytes": 2341,
+      "bytes": 9713,
+      "sha256": "c93aa8f12259fc20b5b436ac3b2ea4f70dafb272eaa79ddfe9be060ccd9145ed",
+      "gitBlob": "b2665b0771091e82460c0b41f518e8dd07873d83"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "crc32": "6277a41c",
+      "compressedBytes": 42,
+      "bytes": 41,
+      "sha256": "a9972b88d7e66f87204889e5fff4564cf7be2099166ffb1fbd5df3b72a77dac4",
+      "gitBlob": "2d6f8e861060e6bf0e6efb26eb84a7e39679b0a0"
+    }
+  ]
+}

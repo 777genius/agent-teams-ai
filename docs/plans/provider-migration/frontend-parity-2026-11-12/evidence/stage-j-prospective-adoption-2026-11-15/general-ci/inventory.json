@@ -1,0 +1,40 @@
+{
+  "files": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/general-ci-j-checkpoints/332fbe3-terminal.json",
+      "head": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "run": 43766707892,
+      "counts": {
+        "cancelled": 12,
+        "skipped": 3
+      },
+      "bytes": 4934,
+      "blob": "5dc3a46abafc287450c7fb0442a82f32140481dc",
+      "sha256": "99fada82bd323dbd24e616853b8da12b93f76cc6993dd2da9a2823f76adf1d38"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/general-ci-j-checkpoints/4dc08de-terminal.json",
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "run": 43765103146,
+      "counts": {
+        "cancelled": 12,
+        "skipped": 3
+      },
+      "bytes": 4934,
+      "blob": "2ae5f4eb9add175204f41a023a20f56a0d150dd5",
+      "sha256": "db6ad205838992c535e5b275b67c343021517f6e8ec7ed4819fc67cbb524c82b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/general-ci-j-checkpoints/6e90f38-terminal.json",
+      "head": "6e90f38155f5a8edf57b0336b6d79e4ca60c110b",
+      "run": 43768057449,
+      "counts": {
+        "cancelled": 12,
+        "skipped": 3
+      },
+      "bytes": 4943,
+      "blob": "829ffcd2846eb0c957511cbeba6abd8f8887edd0",
+      "sha256": "3dd5873d72bc7d19237b516a573dec5f117c66196536dcd83b1d47ad96a62d1f"
+    }
+  ]
+}

@@ -4743,3 +4743,320 @@ The full50b→332 history, its complete Plan29 suffix and new Plan32 must be pre
 
 The executor became unavailable while the fresh incoming fetch was being started; that attempt has no confirmed successful completion and is not execution evidence. A later explicit environment-restored notification permitted a fresh health read, which completed at22:06:27 UTC with a clean H workspace. That read does not itself verify dependencies, built outputs or the I command prerequisites. The original frozen checks, complete source/publication readback and successfully completed fresh Git fetch remain mandatory before project execution. API-only inspection does not execute those commands, rebuild outputs or replace any native/Desktop gate. Preserve the original no-replay, source/dependency/output, deadline, cleanup and failure conditions. This note changes only the explicit late-history staging disposition; it grants no Ready/base/main/release/default activation/Stage2 or real Claude/Codex execution.
 
+
+
+
+## Original Windows WOW64 path binding — 15 November 2026
+
+### R1: observed fixture refusal and bounded correction
+
+Exact diagnostic source `4dc08dea7eeed5c286cf310e09a2ba26d84a9546`
+fails the original [ARM64 job132968371746](https://github.com/777genius/agent-teams-ai/actions/runs/43765103075/job/132968371746).
+At `2026-11-15T21:52:59.7797577Z` the retained record is:
+
+```json
+{"nativeServiceReadinessFailure":{"rootExitCode":62,"rootCount":1,"childCount":0,"rootChildCount":0,"wow64Completed":false,"churnCompleted":false,"prerequisite":{"stage":5}}}
+```
+
+Stage5 is `Wow64Path`: `wow64Command()` returned empty before the x86
+child was created. Both preceding application-breakpoint checks completed.
+The original ten-second readiness error is now preserved through cleanup;
+the outer controller drains with rootExitCode1 and activeProcesses0.
+Source A/B is not reached. The same-source
+[x64 job132968371549](https://github.com/777genius/agent-teams-ai/actions/runs/43765103075/job/132968371549)
+is still queued at this review and has no qualification result.
+
+The helper currently asks the physical `Kernel32.dll` module for
+`GetSystemWow64Directory2W`. Microsoft's generated
+[Windows SDK import mappings](https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/libMappings.rsp)
+instead map that entry to `api-ms-win-core-wow64-l1-1-1.dll`, while mapping
+`IsWow64Process2` and `GetSystemWow64DirectoryW` to `KERNEL32.dll`.
+Microsoft's [API-set guidance](https://learn.microsoft.com/en-us/windows/win32/apiindex/windows-apisets)
+explains that the contract routes to its implementation independently of a
+physical module name. A missing physical-module export is therefore the leading
+source-level explanation, not a measured `GetProcAddress` error: stage5 also
+groups a zero or oversized directory result. No breakpoint-policy or deadline
+change is justified by this evidence.
+
+Keep the correction in `tools/owned-process-broker/nativeFixture.cpp`:
+
+- Define `_WIN32_WINNT 0x0A00` before `windows.h`, matching the existing broker.
+- Replace the helper's module/function-pointer lookup with the declared SDK call
+  `GetSystemWow64Directory2W(path,MAX_PATH,IMAGE_FILE_MACHINE_I386)`.
+- Keep the existing zero/oversized-result refusal, `MAX_PATH` buffer, suffix and
+  `IsWow64Process2` verification of the actual child. Preserve the closed stage5
+  diagnostic, return62/63, original child actions, waits, handle closes,
+  CREATE_NEW publication, application-breakpoint checks and eighty-child churn.
+
+The [official SDK header](https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/RecompiledIdlHeaders/um/wow64apiset.h)
+declares this function under `_WIN32_WINNT >= 0x0A00`; no NTDDI change is needed.
+The [API reference](https://learn.microsoft.com/en-us/windows/win32/api/wow64apiset/nf-wow64apiset-getsystemwow64directory2w)
+names `Kernel32.lib` and Windows10 version1511 or later. The fixture already uses
+the ordinary MSVC/CMake Windows SDK libraries, including Kernel32; no additional
+umbrella library, runtime module loader or fallback path is planned. The observed
+ARM build selects SDK10.0.26100.0 for Windows10.0.26200 with MSVC19.51.36260.0.
+This checks the declaration and intended link contract; actual resulting-source
+x64/ARM64 native compilation and execution remain required.
+
+Estimate: about10 changed TEST lines, zero product lines; complexity2/10,
+reliability8/10, confidence8/10 in correcting the binding, with the original
+stage5 subcause not independently measured. Root and qualification audit agree
+on this narrow correction; publish this plan before source changes, then review
+the exact source diff independently. Retain the prior failure evidence and await
+both original resulting-source Windows gates. Superseded queued work remains
+unqualified. No fallback, new process probe, ownership oracle, workflow, provider
+invocation, Draft/base, main, release or activation change is included.
+
+R2 `/root` independently read the exact ARM job log, Microsoft SDK import mapping,
+SDK declaration and local CMake targets. GO for this TEST-only binding correction
+after plan publication. The reviewed code must retain actual I386 verification;
+the API mapping supports the correction but does not prove the unmeasured stage5
+subcause or resulting native PASS. No additional product change is authorized by
+this failure localization.
+
+## Windows SDK import-library correction — 15 November 2026
+
+Both original jobs for `332fbe3420c811c095dac4187d3f9664e8c47179`
+failed before native qualification: [x64 job132973378700](https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973378700)
+at22:10:20Z and [ARM64 job132973379104](https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973379104)
+at22:12:43Z. Both report LNK2019 for
+`__imp_GetSystemWow64Directory2W`, then LNK1120. This falsifies the previous
+assumption that the ordinary Kernel32 import library is sufficient; neither
+job reached the original runtime gate.
+
+R1 `/root/qualification_audit` inspected Microsoft's official
+[Windows SDK26100.1 x64 package](https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.cpp.x64/10.0.26100.1/microsoft.windows.sdk.cpp.x64.10.0.26100.1.nupkg)
+and [ARM64 package](https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.cpp.arm64/10.0.26100.1/microsoft.windows.sdk.cpp.arm64.10.0.26100.1.nupkg).
+Their Kernel32.Lib lacks this import. Both OneCore.Lib archives define the exact
+import symbol and route its COFF import member to
+`api-ms-win-core-wow64-l1-1-1.dll`; ZIP entries and CRCs were checked.
+The inspected OneCore.Lib SHA-256 values are
+`038b7c879acc32eb122597c9938af1025c8601ed1103558a52ef04c837439a44`
+for x64 (2374038 bytes) and
+`ede054272d34f637af76b9cb57e798afe2bbcf21a3875677fda5ae9132fbb46f`
+for ARM64 (6585362 bytes). These are source-investigation artifacts, not
+substitutes for the runner's selected SDK or native PASS.
+
+A fixture-only OneCore link was reviewed as a possible repair. Before its plan
+could be published, concurrent commit
+[`bb48cb81493fbadb8b1e451ba5c35d7bc8488952`](https://github.com/777genius/agent-teams-ai/commit/bb48cb81493fbadb8b1e451ba5c35d7bc8488952)
+instead repaired this helper through the documented API-set contract. The
+compare-and-swap correctly rejected the stale plan publication. Preserve that
+contributor's commit and do not add an unused import library on top of it.
+
+Exact blob `ca0ded66441b8818bdf5726ee7d8ffa95abb8518` loads only
+`api-ms-win-core-wow64-l1-1-1.dll` with
+`LOAD_LIBRARY_SEARCH_SYSTEM32`, obtains the SDK-typed function pointer, makes
+the same one I386 directory query and checks one FreeLibrary on every successful
+load path. A missing entry still closes the module and returns the same refusal.
+The decltype reference is unevaluated and introduces no static SDK import.
+There is no directory fallback, new process probe, product edit or changed
+action, timeout, child identity, release/cleanup check or control-channel rule.
+
+R2 `/root/qualification_audit` independently accepted that exact preserved
+source diff; `/root` inspected and imported it without overwriting concurrent
+history. Microsoft's API-set guidance supports loading the named contract.
+The SDK archive investigation above corroborates its contract name, but neither
+review establishes the original stage5 subcause or a native PASS. Await both
+original resulting-source Windows compile/runtime jobs. The earlier linker
+failures and P08/P09 INCOMPLETE status remain explicit.
+
+
+
+### Actual isolated stage I: ten local commands on the reviewed 4dc composition
+
+This is evidence only. Append it after the entire then-current Plan29. The recorded R1 parent is `d556e23288c820b983a33808117f624cb2e93e39` / tree `e9004d75eace24307f5cc69a2110e434e6ad3e9c`, whose Plan29 blob `f48ed094dc7ed844be870ec03cf28499b75e18a2` preserves the complete earlier 945,358-byte prefix and all twelve reviewed appendices, including the late332 disposition. The subsequently published I commit is `88ada74cfc4598b1bff2ab3bc0f9d08177862dbf` / tree `6ea25725dec09d0617c2bc438472d6b77f3354ec`, with ordered parents `[d556e23288c820b983a33808117f624cb2e93e39, 4dc08dea7eeed5c286cf310e09a2ba26d84a9546]`. Independent API/Git and full-byte readbacks established exactly twenty reviewed integration paths, including one new runner, with all 9,780 other leaves/modes preserved. The published plans preceded source application.
+
+The fixed manifest `c12e7f2c56649cdd8d2d21b08884bb876fd3a6d9` and recorder `c3c983293c1ad0f2496b07b9d2262af71adb60c9` were used without command substitution or a rerun. All ten actual commands exited 0 and recorded `postflightExact:true`, with no postflight error. Their UTC records span 2026-11-15T22:16:46.265588+00:00 through 2026-11-15T22:21:08.847732+00:00; this interval includes time between commands and is not a continuous benchmark. The individual process durations below are rounded from the preserved original monotonic measurements.
+
+| Actual command | Observed result | Process seconds |
+| --- | --- | ---: |
+| Original complete eight-file Desktop helper Node command | 115 PASS; 0 FAIL/SKIP/cancel/todo | 6.659834 |
+| Full `tsconfig.legacy-agent-host-scripts.json` TypeScript project | Exit 0; empty output | 1.179930 |
+| Full `tools/owned-process-broker/tsconfig.json`, original `--noEmit -p` | Exit 0; empty output | 0.396805 |
+| Full `tools/owned-process-broker/tsconfig.retained-host.json`, original `--noEmit -p` | Exit 0; empty output | 0.870657 |
+| Original `tools/owned-process-broker/vitest.config.ts`, `run --maxWorkers=1` | All three files PASS: protocol 47, context 3, events 3; 53/53 | 2.294531 |
+| Exact declared fast-lint body with all thirteen selected changed TypeScript paths | Exit 0; empty output | 2.848003 |
+| Original source-size guard | PASS: 5,015 production files, 141 frozen exceptions, unchanged 800-line cap | 0.468240 |
+| Original provisioning architecture guard | PASS; retained counters 22/50/31/62/154 | 0.106601 |
+| Reviewed static YAML check of the two changed workflows | One document each; 0 errors and 0 warnings | 0.073278 |
+| `git diff --check d556e232..88ada74c --` all twenty exact integration paths | Exit 0; empty output | 0.008501 |
+
+The complete helper log contains the same 115 case names in the same order as G's earlier original eight-file run. Its no-child journal failures/malformed/late controls, complete owner-availability negatives, and both Selection convergence cases all passed on I. The 53 tests comprise `protocol.test.ts` (47), `nativeGateContext.test.ts` (3) and `nativeGateEvents.test.ts` (3): these are the original finite Node protocol/context/event suites, not execution of Windows C++ actors, Job controllers or packaged native UI. No per-case native-provider acceptance is inferred from their directory or configuration name. The three compiler results concern the full explicitly named tracked projects; no substitute source-only or include-only configuration was used. They do not assert that the separate root backend-test project was executed or recover the unknown argv/cause of the earlier historical exit137 attempts.
+
+Every command used the captured Node v24.21.0 binary at `/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node`, SHA256 `7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c`; full cwd/argv, ordered parents, UTC times, raw exit, raw-log hash and preflight hash are retained separately. The final diff command is Git, with the same recorded source/runtime preflight. Each preflight/postflight joins all 76 selected source files, the unchanged 615-file Host source closure, the original seventeen selected dependency files and the additional 77 pinned YAML inputs: 94 selected dependency files, not a full node_modules census. Root's source readback and the independent source review also matched actual Git and working-tree bytes before execution. The independent final audit rehashed the same source/dependency inputs after all ten commands and observed a clean I worktree. Empty logs remain separate zero-byte files; success is established by their actual exit and postflight records, not absence of text alone.
+
+No new Host/ledger build was performed. All 1,446 development output payloads remain byte-identical to the already recorded D build on `7e8e37c282e9cc653efd79799dc862d116310065`; the retained full output inventory SHA256 is `babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8`. I's recorder verified those existing outputs before and after every command. The final independent audit read them again against the same inventory. This establishes unchanged reuse of that development payload, not a new I build, native binary compilation, or a different platform's payload. The earlier E/F/G/H semantic RED/GREEN and D Selection setup-failure records remain unchanged, and their protected proof snapshots are retained through the execution chain.
+
+The YAML check consumed the actual 97,137-byte Host workflow and 19,532-byte packaged workflow with the previously reviewed size/type, one-document, duplicate-key and mapping bounds. It does not qualify GitHub Actions expressions, event scheduling, permissions, runner execution or schema compatibility. The source-size result retains the same cap and exception policy; its informational count of 86 legacy files below their frozen caps is not a cap modification. The architecture counters remain `facadeInheritance:22`, `serviceHostDeclaration:50`, `serviceHostCast:31`, `protectedAbstractDependency:62`, `createFromServiceFactory:154`.
+
+The frozen [inventory](evidence/isolated-i-4dc-adoption-2026-11-15/inventory.json) retains all thirty original raw log/metadata/preflight records plus four original binding/publication-review proofs: 34 verbatim files, 900,591 bytes. All original paths, exact bytes, Git blobs, SHA256 values, ten complete argv arrays and elapsed/timestamp fields are mapped there. It also maps 48 already-published byte-identical evidence inputs, including the original manifest, recorder, canonical R1, execution plan, Host closure and D-build/earlier-result records; those files are reused rather than copied again. The new [independent actual audit](evidence/isolated-i-4dc-adoption-2026-11-15/independent-actual-review.json) is 35,210 bytes, blob `98292da0e4973d94dab55c40cb2b6be047d78708`, SHA256 `b5a054ee53fd74b8cbb0ef3d46cd765dc4ad96232a27344cd836cb1432e30e69`. Inventory identity: `8e896b570cabb997e7f084f4bc93f123ec6f960d`, 82,738 bytes, SHA256 `97da5f115367fe8444fec639ad633a756256a1513d6e93b1a429435a1040e5a4`.
+
+All observations remain bound to I88ada/tree6ea and this local venue. The stage was deliberately isolated from the later 50b→332→6e90 author history; its published disposition requires preserving and reviewing later plans/source before coherent PR integration. These local results neither qualify a subsequent author head nor retrospectively turn historical failed, cancelled, skipped or unexecuted jobs into PASS. Resulting-source original CI, frontend/Desktop acceptance, native Node/Electron/architecture-specific controllers, cleanup/custody, packaged P08 and the outstanding P09 obligations remain separate. This appendix authorizes no further source edits, retries, deadlines, provider execution, PR/base/Draft change or gate waiver.
+
+
+## Original 4dc ARM process refusal and cancelled V2 partial result — 15 November 2026
+
+This is evidence for exact source `4dc08dea7eeed5c286cf310e09a2ba26d84a9546`, not the later SDK-binding correction or the isolated integration composition. The read-only terminal API slice at 22:03:09 UTC records Process run 43765103075 as one failed ARM job and four cancelled jobs, including x64; V2/static run 43765103118 has nine cancelled jobs. No rerun, cancellation, native/provider execution, compiler or project test was performed by this audit. Original logs and API evidence were retained as unreferenced Git blobs during the temporary executor outage. The subsequent file audit below closes their explicitly pending archive-member comparisons without rewriting that earlier bounded checkpoint.
+
+| Original evidence | Exact identity |
+| --- | --- |
+| Process ARM job 132968371746, artifact 14182635455 | ZIP 14,471 bytes; SHA-256 `a064253b68cf1131c90094936a7718c7a44e191de5b2c5bbed5991393ea3457a`; blob `d82f3e22351e6fb5a5ef16578f27d09994700b60`; nine members. |
+| Process full original job log | 149,803 bytes; SHA-256 `b40bfbaff6475e9cf4d05a0cabe663e270d7dacf2e793dfb98956360b3960f38`; blob `c9ce514317b69c907baeac9d0d322a3f609d85e5`. |
+| Process original windows-node24.log member | 23,320 bytes; SHA-256 `bf4cc8f891885bca31af28c0827ba8a1e544b1e673e7b42c989bf24abff0785f`; blob `7d942b3ca97bb1e81a7dd31c8280c05417207d33`. |
+| V2 ARM job 132968322085, artifact 14182895280 | ZIP 7,452 bytes; SHA-256 `c506eaa1a236d8e614dd349067aac9155fb7a3b0d46544fc6bcbe88886358971`; blob `a8210dfdae1cfab5148462a27b351aac579c2715`; three members. |
+| V2 full original job log | 99,483 bytes; SHA-256 `1d40c6aefda602f8d40221bdcd20acbe354ce9838b317c17ff5979ab607e71fe`; blob `bdafd18cfd945b81a08551fe2dd746e32b1da742`. |
+| Complete read-only receipt/source audit | 56,863 bytes; SHA-256 `aa2370aa289cf1a085e6993a2717c51390048c4d55f58290d74766688db8ba4b`; blob `7b5b77b5055c3eb8f04ec5b9d127564151d0d0d7`. |
+
+Both official ZIPs match their original API size and digest, pass every CRC, and have unique safe relative names without symlinks. Every extracted member matches its ZIP bytes. The Process source-head.txt, checkout log and job metadata join exact 4dc; all original native JSON lines also occur in its full job log. Thirteen relevant immutable source leaves, including the three diagnostic files, original collector/events/context, native Host/custody callers and both workflows, were read from exact 4dc Git objects. The nine recorded binary hashes agree between both archived hash listings and the two regular/service-scoped manifest claims; the executable bytes themselves were not archived and were not independently rebuilt. The archive contains no full runtime/harness source freeze. Ordinary original commands passed 160 with 3 original skips, then 53/53 across 3 files and 81/81 across 8 files: 294 PASS, 3 SKIP, 0 FAIL in those prerequisite commands. These are not a native scenario PASS.
+
+The actual Process failure is step 16, “Qualify original Windows Job and control under Host Node”; steps 17–22, including original source A/B, are skipped. At 21:52:59.7797577Z the retained failure record contains rootExitCode=62, rootCount=1, childCount=0, rootChildCount=0, wow64Completed=false, churnCompleted=false and prerequisite stage 5. The original `Native readiness deadline` Error from nativeGateContext.ts:36 through nativeDebugServiceScenario.ts:128 survives cleanup. Stage5 is `Wow64Path`: the original private helper returned empty. Its three possible empty-return branches are the inner GetModuleHandleW lookup, the GetProcAddress entry lookup, and a zero or oversized return from the original directory call. The record does not recover that subbranch, its Win32 error, or a measured missing-export cause. Both root application-breakpoint handlers and the outer IsWow64Process2 entry check completed by the original source order; the WOW64 cmd child, its I386 check, CREATE_NEW publication, application child and churn were not reached. The retained root-exit frame passed original upstream decoding, but the later rootBirth equality assertion did not execute. It is not complete original-root custody proof. Retained child-lines elapsed 971 ms and cleanup start 10981 ms differ by 10,010 ms; that phase interval is not per-API latency attribution.
+
+The original final cleanup observation confirms 13 closed helpers. Slots 1–10 exited 0/null; sentinel slot 0, debug-service raw broker slot 11 and witness slot 12 exited through cleanup SIGTERM, not natural success. All their stdout/stderr streams ended with zero buffered bytes. Three retained capabilities report writeCompleted=true and brokerExit=0/null. The outer controller records rootExitCode=1 and activeProcesses=0. These are the original recorded cleanup facts, while the native gate remains failed and has no final successful scenario receipt. The prior a02 cleanup-time null-versus-zero exception is not substituted for this newly retained 4dc first Error.
+
+The separate V2 ARM job completed its original Windows custody commands 13–14 and manual Host command 16 before command 17 automatic approval was cancelled; commands 18–24 were skipped. Its archive contains inputs, original Windows custody and manual Host receipts, with no automatic receipt. Inputs retain Node 24.21.0, Bun 1.4.3 and the exact 4dc source. Rehashing all 615 Host source .ts Git objects (4,084,414 LF bytes; tree 92515b1671f7bc02c9fbbde943319b503f7e73de) yields LF 7a1229966bdf7b230657d9a8e509a3cedfda01419c24d6aa26fbdca7c669f77e and Windows CRLF 5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052, matching the retained receipts. Bun/manifest/provider/build digest claims agree across the three receipts; absent binary/dist bytes are not independently reconstructed. The original Windows custody receipt records capture before input, descendant survival after root exit, confirmed original Job cleanup, neighbor survival during target Stop and confirmed neighbor Job cleanup. Its product/desktop flags remain false.
+
+The manual Host receipt has all six original step labels, status PASS, cleanup=true, cancelled=false, failureCode=null, two Host exits 0/null with valid stdout, 11 scripted-local model requests and no model failures. It includes actual tool/MCP/once-approval behavior, original selected model/configuration and uploaded-image readback, original checkpoint/Stop cleanup, and cold Host history without model/tool replay, within this finite scenario. Its own elapsed value is 230,466 ms. The passive trace contains 254 projected rows: 253 ordinary plus one trace-limit, 54,796 UTF-8 bytes including LF, maximum 229 bytes per row, and only epoch 1 ending at 86,461 ms. This respects the original reserved-slot/257-row/64KiB/512-wire/513-projected limits; it is not a complete manual cleanup or cold-epoch trace. Separate original receipt assertions establish those manual cleanup facts. The retained CPU summary is not causal evidence for a repair. Vendor authentication, desktop and release remain unqualified.
+
+Manual PASS does not turn the overall cancelled V2 job into success, qualify its cancelled automatic session’s cleanup, or satisfy its skipped catalog/credentials/permissions/MCP paths. Process FAIL and V2’s partial PASS are separate original scenarios. No P08/P09, product/provider authentication, later-source qualification or causal attribution to the diagnostic changes or SDK-binding proposal follows from this checkpoint. The complete recoverable selected payload list is frozen beside this appendix; ZIP members remain recoverable from their exact original archives.
+
+
+## Original 332 Windows fixture link failures — 15 November 2026
+
+The two original Windows Process jobs in run 43766708055 on exact source `332fbe3420c811c095dac4187d3f9664e8c47179` failed at step 15, before the native runtime gate. This later evidence resolves the previously unexecuted link qualification of the direct SDK call; it does not relabel the earlier 4dc runtime stage 5 refusal or its cleanup. The immutable source-only review of 332 had explicitly left compile/link/load/native results pending. No CI replay, native/provider operation, compiler or project test was performed by this read-only audit.
+
+| Original source 332 job | Full original log | Official ZIP |
+| --- | --- | --- |
+| Windows x64, job 132973378700 | 94,192 bytes; SHA-256 `dd5e6457a7a4d1ddad575e3ca59c4a59197b1ef7f87a7627253c0aa2c8030b79`; blob `2c3063fa4db921167f324a1e87f80bef0795ae89`. | artifact 14182688207; 9,691 bytes; SHA-256 `7d62e776f1594773e418a19dd79a3771d9b85874d4fdcc86de31d1385f6934a0`; blob `d2351a6d306da55671ef982307a19ab6e5d9a0d9`. |
+| Windows ARM64, job 132973379104 | 120,277 bytes; SHA-256 `35a82d37a581106c8e2482be5ad05edf3b2c964f2ca994dc7d5d04704d2e177b`; blob `0a24ab51b1ff7428d104e419519a0cfdedb64346`. | artifact 14182743469; 10,004 bytes; SHA-256 `81cc2ea667125ab5028ccff9eed5d245d77b01dfbd07447f52034504fb4ce95f`; blob `02675c175e8d3c8ac7660b1cddaf4ce44022dd7b`. |
+
+Both ZIPs match the original API size/digest and pass all CRC, unique-safe-name, nonsymlink and extracted-byte checks. Each contains exactly four members: host-contracts.log, protocol.log, retained-main.log and source-head.txt. Checkout/job metadata and source-head join exact 332. Native logs, final native receipts and binary manifests are absent because the build failed before those steps. The full source-linked audit is `receipt-audit-process-build-failures.json`, 28,960 bytes, SHA-256 `328dc8d6cb3b08e53b7d29b040829c964e371a3dcf34faf0c3b1cf49d4be274f`, blob `5b438efb863b1c8fa7f5df45ac3a33f23df71ce3`.
+
+Both actual errors are LNK2019, unresolved external symbol `__imp_GetSystemWow64Directory2W`, followed by LNK1120 with one unresolved external. The x64 record is at 22:10:20.2085336Z, referring to the inlined wow64Startup call; ARM is at 22:12:43.3820394Z, referring to wow64Command. The original build wrapper then throws `Native build failed` at scripts/build/buildOwnedProcessBroker.ts:33 and exits 1. Both selected Windows SDK 10.0.26100.0; x64 targeted Windows 10.0.20348 with MSVC 19.44.35230.0, while ARM targeted Windows 10.0.26200 with MSVC 19.52.37029.0. These are actual distinct compiler/target tuples, not inferred from another cohort. The records establish that the ordinary current link configuration did not resolve this declared import. They do not by themselves identify a suitable alternative library, its exact SDK symbol table, or the result of a later dynamic-binding correction.
+
+The exact relevant source objects were read independently: nativeFixture.cpp `43603d29138a5c43547f46099c5dad39d3d75815`; CMakeLists.txt `cf158110832d24afd7f97b6e9ef2dbf7472b0410`; buildOwnedProcessBroker.ts `90499776e145f9ffaba230b280d5d9da9e15a8e0`; Process workflow `123e52f461e42790ddf5fb8b1ea653b9e32c30db`. The fixture object contains the direct SDK call introduced by 332. These two failed runs do not exercise the later preserved API-set module helper. They are also not a runtime architecture, original-process identity, signal, cleanup or source-Team refusal: original steps 16–22 were skipped, and no native controller/scenario receipt exists in these archives.
+
+Each job had already completed the original prerequisite commands: 160 PASS with 3 original skips, 53/53 across 3 files and 81/81 across 8 files, giving 294 PASS, 3 SKIP, 0 FAIL in those commands. No prerequisite PASS is promoted to native qualification. At the 22:13:25 Process API snapshot the cohort is two Windows FAIL and three cancelled jobs. The separate V2 final snapshot at 22:18:35 is two successful leaves (Windows static and the independently audited Windows x64 V2 scenario) and seven cancelled leaves; ARM V2 was cancelled at preparation step 10 before original custody/manual/auto. Neither cancellation nor the independent V2 x64 PASS changes these linker failures. All historical failures, absent cleanup qualifications and later-source/P08/P09 boundaries remain intact.
+
+
+## Original 332 Windows x64 V2 leaf PASS — 15 November 2026
+
+Run 43766707964/job 132973378423 completed SUCCESS on exact source `332fbe3420c811c095dac4187d3f9664e8c47179`. This is a separate original V2 leaf, not the Process gate that exercises the changed C++ WOW64 path helper. The read-only audit did not execute any provider, native actor, test, compiler or CI action.
+
+| Retained original | Exact identity |
+| --- | --- |
+| Official artifact 14183136114, opencode-v2-embedded-native-win32-x64 | ZIP 13,207 bytes; SHA-256 `4b7a4213ae1a685d1c7ae4aa25ed46e59307da0762ec44569d4d44827a857802`; Git blob `a6a00a0226bd30be97639c4f14bab8c9c7615e81`. |
+| Full original job log | 87,622 bytes; SHA-256 `79e5e818eca60e60abbf06a452af1c4d773839ccf0ba882482040abad232e565`; blob `1e4273c99d287dcd141bd6c1962745b390dd1cd5`. |
+| Complete receipt/source audit | 29,578 bytes; SHA-256 `abc36d10fd5efa281979b507ff0a9d13abc8cb89bb6a01c54ec8b7efb9db3f21`; blob `a91c9e4cb848a77dbba93d3e598aba00bbeec0e8`. |
+
+The exact API size and ZIP digest, all four member CRCs, safe unique relative names, absence of symlinks and extracted-byte identities were verified. The members are the inputs, original Windows Job custody, manual Host and automatic Host receipts. They all retain source 332, Windows x64 and Node 24.21.0; the input receipt retains Bun 1.4.3. Six relevant source leaves were independently read from exact 332 Git objects. Its complete Host source tree `92515b1671f7bc02c9fbbde943319b503f7e73de` equals the independently rehashed 615-file tree in the earlier 4dc audit; Windows CRLF digest `5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052` agrees with both Host receipts and custody. Bun, manifest, provider and compiled-output digest claims join across the receipts. Executable/dist bytes were not archived or independently rebuilt, and immutable source-tree equality is not a new binary build.
+
+The full log contains four complete original Node test commands: the six-file graph/custody command has 57 PASS and one original SKIP; original Windows custody has one PASS; original manual Host has one PASS; original automatic Host has one PASS. Their total is 60 PASS, one SKIP, zero FAIL and zero cancelled tests. The workflow’s actual Windows custody steps 13–14, manual 16 and automatic 17 succeeded. Original Darwin steps 11–12, Desktop-composition 15, platform-specific management/permissions 18–22 and POSIX 24 were skipped and remain unqualified. The later step 23 wording about product-path proof does not widen the explicit false product/vendor-auth/desktop/release receipt flags.
+
+The original custody receipt records capture of the original Bun before input, descendant survival after root exit, confirmed original Job cleanup, neighbor survival during target Stop and confirmed neighbor Job cleanup. Each manual/automatic Host receipt has the same six original completion labels, cleanup=true, cancelled=false, failureCode=null, two Host exits 0/null with valid stdout, 11 scripted-local model requests and no model failures. The actual source assertions retain both original selected-model/configuration turns and uploaded-image readback, expected native effects/task/replies, explicit checkpoint/Stop with closed/released custody, cold Host recovery with retained input IDs and changed generation, no model/tool replay, and released custody after resumed Stop. Manual and automatic elapsed values are 147,164 ms and 132,189 ms. These original finite scenarios establish the recorded behavior; they do not establish vendor authentication or complete Desktop parity.
+
+Each passive trace has 254 rows: 253 ordinary plus one trace-limit. Manual trace size is 54,754 bytes including LF and automatic 54,750; both have maximum 229-byte rows. Both end in epoch 1 at 47,561 ms/47,705 ms and preserve the original reserved slots, 257-row,64KiB and 512-wire/513-projected limits. Neither trace is complete through cleanup or the cold epoch; the independent original Host/custody assertions and receipts establish those cleanup results. No performance or source-fix causality is inferred from the CPU summary or shorter timings. The changed C++ service-pair/WOW64 prerequisite is not called by this V2 workflow, so this leaf PASS supplies no evidence that the new SDK binding fixed the earlier stage 5 refusal. Process, packaged P08, P09 and any later composition remain separate qualification boundaries.
+
+
+## Original General CI terminal observations after the I cutoff
+
+The original General workflow wrapper observations for source4dc (run43765103146), source332 (run43766707892) and source6e90 (run43768057449) each contain15 terminal jobs:12 cancelled and3 skipped. The first two snapshots were observed at22:00:40Z and22:13:55Z; the6e90 wrapper result was retained no later than22:20:57Z, with no more precise request clock recorded. All terminal cohorts were removed from further polling.
+
+The attached JSON files preserve the exact decoded tool objects, including names and job IDs. They are latest-attempt first-page wrapper data, not HTTP wire bytes or full job logs; null steps are not proof of zero work. Neither cancellation cause nor absence of partial work is inferred. These statuses establish no test PASS, no native/frontend parity and no qualification of I or J. A queued newer cohort is tracked separately and is not an owner blocker; no run was rerun, dispatched or cancelled by this observation.
+
+
+# Prospective native adoption review — exact bb48 API-set helper
+
+**Independent source R2: APPROVE the exact helper for a separately published, bounded adoption R1. This is not a compiler or native PASS.** The reviewed source is `tools/owned-process-broker/nativeFixture.cpp` from commit `bb48cb81493fbadb8b1e451ba5c35d7bc8488952`, retained unchanged by docs-only head `462845722260dfd91111c37cb66fc54a01a3ecb7`. No tracked source, CMake, workflow, test, ref or CI action was performed for this review. The isolated I composition remains on its already selected 4dc fixture until root explicitly adopts the later history.
+
+## Exact source and chronology
+
+| State | Fixture blob | Bytes / lines | SHA-256 |
+|---|---|---:|---|
+| Isolated I / source 4dc | `579a7aadf70a284cb44f7ec3690dab32c4d76e92` | 17,237 / 322 | `5891d489d3587218900ae8864c64c29c4fbc594022b95132c0292074e3ce865c` |
+| Direct SDK source 332, unchanged by docs-only 6e90 | `43603d29138a5c43547f46099c5dad39d3d75815` | 17,041 / 318 | `4ed2586ee2129d7a7ed471db795a4cc3ea28c2895d62db12fdb7c1abfffacfb0` |
+| Exact bb48 candidate, unchanged by docs-only 462 | `ca0ded66441b8818bdf5726ee7d8ffa95abb8518` | 17,444 / 324 | `dc3cfdb3e8a7398d91dd2d0651bc31c11d2e6c357aaa03e83dba21c3b81adeb5` |
+
+The single source commit bb48 has sole parent `6e90f38155f5a8edf57b0336b6d79e4ca60c110b` and changes only this file by +8/−2. Inverting that exact helper hunk reproduces the full 332/6e90 preimage byte-for-byte. The outer `wow64Startup` function, its original call order and every later child, machine-type, breakpoint, CREATE_NEW publication, churn, witness, wait, cleanup and negative assertion are unchanged by bb48. The preceding 332 change introduced `_WIN32_WINNT 0x0A00` and direct SDK binding; bb48 retains that definition while replacing only the helper's binding mechanism.
+
+The relevant sequence is `4dc08dea7eeed5c286cf310e09a2ba26d84a9546 → 50bdfaf99223ab8368eb694b217947a88a3e42de → 332fbe3420c811c095dac4187d3f9664e8c47179 → 6e90f38155f5a8edf57b0336b6d79e4ca60c110b → bb48cb81493fbadb8b1e451ba5c35d7bc8488952 → 462845722260dfd91111c37cb66fc54a01a3ecb7`. The 50b Plan29 addition selected direct SDK binding and explicitly excluded a runtime module loader. The bb48 source predates the later 462 Plan29 47-line note, blob `411f9e7943bd9323006ea67ef470624b873419c9`. That later note records preservation of the concurrent helper; it must not be described as a previously published R1 for bb48. A fresh root adoption R1 must preserve the actual history and expressly amend the earlier no-runtime-loader clause and observation accounting. The 462 Plan32 addition is a separate activity-UI concern and is not native authority supplied by this review.
+
+## Exact helper and fail-closed behavior
+
+~~~cpp
+static std::wstring wow64Command() {
+  // Resolve the documented API-set contract with one bounded module lifetime.
+  const auto module=LoadLibraryExW(L"api-ms-win-core-wow64-l1-1-1.dll",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);
+  if(!module) return {};
+  const auto directory=reinterpret_cast<decltype(&GetSystemWow64Directory2W)>(
+    GetProcAddress(module,"GetSystemWow64Directory2W"));
+  wchar_t path[MAX_PATH]{};
+  const auto length=directory?directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386):0;
+  const bool closed=FreeLibrary(module)!=FALSE;
+  if(!closed||!length||length>=MAX_PATH) return {};
+  return std::wstring(path)+L"\\cmd.exe";
+}
+~~~
+
+The load uses the one literal API-set name and the System32 search flag, with no alternate module, directory or machine fallback. A failed load returns the existing empty-result refusal. After a successful load, every normal-return path invokes exactly one `FreeLibrary`, including the missing-export branch. The function pointer is used only before that close; the directory is copied into the original stack buffer before module release. A successful directory query still requires the exact I386 input and `0 < length < MAX_PATH`. A missing export, zero/oversized result or failed `FreeLibrary` returns empty, so the new close failure cannot turn into qualification. `decltype` supplies the SDK declaration's pointer type without an evaluated direct call. These observations support the source change; actual resulting-source Windows linkage and execution remain required.
+
+The outer code still obtains the `IsWow64Process2` entry, calls `wow64Command()`, then checks the already obtained machine entry before checking the executable result. The original error precedence and short-circuit order are retained. On an eventual new-source stage-5 refusal, the aggregate could cover load, export, directory-result or close failure. It would not, without another retained operand, identify one of them. In contrast, the historical 4dc stage-5 aggregate concerns its old GetModuleHandle/GetProcAddress/directory paths and contains no FreeLibrary branch.
+
+## New work and unchanged acceptance boundaries
+
+Relative to direct-binding source 332, a successful helper adds one `LoadLibraryExW`, one `GetProcAddress` and one `FreeLibrary` around the same one directory query. Relative to the isolated I/4dc helper, it replaces `GetModuleHandleW` with `LoadLibraryExW` and adds `FreeLibrary`; the old helper already performed an export lookup and directory query. The missing-export branch now closes the acquired module before refusing. These are explicit new in-process API operations and a module lifetime, not an unchanged observation count. Loading can perform loader/dependency work, and all new synchronous work consumes the original budget. Finite call counts do not bound wall-clock latency or guarantee output/delivery.
+
+The candidate adds no child, provider input, extra process probe, census, runtime RPC, signal, retry, fresh deadline or directory fallback. It does not change the original child identity, actual I386 verification, original HANDLE custody, release/cleanup predicates, control-channel rules, action sequence or success oracle. The existing phase/controller/native budgets remain unchanged; no earlier snapshot is reused across a mutable boundary. The exact CMake file `cf158110832d24afd7f97b6e9ef2dbf7472b0410` is untouched. No OneCore link change is proposed on top of the preserved helper.
+
+## Primary source basis and its limits
+
+Microsoft documents API-set names as logical contracts rather than a guaranteed physical implementation DLL, and explicitly permits loading an API set with the LoadLibrary family: [Windows API sets](https://learn.microsoft.com/en-us/windows/win32/apiindex/windows-apisets). [LoadLibraryExW](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw) documents the System32 search flag, module loading and failure result. [FreeLibrary](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary) documents the acquired-module reference count and BOOL result. The candidate owns a LoadLibraryEx reference; it does not incorrectly free an unowned GetModuleHandle result. Microsoft's [decltype reference](https://learn.microsoft.com/en-us/cpp/cpp/decltype-cpp?view=msvc-170) supports the type-only use. The [GetSystemWow64Directory2W reference](https://learn.microsoft.com/en-us/windows/win32/api/wow64apiset/nf-wow64apiset-getsystemwow64directory2w) specifies its I386 directory query, zero failure and returned-length rules. These pages were actually opened during this finite review; their general contract does not prove availability or successful loading on either pending original runner.
+
+Independent pinned source inspection used Microsoft's [win32metadata commit 15fc870a5e96df7c560877ff30136c0fb5a21e9b](https://github.com/microsoft/win32metadata/tree/15fc870a5e96df7c560877ff30136c0fb5a21e9b), tree `32ed0efbd28a018ec154f989433b030730428895`. Its [wow64apiset.h](https://github.com/microsoft/win32metadata/blob/15fc870a5e96df7c560877ff30136c0fb5a21e9b/generation/WinSDK/RecompiledIdlHeaders/um/wow64apiset.h), blob `2c10f96459c0e5b190f08e291f6b4e3a47a7c302`, gives the exact SDK declaration under the Windows-10 guard. Its [libMappings.rsp](https://github.com/microsoft/win32metadata/blob/15fc870a5e96df7c560877ff30136c0fb5a21e9b/generation/WinSDK/libMappings.rsp), blob `cd869237f7c43ea9e5d297a3d8901099380c55b8`, maps GetSystemWow64Directory2W to `api-ms-win-core-wow64-l1-1-1.dll` while mapping IsWow64Process2 to KERNEL32.dll. Inspection of the [mapping generator](https://github.com/microsoft/win32metadata/blob/15fc870a5e96df7c560877ff30136c0fb5a21e9b/scripts/CreateProcLibMappingForAllLibs.ps1), blob `7a7a2becace9ded1f001438850512ca1d711244d`, and [COFF import parser](https://github.com/microsoft/win32metadata/blob/15fc870a5e96df7c560877ff30136c0fb5a21e9b/sources/MetadataUtils/LibScraper.cs), blob `233b9560deb9f6c03a1b0314bd025c0e15431973`, also establishes a limit: the map does not identify which contributing SDK .lib supplied each symbol. This review did not independently download the official SDK NuGet archives cited by the later 462 author. Their sizes/digests and import-library conclusions remain that author's reported evidence, not a second independent archive audit.
+
+## Actual historical evidence and prospective validation
+
+The independently audited source-332 Process jobs `132973378700` (x64) and `132973379104` (ARM64), run `43766708055`, both failed original step 15 with `LNK2019 __imp_GetSystemWow64Directory2W` followed by LNK1120, before native runtime qualification. Their exact original ZIP/log/source joins are preserved in `native-audit-332/process-build-checkpoint-20261115-2219.json`. The earlier 4dc ARM original stage-5/readiness failure remains failed and is preserved in `native-audit-4dc/arm-terminal-checkpoint-20261115-2211.json`. Neither the API-set mapping nor the later helper identifies the old aggregate's inner subbranch or retrospectively changes its cleanup/custody qualification.
+
+The exact resulting-source original Windows x64 and ARM compile/runtime commands remain decisive. No new finite test was manufactured to assert that replacing a source literal proves native correctness, and no project/native command was executed for this review. The successful source-332 V2 x64 leaf is a separate scenario that does not execute this C++ service-pair helper. The fresh source-462 Process/V2 initial API slice at 22:22:03 UTC had all 14 owned jobs queued. No resulting-source compiler, SDK-load, original child, native cleanup, P08, P09, product or release PASS is claimed here.
+
+
+## Prospective Stage J: preserve the five incoming commits and repair the finite Windows fixture binding
+
+This is a prospective application contract, recorded before this branch changes its fixture. It follows the actually executed Stage I at `88ada74cfc4598b1bff2ab3bc0f9d08177862dbf`, tree `6ea25725dec09d0617c2bc438472d6b77f3354ec`, with ordered parents `d556e23288c820b983a33808117f624cb2e93e39` and `4dc08dea7eeed5c286cf310e09a2ba26d84a9546`. Stage I completed its ten original recorded commands with exit0 and exact postflight. Its helper suite reported115 PASS, its three finite native-contract files reported53 PASS; these are original Stage I observations, not Windows C++ execution or qualification of Stage J.
+
+### Frozen incoming history and documentation
+
+The incoming cutoff is `462845722260dfd91111c37cb66fc54a01a3ecb7`, tree `b891eb06f0ab42236f3145267aede136e4020d4f`. Preserve every commit and ordered edge in `4dc → 50bdfaf99223ab8368eb694b217947a88a3e42de → 332fbe3420c811c095dac4187d3f9664e8c47179 → 6e90f38155f5a8edf57b0336b6d79e4ca60c110b → bb48cb81493fbadb8b1e451ba5c35d7bc8488952 → 462845722260dfd91111c37cb66fc54a01a3ecb7`. The complete delta after4dc has exactly four paths: Plan29, new Plans32/33 and `tools/owned-process-broker/nativeFixture.cpp`.
+
+The prior Plan29 blob `f48ed094dc7ed844be870ec03cf28499b75e18a2` remains an exact1,072,934-byte prefix. Append the complete original incoming Plan29 suffix once:115 physical lines,7,520 bytes, blob `df3939ae097bb3bffd92b2b01a46bd80b4487cdd`, SHA256 `3c19f551a65f33dd94f05ca2e001667281d79a0a00bbf865d6be64a769e6840a`. Preserve Plan32 blob `1a2930d8ff1c5332a35126d7b161f7ea255b2d29` and Plan33 blob `a12546e75cdfa2cc3fa4661f78ba1d92f45f06de` byte-for-byte. Plan30 remains `eb68d2643eb11527594d546d8a5088f48f8e2865`. Plans32/33 authorize bounded later design work; this adoption implements none of their Logs, thinking, stderr, codec, provider or renderer changes.
+
+The documentation commit first publishes this contract, the exact proposed fixture patch, actual I evidence and the source-specific original failure records. Only after full independent documentation readback may a separate merge commit adopt the fixture, with ordered parents `[published-J-docs, 462845...]`. Relative to the documentation parent, that merge changes exactly one existing100644 leaf. All other leaves and modes, including every Stage I correction, remain exact. Publish each created commit immediately through an ordinary non-forced push with a fresh expected branch SHA. No PR fast-forward may discard later incoming history; a newer incoming head requires a separate exact disposition. The original PR stays open Draft against the unchanged integration base.
+
+### Original observations motivating this one-file change
+
+Original4dc Process ARM failed with `Native readiness deadline`; its bounded retained projection reports rootExitCode62, rootCount1, childCount0, rootChildCount0, wow64Completedfalse, churnCompletedfalse and prerequisite stage5. Stage5 identifies an empty WOW64 command path before creating that child; it does not identify which internal lookup/query branch returned empty. Original294 prerequisites passed and3 original skips preceded the failure. The later native/source journeys did not execute. Helper closure and the outer controller's cleanup are retained separately from that failed native outcome.
+
+Both original332 Windows Process jobs failed at step15, before the native runtime gate, with LNK2019 for `__imp_GetSystemWow64Directory2W` and then LNK1120. They were jobs132973378700 and132973379104 in run43766708055. These are actual linker failures of the intermediate static-import source. They are not a semantic runtime RED on the newer dynamic implementation. No additional execution of an intentionally broken historical source is authorized or needed by this adoption.
+
+The separate332 V2 x64 custody/manual/automatic successes do not execute this C++ WOW64 service-pair helper and cannot validate this repair. The original I finite tests also do not compile or execute it. Resulting-source Windows compile and original runtime evidence remain necessary; neither source review nor a successful link proves native parity. Original P08/P09 limits and every old failure remain explicit.
+
+### Exact fixture bytes and added operations
+
+Replace only `tools/owned-process-broker/nativeFixture.cpp` blob `579a7aadf70a284cb44f7ec3690dab32c4d76e92` (17,237 bytes) with the incoming exact blob `ca0ded66441b8818bdf5726ee7d8ffa95abb8518` (17,444 bytes,324 physical lines), SHA256 `dc3cfdb3e8a7398d91dd2d0651bc31c11d2e6c357aaa03e83dba21c3b81adeb5`. Its complete diff against I is +7/−5, including the new `_WIN32_WINNT 0x0A00` declaration. The exact full-index patch is1,540 bytes, blob `46164e2e119683ef9439283dbf979f188252da6c`, SHA256 `126c7ec6277ef315ceb15c8ac9543dcbf90ac0e60f28ce7d237d7af649b6825f`. There is no CMake or import-library change.
+
+The original helper's borrowed `GetModuleHandleW(L"Kernel32.dll")` is replaced by one `LoadLibraryExW(L"api-ms-win-core-wow64-l1-1-1.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32)`. A failed load returns the existing empty-path refusal. A successful load is followed by the existing function-name lookup, now cast using the SDK-declared `decltype(&GetSystemWow64Directory2W)`. That type expression is unevaluated and does not introduce the failed static import. The original single I386 directory query executes only if the pointer is available. On each normal path following a successful load, exactly one `FreeLibrary` executes, including the missing-entry path. The pointer is used only before that release. Only successful release and a nonzero result strictly smaller thanMAX_PATH produce the copied directory plus the original `\\cmd.exe` suffix.
+
+**This adds real loader/reference-count/release work.** It is an explicit amendment to the earlier50b static-binding plan's no-runtime-loader boundary. It must not be described as unchanged observations or as a mere compile-time correction. Module initialization/dependencies and loader scheduling may occur. A finite call count does not bound wall time; all such work consumes the existing original budgets, with no new timeout, budget reset, retry, fallback, availability probe or extra process. The source comment's bounded lifetime means the reviewed ordinary control-flow pairing; it is not a measured latency claim or a guarantee after process termination/exception.
+
+The source chronology is retained: bb48 introduced the dynamic helper before462's later acceptance note. This new prospective contract authorizes its adoption on this branch; it does not retrospectively claim that462 documentation preceded bb48. The separate reported SDK package investigation in462 remains attributed to its author. This review does not claim that those package bytes were the runner's selected import libraries.
+
+Microsoft's [API-set contract guidance](https://learn.microsoft.com/en-us/windows/win32/apiindex/windows-apisets) supports selecting an API contract independently of its physical host DLL. [LoadLibraryExW](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw) documents the System32 search flag and possible dependency loading. [FreeLibrary](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary) documents reference release and its return status. The pinned Microsoft win32metadata mapping in the independent source review supplies this exact contract name. None of these references establishes the unobserved4dc subcause, the runner's actual contract availability or a native PASS.
+
+### Preserved acceptance contract and work still required
+
+Every other fixture statement, prerequisite-stage marker, original I386 architecture witness, child identity, service-pair/churn action, wait, control-channel rule, negative oracle and cleanup check remains byte-for-byte unchanged. The three4dc diagnostic leaves already adopted in I keep their exact bytes except for this reviewed helper delta. Original absolute source deadlines, early and late capture checks, same-deadline journal reads, no-replay rules, Host/source identity joins, module/process custody and cleanup oracles remain in force. Do not execute real Claude Code or Codex, including version checks. Do not activate default Host, Stage2, a release or a main-branch merge.
+
+Before creating the source merge: independently review this contract, the source/history metadata and exact one-file patch; publish and fully read back the documentation tree; verify the fresh followup ref. After the merge's immediate ordinary push, fetch and check out the actual commit, independently verify its tree/ordered parents and the exact one-leaf delta, then execute the one original whitespace check recorded in the frozen Stage J validation manifest. That recorder also verifies all76 selected source leaves and all615 Host source leaves against their frozen I identities, allowing only the declared fixture replacement, and retains the original I evidence identities. It must refuse dirty or foreign source, missing proof, overwritten records or a changed command.
+
+No portable test replay is added for this C++-only adoption. The original I results remain I results with an explicit identical-source correspondence for the code they exercised. The local check is not a Windows compiler/runtime test. Original source462 Windows jobs may provide source-specific observations when they finish; final PR qualification still requires the actual reconciled source and all original gates, without transferring earlier successes. Preserve outstanding later incoming changes before any PR ref update. CI queue/running state is not a blocker and does not authorize rerun, cancellation, dispatch, skipped gates or a completion claim.
