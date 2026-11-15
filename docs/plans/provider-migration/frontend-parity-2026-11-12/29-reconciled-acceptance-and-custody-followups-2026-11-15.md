@@ -4070,3 +4070,130 @@ The selected Host test compiler passed after restoring the scratch dependency-re
 | `selected-app-types-original-ambient.log` | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
 
 Independent candidate R2 covered all ten before/after file blobs and the scoped compiler amendments. Root verified all applied after blobs, the exact source diff and unchanged normal Git index; the final factual appendix changes documentation only. The qualified result is the bounded reader/DTO/task projection slice. Provider producer Thinking, checked immutable archives and atomic normalizer adoption, default Lead/shared rich Logs UI, selected-member stderr, resulting-source Electron/native and existing P08/P09/genuine-upgrade/M16 obligations remain open. Draft/base and every original deadline/custody/no-replay/no-release/no-Stage2 restriction remain.
+
+## Prospective R1: reconcile the published Host Logs implementation with preserved private regressions
+
+This is a narrow source-integration GO on private `55039e542597d947af62e5688011b2f3b387a40d` / tree `40ddd01358eb667849681ca067c90d1c536e3e39`, taking the independently reviewed Logs cut published at `27b1acf48278dcd0fb348c626696eac2dc64de73` / tree `df57310cd096bfc628b31ca05b0caae91eb5ae09`. Public #1192 remains open Draft on original base `def734338f13bcc3209e78079a0cedbc48f05a5b`. This integration is neither a merge of the full public branch nor qualification of its separate native changes. Preserve both histories; do not overwrite the public branch or claim all commits reconciled.
+
+The selected published cut contains 48 paths, including Plans32/33. Adopt that existing implementation instead of maintaining the parallel scratch proposals. Preserve its actual roster-based Host Lead/member route, shared existing controls/read owner, rich rendering, source identity, child/tool correlation, dedup-before-filter, retained data with background failures, collapse/fullscreen/viewport state and original polling settlement. Adopt its bounded, attributed and redacted member stderr observer at the existing owned-process seam; no new launch path or input attribution. Its two pure diagnostic moves retain the old public imports through browser-safe exports. Its focused codec extraction preserves strict decoding and keeps the existing source cap. The Host package manifest changes only the two pure diagnostic exports; no dependency, archive or lockfile changes. The sole workflow change adds the existing team-activity-read suite to the original team lane without changing gate selection/requirements, matrix, deadline or application action.
+
+Retain all five private Thinking regressions as byte-exact insertions in four existing published test files; every published assertion also remains. The previous private 53-case result belongs only to `55039e54`, and no previous author/public/local result qualifies this new composition. The published `normalizeActivity(Event)` and installed checked SessionSPI/archive remain unchanged; synthetic typed read-side Thinking does not establish real provider production or E2E Thinking parity.
+
+### Two proven narrow corrections
+
+1. Main Task boundary: the normal Host reader already excludes `process-output` for task reads, and the strict decoder rejects every defined inputId and nested stderr. A malformed reply can still put a valid anonymous stderr fact under the requested outer taskId. `projectTeamActivityLogs` currently accepts it and the actual Task Stream returns it. Add exactly two lines after the existing decoder to refuse process-output when the request selects a task; the same fact stays valid in member history. This is a source-proven invalid-response counterexample, not attribution of an observed E2E failure or a claim that the normal producer emits it. The new single existing-file case checks real member/Task projection plus actual Stream/exact-summary reads through that projector and exactly two read-only invokes. Combined Task test blob `294d5368e92a6f871a394206bc75a4177a59f666` includes both the private preservation and this case.
+2. Desktop source attribution: the published 53-line comment-plus-52-path block was appended to WindowsRetry, absent from the ordinary Activity/Runtime/Collaboration source closure. Move that exact block into the existing Supplementary array. Roster `c76e4a5a447e87b90e731e1bf6da8c62b526e712` becomes `47d1d9520e794ea9048cd98d997e54fa70bfc4b6`, 20,446 bytes /315 lines before and after, +53/-53. All other bytes and prior entry order are unchanged. The root roster remains800 lines. Windows already unions ordinary Desktop with its Retry array, preserving the same combined membership. No scenario or assertion is replaced.
+
+The selected Runtime Desktop script also retains the earlier published Task Activity proof (+73/-1 from the private baseline before the Logs adaptation), which reuses the original cron Task and existing receipt/input identity. It adds read-only presentation/digest assertions and checks unchanged inputs, commands, effects and task/journal writes; it adds no business turn, deadline extension or native policy. Existing Activity, Runtime and Collaboration actions, stream-release sequence, partial/complete checks, error/child identities, cold-read/no-write/no-replay and physical cleanup remain required.
+
+### Exact prospective path boundary
+
+The49 paths below are the complete code/test/plan adoption; Plan29 is the sole additional documentation path. `absent` means absent on the private parent. Six after-blobs differ from the published48-path cut: four test-preservation compositions, the source-roster relocation, and the additional existing Task mapper. Everything else is the published blob unchanged.
+
+| Path | Private before blob | Exact candidate blob | Lines |
+| --- | --- | --- | ---: |
+| `.github/workflows/host-emulated-acceptance.yml` | `c956c196e4208c11b421b1eb5b68d4850ac50d43` | `bf268bbeedf1d985cb1f7ceae35716dae3b3d40c` | 1248 |
+| `docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md` | `absent` | `52227dc108a65347aa5dea7995d0ee6e3f3fbc45` | 248 |
+| `docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md` | `absent` | `5fbc886bdd2f4fe9c2914844b94bbd16f3224075` | 236 |
+| `packages/legacy-agent-host/package.json` | `063d101c59bbdcc9a6bb9d9961d12b468a5a944b` | `c6248499ad8a3d7355cf3cc51062cc0207fbde04` | 300 |
+| `packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts` | `4d1ff99143e5ddfb157ddaa7ee5ed48caa608e91` | `a2158e62d439c0ee0b29ffd28df64cf848cee99f` | 196 |
+| `packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts` | `537cc17c207699eadba99bfae09b5853a3eaf1be` | `2fe449639596cdb07bf5ef39d8040c65d9d6538c` | 294 |
+| `packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts` | `4169f9ed08441561bda739ab79eedfca32b62e73` | `1fc098d27f67825b7cf48318329d1a809e41e1f4` | 62 |
+| `packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts` | `absent` | `2d407fff63c9529c2d5933daeb01b81c08443c8f` | 121 |
+| `packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts` | `879c120b7d9b2226701f58e832914adde5a3dd58` | `0f5e2258b2af33c55673aa0fdc4c660e3629e784` | 800 |
+| `packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts` | `0482d11bb2a051a0710905c5393495ee7cec64bf` | `ff8389cb7c44d3116c17a9826f1daf9c17551c7d` | 315 |
+| `packages/legacy-agent-host/src/composition/readTeamActivity.ts` | `88cb320d5dc64b58ebecc8bb9b9ac36a68296a36` | `f6243d55f628833ef797cce0afa2e1339a01e609` | 289 |
+| `packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts` | `f7613503aeab160498754b067a21011c62a5dda3` | `4a7d1e5330d4de65f95c9cd2cfc5c87e8027b773` | 171 |
+| `packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts` | `absent` | `5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b` | 50 |
+| `packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts` | `absent` | `49183056d50b7815bde238e758c47c13302117f3` | 60 |
+| `packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts` | `504be286f7ef7eb147310503a2a5ed3a6f339381` | `48f51dc20a9253c81c9b231b6aa115f6244bd18f` | 589 |
+| `packages/legacy-agent-host/src/runtime/RuntimeOwner.ts` | `7ef05204eb696e2b498595a5f04a544fe20d0036` | `a566efc5987b6859d004a8531cb8e6bac80bec30` | 757 |
+| `packages/legacy-agent-host/src/runtime/providerActivityContracts.ts` | `01b12ef6f147495d72c46145d8e85622e78de77b` | `d0ee6a31ded14c9af572a12ecc2dee4352f4eacf` | 13 |
+| `packages/legacy-agent-host/tests/captured-claude-process.test.ts` | `1bdd368dc281a59fb1a5b2fca629a18e201945a5` | `9e821dc3669a249411ef7999cb01aa566dc4ddb7` | 264 |
+| `packages/legacy-agent-host/tests/codex-member-provider.test.ts` | `13cba7f4f29acc4edc08e5ae582773564c160d15` | `414525958b459ccb9d4c20e4b185e03d71d46867` | 1028 |
+| `packages/legacy-agent-host/tests/member-process-stderr.test.ts` | `absent` | `dc9658bb5b5802eb9f8e6749b5a09994f1806e8d` | 130 |
+| `packages/legacy-agent-host/tests/member-provider-authority.test.ts` | `df2deba6e265720b59227a5afba9a3086557e8d5` | `011875b3a5bcab4d6f0775fdbc419157e0d48cba` | 564 |
+| `packages/legacy-agent-host/tests/owned-process-facade.test.ts` | `c52c8cf9349798754192b2faf92a201186dbfb2b` | `1a202377edc9f57c62eb757e9fcdc8718479e3d1` | 164 |
+| `packages/legacy-agent-host/tests/runtime-activity.test.ts` | `f0fcf9c7655a0847ba4a85c40c1118a9b78525b5` | `ebf0282a8af771eb9024fd34e5bae0a07d5e9b9c` | 1116 |
+| `packages/legacy-agent-host/tests/team-activity-read.test.ts` | `29618a80cd3d5c22a40fb19009531160370a99d2` | `420ea7318a294a6e21e9da54cfa8dcbbebd361d1` | 419 |
+| `scripts/legacy-agent-host/desktop-activity-ui-smoke.ts` | `805941d9da3fffdac8c6e04c57e2eb46710bbcd7` | `b030c7030ed39b1091c56dca6f1317e0f5372477` | 428 |
+| `scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts` | `04ed8641e43ba4cefd95fedca712522c2061b78d` | `aff6e19ec4cf492841aa667442c1b7d71541c7c5` | 377 |
+| `scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts` | `55a7973806202dcca4b3cbcbadf621d4b7664f34` | `cb3974254caf54d40d560eff2ad5419adcedae3c` | 666 |
+| `scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts` | `5c8d6a2ee1555257a4f83fa074a4e0de6549b14c` | `47d1d9520e794ea9048cd98d997e54fa70bfc4b6` | 315 |
+| `src/features/agent-backend/contracts/operations.ts` | `0e238921f39c058df5e3b94c494286383b170fa1` | `788c1ff6bb4a2a737c0a8d1399ffd43e134e6a38` | 538 |
+| `src/features/agent-backend/main/adapters/output/projectBackendResult.ts` | `1ee20c8d423d84085176cda45fb14c7f080123d2` | `dbeb14ba7d4a0de1ae97662e74d2929a51f9106c` | 500 |
+| `src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts` | `absent` | `4df980788dc6b990fcd555439c53bb4a329cef36` | 317 |
+| `src/features/agent-backend/renderer/createHostTaskActivityApi.ts` | `36aa73cd697b396faf9545a56b9b96ef42e6ef4a` | `8a35885a868140481e0b9d374fd3bd07f2742083` | 164 |
+| `src/renderer/components/team/ClaudeLogsPanel.tsx` | `829b1ec065212ee20f0fdf57147977770e184eb8` | `5255eb491789a5e2fd0cf11c338934b46ac7ae7b` | 243 |
+| `src/renderer/components/team/ClaudeLogsSection.tsx` | `0632e20213f52663eef0e7f3bee3f93a92a51348` | `06245cd010f4bdcca1ad0ed1177163c743343a3b` | 586 |
+| `src/renderer/components/team/members/HostMemberActivityLog.tsx` | `fea2c35c61000827cebb626d83e9c68e5a289a04` | `f24568c549ed723ad9f5c228a6b3c6e04771869b` | 360 |
+| `src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx` | `54f77b51f045451c6afdccf2a36f8e33688a19e3` | `65f23ad13df71b514a11a97152b3d3324f0da5c5` | 65 |
+| `src/renderer/components/team/members/MemberLogsTab.tsx` | `806fe6c45b47e68fa3df56ba5feae61c59f9c8c7` | `112623fefdd629c05c414951a57c81afb2f1ca79` | 751 |
+| `src/shared/types/teamActivity.ts` | `ae3f5ba5982a7b090807f1875e322bb4cabb298f` | `4bd34ac1435cab2472104203c00ecc4be3889630` | 134 |
+| `src/shared/utils/diagnosticsRedaction.ts` | `5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b` | `2e345624c752ebac3024d579c1501dff7fe84a9e` | 1 |
+| `src/shared/utils/runtimeDiagnosticText.ts` | `1444ee99085670ffb786b5419dd9cd6e5fc29579` | `1410cd6d6d9accf6f3c29802884b8acd58dc0568` | 1 |
+| `test/features/agent-backend/hostTaskActivity.test.ts` | `9d92be96e0cddad0515b0e0e248c74988a18dd0b` | `294d5368e92a6f871a394206bc75a4177a59f666` | 482 |
+| `test/features/agent-backend/runtimeActivityFacade.test.ts` | `e7c36e57bc2b085665716d72c25abd7ed52fbf7f` | `8aef5576630d01c091f1514bd2896ef415130d13` | 1074 |
+| `test/features/agent-backend/tsconfig.json` | `84f05e170dc7ba5d5880588712fef782f91bd10e` | `de2814ddc27524ac335f9f6c174aace1c7b1387c` | 12 |
+| `test/renderer/components/team/ClaudeLogsSection.test.ts` | `3ba7a08fbf4c9dd5125958cdd8c556af828e9114` | `f60ad1bca4efa3af874080c6acd8cfc7a46745ac` | 1229 |
+| `test/renderer/components/team/members/MemberLogsPolling.test.ts` | `1f5820a4e7a0b0ee611ed9c990d8e0497236c928` | `27610578158b6eb0b810e1a79e9624e8da6e53a4` | 480 |
+| `test/renderer/components/team/members/hostLogStatsTabs.test.tsx` | `5722926c371b7bd8506e452522358ac3d08c19f7` | `de455b7999a367b3ed697d6560b408991129c931` | 581 |
+| `tools/owned-process-broker/fixtures/claudeProviderPeer.mjs` | `45cc6900fbc5ce462ccaa4da512fcc34174f1386` | `1734ab07e519f6c98f2c012718411c78b47f958b` | 451 |
+| `tools/owned-process-broker/fixtures/providerDesktopPeer.mjs` | `77b2f17c47b1bda1506aaf124ea079db1680199f` | `5de48ea5710cc24f3a7eb3527934073df0d57e1c` | 555 |
+| `src/features/agent-backend/main/adapters/output/projectTeamActivity.ts` | `2f03dbc22891af7d294df53f61af1d3b6e79c0bd` | `bfa65f8590566ec3139838d6a38cc40ffc2e5bda` | 133 |
+
+### Prospective finite validation and custody
+
+Root publishes this documentation-only R1, immediately pushes with expected-head protection and performs full readback before any canonical source application or execution. Independent R2 covers the exact49-path candidate, all private/public preservation and the actual validation roster. No source was applied or executed during scratch preparation.
+
+After readback, apply the exact assembled source while keeping the original Task mapper for the meaningful RED. Build the canonical Host first with pinned Node24.21.0 and the existing package build/prebuild; no stale Host dist is substituted. Run the complete combined existing hostTaskActivity Vitest file with one worker: its new first Task refusal assertion is the predicted single failure. Apply only the exact two-line Task mapper, rerun the same complete file and then run the focused existing suites listed below on the complete resulting source. If the RED differs, preserve the observation and diagnose before treating the correction as qualified.
+
+For the roster counterexample, use the pinned Node runtime to import only the actual four pure roster modules from copied original/corrected sources, without importing any Desktop/native entrypoint. Require52 absent paths in the original ordinary export, all52 present after correction, identical Windows union membership, and the same old relative order. Record exact source hashes and arrays. This check is finite source-membership evidence, not graphical acceptance.
+
+The Host Node runner selects exactly runtime-activity, member-provider-authority, member-process-stderr, codex-member-provider, captured-claude-process, owned-process-facade and team-activity-read tests, with --test-concurrency=1. These use finite in-memory/private generic Node actors, never real Claude/Codex. The renderer/read-side and existing diagnostic consumer suite paths and strict selected compiler inputs are frozen in the following validation manifest. Existing fake timers are allowed only for finite renderer five-second settlement tests; no product timestamp or native clock is fabricated.
+
+Use original compiler options with noEmit and selected file roots only: Host extends its original test config; app extends the original root config and includes the unchanged existing ambient declarations. Resolve installed modules through a scratch-only node_modules link. Do not retry the previously failed whole-workspace or whole-Host-test compiler, change compiler options, add declaration stubs or install/update packages. The existing legacy-host-scripts compiler covers the changed Desktop scripts. Run scoped lint on changed code/test inputs and the unchanged source-size/provisioning guards. No lint-fix or cap/exception/matrix alteration. Original gate failure remains failure; preserve raw output, command, start/end, source tree and log hash.
+
+All checks use existing Node24.21.0 / TypeScript7.0.2 and installed app pnpm11.25.0, without pretending this is provider pnpm11.18 qualification. Unset LEGACY_PROVIDER_SOURCE_TEST, OWNED_PROCESS_VENDOR_TEST_GO, NODE_OPTIONS and NODE_PATH; AGENT_BACKEND_TEST_NODE is the pinned generic Node. No real Claude/Codex, native/GUI/Xvfb/Electron rebuild, user-project or credential discovery, inference, workflow dispatch/rerun/cancel, replay or widened deadline. Original15-second qualifying native deadlines, ownership/custody and physical cleanup remain unchanged.
+
+The remaining27 public/private paths outside this49-path cut are not adopted. Full incoming production C++ policy reconciliation remains HOLD pending original ordered native facts; P08/P09, original native matrices, M16/genuine upgrade and graphical resulting-source acceptance remain separate. Checked provider Thinking adoption still requires original exact-head CI archives/receipt plus required qualification, followed by atomic pins/normalizer adoption. Local provider checks and typed read-side fixtures do not replace that gate. No Ready, main merge, release, default activation, Stage2 or new acceptance claim is authorized.
+
+### Frozen validation inputs
+
+These are prospective current-source selections, not a reconstruction of the author's undocumented six-suite62 or three-suite40 command. No historical total is transferred.
+
+Focused complete Vitest files:
+
+- `test/renderer/components/team/ClaudeLogsSection.test.ts`
+- `test/renderer/components/team/members/MemberLogsPolling.test.ts`
+- `test/renderer/components/team/members/hostLogStatsTabs.test.tsx`
+- `test/features/agent-backend/runtimeActivityFacade.test.ts`
+- `test/features/agent-backend/hostTaskActivity.test.ts`
+- `test/renderer/components/team/ClaudeLogsPanel.test.ts`
+- `test/renderer/components/team/useClaudeLogsController.test.tsx`
+
+Diagnostic compatibility files:
+
+- `test/main/services/runtime/runtimeStatusCommandDiagnostics.test.ts`
+- `test/renderer/components/team/dialogs/ProvisioningProviderStatusList.test.ts`
+- `test/renderer/utils/memberLaunchDiagnostics.test.ts`
+
+The latter exercise the existing Main status diagnostic, renderer provisioning display/copy and member-launch redaction consumers through the preserved public utility re-exports. No unrelated Settings breadth is added.
+
+Selected Host config has all13 changed Host source roots and all7 selected Host suites, extends the original Host test config and overrides only files/include. Selected app config has the5 changed renderer roots,2 DTO roots,7 complete focused suites and6 existing ambient declarations, extending the original root config without any compiler-option override. The original Main decoder, Task API and read owner are included by ordinary imports.
+
+| Scratch validation configuration | Git blob | SHA256 |
+| --- | --- | --- |
+| `tsconfig.host-selected.json` | `5ee5b5dcdbb16e22a81d9e406504a69b99428e59` | `6e4f8af7b56bbb022a174169445d8935ccdefd4cd97aac31d09ffe092c8ecb8c` |
+| `tsconfig.logs-renderer.json` | `60e2ca3c5e7010c68b49b8bd40ae4c8feb1c24ef` | `10369a8517fa0cf30900d7efef0f39d44abd0b20dec28705af54e6242901b572` |
+
+Existing ambient declarations:
+
+- `src/renderer/vite-env.d.ts`
+- `src/features/localization/renderer/i18next.d.ts`
+- `src/features/localization/renderer/resources.d.ts`
+- `src/types/pica.d.ts`
+- `src/types/agent-teams-controller.d.ts`
+- `test/types/better-sqlite3-node.d.ts`
+
+Validation command manifest SHA256 `6e0cdfd39123c11e3b62bb5203577b204cc0067aac9583122a18440e5afbc556`; all runner commands use existing entrypoints with one test worker, inherited options and a180-second local subprocess ceiling, not any extension of product/native qualification deadlines. Candidate patch SHA256 `2358dfd11ebf5dc644bd6576c3d66595cd5a093347f3899a4d63202bbb703514`.
