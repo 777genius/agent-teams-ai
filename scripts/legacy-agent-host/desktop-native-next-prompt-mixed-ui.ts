@@ -325,7 +325,11 @@ export async function runDesktopNativeNextPromptMixedUi(
     if (actor.provider === 'codex')
       await ui.waitRead(
         `(() => {
-        const text=document.querySelector(${desktopJsLiteral(memberSelector)})?.textContent??'';
+        const cards=[...document.querySelectorAll('[class~="group/member"]')].filter(card=>
+          card.getClientRects().length>0&&[...card.querySelectorAll('span')].some(span=>
+            span.textContent?.trim()===${desktopJsLiteral(actor.name === 'team-lead' ? 'lead' : actor.name)}));
+        if(cards.length!==1)return false;
+        const text=cards[0].textContent??'';
         return text.includes('Codex')&&text.includes('mock-model');
       })()`,
         `actual ${actor.key} card shows its Codex provider and localhost TEST model`
