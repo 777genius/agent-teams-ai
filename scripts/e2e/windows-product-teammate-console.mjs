@@ -56,7 +56,7 @@ let launched = false;
 let stopped = false;
 let originalMember;
 let initialMember;
-let appManagedRestartConfirmed = false;
+let appManagedRosterAttachConfirmed = false;
 let forceExitMember;
 let hwndObserver;
 let hwndObserverLog = '';
@@ -295,45 +295,49 @@ async function run() {
     originalMember = observed;
     return snap;
   }, 180_000);
-  // Initial provisioning takes the deterministic spawn path. The contributor's
-  // Windows detached:false fix is in the distinct app-managed restart path:
-  // exercise that production IPC path and use its replacement process for tools.
-  phase = 'app-managed-teammate-restart';
+
+  // Initial provisioning uses deterministic spawn. The changed Windows-only
+  // spawn option belongs to app-managed live-roster attachment as well as
+  // manual restart. Attach a NEW teammate through ordinary product IPC: a
+  // restarted existing member would be refused while its PID is unverified.
+  // Never downgrade the production PID safety guard to pass this test.
+  phase = 'app-managed-teammate-attach';
   initialMember = originalMember;
-  // Real member restart can exceed the CDP transport's 30s evaluate timeout.
-  // Submit exactly once, then poll the same original product IPC promise.
+  const attachedName = 'bob';
+  const attachedSpec = {
+    name: attachedName, providerId: 'anthropic', model: 'claude-sonnet-4-6',
+    role: 'Disposable Windows app-managed teammate',
+  };
   await api(`(() => {
-    window.__winProductRestart={done:false};
-    window.electronAPI.teams.restartMember(${literal(teamName)}, 'alice').then(
-      value => window.__winProductRestart={done:true,value},
-      error => window.__winProductRestart={done:true,error:String(error)}
+    window.__winProductAttach={done:false};
+    window.electronAPI.teams.addMember(${literal(teamName)}, ${literal(attachedSpec)}).then(
+      value => window.__winProductAttach={done:true,value},
+      error => window.__winProductAttach={done:true,error:String(error)}
     ); return true;
   })()`);
-  const restartResult = await wait('original app-managed member restart IPC', () =>
-    client.evaluate('window.__winProductRestart?.done ? window.__winProductRestart : null'),
+  const attachResult = await wait('original app-managed member attachment IPC', () =>
+    client.evaluate('window.__winProductAttach?.done ? window.__winProductAttach : null'),
     180_000);
-  if (restartResult.error) throw new Error('Product member restart failed: ' + restartResult.error);
-  assert.equal(restartResult.value?.status, 'restarted', 'Product IPC did not restart alice');
-  await wait('original provisioned teammate retired after app-managed restart',
-    async () => !(await ownedStillAlive(initialMember)), 60_000);
-  originalMember = await wait('new app-managed teammate process', async () => {
+  if (attachResult.error) throw new Error('Product member attachment failed: ' + attachResult.error);
+  originalMember = await wait('real app-managed added teammate process', async () => {
     const snapshot = await api(
       `window.electronAPI.teams.getTeamAgentRuntime(${literal(teamName)})`);
-    const member = snapshot?.members?.alice;
+    const member = snapshot?.members?.[attachedName];
     const pid = member?.runtimePid ?? member?.pid;
     if (!member?.alive || !Number.isSafeInteger(pid) || pid <= 0 ||
         pid === initialMember.pid) return false;
-    const replacement = await getProcess(pid);
-    return replacement?.command?.includes(teamName) ? replacement : false;
+    const added = await getProcess(pid);
+    return added?.command?.includes(teamName) &&
+      added.command.includes('--agent-name') &&
+      added.command.includes(attachedName) ? added : false;
   }, 180_000);
-  assert(originalMember.creation !== initialMember.creation ||
-    originalMember.pid !== initialMember.pid, 'Restart reused original process identity');
-  // The production change lives in the *direct-process manual_restart* lane,
-  // not deterministic initial provisioning. Require its original runtime
-  // process-spawn event, tied to this exact replacement PID and owned team.
-  await wait('original app-managed direct-process restart event', async () => {
+  assert(originalMember.pid !== initialMember.pid,
+    'App-managed teammate must use a distinct original PID');
+  // Bind acceptance to the real direct-process member_added launch path in
+  // production, not an initial deterministic spawn or unrelated fixture.
+  await wait('original app-managed direct-process attachment event', async () => {
     const filePath = path.join(env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT,
-      'teams', teamName, 'runtime', 'alice.runtime.jsonl');
+      'teams', teamName, 'runtime', attachedName + '.runtime.jsonl');
     const contents = await readFile(filePath, 'utf8').catch(error => {
       if (error?.code === 'ENOENT') return '';
       throw error;
@@ -341,12 +345,12 @@ async function run() {
     return contents.split('\n').filter(Boolean).some(line => {
       const event = JSON.parse(line);
       return event.type === 'process_spawned' &&
-        event.source === 'TeamProvisioningService.direct_process_manual_restart' &&
-        event.teamName === teamName && event.agentName === 'alice' &&
+        event.source === 'TeamProvisioningService.direct_process_member_added' &&
+        event.teamName === teamName && event.agentName === attachedName &&
         event.pid === originalMember.pid;
     });
   }, 30_000);
-  appManagedRestartConfirmed = true;
+  appManagedRosterAttachConfirmed = true;
   await client.screenshot(screenshot);
   // Establish and pin a focused Electron foreground baseline immediately
   // before the tool probes; earlier startup/teammate activity is a separate gate.
@@ -381,7 +385,7 @@ async function run() {
     const token = randomUUID(), key = kind + ':' + token;
     expected.set(key, 'WIN_TOOL_' + kind.toUpperCase() + '_' + token);
     await api(`window.electronAPI.teams.sendMessage(${literal(teamName)},
-      ${literal({ member: 'alice', from: 'user', text: 'WIN_NATIVE_TOOL:' + key })})`);
+      ${literal({ member: attachedName, from: 'user', text: 'WIN_NATIVE_TOOL:' + key })})`);
     await wait('original ' + kind + ' tool result in live teammate runtime',
       () => proofs.get(key) || false, 150_000);
   }
@@ -430,8 +434,9 @@ async function run() {
   phase = 'product-stop';
   await api(`window.electronAPI.teams.stop(${literal(teamName)})`);
   stopped = true;
-  await wait('original teammate PID retired after product Stop', async () =>
-    !(await ownedStillAlive(originalMember)), 30_000);
+  await wait('both original teammate PIDs retired after product Stop', async () =>
+    !(await ownedStillAlive(originalMember)) &&
+      !(await ownedStillAlive(initialMember)), 30_000);
   const focus = await mainInspector.evaluate('globalThis.__winProductFocus');
   assert(focus.pid > 0 && Number.isSafeInteger(focus.blur));
   assert.equal(focus.before, true, 'Electron window did not own focus before tools');
@@ -483,8 +488,8 @@ async function run() {
     modelBoundary: 'loopback synthetic HTTP; no paid model inference',
     realElectronMainHosted: true, realProductTeammateLaunch: true,
     realProductStopConfirmed: true, nativeOsPidBound: true,
-    appManagedRestartConfirmed, provisionedTeammatePid: initialMember.pid,
-    restartedTeammatePid: originalMember.pid,
+    appManagedRosterAttachConfirmed, provisionedTeammatePid: initialMember.pid,
+    appManagedAddedTeammatePid: originalMember.pid,
     originalTeammatePid: originalMember.pid, originalTeammateBirth: originalMember.creation,
     toolResults: [...proofs.values()], usageImporterProcesses, electronFocus: focus,
     actualConsoleWindowsEnumerated: true,
@@ -506,7 +511,7 @@ try {
   await writeFile(receiptPath, JSON.stringify({
     schemaVersion: 1, success: false, phase, error: String(error),
     realProductTeammateLaunch: Boolean(originalMember),
-    appManagedRestartConfirmed,
+    appManagedRosterAttachConfirmed,
     toolResults: [...proofs.values()], usageImporterProcesses,
     modelErrors: model?.errors ?? [],
     logTail: log.slice(-3500),
