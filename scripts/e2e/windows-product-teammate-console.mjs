@@ -326,7 +326,7 @@ try {
         throw new Error('Original Windows PID survived verified termination');
     } catch (error) {
       cleanupOk = false;
-      process.stderr.write('Owned Windows E2E cleanup failed: ' + String(error) + '\\n');
+      process.stderr.write('Owned Windows E2E cleanup failed: ' + String(error) + '\n');
     }
   }
   await model?.close().catch(() => { cleanupOk = false; });
@@ -339,7 +339,7 @@ try {
       const receipt = JSON.parse(await readFile(receiptPath, 'utf8'));
       await writeFile(receiptPath, JSON.stringify({
         ...receipt, success: false, cleanupConfirmed: false,
-      }, null, 2) + '\\n');
+      }, null, 2) + '\n');
     } catch { /* The original failure and process evidence stay in CI logs. */ }
   }
 }
