@@ -5,7 +5,7 @@ import {
   crossTeamOwnerResourceRef,
   crossTeamTeamResourceRef,
 } from '@agent-teams/legacy-agent-host/cross-team';
-import { projectHostPromptSuggestion } from '@features/native-prompt-suggestions/main/projectHostPromptSuggestion';
+import { projectHostPromptSuggestion } from '@features/native-prompt-suggestions/main';
 import { captureManagedProviderRuntimePreferences } from '@features/runtime-provider-management/main';
 import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 
