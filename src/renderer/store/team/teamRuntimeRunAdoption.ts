@@ -1,4 +1,8 @@
-import { hostTeamSelectionKey, parseHostTeamRunId } from '@features/agent-backend/contracts';
+import {
+  hostTeamSelectionKey,
+  isHostTeamRunId,
+  parseHostTeamRunId,
+} from '@features/agent-backend/contracts';
 import { hostMemberSpawnSnapshotCurrentness } from '@features/agent-backend/renderer';
 
 import { areMemberSpawnSnapshotsSemanticallyEqual } from './teamMemberSpawnSnapshotEquality';
@@ -21,6 +25,26 @@ const STOPPED_SPAWN_STATUSES: ReadonlySet<MemberSpawnStatus> = new Set([
 export type IncomingRuntimeRunAdoption = 'reject' | 'apply' | 'retarget';
 
 type SpawnStatusLike = Pick<MemberSpawnStatusEntry, 'status' | 'runtimeAlive'>;
+
+/** Capture the existing Host status-read scope and both pins before its await. */
+export function captureHostProvisioningStatusRead(
+  runId: string,
+  get: () => {
+    currentProvisioningRunIdByTeam: Record<string, string | null>;
+    currentRuntimeRunIdByTeam: Record<string, string | null>;
+  },
+  captureScopeCurrentness: (teamName: string) => () => boolean
+): () => boolean {
+  if (!isHostTeamRunId(runId)) return () => true;
+  const teamName = hostTeamSelectionKey(parseHostTeamRunId(runId).handleId);
+  const isScopeCurrent = captureScopeCurrentness(teamName);
+  const previousRunId = get().currentProvisioningRunIdByTeam[teamName];
+  const previousRuntimeRunId = get().currentRuntimeRunIdByTeam[teamName];
+  return () =>
+    isScopeCurrent() &&
+    get().currentProvisioningRunIdByTeam[teamName] === previousRunId &&
+    get().currentRuntimeRunIdByTeam[teamName] === previousRuntimeRunId;
+}
 
 export function isPinnedRuntimeRunFullyStopped(
   statuses: Record<string, SpawnStatusLike> | undefined
