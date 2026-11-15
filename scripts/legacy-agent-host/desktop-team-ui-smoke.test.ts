@@ -1491,6 +1491,11 @@ test('original owner availability retains singleton, subset and duplicate-row ca
 test('original owner availability refuses foreign identities and preserves its existing aggregate guards', { timeout: 5000 }, async () => {
   const changes: [string, (f: ReturnType<typeof originalOwnerAvailability>) => void][] = [
     ['healthy B as unavailable A', f => { f.unavailable[1]!.teamName = 'host-team:TEST-healthy-b'; }],
+    ['captured foreign owner', f => {
+      f.discovery.bindings.push({ ...f.bPublic, handle: { handleId: 'TEST-foreign-c' },
+        ownerResourceRef: 'c'.repeat(64), teamResourceRef: 'TEST-c-resource', label: 'TEST C' });
+      f.unavailable[1]!.teamName = 'host-team:TEST-foreign-c';
+    }],
     ['unregistered A-shaped key', f => { f.unavailable[1]!.teamName = 'host-team:TEST-unregistered-a'; }],
     ['noncanonical key', f => { f.unavailable[2]!.teamName = 'host-team:TEST-cross/alpha'; }],
     ['boxed key', f => { f.unavailable[1]!.teamName = Object('host-team:TEST-original-a'); }],
@@ -1531,6 +1536,14 @@ test('original owner availability refuses foreign identities and preserves its e
       return true;
     });
     assert.equal(f.screenshots(), 0, label + ': no proof screenshot after refusal');
+    if (label === 'uncaptured original A' || label === 'non-string captured handle') {
+      assert.deepEqual(f.actions, [], label);
+      assert.deepEqual(f.reads, [], label);
+    }
+    if (label === 'captured foreign owner') {
+      assert.deepEqual(f.actions, ['open original availability menu', 'open original available Teams list', 'original healthy B Team'], label);
+      assert.equal(f.reads.length, 1, label);
+    }
   }
 });
 

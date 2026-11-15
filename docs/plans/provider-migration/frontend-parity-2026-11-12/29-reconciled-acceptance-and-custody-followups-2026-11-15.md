@@ -3591,3 +3591,28 @@ After the correction, rerun the same complete records file and the complete exis
 
 At this R1 publication no candidate source or test has been applied or executed, and no RED/GREEN/compiler/E2E result is claimed. Draft, original base, finite TEST-only Claude/Codex restriction and Stage1 scope persist. Windows P08 and the separate Darwin P09 contract remain unqualified; this amendment grants no real-vendor execution, Ready/main/release/default activation, deadline change or weaker oracle.
 
+
+
+### Actual verification of the post-merge correction
+
+The preceding R1 was published as `2e22ab13d9960f06be65c4781caa48f7c6d86921` (tree `aa921b4e16cf826ef4edae3163226612252bc1b8`, Plan29 blob `229fc0515b1ca01ca438542d987a373d353ab674`) and fully read back independently before application. Each of the four candidates received independent exact-source R2 approval. The isolated working tree was first verified equal to the complete `9a34bb28` tree, then to the published R1 tree; the original checkout and current PR head were preserved.
+
+Actual Node24.21.0 execution of the complete records test file first produced **6 PASS / 1 FAIL / 0 SKIP** with UI preimage `74c3aadd` and candidate test `13229f20`. RED tree `e227e9dc0e9297d754e8bc97b82ce0e982bb489f` differs from R1 only in that test. The first global-default regression failed at the exact zero-evaluation assertion: one DOM read occurred after owner revocation. This is a functional assertion failure, not an import or setup error; the later project variant was not reached in RED.
+
+After the one-line correction, the **same complete records file passed 7/7**, with no failures, skips, cancellation or todo. The two complete native-process UI/Team UI helper files passed **39 cases**, with **one existing SKIP** requiring the isolated Processes lane's original native artifact capture. Their retained zero-observation and captured-owner negative assertions executed successfully. The two preservation files do not claim a product RED, and the skipped capture is not PASS. Independent read-only evidence review rehashed the logs and confirmed all four exact candidate blobs.
+
+The actual whole `typecheck:legacy-host-scripts` command passed with pinned TypeScript7.0.2. Focused fast lint on all four paths passed with no reported error or warning. The unchanged source-size guard checked 5,014 production files, 141 frozen exceptions and the 800-line limit; the provisioning guard retained counts 22/50/31/62/154. Both guards and the exact four-path diff check passed. A temporary index verified complete candidate tree `a4f8d2b669f9351c7bee3f4bced7eb9869df0141`, containing precisely four source/test changes relative to R1, **38 additions / 2 deletions**. The ordinary index was unchanged. No broad application compiler retry, dependency installation, native/vendor execution or workflow action was performed for this correction.
+
+| Retained raw output | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `red.log` | 1688 | `4f569e0a0e62a52eff3221df4613d78151836c8d9147fe9553af0759067a91d7` |
+| `green.log` | 891 | `571a4d9b8ddc62f570b4347fcbe3cfd0a98566477877077b3f8308cc60371ca3` |
+| `preservation.log` | 4582 | `05dc1bf9236a290cff6317a9cb3faead5e721cf0c92259c0dbfcc9a3b11106b8` |
+| `types.log` | 97 | `497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015` |
+| `lint.log` | 363 | `a96fb53a0da51e08675f834397519a9761c0e944d563d1501c3f81cf2f00dcf3` |
+| `source-guard.log` | 249 | `961492c3971768c144057514917b4179f695089b172a31e2d3d3d62b9efdc8f3` |
+| `provisioning-guard.log` | 245 | `7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c` |
+| `diff-check.log` | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+
+These are finite local results for the four reviewed candidates, not current-source Desktop/native/packaged/full-workspace acceptance. Keep the existing `9a34bb28` cohort intact while retaining this followup on the private branch. Original resulting-source gates and physical cleanup remain mandatory. P08/P09, Draft/base and all previously retained restrictions remain unchanged.
+

@@ -91,6 +91,7 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
           assert.ok(Date.now() < deadline, 'original default intent remains within its deadline');
           const modelId = step === 'global-default' ? modelA : modelB;
           const row = dialog + ' [data-testid=' + JSON.stringify('runtime-provider-model-row-' + modelId) + ']';
+          options.assertOwnedRenderer();
           intentComplete = await cdp.evaluate('(() => { const rows=[...document.querySelectorAll(' +
             desktopJsLiteral(row) + ')]; if(rows.length!==1)return false;' +
             'const buttons=[...rows[0].querySelectorAll("button[aria-pressed]")]; if(buttons.length!==1)return false;' +

@@ -247,6 +247,12 @@ test('original same-Main Retry retains a bounded first UI refusal without changi
   assert.equal(refused.proof.retryUi?.last?.result, 'retry-present', 'retain the first original UI refusal');
   assert.deepEqual(refused.proof.retryUi, { stages: { clickReturnedMs: 1, writerObservedMs: 2, hostCheckedMs: 3, uiReadyMs: null },
     returnedReads: 1, countTruncated: false, last: { atMs: 4, result: 'retry-present' } });
+  const unobserved = await exercise([]);
+  assert.equal(unobserved.error, unobserved.failure);
+  assert.deepEqual(unobserved.calls, [...initialCalls, 'guard', 'evaluate']);
+  assert.equal(unobserved.proof.retryUi?.returnedReads, 0);
+  assert.equal(unobserved.proof.retryUi?.last, null);
+
   const ready = await exercise(['surface-missing', 'refresh-not-enabled', 'retry-present', 'alert-present', 'ready']);
   assert.equal(ready.error, undefined); assert.equal(ready.proof.counts.retryClicks, 1);
   assert.deepEqual(ready.calls, [...initialCalls, ...Array.from({ length: 5 }, () => ['guard', 'evaluate']).flat()]);
