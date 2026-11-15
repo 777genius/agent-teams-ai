@@ -112,6 +112,7 @@ const proof = {
   selectedSourceHashes: sourceHashes, originalInputPins: fixture.pins,
   counts: { mainStarts: 0, initialRuntimeOpen: 0, businessInput: 0, refreshClicks: 0, retryClicks: 0, uiStops: 0, quit: 0 },
   phases: [], uiSteps: [], screenshots: [], appLog: logPath,
+  censusReads: [], censusReadsTruncated: false,
 };
 let app, cdp, appLog, main, hostA, hostB, writerA, exit, exitPromise, binding;
 let lineage = [], startedAt, outerDeadline, activeDeadline, activePhase = 'prepare';
@@ -178,13 +179,31 @@ const validateCensus = snapshot => {
   remaining();
   return snapshot;
 };
+const observeCensus = (operation, read) => {
+  const phase = activePhase;
+  let from;
+  try { from = performance.now(); } catch { /* Observation only. */ }
+  let returned = false;
+  try {
+    const value = read(); returned = true; return value;
+  } finally {
+    try {
+      if (from !== undefined) {
+        if (proof.censusReads.length < 512) proof.censusReads.push({
+          phase, operation, startMs: from - startedAt, endMs: performance.now() - startedAt, returned,
+        });
+        else proof.censusReadsTruncated = true;
+      }
+    } catch { /* Preserve the original read result or refusal. */ }
+  }
+};
 const captureCensus = () => {
   check();
-  return validateCensus(processes());
+  return validateCensus(observeCensus('process-census', processes));
 };
 const assertOwnedRenderer = () => {
   check();
-  const observation = windowsProcessListenerSnapshot();
+  const observation = observeCensus('process-listener-snapshot', windowsProcessListenerSnapshot);
   const snapshot = validateCensus(observation.processes), ids = observation.listeners;
   assert.ok(ids.length > 0 && ids.every(pid => snapshot.some(current =>
     current.pid === pid && lineage.some(original => original.pid === pid && original.birth === current.birth))),
@@ -396,7 +415,12 @@ try {
     captureCensus().some(current => current.pid === row.pid && current.birth === row.birth)));
   const ui = createDesktopUiControls(port, {
     assertOwnedRenderer,
-    step: value => { assert.ok(proof.uiSteps.length < 128); proof.uiSteps.push({ phase: activePhase, ...value }); },
+    step: value => {
+      assert.ok(proof.uiSteps.length < 128);
+      const entry = { phase: activePhase, ...value };
+      try { entry.atMs = performance.now() - startedAt; } catch { /* Observation only. */ }
+      proof.uiSteps.push(entry);
+    },
   });
   await ui.observeInput();
   await ui.waitRead('Boolean(document.querySelector("#sidebar-tasks-panel"))', 'original sidebar', remaining());
@@ -441,21 +465,44 @@ try {
 
   assertHostBirths();
   begin('one-explicit-same-Main-Retry', 10000);
+  let retryUiSampleCount = 0, retryUiLast = null, retryUiLastAtMs = null;
+  const retryUiBase = { schemaVersion: 1, source: 'original-recovery-wait', atomicWithFailure: false };
+  const retryUiStages = { clickReturnedMs: null, writerObservedMs: null, hostCheckedMs: null, uiReadyMs: null };
+  const publishRetryUi = () => {
+    try {
+      const observation = { ...retryUiBase, stages: { ...retryUiStages }, sampleCount: Math.min(128, retryUiSampleCount),
+        sampleCountCapped: retryUiSampleCount > 128, lastAtMs: retryUiLastAtMs,
+        last: retryUiLast === null ? null : { ...retryUiLast } };
+      if (Buffer.byteLength(JSON.stringify(observation), 'utf8') <= 512) proof.retryUiObservation = observation;
+    } catch { /* Passive observation cannot change the original readiness result. */ }
+  };
+  const recordRetryUi = (stage, last) => {
+    let atMs = null;
+    try {
+      const elapsed = Math.round(performance.now() - startedAt - proof.phases.at(-1).atMs);
+      if (Number.isSafeInteger(elapsed) && elapsed >= 0) atMs = elapsed;
+    } catch { /* Failed timing does not discard valid facts or decide readiness. */ }
+    if (stage === 'sample') {
+      if (retryUiSampleCount < 129) retryUiSampleCount++;
+      retryUiLast = last; retryUiLastAtMs = atMs;
+    } else retryUiStages[stage] = atMs;
+    publishRetryUi();
+  };
+  publishRetryUi();
   proof.counts.retryClicks++;
   await ui.click(surface + ' button', 'explicit product Retry once', 'Retry');
+  recordRetryUi('clickReturnedMs');
   const successorWriter = await poll(async () => {
     const writer = readWriter();
     if (!writer || writer.pid === writerA.pid) return false;
     assert.notEqual(writer.token, writerA.token); return writer;
   }, 'actual successor writer acquisition');
+  recordRetryUi('writerObservedMs');
   hostB = assertHost(successorWriter, captureCensus());
   assert.notEqual(hostB.pid, hostA.pid);
   proof.successorHost = { identity: hostB, writer: successorWriter };
   assertHostBirths();
-  let retryUiSampleCount = 0;
-  const retryUiBase = { schemaVersion: 1, source: 'original-recovery-wait', atomicWithFailure: false };
-  try { proof.retryUiObservation = { ...retryUiBase, sampleCount: 0, sampleCountCapped: false, last: null }; }
-  catch { /* Passive observation cannot change the original readiness result. */ }
+  recordRetryUi('hostCheckedMs');
   await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) +
     ');let firstRefresh=null,refresh="not-observed",retryPresent=null,alertPresent=null;' +
     'if(!s)return {surfacePresent:false,refresh,firstRefreshBusy:null,retryPresent,alertPresent,ready:false};' +
@@ -489,14 +536,10 @@ try {
       if (observedReady !== ready) return false;
       last = { surfacePresent, refresh, firstRefreshBusy, retryPresent, alertPresent, ready };
     } catch { return false; }
-    if (retryUiSampleCount < 129) retryUiSampleCount++;
-    try {
-      const observation = { ...retryUiBase, sampleCount: Math.min(128, retryUiSampleCount),
-        sampleCountCapped: retryUiSampleCount > 128, last };
-      if (Buffer.byteLength(JSON.stringify(observation), 'utf8') <= 512) proof.retryUiObservation = observation;
-    } catch { /* Passive observation cannot change the original readiness result. */ }
+    recordRetryUi('sample', last);
     return ready;
   });
+  recordRetryUi('uiReadyMs');
   await originalBinding();
   await within(() => fixture.afterRetry(activeDeadline));
   proof.afterRetryPublic = await readProcesses();

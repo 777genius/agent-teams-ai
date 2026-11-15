@@ -1,0 +1,20 @@
+{
+  "sourceHead": "81ccea049ff5bb4a76d2d871e07934c72c9f2ae2",
+  "sourceTree": "d09ae2fdb8e55578cca0d2b473943a9c4bf84865",
+  "status": "",
+  "helperBlob": "5852944f37635afc9d7c6b2c444616b812bd5e84",
+  "testBlob": "cc200151738da867232a6bcd9d0525642ab73ecb",
+  "node": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "bytes": 12024,
+  "sha256": "20e90ac77e78af555ca6d12e3edb1ff50cd1bb1128238fe39047beec4a0d260c",
+  "counts": {
+    "tests": 44,
+    "pass": 40,
+    "fail": 4,
+    "skipped": 0
+  },
+  "exitCode": 1,
+  "qualification": "Specific test-first RED only; duplicate-A and over-bound captured discovery reach the original first screenshot checkpoint instead of refusing. Other failures retained exactly. No helper/source application and no E2E PASS.",
+  "command": "git diff --quiet\nrecon_clean_exit=$?\nif test \"$recon_clean_exit\" -ne 0; then exit \"$recon_clean_exit\"; fi\ngit fetch https://github.com/777genius/agent-teams-ai.git fix/frontend-parity-coobservation-c714-20261115\nrecon_fetch_exit=$?\nif test \"$recon_fetch_exit\" -ne 0; then exit \"$recon_fetch_exit\"; fi\ngit checkout --detach 81ccea049ff5bb4a76d2d871e07934c72c9f2ae2\nrecon_checkout_exit=$?\nif test \"$recon_checkout_exit\" -ne 0; then exit \"$recon_checkout_exit\"; fi\n/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts > /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-cross-44-red.log 2>&1\nrecon_cross_red_exit=$?\ntail -65 /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-cross-44-red.log\nexit \"$recon_cross_red_exit\""
+}

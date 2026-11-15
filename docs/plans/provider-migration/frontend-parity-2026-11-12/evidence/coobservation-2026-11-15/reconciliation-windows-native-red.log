@@ -1,0 +1,54 @@
+✔ post-Stop observer continues past stale original and pending alternate to fresh stopped props (3.063172ms)
+✔ initial original-ref observation remains exact and cannot select a replacement ref (1.794693ms)
+✔ background acceptance waits for atomic service publication without masking corrupt readiness (136.547826ms)
+﹣ captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime (0.293217ms) # requires the isolated Processes lane original native artifact capture
+✔ Windows outage membership requires both original process owners in one renderer sample (3.618669ms)
+✖ Windows Retry retains same-evaluation operands without changing the original wait (3.621233ms)
+✔ Windows primary failure is emitted once before cleanup without replacing the original error (2.208219ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 5
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 1615.112156
+
+✖ failing tests:
+
+test at scripts/legacy-agent-host/desktop-native-process-ui.test.ts:259:1
+✖ Windows Retry retains same-evaluation operands without changing the original wait (3.621233ms)
+  AssertionError [ERR_ASSERTION]: the same successful original wait must retain its selected stage and sample timings
+  + actual - expected
+  ... Skipped lines
+  
+    {
+      atomicWithFailure: false,
+      last: {
+        alertPresent: false,
+        firstRefreshBusy: false,
+  ...
+      },
+  -   lastAtMs: 4,
+      sampleCount: 1,
+      sampleCountCapped: false,
+      schemaVersion: 1,
+      source: 'original-recovery-wait',
+  -   stages: {
+  -     clickReturnedMs: 1,
+  -     hostCheckedMs: 3,
+  -     uiReadyMs: 5,
+  -     writerObservedMs: 2
+  -   }
+    }
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-native-process-ui.test.ts:388:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { schemaVersion: 1, source: 'original-recovery-wait', atomicWithFailure: false, sampleCount: 1, sampleCountCapped: false, last: { surfacePresent: true, refresh: 'enabled', firstRefreshBusy: false, retryPresent: false, alertPresent: false, ready: true } },
+    expected: { schemaVersion: 1, source: 'original-recovery-wait', atomicWithFailure: false, stages: { clickReturnedMs: 1, writerObservedMs: 2, hostCheckedMs: 3, uiReadyMs: 5 }, sampleCount: 1, sampleCountCapped: false, lastAtMs: 4, last: { surfacePresent: true, refresh: 'enabled', firstRefreshBusy: false, retryPresent: false, alertPresent: false, ready: true } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

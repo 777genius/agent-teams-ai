@@ -1,0 +1,23 @@
+{
+  "stage": "size",
+  "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+  "sourceTree": "95984c5c4aa1e7ff8c4d910dec582e6bc163e9b7",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "./scripts/ci/check-source-file-size.mjs"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T19:24:44.789508+00:00",
+  "finishedAtUTC": "2026-11-15T19:24:45.366061+00:00",
+  "elapsedSeconds": 0.5765148259961279,
+  "exitCode": 0,
+  "preflightMetadataSHA256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87",
+  "logBytes": 202,
+  "logSHA256": "1eb83c975f69534c70814629b4eb6d3124c0367a12b2463dd9716b6741d1a167",
+  "sourceHeadAfter": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+  "statusAfter": "",
+  "selectedLeavesUnchanged": true,
+  "selectedDependencyInputsUnchanged": true
+}

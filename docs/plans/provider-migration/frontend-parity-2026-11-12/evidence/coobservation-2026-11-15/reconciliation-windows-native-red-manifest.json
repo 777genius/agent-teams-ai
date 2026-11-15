@@ -1,0 +1,21 @@
+{
+  "sourceHead": "50d98fb01e6419c5fd0c9383efb2f5ea83657874",
+  "sourceTree": "06bc6b48d3bf23af6d099fbd53c9eb40ddd72bff",
+  "status": "",
+  "gateBlob": "0a76eee51a87ba5cf77b38bf83f408faf174bc84",
+  "testBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+  "helperBlob": "5852944f37635afc9d7c6b2c444616b812bd5e84",
+  "node": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "bytes": 2765,
+  "sha256": "e6d7fdf66c9231bf602424b95f897af41dc655bb379a254ce777c6b899c33d2c",
+  "counts": {
+    "tests": 7,
+    "pass": 5,
+    "fail": 1,
+    "skipped": 1
+  },
+  "exitCode": 1,
+  "qualification": "Specific test-first missing selected stage/sample timings after original successful full Retry and unchanged original setup/read/guard/DOM counts. No missing helper/import/anchor RED; original capture-dependent skip preserved. No source application or native/E2E qualification.",
+  "command": "git diff --quiet\nrecon_native_clean_exit=$?\nif test \"$recon_native_clean_exit\" -ne 0; then exit \"$recon_native_clean_exit\"; fi\ngit fetch https://github.com/777genius/agent-teams-ai.git fix/frontend-parity-coobservation-c714-20261115\nrecon_native_fetch_exit=$?\nif test \"$recon_native_fetch_exit\" -ne 0; then exit \"$recon_native_fetch_exit\"; fi\ngit checkout --detach 50d98fb01e6419c5fd0c9383efb2f5ea83657874\nrecon_native_checkout_exit=$?\nif test \"$recon_native_checkout_exit\" -ne 0; then exit \"$recon_native_checkout_exit\"; fi\n/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node --test scripts/legacy-agent-host/desktop-native-process-ui.test.ts > /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-windows-native-red.log 2>&1\nrecon_native_red_exit=$?\ntail -65 /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-windows-native-red.log\nexit \"$recon_native_red_exit\""
+}

@@ -297,3 +297,35 @@ test('Windows phase observations use the original phase clocks and cannot bypass
   assert.deepEqual(retained.phases, [{ phase: oversized, atMs: 10, budgetMs: 10000 }],
     'the byte bound changes only the diagnostic output');
 });
+
+test('Windows census observations preserve original results, refusals and bounded diagnostics', () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const section = (start, end) => {
+    assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+    const from = source.indexOf(start), to = source.indexOf(end);
+    assert(to > from); return source.slice(from, to);
+  };
+  const proof = { censusReads: [], censusReadsTruncated: false }, calls = [], original = {};
+  let now = 110;
+  const observe = runInThisContext('(function(performance, proof) {' +
+    "const startedAt=100, activePhase='one-explicit-same-Main-Retry';" +
+    section('const observeCensus = (operation, read) => {', 'const captureCensus = () => {') +
+    'return observeCensus;})')({ now: () => { calls.push('clock'); return now++; } }, proof);
+  assert.equal(observe('process-census', () => { calls.push('read'); return original; }), original);
+  assert.deepEqual(calls, ['clock', 'read', 'clock']);
+  assert.deepEqual(proof.censusReads, [{
+    phase: 'one-explicit-same-Main-Retry', operation: 'process-census', startMs: 10, endMs: 11, returned: true,
+  }]);
+  const refusal = new Error('TEST original census refusal');
+  calls.length = 0;
+  assert.throws(() => observe('process-listener-snapshot', () => {
+    calls.push('read'); throw refusal;
+  }), error => error === refusal);
+  assert.deepEqual(calls, ['clock', 'read', 'clock']); assert.equal(proof.censusReads.at(-1).returned, false);
+  proof.censusReads = Object.freeze([]);
+  assert.throws(() => observe('process-census', () => { throw refusal; }), error => error === refusal);
+  assert.equal(observe('process-census', () => original), original, 'diagnostic failure preserves success too');
+  proof.censusReads = Array(512).fill(null);
+  assert.equal(observe('process-census', () => original), original);
+  assert.equal(proof.censusReads.length, 512); assert.equal(proof.censusReadsTruncated, true);
+});

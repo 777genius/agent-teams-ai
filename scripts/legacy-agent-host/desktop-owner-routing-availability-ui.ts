@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
+import { hostTeamSelectionKey, parseHostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { ownerRoutingRow as row } from './desktop-owner-routing-fixture.ts';
 import { bounded } from './desktop-proof-bounds.ts';
@@ -32,14 +32,20 @@ export async function assertDesktopOwnerRoutingAvailability(options: {
   assert.equal(row(row(receipt.command).payload).subject, task.subject);
   assert.equal(options.discovery.state, 'ready', 'Partial UI proof requires original ready discovery');
   assert.ok(Array.isArray(options.discovery.bindings) && Array.isArray(options.discovery.unavailableOwners));
+  assert.ok(options.discovery.bindings.length <= 16);
+  const aTeams = new Set<string>();
+  for (const value of options.discovery.bindings) {
+    const binding = row(value);
+    if (binding.ownerResourceRef !== aPublic.ownerResourceRef) continue;
+    const handleId = row(binding.handle).handleId;
+    assert.equal(typeof handleId, 'string');
+    const selection = hostTeamSelectionKey(handleId as string);
+    parseHostTeamSelectionKey(selection);
+    assert.ok(!aTeams.has(selection), 'Duplicate captured A Team');
+    aTeams.add(selection);
+  }
+  assert.ok(aTeams.has(a), 'Original A must remain in the captured owner discovery');
   assert.deepEqual(options.discovery.bindings.filter(value => row(row(value).handle).handleId === row(bPublic.handle).handleId), [bPublic]);
-  const aTeamNames = new Set(options.discovery.bindings.filter(value =>
-    row(value).ownerResourceRef === aPublic.ownerResourceRef).map(value => {
-    const handleId = row(row(value).handle).handleId;
-    assert.ok(typeof handleId === 'string' && handleId.length > 0);
-    return hostTeamSelectionKey(handleId);
-  }));
-  assert.ok(aTeamNames.has(a), 'Original A binding must remain captured');
   const unavailable = options.discovery.unavailableOwners.map(row);
   assert.equal(unavailable.length, 1); assert.equal(unavailable[0]!.kind, 'owner');
   assert.equal(unavailable[0]!.ownerResourceRef, aPublic.ownerResourceRef);
@@ -111,7 +117,7 @@ export async function assertDesktopOwnerRoutingAvailability(options: {
     assert.ok(rows.length > 0 && rows.length <= 16);
     assert.ok(rows.every(entry => ['busy', 'unavailable', 'shutting-down'].includes(String(entry.code)) &&
       ['not-dispatched', 'rejected', 'unknown'].includes(String(entry.outcome)) &&
-      (entry.kind === 'owner' ? entry.ownerResourceRef === aPublic.ownerResourceRef : entry.kind === 'team' && typeof entry.teamName === 'string' && aTeamNames.has(entry.teamName))));
+      (entry.kind === 'owner' ? entry.ownerResourceRef === aPublic.ownerResourceRef : entry.kind === 'team' && typeof entry.teamName === 'string' && aTeams.has(entry.teamName))));
     assert.equal(rows.filter(entry => entry.kind === 'owner').length, 1);
     assert.equal(healthy.teamName, b); assert.equal(healthy.ownerResourceRef, bPublic.ownerResourceRef);
     if (surface === 'tasks') {
