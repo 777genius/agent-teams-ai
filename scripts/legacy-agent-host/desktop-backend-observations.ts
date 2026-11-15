@@ -242,6 +242,8 @@ interface CdpFixtureCorrelation {
   fixtureHostArgv: boolean | null; fixtureNodeExecutable: boolean | null;
   fixtureMcpBuilderEntry: boolean | null;
   closeOnExec: boolean | null;
+  commandLineState: 'unknown' | 'unavailable-or-over-limit' | 'empty' | 'incomplete' | 'complete';
+  executableKind: 'unknown' | 'electron' | 'node' | 'git' | 'shell' | 'other';
 }
 type CdpFixtureSelection = { node: string; hostEntry: string; mcpBuilderEntry?: string };
 const cdpListenerFailures = new WeakMap<Error, CdpListenerFacts>();
@@ -253,7 +255,8 @@ const cdpFixtureFailures = new WeakMap<Error, CdpListenerFacts & {
 function correlateCdpFixture(file: CdpListenerFile, fixture: CdpFixtureSelection): CdpFixtureCorrelation {
   const unknown: CdpFixtureCorrelation = { pid: file.pid, fd: file.fd,
     scope: 'after-failed-census', atomic: false, birth: 'unknown', socket: 'unknown',
-    fixtureHostArgv: null, fixtureNodeExecutable: null, fixtureMcpBuilderEntry: null, closeOnExec: null };
+    fixtureHostArgv: null, fixtureNodeExecutable: null, fixtureMcpBuilderEntry: null, closeOnExec: null,
+    commandLineState: 'unknown', executableKind: 'unknown' };
   const original = file.afterCensus;
   if (original?.birth !== 'same' || !original.socketInode) return unknown;
   const sameBirth = (value: ProcBirth | undefined) => value !== undefined &&
@@ -265,6 +268,12 @@ function correlateCdpFixture(file: CdpListenerFile, fixture: CdpFixtureSelection
     if (readlinkSync(path) !== socket) return unknown;
     const argv = boundedProcText(`/proc/${file.pid}/cmdline`);
     const executable = readlinkSync(`/proc/${file.pid}/exe`);
+    const commandLineState = argv === undefined ? 'unavailable-or-over-limit' : argv.length === 0
+      ? 'empty' : argv.endsWith('\0') ? 'complete' : 'incomplete';
+    const executableName = basename(executable);
+    const executableKind = ['electron', 'agent-teams-ai', 'Agent Teams AI'].includes(executableName)
+      ? 'electron' : executableName === 'node' ? 'node' : executableName === 'git' ? 'git'
+        : ['sh', 'bash', 'dash', 'zsh'].includes(executableName) ? 'shell' : 'other';
     const info = boundedProcText(`/proc/${file.pid}/fdinfo/${file.fd}`);
     const flags = info?.split('\n').filter(line => line.startsWith('flags:')) ?? [];
     const octal = flags.length === 1 ? /^flags:\t(0[0-7]{1,10})$/u.exec(flags[0]!)?.[1] : undefined;
@@ -281,7 +290,8 @@ function correlateCdpFixture(file: CdpListenerFile, fixture: CdpFixtureSelection
       Boolean(args[3]) && args[3] !== '--out-dir';
     if (readlinkSync(path) !== socket || !sameBirth(readProcBirth(file.pid))) return unknown;
     return { ...unknown, birth: 'same', socket: 'same-as-supplemental',
-      fixtureHostArgv, fixtureNodeExecutable: executable === fixture.node, fixtureMcpBuilderEntry, closeOnExec };
+      fixtureHostArgv, fixtureNodeExecutable: executable === fixture.node, fixtureMcpBuilderEntry, closeOnExec,
+      commandLineState, executableKind };
   } catch { return unknown; }
 }
 

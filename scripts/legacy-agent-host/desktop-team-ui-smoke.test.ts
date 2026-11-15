@@ -14,6 +14,7 @@ import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-commen
 import { runDesktopTaskBoardAttachmentsUi } from './desktop-task-board-attachments-ui.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
+import { projectDesktopEmulatedReadinessFailure, projectDesktopProofReceiptSummary } from './desktop-proof-evidence.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -753,4 +754,42 @@ test('login failure facts retain only bounded original attempts and confirmed mi
     capturedHostObserved: null, capturedHostAbsent: null, failureRecorded: null });
   assert.equal(JSON.stringify(malformed).includes(privateSentinel), false);
   assert.equal(projectDesktopCodexLoginFailure({}).originalFailureRecorded, false);
+});
+
+test('finite readiness failure summaries keep only bounded states and never private snapshot data', () => {
+  const secret = 'TEST-private-value https://TEST-private.example/token /TEST-secret/path';
+  const evidence = { status: 'INCOMPLETE', stoppedImportUiProof: { hydrationFailureDiagnostics: {
+    text: 'Runtime environment unavailable ' + secret, permissions: 'unchecked', inputs: [{ value: secret }] } },
+    rendererFailureSnapshot: { store: { provisioning: [{ currentProvisioningRunId: secret,
+      error: 'Runtime source changed ' + secret, progress: { state: 'failed', configReady: false,
+        message: 'Selected model could not be verified ' + secret } }] } } };
+  const before = JSON.stringify(evidence), result = projectDesktopEmulatedReadinessFailure(evidence);
+  assert.ok('hydration' in result && result.hydration && 'provisioning' in result && result.provisioning);
+  assert.equal(result.hydration.text.runtimeUnavailable, true);
+  assert.equal(result.hydration.permissions, 'unchecked');
+  assert.equal(result.provisioning.items[0]!.state, 'failed');
+  assert.equal(result.provisioning.items[0]!.configReady, false);
+  assert.deepEqual(result.provisioning.items[0]!.error.terms, ['runtime', 'source', 'changed']);
+  assert.equal(result.provisioning.items[0]!.message.modelUnverified, true);
+  assert.doesNotMatch(JSON.stringify(result), /TEST-private|https:|\/TEST-secret|Runtime source changed/);
+  assert.equal(JSON.stringify(evidence), before);
+  for (const mode of ['emulated-import-ui', 'emulated-opencode-runtime-ui']) {
+    assert.ok('emulatedReadinessFailure' in projectDesktopProofReceiptSummary(evidence, { mode, receiptPath: 'TEST-receipt', mixedMode: false }));
+    assert.equal('emulatedReadinessFailure' in projectDesktopProofReceiptSummary({ ...evidence, status: 'PASS' }, { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  }
+  for (const mode of ['team-ui', 'emulated-extensions-ui'])
+    assert.equal('emulatedReadinessFailure' in projectDesktopProofReceiptSummary(evidence, { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  let getterReads = 0;
+  projectDesktopEmulatedReadinessFailure(Object.defineProperty({}, 'rendererFailureSnapshot', {
+    get() { getterReads++; throw new Error(secret); } }));
+  projectDesktopEmulatedReadinessFailure({ rendererFailureSnapshot: { store: {
+    provisioning: new Proxy([], { get() { getterReads++; throw new Error(secret); } }) } } });
+  assert.equal(getterReads, 0);
+  const overflow = projectDesktopEmulatedReadinessFailure({ rendererFailureSnapshot: {
+    store: { provisioning: Array.from({ length: 99 }, () => ({ progress: { state: secret } })) } } });
+  assert.ok('provisioning' in overflow && overflow.provisioning);
+  assert.equal(overflow.provisioning.count, 9); assert.equal(overflow.provisioning.overflow, true);
+  assert.equal(overflow.provisioning.items.length, 8);
+  assert.ok(overflow.provisioning.items.every(row => row.state === null));
+  assert.ok(Buffer.byteLength(JSON.stringify(overflow)) <= 8192);
 });

@@ -7,6 +7,7 @@ import { performance } from 'node:perf_hooks';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { FileManagementCommandStore } from '../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js';
+import { ClaudeAuthenticationCoordinator } from '../../packages/legacy-agent-host/dist/composition/ClaudeAuthenticationCoordinator.js';
 import { ClaudeManagementCoordinator } from '../../packages/legacy-agent-host/dist/composition/ClaudeManagementCoordinator.js';
 import { NativeExtensionCoordinator } from '../../packages/legacy-agent-host/dist/extensions/NativeExtensionCoordinator.js';
 import { claudeManagementProfileSchema } from '../../packages/legacy-agent-host/dist/management/profile.js';
@@ -55,6 +56,22 @@ await import(${JSON.stringify(pathToFileURL(source).href)});
   t.after(() => management.close());
   return { root, peerRoot, profile, store, management, effects };
 }
+
+test('finite extension status uses the original Host auth command and retains its exact private namespace', { timeout: 15000 }, async t => {
+  const f = await fixture(t, 'extensions');
+  const identity = { profileId: f.profile.profileId, configRevision: f.profile.configRevision };
+  const auth = new ClaudeAuthenticationCoordinator([f.profile], (id, revision) => f.management.target(id, revision), () => {});
+  t.after(() => auth.close());
+  const status = await auth.read(identity);
+  assert.deepEqual(status, { ...identity, loggedIn: true, authMethod: 'api_key', canLogin: false, canLogout: false });
+  const effects = await f.effects();
+  assert.deepEqual(effects.filter(row => row.event === 'launch').map(row => row.command), [['auth', 'status', '--json']]);
+  assert.equal(effects.filter(row => row.event === 'auth-status').length, 1);
+  assert.equal(effects.some(row => row.event === 'extension-command' || row.event === 'failure'), false);
+  assert.deepEqual([...f.store.list()], []);
+  await assert.rejects(readFile(join(f.peerRoot, 'config/settings.json')), { code: 'ENOENT' });
+  await assert.rejects(readFile(join(f.peerRoot, 'config/.claude.json')), { code: 'ENOENT' });
+});
 
 test('finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay', { timeout: 15000 }, async t => {
   const f = await fixture(t, 'extensions');
@@ -110,7 +127,8 @@ test('finite extension CLI refuses changed names/scopes and does not overwrite s
   const f = await fixture(t, 'extensions'), path = join(f.peerRoot, 'config/.claude.json');
   const original = JSON.stringify({ TEST_unchanged: true }); await writeFile(path, original, { mode: 0o600 });
   for (const args of [['mcp', 'add', '-s', 'user', '-t', 'http', 'unselected', extensionMcpUrl],
-    ['plugin', 'install', '-s', 'project', extensionPlugin], ['plugin', 'marketplace', 'add', 'https://example.com']]) {
+    ['plugin', 'install', '-s', 'project', extensionPlugin], ['plugin', 'marketplace', 'add', 'https://example.com'],
+    ['auth', 'login', '--claudeai'], ['auth', 'logout'], ['auth', 'status', '--json', '--extra']]) {
     const result = spawnSync(f.profile.executable.path, args, { cwd: f.profile.cwd, env: f.profile.environment, timeout: 5000 });
     assert.equal(result.status, 78); assert.equal(await readFile(path, 'utf8'), original);
   }

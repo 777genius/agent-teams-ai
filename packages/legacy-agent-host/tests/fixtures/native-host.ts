@@ -358,7 +358,8 @@ export function startHost(options: {
 
 /** Failure-only evidence: no native authority, raw output, or dependency on the relocated checkout. */
 export async function writeNativeFailureReceipt(options: {
-  kind: 'TEST_NATIVE_V2_FAILURE_RECEIPT' | 'TEST_PACKAGED_V2_FAILURE_RECEIPT';
+  kind: 'TEST_NATIVE_V2_FAILURE_RECEIPT' | 'TEST_PACKAGED_V2_FAILURE_RECEIPT' |
+    'TEST_NATIVE_V2_CREDENTIAL_FAILURE_RECEIPT';
   sourceHead: string;
   platform: string;
   serialized: string;

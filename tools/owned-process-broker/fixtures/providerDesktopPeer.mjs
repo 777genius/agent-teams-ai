@@ -11,8 +11,6 @@ import process from 'node:process';
 import { setTimeout } from 'node:timers';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
 const hostRequire = createRequire(new URL('../../../packages/legacy-agent-host/package.json', import.meta.url));
-const { Client } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/index.js')).href);
-const { StreamableHTTPClientTransport } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/streamableHttp.js')).href);
 
 assert.equal(process.env.TEST_EMULATED_DESKTOP_PROVIDER, '1');
 assert.equal(process.env.TEST_EMULATED_WINDOWS_PROVIDER, undefined);
@@ -72,7 +70,10 @@ const managedPolicy = raw => {
       : '{' + Object.entries(record(value)).map(([key, field]) => JSON.stringify(key) + '=' + encode(field)).join(',') + '}';
   assert.equal(encode(rows), raw, 'only the original canonical managed policy');
   assert.deepEqual(readdirSync(process.env.CODEX_HOME), [], 'only the original empty TEST native catalog');
-  if (Object.keys(rows).length === 0) { assert.equal(role, 'management'); return rows; }
+  if (Object.keys(rows).length === 0) {
+    assert.equal(process.env.LEGACY_AGENT_HOST_TEAM_MCP_TOKEN, undefined);
+    return rows; // Runtime use additionally requires the original ephemeral thread below.
+  }
   assert.deepEqual(Object.keys(rows), ['team']); const team = record(rows.team);
   assert.ok(Object.keys(team).every(key => ['url', 'bearer_token_env_var', 'enabled_tools', 'tools', 'enabled', 'startup_timeout_sec', 'tool_timeout_sec'].includes(key)));
   assert.equal(team.enabled, true); assert.equal(team.bearer_token_env_var, 'LEGACY_AGENT_HOST_TEAM_MCP_TOKEN');
@@ -120,6 +121,7 @@ assert.equal(appServer, 1);
   assert.equal(process.env.OPENCODE_SERVER_USERNAME, 'opencode'); assert.ok(process.env.OPENCODE_SERVER_PASSWORD);
 }
 const managedMcp = options.mcp_servers;
+const standaloneMcp = provider === 'codex' && role === 'runtime' && managedMcp !== undefined && Object.keys(managedMcp).length === 0;
 if (managedMcp !== undefined) {
   assert.equal(options['features.apps'], false); assert.equal(Object.keys(options).some(key => key.startsWith('mcp_servers.')), false);
   if (managedMcp.team) {
@@ -167,6 +169,8 @@ const connectTeam = async () => {
     assert.equal(tokenName, 'LEGACY_AGENT_HOST_TEAM_MCP_TOKEN'); assert.ok(process.env[tokenName]);
     authorization = `Bearer ${process.env[tokenName]}`;
   }
+  const { Client } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/index.js')).href);
+  const { StreamableHTTPClientTransport } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/streamableHttp.js')).href);
   mcp = new Client({ name: 'TEST-desktop-provider-peer', version: '1' });
   await mcp.connect(new StreamableHTTPClientTransport(endpoint, {
     requestInit: { headers: nativeMcp ? { ...record(nativeMcp.headers) } : { authorization } },
@@ -245,7 +249,7 @@ const send = value => process.stdout.write(JSON.stringify(value) + '\n');
 const reply = (id, result) => send({ id, result });
 const notify = (method, params) => send({ method, params });
 const threadId = `TEST-thread-${process.pid}`;
-let turns = 0, active, pending, managedConfigObserved = false;
+let turns = 0, active, pending, managedConfigObserved = false, standaloneThread = false;
 const fields = turn => ({ threadId, turnId: turn.id, itemId: turn.itemId });
 const delta = (turn, text) => {
   assert.equal(active, turn); turn.text += text;
@@ -343,6 +347,10 @@ async function receive(frame) {
     case 'thread/start':
       assert.equal(active, undefined); assert.equal(params.cwd, process.cwd()); assert.ok(codexModels.includes(params.model));
       if (managedMcp !== undefined) { assert.equal(managedConfigObserved, true); if (runtimeMcp) await connectTeam(); }
+      if (standaloneMcp) {
+        assert.equal(params.ephemeral, true, 'Only the original standalone ephemeral thread');
+        assert.equal(standaloneThread, false); standaloneThread = true;
+      }
       if (selection !== undefined) {
         if (runtimeMcp) assert.ok(['low', 'high'].includes(options.model_reasoning_effort));
         effect({ event: 'thread-selection', threadId, model: params.model,
@@ -351,10 +359,16 @@ async function receive(frame) {
       result = { thread: { id: threadId }, cwd: params.cwd, model: params.model, modelProvider: params.modelProvider ?? 'TEST-fixture',
         reasoningEffort: options.model_reasoning_effort ?? null, serviceTier: options.service_tier ?? null }; break;
     case 'mcpServerStatus/list':
-      assert.equal(runtimeMcp, true); assert.ok(mcp); assert.equal(params.threadId, threadId);
+      assert.equal(params.threadId, threadId);
+      if (standaloneMcp) {
+        assert.equal(standaloneThread, true); assert.equal(mcp, undefined); assert.deepEqual(tools, []);
+        result = { data: [], nextCursor: null }; break;
+      }
+      assert.equal(runtimeMcp, true); assert.ok(mcp);
       result = { data: [{ name: 'team', authStatus: 'bearerToken', runtimeStatus: 'connected', toolsError: null,
         resources: [], resourceTemplates: [], tools: Object.fromEntries(tools.map(tool => [tool.name, tool])) }], nextCursor: null }; break;
     case 'turn/start': {
+      if (standaloneMcp) assert.equal(standaloneThread, true);
       assert.equal(params.threadId, threadId); assert.equal(active, undefined); assert.ok(++turns <= 24);
       assert.ok(Array.isArray(params.input) && params.input.length > 0 && params.input.every(part => part.type === 'text'));
       const marker = selectMarker(params.input.map(part => part.text).join('\n'));

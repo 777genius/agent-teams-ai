@@ -7,7 +7,6 @@ import { tmpdir } from 'node:os';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
-import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { NativeCoordinationFixture } from './fixtures/native-opencode-team/coordination-probe.ts';
 import { record } from './fixtures/native-claude-team/model.ts';
@@ -118,6 +117,10 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   if (packaged) assert.equal(packaged.sourceHead, sourceHead);
   const sourceBuild = packaged ? undefined : await buildNativeV1Host(repo, sourceHead);
   if (packaged && process.platform === 'darwin') assert.ok(packaged.processCustody);
+  // Resolve admission from the same selected Host closure; a relocated TEST harness cannot
+  // resolve that closure's CommonJS dependencies relative to its own temporary directory.
+  const { captureInitialRuntimeModelAdmission } = await import(pathToFileURL(join(pkg, 'dist/composition/initialRuntimeModelAdmission.js')).href) as
+    typeof import('../dist/composition/initialRuntimeModelAdmission.js');
   const { applyLaunchConfiguration } = await import(pathToFileURL(join(pkg, 'dist/composition/launchConfiguration.js')).href) as
     typeof import('../dist/composition/launchConfiguration.js');
   const { applyOpenCodeRuntimeSource } = await import(pathToFileURL(join(pkg, 'dist/composition/applyOpenCodeRuntimeSource.js')).href) as

@@ -15,6 +15,7 @@ import {
   compiledBundleHashes,
   portOccupied,
   processTable,
+  readOwnedCdpListenerFailure,
   readRendererBackendConnections,
 } from './desktop-backend-observations.ts';
 import { bounded } from './desktop-proof-bounds.ts';
@@ -652,6 +653,17 @@ export async function runDesktopOwnerRoutingContinuation(
         epoch.preQuitSentinel = await sentinel(phase + '-before-quit');
         flowSucceeded = true;
       } catch (error) {
+        const listenerFailure = readOwnedCdpListenerFailure(error, {
+          node: fixture.node, hostEntry: fixture.hostEntry,
+        });
+        if (listenerFailure) {
+          epoch.cdpListenerFailure = listenerFailure;
+          try {
+            const line = 'TEST_CDP_LISTENER_FAILURE ' + JSON.stringify(listenerFailure);
+            console.log(Buffer.byteLength(line, 'utf8') <= 32 * 1024 ? line :
+              'TEST_CDP_LISTENER_FAILURE {"scope":"original-linux-lsof-test-cdp","unavailable":"over-limit"}');
+          } catch { /* Diagnostic failure never replaces the original listener assertion. */ }
+        }
         epoch.failure =
           error instanceof Error ? error.message.slice(0, 4000) : 'original epoch failure';
         if (cdp) {

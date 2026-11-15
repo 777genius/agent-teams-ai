@@ -163,8 +163,8 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
     const label = scope === 'global' ? 'Change: Default model' : 'Use another model: This project: workspace';
     const control = `${dialog} button[aria-label=${JSON.stringify(label)}]`;
     await ui.scrollTo(control, label); await ui.click(control, label);
-    const header = `${dialog} [data-testid="runtime-provider-row-${desktopV2ProviderId}-header"]`;
-    const content = `${dialog} [data-testid="runtime-provider-row-${desktopV2ProviderId}-content"]`;
+    const header = `${dialog} [data-testid="runtime-provider-directory-row-${desktopV2ProviderId}-header"]`;
+    const content = `${dialog} [data-testid="runtime-provider-directory-row-${desktopV2ProviderId}-content"]`;
     if (!await cdp.evaluate(`Boolean(document.querySelector(${desktopJsLiteral(content)}))`)) {
       await ui.scrollTo(header, 'original configured provider'); await ui.click(header, 'expand original configured provider');
     }

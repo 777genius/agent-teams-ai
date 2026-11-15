@@ -132,3 +132,99 @@ test('finite managed Codex policy refuses alternate syntax, extra servers and en
     assert.deepEqual(await f.effects(), []);
   }
 });
+
+function standalonePeer(f: Awaited<ReturnType<typeof fixture>>, expectedExit = 0) {
+  const args = ['app-server', '--listen', 'stdio://', ...codexMcpPolicyArgs({ catalog, selected: {} })];
+  const child = spawn(f.node, [f.source, ...args], { cwd: f.workspace, env: f.environment,
+    stdio: ['pipe', 'pipe', 'pipe'] });
+  const exited = once(child, 'close'), frames: Record<string, unknown>[] = [];
+  let stderr = '', sequence = 0;
+  child.stderr.on('data', bytes => { stderr += bytes; assert.ok(Buffer.byteLength(stderr) <= 65536); });
+  const lines = createInterface({ input: child.stdout });
+  lines.on('line', line => { assert.ok(frames.length < 64); frames.push(JSON.parse(line)); });
+  const closed = async () => {
+    const timeout = setTimeout(() => child.kill('SIGTERM'), 5000); timeout.unref();
+    try { assert.deepEqual(await exited, [expectedExit, null], stderr); }
+    finally { clearTimeout(timeout); lines.close(); }
+  };
+  const finish = () => { child.stdin.end(); return closed(); };
+  f.cleanupWith(finish);
+  const send = (method: string, params: Record<string, unknown> = {}) => {
+    const id = ++sequence;
+    child.stdin.write(JSON.stringify({ id, method, params }) + '\n');
+    return id;
+  };
+  const until = async (select: () => Record<string, unknown> | undefined) => {
+    const deadline = performance.now() + 5000;
+    for (;;) {
+      assert.ok(performance.now() < deadline, 'original finite protocol deadline');
+      const found = select(); if (found) return found;
+      assert.equal(child.exitCode, null, stderr);
+      await new Promise<void>(resolve => setTimeout(resolve, 10));
+    }
+  };
+  const rpc = async (method: string, params: Record<string, unknown> = {}) => {
+    const id = send(method, params), frame = await until(() => frames.find(row => row.id === id));
+    assert.equal(frame.error, undefined); return frame.result as Record<string, unknown>;
+  };
+  assert.ok(child.pid);
+  return { rpc, send, closed, finish, until, frames, unstartedThreadId: `TEST-thread-${child.pid}` };
+}
+
+test('finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread', async t => {
+  const f = await fixture(t), peer = standalonePeer(f);
+  await peer.rpc('initialize');
+  const config = await peer.rpc('config/read');
+  assert.deepEqual(config, { config: { model: 'TEST-model', model_provider: 'TEST-fixture',
+    features: { apps: false }, mcp_servers: {} } });
+  const opened = await peer.rpc('thread/start', { cwd: f.workspace, model: 'TEST-model', ephemeral: true });
+  const threadId = (opened.thread as { id: string }).id;
+  assert.equal(typeof threadId, 'string');
+  assert.deepEqual(await peer.rpc('mcpServerStatus/list', { threadId }), { data: [], nextCursor: null });
+  const accepted = await peer.rpc('turn/start', { threadId, input: [
+    { type: 'text', text: 'Reply only OK. Do not use tools, access files or run commands.' },
+  ] });
+  const turnId = (accepted.turn as { id: string }).id;
+  const terminal = await peer.until(() => peer.frames.find(row => row.method === 'turn/completed'));
+  assert.deepEqual(terminal.params, { threadId, turn: { id: turnId, status: 'completed' } });
+  const item = peer.frames.find(row => row.method === 'item/completed')?.params as {
+    threadId: string; turnId: string; item: { type: string; text: string } };
+  assert.equal(item.threadId, threadId); assert.equal(item.turnId, turnId);
+  assert.equal(item.item.type, 'agentMessage'); assert.equal(item.item.text, 'OK');
+  await peer.finish();
+  const effects = await f.effects();
+  assert.equal(effects.some(row => row.event === 'connected' || row.event === 'mcp-call'), false);
+  assert.deepEqual(effects.filter(row => row.event === 'input').map(row => row.marker), ['TEST_MODEL_PROBE']);
+  assert.deepEqual(effects.filter(row => row.event === 'terminal').map(row => row.status), ['completed']);
+});
+
+test('finite Codex standalone refuses Team authority, persistent threads and unselected thread work', async t => {
+  const args = ['app-server', '--listen', 'stdio://', ...codexMcpPolicyArgs({ catalog, selected: {} })];
+  const tokenFixture = await fixture(t);
+  const token = tokenFixture.invoke(args, { LEGACY_AGENT_HOST_TEAM_MCP_TOKEN: 'TEST-unselected-authority' });
+  assert.equal(token.status, 1); assert.equal(token.signal, null); assert.equal(token.error, undefined);
+  assert.equal(token.stdout, ''); assert.deepEqual(await tokenFixture.effects(), []);
+  for (const mode of ['missing-ephemeral', 'persistent', 'early-status', 'early-input', 'foreign-status', 'foreign-input'] as const) {
+    const f = await fixture(t), peer = standalonePeer(f, 1);
+    await peer.rpc('initialize'); await peer.rpc('config/read');
+    if (mode === 'missing-ephemeral' || mode === 'persistent') {
+      peer.send('thread/start', { cwd: f.workspace, model: 'TEST-model',
+        ...(mode === 'persistent' ? { ephemeral: false } : {}) });
+    } else if (mode === 'early-status' || mode === 'early-input') {
+      peer.send(mode === 'early-status' ? 'mcpServerStatus/list' : 'turn/start', {
+        threadId: peer.unstartedThreadId,
+        ...(mode === 'early-input' ? { input: [{ type: 'text', text: 'Reply only OK. Do not use tools, access files or run commands.' }] } : {}),
+      });
+    } else {
+      await peer.rpc('thread/start', { cwd: f.workspace, model: 'TEST-model', ephemeral: true });
+      peer.send(mode === 'foreign-status' ? 'mcpServerStatus/list' : 'turn/start', {
+        threadId: 'TEST-unselected-thread',
+        ...(mode === 'foreign-input' ? { input: [{ type: 'text', text: 'Reply only OK. Do not use tools, access files or run commands.' }] } : {}),
+      });
+    }
+    await peer.closed();
+    const effects = await f.effects();
+    assert.equal(effects.some(row => ['connected', 'mcp-call', 'input', 'terminal'].includes(String(row.event))), false);
+    assert.deepEqual(effects.filter(row => row.event === 'failure').map(row => row.reason), ['assertion']);
+  }
+});

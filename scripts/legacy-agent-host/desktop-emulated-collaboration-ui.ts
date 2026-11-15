@@ -131,8 +131,8 @@ export async function runDesktopEmulatedCollaborationUi(cdp: UiCdpPort, options:
     return { ...result, physical: peer, nativeSession, allPhysical: physical };
   };
   await back(); const beforeAdd = await records.owner();
-  await ui.scrollTo('[data-section-id="team"] button', 'original Add Members control', 'Add');
-  await ui.click('[data-section-id="team"] button', 'open original Add Members', 'Add');
+  await ui.scrollTo('[data-section-id="team"] button[aria-label="Add"]', 'original Add Members control');
+  await ui.click('[data-section-id="team"] button[aria-label="Add"]', 'open original Add Members');
   await fill('[role="dialog"] input[aria-label="Member 1 name"]', 'carol');
   const picker = '[role="dialog"] button[aria-label*=" provider,"]';
   await ui.scrollTo(picker, 'original new member model selector'); await ui.click(picker, 'expand original member model selector');

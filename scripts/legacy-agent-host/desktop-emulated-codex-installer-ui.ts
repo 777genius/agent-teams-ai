@@ -32,7 +32,31 @@ export async function runDesktopEmulatedCodexInstallerUi(cdp: UiCdpPort, options
   const indexBytes = () => readFile(indexPath).catch((error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return null; throw error; });
   const readStatus = async () => {
     options.assertOwnedRenderer();
-    return record(await cdp.evaluate('window.electronAPI.codexRuntime.getStatus()'));
+    try {
+      return record(await cdp.evaluate('window.electronAPI.codexRuntime.getStatus()'));
+    } catch (error) {
+      try {
+        const ownValue = (value: unknown, key: string): unknown => {
+          if (value === null || typeof value !== 'object') return undefined;
+          const descriptor = Object.getOwnPropertyDescriptor(value, key);
+          return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+        };
+        const code = ownValue(error, 'code'), message = ownValue(error, 'message');
+        const name = error instanceof assert.AssertionError ? 'AssertionError'
+          : error instanceof TypeError ? 'TypeError' : error instanceof ReferenceError ? 'ReferenceError'
+            : error instanceof SyntaxError ? 'SyntaxError' : error instanceof Error ? 'Error' : 'unknown';
+        const publicFailure = [
+          'The original Codex installation context is unavailable.',
+          'The original Codex runtime selection could not be confirmed.',
+          'CDP command timed out: Runtime.evaluate',
+          'CDP connection closed',
+        ].find(value => typeof message === 'string' && message.includes(value)) ?? null;
+        console.log(JSON.stringify({ kind: 'TEST_CODEX_INSTALLER_STATUS_FAILURE', errorName: name,
+          errorCode: typeof code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/u.test(code) ? code : null,
+          publicFailure }));
+      } catch { /* Diagnostics cannot replace the original status failure. */ }
+      throw error;
+    }
   };
   const sourceBeforeRead = await indexBytes();
   assert.equal(await readDesktopEmulatedCodexInstallation(selected), undefined);

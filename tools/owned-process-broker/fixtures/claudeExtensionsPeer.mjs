@@ -33,6 +33,7 @@ const url = 'http://127.0.0.1:9/TEST-native-extension-config-only';
 const settings = join(config, 'settings.json'), installed = join(config, 'plugins', 'installed_plugins.json');
 const nativeConfig = join(config, '.claude.json');
 const commands = [
+  ['auth', 'status', '--json'],
   ['plugin', 'install', '-s', 'user', plugin], ['plugin', 'uninstall', '-s', 'user', plugin],
   ['plugin', 'list'], ['mcp', 'add', '-s', 'user', '-t', 'http', name, url],
   ['mcp', 'remove', '-s', 'user', name], ['mcp', 'list'],
@@ -59,7 +60,11 @@ const write = (path, value) => {
 try {
   assert.ok(commands.some(command => JSON.stringify(command) === JSON.stringify(args)), 'closed extension argv');
   effect({ event: 'launch', parentPid: process.ppid, command: args });
-  if (args[0] === 'plugin' && args[1] !== 'list') {
+  if (args[0] === 'auth') {
+    process.stdout.write(JSON.stringify({ loggedIn: true, authMethod: 'api_key',
+      apiProvider: 'firstParty', configDirectory: config }) + '\n');
+    effect({ event: 'auth-status', command: args, loggedIn: true, authMethod: 'api_key' });
+  } else if (args[0] === 'plugin' && args[1] !== 'list') {
     const current = read(settings), metadata = read(installed);
     if (Object.keys(metadata).length) assert.equal(metadata.version, 2);
     const enabled = object(current.enabledPlugins ?? {}), plugins = object(metadata.plugins ?? {});

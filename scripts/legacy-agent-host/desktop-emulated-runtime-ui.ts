@@ -181,7 +181,18 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     const cost = await readNativeHostCostProof({ teamRoot, commandId: String(costs[0]!.commandId), memberName: 'alice', principalId: 'TEST-human', binding: record((await session()).binding), stats });
     assert.deepEqual((await session()).inputs, inputsBeforeCost);
     assert.equal((await effects()).filter(row => row.event === 'input').length, turnsBeforeCost);
-    await revealDesktopReply(cdp, String(cost.reply.text), { assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
+    assert.equal(typeof cost.reply.messageId, 'string');
+    const costCard = `[data-timeline-row-key=${literal(cost.reply.messageId)}] article.activity-timeline-card`;
+    const expanded = await ui.waitRead(`(()=>{const rows=document.querySelectorAll(${literal(costCard)});return rows.length===1?rows[0].getAttribute('data-expanded'):null})()`, 'one original Codex /cost report card');
+    assert.ok(expanded === 'true' || expanded === 'false');
+    if (expanded === 'false') {
+      const header = `${costCard} > div[role="button"]`;
+      await ui.scrollTo(header, 'original Codex /cost report header');
+      await ui.click(header, 'expand original Codex /cost report once');
+      await ui.waitRead(`document.querySelector(${literal(costCard)})?.getAttribute('data-expanded')==='true'`, 'original Codex /cost report expanded');
+    }
+    await revealDesktopReply(cdp, String(cost.reply.text), { messageId: String(cost.reply.messageId),
+      assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
     proof.costScreenshot = await screenshot('cost'); proof.cost = cost;
   } else if (provider === 'claude') {
     const expectedCatalog = ['/compact', '/cost', '/review', '/test-desktop-skill'], commandProofs: Row[] = [];
@@ -304,6 +315,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     assert.deepEqual(await rows(taskDirectory), beforeStandaloneTasks, 'standalone creates no hidden Team task');
     await ui.scrollTo(`${scheduleRow(EDITED_SCHEDULE_LABEL)} button[aria-label=${literal(EDITED_SCHEDULE_LABEL)}]`, 'original standalone history');
     await ui.click(`${scheduleRow(EDITED_SCHEDULE_LABEL)} button[aria-label=${literal(EDITED_SCHEDULE_LABEL)}]`, 'expand original standalone history');
+    await ui.scrollTo(`${scheduleRow(EDITED_SCHEDULE_LABEL)} div[role="button"]`, 'reveal original completed standalone log');
     await ui.click(`${scheduleRow(EDITED_SCHEDULE_LABEL)} div[role="button"]`, 'open original completed standalone log');
     await ui.waitRead(`document.querySelector('[role="dialog"]')?.textContent.includes('TEST standalone complete')`, 'original completed standalone stdout');
     proof.standaloneCompletedScreenshot = await screenshot('standalone-completed');

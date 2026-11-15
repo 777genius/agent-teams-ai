@@ -95,40 +95,54 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       attach(context) {
         const original = physical.attach(context);
         return { ...original, async handle(call) {
-          const result = await original.handle(call);
-          if (call.operation === 'allocate') {
-            assert.ok(jobs.length < 64 && !jobs.some(value => value.capability === call.capability));
-            jobs.push({ capability: call.capability,
-              ...(call.runtimeSourceOrigin ? { origin: structuredClone(call.runtimeSourceOrigin) } : {}),
-              resumed: false, stopped: false, drained: false, released: false, handleAbsent: false, threadEphemeral: [], wire: '' });
-          }
-          const job = jobs.find(value => value.capability === call.capability); assert.ok(job);
-          if (result.operation === 'prepare') {
-            assert.equal(job.root, undefined); job.root = result.root;
-            // Capture the original suspended root HANDLE before forwarding preparation to Host/resume.
-            job.witness = await capturedQueryableWitness(actor, result.root.pid, result.root.birth, track, events,
-              'query-wait-gated');
-          }
-          if (result.operation === 'resume') job.resumed = true;
-          if (result.operation === 'stop' && result.state === 'confirmed') job.stopped = true;
-          if (result.operation === 'drain' && result.state === 'complete') job.drained = true;
-          if (result.operation === 'release' && result.state === 'released') job.released = true;
-          if (call.operation.startsWith('service-')) counts.service++;
-          if (provider === 'codex' && call.operation === 'write') {
-            job.wire += Buffer.from(call.bytes, 'base64').toString('utf8');
-            assert.ok(Buffer.byteLength(job.wire) <= 131072);
-            for (let end = job.wire.indexOf('\n'); end >= 0; end = job.wire.indexOf('\n')) {
-              const line = job.wire.slice(0, end); job.wire = job.wire.slice(end + 1);
-              const frame = object(JSON.parse(line));
-              // Only the original ephemeral boolean is retained, never stdin prompts/MCP credentials.
-              if (frame.method === 'thread/start') {
-                const ephemeral = object(frame.params).ephemeral;
-                assert.ok(ephemeral === undefined || typeof ephemeral === 'boolean');
-                job.threadEphemeral.push(ephemeral === true);
+          const preparation = call.operation === 'prepare'
+            ? { phase: 'owner' as 'owner' | 'witness' | 'complete', started: performance.now() } : undefined;
+          try {
+            const result = await original.handle(call);
+            if (call.operation === 'allocate') {
+              assert.ok(jobs.length < 64 && !jobs.some(value => value.capability === call.capability));
+              jobs.push({ capability: call.capability,
+                ...(call.runtimeSourceOrigin ? { origin: structuredClone(call.runtimeSourceOrigin) } : {}),
+                resumed: false, stopped: false, drained: false, released: false, handleAbsent: false, threadEphemeral: [], wire: '' });
+            }
+            const job = jobs.find(value => value.capability === call.capability); assert.ok(job);
+            if (result.operation === 'prepare') {
+              assert.equal(job.root, undefined); job.root = result.root;
+              if (preparation) preparation.phase = 'witness';
+              // Capture the original suspended root HANDLE before forwarding preparation to Host/resume.
+              job.witness = await capturedQueryableWitness(actor, result.root.pid, result.root.birth, track, events,
+                'query-wait-gated');
+              if (preparation) preparation.phase = 'complete';
+            }
+            if (result.operation === 'resume') job.resumed = true;
+            if (result.operation === 'stop' && result.state === 'confirmed') job.stopped = true;
+            if (result.operation === 'drain' && result.state === 'complete') job.drained = true;
+            if (result.operation === 'release' && result.state === 'released') job.released = true;
+            if (call.operation.startsWith('service-')) counts.service++;
+            if (provider === 'codex' && call.operation === 'write') {
+              job.wire += Buffer.from(call.bytes, 'base64').toString('utf8');
+              assert.ok(Buffer.byteLength(job.wire) <= 131072);
+              for (let end = job.wire.indexOf('\n'); end >= 0; end = job.wire.indexOf('\n')) {
+                const line = job.wire.slice(0, end); job.wire = job.wire.slice(end + 1);
+                const frame = object(JSON.parse(line));
+                // Only the original ephemeral boolean is retained, never stdin prompts/MCP credentials.
+                if (frame.method === 'thread/start') {
+                  const ephemeral = object(frame.params).ephemeral;
+                  assert.ok(ephemeral === undefined || typeof ephemeral === 'boolean');
+                  job.threadEphemeral.push(ephemeral === true);
+                }
               }
             }
+            return result;
+          } finally {
+            if (preparation) {
+              const jobSlot = jobs.findIndex(job => job.capability === call.capability), job = jobs[jobSlot];
+              console.log(JSON.stringify({ kind: 'TEST_SOURCE_PREPARATION', provider, mainEpoch: physical.mainEpoch,
+                jobSlot, phase: preparation.phase, elapsedMs: performance.now() - preparation.started,
+                source: job?.origin ? sourceRef(job.origin) : null,
+                rootCaptured: job?.root !== undefined, witnessCaptured: job?.witness !== undefined }));
+            }
           }
-          return result;
         } };
       } };
     const client = new CapturedHostClient(fixture.host, observed);
@@ -352,10 +366,23 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const before = first.jobs.length;
       await first.rpc(1, 'schedule.run.start', scheduled.runId, scheduled);
       let completed: Record<string, unknown> = {};
-      await poll(async () => {
-        completed = await first.rpc(1, 'schedule.run.read', 'TEST-schedule-read', { runId: scheduled!.runId, scheduleId: scheduled!.scheduleId });
-        return completed.phase === 'completed';
-      }, 'Original standalone completion');
+      const completion = { source: sourceRef(b.source), runId: scheduled.runId, scheduleId: scheduled.scheduleId,
+        readCount: 0, elapsedMs: 0, lastRunRead: null as Record<string, unknown> | null };
+      evidence.lastStandaloneCompletion = completion;
+      const completionStarted = performance.now();
+      try {
+        await poll(async () => {
+          completed = await first.rpc(1, 'schedule.run.read', 'TEST-schedule-read', { runId: scheduled!.runId, scheduleId: scheduled!.scheduleId });
+          const result = completed.result;
+          Object.assign(completion, { readCount: completion.readCount + 1, elapsedMs: performance.now() - completionStarted,
+            lastRunRead: { phase: completed.phase, cleanup: completed.cleanup,
+              ...(result && typeof result === 'object' && !Array.isArray(result)
+                ? { exitCode: (result as Record<string, unknown>).exitCode } : {}) } });
+          return completed.phase === 'completed';
+        }, 'Original standalone completion');
+      } finally {
+        console.log(JSON.stringify({ kind: 'TEST_SOURCE_STANDALONE', provider, ...completion }));
+      }
       assert.equal(completed.cleanup, 'confirmed'); assert.equal(object(completed.result).exitCode, 0);
       assert.ok(text(object(completed.result).stdout).includes(provider === 'claude' ? 'TEST standalone complete' : 'OK'));
       const capture = readScheduledRunCapture(new TeamOwnerStore(fixture.profile.owner.storageRoot,

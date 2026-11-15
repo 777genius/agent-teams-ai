@@ -519,9 +519,29 @@ jobs:
               const births = cleanup.effects.filter(row => row.event === 'launch');
               assert.ok(births.length > 0);
               assert.equal(cleanup.effects.some(row => row.event === 'failure'), false);
+              const inventory = extensions ? proof.finitePluginInventoryRead : null;
+              let inventoryBirth;
+              if (extensions) {
+                assert.deepEqual(inventory.command, ['plugin', 'list']);
+                assert.deepEqual(inventory.executable, pins.executable);
+                assert.ok(Number.isSafeInteger(inventory.pid) && inventory.pid > 1);
+                assert.ok(Number.isSafeInteger(inventory.parentPid) && inventory.parentPid > 1);
+                assert.notEqual(inventory.parentPid, receipt.hostChild.pid);
+                assert.equal(inventory.app.pid, receipt.app.pid);
+                assert.equal(inventory.app.pgid, receipt.app.processGroup);
+                assert.equal(inventory.app.ppid, inventory.parentPid);
+                assert.equal(inventory.exitCode, 0); assert.equal(inventory.signal, null);
+                assert.equal(inventory.outputSha256, createHash('sha256').update('Installed plugins:\n  frontend-design@claude-plugins-official (user)\n').digest('hex'));
+                const readers = births.filter(row => row.pid === inventory.pid);
+                assert.equal(readers.length, 1); inventoryBirth = readers[0];
+                assert.deepEqual(inventoryBirth.command, ['plugin', 'list']);
+                const observations = cleanup.effects.filter(row => row.pid === inventory.pid);
+                assert.deepEqual(observations.map(row => row.event), ['launch', 'extension-read']);
+                assert.ok(observations.every(row => JSON.stringify(row.command) === JSON.stringify(['plugin', 'list'])));
+              }
               for (const birth of births) {
                 assert.ok(Number.isSafeInteger(birth.pid) && birth.pid > 1);
-                assert.equal(birth.parentPid, receipt.hostChild.pid);
+                assert.equal(birth.parentPid, birth === inventoryBirth ? inventory.parentPid : receipt.hostChild.pid);
                 assert.ok(cleanup.originalPeerPids.includes(birth.pid));
               }
               for (const pin of [...pins.sources, ...(collaboration ? pins.executables : [pins.executable])]) {

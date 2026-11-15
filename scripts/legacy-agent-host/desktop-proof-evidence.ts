@@ -437,6 +437,63 @@ export function projectDesktopMixedSettingsFailure(value: unknown) {
   } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' }; }
 }
 
+export function projectDesktopEmulatedReadinessFailure(value: unknown) {
+  try {
+    const missing = Symbol('missing');
+    const own = (row: unknown, key: string): unknown => {
+      if (row === null || typeof row !== 'object') return missing;
+      const field = Object.getOwnPropertyDescriptor(row, key);
+      return field && 'value' in field ? field.value : missing;
+    };
+    const record = (row: unknown) => row !== null && typeof row === 'object' && !Array.isArray(row);
+    const boolean = (field: unknown) => typeof field === 'boolean' ? field : null;
+    const choice = (field: unknown, allowed: readonly string[]) =>
+      typeof field === 'string' && allowed.includes(field) ? field : null;
+    const textFacts = (field: unknown) => {
+      if (typeof field !== 'string') return { present: false, bounded: null, terms: [] as string[] };
+      if (field.length > 8000) return { present: true, bounded: false, terms: [] as string[] };
+      const lower = field.toLowerCase();
+      const vocabulary = ['authentication', 'credential', 'permission', 'model', 'probe', 'runtime', 'source',
+        'profile', 'owner', 'grant', 'context', 'capture', 'preparation', 'provider', 'ready', 'loading',
+        'unavailable', 'unsupported', 'missing', 'mismatch', 'changed', 'expired', 'stale', 'busy',
+        'blocked', 'rejected', 'refused', 'failed', 'invalid', 'timeout', 'timed out', 'cancelled'];
+      return { present: true, bounded: true, empty: field.length === 0,
+        terms: vocabulary.filter(term => lower.includes(term)),
+        selectedProvidersReady: field.includes('All selected providers are ready'),
+        runtimeUnavailable: field.includes('Runtime environment unavailable') || field.includes('Runtime environment not available'),
+        providerStatusLoading: field.includes('provider status is still loading'),
+        modelUnverified: field.includes('could not be verified') || field.includes('check failed') };
+    };
+    const snapshot = own(value, 'rendererFailureSnapshot'), store = own(snapshot, 'store');
+    const imported = own(value, 'stoppedImportUiProof'), hydration = own(imported, 'hydrationFailureDiagnostics');
+    const entries = own(store, 'provisioning');
+    const length = Array.isArray(entries) ? own(entries, 'length') : missing;
+    const count = typeof length === 'number' && Number.isSafeInteger(length) && length >= 0 ? length : null;
+    const provisioning = [];
+    if (count !== null) for (let index = 0; index < Math.min(count, 8); index++) {
+      const row = own(entries, String(index)), progress = own(row, 'progress');
+      provisioning.push({ recorded: record(row), progressRecorded: record(progress),
+        currentProvisioningRunRecorded: typeof own(row, 'currentProvisioningRunId') === 'string',
+        currentRuntimeRunRecorded: typeof own(row, 'currentRuntimeRunId') === 'string',
+        state: choice(own(progress, 'state'), ['idle', 'preparing', 'launching', 'running', 'ready', 'failed', 'error', 'cancelled', 'completed', 'stopped']),
+        configReady: boolean(own(progress, 'configReady')),
+        error: textFacts(own(row, 'error')), progressError: textFacts(own(progress, 'error')),
+        message: textFacts(own(progress, 'message')) });
+    }
+    const cleanup = own(value, 'emulatedRuntimeCleanup');
+    const result = { schemaVersion: 1, status: 'available',
+      snapshotRecorded: record(snapshot), snapshotUnavailable: boolean(own(snapshot, 'unavailable')),
+      storeRecorded: record(store), selectedTeamError: textFacts(own(store, 'selectedTeamError')),
+      importRecorded: record(imported), hydrationRecorded: record(hydration),
+      hydration: { text: textFacts(own(hydration, 'text')),
+        permissions: choice(own(hydration, 'permissions'), ['checked', 'unchecked', 'indeterminate']) },
+      provisioning: { count: count === null ? null : Math.min(count, 9), overflow: count === null ? null : count > 8, items: provisioning },
+      peerCleanup: { recorded: record(cleanup), absent: boolean(own(cleanup, 'absent')),
+        observationFailed: boolean(own(cleanup, 'observationFailed')) } };
+    return JSON.stringify(result).length <= 8192 ? result : { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
+  } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' }; }
+}
+
 /** Only the original receipt summary; no observation, retry or cleanup is performed here. */
 export function projectDesktopProofReceiptSummary(evidence: Record<string, unknown>, options: {
   receiptPath: string; mode: string; mixedMode: boolean;
@@ -449,5 +506,7 @@ export function projectDesktopProofReceiptSummary(evidence: Record<string, unkno
       ? { loginFailure: projectDesktopCodexLoginFailure(evidence) } : {}),
     ...(mixedMode && evidence.status !== 'PASS'
       ? { mixedSettingsFailure: projectDesktopMixedSettingsFailure(evidence) } : {}),
+    ...(['emulated-import-ui', 'emulated-opencode-runtime-ui'].includes(mode) && evidence.status !== 'PASS'
+      ? { emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) } : {}),
   };
 }

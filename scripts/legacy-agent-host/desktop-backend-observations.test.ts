@@ -123,7 +123,8 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
   let nextFd = 9000;
   let comparison: 'off' | 'exact' | 'other-argv' | 'builder' | 'other-builder' |
     'builder-duplicate-output' | 'builder-empty-output' | 'builder-no-expectation' |
-    'missing-flags' | 'duplicate-flags' | 'reused-birth' | 'changed-socket' = 'off';
+    'missing-flags' | 'duplicate-flags' | 'reused-birth' | 'changed-socket' |
+    'oversize-argv' | 'empty-argv' | 'incomplete-argv' = 'off';
   let comparing = false;
   const links = new Map<number, number>();
   const fixture = { node: '/PRIVATE_FIXED/node', hostEntry: '/PRIVATE_FIXED/cli.js',
@@ -150,7 +151,10 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
         comparison === 'duplicate-flags' ? 'flags:\t02002\nflags:\t02002002\n' :
         `flags:\t${pid === 4100 ? '02002002' : '02002'}\n`;
     } else if (comparison !== 'off' && pid === 4101) {
-      if (comparison.includes('builder')) {
+      if (comparison === 'oversize-argv') value = 'PRIVATE_'.repeat(600);
+      else if (comparison === 'empty-argv') value = '';
+      else if (comparison === 'incomplete-argv') value = 'PRIVATE_INCOMPLETE';
+      else if (comparison.includes('builder')) {
         const entry = comparison === 'other-builder' ? '/PRIVATE_OTHER/cli-default.js' : fixture.mcpBuilderEntry;
         const output = comparison === 'builder-empty-output' ? '' :
           comparison === 'builder-duplicate-output' ? '--out-dir' : '/PRIVATE_OUTPUT';
@@ -226,7 +230,7 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
   }
   for (const variant of ['exact', 'other-argv', 'builder', 'other-builder', 'builder-duplicate-output',
     'builder-empty-output', 'builder-no-expectation', 'missing-flags', 'duplicate-flags',
-    'reused-birth', 'changed-socket'] as const) {
+    'reused-birth', 'changed-socket', 'oversize-argv', 'empty-argv', 'incomplete-argv'] as const) {
     comparison = variant; comparing = false; change = 'none';
     statReads.clear(); links.clear(); procReads.length = 0;
     let failure: unknown;
@@ -241,16 +245,22 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
     assert.equal(projected.holderCount, 2);
     const child = projected.fixtureCorrelation![1]!;
     const unknown = variant === 'reused-birth' || variant === 'changed-socket';
+    const unreadableArgv = ['oversize-argv', 'empty-argv', 'incomplete-argv'].includes(variant);
     assert.deepEqual(child, {
       pid: 4101, fd: '61', scope: 'after-failed-census', atomic: false,
       birth: unknown ? 'unknown' : 'same', socket: unknown ? 'unknown' : 'same-as-supplemental',
-      fixtureHostArgv: unknown ? null : ['exact', 'missing-flags', 'duplicate-flags'].includes(variant),
+      fixtureHostArgv: unknown || unreadableArgv ? null : ['exact', 'missing-flags', 'duplicate-flags'].includes(variant),
       fixtureNodeExecutable: unknown ? null : true,
-      fixtureMcpBuilderEntry: unknown || variant === 'builder-no-expectation' ? null : variant === 'builder',
+      fixtureMcpBuilderEntry: unknown || unreadableArgv || variant === 'builder-no-expectation' ? null : variant === 'builder',
       closeOnExec: unknown || variant === 'missing-flags' || variant === 'duplicate-flags' ? null : false,
+      commandLineState: unknown ? 'unknown' : variant === 'oversize-argv' ? 'unavailable-or-over-limit' :
+        variant === 'empty-argv' ? 'empty' : variant === 'incomplete-argv' ? 'incomplete' : 'complete',
+      executableKind: unknown ? 'unknown' : 'node',
     });
     assert.equal(projected.fixtureCorrelation![0]!.fixtureHostArgv, false);
     assert.equal(projected.fixtureCorrelation![0]!.fixtureNodeExecutable, false);
+    assert.equal(projected.fixtureCorrelation![0]!.commandLineState, 'complete');
+    assert.equal(projected.fixtureCorrelation![0]!.executableKind, 'electron');
     assert.equal(projected.fixtureCorrelation![0]!.fixtureMcpBuilderEntry,
       variant === 'builder-no-expectation' ? null : false);
     if (variant === 'exact') assert.equal(projected.fixtureCorrelation![0]!.closeOnExec, true);

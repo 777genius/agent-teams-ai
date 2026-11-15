@@ -9,7 +9,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 
-import { fileHash, startHost, tick } from './fixtures/native-host.ts';
+import { fileHash, startHost, tick, writeNativeFailureReceipt } from './fixtures/native-host.ts';
 import { createPassiveNativeDiagnosticCapture } from './fixtures/native-opencode-team/passive-diagnostics.ts';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 import { applyOpenCodeRuntimeSource } from '../dist/composition/applyOpenCodeRuntimeSource.js';
@@ -674,8 +674,10 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     cleanup = cleanupErrors.length === 0;
     if (cleanup) try { await rm(root, { recursive: true, force: true }); }
     catch (error) { cleanup = false; cleanupErrors.push(error); }
+    let serialized: string | undefined;
+    let receiptWritten = false;
     try {
-      await writeFile(receiptPath, JSON.stringify({ kind: 'TEST_NATIVE_V2_CREDENTIAL', sourceHead,
+      serialized = JSON.stringify({ kind: 'TEST_NATIVE_V2_CREDENTIAL', sourceHead,
         status: passed && cleanup && !originalFailure ? 'PASS' : 'INCOMPLETE', cleanup, version: '2.1.4',
         digests, steps, requests, nativeCredentialCount, nativeProcessCount: nativePids.size,
         hosts: hosts.map(({ exitCode, signalCode, stdoutValid, diagnosticBytes }) =>
@@ -684,8 +686,15 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
         ...(failedHost ? { closeFailure: { epoch: epoch?.id ?? null, pid: failedHost.pid ?? null,
           exitCode: failedHost.exitCode, signalCode: failedHost.signalCode,
           stdoutValid: failedHost.stdoutValid, diagnosticBytes: failedHost.diagnosticBytes }, timeoutJournal } : {}),
-        vendorAuthQualified: false, desktopQualified: false, releaseQualified: false }, null, 2) + '\n', { mode: 0o600 });
+        vendorAuthQualified: false, desktopQualified: false, releaseQualified: false }, null, 2) + '\n';
+      await writeFile(receiptPath, serialized, { mode: 0o600 });
+      receiptWritten = true;
     } catch (error) { cleanupErrors.push(error); }
+    if (serialized !== undefined && (originalFailure || cleanupErrors.length > 0 || !passed)) {
+      await writeNativeFailureReceipt({ kind: 'TEST_NATIVE_V2_CREDENTIAL_FAILURE_RECEIPT',
+        sourceHead, platform: `${process.platform}-${process.arch}`, serialized,
+        details: { receiptWritten, frames: failedHost?.frames.slice(-16) ?? [] } });
+    }
   }
   if (originalFailure && cleanupErrors.length) throw new AggregateError([originalFailure, ...cleanupErrors], 'TEST credential and cleanup failed');
   if (originalFailure) throw originalFailure;

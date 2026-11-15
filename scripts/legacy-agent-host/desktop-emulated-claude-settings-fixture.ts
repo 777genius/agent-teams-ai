@@ -31,7 +31,7 @@ assert.equal(process.env.TEST_DESKTOP_SETTINGS,${JSON.stringify(kind)});
 assert.equal(process.env.TEST_PEER_ROLE,'management');
 for(const source of ${JSON.stringify(sources)}){assert.equal(realpathSync(source.path),source.path);assert.equal(createHash('sha256').update(readFileSync(source.path)).digest('hex'),source.sha256)}
 await import(${kind === 'extensions'
-    ? `['plugin','mcp'].includes(process.argv[2])?${JSON.stringify(pathToFileURL(sources[0]!.path).href)}:${JSON.stringify(pathToFileURL(sources[1]!.path).href)}`
+    ? `['plugin','mcp','auth'].includes(process.argv[2])?${JSON.stringify(pathToFileURL(sources[0]!.path).href)}:${JSON.stringify(pathToFileURL(sources[1]!.path).href)}`
     : JSON.stringify(pathToFileURL(sources[0]!.path).href)});
 `;
   const executable = { path: join(fixture.root, `bin/TEST-claude-${kind}-peer`), sha256: digest(wrapper) };
