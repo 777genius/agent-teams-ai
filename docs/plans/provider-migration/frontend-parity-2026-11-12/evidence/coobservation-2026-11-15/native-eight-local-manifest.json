@@ -1,0 +1,133 @@
+{
+  "sourceHead": "6e222b57f700832cfd78a934a3b6a205a5764761",
+  "sourceTree": "2ac4903718c3ce3e615b209085226d5d35f0a2a1",
+  "statusBefore": "",
+  "sourceBlobs": {
+    "tools/owned-process-broker/serviceScopes.h": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+    "tools/owned-process-broker/serviceDebugLoop.h": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+    "tools/owned-process-broker/debugServiceTest.h": "9edcec8fffca780706cbde634c35d7929552f9f6",
+    "tools/owned-process-broker/nativeDebugServiceScenario.ts": "25158d10870b78d5b8f6a77b4678fb5d7333600e",
+    "tools/owned-process-broker/nativeFixture.cpp": "21b080fd65679e903837e1cc5eabb8a451d7d55b",
+    "tools/owned-process-broker/nativeGate.ts": "0640b35744192a0dbe1b6755a069fb544d2cf347",
+    "tools/owned-process-broker/nativeGateDiagnostics.ts": "22cf67a484f0a2a5a2b89639e38515cc0242a21a",
+    "tools/owned-process-broker/nativeGateContext.test.ts": "48d1c9752dddb3e5fa91c6c564912b0474312168"
+  },
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "steps": [
+    {
+      "name": "native-eight-types.log",
+      "argv": [
+        "node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tools/owned-process-broker/tsconfig.json"
+      ],
+      "startedAt": "2026-11-15T22:35:20.336646+00:00",
+      "completedAt": "2026-11-15T22:35:20.845797+00:00",
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-eight-retained-host-types.log",
+      "argv": [
+        "node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tools/owned-process-broker/tsconfig.retained-host.json"
+      ],
+      "startedAt": "2026-11-15T22:35:20.846422+00:00",
+      "completedAt": "2026-11-15T22:35:21.949018+00:00",
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-eight-protocol.log",
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--config",
+        "tools/owned-process-broker/vitest.config.ts"
+      ],
+      "startedAt": "2026-11-15T22:35:21.950104+00:00",
+      "completedAt": "2026-11-15T22:35:24.627017+00:00",
+      "exitCode": 0,
+      "bytes": 472,
+      "sha256": "3a21671db60bb99e40f8c7ccd7d78ec8a46c34660ca6a5ef65a093bb279b083e"
+    },
+    {
+      "name": "native-eight-scoped-lint.log",
+      "argv": [
+        "pnpm",
+        "lint:fast:files",
+        "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "tools/owned-process-broker/nativeGate.ts",
+        "tools/owned-process-broker/nativeGateDiagnostics.ts",
+        "tools/owned-process-broker/nativeGateContext.test.ts"
+      ],
+      "startedAt": "2026-11-15T22:35:24.634885+00:00",
+      "completedAt": "2026-11-15T22:35:26.894281+00:00",
+      "exitCode": 0,
+      "bytes": 311,
+      "sha256": "bac4e14e73a1304ef642237e2d077668b791090e92e3b5cad605155f860ba0d3"
+    },
+    {
+      "name": "native-eight-source-size.log",
+      "argv": [
+        "pnpm",
+        "guard:source-file-size"
+      ],
+      "startedAt": "2026-11-15T22:35:26.899658+00:00",
+      "completedAt": "2026-11-15T22:35:27.804445+00:00",
+      "exitCode": 0,
+      "bytes": 249,
+      "sha256": "961492c3971768c144057514917b4179f695089b172a31e2d3d3d62b9efdc8f3"
+    },
+    {
+      "name": "native-eight-provisioning.log",
+      "argv": [
+        "pnpm",
+        "guard:team-provisioning-architecture"
+      ],
+      "startedAt": "2026-11-15T22:35:27.805059+00:00",
+      "completedAt": "2026-11-15T22:35:28.212774+00:00",
+      "exitCode": 0,
+      "bytes": 245,
+      "sha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c"
+    },
+    {
+      "name": "native-eight-source-diff.log",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "9b29d595c0f7baf1e1c34da85c9c1b0543a19451",
+        "6e222b57f700832cfd78a934a3b6a205a5764761",
+        "--",
+        "tools/owned-process-broker/serviceScopes.h",
+        "tools/owned-process-broker/serviceDebugLoop.h",
+        "tools/owned-process-broker/debugServiceTest.h",
+        "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "tools/owned-process-broker/nativeFixture.cpp",
+        "tools/owned-process-broker/nativeGate.ts",
+        "tools/owned-process-broker/nativeGateDiagnostics.ts",
+        "tools/owned-process-broker/nativeGateContext.test.ts"
+      ],
+      "startedAt": "2026-11-15T22:35:28.213211+00:00",
+      "completedAt": "2026-11-15T22:35:28.223218+00:00",
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "qualification": "Original native and retained-host type projects, full protocol cohort and scoped gates once on reviewed native8 source. No Windows C++ build/link/load/native execution claim; no scripts, Host test-types, workspace or backend compiler retry.",
+  "statusAfter": ""
+}

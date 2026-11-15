@@ -4331,3 +4331,54 @@ Publish and independently read back this amendment before authoring the integrat
 Frozen test-onlyc98577887509e49d6dddeb5426eb4d18d88e4675/tree da04645d completed its original fresh Host build at22:15:03.171624–22:15:06.378682 UTC, exit0, then the complete original `node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts` at22:15:06.379453–22:15:07.381877, exit1. Captured Node24.21.0/SHA7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c, repo-pinned pnpm11.22.0 and clean before/after source are retained in the2443-byte manifest/SHA25600a9dd5c7290fb4f9a9ced9d5f58b52cb4e847c66d6e7cbd34baf98ea1422c3f. Full raw9753bytes/SHA2568081b16e6322bf34ba561db56890016e7dce7f1360daa39903aa920ce841de5b records41tests:34PASS,7FAIL,0SKIP,0CANCELLED.
 
 Both required positives reached actual original f2f assertions: delayed-row failed original birth at225; exited peer failed original pinned-command prefix at224. Five additional reuse/reparent/argv/duplicate/late cases reported missing expected rejection; their later assertions are not claimed executed. All25 original cases, all8 empty-state journal guards and missing-launch refusal passed. Independent full raw/manifest/source readback accepted this substantive RED, with no import/setup/extraction failure. The old fixture f2f remains in this documentation cut. Only the previously bounded4265 observation change plus the original unconditional journal validation may now be authored and undergo exact source R2; no resulting-source GREEN, original CI or UI qualification is asserted by this record.
+
+### 2026-11-15: observed native local gates, Desktop GREEN and complete capacity Main cohort
+
+The exact native source is now published as 6e222b57f700832cfd78a934a3b6a205a5764761,
+tree 2ac4903718c3ce3e615b209085226d5d35f0a2a1, sole parent 9b29d595.
+Root and independent pr_graph read back the full tree and all eight source blobs.
+The eight-path source audit is retained verbatim as
+evidence/coobservation-2026-11-15/native-integrated-eight-source-review-20261115.json.
+Every other source leaf, original witness/call/churn block and the helper ceiling remains as reviewed.
+
+On that clean source, the original native and retained-host TypeScript projects,
+full protocol cohort (53 tests / 3 files), four-path TypeScript lint, source-size
+(5014 production files / 141 frozen exceptions / 800-line limit), provisioning and
+eight-path diff checks all returned 0 once at 22:35:20.336646 through 22:35:28.223218 UTC.
+The complete manifest, raw logs and bounded assessment are retained under the same evidence directory.
+This Linux execution did not compile, link, load or run Windows C++.
+No exhausted scripts, Host-test, workspace or backend compiler invocation was repeated.
+
+The preceding Desktop producer commit 9b29d595 passed the original complete
+41-case observation file after the actual c985 test-first RED (34 PASS / 7 FAIL).
+Fresh Host build, scoped lint, source-size, provisioning and source diff passed.
+Its eight GREEN evidence leaves are retained unchanged; these remain results on 9b29,
+not a fabricated repeated run on 6e222. Actual Desktop GUI acceptance remains required.
+
+The final original Process 43763317915 / attempt 1 capacity cohort at frozen 9b56
+has actual Main 81/8, including the 33-case retained client file, on all five tuples.
+Darwin ARM64 and Linux evidence is now retained alongside the previously reviewed tuples.
+Linux job 132962734409 completed SUCCESS at 22:24:40Z; its actual artifact 14182994652
+was verified at 1522042 B / SHA256 643c7d2d24047d8a242133dd468561b70fb686cdebd6c87f25d644d217122d4b,
+with valid CRC, 51 unique safe members, no symlinks, 39 full UTF8 payloads and
+12 binary hash/size records. Host 163, protocol 53/3, POSIX 23, Node/Electron descriptor 6+6
+and packaging 63 passed. Original automatic/warm Linux custody receipts are complete
+and cleaned only within their recorded scope.
+The entire Process run remains FAILURE because both later Windows provider-source journeys failed.
+No new Windows, Desktop, vendor, executable-admission, ABI or release qualification is inferred.
+
+All 26 newly retained evidence leaves in tree 0495d1c3450d3c1318fe7a0939732687f88a057d
+received complete independent review. The prior Desktop 8 and Darwin ARM64 4 records
+were confirmed byte-identical; all native raw hashes and Linux API/source/artifact joins matched.
+
+The concrete documentation-only proposal for one separate frozen original CI venue
+is evidence/coobservation-2026-11-15/native-desktop-frozen-green-venue-r1-20261115.md.
+It fixes base 58c14 and head 6e222, exactly nine changed existing source leaves,
+all 42 workflows unchanged, the eight original opened workflow definitions and all
+Draft/no-real-Claude/Codex boundaries. Ref/PR creation is gated on published full
+independent readback of that exact proposal. This evidence commit itself creates no CI refs or PR.
+Existing 1206/1207 and primary 1192 remain untouched and their useful cohorts are not cancelled.
+Later primary 27b Logs/stderr code and provider 9423 Thinking dependencies require separate
+source reconciliation/adoption and acceptance; none is selected by this native/Desktop venue.
+P08, P09 and full M16, native providers, packaged delivery, release, default activation
+and Stage2 remain unclosed.

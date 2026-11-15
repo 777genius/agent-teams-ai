@@ -1,0 +1,62 @@
+{
+  "kind": "CAPACITY_GREEN_ORIGINAL_DARWIN_ARM64_CI",
+  "sourceHead": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+  "runId": 43763317915,
+  "attempt": 1,
+  "jobId": 132962734470,
+  "jobConclusion": "success",
+  "nodeVersion": "v24.21.0",
+  "actual": {
+    "main": {
+      "files": 8,
+      "passed": 81,
+      "failed": 0,
+      "skipped": 0,
+      "capturedHostClientPassed": 33,
+      "strict7And8SlotRefusals": "PASS",
+      "nineSlotPositive": "PASS"
+    },
+    "host": {
+      "passed": 161,
+      "skipped": 2
+    },
+    "protocol": {
+      "files": 3,
+      "passed": 53
+    },
+    "posix": {
+      "passed": 23,
+      "skipped": 0
+    }
+  },
+  "artifact": {
+    "id": 14182724249,
+    "bytes": 11991,
+    "sha256": "33a1bf2f0230154c924870ca5531a8c16ac988fa2c75023579b81b6b447c3809",
+    "allMembers": 6,
+    "zipCrcSafeNamesAndNoSymlinksVerified": true,
+    "projectionBytes": 39018,
+    "projectionSha256": "8c843bc67cf2d3a46f7a82c146b6d0735705efd87309ef165add4da938f8d4fb"
+  },
+  "raw": {
+    "bytes": 123590,
+    "sha256": "42766837c3f9863dffa9c0351990c4f29ac147231cfabbcb556f5c3267ef2fb9"
+  },
+  "scope": {
+    "kind": "TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE",
+    "status": "PASS",
+    "sourceHead": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+    "platform": "darwin-arm64",
+    "nodeVersion": "v24.21.0",
+    "controlledContracts": true,
+    "retainedMainTransport": true,
+    "posixProcessGroups": true,
+    "native": [],
+    "nativeProviderRuntimeQualified": false,
+    "darwinNativeRegistrationQualified": false,
+    "posixExecutableAdmissionQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+  },
+  "qualification": "Original capacity-only9b56 source. No later reservation/Desktop/native-code or UI/P08/P09/full-M16 qualification; original skipped cases are not passes."
+}

@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-eight-original-local-gates",
+  "sourceHead": "6e222b57f700832cfd78a934a3b6a205a5764761",
+  "sourceTree": "2ac4903718c3ce3e615b209085226d5d35f0a2a1",
+  "manifest": "native-eight-local-manifest.json",
+  "manifestSha256": "f990eaf106859b92739eea809008bc7abda40ea9bd831d215788215c6cba6989",
+  "publishedSourceReview": {
+    "rootFullReadback": true,
+    "independentFullReadback": true,
+    "only8leaves": true,
+    "sourceAudit": "native-integrated-eight-source-review-20261115.json"
+  },
+  "steps": [
+    {
+      "name": "native-eight-types.log",
+      "argv": [
+        "node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tools/owned-process-broker/tsconfig.json"
+      ],
+      "startedAt": "2026-11-15T22:35:20.336646+00:00",
+      "completedAt": "2026-11-15T22:35:20.845797+00:00",
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-eight-retained-host-types.log",
+      "argv": [
+        "node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tools/owned-process-broker/tsconfig.retained-host.json"
+      ],
+      "startedAt": "2026-11-15T22:35:20.846422+00:00",
+      "completedAt": "2026-11-15T22:35:21.949018+00:00",
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-eight-protocol.log",
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--config",
+        "tools/owned-process-broker/vitest.config.ts"
+      ],
+      "startedAt": "2026-11-15T22:35:21.950104+00:00",
+      "completedAt": "2026-11-15T22:35:24.627017+00:00",
+      "exitCode": 0,
+      "bytes": 472,
+      "sha256": "3a21671db60bb99e40f8c7ccd7d78ec8a46c34660ca6a5ef65a093bb279b083e"
+    },
+    {
+      "name": "native-eight-scoped-lint.log",
+      "argv": [
+        "pnpm",
+        "lint:fast:files",
+        "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "tools/owned-process-broker/nativeGate.ts",
+        "tools/owned-process-broker/nativeGateDiagnostics.ts",
+        "tools/owned-process-broker/nativeGateContext.test.ts"
+      ],
+      "startedAt": "2026-11-15T22:35:24.634885+00:00",
+      "completedAt": "2026-11-15T22:35:26.894281+00:00",
+      "exitCode": 0,
+      "bytes": 311,
+      "sha256": "bac4e14e73a1304ef642237e2d077668b791090e92e3b5cad605155f860ba0d3"
+    },
+    {
+      "name": "native-eight-source-size.log",
+      "argv": [
+        "pnpm",
+        "guard:source-file-size"
+      ],
+      "startedAt": "2026-11-15T22:35:26.899658+00:00",
+      "completedAt": "2026-11-15T22:35:27.804445+00:00",
+      "exitCode": 0,
+      "bytes": 249,
+      "sha256": "961492c3971768c144057514917b4179f695089b172a31e2d3d3d62b9efdc8f3"
+    },
+    {
+      "name": "native-eight-provisioning.log",
+      "argv": [
+        "pnpm",
+        "guard:team-provisioning-architecture"
+      ],
+      "startedAt": "2026-11-15T22:35:27.805059+00:00",
+      "completedAt": "2026-11-15T22:35:28.212774+00:00",
+      "exitCode": 0,
+      "bytes": 245,
+      "sha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c"
+    },
+    {
+      "name": "native-eight-source-diff.log",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "9b29d595c0f7baf1e1c34da85c9c1b0543a19451",
+        "6e222b57f700832cfd78a934a3b6a205a5764761",
+        "--",
+        "tools/owned-process-broker/serviceScopes.h",
+        "tools/owned-process-broker/serviceDebugLoop.h",
+        "tools/owned-process-broker/debugServiceTest.h",
+        "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "tools/owned-process-broker/nativeFixture.cpp",
+        "tools/owned-process-broker/nativeGate.ts",
+        "tools/owned-process-broker/nativeGateDiagnostics.ts",
+        "tools/owned-process-broker/nativeGateContext.test.ts"
+      ],
+      "startedAt": "2026-11-15T22:35:28.213211+00:00",
+      "completedAt": "2026-11-15T22:35:28.223218+00:00",
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "protocol": {
+    "files": 3,
+    "passed": 53,
+    "failed": 0
+  },
+  "limits": [
+    "Both original native and retained-host TypeScript projects, full protocol cohort and scoped gates passed once on6e222. C++ headers/fixture were not compiled, linked, loaded or executed on this Linux executor.",
+    "The resulting source still requires original Windows x64 and ARM64 Node/Electron native gates. Native SDK import/runtime compatibility, Stop/CREATE race and WOW64 root are pending those gates.",
+    "No retry of exhausted Host-test, scripts, whole-workspace or backend compiler gates occurred. Desktop41-case GREEN is separately evidenced on9b29 and is not rerun or reattributed.",
+    "No full frontend/P08/P09/M16/vendor/packaged/release qualification is claimed."
+  ]
+}

@@ -1,0 +1,715 @@
+{
+  "archive": {
+    "key": "capacity1207-linux",
+    "zip": "/workspace/scratch/c714f5bce554/verified-ci-archives-20261115/capacity1207-linux.zip",
+    "sha256": "643c7d2d24047d8a242133dd468561b70fb686cdebd6c87f25d644d217122d4b",
+    "bytes": 1522042,
+    "crc_ok": true,
+    "entries": [
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+        "size": 20224,
+        "crc": 1747066686,
+        "sha256": "b576c6383555b2eb17464487de5ca7e178cfac68af711b0bfa7f241d2fa158b2"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/artifact/registered-process.node",
+        "size": 36104,
+        "crc": 1425276003,
+        "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/artifact/manifest.json",
+        "size": 1170,
+        "crc": 573565884,
+        "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/linux-child-exec/linux-child-exec",
+        "size": 789792,
+        "crc": 3184229833,
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/linux-child-exec/manifest.json",
+        "size": 2408,
+        "crc": 23625837,
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/native.log",
+        "size": 233,
+        "crc": 3382387471,
+        "sha256": "c78a6bc4c4f9b92e01451f442550407cf25c65dae82cc0e7d6a070f02d0a252f"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/proof.ndjson",
+        "size": 4083,
+        "crc": 1758781708,
+        "sha256": "78302928285e20482f0d885b090f58d343b6e2c7c2c555c12593569e64aa1b69"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/registered-process-actor",
+        "size": 17288,
+        "crc": 1586887017,
+        "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/selection.json",
+        "size": 589,
+        "crc": 2725318406,
+        "sha256": "bdac8ee59b54d027a8224a38521ffb49e4655d98cb1417d18c62c829e4846dbe"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/warm-native.log",
+        "size": 233,
+        "crc": 1033480144,
+        "sha256": "75802afd565993fecec2723dd3120190802f3d6e907523b3cd02e3d7cef208fe"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/warm-proof.ndjson",
+        "size": 4577,
+        "crc": 4135944705,
+        "sha256": "c4366af1792771634ddb9ec2faa67451a206d9980907112f1c0dd1eaa736f814"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron.log",
+        "size": 854,
+        "crc": 2370597765,
+        "sha256": "a2a95b7feb2d189f1e88123e2df988ab92bda7f5f4b4e3824370c9948d9e01d9"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node-exec-electron.log",
+        "size": 754,
+        "crc": 3287111834,
+        "sha256": "82454e716551874ac5ef2f58074da6f99613bfd3064124e374bf7d03033cb078"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node-exec-node24.log",
+        "size": 756,
+        "crc": 2062023837,
+        "sha256": "d4baaecfedea7ae2bbd6e0849710bc74b867d43acf259eb066898e49ee27f747"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node-exec-packaging.log",
+        "size": 6529,
+        "crc": 2590421,
+        "sha256": "81fd0f41fc6e9ba529f1b1fd6afd86beb974affd5b1c0014ce23873a3c72ca4b"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/artifact/manifest.json",
+        "size": 1170,
+        "crc": 573565884,
+        "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/artifact/registered-process.node",
+        "size": 36104,
+        "crc": 1425276003,
+        "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/linux-child-exec/linux-child-exec",
+        "size": 789792,
+        "crc": 3184229833,
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/linux-child-exec/manifest.json",
+        "size": 2408,
+        "crc": 23625837,
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/native.log",
+        "size": 233,
+        "crc": 1935891448,
+        "sha256": "0ffd9fe3d4855eb4e00a3b1e30a04440d1c4f745d3398e32531b76da8a3a4bdc"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/proof.ndjson",
+        "size": 4038,
+        "crc": 1429217749,
+        "sha256": "0db7950e53df7ece6b98b8bbb7394503d051df5c43090b595ff2ff361d173f0b"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/registered-process-actor",
+        "size": 17288,
+        "crc": 1586887017,
+        "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/selection.json",
+        "size": 583,
+        "crc": 2164645347,
+        "sha256": "970a854243b0f4304c721d9048eeb75ceb5dd026986dd49af5706c948b8cd4fb"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/warm-native.log",
+        "size": 233,
+        "crc": 557136524,
+        "sha256": "17c9c66688796b27c4e90c9ca799f440012fe1915a8e71aeed6ccf3ac1a7bb3f"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/warm-proof.ndjson",
+        "size": 4534,
+        "crc": 1819726678,
+        "sha256": "21c9b76e56cb8a6d846ec854cf8b35ce73131a07b02a08bf8c7534c9feaca864"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24.log",
+        "size": 848,
+        "crc": 1033024250,
+        "sha256": "d509d3ef75a29dc00aed0405514a2362d777b004dd746cf4e6e71910b62d821d"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+        "size": 2802,
+        "crc": 2216651532,
+        "sha256": "a272d381fc3dee7b95d1c57652676bf5d1324d02722dce0578647034822bbd28"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+        "size": 769,
+        "crc": 3114939157,
+        "sha256": "ac664aaeba94cf8c2cb521b15a1a7e8ec95c3b7edfdc7a7163dbda289347036e"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+        "size": 8076,
+        "crc": 1422966830,
+        "sha256": "d4d6bc98ffb26530446bcc6c668100674fb1b45f2f7dcfc2a79d6fc3d58236e6"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+        "size": 2810,
+        "crc": 1720173920,
+        "sha256": "9f6f37715a3175b3576294abfac6639dbb418699072db58138d9e89b0f81d471"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "size": 41,
+        "crc": 825398602,
+        "sha256": "6f4ac488a94cb3437f16ff8dfaaa5e4c73c51a21d0ed398f5e9b5aa805b4a9ff"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43763317915/artifact/manifest.json",
+        "size": 1170,
+        "crc": 573565884,
+        "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43763317915/linux-child-exec/linux-child-exec",
+        "size": 789792,
+        "crc": 3184229833,
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43763317915/linux-child-exec/manifest.json",
+        "size": 2408,
+        "crc": 23625837,
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43763317915/artifact/registered-process.node",
+        "size": 36104,
+        "crc": 1425276003,
+        "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43763317915/native.log",
+        "size": 233,
+        "crc": 1935891448,
+        "sha256": "0ffd9fe3d4855eb4e00a3b1e30a04440d1c4f745d3398e32531b76da8a3a4bdc"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43763317915/proof.ndjson",
+        "size": 4038,
+        "crc": 1429217749,
+        "sha256": "0db7950e53df7ece6b98b8bbb7394503d051df5c43090b595ff2ff361d173f0b"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43763317915/registered-process-actor",
+        "size": 17288,
+        "crc": 1586887017,
+        "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43763317915/selection.json",
+        "size": 583,
+        "crc": 2164645347,
+        "sha256": "970a854243b0f4304c721d9048eeb75ceb5dd026986dd49af5706c948b8cd4fb"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43763317915/warm-proof.ndjson",
+        "size": 4534,
+        "crc": 1819726678,
+        "sha256": "21c9b76e56cb8a6d846ec854cf8b35ce73131a07b02a08bf8c7534c9feaca864"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43763317915/artifact/manifest.json",
+        "size": 1170,
+        "crc": 573565884,
+        "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43763317915/warm-native.log",
+        "size": 233,
+        "crc": 557136524,
+        "sha256": "17c9c66688796b27c4e90c9ca799f440012fe1915a8e71aeed6ccf3ac1a7bb3f"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43763317915/artifact/registered-process.node",
+        "size": 36104,
+        "crc": 1425276003,
+        "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43763317915/linux-child-exec/linux-child-exec",
+        "size": 789792,
+        "crc": 3184229833,
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43763317915/linux-child-exec/manifest.json",
+        "size": 2408,
+        "crc": 23625837,
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43763317915/native.log",
+        "size": 233,
+        "crc": 3382387471,
+        "sha256": "c78a6bc4c4f9b92e01451f442550407cf25c65dae82cc0e7d6a070f02d0a252f"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43763317915/proof.ndjson",
+        "size": 4083,
+        "crc": 1758781708,
+        "sha256": "78302928285e20482f0d885b090f58d343b6e2c7c2c555c12593569e64aa1b69"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43763317915/registered-process-actor",
+        "size": 17288,
+        "crc": 1586887017,
+        "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43763317915/selection.json",
+        "size": 589,
+        "crc": 2725318406,
+        "sha256": "bdac8ee59b54d027a8224a38521ffb49e4655d98cb1417d18c62c829e4846dbe"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43763317915/warm-native.log",
+        "size": 233,
+        "crc": 1033480144,
+        "sha256": "75802afd565993fecec2723dd3120190802f3d6e907523b3cd02e3d7cef208fe"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43763317915/warm-proof.ndjson",
+        "size": 4577,
+        "crc": 4135944705,
+        "sha256": "c4366af1792771634ddb9ec2faa67451a206d9980907112f1c0dd1eaa736f814"
+      }
+    ]
+  },
+  "members": [
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "size": 20224,
+      "crc": 1747066686,
+      "sha256": "b576c6383555b2eb17464487de5ca7e178cfac68af711b0bfa7f241d2fa158b2",
+      "contentEncoding": "utf-8",
+      "content": "✔ close caches one owned stop before entering a reentrant custody port (23.974325ms)\nlegacy-agent-host: claude-management {\"profileHash\":\"68c91f8bffd9ec48a473fef8a3d57fbd97b55eece93675655de0302d92b476ea\",\"namespaceHash\":\"50fbe514c03f48dbcca3cfe795d531b4e516fa4f0980153e17839e1740c787be\",\"commandHash\":null,\"stage\":\"host-metadata\",\"code\":\"claude.metadata.cleanup-unconfirmed\"}\nlegacy-agent-host: claude-management {\"profileHash\":\"68c91f8bffd9ec48a473fef8a3d57fbd97b55eece93675655de0302d92b476ea\",\"namespaceHash\":\"50fbe514c03f48dbcca3cfe795d531b4e516fa4f0980153e17839e1740c787be\",\"commandHash\":null,\"stage\":\"host-cleanup\",\"code\":\"cleanup-unconfirmed\"}\nlegacy-agent-host: claude-management {\"profileHash\":\"68c91f8bffd9ec48a473fef8a3d57fbd97b55eece93675655de0302d92b476ea\",\"namespaceHash\":\"f3aafa4f943d4d958834e25587bc6e77945d8085f4e18072e7aea74f018b800f\",\"commandHash\":null,\"stage\":\"host-metadata\",\"code\":\"claude.metadata.cleanup-unconfirmed\"}\nlegacy-agent-host: claude-management {\"profileHash\":\"68c91f8bffd9ec48a473fef8a3d57fbd97b55eece93675655de0302d92b476ea\",\"namespaceHash\":\"f3aafa4f943d4d958834e25587bc6e77945d8085f4e18072e7aea74f018b800f\",\"commandHash\":null,\"stage\":\"host-cleanup\",\"code\":\"unavailable\"}\nlegacy-agent-host: claude-management {\"profileHash\":\"68c91f8bffd9ec48a473fef8a3d57fbd97b55eece93675655de0302d92b476ea\",\"namespaceHash\":\"f3aafa4f943d4d958834e25587bc6e77945d8085f4e18072e7aea74f018b800f\",\"commandHash\":null,\"stage\":\"host-cleanup\",\"code\":\"cleanup-unconfirmed\"}\n✔ finite metadata cleanup settles original custody before SDK forwarded abort, including false and throw (30.372785ms)\n✔ model probe retains normalized pre-mask failure while its public result and owned cleanup remain held/confirmed (9.719978ms)\n✔ coordinator current guard is observed before Host creation without changing its error or cleanup (3.381291ms)\n✔ actual pinned SDK reads metadata and probes only the finite Node stream-JSON peer under original cleanup (454.347167ms)\n✔ destructive lifecycle inspects original process receipt after metadata unregister, without signalling or trusting metadata stop (72.548843ms)\n✔ actual purge preflight persists natural Windows absence without a list or Stop; cold original purge uses the same durable proof (298.318581ms)\n✔ Windows receipt mode bits do not impersonate POSIX permissions; original bytes/digest remain required (193.626295ms)\n✔ POSIX readable-by-others management receipts remain held (2.340335ms)\n✔ Windows no-follow fallback still refuses a valid symlink receipt without touching its target (7.955418ms)\n✔ Windows receipt replacement is held at before-open and closes the original FD (2.604936ms)\n✔ Windows receipt replacement is held at after-open and closes the original FD (2.839772ms)\n✔ Windows receipt replacement is held at disappeared-before-open and closes the original FD (1.925442ms)\n✔ a Team model probe binds its context and cannot publish a result after its captured authority is revoked (65.653624ms)\n✔ model probe claims before native work and returns original result without a second model request on replay (1406.612774ms)\n✔ cancel retains auth namespace until physical close and a late model response cannot publish success (8.912931ms)\n✔ cold pending probe is held and never reruns inference; unknown physical cleanup holds the account (25.503972ms)\n✔ explicit cancellation settles held observations only after native custody is released (10.255129ms)\n✔ expiry and orderly shutdown cancel only their original probe (23.718362ms)\n✔ failed initial claim allocates nothing; writer revocation or target change cannot publish a completed model proof (17.145189ms)\n✔ cancelled probe receipts cannot claim confirmed cancellation while retaining unknown process custody (6.256326ms)\n✔ model limit identity is durable: changed limits conflict and invalid bounds never reach native (6.442029ms)\n✔ early SDK write and EOF wait for native owner installation and resume, with backpressure (10.401344ms)\n✔ abort-during-prepare never resumes native code or flushes queued input (3.18384ms)\n✔ authority-loss-during-install never resumes native code or flushes queued input (1.646821ms)\n✔ target exit before resume acknowledgement preserves its native code and final stdout/stderr (1.066204ms)\n✔ prepare/control failure requests original cleanup once and never invents target termination (3.512595ms)\n✔ Linux builder refuses an existing or linked output leaf before any compiler dispatch (9.284044ms)\n✔ new native-qualified OS builds admit only the architecture with measured custody evidence (2.875425ms)\n✔ manifest selects one exact known build; unknown tuples and a mismatched loaded build fail closed (12.094303ms)\n✔ saved historical records remain readable; control requires root, target, selected and actual builds to match (11.427539ms)\n✔ builder keeps unknown candidates out of product admission and refuses changed hosts (8.649859ms)\n✔ native executable observations reuse the original captured child and reject changed bytes or birth (11.247763ms)\n✔ x64 selects only its own finite OS artifact; this synthetic boundary is not a native qualification (4.696943ms)\n✔ Linux pidfs records preserve original identity; reading Darwin v1/v2 never rewrites their bytes (1.680961ms)\n✔ v1 same-session remains compatible; cross-session needs an explicit private v2 admission (0.473869ms)\n✔ warm records are strict owner-local references and never accept serialized pidfd authority (0.46743ms)\n✔ existing registry is cold-readable; metadata stop does not signal or claim native exit (25.590535ms)\n✔ requested-before-native survives lost result/cold reopen and never redispatches (7.360516ms)\n✔ stale exact row, corrupt registry and revoked authority fail before any signal (2.603233ms)\n✔ finite Host route strips native authority and refuses PID or caller-supplied token selection (2.894523ms)\n✔ metadata PID unregister preserves canonical all-history removal and never invokes OS signal (1.41575ms)\n✔ same existing command namespace validates original fingerprints and generic pending phases (2.299935ms)\n✔ explicit live-ancestry receipt cold-reads original target; same-token SID uncertainty holds custody without recapture or signal (5.421242ms)\n✔ cold warm history requires completed absence of the full original capture, never a signal or another owner (14.929769ms)\n✔ Windows lost capture ACK uses original receipt on cold lookup and async MCP strips private capability (44.489162ms)\n✔ Windows original input is checked outside Team fence after capture await and before any policy effect (3.368022ms)\n✔ Windows expired capture retains evidence without policy; a later saved-capture lookup still checks original source (25.845317ms)\n✔ Windows uncertain original policy writes never register twice and only exact attached row can complete (9.249739ms)\n✔ Windows Stop uncertainty survives metadata removal and replacement; cold absence belongs to full original scope (95.97003ms)\n✔ Windows natural absence stays on one original register across principals and cold reads, without a Stop (19.85936ms)\n✔ lifecycle settles the original completed Windows Stop before purge without repeating its signal (59.143855ms)\n✔ Windows natural settlement preserves pre-dispatch and lost-ACK uncertainty; only later proven no-dispatch may retry (40.379796ms)\n✔ Windows natural evidence cannot cross a changed source, grant, deadline, capture or concurrent original Stop (50.245941ms)\n✔ bounded warm sweep releases only native-absent descriptors, including orphaned descendants, and keeps original proofs (15.828255ms)\n✔ warm absence acknowledgement is exact, already-absent only, and refuses foreign or stale authority (6.255199ms)\n✔ purged Team retirement is atomic, binding-scoped, and retains every unknown or live original (1.045153ms)\n✔ more than 10000 sequential acknowledged Stops and purged Teams do not exhaust the warm owner lifetime (500.756459ms)\n✔ Stop persists original absence before acknowledgement, recovers failed acknowledgement, and keeps reads inert (84.664371ms)\n✔ natural warm history survives reads and failed purge, then actual durable Host purge retires it without a Stop (389.675953ms)\n✔ exact deleted purge replay retries private cleanup without replaying publication or filesystem work (115.168476ms)\n✔ Linux original executable compares signed Node and unsigned native inode bits exactly (7.139925ms)\n✔ real controller registry and existing command scanner cold-recover original requested stop without redispatch (240.490468ms)\n✔ actual bound MCP catalog preserves PID/id metadata semantics and excludes all OS termination tools (49.560388ms)\n✔ real process composition accepts full stored binding and refuses wrong original owner/scope/extra selectors before native reads (16.850659ms)\n✔ codex ordinary equal-profile probe origins survive the original metadata wait without retargeting (51.447534ms)\n✔ codex prepared equal-profile probe origins survive the original metadata wait without retargeting (18.626215ms)\n✔ claude ordinary equal-profile probe origins survive the original metadata wait without retargeting (19.999031ms)\n✔ claude prepared equal-profile probe origins survive the original metadata wait without retargeting (15.73668ms)\n✔ V1 equal-profile cache retirement releases only the original before B (24.24585ms)\n✔ V1 equal-profile cache retirement holds B after unconfirmed original cleanup (59.511678ms)\n✔ V1 catalog rechecks the actual model fence after awaiting original same-profile retirement (13.896703ms)\n✔ Main read-only source observation creates no index, journal or native work (12.62761ms)\n✔ original released A and B remain eligible after publication and cold read; no latest substitution (118.463481ms)\n✔ changed original seed becomes unavailable and corrupt or dangling successful history is held (22.051209ms)\n✔ only explicit recovery reads an original prepared never-allocated snapshot (18.874065ms)\n✔ configuration version check uses its exact published predecessor or original prepared snapshot (42.110593ms)\n✔ complete original Team scopes and member references produce private exact origins without changing retained bytes (77.41094ms)\n✔ live member retains its own original source and rejects a capture from another configuration (53.314091ms)\n✔ source origin preserves original whole-job admission without manufacturing Main ownership (24.058768ms)\n✔ source origin preserves original main admission without manufacturing Main ownership (21.7199ms)\n✔ source origin preserves original scoped-without-main admission without manufacturing Main ownership (23.383856ms)\n✔ saved model evidence follows the published source and cannot authorize a later source revision (225.387334ms)\n✔ saved no-draft and same-provider draft probes retain their source origin outside original profile and journal bytes (260.150668ms)\n✔ never-captured saved/imported lead and Alice resolve explicit private recipes without any product/runtime writes (36.313191ms)\n✔ missing/ambiguous templates, changed source and stale owner refuse without authorizing a new launch (20.598565ms)\n✔ existing probe journal retains original intents and exact claude cleanup after roster without native Team allocation (70.291996ms)\n✔ existing probe journal retains original intents and exact claude cleanup after revoke without native Team allocation (72.157696ms)\n✔ existing probe journal retains original intents and exact claude cleanup after recipe without native Team allocation (53.986359ms)\n✔ existing probe journal retains original intents and exact codex cleanup after roster without native Team allocation (72.881724ms)\n✔ existing probe journal retains original intents and exact codex cleanup after revoke without native Team allocation (144.578209ms)\n✔ existing probe journal retains original intents and exact codex cleanup after recipe without native Team allocation (52.930865ms)\n✔ existing probe journal retains original intents and exact opencode cleanup after roster without native Team allocation (705.557119ms)\n✔ existing probe journal retains original intents and exact opencode cleanup after revoke without native Team allocation (44.158487ms)\n✔ existing probe journal retains original intents and exact opencode cleanup after recipe without native Team allocation (58.150781ms)\n✔ operator grant revocation invalidates saved source evidence even when the roster and template remain identical (33.779577ms)\n✔ Team probe read rejects completed evidence after physical config-directory replacement while exact contextual cleanup remains addressable (687.492353ms)\n✔ saved Launch draft codex/lead selects only its explicit private recipe and retains original cancellation after template change (39.864843ms)\n✔ saved Launch draft codex/new-member selects only its explicit private recipe and retains original cancellation after template change (34.950981ms)\n✔ saved Launch draft opencode/lead selects only its explicit private recipe and retains original cancellation after template change (46.583246ms)\n✔ saved Launch draft opencode/new-member selects only its explicit private recipe and retains original cancellation after template change (41.761143ms)\n✔ saved workspace projection distinguishes canonical inheritance from an explicit member cwd (16.591036ms)\n✔ codex model preflight preserves private default native options and binds explicit effort without rewriting the source (18.841702ms)\n✔ opencode model preflight preserves private default native options and binds explicit effort without rewriting the source (36.412953ms)\n✔ claude explicit UI Default low resets only model/effort from the same private recipe while absent choices retain captured values (20.215334ms)\n✔ claude explicit UI Default undefined resets only model/effort from the same private recipe while absent choices retain captured values (33.679584ms)\n✔ codex explicit UI Default low resets only model/effort from the same private recipe while absent choices retain captured values (28.584623ms)\n✔ codex explicit UI Default undefined resets only model/effort from the same private recipe while absent choices retain captured values (59.567246ms)\n✔ opencode explicit UI Default low resets only model/effort from the same private recipe while absent choices retain captured values (26.053507ms)\n✔ opencode explicit UI Default undefined resets only model/effort from the same private recipe while absent choices retain captured values (26.604475ms)\n✔ V1 saved Default rebases only its proven limit overlay and resets the native provider/model pair (56.124304ms)\n✔ V2 draft Default preserves the native session model and rejects drifted private defaults (14.843491ms)\n✔ finite Host run keeps scheduled choices, one input and original outcome across replay and cold restart (569.58278ms)\n✔ cancel before start and during native open never submit; original physical cleanup releases the pending factory (145.5883ms)\n✔ unknown cleanup is retained and cannot authorize replay or another native occurrence (454.64024ms)\n✔ independent schedules run concurrently and cancelling one preserves the original neighbor (198.932385ms)\n✔ actual pinned SDK standalone run completes, cancels and survives cold replay without mutating the Team recipe (9550.227537ms)\nlegacy-agent-host: claude-management {\"profileHash\":\"68c91f8bffd9ec48a473fef8a3d57fbd97b55eece93675655de0302d92b476ea\",\"namespaceHash\":\"42d68e2529539dfe6638e7ab567b72fd2158e0f59ae69e70012ada44ec2dfc5e\",\"commandHash\":\"ebd580a991341f41273f096fb6ac67f9ca7b912ca1eb23deca15ce0097cb4c62\",\"stage\":\"probe-host\",\"code\":\"unavailable\"}\n✔ codex metadata reaches its original finite process factory (13.143891ms)\n✔ codex login reaches its original finite process factory (2.726585ms)\n✔ codex probe reaches its original finite process factory (2.89293ms)\n✔ claude metadata reaches its original finite process factory (3.955919ms)\n✔ claude auth-status reaches its original finite process factory (3.627104ms)\n✔ claude login reaches its original finite process factory (2.526409ms)\n✔ claude probe reaches its original finite process factory (3.60414ms)\n✔ opencode catalog reaches its original finite process factory (8.156369ms)\n✔ claude schedule receives Main custody without Team service authority (1.981655ms)\n✔ codex schedule receives Main custody without Team service authority (0.943002ms)\n✔ Codex MCP read receives its original finite Main port before metadata execution (1.012385ms)\n✔ source-version composition uses the same original Main port with only filtered captured environment (38.011518ms)\n✔ original Windows handles retain birth and executable identity without any later PID lookup (14.429824ms)\n✔ same-name executable replacement cannot satisfy retained Windows process custody (4.157957ms)\n✔ Windows job owns descendants after root exit and closes both handles only after complete absence (4.271115ms)\n✔ native Windows errors and malformed accounting stay unknown and do not replay termination (2.835605ms)\n✔ a failed native close never retries a possibly recycled handle or claims cleanup (3.546224ms)\n✔ failed Windows job assignment rejects original capture and never adopts the PID on retry (2.196933ms)\n✔ kernel32 binding uses noninheritable opaque handles and a non-breakaway job with native accounting (1.690165ms)\n✔ required tree capture fails before private stdin and retains the failed original child as unknown (4000.907151ms)\n✔ fresh observations of a retained original tree use owned lifetime, not the allocation gate (454.456734ms)\n✔ retained Windows executable checks distinguish file IDs above the safe integer range (2.57408ms)\n✔ native binding rejects unattested-bytes-before-load without admitting a kernel (114.677192ms)\n✔ native binding rejects lossy-file-id-after-load without admitting a kernel (9.257656ms)\n✔ long Windows argument runs retain literal backslashes, quotes and the original time bound (17.958488ms)\n✔ known wrapper pins original, selected interpreter and script; later PATH never changes its argv (4.305165ms)\n✔ captured fallback preserves the shared shell policy and pins its actual cmd image (1.739909ms)\n✔ captured batch recipe rejects shell suffixes outside its encoded arguments (1.240471ms)\n✔ captured shell recipe preserves quoted arguments and rejects malformed suffixes (1.869289ms)\n✔ captured passthrough recipe preserves quoted arguments and rejects malformed suffixes (1.685177ms)\n✔ captured direct-wrapper recipe preserves quoted arguments and rejects malformed suffixes (1.390963ms)\n✔ known wrapper rejects ambiguous captured PATH and a changed original before selection (0.60286ms)\n✔ direct native image selection preserves its independent command-line contract (0.601318ms)\n✔ retained Windows port shares one immutable original selection only with its exact native profile (3.422241ms)\n✔ retained Windows launch refuses changed original C:\\TEST\\provider.cmd (2.353945ms)\n✔ retained Windows launch refuses changed original C:\\Captured\\node.exe (1.723433ms)\n✔ retained Windows launch refuses changed original C:\\TEST\\cli.cjs (1.635094ms)\n✔ retained Windows prepare refuses changed original C:\\TEST\\provider.cmd (5.21707ms)\n✔ retained Windows prepare refuses changed original C:\\Captured\\node.exe (1.918451ms)\n✔ retained Windows prepare refuses changed original C:\\TEST\\cli.cjs (1.817292ms)\n✔ retained Windows install-owner refuses changed original C:\\TEST\\provider.cmd (2.413553ms)\n✔ retained Windows install-owner refuses changed original C:\\Captured\\node.exe (2.12737ms)\n✔ retained Windows install-owner refuses changed original C:\\TEST\\cli.cjs (1.982316ms)\n✔ ordinary Windows ports still capture their own original recipe without a retained facet (2.082093ms)\n✔ codex forwards only its scoped original Windows service intent (24.902368ms)\n✔ opencode forwards only its scoped original Windows service intent (11.206242ms)\nℹ tests 163\nℹ suites 0\nℹ pass 163\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 15551.25211\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/artifact/registered-process.node",
+      "size": 36104,
+      "crc": 1425276003,
+      "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217",
+      "contentEncoding": "binary-hash-only"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/artifact/manifest.json",
+      "size": 1170,
+      "crc": 573565884,
+      "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"schemaVersion\": 1,\n  \"abi\": \"napi-8\",\n  \"platform\": \"linux\",\n  \"architecture\": \"x64\",\n  \"kernelCapability\": \"pidfd-live-v1\",\n  \"buildKernelRelease\": \"7.0.0-1017-azure\",\n  \"libc\": {\n    \"family\": \"glibc\",\n    \"minimumVersion\": \"2.33\"\n  },\n  \"library\": \"registered-process.node\",\n  \"sourceSha256\": \"f5d00c04919f9d8bdd36a1482bd96849488d54552a55f9daebeb03739db7c667\",\n  \"binarySha256\": \"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\n  \"compilerSha256\": \"1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26\",\n  \"inspectorSha256\": \"64c58e15274bbbb5153f31078e455e9e77ee5f51489e709bba5bb788ce9df2b0\",\n  \"headers\": [\n    {\n      \"file\": \"node_api.h\",\n      \"sha256\": \"2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a\"\n    },\n    {\n      \"file\": \"node_api_types.h\",\n      \"sha256\": \"a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00\"\n    },\n    {\n      \"file\": \"js_native_api.h\",\n      \"sha256\": \"8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788\"\n    },\n    {\n      \"file\": \"js_native_api_types.h\",\n      \"sha256\": \"4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0\"\n    }\n  ]\n}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/linux-child-exec/linux-child-exec",
+      "size": 789792,
+      "crc": 3184229833,
+      "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110",
+      "contentEncoding": "binary-hash-only"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/linux-child-exec/manifest.json",
+      "size": 2408,
+      "crc": 23625837,
+      "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"schemaVersion\": 1,\n  \"platform\": \"linux\",\n  \"architecture\": \"x64\",\n  \"protocol\": \"linux-child-exec-v1\",\n  \"kernelCapability\": \"close-range-v1\",\n  \"binary\": \"linux-child-exec\",\n  \"binarySha256\": \"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\",\n  \"sourceSha256\": \"29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337\",\n  \"compilerSha256\": \"1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26\",\n  \"inspectorSha256\": \"64c58e15274bbbb5153f31078e455e9e77ee5f51489e709bba5bb788ce9df2b0\",\n  \"buildKernelRelease\": \"7.0.0-1017-azure\",\n  \"linkInputs\": [\n    {\n      \"file\": \"/usr/bin/x86_64-linux-gnu-as\",\n      \"sha256\": \"21aff249b692b5c31a44007491f922dcb49f41323e362c57d2ada3f52eddb7f0\"\n    },\n    {\n      \"file\": \"/usr/bin/x86_64-linux-gnu-ld.bfd\",\n      \"sha256\": \"e9ceb054c12207970f2726dfc07e9a66b411602748628baf27399f02a9bbb31b\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginT.o\",\n      \"sha256\": \"42171a80795909e1a0743f71c60b503ff2951ed40bf94cae9ca55c324a8cc26a\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/crtend.o\",\n      \"sha256\": \"9c8b2caad195193301ef072895dc89bea1d23371d4c19accd821debe27773063\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/libgcc.a\",\n      \"sha256\": \"d9376c55f97863a4e5fbb6c6beca2591b319bf786f3a7ca56da8964c5662171f\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/libgcc_eh.a\",\n      \"sha256\": \"f853cbbf842ff8714cc8dd986e2fd5bb309d34d490b0707203223ee4d52c76bc\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/crt1.o\",\n      \"sha256\": \"5cfb30db1d2c92a9a818f6c015ad7fcd6519afaa1b88148e831504fe6e299479\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/crti.o\",\n      \"sha256\": \"077ccb6c68db1794da3ee262c4a16a3c6f8e902845dd0829110ad4b7065e5aa3\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/crtn.o\",\n      \"sha256\": \"a2266079f95b84ccc2162ebbf279bcd78858a748aa1882e0bdb912316c76a58f\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/libc.a\",\n      \"sha256\": \"a40c7eae7581f977b65eddb81cbc799213a695749e039d966db55bdee4ac9621\"\n    },\n    {\n      \"file\": \"/usr/libexec/gcc/x86_64-linux-gnu/13/cc1\",\n      \"sha256\": \"5d1679131184e2de4435b426eb264bf13472fe026db8e5c6bc97445814e8e2f4\"\n    },\n    {\n      \"file\": \"/usr/libexec/gcc/x86_64-linux-gnu/13/collect2\",\n      \"sha256\": \"4d1f341ae5b763b513258ee2812422a45e063c30a2f1924a0cf63d3699f3a158\"\n    }\n  ]\n}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/native.log",
+      "size": 233,
+      "crc": 3382387471,
+      "sha256": "c78a6bc4c4f9b92e01451f442550407cf25c65dae82cc0e7d6a070f02d0a252f",
+      "contentEncoding": "utf-8",
+      "content": "{\"workspace\":\"/tmp/TEST-linux-pidfd-3AkgOz\",\"completed\":true,\"cleaned\":true,\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"}}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/proof.ndjson",
+      "size": 4083,
+      "crc": 1758781708,
+      "sha256": "78302928285e20482f0d885b090f58d343b6e2c7c2c555c12593569e64aa1b69",
+      "contentEncoding": "utf-8",
+      "content": "{\"phase\":\"start\",\"scope\":\"TEST original process custody; actual SDK and Desktop remain separate\",\"selection\":\"Host automatic kernel capability\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"},\"versions\":{\"node\":\"24.22.1\",\"acorn\":\"8.18.0\",\"ada\":\"4.0.0\",\"amaro\":\"1.1.11\",\"ares\":\"1.34.9\",\"brotli\":\"1.2.0\",\"cldr\":\"48.0\",\"icu\":\"78.2\",\"llhttp\":\"9.4.3\",\"merve\":\"1.2.2\",\"modules\":\"149\",\"napi\":\"10\",\"nbytes\":\"0.1.4\",\"ncrypto\":\"0.0.1\",\"nghttp2\":\"1.70.0\",\"nghttp3\":\"\",\"ngtcp2\":\"\",\"openssl\":\"0.0.0\",\"simdjson\":\"4.6.11\",\"simdutf\":\"7.7.0\",\"sqlite\":\"3.53.4\",\"tz\":\"2026e\",\"undici\":\"7.30.1\",\"unicode\":\"17.0\",\"uv\":\"1.52.1\",\"uvwasi\":\"0.0.23\",\"v8\":\"15.2.124.45-electron.0\",\"zlib\":\"1.3.2.1-motley\",\"zstd\":\"1.6.0\",\"electron\":\"44.10.1\",\"chrome\":\"152.0.7977.169\"},\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\"}\n{\"phase\":\"isolated-same-child-launch\",\"completed\":true,\"parentUnchanged\":true,\"helperSha256\":\"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\",\"originalChildPid\":4598,\"exactHighDescriptorAbsent\":true,\"descendantDescriptorAbsent\":true,\"scope\":\"Native child isolation only; Main integration and executable-byte race qualification remain separate\"}\n{\"phase\":\"ownership-and-identity-negatives\",\"same\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4637,\"sessionId\":4637,\"pidfdId\":\"1379\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4646,\"sessionId\":4637,\"pidfdId\":\"5256\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"owned\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4647,\"sessionId\":4647,\"pidfdId\":\"1380\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4665,\"sessionId\":4656,\"pidfdId\":\"13236\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"peer\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4666,\"sessionId\":4666,\"pidfdId\":\"5261\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4684,\"sessionId\":4675,\"pidfdId\":\"13245\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"scope\":\"No forced numeric PID churn; exact inode/namespace mismatch refused\"}\n{\"phase\":\"requested-before-native\",\"original\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4647,\"sessionId\":4647,\"pidfdId\":\"1380\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4665,\"sessionId\":4656,\"pidfdId\":\"13236\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}}}\n{\"phase\":\"live-worker-after-thread-leader-exit\",\"original\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4704,\"sessionId\":4704,\"pidfdId\":\"9363\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4722,\"sessionId\":4713,\"pidfdId\":\"9364\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"observation\":\"unknown\",\"signal\":\"refused\",\"workerClosed\":false}\n{\"phase\":\"proved\",\"captureVersion\":3,\"coldRead\":{\"before\":\"same-live\",\"workerPid\":4724},\"coldSignal\":{\"before\":\"same-live\",\"result\":\"accepted\",\"workerPid\":4737},\"originalTarget\":\"absent\",\"neighbor\":\"same-live\",\"sameSession\":\"same-live\",\"changedSession\":\"unknown\",\"nativeSignalCalls\":1}\n{\"phase\":\"finite-cleanup\",\"cleaned\":true,\"completed\":true,\"scope\":\"Only original pidfd received one SIGTERM; all other TEST actors self-exited after their TTL\"}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/registered-process-actor",
+      "size": 17288,
+      "crc": 1586887017,
+      "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b",
+      "contentEncoding": "binary-hash-only"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/selection.json",
+      "size": 589,
+      "crc": 2725318406,
+      "sha256": "bdac8ee59b54d027a8224a38521ffb49e4655d98cb1417d18c62c829e4846dbe",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"directory\": \"/home/runner/work/_temp/TEST-process-electron-43763317915/artifact\",\n  \"manifestSha256\": \"b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555\",\n  \"actor\": \"/home/runner/work/_temp/TEST-process-electron-43763317915/registered-process-actor\",\n  \"linuxChildExec\": {\n    \"manifestPath\": \"/home/runner/work/_temp/TEST-process-electron-43763317915/linux-child-exec/manifest.json\",\n    \"manifestSha256\": \"c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484\",\n    \"binarySha256\": \"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\"\n  }\n}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/warm-native.log",
+      "size": 233,
+      "crc": 1033480144,
+      "sha256": "75802afd565993fecec2723dd3120190802f3d6e907523b3cd02e3d7cef208fe",
+      "contentEncoding": "utf-8",
+      "content": "{\"workspace\":\"/tmp/TEST-linux-pidfd-eAQU4d\",\"completed\":true,\"cleaned\":true,\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"}}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/warm-proof.ndjson",
+      "size": 4577,
+      "crc": 4135944705,
+      "sha256": "c4366af1792771634ddb9ec2faa67451a206d9980907112f1c0dd1eaa736f814",
+      "contentEncoding": "utf-8",
+      "content": "{\"phase\":\"start\",\"scope\":\"TEST original process custody; actual SDK and Desktop remain separate\",\"selection\":\"TEST internal warm owner\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"},\"versions\":{\"node\":\"24.22.1\",\"acorn\":\"8.18.0\",\"ada\":\"4.0.0\",\"amaro\":\"1.1.11\",\"ares\":\"1.34.9\",\"brotli\":\"1.2.0\",\"cldr\":\"48.0\",\"icu\":\"78.2\",\"llhttp\":\"9.4.3\",\"merve\":\"1.2.2\",\"modules\":\"149\",\"napi\":\"10\",\"nbytes\":\"0.1.4\",\"ncrypto\":\"0.0.1\",\"nghttp2\":\"1.70.0\",\"nghttp3\":\"\",\"ngtcp2\":\"\",\"openssl\":\"0.0.0\",\"simdjson\":\"4.6.11\",\"simdutf\":\"7.7.0\",\"sqlite\":\"3.53.4\",\"tz\":\"2026e\",\"undici\":\"7.30.1\",\"unicode\":\"17.0\",\"uv\":\"1.52.1\",\"uvwasi\":\"0.0.23\",\"v8\":\"15.2.124.45-electron.0\",\"zlib\":\"1.3.2.1-motley\",\"zstd\":\"1.6.0\",\"electron\":\"44.10.1\",\"chrome\":\"152.0.7977.169\"},\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\"}\n{\"phase\":\"isolated-same-child-launch\",\"completed\":true,\"parentUnchanged\":true,\"helperSha256\":\"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\",\"originalChildPid\":4782,\"exactHighDescriptorAbsent\":true,\"descendantDescriptorAbsent\":true,\"scope\":\"Native child isolation only; Main integration and executable-byte race qualification remain separate\"}\n{\"phase\":\"ownership-and-identity-negatives\",\"same\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"99376458-ca0b-44bb-b622-1069acf85d1b\",\"captureKey\":\"8cc2ab3c-bd09-40c4-8b31-86461faecd4a\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4821,\"sessionId\":4821,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4830,\"sessionId\":4821,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"owned\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"99376458-ca0b-44bb-b622-1069acf85d1b\",\"captureKey\":\"bb1168e6-6038-4d3c-ba0e-036aaab25fb5\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4831,\"sessionId\":4831,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4849,\"sessionId\":4840,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"peer\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"99376458-ca0b-44bb-b622-1069acf85d1b\",\"captureKey\":\"d3026a49-d544-46cd-8354-d8c30e660399\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4850,\"sessionId\":4850,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4868,\"sessionId\":4859,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"scope\":\"No forced numeric PID churn; exact inode/namespace mismatch refused\"}\n{\"phase\":\"requested-before-native\",\"original\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"99376458-ca0b-44bb-b622-1069acf85d1b\",\"captureKey\":\"bb1168e6-6038-4d3c-ba0e-036aaab25fb5\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4831,\"sessionId\":4831,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4849,\"sessionId\":4840,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}}}\n{\"phase\":\"live-worker-after-thread-leader-exit\",\"original\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"99376458-ca0b-44bb-b622-1069acf85d1b\",\"captureKey\":\"2773478c-e46c-4dbf-84f4-3ffb9b463c5f\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4888,\"sessionId\":4888,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4906,\"sessionId\":4897,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"observation\":\"unknown\",\"signal\":\"refused\",\"workerClosed\":false}\n{\"phase\":\"proved\",\"captureVersion\":4,\"coldRead\":{\"before\":\"unknown\",\"workerPid\":4908},\"coldSignal\":{\"before\":\"unknown\",\"result\":\"refused\",\"workerPid\":4921},\"originalTarget\":\"absent\",\"neighbor\":\"same-live\",\"sameSession\":\"same-live\",\"changedSession\":\"unknown\",\"nativeSignalCalls\":1}\n{\"phase\":\"finite-cleanup\",\"cleaned\":true,\"completed\":true,\"scope\":\"Only original pidfd received one SIGTERM; all other TEST actors self-exited after their TTL\"}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron.log",
+      "size": 854,
+      "crc": 2370597765,
+      "sha256": "a2a95b7feb2d189f1e88123e2df988ab92bda7f5f4b4e3824370c9948d9e01d9",
+      "contentEncoding": "utf-8",
+      "content": "{\"directory\":\"/home/runner/work/_temp/TEST-process-electron-43763317915/artifact\",\"manifestSha256\":\"b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555\",\"actor\":\"/home/runner/work/_temp/TEST-process-electron-43763317915/registered-process-actor\",\"linuxChildExec\":{\"manifestPath\":\"/home/runner/work/_temp/TEST-process-electron-43763317915/linux-child-exec/manifest.json\",\"manifestSha256\":\"c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484\",\"binarySha256\":\"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\"},\"completed\":true,\"cleaned\":true,\"automaticAndWarm\":true,\"binarySha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\"libc\":{\"family\":\"glibc\",\"minimumVersion\":\"2.33\"},\"scope\":\"Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate\"}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node-exec-electron.log",
+      "size": 754,
+      "crc": 3287111834,
+      "sha256": "82454e716551874ac5ef2f58074da6f99613bfd3064124e374bf7d03033cb078",
+      "contentEncoding": "utf-8",
+      "content": "▶ Linux Node stage closes inherited socket FDs before original Node entry and preserves custody\n  ✔ normal: original PID, arguments, environment, stdio and high descriptors (29.726638ms)\n  ✔ fallback: original PID, arguments, environment, stdio and high descriptors (31.105542ms)\n  ✔ unexpected close_range refusal never reaches target Node (4.223293ms)\n  ✔ Stop remains on the original child; a live sibling survives (28.169409ms)\n  ✔ a replaced manifest or image cannot become the captured launcher (3.185201ms)\n✔ Linux Node stage closes inherited socket FDs before original Node entry and preserves custody (525.009335ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 638.057012\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node-exec-node24.log",
+      "size": 756,
+      "crc": 2062023837,
+      "sha256": "d4baaecfedea7ae2bbd6e0849710bc74b867d43acf259eb066898e49ee27f747",
+      "contentEncoding": "utf-8",
+      "content": "▶ Linux Node stage closes inherited socket FDs before original Node entry and preserves custody\n  ✔ normal: original PID, arguments, environment, stdio and high descriptors (30.650352ms)\n  ✔ fallback: original PID, arguments, environment, stdio and high descriptors (30.367162ms)\n  ✔ unexpected close_range refusal never reaches target Node (3.661165ms)\n  ✔ Stop remains on the original child; a live sibling survives (25.824237ms)\n  ✔ a replaced manifest or image cannot become the captured launcher (3.254023ms)\n✔ Linux Node stage closes inherited socket FDs before original Node entry and preserves custody (2681.169501ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2778.885472\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node-exec-packaging.log",
+      "size": 6529,
+      "crc": 2590421,
+      "sha256": "81fd0f41fc6e9ba529f1b1fd6afd86beb974affd5b1c0014ce23873a3c72ca4b",
+      "contentEncoding": "utf-8",
+      "content": "\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv3.2.6 \u001b[39m\u001b[90m/home/runner/work/agent-teams-ai/agent-teams-ai\u001b[39m\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes host node-pty build outputs when a matching target prebuild exists\n\u001b[22m\u001b[39m[afterPack] pruned 1 incompatible native artifact(s) for win32-x64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes known win32-x64 runtime variants while retaining compatible target siblings\n\u001b[22m\u001b[39m[afterPack] pruned 18 incompatible native artifact(s) for win32-x64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes known win32-arm64 runtime variants while retaining compatible target siblings\n\u001b[22m\u001b[39m[afterPack] pruned 18 incompatible native artifact(s) for win32-arm64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes known darwin-arm64 runtime variants while retaining compatible target siblings\n\u001b[22m\u001b[39m[afterPack] pruned 17 incompatible native artifact(s) for darwin-arm64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes known darwin-x64 runtime variants while retaining compatible target siblings\n\u001b[22m\u001b[39m[afterPack] pruned 17 incompatible native artifact(s) for darwin-x64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes the msgpackr-extract ELF build leftovers shipped in the win32-arm64 runtime\n\u001b[22m\u001b[39m[afterPack] pruned 3 incompatible native artifact(s) for win32-arm64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mkeeps a compatible msgpackr-extract binding while pruning node-gyp build leftovers\n\u001b[22m\u001b[39m[afterPack] pruned 2 incompatible native artifact(s) for win32-arm64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes portable runtime optional binaries for darwin-arm64 while preserving target bytes\n\u001b[22m\u001b[39m[afterPack] pruned 22 incompatible native artifact(s) for darwin-arm64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes portable runtime optional binaries for darwin-x64 while preserving target bytes\n\u001b[22m\u001b[39m[afterPack] pruned 22 incompatible native artifact(s) for darwin-x64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes portable runtime optional binaries for win32-x64 while preserving target bytes\n\u001b[22m\u001b[39m[afterPack] pruned 22 incompatible native artifact(s) for win32-x64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes portable runtime optional binaries for win32-arm64 while preserving target bytes\n\u001b[22m\u001b[39m[afterPack] pruned 22 incompatible native artifact(s) for win32-arm64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes only foreign bun-pty variants for darwin-universal\n\u001b[22m\u001b[39m[afterPack] pruned 6 incompatible native artifact(s) for darwin-universal\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes foreign hoisted bun-pty libraries for win32-arm64\n\u001b[22m\u001b[39m[afterPack] pruned 1 incompatible native artifact(s) for win32-arm64\n[afterPack] notice: no loadable bun-pty binding for win32-arm64 (missing /tmp/after-pack-test-kU1zqf/resources/runtime/local-cli/node_modules/bun-pty/rust-pty/target/release/rust_pty_arm64.dll); PTY stays unavailable until the runtime ships it\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes only the known portable ffi-rs ia32 optional binary for win32-x64\n\u001b[22m\u001b[39m[afterPack] pruned 1 incompatible native artifact(s) for win32-x64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes only the known portable ffi-rs ia32 optional binary for win32-arm64\n\u001b[22m\u001b[39m[afterPack] pruned 1 incompatible native artifact(s) for win32-arm64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes only incompatible known msgpackr build files for win32-x64\n\u001b[22m\u001b[39m[afterPack] pruned 3 incompatible native artifact(s) for win32-x64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes only incompatible known msgpackr build files for win32-arm64\n\u001b[22m\u001b[39m[afterPack] pruned 3 incompatible native artifact(s) for win32-arm64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2mprunes only incompatible known msgpackr build files for win32-arm64\n\u001b[22m\u001b[39m[afterPack] pruned 3 incompatible native artifact(s) for win32-arm64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2maccepts a clean arm64 mac bundle after pruning\n\u001b[22m\u001b[39m[afterPack] pruned 1 incompatible native artifact(s) for darwin-arm64\n\n\u001b[90mstdout\u001b[2m | test/main/build/electronBuilderAfterPack.test.ts\u001b[2m > \u001b[22m\u001b[2melectron-builder afterPack\u001b[2m > \u001b[22m\u001b[2maccepts a clean x64 Windows bundle with optional standalone helper binaries\n\u001b[22m\u001b[39m[afterPack] pruned 1 incompatible native artifact(s) for win32-x64\n\n \u001b[32m✓\u001b[39m test/main/build/electronBuilderAfterPack.test.ts \u001b[2m(\u001b[22m\u001b[2m63 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 1948\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m electron-builder afterPack\u001b[2m > \u001b[22mrequires the exact copied native Linux launcher in a complete afterPack pass \u001b[33m 1626\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m63 passed\u001b[39m\u001b[22m\u001b[90m (63)\u001b[39m\n\u001b[2m   Start at \u001b[22m 22:23:30\n\u001b[2m   Duration \u001b[22m 2.55s\u001b[2m (transform 75ms, setup 215ms, collect 47ms, tests 1.95s, environment 0ms, prepare 123ms)\u001b[22m\n\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/artifact/manifest.json",
+      "size": 1170,
+      "crc": 573565884,
+      "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"schemaVersion\": 1,\n  \"abi\": \"napi-8\",\n  \"platform\": \"linux\",\n  \"architecture\": \"x64\",\n  \"kernelCapability\": \"pidfd-live-v1\",\n  \"buildKernelRelease\": \"7.0.0-1017-azure\",\n  \"libc\": {\n    \"family\": \"glibc\",\n    \"minimumVersion\": \"2.33\"\n  },\n  \"library\": \"registered-process.node\",\n  \"sourceSha256\": \"f5d00c04919f9d8bdd36a1482bd96849488d54552a55f9daebeb03739db7c667\",\n  \"binarySha256\": \"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\n  \"compilerSha256\": \"1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26\",\n  \"inspectorSha256\": \"64c58e15274bbbb5153f31078e455e9e77ee5f51489e709bba5bb788ce9df2b0\",\n  \"headers\": [\n    {\n      \"file\": \"node_api.h\",\n      \"sha256\": \"2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a\"\n    },\n    {\n      \"file\": \"node_api_types.h\",\n      \"sha256\": \"a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00\"\n    },\n    {\n      \"file\": \"js_native_api.h\",\n      \"sha256\": \"8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788\"\n    },\n    {\n      \"file\": \"js_native_api_types.h\",\n      \"sha256\": \"4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0\"\n    }\n  ]\n}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/artifact/registered-process.node",
+      "size": 36104,
+      "crc": 1425276003,
+      "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217",
+      "contentEncoding": "binary-hash-only"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/linux-child-exec/linux-child-exec",
+      "size": 789792,
+      "crc": 3184229833,
+      "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110",
+      "contentEncoding": "binary-hash-only"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/linux-child-exec/manifest.json",
+      "size": 2408,
+      "crc": 23625837,
+      "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"schemaVersion\": 1,\n  \"platform\": \"linux\",\n  \"architecture\": \"x64\",\n  \"protocol\": \"linux-child-exec-v1\",\n  \"kernelCapability\": \"close-range-v1\",\n  \"binary\": \"linux-child-exec\",\n  \"binarySha256\": \"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\",\n  \"sourceSha256\": \"29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337\",\n  \"compilerSha256\": \"1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26\",\n  \"inspectorSha256\": \"64c58e15274bbbb5153f31078e455e9e77ee5f51489e709bba5bb788ce9df2b0\",\n  \"buildKernelRelease\": \"7.0.0-1017-azure\",\n  \"linkInputs\": [\n    {\n      \"file\": \"/usr/bin/x86_64-linux-gnu-as\",\n      \"sha256\": \"21aff249b692b5c31a44007491f922dcb49f41323e362c57d2ada3f52eddb7f0\"\n    },\n    {\n      \"file\": \"/usr/bin/x86_64-linux-gnu-ld.bfd\",\n      \"sha256\": \"e9ceb054c12207970f2726dfc07e9a66b411602748628baf27399f02a9bbb31b\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginT.o\",\n      \"sha256\": \"42171a80795909e1a0743f71c60b503ff2951ed40bf94cae9ca55c324a8cc26a\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/crtend.o\",\n      \"sha256\": \"9c8b2caad195193301ef072895dc89bea1d23371d4c19accd821debe27773063\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/libgcc.a\",\n      \"sha256\": \"d9376c55f97863a4e5fbb6c6beca2591b319bf786f3a7ca56da8964c5662171f\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/libgcc_eh.a\",\n      \"sha256\": \"f853cbbf842ff8714cc8dd986e2fd5bb309d34d490b0707203223ee4d52c76bc\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/crt1.o\",\n      \"sha256\": \"5cfb30db1d2c92a9a818f6c015ad7fcd6519afaa1b88148e831504fe6e299479\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/crti.o\",\n      \"sha256\": \"077ccb6c68db1794da3ee262c4a16a3c6f8e902845dd0829110ad4b7065e5aa3\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/crtn.o\",\n      \"sha256\": \"a2266079f95b84ccc2162ebbf279bcd78858a748aa1882e0bdb912316c76a58f\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/libc.a\",\n      \"sha256\": \"a40c7eae7581f977b65eddb81cbc799213a695749e039d966db55bdee4ac9621\"\n    },\n    {\n      \"file\": \"/usr/libexec/gcc/x86_64-linux-gnu/13/cc1\",\n      \"sha256\": \"5d1679131184e2de4435b426eb264bf13472fe026db8e5c6bc97445814e8e2f4\"\n    },\n    {\n      \"file\": \"/usr/libexec/gcc/x86_64-linux-gnu/13/collect2\",\n      \"sha256\": \"4d1f341ae5b763b513258ee2812422a45e063c30a2f1924a0cf63d3699f3a158\"\n    }\n  ]\n}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/native.log",
+      "size": 233,
+      "crc": 1935891448,
+      "sha256": "0ffd9fe3d4855eb4e00a3b1e30a04440d1c4f745d3398e32531b76da8a3a4bdc",
+      "contentEncoding": "utf-8",
+      "content": "{\"workspace\":\"/tmp/TEST-linux-pidfd-yFgWp6\",\"completed\":true,\"cleaned\":true,\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"}}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/proof.ndjson",
+      "size": 4038,
+      "crc": 1429217749,
+      "sha256": "0db7950e53df7ece6b98b8bbb7394503d051df5c43090b595ff2ff361d173f0b",
+      "contentEncoding": "utf-8",
+      "content": "{\"phase\":\"start\",\"scope\":\"TEST original process custody; actual SDK and Desktop remain separate\",\"selection\":\"Host automatic kernel capability\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"},\"versions\":{\"node\":\"24.21.0\",\"acorn\":\"8.18.0\",\"ada\":\"4.0.0\",\"amaro\":\"1.1.11\",\"ares\":\"1.34.8\",\"brotli\":\"1.2.0\",\"cldr\":\"48.0\",\"icu\":\"78.3\",\"llhttp\":\"9.4.3\",\"merve\":\"1.2.2\",\"modules\":\"137\",\"napi\":\"10\",\"nbytes\":\"0.1.4\",\"ncrypto\":\"0.0.1\",\"nghttp2\":\"1.70.0\",\"nghttp3\":\"\",\"ngtcp2\":\"\",\"openssl\":\"3.5.8\",\"simdjson\":\"4.6.7\",\"simdutf\":\"6.4.0\",\"sqlite\":\"3.53.4\",\"tz\":\"2026c\",\"undici\":\"7.29.1\",\"unicode\":\"17.0\",\"uv\":\"1.52.1\",\"uvwasi\":\"0.0.23\",\"v8\":\"13.6.233.17-node.53\",\"zlib\":\"1.3.2.1-motley-8002e91\",\"zstd\":\"1.5.7\"},\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\"}\n{\"phase\":\"isolated-same-child-launch\",\"completed\":true,\"parentUnchanged\":true,\"helperSha256\":\"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\",\"originalChildPid\":4241,\"exactHighDescriptorAbsent\":true,\"descendantDescriptorAbsent\":true,\"scope\":\"Native child isolation only; Main integration and executable-byte race qualification remain separate\"}\n{\"phase\":\"ownership-and-identity-negatives\",\"same\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4272,\"sessionId\":4272,\"pidfdId\":\"9289\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4279,\"sessionId\":4272,\"pidfdId\":\"1269\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"owned\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4280,\"sessionId\":4280,\"pidfdId\":\"9290\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4294,\"sessionId\":4287,\"pidfdId\":\"1282\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"peer\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4295,\"sessionId\":4295,\"pidfdId\":\"5154\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4309,\"sessionId\":4302,\"pidfdId\":\"13152\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"scope\":\"No forced numeric PID churn; exact inode/namespace mismatch refused\"}\n{\"phase\":\"requested-before-native\",\"original\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4280,\"sessionId\":4280,\"pidfdId\":\"9290\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4294,\"sessionId\":4287,\"pidfdId\":\"1282\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}}}\n{\"phase\":\"live-worker-after-thread-leader-exit\",\"original\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4325,\"sessionId\":4325,\"pidfdId\":\"9293\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4339,\"sessionId\":4332,\"pidfdId\":\"9294\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"observation\":\"unknown\",\"signal\":\"refused\",\"workerClosed\":false}\n{\"phase\":\"proved\",\"captureVersion\":3,\"coldRead\":{\"before\":\"same-live\",\"workerPid\":4342},\"coldSignal\":{\"before\":\"same-live\",\"result\":\"accepted\",\"workerPid\":4353},\"originalTarget\":\"absent\",\"neighbor\":\"same-live\",\"sameSession\":\"same-live\",\"changedSession\":\"unknown\",\"nativeSignalCalls\":1}\n{\"phase\":\"finite-cleanup\",\"cleaned\":true,\"completed\":true,\"scope\":\"Only original pidfd received one SIGTERM; all other TEST actors self-exited after their TTL\"}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/registered-process-actor",
+      "size": 17288,
+      "crc": 1586887017,
+      "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b",
+      "contentEncoding": "binary-hash-only"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/selection.json",
+      "size": 583,
+      "crc": 2164645347,
+      "sha256": "970a854243b0f4304c721d9048eeb75ceb5dd026986dd49af5706c948b8cd4fb",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"directory\": \"/home/runner/work/_temp/TEST-process-node24-43763317915/artifact\",\n  \"manifestSha256\": \"b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555\",\n  \"actor\": \"/home/runner/work/_temp/TEST-process-node24-43763317915/registered-process-actor\",\n  \"linuxChildExec\": {\n    \"manifestPath\": \"/home/runner/work/_temp/TEST-process-node24-43763317915/linux-child-exec/manifest.json\",\n    \"manifestSha256\": \"c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484\",\n    \"binarySha256\": \"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\"\n  }\n}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/warm-native.log",
+      "size": 233,
+      "crc": 557136524,
+      "sha256": "17c9c66688796b27c4e90c9ca799f440012fe1915a8e71aeed6ccf3ac1a7bb3f",
+      "contentEncoding": "utf-8",
+      "content": "{\"workspace\":\"/tmp/TEST-linux-pidfd-Jozh8U\",\"completed\":true,\"cleaned\":true,\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"}}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/warm-proof.ndjson",
+      "size": 4534,
+      "crc": 1819726678,
+      "sha256": "21c9b76e56cb8a6d846ec854cf8b35ce73131a07b02a08bf8c7534c9feaca864",
+      "contentEncoding": "utf-8",
+      "content": "{\"phase\":\"start\",\"scope\":\"TEST original process custody; actual SDK and Desktop remain separate\",\"selection\":\"TEST internal warm owner\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"},\"versions\":{\"node\":\"24.21.0\",\"acorn\":\"8.18.0\",\"ada\":\"4.0.0\",\"amaro\":\"1.1.11\",\"ares\":\"1.34.8\",\"brotli\":\"1.2.0\",\"cldr\":\"48.0\",\"icu\":\"78.3\",\"llhttp\":\"9.4.3\",\"merve\":\"1.2.2\",\"modules\":\"137\",\"napi\":\"10\",\"nbytes\":\"0.1.4\",\"ncrypto\":\"0.0.1\",\"nghttp2\":\"1.70.0\",\"nghttp3\":\"\",\"ngtcp2\":\"\",\"openssl\":\"3.5.8\",\"simdjson\":\"4.6.7\",\"simdutf\":\"6.4.0\",\"sqlite\":\"3.53.4\",\"tz\":\"2026c\",\"undici\":\"7.29.1\",\"unicode\":\"17.0\",\"uv\":\"1.52.1\",\"uvwasi\":\"0.0.23\",\"v8\":\"13.6.233.17-node.53\",\"zlib\":\"1.3.2.1-motley-8002e91\",\"zstd\":\"1.5.7\"},\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\"}\n{\"phase\":\"isolated-same-child-launch\",\"completed\":true,\"parentUnchanged\":true,\"helperSha256\":\"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\",\"originalChildPid\":4389,\"exactHighDescriptorAbsent\":true,\"descendantDescriptorAbsent\":true,\"scope\":\"Native child isolation only; Main integration and executable-byte race qualification remain separate\"}\n{\"phase\":\"ownership-and-identity-negatives\",\"same\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"d2f94b7c-ee86-412a-9cea-662b9c556747\",\"captureKey\":\"abc93872-54b9-42e3-bdcb-d159d8d56411\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4420,\"sessionId\":4420,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4427,\"sessionId\":4420,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"owned\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"d2f94b7c-ee86-412a-9cea-662b9c556747\",\"captureKey\":\"505691f7-147c-403a-a75d-9b1372b3bfd5\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4428,\"sessionId\":4428,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4442,\"sessionId\":4435,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"peer\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"d2f94b7c-ee86-412a-9cea-662b9c556747\",\"captureKey\":\"438edff3-6618-40a1-9c31-a9c314c38343\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4443,\"sessionId\":4443,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4457,\"sessionId\":4450,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"scope\":\"No forced numeric PID churn; exact inode/namespace mismatch refused\"}\n{\"phase\":\"requested-before-native\",\"original\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"d2f94b7c-ee86-412a-9cea-662b9c556747\",\"captureKey\":\"505691f7-147c-403a-a75d-9b1372b3bfd5\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4428,\"sessionId\":4428,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4442,\"sessionId\":4435,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}}}\n{\"phase\":\"live-worker-after-thread-leader-exit\",\"original\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"d2f94b7c-ee86-412a-9cea-662b9c556747\",\"captureKey\":\"2e1df720-be10-46c6-adb6-1393fe160229\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4473,\"sessionId\":4473,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4487,\"sessionId\":4480,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"observation\":\"unknown\",\"signal\":\"refused\",\"workerClosed\":false}\n{\"phase\":\"proved\",\"captureVersion\":4,\"coldRead\":{\"before\":\"unknown\",\"workerPid\":4489},\"coldSignal\":{\"before\":\"unknown\",\"result\":\"refused\",\"workerPid\":4500},\"originalTarget\":\"absent\",\"neighbor\":\"same-live\",\"sameSession\":\"same-live\",\"changedSession\":\"unknown\",\"nativeSignalCalls\":1}\n{\"phase\":\"finite-cleanup\",\"cleaned\":true,\"completed\":true,\"scope\":\"Only original pidfd received one SIGTERM; all other TEST actors self-exited after their TTL\"}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24.log",
+      "size": 848,
+      "crc": 1033024250,
+      "sha256": "d509d3ef75a29dc00aed0405514a2362d777b004dd746cf4e6e71910b62d821d",
+      "contentEncoding": "utf-8",
+      "content": "{\"directory\":\"/home/runner/work/_temp/TEST-process-node24-43763317915/artifact\",\"manifestSha256\":\"b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555\",\"actor\":\"/home/runner/work/_temp/TEST-process-node24-43763317915/registered-process-actor\",\"linuxChildExec\":{\"manifestPath\":\"/home/runner/work/_temp/TEST-process-node24-43763317915/linux-child-exec/manifest.json\",\"manifestSha256\":\"c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484\",\"binarySha256\":\"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\"},\"completed\":true,\"cleaned\":true,\"automaticAndWarm\":true,\"binarySha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\"libc\":{\"family\":\"glibc\",\"minimumVersion\":\"2.33\"},\"scope\":\"Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate\"}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+      "size": 2802,
+      "crc": 2216651532,
+      "sha256": "a272d381fc3dee7b95d1c57652676bf5d1324d02722dce0578647034822bbd28",
+      "contentEncoding": "utf-8",
+      "content": "✔ captured native executable is pinned again at launch and sealing forbids late allocation (13.072026ms)\n✔ captured launch rejects exact inode changes hidden by numeric file metadata before spawning (6.835991ms)\n✔ captured launch rejects exact mtime changes hidden by numeric file metadata before spawning (6.805676ms)\n✔ captured launch rejects exact ctime changes hidden by numeric file metadata before spawning (6.585141ms)\n✔ custody closes its live original process group, preserving a neighboring process (1636.474559ms)\nℹ {\"cleanupConfirmed\":true,\"descendantAbsent\":true,\"neighborPreserved\":true}\n✔ custody holds an unverified group after parent exit until TEST descendants leave naturally (3620.460839ms)\nℹ {\"cleanupConfirmed\":false,\"descendantAbsent\":true,\"neighborPreserved\":true}\n✔ an exited original cannot signal a positively probed replacement group (3531.05729ms)\n✔ captured launch revalidates selected cwd before any process allocation (2.044488ms)\n✔ source hashing yields to original Host control and rejects a replaced pathname before publication (71.436702ms)\n✔ V1 preferences publish once, retain lost-ACK A and apply only the actual selected model limits (49.603302ms)\n✔ native-only installer intent shares the exact full-candidate receipt and replay identity (43.353316ms)\n✔ V2 native selection inherits executor and delivery only from its original expected revision (162.378791ms)\n✔ new qualified native bytes publish only after exact owned version and cleanup; cold replay never repeats the child (15.460812ms)\n✔ version policy, exact native output and post-read bytes are independent gates (49.228779ms)\n✔ installer restart recovers the one prepared original intent before any replacement selection (16.93624ms)\n✔ source recovery refuses missing, changed and ambiguous durable intent snapshots (8.675347ms)\n✔ verified pre-publication recovery reuses its original native observation without another version process (20.238591ms)\n✔ unknown cleanup is retained; only the original live handle may settle it without rerunning native verification (20.419203ms)\n✔ a later shutdown can confirm the same retained version check after an unconfirmed close (8.246353ms)\n✔ Host shutdown seals admission, drains the original version child and persists confirmed cleanup under its lease (31.231523ms)\n✔ Claude native qualification compares its original CLI version, never the SDK revision (23.58165ms)\n✔ supported V1 native updates change the selected CLI while preserving the engine generation (14.296584ms)\n✔ V2 CLI policy cannot substitute another engine, cross generation or qualify unsupported engine versions (2.4047ms)\nℹ tests 23\nℹ suites 0\nℹ pass 23\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 8934.408681\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "size": 769,
+      "crc": 3114939157,
+      "sha256": "ac664aaeba94cf8c2cb521b15a1a7e8ec95c3b7edfdc7a7163dbda289347036e",
+      "contentEncoding": "utf-8",
+      "content": "\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv3.2.6 \u001b[39m\u001b[90m/home/runner/work/agent-teams-ai/agent-teams-ai\u001b[39m\n\n \u001b[32m✓\u001b[39m tools/owned-process-broker/protocol.test.ts \u001b[2m(\u001b[22m\u001b[2m47 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 107\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m tools/owned-process-broker/nativeGateContext.test.ts \u001b[2m(\u001b[22m\u001b[2m3 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 76\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m tools/owned-process-broker/nativeGateEvents.test.ts \u001b[2m(\u001b[22m\u001b[2m3 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 3\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m3 passed\u001b[39m\u001b[22m\u001b[90m (3)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m53 passed\u001b[39m\u001b[22m\u001b[90m (53)\u001b[39m\n\u001b[2m   Start at \u001b[22m 22:22:30\n\u001b[2m   Duration \u001b[22m 1.82s\u001b[2m (transform 334ms, setup 0ms, collect 1.11s, tests 186ms, environment 0ms, prepare 210ms)\u001b[22m\n\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "size": 8076,
+      "crc": 1422966830,
+      "sha256": "d4d6bc98ffb26530446bcc6c668100674fb1b45f2f7dcfc2a79d6fc3d58236e6",
+      "contentEncoding": "utf-8",
+      "content": "\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv3.2.6 \u001b[39m\u001b[90m/home/runner/work/agent-teams-ai/agent-teams-ai\u001b[39m\n\n\u001b[90mstdout\u001b[2m | test/features/agent-backend/desktopBackendFeature.test.ts\n\u001b[22m\u001b[39mDownloading Electron binary...\n\n{\"kind\":\"TEST_LAZY_HOST_STARTUP_OBSERVATION\",\"point\":\"case-finally\",\"observations\":[{\"phase\":\"profile-validation-start\",\"kind\":\"handshake\",\"elapsedMs\":10380},{\"phase\":\"profile-validation-complete\",\"kind\":\"handshake\",\"elapsedMs\":10588},{\"phase\":\"child-captured\",\"kind\":\"handshake\",\"elapsedMs\":10598},{\"phase\":\"request-admitted\",\"kind\":\"handshake\",\"elapsedMs\":10598},{\"phase\":\"response-accepted\",\"kind\":\"handshake\",\"elapsedMs\":11837},{\"phase\":\"ready\",\"kind\":\"handshake\",\"elapsedMs\":11837}],\"dropped\":0,\"pending\":{\"state\":\"resolved-failure\",\"code\":\"forbidden\",\"outcome\":\"not-dispatched\"}}\n \u001b[32m✓\u001b[39m test/features/agent-backend/desktopBackendFeature.test.ts \u001b[2m(\u001b[22m\u001b[2m16 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 6044\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captures global and exact project provider scopes without Team handles or default-owner fallback \u001b[33m 586\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m routes paired facade sends through the original captured owner with both immutable bindings \u001b[33m 326\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m uses two lazily captured subprocess hosts and captured context grants for finite IPC operations \u001b[33m 779\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m connection discovery ignores renderer context claims and denies navigation/context changes during initialization \u001b[33m 404\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m keeps healthy owner discovery available after original transport loss \u001b[33m 731\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m keeps malformed registry, binding conflicts and stale discovery context fatal \u001b[33m 619\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m HTTP discovery uses the same captured context and rejects client context overrides \u001b[33m 328\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m rechecks captured context after lazy host startup before dispatching a finite command \u001b[33m 1469\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m native health starts only the granted default owner and reports actual handshake without provider or Team work \u001b[33m 312\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m test/features/agent-backend/capturedHostClient.test.ts \u001b[2m(\u001b[22m\u001b[2m33 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 18547\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mkeeps the original service intent and scope through late ACK and a successor Host \u001b[33m 702\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mderives retained service absence only from the original whole-Job proof: job-membership \u001b[33m 362\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mderives retained service absence only from the original whole-Job proof: no-local-dispatch \u001b[33m 362\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mretains Main launch/stdio/receipt ownership across graceful Host close \u001b[33m 645\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mretains Main launch/stdio/receipt ownership across crash Host close \u001b[33m 649\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mqueues multi-member launch and graceful cleanup without caching capacity refusals \u001b[33m 408\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mqueues multi-member launch and expired cleanup without caching capacity refusals \u001b[33m 441\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mholds Main reply bytes before native effect, expiry=false \u001b[33m 331\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mholds Main reply bytes before native effect, expiry=true \u001b[33m 343\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mkeeps the original TEST physical owner across Host loss, without replaying an unacknowledged write \u001b[33m 665\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mreserves native control under full reverse request and shared reply-byte budgets \u001b[33m 324\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mhandshakes with the packed host, serves two inputs, then confirms scoped close \u001b[33m 349\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mdoes not turn a generic remote exception after an effect into a rejection receipt \u001b[33m 315\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mrejects malformed frames before treating them as successful responses \u001b[33m 314\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mrejects oversized frames before treating them as successful responses \u001b[33m 321\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mkeeps one work output slot alongside the full control reserve \u001b[33m 327\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mrequest timeout retains unknown outcome while independent control remains available \u001b[33m 411\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mrejects mismatched host build identity \u001b[33m 6475\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mseals pending startup before validation can spawn the host \u001b[33m 614\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mshutdown does not kill an unrelated captured test child \u001b[33m 333\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mwaits for advertised cleanup budget 200 before signaling the original Host \u001b[33m 395\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mwaits for advertised cleanup budget 6000 before signaling the original Host \u001b[33m 400\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m captured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mkeeps finite Host cleanup timeout distinct from confirmed child exit and provider release \u001b[33m 357\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts \u001b[2m(\u001b[22m\u001b[2m7 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 7266\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m pending original custody stays UNKNOWN after the existing drain bound and late release \u001b[33m 7044\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m test/features/agent-backend/capturedWindowsSourceHistory.test.ts \u001b[2m(\u001b[22m\u001b[2m5 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 87\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m test/features/agent-backend/capturedWindowsSelection.test.ts \u001b[2m(\u001b[22m\u001b[2m5 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 55\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m test/features/agent-backend/fileTeamModelProbeIntents.test.ts \u001b[2m(\u001b[22m\u001b[2m10 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 66\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m test/features/agent-backend/capturedWindowsSourcePending.test.ts \u001b[2m(\u001b[22m\u001b[2m2 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 23\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts \u001b[2m(\u001b[22m\u001b[2m3 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 12\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m8 passed\u001b[39m\u001b[22m\u001b[90m (8)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m81 passed\u001b[39m\u001b[22m\u001b[90m (81)\u001b[39m\n\u001b[2m   Start at \u001b[22m 22:22:33\n\u001b[2m   Duration \u001b[22m 44.70s\u001b[2m (transform 3.13s, setup 1.51s, collect 9.64s, tests 32.10s, environment 1ms, prepare 453ms)\u001b[22m\n\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+      "size": 2810,
+      "crc": 1720173920,
+      "sha256": "9f6f37715a3175b3576294abfac6639dbb418699072db58138d9e89b0f81d471",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"kind\": \"TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE\",\n  \"status\": \"PASS\",\n  \"sourceHead\": \"9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e\",\n  \"platform\": \"linux-x64\",\n  \"nodeVersion\": \"v24.21.0\",\n  \"controlledContracts\": true,\n  \"retainedMainTransport\": true,\n  \"posixProcessGroups\": true,\n  \"native\": [\n    {\n      \"log\": \"linux-node24.log\",\n      \"scope\": \"original Linux pidfs and retained pidfd\",\n      \"receipt\": {\n        \"directory\": \"/home/runner/work/_temp/TEST-process-node24-43763317915/artifact\",\n        \"manifestSha256\": \"b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555\",\n        \"actor\": \"/home/runner/work/_temp/TEST-process-node24-43763317915/registered-process-actor\",\n        \"linuxChildExec\": {\n          \"manifestPath\": \"/home/runner/work/_temp/TEST-process-node24-43763317915/linux-child-exec/manifest.json\",\n          \"manifestSha256\": \"c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484\",\n          \"binarySha256\": \"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\"\n        },\n        \"completed\": true,\n        \"cleaned\": true,\n        \"automaticAndWarm\": true,\n        \"binarySha256\": \"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\n        \"libc\": {\n          \"family\": \"glibc\",\n          \"minimumVersion\": \"2.33\"\n        },\n        \"scope\": \"Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate\"\n      }\n    },\n    {\n      \"log\": \"linux-electron.log\",\n      \"scope\": \"original Linux pidfs and retained pidfd\",\n      \"receipt\": {\n        \"directory\": \"/home/runner/work/_temp/TEST-process-electron-43763317915/artifact\",\n        \"manifestSha256\": \"b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555\",\n        \"actor\": \"/home/runner/work/_temp/TEST-process-electron-43763317915/registered-process-actor\",\n        \"linuxChildExec\": {\n          \"manifestPath\": \"/home/runner/work/_temp/TEST-process-electron-43763317915/linux-child-exec/manifest.json\",\n          \"manifestSha256\": \"c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484\",\n          \"binarySha256\": \"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\"\n        },\n        \"completed\": true,\n        \"cleaned\": true,\n        \"automaticAndWarm\": true,\n        \"binarySha256\": \"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\n        \"libc\": {\n          \"family\": \"glibc\",\n          \"minimumVersion\": \"2.33\"\n        },\n        \"scope\": \"Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate\"\n      }\n    }\n  ],\n  \"nativeProviderRuntimeQualified\": false,\n  \"darwinNativeRegistrationQualified\": false,\n  \"posixExecutableAdmissionQualified\": false,\n  \"desktopQualified\": false,\n  \"releaseQualified\": false\n}\n"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "size": 41,
+      "crc": 825398602,
+      "sha256": "6f4ac488a94cb3437f16ff8dfaaa5e4c73c51a21d0ed398f5e9b5aa805b4a9ff",
+      "contentEncoding": "utf-8",
+      "content": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e\n"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43763317915/artifact/manifest.json",
+      "size": 1170,
+      "crc": 573565884,
+      "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"schemaVersion\": 1,\n  \"abi\": \"napi-8\",\n  \"platform\": \"linux\",\n  \"architecture\": \"x64\",\n  \"kernelCapability\": \"pidfd-live-v1\",\n  \"buildKernelRelease\": \"7.0.0-1017-azure\",\n  \"libc\": {\n    \"family\": \"glibc\",\n    \"minimumVersion\": \"2.33\"\n  },\n  \"library\": \"registered-process.node\",\n  \"sourceSha256\": \"f5d00c04919f9d8bdd36a1482bd96849488d54552a55f9daebeb03739db7c667\",\n  \"binarySha256\": \"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\n  \"compilerSha256\": \"1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26\",\n  \"inspectorSha256\": \"64c58e15274bbbb5153f31078e455e9e77ee5f51489e709bba5bb788ce9df2b0\",\n  \"headers\": [\n    {\n      \"file\": \"node_api.h\",\n      \"sha256\": \"2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a\"\n    },\n    {\n      \"file\": \"node_api_types.h\",\n      \"sha256\": \"a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00\"\n    },\n    {\n      \"file\": \"js_native_api.h\",\n      \"sha256\": \"8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788\"\n    },\n    {\n      \"file\": \"js_native_api_types.h\",\n      \"sha256\": \"4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0\"\n    }\n  ]\n}\n"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43763317915/linux-child-exec/linux-child-exec",
+      "size": 789792,
+      "crc": 3184229833,
+      "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110",
+      "contentEncoding": "binary-hash-only"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43763317915/linux-child-exec/manifest.json",
+      "size": 2408,
+      "crc": 23625837,
+      "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"schemaVersion\": 1,\n  \"platform\": \"linux\",\n  \"architecture\": \"x64\",\n  \"protocol\": \"linux-child-exec-v1\",\n  \"kernelCapability\": \"close-range-v1\",\n  \"binary\": \"linux-child-exec\",\n  \"binarySha256\": \"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\",\n  \"sourceSha256\": \"29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337\",\n  \"compilerSha256\": \"1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26\",\n  \"inspectorSha256\": \"64c58e15274bbbb5153f31078e455e9e77ee5f51489e709bba5bb788ce9df2b0\",\n  \"buildKernelRelease\": \"7.0.0-1017-azure\",\n  \"linkInputs\": [\n    {\n      \"file\": \"/usr/bin/x86_64-linux-gnu-as\",\n      \"sha256\": \"21aff249b692b5c31a44007491f922dcb49f41323e362c57d2ada3f52eddb7f0\"\n    },\n    {\n      \"file\": \"/usr/bin/x86_64-linux-gnu-ld.bfd\",\n      \"sha256\": \"e9ceb054c12207970f2726dfc07e9a66b411602748628baf27399f02a9bbb31b\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginT.o\",\n      \"sha256\": \"42171a80795909e1a0743f71c60b503ff2951ed40bf94cae9ca55c324a8cc26a\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/crtend.o\",\n      \"sha256\": \"9c8b2caad195193301ef072895dc89bea1d23371d4c19accd821debe27773063\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/libgcc.a\",\n      \"sha256\": \"d9376c55f97863a4e5fbb6c6beca2591b319bf786f3a7ca56da8964c5662171f\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/libgcc_eh.a\",\n      \"sha256\": \"f853cbbf842ff8714cc8dd986e2fd5bb309d34d490b0707203223ee4d52c76bc\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/crt1.o\",\n      \"sha256\": \"5cfb30db1d2c92a9a818f6c015ad7fcd6519afaa1b88148e831504fe6e299479\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/crti.o\",\n      \"sha256\": \"077ccb6c68db1794da3ee262c4a16a3c6f8e902845dd0829110ad4b7065e5aa3\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/crtn.o\",\n      \"sha256\": \"a2266079f95b84ccc2162ebbf279bcd78858a748aa1882e0bdb912316c76a58f\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/libc.a\",\n      \"sha256\": \"a40c7eae7581f977b65eddb81cbc799213a695749e039d966db55bdee4ac9621\"\n    },\n    {\n      \"file\": \"/usr/libexec/gcc/x86_64-linux-gnu/13/cc1\",\n      \"sha256\": \"5d1679131184e2de4435b426eb264bf13472fe026db8e5c6bc97445814e8e2f4\"\n    },\n    {\n      \"file\": \"/usr/libexec/gcc/x86_64-linux-gnu/13/collect2\",\n      \"sha256\": \"4d1f341ae5b763b513258ee2812422a45e063c30a2f1924a0cf63d3699f3a158\"\n    }\n  ]\n}\n"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43763317915/artifact/registered-process.node",
+      "size": 36104,
+      "crc": 1425276003,
+      "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217",
+      "contentEncoding": "binary-hash-only"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43763317915/native.log",
+      "size": 233,
+      "crc": 1935891448,
+      "sha256": "0ffd9fe3d4855eb4e00a3b1e30a04440d1c4f745d3398e32531b76da8a3a4bdc",
+      "contentEncoding": "utf-8",
+      "content": "{\"workspace\":\"/tmp/TEST-linux-pidfd-yFgWp6\",\"completed\":true,\"cleaned\":true,\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"}}\n"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43763317915/proof.ndjson",
+      "size": 4038,
+      "crc": 1429217749,
+      "sha256": "0db7950e53df7ece6b98b8bbb7394503d051df5c43090b595ff2ff361d173f0b",
+      "contentEncoding": "utf-8",
+      "content": "{\"phase\":\"start\",\"scope\":\"TEST original process custody; actual SDK and Desktop remain separate\",\"selection\":\"Host automatic kernel capability\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"},\"versions\":{\"node\":\"24.21.0\",\"acorn\":\"8.18.0\",\"ada\":\"4.0.0\",\"amaro\":\"1.1.11\",\"ares\":\"1.34.8\",\"brotli\":\"1.2.0\",\"cldr\":\"48.0\",\"icu\":\"78.3\",\"llhttp\":\"9.4.3\",\"merve\":\"1.2.2\",\"modules\":\"137\",\"napi\":\"10\",\"nbytes\":\"0.1.4\",\"ncrypto\":\"0.0.1\",\"nghttp2\":\"1.70.0\",\"nghttp3\":\"\",\"ngtcp2\":\"\",\"openssl\":\"3.5.8\",\"simdjson\":\"4.6.7\",\"simdutf\":\"6.4.0\",\"sqlite\":\"3.53.4\",\"tz\":\"2026c\",\"undici\":\"7.29.1\",\"unicode\":\"17.0\",\"uv\":\"1.52.1\",\"uvwasi\":\"0.0.23\",\"v8\":\"13.6.233.17-node.53\",\"zlib\":\"1.3.2.1-motley-8002e91\",\"zstd\":\"1.5.7\"},\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\"}\n{\"phase\":\"isolated-same-child-launch\",\"completed\":true,\"parentUnchanged\":true,\"helperSha256\":\"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\",\"originalChildPid\":4241,\"exactHighDescriptorAbsent\":true,\"descendantDescriptorAbsent\":true,\"scope\":\"Native child isolation only; Main integration and executable-byte race qualification remain separate\"}\n{\"phase\":\"ownership-and-identity-negatives\",\"same\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4272,\"sessionId\":4272,\"pidfdId\":\"9289\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4279,\"sessionId\":4272,\"pidfdId\":\"1269\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"owned\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4280,\"sessionId\":4280,\"pidfdId\":\"9290\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4294,\"sessionId\":4287,\"pidfdId\":\"1282\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"peer\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4295,\"sessionId\":4295,\"pidfdId\":\"5154\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4309,\"sessionId\":4302,\"pidfdId\":\"13152\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"scope\":\"No forced numeric PID churn; exact inode/namespace mismatch refused\"}\n{\"phase\":\"requested-before-native\",\"original\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4280,\"sessionId\":4280,\"pidfdId\":\"9290\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4294,\"sessionId\":4287,\"pidfdId\":\"1282\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}}}\n{\"phase\":\"live-worker-after-thread-leader-exit\",\"original\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4325,\"sessionId\":4325,\"pidfdId\":\"9293\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4339,\"sessionId\":4332,\"pidfdId\":\"9294\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"observation\":\"unknown\",\"signal\":\"refused\",\"workerClosed\":false}\n{\"phase\":\"proved\",\"captureVersion\":3,\"coldRead\":{\"before\":\"same-live\",\"workerPid\":4342},\"coldSignal\":{\"before\":\"same-live\",\"result\":\"accepted\",\"workerPid\":4353},\"originalTarget\":\"absent\",\"neighbor\":\"same-live\",\"sameSession\":\"same-live\",\"changedSession\":\"unknown\",\"nativeSignalCalls\":1}\n{\"phase\":\"finite-cleanup\",\"cleaned\":true,\"completed\":true,\"scope\":\"Only original pidfd received one SIGTERM; all other TEST actors self-exited after their TTL\"}\n"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43763317915/registered-process-actor",
+      "size": 17288,
+      "crc": 1586887017,
+      "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b",
+      "contentEncoding": "binary-hash-only"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43763317915/selection.json",
+      "size": 583,
+      "crc": 2164645347,
+      "sha256": "970a854243b0f4304c721d9048eeb75ceb5dd026986dd49af5706c948b8cd4fb",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"directory\": \"/home/runner/work/_temp/TEST-process-node24-43763317915/artifact\",\n  \"manifestSha256\": \"b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555\",\n  \"actor\": \"/home/runner/work/_temp/TEST-process-node24-43763317915/registered-process-actor\",\n  \"linuxChildExec\": {\n    \"manifestPath\": \"/home/runner/work/_temp/TEST-process-node24-43763317915/linux-child-exec/manifest.json\",\n    \"manifestSha256\": \"c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484\",\n    \"binarySha256\": \"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\"\n  }\n}\n"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43763317915/warm-proof.ndjson",
+      "size": 4534,
+      "crc": 1819726678,
+      "sha256": "21c9b76e56cb8a6d846ec854cf8b35ce73131a07b02a08bf8c7534c9feaca864",
+      "contentEncoding": "utf-8",
+      "content": "{\"phase\":\"start\",\"scope\":\"TEST original process custody; actual SDK and Desktop remain separate\",\"selection\":\"TEST internal warm owner\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"},\"versions\":{\"node\":\"24.21.0\",\"acorn\":\"8.18.0\",\"ada\":\"4.0.0\",\"amaro\":\"1.1.11\",\"ares\":\"1.34.8\",\"brotli\":\"1.2.0\",\"cldr\":\"48.0\",\"icu\":\"78.3\",\"llhttp\":\"9.4.3\",\"merve\":\"1.2.2\",\"modules\":\"137\",\"napi\":\"10\",\"nbytes\":\"0.1.4\",\"ncrypto\":\"0.0.1\",\"nghttp2\":\"1.70.0\",\"nghttp3\":\"\",\"ngtcp2\":\"\",\"openssl\":\"3.5.8\",\"simdjson\":\"4.6.7\",\"simdutf\":\"6.4.0\",\"sqlite\":\"3.53.4\",\"tz\":\"2026c\",\"undici\":\"7.29.1\",\"unicode\":\"17.0\",\"uv\":\"1.52.1\",\"uvwasi\":\"0.0.23\",\"v8\":\"13.6.233.17-node.53\",\"zlib\":\"1.3.2.1-motley-8002e91\",\"zstd\":\"1.5.7\"},\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\"}\n{\"phase\":\"isolated-same-child-launch\",\"completed\":true,\"parentUnchanged\":true,\"helperSha256\":\"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\",\"originalChildPid\":4389,\"exactHighDescriptorAbsent\":true,\"descendantDescriptorAbsent\":true,\"scope\":\"Native child isolation only; Main integration and executable-byte race qualification remain separate\"}\n{\"phase\":\"ownership-and-identity-negatives\",\"same\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"d2f94b7c-ee86-412a-9cea-662b9c556747\",\"captureKey\":\"abc93872-54b9-42e3-bdcb-d159d8d56411\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4420,\"sessionId\":4420,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4427,\"sessionId\":4420,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"owned\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"d2f94b7c-ee86-412a-9cea-662b9c556747\",\"captureKey\":\"505691f7-147c-403a-a75d-9b1372b3bfd5\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4428,\"sessionId\":4428,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4442,\"sessionId\":4435,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"peer\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"d2f94b7c-ee86-412a-9cea-662b9c556747\",\"captureKey\":\"438edff3-6618-40a1-9c31-a9c314c38343\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4443,\"sessionId\":4443,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4457,\"sessionId\":4450,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"scope\":\"No forced numeric PID churn; exact inode/namespace mismatch refused\"}\n{\"phase\":\"requested-before-native\",\"original\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"d2f94b7c-ee86-412a-9cea-662b9c556747\",\"captureKey\":\"505691f7-147c-403a-a75d-9b1372b3bfd5\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4428,\"sessionId\":4428,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4442,\"sessionId\":4435,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}}}\n{\"phase\":\"live-worker-after-thread-leader-exit\",\"original\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"d2f94b7c-ee86-412a-9cea-662b9c556747\",\"captureKey\":\"2e1df720-be10-46c6-adb6-1393fe160229\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4473,\"sessionId\":4473,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4487,\"sessionId\":4480,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"observation\":\"unknown\",\"signal\":\"refused\",\"workerClosed\":false}\n{\"phase\":\"proved\",\"captureVersion\":4,\"coldRead\":{\"before\":\"unknown\",\"workerPid\":4489},\"coldSignal\":{\"before\":\"unknown\",\"result\":\"refused\",\"workerPid\":4500},\"originalTarget\":\"absent\",\"neighbor\":\"same-live\",\"sameSession\":\"same-live\",\"changedSession\":\"unknown\",\"nativeSignalCalls\":1}\n{\"phase\":\"finite-cleanup\",\"cleaned\":true,\"completed\":true,\"scope\":\"Only original pidfd received one SIGTERM; all other TEST actors self-exited after their TTL\"}\n"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43763317915/artifact/manifest.json",
+      "size": 1170,
+      "crc": 573565884,
+      "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"schemaVersion\": 1,\n  \"abi\": \"napi-8\",\n  \"platform\": \"linux\",\n  \"architecture\": \"x64\",\n  \"kernelCapability\": \"pidfd-live-v1\",\n  \"buildKernelRelease\": \"7.0.0-1017-azure\",\n  \"libc\": {\n    \"family\": \"glibc\",\n    \"minimumVersion\": \"2.33\"\n  },\n  \"library\": \"registered-process.node\",\n  \"sourceSha256\": \"f5d00c04919f9d8bdd36a1482bd96849488d54552a55f9daebeb03739db7c667\",\n  \"binarySha256\": \"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\n  \"compilerSha256\": \"1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26\",\n  \"inspectorSha256\": \"64c58e15274bbbb5153f31078e455e9e77ee5f51489e709bba5bb788ce9df2b0\",\n  \"headers\": [\n    {\n      \"file\": \"node_api.h\",\n      \"sha256\": \"2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a\"\n    },\n    {\n      \"file\": \"node_api_types.h\",\n      \"sha256\": \"a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00\"\n    },\n    {\n      \"file\": \"js_native_api.h\",\n      \"sha256\": \"8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788\"\n    },\n    {\n      \"file\": \"js_native_api_types.h\",\n      \"sha256\": \"4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0\"\n    }\n  ]\n}\n"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43763317915/warm-native.log",
+      "size": 233,
+      "crc": 557136524,
+      "sha256": "17c9c66688796b27c4e90c9ca799f440012fe1915a8e71aeed6ccf3ac1a7bb3f",
+      "contentEncoding": "utf-8",
+      "content": "{\"workspace\":\"/tmp/TEST-linux-pidfd-Jozh8U\",\"completed\":true,\"cleaned\":true,\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"}}\n"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43763317915/artifact/registered-process.node",
+      "size": 36104,
+      "crc": 1425276003,
+      "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217",
+      "contentEncoding": "binary-hash-only"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43763317915/linux-child-exec/linux-child-exec",
+      "size": 789792,
+      "crc": 3184229833,
+      "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110",
+      "contentEncoding": "binary-hash-only"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43763317915/linux-child-exec/manifest.json",
+      "size": 2408,
+      "crc": 23625837,
+      "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"schemaVersion\": 1,\n  \"platform\": \"linux\",\n  \"architecture\": \"x64\",\n  \"protocol\": \"linux-child-exec-v1\",\n  \"kernelCapability\": \"close-range-v1\",\n  \"binary\": \"linux-child-exec\",\n  \"binarySha256\": \"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\",\n  \"sourceSha256\": \"29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337\",\n  \"compilerSha256\": \"1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26\",\n  \"inspectorSha256\": \"64c58e15274bbbb5153f31078e455e9e77ee5f51489e709bba5bb788ce9df2b0\",\n  \"buildKernelRelease\": \"7.0.0-1017-azure\",\n  \"linkInputs\": [\n    {\n      \"file\": \"/usr/bin/x86_64-linux-gnu-as\",\n      \"sha256\": \"21aff249b692b5c31a44007491f922dcb49f41323e362c57d2ada3f52eddb7f0\"\n    },\n    {\n      \"file\": \"/usr/bin/x86_64-linux-gnu-ld.bfd\",\n      \"sha256\": \"e9ceb054c12207970f2726dfc07e9a66b411602748628baf27399f02a9bbb31b\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginT.o\",\n      \"sha256\": \"42171a80795909e1a0743f71c60b503ff2951ed40bf94cae9ca55c324a8cc26a\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/crtend.o\",\n      \"sha256\": \"9c8b2caad195193301ef072895dc89bea1d23371d4c19accd821debe27773063\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/libgcc.a\",\n      \"sha256\": \"d9376c55f97863a4e5fbb6c6beca2591b319bf786f3a7ca56da8964c5662171f\"\n    },\n    {\n      \"file\": \"/usr/lib/gcc/x86_64-linux-gnu/13/libgcc_eh.a\",\n      \"sha256\": \"f853cbbf842ff8714cc8dd986e2fd5bb309d34d490b0707203223ee4d52c76bc\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/crt1.o\",\n      \"sha256\": \"5cfb30db1d2c92a9a818f6c015ad7fcd6519afaa1b88148e831504fe6e299479\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/crti.o\",\n      \"sha256\": \"077ccb6c68db1794da3ee262c4a16a3c6f8e902845dd0829110ad4b7065e5aa3\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/crtn.o\",\n      \"sha256\": \"a2266079f95b84ccc2162ebbf279bcd78858a748aa1882e0bdb912316c76a58f\"\n    },\n    {\n      \"file\": \"/usr/lib/x86_64-linux-gnu/libc.a\",\n      \"sha256\": \"a40c7eae7581f977b65eddb81cbc799213a695749e039d966db55bdee4ac9621\"\n    },\n    {\n      \"file\": \"/usr/libexec/gcc/x86_64-linux-gnu/13/cc1\",\n      \"sha256\": \"5d1679131184e2de4435b426eb264bf13472fe026db8e5c6bc97445814e8e2f4\"\n    },\n    {\n      \"file\": \"/usr/libexec/gcc/x86_64-linux-gnu/13/collect2\",\n      \"sha256\": \"4d1f341ae5b763b513258ee2812422a45e063c30a2f1924a0cf63d3699f3a158\"\n    }\n  ]\n}\n"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43763317915/native.log",
+      "size": 233,
+      "crc": 3382387471,
+      "sha256": "c78a6bc4c4f9b92e01451f442550407cf25c65dae82cc0e7d6a070f02d0a252f",
+      "contentEncoding": "utf-8",
+      "content": "{\"workspace\":\"/tmp/TEST-linux-pidfd-3AkgOz\",\"completed\":true,\"cleaned\":true,\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"}}\n"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43763317915/proof.ndjson",
+      "size": 4083,
+      "crc": 1758781708,
+      "sha256": "78302928285e20482f0d885b090f58d343b6e2c7c2c555c12593569e64aa1b69",
+      "contentEncoding": "utf-8",
+      "content": "{\"phase\":\"start\",\"scope\":\"TEST original process custody; actual SDK and Desktop remain separate\",\"selection\":\"Host automatic kernel capability\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"},\"versions\":{\"node\":\"24.22.1\",\"acorn\":\"8.18.0\",\"ada\":\"4.0.0\",\"amaro\":\"1.1.11\",\"ares\":\"1.34.9\",\"brotli\":\"1.2.0\",\"cldr\":\"48.0\",\"icu\":\"78.2\",\"llhttp\":\"9.4.3\",\"merve\":\"1.2.2\",\"modules\":\"149\",\"napi\":\"10\",\"nbytes\":\"0.1.4\",\"ncrypto\":\"0.0.1\",\"nghttp2\":\"1.70.0\",\"nghttp3\":\"\",\"ngtcp2\":\"\",\"openssl\":\"0.0.0\",\"simdjson\":\"4.6.11\",\"simdutf\":\"7.7.0\",\"sqlite\":\"3.53.4\",\"tz\":\"2026e\",\"undici\":\"7.30.1\",\"unicode\":\"17.0\",\"uv\":\"1.52.1\",\"uvwasi\":\"0.0.23\",\"v8\":\"15.2.124.45-electron.0\",\"zlib\":\"1.3.2.1-motley\",\"zstd\":\"1.6.0\",\"electron\":\"44.10.1\",\"chrome\":\"152.0.7977.169\"},\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\"}\n{\"phase\":\"isolated-same-child-launch\",\"completed\":true,\"parentUnchanged\":true,\"helperSha256\":\"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\",\"originalChildPid\":4598,\"exactHighDescriptorAbsent\":true,\"descendantDescriptorAbsent\":true,\"scope\":\"Native child isolation only; Main integration and executable-byte race qualification remain separate\"}\n{\"phase\":\"ownership-and-identity-negatives\",\"same\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4637,\"sessionId\":4637,\"pidfdId\":\"1379\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4646,\"sessionId\":4637,\"pidfdId\":\"5256\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"owned\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4647,\"sessionId\":4647,\"pidfdId\":\"1380\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4665,\"sessionId\":4656,\"pidfdId\":\"13236\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"peer\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4666,\"sessionId\":4666,\"pidfdId\":\"5261\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4684,\"sessionId\":4675,\"pidfdId\":\"13245\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"scope\":\"No forced numeric PID churn; exact inode/namespace mismatch refused\"}\n{\"phase\":\"requested-before-native\",\"original\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4647,\"sessionId\":4647,\"pidfdId\":\"1380\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4665,\"sessionId\":4656,\"pidfdId\":\"13236\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}}}\n{\"phase\":\"live-worker-after-thread-leader-exit\",\"original\":{\"version\":3,\"platform\":\"linux\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4704,\"sessionId\":4704,\"pidfdId\":\"9363\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4722,\"sessionId\":4713,\"pidfdId\":\"9364\",\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"observation\":\"unknown\",\"signal\":\"refused\",\"workerClosed\":false}\n{\"phase\":\"proved\",\"captureVersion\":3,\"coldRead\":{\"before\":\"same-live\",\"workerPid\":4724},\"coldSignal\":{\"before\":\"same-live\",\"result\":\"accepted\",\"workerPid\":4737},\"originalTarget\":\"absent\",\"neighbor\":\"same-live\",\"sameSession\":\"same-live\",\"changedSession\":\"unknown\",\"nativeSignalCalls\":1}\n{\"phase\":\"finite-cleanup\",\"cleaned\":true,\"completed\":true,\"scope\":\"Only original pidfd received one SIGTERM; all other TEST actors self-exited after their TTL\"}\n"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43763317915/registered-process-actor",
+      "size": 17288,
+      "crc": 1586887017,
+      "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b",
+      "contentEncoding": "binary-hash-only"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43763317915/selection.json",
+      "size": 589,
+      "crc": 2725318406,
+      "sha256": "bdac8ee59b54d027a8224a38521ffb49e4655d98cb1417d18c62c829e4846dbe",
+      "contentEncoding": "utf-8",
+      "content": "{\n  \"directory\": \"/home/runner/work/_temp/TEST-process-electron-43763317915/artifact\",\n  \"manifestSha256\": \"b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555\",\n  \"actor\": \"/home/runner/work/_temp/TEST-process-electron-43763317915/registered-process-actor\",\n  \"linuxChildExec\": {\n    \"manifestPath\": \"/home/runner/work/_temp/TEST-process-electron-43763317915/linux-child-exec/manifest.json\",\n    \"manifestSha256\": \"c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484\",\n    \"binarySha256\": \"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\"\n  }\n}\n"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43763317915/warm-native.log",
+      "size": 233,
+      "crc": 1033480144,
+      "sha256": "75802afd565993fecec2723dd3120190802f3d6e907523b3cd02e3d7cef208fe",
+      "contentEncoding": "utf-8",
+      "content": "{\"workspace\":\"/tmp/TEST-linux-pidfd-eAQU4d\",\"completed\":true,\"cleaned\":true,\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"}}\n"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43763317915/warm-proof.ndjson",
+      "size": 4577,
+      "crc": 4135944705,
+      "sha256": "c4366af1792771634ddb9ec2faa67451a206d9980907112f1c0dd1eaa736f814",
+      "contentEncoding": "utf-8",
+      "content": "{\"phase\":\"start\",\"scope\":\"TEST original process custody; actual SDK and Desktop remain separate\",\"selection\":\"TEST internal warm owner\",\"kernel\":{\"release\":\"7.0.0-1017-azure\",\"platform\":\"linux\",\"arch\":\"x64\"},\"versions\":{\"node\":\"24.22.1\",\"acorn\":\"8.18.0\",\"ada\":\"4.0.0\",\"amaro\":\"1.1.11\",\"ares\":\"1.34.9\",\"brotli\":\"1.2.0\",\"cldr\":\"48.0\",\"icu\":\"78.2\",\"llhttp\":\"9.4.3\",\"merve\":\"1.2.2\",\"modules\":\"149\",\"napi\":\"10\",\"nbytes\":\"0.1.4\",\"ncrypto\":\"0.0.1\",\"nghttp2\":\"1.70.0\",\"nghttp3\":\"\",\"ngtcp2\":\"\",\"openssl\":\"0.0.0\",\"simdjson\":\"4.6.11\",\"simdutf\":\"7.7.0\",\"sqlite\":\"3.53.4\",\"tz\":\"2026e\",\"undici\":\"7.30.1\",\"unicode\":\"17.0\",\"uv\":\"1.52.1\",\"uvwasi\":\"0.0.23\",\"v8\":\"15.2.124.45-electron.0\",\"zlib\":\"1.3.2.1-motley\",\"zstd\":\"1.6.0\",\"electron\":\"44.10.1\",\"chrome\":\"152.0.7977.169\"},\"artifactSha256\":\"a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217\"}\n{\"phase\":\"isolated-same-child-launch\",\"completed\":true,\"parentUnchanged\":true,\"helperSha256\":\"be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110\",\"originalChildPid\":4782,\"exactHighDescriptorAbsent\":true,\"descendantDescriptorAbsent\":true,\"scope\":\"Native child isolation only; Main integration and executable-byte race qualification remain separate\"}\n{\"phase\":\"ownership-and-identity-negatives\",\"same\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"99376458-ca0b-44bb-b622-1069acf85d1b\",\"captureKey\":\"8cc2ab3c-bd09-40c4-8b31-86461faecd4a\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4821,\"sessionId\":4821,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4830,\"sessionId\":4821,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"owned\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"99376458-ca0b-44bb-b622-1069acf85d1b\",\"captureKey\":\"bb1168e6-6038-4d3c-ba0e-036aaab25fb5\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4831,\"sessionId\":4831,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4849,\"sessionId\":4840,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"peer\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"99376458-ca0b-44bb-b622-1069acf85d1b\",\"captureKey\":\"d3026a49-d544-46cd-8354-d8c30e660399\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4850,\"sessionId\":4850,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4868,\"sessionId\":4859,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"scope\":\"No forced numeric PID churn; exact inode/namespace mismatch refused\"}\n{\"phase\":\"requested-before-native\",\"original\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"99376458-ca0b-44bb-b622-1069acf85d1b\",\"captureKey\":\"bb1168e6-6038-4d3c-ba0e-036aaab25fb5\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4831,\"sessionId\":4831,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4849,\"sessionId\":4840,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}}}\n{\"phase\":\"live-worker-after-thread-leader-exit\",\"original\":{\"version\":4,\"platform\":\"linux\",\"admission\":\"owner-pidfd-v1\",\"ownerInstance\":\"99376458-ca0b-44bb-b622-1069acf85d1b\",\"captureKey\":\"2773478c-e46c-4dbf-84f4-3ffb9b463c5f\",\"registrar\":{\"backendId\":\"TEST-native\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"TEST-member\",\"generation\":\"1\"},\"root\":{\"pid\":4888,\"sessionId\":4888,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"},\"target\":{\"pid\":4906,\"sessionId\":4897,\"pidNamespaceId\":\"4026531836\",\"bootId\":\"cdd8f135-4a15-406a-8bbf-ad76febd0dec\"}},\"observation\":\"unknown\",\"signal\":\"refused\",\"workerClosed\":false}\n{\"phase\":\"proved\",\"captureVersion\":4,\"coldRead\":{\"before\":\"unknown\",\"workerPid\":4908},\"coldSignal\":{\"before\":\"unknown\",\"result\":\"refused\",\"workerPid\":4921},\"originalTarget\":\"absent\",\"neighbor\":\"same-live\",\"sameSession\":\"same-live\",\"changedSession\":\"unknown\",\"nativeSignalCalls\":1}\n{\"phase\":\"finite-cleanup\",\"cleaned\":true,\"completed\":true,\"scope\":\"Only original pidfd received one SIGTERM; all other TEST actors self-exited after their TTL\"}\n"
+    }
+  ]
+}

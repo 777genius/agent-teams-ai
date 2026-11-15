@@ -668,3 +668,24 @@ Doc29 appends exact reviewed4773-byte SDK-binding R1 amendment34582e095069b9ccbb
 ## Desktop old-producer regression is now measured
 
 The actual frozen c985 run passed its fresh Host build, then the full original41-case Desktop observation file returned34PASS/7specificFAIL without skips/cancellations. Both original delayed-launch and exited-command assertions were reached; all25 old cases and8 empty-journal guards passed. Exact full raw, manifest and assessment are retained and independently accepted. This satisfies the published source proposal's substantive-RED prerequisite only. Fixturef2f is still unchanged here; exact bounded source R2 and complete resulting-source GREEN remain required. No extra compiler attempt or CI venue is granted.
+
+### 2026-11-15: native integrated source is locally checked; original Windows execution remains pending
+
+Published 6e222 / tree 2ac490 retains the exact eight reviewed native leaves, original
+Stop/identity/Job/currentness/witness oracles, original old service-scope function,
+three old calls and churn. Independent full source and published readback accepted it.
+Root ran the two original native TypeScript projects, all 53 protocol tests in 3 files,
+four-TS-path lint, source/provisioning guards and exact-eight-path diff once; all 7 exits 0.
+Full raw/manifest/source audit is retained in evidence/coobservation-2026-11-15.
+No C++/SDK link/load or Windows execution PASS follows from these local checks.
+
+The separate frozen native/Desktop CI venue proposal is retained verbatim as
+native-desktop-frozen-green-venue-r1-20261115.md in that evidence directory.
+Its exact base 58c14/head 6e222 and Draft trigger inventory require independent
+published readback before refs or a PR are created. Four original Windows
+Node/Electron native gates, their later provider-source journeys and full Desktop
+shared/GUI prerequisites remain required. Existing deadlines and failed source
+receipts remain unchanged. Frozen 1207's Main 81/8 passes on all five tuples while its
+whole Process run is still FAILURE on the two later Windows lanes; it cannot qualify native8.
+No additional local compiler attempt, metadata change to existing frozen PRs,
+cancellation, real Claude/Codex execution, default activation or Stage2 is authorized here.

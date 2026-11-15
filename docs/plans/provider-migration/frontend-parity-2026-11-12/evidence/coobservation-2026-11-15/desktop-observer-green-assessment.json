@@ -1,0 +1,37 @@
+{
+  "kind": "DESKTOP_OBSERVER_RESULTING_SOURCE_LOCAL_GREEN",
+  "sourceHead": "9b29d595c0f7baf1e1c34da85c9c1b0543a19451",
+  "sourceTree": "f82f0b225b3b24f9d26bc1f7abb08f2e69bfdf15",
+  "test": "b47e3a6e0227e2c3521a4e0124074ce6ec94bae8",
+  "producer": "3d22185325dc1f0d9d25d4b64461e521e00b9388",
+  "sourceDelta": {
+    "fixture": {
+      "insertions": 45,
+      "deletions": 5,
+      "physicalLines": 279
+    },
+    "test": {
+      "insertions": 129,
+      "deletions": 0,
+      "physicalLines": 1006
+    }
+  },
+  "actual": {
+    "tests": 41,
+    "passed": 41,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "steps": "Fresh original Host build; complete unchanged Node file; two-path fast lint; full source-size guard; provisioning guard; exact two-path commit diff. All six exits0, source clean before/after, same pinned Node24.21.0 SHA7fde/pnpm11.22.0.",
+  "effect": "Both positive short-peer races now pass and all refusal cases reach their post-rejection inventory checks. All25 old tests and8 unconditional empty-state journal guards remain passing.",
+  "limits": [
+    "Finite controlled observations only; no kernel custody or signal authority",
+    "No actual full Desktop UI or native qualification by this local file",
+    "No standalone scripts/Host-test/workspace/dedicated-backend compiler retry",
+    "Original resulting-source CI type and full shared/UI/native gates remain required",
+    "Prior be75 Host test-types137 stays unqualified",
+    "P08/P09/fullM16 remain open"
+  ]
+}

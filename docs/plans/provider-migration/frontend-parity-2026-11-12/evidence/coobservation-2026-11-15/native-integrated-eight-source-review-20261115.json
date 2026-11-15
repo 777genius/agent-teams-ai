@@ -1,0 +1,545 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-integrated-eight-source-review",
+  "status": "immutable proposal only; no commit, ref, application or execution",
+  "candidateTree": "a1fb792ebb56d1311859625c151d9dafdc20fdb7",
+  "publishedAuthorization": {
+    "nativeR1": "4d195e94cb1583ed27f512368b90c3c18a8565a1",
+    "nativeAppendix": "086066816eb8460e3027afdd05c33e1962699d4d",
+    "sdkAddendumPublication": "58c14e5fbe6188aea70307e2b0734b125d899a03",
+    "sdkAppendix": "34582e095069b9ccbb435371b46d3430b4dc6350",
+    "latestKnownCompositionParent": "9b29d595c0f7baf1e1c34da85c9c1b0543a19451"
+  },
+  "composition": "The candidate tree is minimal, not a complete repository. Apply only these eight existing leaves to the root's fresh authorized tree; retain all other source/docs/tests/evidence, including the Desktop producer.",
+  "inventory": [
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "preimage": "0fbfd352900f07ffe50db6c14701da07be7b4d38",
+      "sha": "9edcec8fffca780706cbde634c35d7929552f9f6",
+      "physical": 153,
+      "chars": 7264,
+      "bytes": 7264,
+      "sha256": "e2ad167bf03a8c4566d720a8bc23d9fff274971b2523397f02ac766d89d8944a",
+      "fnv": "fae64633",
+      "additions": 103,
+      "deletions": 1,
+      "limits": {
+        "additions": 103,
+        "deletions": 1,
+        "physical": 153
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "preimage": "bb4aea3f241c402c12d3b1759ddb91226c02070d",
+      "sha": "25158d10870b78d5b8f6a77b4678fb5d7333600e",
+      "physical": 469,
+      "chars": 28714,
+      "bytes": 28714,
+      "sha256": "e4afc756212279193c91b2203a5a25de27d967b5cdef56d08171485757c7e1cc",
+      "fnv": "9cb5421b",
+      "additions": 249,
+      "deletions": 2,
+      "limits": {
+        "additions": 328,
+        "deletions": 3,
+        "physical": 550
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "preimage": "cafad66ab0933e9840ea359cb4a5af76e9aa233f",
+      "sha": "21b080fd65679e903837e1cc5eabb8a451d7d55b",
+      "physical": 277,
+      "chars": 14635,
+      "bytes": 14635,
+      "sha256": "fb200b9b76faf04a7e356402c2fd0a37ac09a1c31e87ed8309eab092309e69d6",
+      "fnv": "34deeaa6",
+      "additions": 75,
+      "deletions": 5,
+      "limits": {
+        "additions": 90,
+        "deletions": 8,
+        "physical": 300
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "preimage": "7172f9d90a97d1db8ebea150def22e1bf3ffb251",
+      "sha": "0640b35744192a0dbe1b6755a069fb544d2cf347",
+      "physical": 584,
+      "chars": 22257,
+      "bytes": 22257,
+      "sha256": "c4830885906963a214ed67ce7f7c27bbbb33e1c5f04a34cfdb36ec1f89bdc09d",
+      "fnv": "c2e8be40",
+      "additions": 5,
+      "deletions": 1,
+      "limits": {
+        "additions": 10,
+        "deletions": 1,
+        "physical": 590
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.test.ts",
+      "preimage": "a70f955276982ef6f13e1c6f41e3be8f6eccc122",
+      "sha": "48d1c9752dddb3e5fa91c6c564912b0474312168",
+      "physical": 95,
+      "chars": 4745,
+      "bytes": 4745,
+      "sha256": "4ad0525d402aac610a867e7011da52a4f85dc7d6055fb048d9c78995187f4778",
+      "fnv": "221900ab",
+      "additions": 5,
+      "deletions": 1,
+      "limits": {
+        "additions": 5,
+        "deletions": 1,
+        "physical": 95
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "preimage": "1717e066d2c2fe7e608ee22f308aa884556afa00",
+      "sha": "22cf67a484f0a2a5a2b89639e38515cc0242a21a",
+      "physical": 220,
+      "chars": 6380,
+      "bytes": 6380,
+      "sha256": "d963accfadeb14a93fd5d7e2b934a409212cca40e678b452d011c4a579f29237",
+      "fnv": "27591a4b",
+      "additions": 2,
+      "deletions": 0,
+      "limits": {
+        "additions": 2,
+        "deletions": 0,
+        "physical": 220
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/serviceDebugLoop.h",
+      "preimage": "40256b58a3ec8f7cff78c5c2e73cc68a82c6b0a4",
+      "sha": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+      "physical": 93,
+      "chars": 4891,
+      "bytes": 4891,
+      "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3",
+      "fnv": "398ad8e2",
+      "additions": 10,
+      "deletions": 6,
+      "limits": {
+        "additions": 10,
+        "deletions": 6,
+        "physical": 93
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "preimage": "7a7fd19445532317d54b24870d598eede0b0024a",
+      "sha": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+      "physical": 376,
+      "chars": 15888,
+      "bytes": 15888,
+      "sha256": "cc6b60ac08081c1d14201391e912b1062967dadc25d4633b5329e9524550fb06",
+      "fnv": "edea931e",
+      "additions": 120,
+      "deletions": 12,
+      "limits": {
+        "additions": 120,
+        "deletions": 12,
+        "physical": 376
+      }
+    }
+  ],
+  "totals": {
+    "leaves": 8,
+    "additions": 569,
+    "deletions": 28,
+    "allPhysicalAtMost800": true,
+    "allIndividualR1BoundsMet": true,
+    "allFullBlobReadbacksMatched": true,
+    "recursiveTreeTruncated": false
+  },
+  "preservation": [
+    {
+      "name": "oldScenarioWholeFunction",
+      "count": 1,
+      "bytes": 12681,
+      "sha256": "34f318564473af2aa997522ef8b533af11741c469237a39748c5db07e12ed09c"
+    },
+    {
+      "name": "oldThreeCallLines",
+      "count": 1,
+      "bytes": 411,
+      "sha256": "9977a8598a2c525bccd038d432c22785396ad9f9f1d9796bcdec4768509f0502"
+    },
+    {
+      "name": "oldServicePairChurn",
+      "count": 1,
+      "bytes": 602,
+      "sha256": "db3f4004b8e408614fd7ac36140013dd089e11d9d67c23f842e619ba4952e2dc"
+    },
+    {
+      "name": "oldNativeWitnessBlock",
+      "count": 1,
+      "bytes": 1749,
+      "sha256": "5971c8937579e820a7a15c991242a74b7ad11f7ee8bbaa865e3c9d5859ae49a5"
+    },
+    {
+      "name": "oldWitnessAckFunction",
+      "count": 1,
+      "bytes": 1719,
+      "sha256": "336a31633c8827896c38818d4f0a37da7d381e814fc09cf66b3db7db8186db3a"
+    },
+    {
+      "name": "helperCapLiteral",
+      "count": 1,
+      "bytes": 74,
+      "sha256": "43741afd57400ecce0fe769517111610125e909d68641eb86fc8b02b3d3baaea"
+    }
+  ],
+  "inverseProof": {
+    "allExact": true,
+    "method": "Each ordered replacement was applied once at a verified unique preimage, its original position retained, then reversed in reverse order at that position. Every complete source/reference string matched after inverse reconstruction.",
+    "oldScenario": {
+      "bytes": 13467,
+      "sha256": "ff19621e64b300cbbfee6501990ba5cdbee24a3d967c65f4c756b484d9c8ea43"
+    },
+    "additionalScenarioReference": {
+      "bytes": 17344,
+      "sha256": "d00bf63caa8af4061428aef36953d9a04833894517a5ebba5cdd0eba575cf7db"
+    },
+    "originalScenarioImportJournal": [
+      {
+        "label": "import",
+        "position": 104,
+        "before": "import { closeSync, existsSync, openSync, readFileSync, writeFileSync } from 'node:fs';\n",
+        "after": "import { closeSync, existsSync, openSync, readFileSync, renameSync, writeFileSync } from 'node:fs';\n"
+      },
+      {
+        "label": "import",
+        "position": 204,
+        "before": "import { Duplex } from 'node:stream';\n",
+        "after": "import { dirname, join } from 'node:path';\nimport { Duplex } from 'node:stream';\n"
+      },
+      {
+        "label": "import",
+        "position": 568,
+        "before": "import { capturedWitness, timeout, waitFor } from './nativeGateContext';\n",
+        "after": "import { capturedQueryableWitness, capturedWitness, timeout, waitFor } from './nativeGateContext';\n"
+      }
+    ],
+    "additionalScenarioReferenceJournal": [
+      {
+        "label": "closed entry",
+        "position": 0,
+        "before": "/** Unstaged TEST binary only. A valid provider receipt is never minted from these scoped facts. */\nexport async function nativeDebugServiceScenario(context: GateContext, debugBroker: string,\n  mode: 'pre-resume-cancel' | 'service-pair' | 'service-first' | 'service-race' | 'wow64-root', sentinel: ChildProcess): Promise<void> {\n",
+        "after": "/** Additional TEST-only cases; original witness windows remain in the preserved scenario above. */\nexport async function nativeAdditionalDebugServiceScenario(context: GateContext, debugBroker: string,\n  mode: 'service-race' | 'wow64-root', sentinel: ChildProcess): Promise<void> {\n"
+      },
+      {
+        "label": "race owns fresh path",
+        "position": 531,
+        "before": "  if (mode === 'service-pair') assert.equal(existsSync(wow64Path), false,\n    'The original child scenario publishes a fresh native path in this controller sandbox');\n",
+        "after": "  if (mode === 'service-race') assert.equal(existsSync(wow64Path), false,\n    'The new race publishes a fresh native path in this controller sandbox');\n"
+      },
+      {
+        "label": "closed environment branches",
+        "position": 1141,
+        "before": "        } } : mode === 'wow64-root' ? { env: { ...process.env, OWNED_PROCESS_TEST_I386_ROOT: '1' } } : {}),\n",
+        "after": "        } } : { env: { ...process.env, OWNED_PROCESS_TEST_I386_ROOT: '1' } }),\n"
+      },
+      {
+        "label": "closed launch mode",
+        "position": 4393,
+        "before": "  let launch = spec(mode === 'pre-resume-cancel' ? 'tree' : mode, start);\n",
+        "after": "  let launch = spec(mode, start);\n"
+      },
+      {
+        "label": "closed service branch",
+        "position": 6046,
+        "before": "  } else if (mode !== 'pre-resume-cancel') {\n",
+        "after": "  } else {\n"
+      },
+      {
+        "label": "race loader marker",
+        "position": 6276,
+        "before": "    if (mode === 'service-pair') {\n      assert.ok(text.includes('{\"retiredChildren\":80}'),\n        'actual cumulative child churn exceeded64 without exhausting live scope custody');\n      assert.ok(text.includes('{\"wow64StartupAndApplicationBreakpoints\":true}'),\n        'A verified x86 child survives native startup; later root/child application exceptions reach their handlers');\n    }\n",
+        "after": "    assert.ok(text.includes('{\"wow64StartupAndApplicationBreakpoints\":true}'),\n      'A verified x86 child survives native startup; later root/child application exceptions reach their handlers');\n"
+      },
+      {
+        "label": "exclude old service-first branch",
+        "position": 7076,
+        "before": "    if (mode === 'service-first') {\n      phase('root-exit');\n      writeFileSync(`${start.path}.branch-release`, start.nonce, { flag: 'wx' });\n      assert.equal(await timeout(events.wait(serviceWitnesses[0]!.exit)), 0);\n    }\n",
+        "after": ""
+      },
+      {
+        "label": "race current capture",
+        "position": 7145,
+        "before": "    const captureOpcode = mode !== 'service-first' ? Op.serviceCaptureCurrent : Op.serviceCapture;\n    const capture = mode !== 'service-first' ? currentCapture : encodeServiceCapture(service.pid, service.birth);\n",
+        "after": "    const captureOpcode = Op.serviceCaptureCurrent;\n    const capture = currentCapture;\n"
+      },
+      {
+        "label": "exclude old service-first refusal",
+        "position": 7945,
+        "before": "    if (mode === 'service-first') {\n      assert.equal(decodeServiceRefusal(await request(Op.serviceCaptureCurrent, Op.serviceRefused,\n        currentCapture)).reason, ServiceRefusal.missing,\n        'A current-child selector cannot register an exited original root with live descendants');\n    }\n",
+        "after": ""
+      },
+      {
+        "label": "exclude old query capture ID",
+        "position": 7945,
+        "before": "    const captureId = lastId + 1n;\n",
+        "after": ""
+      },
+      {
+        "label": "same race key predicate",
+        "position": 8097,
+        "before": "    assert.ok(BigInt('0x' + selected.key) > (mode === 'service-pair' ? 64n : 0n),\n",
+        "after": "    assert.ok(BigInt('0x' + selected.key) > 0n,\n"
+      },
+      {
+        "label": "same race root predicate",
+        "position": 8697,
+        "before": "    assert.equal((await observe()).rootExited, mode === 'service-first');\n",
+        "after": "    assert.equal((await observe()).rootExited, false);\n"
+      },
+      {
+        "label": "exclude old service-pair churn queries",
+        "position": 8752,
+        "before": "    if (mode === 'service-pair') {\n      phase('service-query-lifetime');\n      const queryDeadline = Date.now() + 5000;\n      for (let index = 0; index < 1025; index++) {\n        assert.ok(Date.now() < queryDeadline, 'Bounded native query sequence');\n        await observe();\n      }\n      phase('service-effect-retirement');\n      for (let index = 0; index < 64; index++)\n        assert.deepEqual(decodeServiceIdentity(await request(captureOpcode, Op.serviceCaptured, capture)), selected);\n      assert.equal(decodeServiceRefusal(await request(captureOpcode, Op.serviceRefused, capture, captureId)).reason,\n        ServiceRefusal.retiredRequest, 'Evicted command ID is refused, never dispatched as a new registration');\n      await observe(); // Refusing an old request cannot abandon a healthy provider or its original scope.\n    }\n",
+        "after": ""
+      },
+      {
+        "label": "race barrier unconditional in race",
+        "position": 9456,
+        "before": "    if (mode === 'service-race') {\n      publishBarrier(`${start.path}.race-release`);\n      await waitBarrier(`${admissionBarrier}.captured`);\n    }\n",
+        "after": "    publishBarrier(`${start.path}.race-release`);\n    await waitBarrier(`${admissionBarrier}.captured`);\n"
+      },
+      {
+        "label": "race admission assertions",
+        "position": 9828,
+        "before": "    if (mode === 'service-race') {\n      await waitBarrier(`${admissionBarrier}.dispatched`);\n      await observe(); // Original Job accounting retains the pending CREATE during termination.\n      assert.equal(stopReplied, false, 'The one original Stop still waits for pending CREATE cleanup');\n      assert.equal(decodeServiceRefusal(await request(Op.serviceSettle, Op.serviceRefused, key)).reason,\n        ServiceRefusal.invalid, 'Pending CREATE cannot settle or retire the original terminating scope');\n      publishBarrier(`${admissionBarrier}.dispatch-continue`);\n      let admissionText = '';\n      await waitFor(() => {\n        if (!existsSync(`${admissionBarrier}.admitted`)) return false;\n        admissionText = readFileSync(`${admissionBarrier}.admitted`, 'ascii');\n        return admissionText.endsWith('}');\n      }, 5000, events);\n      const admitted: unknown = JSON.parse(admissionText);\n      assert.ok(admitted && typeof admitted === 'object' && 'nonce' in admitted &&\n        'pid' in admitted && 'birth' in admitted);\n      assert.equal(admitted.nonce, start.nonce);\n      assert.ok(typeof admitted.pid === 'number' && Number.isSafeInteger(admitted.pid) && admitted.pid > 0);\n      assert.ok(typeof admitted.birth === 'string' && /^[0-9a-f]{16}$/.test(admitted.birth));\n      assert.equal(decodeServiceRefusal(await request(Op.serviceCaptureCurrent, Op.serviceRefused,\n        encodeServiceCaptureCurrent(admitted.pid))).reason, ServiceRefusal.missing,\n        'A debug-only inherited Job grants no current-child service authority');\n      assert.equal(decodeServiceRefusal(await request(Op.serviceCapture, Op.serviceRefused,\n        encodeServiceCapture(admitted.pid, admitted.birth))).reason, ServiceRefusal.missing,\n        'An exact original identity cannot register the inherited parent Job either');\n      assert.equal(stopReplied, false, 'Stop cannot acknowledge absence before CREATE continuation');\n      publishBarrier(`${admissionBarrier}.admission-continue`);\n    }\n",
+        "after": "    await waitBarrier(`${admissionBarrier}.dispatched`);\n    await observe(); // Original Job accounting retains the pending CREATE during termination.\n    assert.equal(stopReplied, false, 'The one original Stop still waits for pending CREATE cleanup');\n    assert.equal(decodeServiceRefusal(await request(Op.serviceSettle, Op.serviceRefused, key)).reason,\n      ServiceRefusal.invalid, 'Pending CREATE cannot settle or retire the original terminating scope');\n    publishBarrier(`${admissionBarrier}.dispatch-continue`);\n    let admissionText = '';\n    await waitFor(() => {\n      if (!existsSync(`${admissionBarrier}.admitted`)) return false;\n      admissionText = readFileSync(`${admissionBarrier}.admitted`, 'ascii');\n      return admissionText.endsWith('}');\n    }, 5000, events);\n    const admitted: unknown = JSON.parse(admissionText);\n    assert.ok(admitted && typeof admitted === 'object' && 'nonce' in admitted &&\n      'pid' in admitted && 'birth' in admitted);\n    assert.equal(admitted.nonce, start.nonce);\n    assert.ok(typeof admitted.pid === 'number' && Number.isSafeInteger(admitted.pid) && admitted.pid > 0);\n    assert.ok(typeof admitted.birth === 'string' && /^[0-9a-f]{16}$/.test(admitted.birth));\n    assert.equal(decodeServiceRefusal(await request(Op.serviceCaptureCurrent, Op.serviceRefused,\n      encodeServiceCaptureCurrent(admitted.pid))).reason, ServiceRefusal.missing,\n      'A debug-only inherited Job grants no current-child service authority');\n    assert.equal(decodeServiceRefusal(await request(Op.serviceCapture, Op.serviceRefused,\n      encodeServiceCapture(admitted.pid, admitted.birth))).reason, ServiceRefusal.missing,\n      'An exact original identity cannot register the inherited parent Job either');\n    assert.equal(stopReplied, false, 'Stop cannot acknowledge absence before CREATE continuation');\n    publishBarrier(`${admissionBarrier}.admission-continue`);\n"
+      },
+      {
+        "label": "race first-effect assertion",
+        "position": 13587,
+        "before": "    if (mode === 'service-race') assert.equal(existsSync(`${start.path}.race-effect`), false,\n      'The terminated child never reaches its first user-code effect');\n",
+        "after": "    assert.equal(existsSync(`${start.path}.race-effect`), false,\n      'The terminated child never reaches its first user-code effect');\n"
+      },
+      {
+        "label": "exclude old pre-resume branch",
+        "position": 14838,
+        "before": "  if (mode === 'pre-resume-cancel') assert.equal(existsSync(start.path), false);\n",
+        "after": ""
+      }
+    ],
+    "fixtureReferenceJournal": [
+      {
+        "label": "published SDK target declaration",
+        "position": 0,
+        "before": "#define WIN32_LEAN_AND_MEAN\n#include <windows.h>",
+        "after": "#define WIN32_LEAN_AND_MEAN\n#define _WIN32_WINNT 0x0A00\n#include <windows.h>"
+      },
+      {
+        "label": "published SDK direct import",
+        "position": 1295,
+        "before": "  const auto module=GetModuleHandleW(L\"Kernel32.dll\");\n  if(!module) return {};\n  const auto directory=reinterpret_cast<UINT (WINAPI*)(LPWSTR,UINT,WORD)>(\n    GetProcAddress(module,\"GetSystemWow64Directory2W\"));\n  if(!directory) return {};\n  wchar_t path[MAX_PATH]{};\n  const auto length=directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386);\n",
+        "after": "  wchar_t path[MAX_PATH]{};\n  const auto length=GetSystemWow64Directory2W(path,MAX_PATH,IMAGE_FILE_MACHINE_I386);\n"
+      },
+      {
+        "label": "new race owns loader prelude",
+        "position": 11076,
+        "before": "  if(mode==L\"service-pair\") {\n    if(!applicationBreakpoint(EXCEPTION_BREAKPOINT)||!applicationBreakpoint(0x4000001f)||\n      !wow64Startup()) return 62;\n    const auto application=child(executable,L\"application-breakpoints\");\n    DWORD applicationCode=MAXDWORD;\n    const bool applicationPassed=WaitForSingleObject(application.hProcess,5000)==WAIT_OBJECT_0&&\n      GetExitCodeProcess(application.hProcess,&applicationCode)&&applicationCode==0;\n    if(!CloseHandle(application.hProcess)||!applicationPassed) return 63;\n    std::puts(\"{\\\"wow64StartupAndApplicationBreakpoints\\\":true}\"); std::fflush(stdout);\n",
+        "after": "  if(mode==L\"service-race\") {\n    if(!applicationBreakpoint(EXCEPTION_BREAKPOINT)||!applicationBreakpoint(0x4000001f)||\n      !wow64Startup()) return 62;\n    const auto application=child(executable,L\"application-breakpoints\");\n    DWORD applicationCode=MAXDWORD;\n    const bool applicationPassed=WaitForSingleObject(application.hProcess,5000)==WAIT_OBJECT_0&&\n      GetExitCodeProcess(application.hProcess,&applicationCode)&&applicationCode==0;\n    if(!CloseHandle(application.hProcess)||!applicationPassed) return 63;\n    std::puts(\"{\\\"wow64StartupAndApplicationBreakpoints\\\":true}\"); std::fflush(stdout);\n  }\n  if(mode==L\"service-pair\") {\n"
+      }
+    ],
+    "gateOriginalJournal": [
+      {
+        "label": "new entry import",
+        "position": 1274,
+        "before": "import { nativeDebugServiceScenario } from './nativeDebugServiceScenario';",
+        "after": "import { nativeAdditionalDebugServiceScenario, nativeDebugServiceScenario } from './nativeDebugServiceScenario';"
+      },
+      {
+        "label": "retain three calls then race before root",
+        "position": 16851,
+        "before": "    await runScenario('debug-service-cancel', () => nativeDebugServiceScenario(context, debugServiceBroker, 'pre-resume-cancel', sentinel));\n    await runScenario('debug-service', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-pair', sentinel));\n    await runScenario('debug-service-root-first', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-first', sentinel));\n",
+        "after": "    await runScenario('debug-service-cancel', () => nativeDebugServiceScenario(context, debugServiceBroker, 'pre-resume-cancel', sentinel));\n    await runScenario('debug-service', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-pair', sentinel));\n    await runScenario('debug-service-root-first', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-first', sentinel));\n    await runScenario('debug-service-admission-race', () => nativeAdditionalDebugServiceScenario(context, debugServiceBroker, 'service-race', sentinel));\n    await runScenario('debug-service-wow64-root', () => nativeAdditionalDebugServiceScenario(context, debugServiceBroker, 'wow64-root', sentinel));\n"
+      },
+      {
+        "label": "reviewed result labels",
+        "position": 19716,
+        "before": "          'TEST-only-debug-service-prebirth-nested-job-feasibility',\n",
+        "after": "          'TEST-only-debug-service-prebirth-nested-job-feasibility',\n          'TEST-only-scoped-stop-pending-create-isolation',\n          'TEST-only-wow64-root-child-startup-and-application-exceptions',\n"
+      }
+    ]
+  },
+  "helperInventory": {
+    "original": {
+      "sentinel": 1,
+      "preResume": 1,
+      "facade": 2,
+      "capturedRootFirst": 5,
+      "oldDebug": 14,
+      "tree": 10,
+      "accounting": 1,
+      "release": 8,
+      "loss": 12,
+      "pendingWrite": 2
+    },
+    "originalTotal": 56,
+    "newRace": 6,
+    "newWow64Root": 2,
+    "total": 64,
+    "cap": 64,
+    "noEarlyRetirementOrOmittedTrack": true,
+    "note": "New race raw broker/root Q/subtree3/neighbor Q =6; new WOW64 root raw broker/root Q=2. Fixed loader/application children are Job descendants rather than newly registered observer helpers."
+  },
+  "scope": {
+    "exactFixedIncoming": [
+      "debugServiceTest.h",
+      "nativeGateContext.test.ts",
+      "nativeGateDiagnostics.ts",
+      "serviceDebugLoop.h",
+      "serviceScopes.h"
+    ],
+    "adjusted": [
+      "nativeDebugServiceScenario.ts retains the entire old function and adds one closed two-mode entry using only the reviewed new-case source; old witnesses and deadlines are untouched.",
+      "nativeFixture.cpp starts at a02 8ec, relocates the loader/application prelude to new service-race, restores the exact old churn block, and applies only the two approved SDK declaration/import hunks.",
+      "nativeGate.ts retains all three old calls and schedules new race before new WOW64 root; two result labels are added."
+    ],
+    "excluded": [
+      "entire later 4dc/436 fixture diagnostic changes",
+      "Logs plan",
+      "nativeRetainedHostGate and nativeVendorGate changes",
+      "timing-window changes",
+      "Desktop observer variants",
+      "CI/workflow/roster/helper-cap changes",
+      "P09 or M16 mechanisms"
+    ]
+  },
+  "qualification": {
+    "sourceOnly": true,
+    "noTypeOrNativeExecutionClaim": true,
+    "originals": [
+      "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json",
+      "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json",
+      "node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts"
+    ],
+    "unchangedWorkflow": "70202d22a5840401a00025cd60b797c514f3e455",
+    "workflowQualification": "Original Windows product/service CMake builds, controller-owned Host Node and Electron nativeGate commands on original Windows tuples remain mandatory resulting-source evidence; this review authorizes no new CI venue/action.",
+    "limits": [
+      "Integrated C++/TEST-hook qualification; a compile failure from undefined hooks on old source would not be a semantic RED.",
+      "Preserved old capturedWitness ACK starts its original native 15-second wait. Queryable witnesses occur only in the two new cases.",
+      "Loader sequence is bounded one-shot forwarding after corresponding consumed latches, not unique-address identification or executed late-I386 application-exception proof.",
+      "SDK static import adds a TEST-wide load dependency; original Windows SDK link/load remains unqualified until execution.",
+      "No real Claude/Codex execution, no production absence/cleanup promotion, no automatic P08/P09/full-parity PASS."
+    ]
+  },
+  "fullDiffs": [
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "preimage": "0fbfd352900f07ffe50db6c14701da07be7b4d38",
+      "postimage": "9edcec8fffca780706cbde634c35d7929552f9f6",
+      "added": 103,
+      "deleted": 1,
+      "hunks": [
+        " 5/5 #include \"protocol.h\"\n 6/6 #include <io.h>\n+/7 #include <cstdio>\n+/8 #include <cstring>\n+/9 #include <string>\n 7/10 \n 8/11 namespace debug_service_test {\n 9/12 using owned_service::Stage;\n 10/13 inline owned_service::Scopes scopes{64};\n+/14 inline std::wstring admissionPath;\n+/15 inline char admissionNonce[37]{};\n+/16 inline bool admissionUsed=false, admissionCompleted=false;\n+/17 inline ULONGLONG admissionDeadline=0;\n+/18 inline void checkAdmissionDeadline() {\n+/19   if(GetTickCount64()>=admissionDeadline) throw DWORD{WAIT_TIMEOUT};\n+/20 }\n+/21 inline void configureAdmissionBarrier() {\n+/22   wchar_t path[1024]{}, nonce[37]{};\n+/23   const DWORD pathLength=GetEnvironmentVariableW(L\"OWNED_PROCESS_TEST_ADMISSION_BARRIER\",path,1024);\n+/24   if(!pathLength) return;\n+/25   if(pathLength>=1024||GetEnvironmentVariableW(L\"OWNED_PROCESS_TEST_ADMISSION_NONCE\",nonce,37)!=36)\n+/26     throw DWORD{ERROR_INVALID_PARAMETER};\n+/27   admissionPath=path;\n+/28   for(size_t index=0;index<36;++index) {\n+/29     if(nonce[index]>127) throw DWORD{ERROR_INVALID_PARAMETER};\n+/30     admissionNonce[index]=static_cast<char>(nonce[index]);\n+/31   }\n+/32 }\n+/33 inline void writeAdmissionBarrier(const wchar_t* suffix,const char* bytes,DWORD length) {\n+/34   checkAdmissionDeadline();\n+/35   const auto target=admissionPath+suffix;\n+/36   HANDLE file=CreateFileW(target.c_str(),GENERIC_WRITE,FILE_SHARE_READ,nullptr,CREATE_NEW,\n+/37     FILE_ATTRIBUTE_NORMAL,nullptr);\n+/38   if(file==INVALID_HANDLE_VALUE) throw GetLastError();\n+/39   DWORD count=0;\n+/40   const bool written=WriteFile(file,bytes,length,&count,nullptr)!=FALSE;\n+/41   DWORD error=written?(count==length?0:ERROR_INVALID_DATA):GetLastError();\n+/42   if(!CloseHandle(file)&&!error) error=GetLastError();\n+/43   if(error) throw error;\n+/44   checkAdmissionDeadline();\n+/45 }\n+/46 inline void waitAdmissionBarrier(const wchar_t* suffix) {\n+/47   const auto release=admissionPath+suffix;\n+/48   for(;;) {\n+/49     checkAdmissionDeadline();\n+/50     HANDLE file=CreateFileW(release.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,\n+/51       FILE_ATTRIBUTE_NORMAL,nullptr);\n+/52     if(file!=INVALID_HANDLE_VALUE) {\n+/53       char actual[37]{}; DWORD count=0;\n+/54       const bool read=ReadFile(file,actual,sizeof(actual),&count,nullptr)!=FALSE;\n+/55       DWORD error=read?(count==36&&std::memcmp(actual,admissionNonce,36)==0?0:ERROR_INVALID_DATA):GetLastError();\n+/56       if(!CloseHandle(file)&&!error) error=GetLastError();\n+/57       if(error) throw error;\n+/58       checkAdmissionDeadline();\n+/59       break;\n+/60     }\n+/61     const auto error=GetLastError();\n+/62     if(error!=ERROR_FILE_NOT_FOUND) throw error;\n+/63     Sleep(1);\n+/64   }\n+/65 }\n+/66 inline void admissionBarrier(HANDLE child) {\n+/67   if(admissionPath.empty()||admissionUsed) return;\n+/68   const auto key=scopes.testRegisteredAncestor(child);\n+/69   if(!key) return;\n+/70   admissionUsed=true;\n+/71   admissionDeadline=GetTickCount64()+5000;\n+/72   writeAdmissionBarrier(L\".captured\",admissionNonce,36);\n+/73   while(!scopes.testOriginalDispatch(key,child)) {\n+/74     checkAdmissionDeadline();\n+/75     Sleep(1);\n+/76   }\n+/77   writeAdmissionBarrier(L\".dispatched\",admissionNonce,36);\n+/78   waitAdmissionBarrier(L\".dispatch-continue\");\n+/79   const auto pending=scopes.query(key);\n+/80   if(pending.queryError||!pending.active||!scopes.testOriginalDispatch(key,child))\n+/81     throw DWORD{ERROR_INVALID_DATA}; // Pending CREATE cannot be retired as an empty original Job.\n+/82   checkAdmissionDeadline();\n+/83 }\n+/84 inline void admittedBarrier(const owned_service::Scope& child) {\n+/85   if(!admissionUsed||admissionCompleted) return;\n+/86   if(!child.inheritedTermination||!child.terminationDispatched) throw DWORD{ERROR_INVALID_DATA};\n+/87   char value[160]{};\n+/88   const int length=std::snprintf(value,sizeof(value),\"{\\\"nonce\\\":\\\"%s\\\",\\\"pid\\\":%lu,\\\"birth\\\":\\\"%016llx\\\"}\",\n+/89     admissionNonce,child.pid,static_cast<unsigned long long>(child.birth));\n+/90   if(length<=0||static_cast<size_t>(length)>=sizeof(value)) throw DWORD{ERROR_INVALID_DATA};\n+/91   writeAdmissionBarrier(L\".admitted\",value,static_cast<DWORD>(length));\n+/92   waitAdmissionBarrier(L\".admission-continue\");\n+/93   admissionCompleted=true;\n+/94 }\n 11/95 // One bounded TEST diagnostic record, never a command or production wire receipt.\n 12/96 inline void failure(Stage stage,DWORD error,const DEBUG_EVENT& event={}) noexcept {",
+        " 20/104 /** Called on the same existing admission thread; TEST alone supplies FD4 diagnostics. */\n 21/105 inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::timed_mutex>& stateLock) {\n+/106   configureAdmissionBarrier();\n+/107   wchar_t expected[2]{};\n+/108   const auto length=GetEnvironmentVariableW(L\"OWNED_PROCESS_TEST_I386_ROOT\",expected,2);\n+/109   if(length) {\n+/110     const auto module=GetModuleHandleW(L\"Kernel32.dll\");\n+/111     if(!module) throw GetLastError();\n+/112     const auto query=reinterpret_cast<BOOL (WINAPI*)(HANDLE,USHORT*,USHORT*)>(\n+/113       GetProcAddress(module,\"IsWow64Process2\"));\n+/114     if(!query) throw GetLastError();\n+/115     USHORT machine=IMAGE_FILE_MACHINE_UNKNOWN;\n+/116     if(!query(root,&machine,nullptr)) throw GetLastError();\n+/117     if(length!=1||expected[0]!=L'1'||machine!=IMAGE_FILE_MACHINE_I386) throw DWORD{ERROR_INVALID_DATA};\n+/118   }\n+/119   scopes.setTestAdmissionBarriers(admissionBarrier,admittedBarrier);\n+/120   const bool result=owned_service::runDebugLoop(rootPid,root,outer,stateLock,scopes,failure);\n+/121   if(result&&!admissionPath.empty()&&!admissionCompleted) {\n+/122     failure(Stage::Registry,ERROR_INVALID_DATA); return false;\n+/123   }\n+/124   return result;\n-22/   return owned_service::runDebugLoop(rootPid,root,outer,stateLock,scopes,failure);\n 23/125 }\n 24/126 "
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "preimage": "bb4aea3f241c402c12d3b1759ddb91226c02070d",
+      "postimage": "25158d10870b78d5b8f6a77b4678fb5d7333600e",
+      "added": 249,
+      "deleted": 2,
+      "hunks": [
+        " 1/1 import assert from 'node:assert/strict';\n 2/2 import { spawn, type ChildProcess } from 'node:child_process';\n+/3 import { closeSync, existsSync, openSync, readFileSync, renameSync, writeFileSync } from 'node:fs';\n+/4 import { dirname, join } from 'node:path';\n-3/ import { closeSync, existsSync, openSync, readFileSync, writeFileSync } from 'node:fs';\n 4/5 import { Duplex } from 'node:stream';\n 5/6 ",
+        " 7/8   encodeServiceCapture, encodeServiceCaptureCurrent, encodeServiceScope, encodeServiceStop, FrameDecoder, Op, ServiceRefusal,\n 8/9 } from '@agent-teams/legacy-agent-host/owned-process';\n+/10 import { capturedQueryableWitness, capturedWitness, timeout, waitFor } from './nativeGateContext';\n-9/ import { capturedWitness, timeout, waitFor } from './nativeGateContext';\n 10/11 import { createFixtureOutputCollector } from './nativeGateOutput';\n 11/12 ",
+        " 222/223 }\n 223/224 \n+/225 /** Additional TEST-only cases; original witness windows remain in the preserved scenario above. */\n+/226 export async function nativeAdditionalDebugServiceScenario(context: GateContext, debugBroker: string,\n+/227   mode: 'service-race' | 'wow64-root', sentinel: ChildProcess): Promise<void> {\n+/228   const { events, owner, marker, spec, fixture, track, phase } = context;\n+/229   const identity = owner(), start = marker();\n+/230   const admissionBarrier = `${start.path}.admission`;\n+/231   const wow64Path = join(dirname(start.path), 'TEST-wow64-command.utf16');\n+/232   if (mode === 'service-race') assert.equal(existsSync(wow64Path), false,\n+/233     'The new race publishes a fresh native path in this controller sandbox');\n+/234   const diagnosticPath = `${start.path}.debug-failure`;\n+/235   const diagnosticFd = openSync(diagnosticPath, 'wx');\n+/236   const raw = (() => {\n+/237     try {\n+/238       return spawn(debugBroker, [], {\n+/239         stdio: ['pipe', 'pipe', 'pipe', 'overlapped', diagnosticFd], windowsHide: true,\n+/240         ...(mode === 'service-race' ? { env: { ...process.env,\n+/241           OWNED_PROCESS_TEST_ADMISSION_BARRIER: admissionBarrier,\n+/242           OWNED_PROCESS_TEST_ADMISSION_NONCE: start.nonce,\n+/243         } } : { env: { ...process.env, OWNED_PROCESS_TEST_I386_ROOT: '1' } }),\n+/244       });\n+/245     } finally { closeSync(diagnosticFd); }\n+/246   })();\n+/247   track(raw, 'raw-broker');\n+/248   raw.once('exit', events.guard((code: number | null) => {\n+/249     const bytes = readFileSync(diagnosticPath);\n+/250     assert.ok(bytes.length === 0 || bytes.length === 16, 'One bounded native failure record');\n+/251     if (bytes.length) {\n+/252       const stages = ['none', 'retain-root', 'retain-job', 'wait', 'root-identity', 'retain-child',\n+/253         'child-identity', 'outer-membership', 'create-job', 'assign-job', 'verify-job', 'image-close',\n+/254         'dll-close', 'rip', 'continue', 'job-close', 'root-close', 'registry', 'retire'];\n+/255       console.error(JSON.stringify({ debugServiceFailure: {\n+/256         stage: stages[bytes.readUInt32LE(0)] ?? bytes.readUInt32LE(0), win32Error: bytes.readUInt32LE(4),\n+/257         event: bytes.readUInt32LE(8), pid: bytes.readUInt32LE(12),\n+/258       } }));\n+/259     }\n+/260     assert.equal(code, 0, 'TEST debug broker must not die before completing its native gate');\n+/261     assert.equal(bytes.length, 0, 'Success cannot mask a native debug failure');\n+/262   }));\n+/263   const exited = new Promise<number | null>((resolve, reject) => {\n+/264     raw.once('exit', resolve); raw.once('error', reject);\n+/265   });\n+/266   void exited.catch(() => undefined);\n+/267   const pipe = raw.stdio[3];\n+/268   assert.ok(pipe instanceof Duplex);\n+/269   const { stdin, stdout, stderr } = raw;\n+/270   assert.ok(stdin && stdout && stderr, 'TEST target stdio pipes are present');\n+/271   const decoder = new FrameDecoder(identity.processGeneration);\n+/272   const replies = new Map<bigint, { opcode: number; resolve(frame: Frame): void }>();\n+/273   let lastId = 0n;\n+/274   let rootExit: Frame | undefined;\n+/275   const readRootExit = (): Frame | undefined => rootExit;\n+/276   pipe.on('error', events.guard(() => { throw new Error('TEST debug control failed'); }));\n+/277   pipe.on('data', events.guard((chunk: Buffer) => decoder.push(chunk, frame => {\n+/278     if (frame.opcode === Op.rootExit) {\n+/279       assert.equal(rootExit, undefined, 'One original provider exit event');\n+/280       assert.equal(frame.requestId, 0n); assert.equal(frame.payload.length, 12);\n+/281       rootExit = frame; return;\n+/282     }\n+/283     const pending = replies.get(frame.requestId);\n+/284     assert.ok(pending, 'Reply belongs to an admitted exact request');\n+/285     assert.equal(frame.opcode, pending.opcode, 'TEST debug native response opcode');\n+/286     replies.delete(frame.requestId); pending.resolve(frame);\n+/287   })));\n+/288   const request = (opcode: number, response: number, payload: Buffer, id = ++lastId) => {\n+/289     const result = new Promise<Frame>(resolve => replies.set(id, { opcode: response, resolve }));\n+/290     pipe.write(encodeFrame({ opcode, requestId: id, generation: identity.processGeneration, payload }));\n+/291     return timeout(events.wait(result));\n+/292   };\n+/293   const publishBarrier = (path: string) => {\n+/294     writeFileSync(`${path}.pending`, start.nonce, { flag: 'wx' });\n+/295     renameSync(`${path}.pending`, path);\n+/296   };\n+/297   const waitBarrier = (path: string) => waitFor(() => existsSync(path) &&\n+/298     readFileSync(path, 'ascii') === start.nonce, 5000, events);\n+/299   const output = createFixtureOutputCollector();\n+/300   let text = '';\n+/301   stdout.on('data', events.guard((chunk: Buffer) => {\n+/302     output.push(chunk); text += chunk.toString();\n+/303   }));\n+/304   stderr.resume();\n+/305   let launch = spec(mode, start);\n+/306   if (mode === 'wow64-root') {\n+/307     assert.ok(existsSync(wow64Path), 'The preceding completed child scenario must publish its verified I386 path');\n+/308     const bytes = readFileSync(wow64Path);\n+/309     assert.ok(bytes.length > 0 && bytes.length <= 1024 && bytes.length % 2 === 0);\n+/310     const executable = bytes.toString('utf16le');\n+/311     assert.ok(!executable.includes('\"') && !/\\p{Cc}/u.test(executable));\n+/312     launch = { ...launch, executable, commandLine: `\"${executable}\" /d /c exit 0` };\n+/313   }\n+/314   phase('prepare');\n+/315   const prepared = await request(Op.launch, Op.prepared, encodeLaunch(launch));\n+/316   assert.equal(prepared.payload.length, 12);\n+/317   const rootPid = prepared.payload.readUInt32LE(0);\n+/318   const rootBirth = prepared.payload.readBigUInt64LE(4).toString(16).padStart(16, '0');\n+/319   phase('capture-root');\n+/320   const root = await capturedQueryableWitness(fixture, rootPid, rootBirth, track, events, 'query-wait-gated');\n+/321   assert.equal(existsSync(start.path), false, 'DEBUG+CREATE_SUSPENDED target has no pre-resume effect');\n+/322   const whole = Buffer.alloc(5);\n+/323   whole.writeUInt32LE(10000); whole[4] = 1;\n+/324   let neighborWitness: Awaited<ReturnType<typeof capturedQueryableWitness>> | undefined;\n+/325   if (mode === 'wow64-root') {\n+/326     phase('resume');\n+/327     await request(Op.resume, Op.resumed, Buffer.alloc(0));\n+/328     phase('root-exit');\n+/329     await waitFor(() => readRootExit() !== undefined, 5000, events);\n+/330     assert.equal(readRootExit()!.payload.readUInt32LE(0), 0, 'Verified I386 original root survives both loader startup events');\n+/331     assert.equal(await root.observe(), 'absent', 'The exact original x86 root HANDLE signals natural exit');\n+/332   } else {\n+/333     phase('resume');\n+/334     await request(Op.resume, Op.resumed, Buffer.alloc(0));\n+/335     phase('child-lines');\n+/336     await waitFor(() => output.children.length === 4 && output.childrenOf(rootPid).length === 2, 10000, events);\n+/337     assert.ok(text.includes('{\"wow64StartupAndApplicationBreakpoints\":true}'),\n+/338       'A verified x86 child survives native startup; later root/child application exceptions reach their handlers');\n+/339     const [service, neighbor] = output.childrenOf(rootPid);\n+/340     assert.ok(service && neighbor);\n+/341     assert.equal(output.childrenOf(service.pid).length, 2, 'Selected service already has descendants before registration');\n+/342     phase('capture-descendants');\n+/343     const serviceWitnesses = await events.wait(Promise.all([service, ...output.childrenOf(service.pid)].map(value =>\n+/344       capturedWitness(fixture, value.pid, value.birth, track, events))));\n+/345     const adjacent = await capturedQueryableWitness(fixture, neighbor.pid, neighbor.birth, track, events, 'query-wait-gated');\n+/346     neighborWitness = adjacent;\n+/347     const currentCapture = encodeServiceCaptureCurrent(service.pid);\n+/348     const captureOpcode = Op.serviceCaptureCurrent;\n+/349     const capture = currentCapture;\n+/350     const wrong = encodeServiceCapture(service.pid,\n+/351       (BigInt('0x' + service.birth) ^ 1n).toString(16).padStart(16, '0'));\n+/352     phase('service-capture');\n+/353     assert.equal(decodeServiceRefusal(await request(Op.serviceCapture, Op.serviceRefused, wrong)).reason,\n+/354       ServiceRefusal.missing, 'Wrong original identity has no native effect');\n+/355     const sentinelPid = sentinel.pid; assert.ok(sentinelPid);\n+/356     for (const pid of [rootPid, sentinelPid]) {\n+/357       assert.equal(decodeServiceRefusal(await request(Op.serviceCaptureCurrent, Op.serviceRefused,\n+/358         encodeServiceCaptureCurrent(pid))).reason, ServiceRefusal.missing,\n+/359         'Provider and foreign PIDs cannot enter this broker service registry');\n+/360     }\n+/361     const selected = decodeServiceIdentity(await request(captureOpcode, Op.serviceCaptured, capture));\n+/362     assert.equal(selected.birth, service.birth);\n+/363     assert.ok(BigInt('0x' + selected.key) > 0n,\n+/364       'scope keys never restart or alias after cumulative native retirement');\n+/365     const key = encodeServiceScope(selected.key);\n+/366     const observe = async () => {\n+/367       const facts = decodeServiceFacts(await request(Op.serviceQuery, Op.serviceObserved, key));\n+/368       assert.equal(facts.key, selected.key); assert.equal(facts.birth, service.birth);\n+/369       assert.equal(facts.queryError, 0); assert.equal(facts.dispatchError, 0);\n+/370       assert.ok(facts.activeProcesses > 0, 'Read-only query leaves the original subtree running');\n+/371       return facts;\n+/372     };\n+/373     assert.equal((await observe()).rootExited, false);\n+/374     phase('expired-service-stop');\n+/375     const expired = decodeServiceFacts(await request(Op.serviceStop, Op.serviceStopped,\n+/376       encodeServiceStop(selected.key, 0)));\n+/377     assert.equal(expired.key, selected.key); assert.equal(expired.birth, service.birth);\n+/378     assert.equal(expired.queryError, 258); // WAIT_TIMEOUT, no destructive dispatch after the admitted deadline.\n+/379     assert.equal(expired.dispatchError, 0);\n+/380     assert.ok(serviceWitnesses.slice(1).every(witness => witness.process.exitCode === null));\n+/381     await observe();\n+/382     const retainedCaptureId = lastId + 1n;\n+/383     assert.deepEqual(decodeServiceIdentity(await request(captureOpcode, Op.serviceCaptured, capture)), selected);\n+/384     phase('stop');\n+/385     publishBarrier(`${start.path}.race-release`);\n+/386     await waitBarrier(`${admissionBarrier}.captured`);\n+/387     const stopId = lastId + 1n;\n+/388     const stop = encodeServiceStop(selected.key, 10000);\n+/389     const pendingStop = request(Op.serviceStop, Op.serviceStopped, stop);\n+/390     let stopReplied = false;\n+/391     void pendingStop.then(() => { stopReplied = true; }, () => undefined);\n+/392     await waitBarrier(`${admissionBarrier}.dispatched`);\n+/393     await observe(); // Original Job accounting retains the pending CREATE during termination.\n+/394     assert.equal(stopReplied, false, 'The one original Stop still waits for pending CREATE cleanup');\n+/395     assert.equal(decodeServiceRefusal(await request(Op.serviceSettle, Op.serviceRefused, key)).reason,\n+/396       ServiceRefusal.invalid, 'Pending CREATE cannot settle or retire the original terminating scope');\n+/397     publishBarrier(`${admissionBarrier}.dispatch-continue`);\n+/398     let admissionText = '';\n+/399     await waitFor(() => {\n+/400       if (!existsSync(`${admissionBarrier}.admitted`)) return false;\n+/401       admissionText = readFileSync(`${admissionBarrier}.admitted`, 'ascii');\n+/402       return admissionText.endsWith('}');\n+/403     }, 5000, events);\n+/404     const admitted: unknown = JSON.parse(admissionText);\n+/405     assert.ok(admitted && typeof admitted === 'object' && 'nonce' in admitted &&\n+/406       'pid' in admitted && 'birth' in admitted);\n+/407     assert.equal(admitted.nonce, start.nonce);\n+/408     assert.ok(typeof admitted.pid === 'number' && Number.isSafeInteger(admitted.pid) && admitted.pid > 0);\n+/409     assert.ok(typeof admitted.birth === 'string' && /^[0-9a-f]{16}$/.test(admitted.birth));\n+/410     assert.equal(decodeServiceRefusal(await request(Op.serviceCaptureCurrent, Op.serviceRefused,\n+/411       encodeServiceCaptureCurrent(admitted.pid))).reason, ServiceRefusal.missing,\n+/412       'A debug-only inherited Job grants no current-child service authority');\n+/413     assert.equal(decodeServiceRefusal(await request(Op.serviceCapture, Op.serviceRefused,\n+/414       encodeServiceCapture(admitted.pid, admitted.birth))).reason, ServiceRefusal.missing,\n+/415       'An exact original identity cannot register the inherited parent Job either');\n+/416     assert.equal(stopReplied, false, 'Stop cannot acknowledge absence before CREATE continuation');\n+/417     publishBarrier(`${admissionBarrier}.admission-continue`);\n+/418     const stopped = await pendingStop;\n+/419     const terminal = decodeServiceFacts(stopped);\n+/420     assert.equal(terminal.key, selected.key); assert.equal(terminal.birth, service.birth);\n+/421     assert.equal(terminal.rootExited, true);\n+/422     assert.equal(terminal.activeProcesses, 0, 'Selected nested Job is genuinely empty');\n+/423     assert.equal(terminal.queryError, 0); assert.equal(terminal.dispatchError, 0);\n+/424     phase('witness-exits');\n+/425     assert.deepEqual(await timeout(events.wait(Promise.all(serviceWitnesses.map(value => value.exit)))), [0, 0, 0]);\n+/426     assert.deepEqual(decodeServiceIdentity(await request(Op.serviceSettle, Op.serviceSettled, key)), selected);\n+/427     assert.deepEqual(decodeServiceIdentity(await request(captureOpcode, Op.serviceCaptured, capture, retainedCaptureId)), selected,\n+/428       'An original capture ACK replays after retirement without a current-PID lookup');\n+/429     assert.equal(decodeServiceRefusal(await request(Op.serviceCaptureCurrent, Op.serviceRefused,\n+/430       currentCapture)).reason, ServiceRefusal.missing, 'Fresh admission cannot reacquire a retired original');\n+/431     assert.deepEqual((await request(Op.serviceStop, Op.serviceStopped, stop, stopId)).payload, stopped.payload,\n+/432       'original ACK remains replayable after its native scope retired, without recapture');\n+/433     assert.equal(decodeServiceRefusal(await request(Op.serviceStop, Op.serviceRefused, stop)).reason,\n+/434       ServiceRefusal.missing, 'A new Stop cannot reacquire a retired scope');\n+/435     assert.equal(decodeServiceRefusal(await request(Op.serviceQuery, Op.serviceRefused, key)).reason,\n+/436       ServiceRefusal.missing, 'Closed scope is unknown, not a new absence receipt');\n+/437     assert.equal(await adjacent.observe(), 'alive', 'Other service original HANDLE remains unsignaled');\n+/438     assert.equal(await root.observe(), 'alive', 'Provider original HANDLE remains unsignaled');\n+/439     assert.equal(existsSync(`${start.path}.race-effect`), false,\n+/440       'The terminated child never reaches its first user-code effect');\n+/441     assert.equal(sentinel.exitCode, null);\n+/442     stdin.write('TEST provider remains functional\\n');\n+/443     await waitFor(() => text.includes('{\"providerAlive\":true}'), 3000, events);\n+/444   }\n+/445   if (mode !== 'wow64-root')\n+/446     assert.equal(readRootExit(), undefined, 'Service replies cannot publish an exit for the surviving provider');\n+/447   phase('stop');\n+/448   const stopped = await request(Op.stop, Op.stopped, whole);\n+/449   assert.equal(stopped.payload[1], 1);\n+/450   assert.equal(stopped.payload.readUInt32LE(2), 0);\n+/451   assert.equal(stopped.payload.readBigUInt64LE(10), BigInt(`0x${rootBirth}`));\n+/452   assert.equal(stopped.payload.readUInt32LE(18), 0);\n+/453   assert.equal(stopped.payload.readUInt32LE(22), 0);\n+/454   await waitFor(() => readRootExit() !== undefined, 3000, events);\n+/455   const originalExit = readRootExit(); assert.ok(originalExit);\n+/456   assert.equal(originalExit.payload.readBigUInt64LE(4), BigInt('0x' + rootBirth));\n+/457   assert.equal(originalExit.payload.readUInt32LE(0), stopped.payload.readUInt32LE(6));\n+/458   phase('witness-exits');\n+/459   assert.equal(await root.wait(), 0);\n+/460   if (neighborWitness) assert.equal(await neighborWitness.wait(), 0);\n+/461   phase('target-drain');\n+/462   await waitFor(() => stdout.readableEnded && stderr.readableEnded, 3000, events);\n+/463   phase('release-ack');\n+/464   await request(Op.release, Op.released, Buffer.alloc(0));\n+/465   phase('broker-exit');\n+/466   pipe.end();\n+/467   assert.equal(await timeout(events.wait(exited)), 0);\n+/468   assert.equal(sentinel.exitCode, null);\n+/469 }\n+/470 "
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "preimage": "cafad66ab0933e9840ea359cb4a5af76e9aa233f",
+      "postimage": "21b080fd65679e903837e1cc5eabb8a451d7d55b",
+      "added": 75,
+      "deleted": 5,
+      "hunks": [
+        " 1/1 #define WIN32_LEAN_AND_MEAN\n+/2 #define _WIN32_WINNT 0x0A00\n 2/3 #include <windows.h>\n 3/4 #include <cstdint>",
+        " 22/23   CloseHandle(process.hThread); return process;\n 23/24 }\n+/25 static bool applicationBreakpoint(DWORD code) {\n+/26   bool delivered=false;\n+/27   __try { RaiseException(code,0,0,nullptr); }\n+/28   __except(GetExceptionCode()==code?EXCEPTION_EXECUTE_HANDLER:EXCEPTION_CONTINUE_SEARCH) {\n+/29     delivered=true;\n+/30   }\n+/31   return delivered;\n+/32 }\n+/33 static std::wstring wow64Command() {\n+/34   wchar_t path[MAX_PATH]{};\n+/35   const auto length=GetSystemWow64Directory2W(path,MAX_PATH,IMAGE_FILE_MACHINE_I386);\n+/36   if(!length||length>=MAX_PATH) return {};\n+/37   return std::wstring(path)+L\"\\\\cmd.exe\";\n+/38 }\n+/39 static bool wow64Startup() {\n+/40   const auto module=GetModuleHandleW(L\"Kernel32.dll\");\n+/41   if(!module) return false;\n+/42   const auto machine=reinterpret_cast<BOOL (WINAPI*)(HANDLE,USHORT*,USHORT*)>(\n+/43     GetProcAddress(module,\"IsWow64Process2\"));\n+/44   const auto executable=wow64Command();\n+/45   if(!machine||executable.empty()) return false;\n+/46   // This finite Windows component is explicitly verified as x86 on both hosts.\n+/47   // Its ordinary loader must survive the real native + WOW64 startup events.\n+/48   const auto process=child(executable,L\"/d /c exit 0\");\n+/49   USHORT architecture=IMAGE_FILE_MACHINE_UNKNOWN;\n+/50   DWORD code=MAXDWORD;\n+/51   const bool passed=machine(process.hProcess,&architecture,nullptr)&&\n+/52     architecture==IMAGE_FILE_MACHINE_I386&&\n+/53     WaitForSingleObject(process.hProcess,5000)==WAIT_OBJECT_0&&\n+/54     GetExitCodeProcess(process.hProcess,&code)&&code==0;\n+/55   if(!CloseHandle(process.hProcess)||!passed) return false;\n+/56   // The next original-root scenario consumes this exact verified path in the\n+/57   // same controller-created cwd. CREATE_NEW refuses stale or repeated publication.\n+/58   HANDLE file=CreateFileW(L\"TEST-wow64-command.utf16\",GENERIC_WRITE,0,nullptr,CREATE_NEW,\n+/59     FILE_ATTRIBUTE_NORMAL,nullptr);\n+/60   if(file==INVALID_HANDLE_VALUE) return false;\n+/61   const auto length=static_cast<DWORD>(executable.size()*sizeof(wchar_t));\n+/62   DWORD count=0;\n+/63   const bool written=WriteFile(file,executable.data(),length,&count,nullptr)&&count==length;\n+/64   const bool closed=CloseHandle(file)!=FALSE;\n+/65   return written&&closed;\n+/66 }\n 24/67 int wmain(int argc,wchar_t** argv) {\n 25/68   if(argc<2) return 22;",
+        " 35/78     if(mode!=L\"tree\"&&mode!=L\"branch\"&&mode!=L\"leaf\"&&mode!=L\"sentinel\"&&mode!=L\"wait-gated\"&&mode!=L\"query-wait-gated\") return 52;\n 36/79   }\n+/80   if(mode==L\"tree\"||mode==L\"root-first\"||mode==L\"root-first-gated\"||mode==L\"service-pair\"||mode==L\"service-first\"||mode==L\"service-race\"||mode==L\"race-child\"||mode==L\"flood\"||mode==L\"breakaway\"||mode==L\"stdio\"||mode==L\"selection\") {\n-37/   if(mode==L\"tree\"||mode==L\"root-first\"||mode==L\"root-first-gated\"||mode==L\"service-pair\"||mode==L\"service-first\"||mode==L\"flood\"||mode==L\"breakaway\"||mode==L\"stdio\"||mode==L\"selection\") {\n 38/81     // The target-only first observable effect precedes child creation/output/scenario work.\n 39/82     if((mode==L\"selection\"?argc!=7:argc!=4)||wcslen(argv[3])!=36) return 31;",
+        " 45/88     CloseHandle(marker); if(!written||count!=sizeof(nonce)) return 34;\n 46/89   }\n+/90   if(mode==L\"race-child\") return 0;\n 47/91   if(mode==L\"wait\"||mode==L\"wait-gated\"||mode==L\"query-wait-gated\") {\n 48/92     if(mode==L\"query-wait-gated\"&&!vendorHeld) {",
+        " 80/124   }\n 81/125   if(mode==L\"exit-fast\") return 0;\n+/126   if(mode==L\"application-breakpoints\")\n+/127     return applicationBreakpoint(EXCEPTION_BREAKPOINT)&&applicationBreakpoint(0x4000001f)?0:61;\n 82/128   if(mode==L\"source-sentinel\") {\n 83/129     // Only the source gate holds this original pipe inside its existing 120s outer Job.",
+        " 155/201     CloseHandle(process.hProcess); CloseHandle(process.hThread); return 27;\n 156/202   }\n+/203   if(mode!=L\"tree\"&&mode!=L\"root-first\"&&mode!=L\"root-first-gated\"&&mode!=L\"branch\"&&mode!=L\"branch-first\"&&mode!=L\"branch-race\"&&mode!=L\"service-pair\"&&mode!=L\"service-first\"&&mode!=L\"service-race\") return 28;\n-157/   if(mode!=L\"tree\"&&mode!=L\"root-first\"&&mode!=L\"root-first-gated\"&&mode!=L\"branch\"&&mode!=L\"branch-first\"&&mode!=L\"service-pair\"&&mode!=L\"service-first\") return 28;\n 158/204   BOOL inJob=FALSE;\n 159/205   if(!IsProcessInJob(GetCurrentProcess(),nullptr,&inJob)||!inJob) return 29;\n+/206   const bool branch=mode==L\"branch\"||mode==L\"branch-first\"||mode==L\"branch-race\";\n-160/   const bool branch=mode==L\"branch\"||mode==L\"branch-first\";\n 161/207   if(!branch) std::printf(\"{\\\"root\\\":{\\\"pid\\\":%lu,\\\"birth\\\":\\\"%016llx\\\"}}\\n\",\n 162/208     GetCurrentProcessId(),static_cast<unsigned long long>(birth(GetCurrentProcess())));\n+/209   if(mode==L\"service-race\") {\n+/210     if(!applicationBreakpoint(EXCEPTION_BREAKPOINT)||!applicationBreakpoint(0x4000001f)||\n+/211       !wow64Startup()) return 62;\n+/212     const auto application=child(executable,L\"application-breakpoints\");\n+/213     DWORD applicationCode=MAXDWORD;\n+/214     const bool applicationPassed=WaitForSingleObject(application.hProcess,5000)==WAIT_OBJECT_0&&\n+/215       GetExitCodeProcess(application.hProcess,&applicationCode)&&applicationCode==0;\n+/216     if(!CloseHandle(application.hProcess)||!applicationPassed) return 63;\n+/217     std::puts(\"{\\\"wow64StartupAndApplicationBreakpoints\\\":true}\"); std::fflush(stdout);\n+/218   }\n 163/219   if(mode==L\"service-pair\") {\n 164/220     // Sequential original HANDLE exits exceed the debug registry's64 live cap.",
+        " 174/230   }\n 175/231   const std::wstring branchMode=mode==L\"service-first\"\n+/232     ? L\"branch-first \\\"\"+std::wstring(argv[2])+L\".branch-release\\\"\"\n+/233     : mode==L\"service-race\"?L\"branch-race \\\"\"+std::wstring(argv[2])+L\"\\\" \"+argv[3]\n+/234       : (vendorHeld?L\"vendor-branch\":L\"branch\");\n-176/     ? L\"branch-first \\\"\"+std::wstring(argv[2])+L\".branch-release\\\"\" : (vendorHeld?L\"vendor-branch\":L\"branch\");\n 177/235   const std::wstring leafMode=vendorHeld?L\"vendor-leaf\":L\"leaf\";\n 178/236   auto a=child(executable,branch?leafMode:branchMode), b=child(executable,leafMode);",
+        " 196/254     return 0;\n 197/255   }\n+/256   if(mode==L\"branch-race\") {\n+/257     if(argc!=4||wcslen(argv[3])!=36) return 64;\n+/258     const auto release=std::wstring(argv[2])+L\".race-release\";\n+/259     const auto deadline=GetTickCount64()+10000;\n+/260     while(GetFileAttributesW(release.c_str())==INVALID_FILE_ATTRIBUTES) {\n+/261       if(GetLastError()!=ERROR_FILE_NOT_FOUND||GetTickCount64()>=deadline) return 65;\n+/262       Sleep(5);\n+/263     }\n+/264     // The TEST debugger parks this CREATE before it admits the child's own Job.\n+/265     const auto pending=child(executable,L\"race-child \\\"\"+std::wstring(argv[2])+L\".race-effect\\\" \"+argv[3]);\n+/266     CloseHandle(pending.hProcess);\n+/267   }\n 198/268   if(mode==L\"root-first\") return 0;\n+/269   if(mode==L\"service-pair\"||mode==L\"service-first\"||mode==L\"service-race\") {\n-199/   if(mode==L\"service-pair\"||mode==L\"service-first\") {\n 200/270     char input[64]; DWORD count=0;\n 201/271     while(ReadFile(GetStdHandle(STD_INPUT_HANDLE),input,sizeof(input),&count,nullptr)&&count) {"
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "preimage": "7172f9d90a97d1db8ebea150def22e1bf3ffb251",
+      "postimage": "0640b35744192a0dbe1b6755a069fb544d2cf347",
+      "added": 5,
+      "deleted": 1,
+      "hunks": [
+        " 33/33 import { nativeFacadeScenario } from './nativeFacadeScenario';\n 34/34 import { nativeCapturedScenario } from './nativeCapturedScenario';\n+/35 import { nativeAdditionalDebugServiceScenario, nativeDebugServiceScenario } from './nativeDebugServiceScenario';\n-35/ import { nativeDebugServiceScenario } from './nativeDebugServiceScenario';\n 36/36 \n 37/37 async function preResumeCancellation(context: GateContext): Promise<void> {",
+        " 466/466     await runScenario('debug-service', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-pair', sentinel));\n 467/467     await runScenario('debug-service-root-first', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-first', sentinel));\n+/468     await runScenario('debug-service-admission-race', () => nativeAdditionalDebugServiceScenario(context, debugServiceBroker, 'service-race', sentinel));\n+/469     await runScenario('debug-service-wow64-root', () => nativeAdditionalDebugServiceScenario(context, debugServiceBroker, 'wow64-root', sentinel));\n 468/470     for (const mode of ['tree', 'root-first'] as const)\n 469/471       await runScenario(mode, () => treeScenario(context, mode, sentinel));",
+        " 514/516           'captured-root-first-original-descendants-and-neighbor',\n 515/517           'TEST-only-debug-service-prebirth-nested-job-feasibility',\n+/518           'TEST-only-scoped-stop-pending-create-isolation',\n+/519           'TEST-only-wow64-root-child-startup-and-application-exceptions',\n 516/520           'birth-failure-unknown-first-nonce',\n 517/521           'owner-eof',"
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.test.ts",
+      "preimage": "a70f955276982ef6f13e1c6f41e3be8f6eccc122",
+      "postimage": "48d1c9752dddb3e5fa91c6c564912b0474312168",
+      "added": 5,
+      "deleted": 1,
+      "hunks": [
+        " 67/67     assert.equal(vi.mocked(spawn).mock.calls[0]?.[2]?.env, undefined);\n 68/68     assert.deepEqual(tracked, [witness.process]);\n+/69     for (const state of ['alive', 'absent', 'alive', 'absent']) {\n+/70       assert.equal(await witness.observe(), state);\n+/71       if (state === 'absent') assert.equal(witness.process.exitCode, null,\n+/72         'The gated witness staying alive is not evidence that its original target survived');\n+/73     }\n-69/     for (const state of ['alive', 'absent', 'alive', 'absent']) assert.equal(await witness.observe(), state);\n 70/74     await assert.rejects(witness.observe(), /Finite sequential original HANDLE observations/);\n 71/75     const stopped = witness.wait();"
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "preimage": "1717e066d2c2fe7e608ee22f308aa884556afa00",
+      "postimage": "22cf67a484f0a2a5a2b89639e38515cc0242a21a",
+      "added": 2,
+      "deleted": 0,
+      "hunks": [
+        " 19/19   | 'debug-service'\n 20/20   | 'debug-service-root-first'\n+/21   | 'debug-service-admission-race'\n+/22   | 'debug-service-wow64-root'\n 21/23   | 'tree'\n 22/24   | 'root-first'"
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/serviceDebugLoop.h",
+      "preimage": "40256b58a3ec8f7cff78c5c2e73cc68a82c6b0a4",
+      "postimage": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+      "added": 10,
+      "deleted": 6,
+      "hunks": [
+        " 13/13   };\n 14/14   HANDLE observedRoot=nullptr,observedOuter=nullptr;\n+/15   StartupBreakpoints rootStartup;\n 15/16   Stage stage=Stage::RetainRoot;\n 16/17   // The ordinary watcher closes its root handle on exit. Retain both originals\n 17/18   // while the existing admission lock still prevents observer/release races.\n+/19   try {\n+/20     observedRoot=duplicate(root); rootStartup.capture(observedRoot);\n+/21     stage=Stage::RetainJob; observedOuter=duplicate(outer);\n+/22   }\n-18/   try { observedRoot=duplicate(root); stage=Stage::RetainJob; observedOuter=duplicate(outer); }\n 19/23   catch(DWORD error) { failure(stage,error); if(observedRoot) CloseHandle(observedRoot); return false; }\n 20/24   catch(...) { failure(stage,ERROR_INVALID_DATA); if(observedRoot) CloseHandle(observedRoot); return false; }\n 21/25   stateLock.unlock();\n 22/26   bool ok=true;\n-23/   bool rootInitialBreakpoint=false;\n 24/27   for(;;) {\n 25/28     DEBUG_EVENT event{};",
+        " 53/56         if(event.u.LoadDll.hFile&&!CloseHandle(event.u.LoadDll.hFile)) throw GetLastError();\n 54/57       } else if(event.dwDebugEventCode==EXCEPTION_DEBUG_EVENT) {\n+/58         // Only the original native/WOW64 loader startup sequence is handled here;\n-55/         // Only the ordinary initial loader breakpoint is handled here;\n 56/59         // every other exception remains the native application's exception.\n 57/60         bool initial=false;\n+/61         if(event.u.Exception.ExceptionRecord.ExceptionCode==EXCEPTION_BREAKPOINT||\n+/62           event.u.Exception.ExceptionRecord.ExceptionCode==0x4000001f) {\n-58/         if(event.u.Exception.ExceptionRecord.ExceptionCode==EXCEPTION_BREAKPOINT) {\n 59/63           const DWORD rootState=WaitForSingleObject(observedRoot,0);\n 60/64           if(rootState==WAIT_FAILED) throw GetLastError();\n 61/65           if(event.dwProcessId==rootPid&&rootState==WAIT_TIMEOUT) {\n+/66             initial=rootStartup.accept(event.u.Exception);\n+/67           } else initial=scopes.firstBreakpoint(event.dwProcessId,event.u.Exception);\n-62/             initial=!rootInitialBreakpoint; rootInitialBreakpoint=true;\n-63/           } else initial=scopes.firstBreakpoint(event.dwProcessId);\n 64/68         }\n 65/69         if(!initial) continuation=DBG_EXCEPTION_NOT_HANDLED;"
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "preimage": "7a7fd19445532317d54b24870d598eede0b0024a",
+      "postimage": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+      "added": 120,
+      "deleted": 12,
+      "hunks": [
+        " 46/46 }\n 47/47 \n+/48 struct StartupBreakpoints {\n+/49   bool wow64=false, nativeSeen=false, wow64Seen=false;\n+/50   void capture(HANDLE original) {\n+/51     static const auto query=[] {\n+/52       const auto module=GetModuleHandleW(L\"Kernel32.dll\");\n+/53       if(!module) throw GetLastError();\n+/54       const auto address=GetProcAddress(module,\"IsWow64Process2\");\n+/55       if(!address&&GetLastError()!=ERROR_PROC_NOT_FOUND) throw GetLastError();\n+/56       return reinterpret_cast<decltype(&IsWow64Process2)>(address);\n+/57     }();\n+/58     // Older native64 Windows keeps its original startup handling. An unavailable\n+/59     // architecture query never authorizes the additional x86-only exception.\n+/60     if(!query) return;\n+/61     USHORT processMachine=IMAGE_FILE_MACHINE_UNKNOWN;\n+/62     if(!query(original,&processMachine,nullptr)) throw GetLastError();\n+/63     wow64=processMachine==IMAGE_FILE_MACHINE_I386;\n+/64   }\n+/65   bool accept(const EXCEPTION_DEBUG_INFO& event) noexcept {\n+/66     if(!event.dwFirstChance) return false;\n+/67     const DWORD code=event.ExceptionRecord.ExceptionCode;\n+/68     if(code==EXCEPTION_BREAKPOINT&&!nativeSeen) { nativeSeen=true; return true; }\n+/69     // A native debugger sees the x86 loader breakpoint after the native one.\n+/70     // The two startup events never authorize later application breakpoints.\n+/71     if(code==0x4000001f&&wow64&&nativeSeen&&!wow64Seen) { wow64Seen=true; return true; }\n+/72     return false;\n+/73   }\n+/74 };\n+/75 \n 48/76 struct Scope {\n 49/77   HANDLE process=nullptr, job=nullptr;",
+        " 51/79   uint64_t birth=0;\n 52/80   Key key=0;\n+/81   StartupBreakpoints startup;\n+/82   bool registered=false, stopping=false, terminationDispatched=false, inheritedTermination=false;\n-53/   bool initialBreakpoint=false, registered=false, stopping=false;\n 54/83   Scope()=default;\n 55/84   Scope(const Scope&)=delete;",
+        " 93/122   Key next=1;\n 94/123   const size_t limit;\n+/124 #if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE)\n+/125   void (*testAdmissionBarrier)(HANDLE)=nullptr;\n+/126   void (*testAdmittedBarrier)(const Scope&)=nullptr;\n+/127 #endif\n 95/128 \n 96/129   std::shared_ptr<Scope> find(Key key) {",
+        " 99/132     return found->second;\n 100/133   }\n+/134   std::shared_ptr<Scope> findService(Key key) {\n+/135     const auto selected=find(key);\n+/136     if(selected->inheritedTermination) throw DWORD{ERROR_NOT_FOUND};\n+/137     return selected;\n+/138   }\n+/139   /** Any one proven original terminating Job suffices, including nested/duplicate\n+/140    * witnesses: the inherited debug record grants no public service authority. */\n+/141   std::shared_ptr<Scope> terminatingOwner(HANDLE process) {\n+/142     for(const auto& item:records) {\n+/143       const auto& selected=item.second;\n+/144       if(!selected->terminationDispatched) continue;\n+/145       BOOL member=FALSE;\n+/146       if(!IsProcessInJob(process,selected->job,&member)) throw GetLastError();\n+/147       if(member) return selected; // Includes debug-only duplicates of this same original Job.\n+/148     }\n+/149     return {};\n+/150   }\n 101/151   void finishStop(const std::shared_ptr<Scope>& selected) noexcept {\n 102/152     std::lock_guard<std::mutex> lock(mutex);",
+        " 112/162     if(!limit||limit>4096) throw DWORD{ERROR_INVALID_PARAMETER};\n 113/163   }\n+/164 #if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE)\n+/165   void setTestAdmissionBarriers(void (*before)(HANDLE),void (*after)(const Scope&)) {\n+/166     testAdmissionBarrier=before; testAdmittedBarrier=after;\n+/167   }\n+/168   Key testRegisteredAncestor(HANDLE child) {\n+/169     std::lock_guard<std::mutex> lock(mutex);\n+/170     for(const auto& item:records) {\n+/171       if(!item.second->registered||item.second->inheritedTermination) continue;\n+/172       BOOL member=FALSE;\n+/173       if(!IsProcessInJob(child,item.second->job,&member)) throw GetLastError();\n+/174       if(member) return item.first;\n+/175     }\n+/176     return 0;\n+/177   }\n+/178   bool testOriginalDispatch(Key key,HANDLE child) {\n+/179     std::lock_guard<std::mutex> lock(mutex);\n+/180     const auto selected=findService(key);\n+/181     BOOL member=FALSE;\n+/182     if(!IsProcessInJob(child,selected->job,&member)) throw GetLastError();\n+/183     if(!member) throw DWORD{ERROR_INVALID_DATA};\n+/184     return selected->terminationDispatched;\n+/185   }\n+/186 #endif\n 114/187 \n 115/188   /** Only the creating debugger thread may admit this original prebirth event. */\n 116/189   void capture(const DEBUG_EVENT& event,HANDLE originalRoot,HANDLE outer,Stage& stage) {\n-117/     stage=Stage::Retire; retire();\n 118/190     const HANDLE original=event.u.CreateProcessInfo.hProcess;\n 119/191     if(!original) throw DWORD{ERROR_INVALID_HANDLE};",
+        " 126/198       sameObject(original,originalRoot)) throw DWORD{ERROR_INVALID_DATA};\n 127/199     selected->birth=birthOf(selected->process);\n+/200     selected->startup.capture(selected->process);\n 128/201     stage=Stage::OuterMembership; BOOL member=FALSE;\n 129/202     if(!IsProcessInJob(selected->process,outer,&member)) throw GetLastError();\n 130/203     if(!member) throw DWORD{ERROR_INVALID_DATA};\n+/204 #if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE)\n+/205     if(testAdmissionBarrier) testAdmissionBarrier(selected->process); // No registry/state lock is held.\n+/206 #endif\n 131/207 \n+/208     // Pin the original termination fact before this capture can retire an empty\n+/209     // public scope. The pin lasts only for this admission, never as history.\n+/210     std::shared_ptr<Scope> inherited;\n+/211     { std::lock_guard<std::mutex> lock(mutex); inherited=terminatingOwner(selected->process); }\n+/212     stage=Stage::Retire; retire();\n+/213     std::unique_lock<std::mutex> lock(mutex);\n-132/     std::lock_guard<std::mutex> lock(mutex);\n 133/214     stage=Stage::Registry;\n 134/215     if(records.size()>=limit||!next) throw DWORD{ERROR_TOO_MANY_OPEN_FILES};",
+        " 143/224     stage=Stage::CreateJob; selected->job=owned_job::create();\n 144/225     stage=Stage::AssignJob;\n+/226     if(!AssignProcessToJobObject(selected->job,selected->process)) {\n+/227       const DWORD assignmentError=GetLastError();\n+/228       try {\n+/229         if(!inherited) inherited=terminatingOwner(selected->process);\n+/230         member=FALSE;\n+/231         if(!inherited||!inherited->terminationDispatched||\n+/232           !IsProcessInJob(selected->process,inherited->job,&member)||!member) throw assignmentError;\n+/233         const HANDLE retained=duplicate(inherited->job);\n+/234         if(!CloseHandle(selected->job)) { CloseHandle(retained); throw assignmentError; }\n+/235         selected->job=retained;\n+/236         selected->inheritedTermination=true;\n+/237         selected->terminationDispatched=true;\n+/238       } catch(...) { throw assignmentError; } // Preserve the first native failure if proof is incomplete.\n+/239     }\n-145/     if(!AssignProcessToJobObject(selected->job,selected->process)) throw GetLastError();\n 146/240     stage=Stage::VerifyJob;\n 147/241     if(!IsProcessInJob(selected->process,selected->job,&member)) throw GetLastError();",
+        " 151/245     records.emplace(selected->key,selected);\n 152/246     currentPids[selected->pid]=selected->key;\n+/247 #if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE)\n+/248     lock.unlock();\n+/249     if(testAdmittedBarrier) testAdmittedBarrier(*selected); // Registration probes must acquire mutex.\n+/250 #endif\n 153/251   }\n 154/252 ",
+        " 160/258     const auto indexed=currentPids.find(pid);\n 161/259     if(indexed==currentPids.end()) throw DWORD{ERROR_NOT_FOUND};\n+/260     const auto selected=findService(indexed->second);\n-162/     const auto selected=find(indexed->second);\n 163/261     if(selected->pid!=pid||selected->key!=indexed->second)\n 164/262       throw DWORD{ERROR_INVALID_DATA};",
+        " 177/275     std::shared_ptr<Scope> selected;\n 178/276     for(const auto& item:records) {\n+/277       if(item.second->inheritedTermination) continue;\n 179/278       if(item.second->pid!=pid||item.second->birth!=birth) continue;\n 180/279       if(selected) throw DWORD{ERROR_INVALID_DATA};",
+        " 189/288   Facts query(Key key) {\n 190/289     std::shared_ptr<Scope> selected;\n+/290     { std::lock_guard<std::mutex> lock(mutex); selected=findService(key); }\n-191/     { std::lock_guard<std::mutex> lock(mutex); selected=find(key); }\n 192/291     return observe(*selected);\n 193/292   }\n 194/293 \n+/294   bool firstBreakpoint(DWORD pid,const EXCEPTION_DEBUG_INFO& event) {\n-195/   bool firstBreakpoint(DWORD pid) {\n 196/295     std::lock_guard<std::mutex> lock(mutex);\n 197/296     const auto found=currentPids.find(pid);\n 198/297     if(found==currentPids.end()) throw DWORD{ERROR_NOT_FOUND};\n 199/298     auto selected=find(found->second);\n+/299     return selected->startup.accept(event);\n-200/     if(selected->initialBreakpoint) return false;\n-201/     selected->initialBreakpoint=true; return true;\n 202/300   }\n 203/301 ",
+        " 210/308     {\n 211/309       std::lock_guard<std::mutex> lock(mutex);\n+/310       selected=findService(key);\n-212/       selected=find(key);\n 213/311       if(!selected->registered) throw DWORD{ERROR_INVALID_STATE};\n 214/312       if(selected->stopping) throw DWORD{ERROR_BUSY};",
+        " 221/319       facts.queryError=queryError?queryError:WAIT_TIMEOUT; return facts;\n 222/320     }\n+/321     {\n+/322       std::lock_guard<std::mutex> lock(mutex);\n+/323       // Admission may have held the registry lock: its delay consumes this same budget.\n+/324       if(GetTickCount64()>=deadline) {\n+/325         facts.queryError=queryError?queryError:WAIT_TIMEOUT; return facts;\n+/326       }\n+/327       if(!absent(facts)) {\n+/328         if(TerminateJobObject(selected->job,1)) selected->terminationDispatched=true;\n+/329         else dispatchError=GetLastError();\n+/330       }\n+/331     }\n-223/     if(!absent(facts)&&!TerminateJobObject(selected->job,1)) dispatchError=GetLastError();\n 224/332     for(;;) {\n 225/333       facts=observe(*selected);",
+        " 241/349     {\n 242/350       std::lock_guard<std::mutex> lock(mutex);\n+/351       const auto selected=findService(key);\n-243/       const auto selected=find(key);\n 244/352       if(!selected->registered||selected->stopping||!absent(observe(*selected)))\n 245/353         throw DWORD{ERROR_INVALID_STATE};"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "sourceHead": "9b29d595c0f7baf1e1c34da85c9c1b0543a19451",
+  "sourceTree": "f82f0b225b3b24f9d26bc1f7abb08f2e69bfdf15",
+  "statusBefore": "",
+  "sourceBlobs": {
+    "scripts/legacy-agent-host/desktop-backend-observations.test.ts": "b47e3a6e0227e2c3521a4e0124074ce6ec94bae8",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "3d22185325dc1f0d9d25d4b64461e521e00b9388",
+    "packages/legacy-agent-host/src/index.ts": "755158699496506a62132c540f19b225c5a6222d",
+    "tools/owned-process-broker/nativeEmulatedSourceProfile.ts": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts": "60548e4b0477924fd2c068283b9372f21946b198",
+    ".github/workflows/host-process-acceptance.yml": "70202d22a5840401a00025cd60b797c514f3e455",
+    ".github/workflows/host-emulated-acceptance.yml": "c956c196e4208c11b421b1eb5b68d4850ac50d43"
+  },
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "AGENT_BACKEND_TEST_NODE": null,
+  "steps": [
+    {
+      "name": "desktop-observer-new-host-build.log",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@agent-teams/legacy-agent-host",
+        "build"
+      ],
+      "startedAt": "2026-11-15T22:20:43.496022+00:00",
+      "completedAt": "2026-11-15T22:20:46.185956+00:00",
+      "exitCode": 0,
+      "bytes": 182,
+      "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789"
+    },
+    {
+      "name": "desktop-observer-green.log",
+      "argv": [
+        "node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts"
+      ],
+      "startedAt": "2026-11-15T22:20:46.186763+00:00",
+      "completedAt": "2026-11-15T22:20:47.158877+00:00",
+      "exitCode": 0,
+      "bytes": 4346,
+      "sha256": "0d5e6003a2e7765a69765599e856740f1fd23ff132b7f275214fe9a95e8eac9a"
+    },
+    {
+      "name": "desktop-observer-scoped-lint.log",
+      "argv": [
+        "pnpm",
+        "lint:fast:files",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts"
+      ],
+      "startedAt": "2026-11-15T22:20:47.159497+00:00",
+      "completedAt": "2026-11-15T22:20:50.007585+00:00",
+      "exitCode": 0,
+      "bytes": 233,
+      "sha256": "bd3dade139646dc77d97fb290fbfc33e29701eef6ab9aa61a3039a2e3dac6ec6"
+    },
+    {
+      "name": "desktop-observer-source-size.log",
+      "argv": [
+        "pnpm",
+        "guard:source-file-size"
+      ],
+      "startedAt": "2026-11-15T22:20:50.008172+00:00",
+      "completedAt": "2026-11-15T22:20:50.898955+00:00",
+      "exitCode": 0,
+      "bytes": 249,
+      "sha256": "961492c3971768c144057514917b4179f695089b172a31e2d3d3d62b9efdc8f3"
+    },
+    {
+      "name": "desktop-observer-provisioning.log",
+      "argv": [
+        "pnpm",
+        "guard:team-provisioning-architecture"
+      ],
+      "startedAt": "2026-11-15T22:20:50.899403+00:00",
+      "completedAt": "2026-11-15T22:20:51.303962+00:00",
+      "exitCode": 0,
+      "bytes": 245,
+      "sha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c"
+    },
+    {
+      "name": "desktop-observer-source-diff.log",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "4d195e94cb1583ed27f512368b90c3c18a8565a1",
+        "9b29d595c0f7baf1e1c34da85c9c1b0543a19451",
+        "--",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts"
+      ],
+      "startedAt": "2026-11-15T22:20:51.304404+00:00",
+      "completedAt": "2026-11-15T22:20:51.309060+00:00",
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "qualification": "Original complete Desktop observation file on reviewed3d221 producer after actual old-source RED acceptance. Fresh original Host build plus scoped lint/source-size/provisioning/source diff. No additional scripts or other compiler attempt and no UI/native CI claim.",
+  "builtHostCli": {
+    "path": "packages/legacy-agent-host/dist/cli.js",
+    "bytes": 2198,
+    "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add"
+  },
+  "statusAfter": ""
+}
