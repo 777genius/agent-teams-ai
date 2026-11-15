@@ -426,7 +426,7 @@ export async function runDesktopOwnerRoutingContinuation(
           const selection = hostTeamSelectionKey(String(handle.handleId));
           await ui.click('button[aria-label="More actions"]', 'open original application menu');
           await ui.click('button', 'open original Teams list', 'Teams');
-          const selector = '[data-team-name=' + JSON.stringify(selection) + ']';
+          const selector = '[role="button"][data-team-name=' + JSON.stringify(selection) + ']';
           await ui.scrollTo(selector, 'original owner-qualified Team card');
           await ui.click(selector, 'open exact original Team card');
           await ui.waitRead(

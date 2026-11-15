@@ -263,7 +263,10 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
   await openTeam(b); proof.bStop = await stop(liveB);
   const afterBStop = await assertSameLive(liveA, 'after-b-stop-during-a-input', false);
   assert.deepEqual(array(afterBStop.inputs).find(row => record(row.intent).inputId === inputId), pending);
-  await openTeam(a); await openChat(liveA); await visible('TEST stream partial');
+  await openTeam(a);
+  await ui.scrollTo('button[aria-label="Back to chats"]', 'original A conversation list after B Stop');
+  await ui.click('button[aria-label="Back to chats"]', 'return to original A chats after B Stop');
+  await openChat(liveA); await visible('TEST stream partial');
   assert.equal(await cdp.evaluate(`document.body.innerText.includes('TEST stream partial complete')`), false);
   proof.aSurvivedScreenshot = await screenshot('a-survived');
   await writeFile(join(fixture.emulatedRuntime.peers[0]!.root, 'release-stream'), 'TEST release once\n', { mode: 0o600, flag: 'wx' });
