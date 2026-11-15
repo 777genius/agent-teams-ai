@@ -8,6 +8,7 @@ import { waitForNativeProcessServices } from './desktop-native-process-model.ts'
 import { prepareControlledProcessFixture } from './desktop-controlled-process-fixture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { desktopProcessOwnerExpression, readDesktopProcessData } from './desktop-native-process-ui.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 
 const selection = 'TEST-owner', id = 'TEST-process';
 const original = { id, processRef: 'TEST-original-ref', observation: 'same-live', canTerminate: true };
@@ -252,4 +253,219 @@ test('Windows outage membership requires both original process owners in one ren
   assert.deepEqual(expired.counts(), { waits: 0, reads: 0, checks: 0, remainingReads: 1 });
   const evaluation = new Error('TEST original renderer evaluation failed');
   await assert.rejects(observe([evaluation]).run(), error => error === evaluation);
+});
+
+
+test('Windows Retry retains same-evaluation operands without changing the original wait', async () => {
+  const source = await readFile(new URL('../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8');
+  const start = '  proof.successorHost = { identity: hostB, writer: successorWriter };\n';
+  const end = '  await originalBinding();';
+  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+  const from = source.indexOf(start) + start.length, to = source.indexOf(end, from);
+  assert(to > from);
+  const execute = Function('ui', 'proof', 'surface', 'remaining', 'desktopJsLiteral', 'assertHostBirths',
+    '"use strict"; return (async () => {' + source.slice(from, to) + '\n})();');
+  const surface = '[data-testid="host-backend-recovery"]';
+  const label = 'original refreshed Team after positive product recovery';
+  const button = (text: string, disabled: boolean | Error = false, busy: unknown = 'false') => {
+    const calls = { text: 0, disabled: 0, busy: 0 };
+    return { calls, node: {
+      get textContent() { calls.text++; return text; },
+      get disabled() { calls.disabled++; if (disabled instanceof Error) throw disabled; return disabled; },
+      getAttribute(name: string) {
+        assert.equal(name, 'aria-busy'); calls.busy++;
+        if (busy instanceof Error) throw busy;
+        return busy;
+      },
+    } };
+  };
+  const frame = (buttons: ReturnType<typeof button>[], present = true, alert = false) => {
+    const calls = { surface: 0, buttons: 0, alert: 0 };
+    const root = {
+      querySelectorAll(selector: string) {
+        assert.equal(selector, 'button'); calls.buttons++; return buttons.map(value => value.node);
+      },
+      querySelector(selector: string) {
+        assert.equal(selector, '[role="alert"]'); calls.alert++; return alert ? {} : null;
+      },
+    };
+    return { calls, document: { querySelector(selector: string) {
+      assert.equal(selector, surface); calls.surface++; return present ? root : null;
+    } } };
+  };
+  const observe = (frames: (ReturnType<typeof frame> | Error)[], options: {
+    proof?: Record<string, unknown>; guardError?: Error; remainingError?: Error; budget?: number;
+  } = {}) => {
+    const proof: Record<string, unknown> = options.proof ?? {};
+    const counts = { waits: 0, reads: 0, guards: 0, remaining: 0, births: 0, sends: 0, steps: 0 };
+    let capturedReady: ((value: unknown) => boolean) | undefined;
+    const controls = createDesktopUiControls({
+      async evaluate(expression: string): Promise<unknown> {
+        const current = frames[counts.reads++]; assert(current);
+        if (current instanceof Error) throw current;
+        return Function('document', 'return ' + expression)(current.document);
+      },
+      async send() { counts.sends++; throw new Error('TEST no input is authorized by this observation'); },
+    }, {
+      assertOwnedRenderer() { counts.guards++; if (options.guardError) throw options.guardError; },
+      step() { counts.steps++; },
+    });
+    const ui = { waitRead(expression: string, actualLabel: string, budget: number,
+      isReady?: (value: unknown) => boolean) {
+      counts.waits++; assert.equal(actualLabel, label); assert.equal(budget, options.budget ?? 2000);
+      capturedReady = isReady;
+      return controls.waitRead(expression, actualLabel, budget, isReady);
+    } };
+    return { proof, counts, ready: () => capturedReady,
+      done: Promise.resolve<unknown>(execute(ui, proof, surface, () => {
+        counts.remaining++; if (options.remainingError) throw options.remainingError;
+        return options.budget ?? 2000;
+      }, desktopJsLiteral, () => { counts.births++; })),
+    };
+  };
+  const ready = { surfacePresent: true, refresh: 'enabled', firstRefreshBusy: false,
+    retryPresent: false, alertPresent: false, ready: true };
+  const expected = (last: unknown, sampleCount = 1, sampleCountCapped = false) => ({
+    schemaVersion: 1, source: 'original-recovery-wait', atomicWithFailure: false,
+    sampleCount, sampleCountCapped, last,
+  });
+  const initial = button('Refresh'), initialFrame = frame([initial]);
+  const success = observe([initialFrame]);
+  await success.done;
+  assert.deepEqual(success.proof.retryUiObservation, expected(ready),
+    'the original successful evaluation must retain its closed recovery observation');
+  assert.deepEqual(success.counts, { waits: 1, reads: 1, guards: 1, remaining: 1, births: 1, sends: 0, steps: 0 });
+  assert.deepEqual(initial.calls, { text: 2, disabled: 1, busy: 1 });
+  assert.deepEqual(initialFrame.calls, { surface: 1, buttons: 1, alert: 1 });
+
+  const stop = new Error('TEST original finite evaluation stops after its retained false sample');
+  const falseFrames = [
+    { dom: frame([], false), facts: { ...ready, surfacePresent: false, refresh: 'not-observed',
+      firstRefreshBusy: null, retryPresent: null, alertPresent: null, ready: false } },
+    { dom: frame([button('TEST private unrelated content')]), facts: { ...ready, refresh: 'absent',
+      firstRefreshBusy: null, retryPresent: null, alertPresent: null, ready: false } },
+    { dom: frame([button('Refresh', true, 'true')]), facts: { ...ready, refresh: 'disabled',
+      firstRefreshBusy: true, retryPresent: null, alertPresent: null, ready: false } },
+    { dom: frame([button('Refresh'), button('Retry')]), facts: { ...ready,
+      retryPresent: true, alertPresent: null, ready: false } },
+    { dom: frame([button('Refresh')], true, true), facts: { ...ready, alertPresent: true, ready: false } },
+  ];
+  for (const { dom, facts } of falseFrames) {
+    const current = observe([dom, stop]);
+    await assert.rejects(current.done, error => error === stop);
+    assert.deepEqual(current.proof.retryUiObservation, expected(facts));
+    assert.equal(dom.calls.alert, facts.alertPresent === null ? 0 : 1);
+    assert.equal(current.counts.reads, 2); assert.equal(current.counts.guards, 2);
+    assert.equal(current.counts.sends + current.counts.steps, 0);
+    assert(!JSON.stringify(current.proof).includes('TEST private'));
+  }
+  const first = button('Refresh', true, 'true'), later = button('Refresh', false, 'false');
+  const duplicate = observe([frame([first, later])]); await duplicate.done;
+  assert.deepEqual(duplicate.proof.retryUiObservation, expected({ ...ready, firstRefreshBusy: true }));
+  assert.equal(first.calls.busy, 1); assert.equal(later.calls.busy, 0);
+  for (const busy of [null, 'TEST private unknown busy', new Error('TEST attribute observer failed')]) {
+    const current = observe([frame([button('Refresh', false, busy)])]); await current.done;
+    assert.deepEqual(current.proof.retryUiObservation, expected({ ...ready, firstRefreshBusy: null }));
+    assert(!JSON.stringify(current.proof).includes('TEST private'));
+  }
+  const transient = observe([new Error('Execution context was destroyed'), frame([button('Refresh')])]);
+  await transient.done; assert.deepEqual(transient.proof.retryUiObservation, expected(ready));
+  assert.equal(transient.counts.reads, 2); assert.equal(transient.counts.guards, 2);
+  const evaluation = new Error('TEST original disabled getter failed');
+  await assert.rejects(observe([frame([button('Refresh', evaluation)])]).done, error => error === evaluation);
+  for (const kind of ['guardError', 'remainingError'] as const) {
+    const refusal = new Error('TEST original ' + kind), current = observe([], { [kind]: refusal });
+    await assert.rejects(current.done, error => error === refusal);
+    assert.equal(current.counts.reads, 0); assert.equal(current.counts.sends + current.counts.steps, 0);
+  }
+  const expired = observe([], { budget: 0 });
+  await assert.rejects(expired.done, error => error instanceof Error &&
+    error.message === 'UI read timed out: ' + label + '; no mutation retry');
+  assert.equal(expired.counts.reads + expired.counts.guards, 0);
+  assert.deepEqual(expired.proof.retryUiObservation, expected(null, 0));
+  const unwritable = observe([frame([button('Refresh')])], { proof: Object.freeze({}) });
+  await unwritable.done; assert.equal(unwritable.counts.reads, 1);
+  const hostileProof = {};
+  Object.defineProperty(hostileProof, 'retryUiObservation', { set() { throw stop; } });
+  const observerFailure = observe([frame([button('Refresh')])], { proof: hostileProof });
+  await observerFailure.done; assert.equal(observerFailure.counts.reads, 1);
+  const accept = success.ready(); assert(accept);
+  let getterReads = 0;
+  const accessor = { ...ready };
+  Object.defineProperty(accessor, 'ready', { get() { getterReads++; return true; } });
+  const reflection = new Proxy({}, { getPrototypeOf() { throw stop; },
+    getOwnPropertyDescriptor() { throw stop; } });
+  for (const malformed of [undefined, null, true, [], {}, Object.create(ready), accessor, reflection,
+    { ...ready, refresh: 'TEST private invalid' }, { ...ready, ready: 'true' },
+    { ...ready, surfacePresent: false }]) assert.equal(accept(malformed), false);
+  assert.equal(getterReads, 0);
+  assert.deepEqual(success.proof.retryUiObservation, expected(ready));
+  for (let index = 0; index < 127; index++) assert.equal(accept(ready), true);
+  assert.deepEqual(success.proof.retryUiObservation, expected(ready, 128, false));
+  assert.equal(accept(ready), true);
+  assert.deepEqual(success.proof.retryUiObservation, expected(ready, 128, true));
+  const latestFalse = { ...ready, alertPresent: true, ready: false };
+  assert.equal(accept(latestFalse), false);
+  assert.deepEqual(success.proof.retryUiObservation, expected(latestFalse, 128, true));
+  assert(Buffer.byteLength(JSON.stringify(success.proof.retryUiObservation), 'utf8') <= 512);
+  assert.deepEqual(success.counts, { waits: 1, reads: 1, guards: 1, remaining: 1, births: 1, sends: 0, steps: 0 });
+});
+
+test('Windows primary failure is emitted once before cleanup without replacing the original error', async () => {
+  const source = await readFile(new URL('../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8');
+  const start = '} catch (error) {\n  primaryError = error;\n  proof.error = errorText(error);\n';
+  const end = '\n} finally {\n  if (app && !quitStarted) {';
+  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+  const from = source.indexOf(start) + '} catch (error) {\n'.length, to = source.indexOf(end, from);
+  assert(to > from);
+  const formatterStart = 'const errorText = ', formatterFrom = source.indexOf(formatterStart) + formatterStart.length;
+  assert.equal(source.split(formatterStart).length, 2);
+  const formatter = Function('return (' + source.slice(formatterFrom, source.indexOf(';\n', formatterFrom)) + ');')();
+  const execute = Function('error', 'proof', 'errorText', 'writeSync', 'Buffer', 'activePhase', 'finish',
+    '"use strict"; let primaryError; try {' + source.slice(from, to) + '\n} finally { finish(); } return primaryError;');
+  const phase = 'one-explicit-same-Main-Retry';
+  const exercise = (text: string, observation: unknown = null, failWrite = false) => {
+    let stackReads = 0, messageReads = 0, writes = 0, finished = 0;
+    const error = new Error('TEST original error');
+    Object.defineProperty(error, 'stack', { get() { stackReads++; return text; } });
+    Object.defineProperty(error, 'message', { get() { messageReads++; throw new Error('TEST unexpected message read'); } });
+    const proof: Record<string, unknown> = { retryUiObservation: observation };
+    const lines: string[] = [];
+    const result = execute(error, proof, formatter, (fd: number, line: string) => {
+      assert.equal(fd, 1); writes++; if (failWrite) throw new Error('TEST original stdout unavailable');
+      lines.push(line);
+    }, Buffer, phase, () => { finished++; });
+    assert.equal(result, error); assert.equal(proof.error, text.slice(0, 4000));
+    assert.equal(stackReads, 1); assert.equal(messageReads, 0); assert.equal(finished, 1);
+    return { proof, lines, writes };
+  };
+  const original = exercise('TEST original primary failure');
+  assert.equal(original.writes, 1, 'the original primary catch must emit its retained failure before cleanup');
+  assert.equal(original.lines.length, 1);
+  assert.deepEqual(JSON.parse(original.lines[0]!), { kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE',
+    phase, error: 'TEST original primary failure', errorTruncated: false, retryUiObservation: null });
+  assert(original.lines[0]!.endsWith('\n'));
+  const observation = { schemaVersion: 1, source: 'original-recovery-wait', atomicWithFailure: false,
+    sampleCount: 1, sampleCountCapped: false, last: { surfacePresent: true, refresh: 'disabled',
+      firstRefreshBusy: true, retryPresent: null, alertPresent: null, ready: false } };
+  const long = '\u{1f642}'.repeat(1600), retained = exercise(long, observation);
+  const decoded = JSON.parse(retained.lines[0]!);
+  assert.equal(decoded.error, long.slice(0, 1024)); assert.equal(decoded.errorTruncated, true);
+  assert.deepEqual(decoded.retryUiObservation, observation);
+  assert.equal(retained.proof.error, long); assert(Buffer.byteLength(retained.lines[0]!, 'utf8') <= 8192);
+  const boundary = exercise('x'.repeat(1024));
+  assert.equal(JSON.parse(boundary.lines[0]!).errorTruncated, false);
+  const overflow = exercise('TEST original', { unexpected: 'x'.repeat(9000) });
+  assert.equal(overflow.writes, 1);
+  assert.equal(overflow.lines[0], '{"kind":"TEST_WINDOWS_PACKAGED_UI_FAILURE","reason":"projection-limit"}\n');
+  const unwritable = exercise('TEST original', null, true);
+  assert.equal(unwritable.writes, 1); assert.deepEqual(unwritable.lines, []);
+  const projectionFailure = exercise('TEST original', { toJSON() { throw new Error('TEST projection failed'); } });
+  assert.equal(projectionFailure.writes, 0);
+  const formatterFailure = new Error('TEST original formatter failed'), error = new Error('TEST original');
+  Object.defineProperty(error, 'stack', { get() { throw formatterFailure; } });
+  let writes = 0, finished = 0;
+  assert.throws(() => execute(error, {}, formatter, () => { writes++; }, Buffer, phase,
+    () => { finished++; }), value => value === formatterFailure);
+  assert.equal(writes, 0); assert.equal(finished, 1);
 });
