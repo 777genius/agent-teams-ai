@@ -167,7 +167,7 @@ test('captured no-provider Processes fixture rejects mixed inputs before allocat
 });
 
 test('Windows outage membership requires both original process owners in one renderer sample', async () => {
-  const source = await readFile(new URL('../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8');
+  const source = (await readFile(new URL('../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
   const start = "  'genuine closed Host read marker with separate controls', remaining());\n";
   const end = "\n\n  assertHostBirths();\n  begin('one-explicit-same-Main-Retry', 10000);";
   assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
@@ -257,86 +257,137 @@ test('Windows outage membership requires both original process owners in one ren
 
 
 test('Windows Retry retains same-evaluation operands without changing the original wait', async () => {
-  const source = await readFile(new URL('../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8');
-  const start = '  proof.successorHost = { identity: hostB, writer: successorWriter };\n';
-  const end = '  await originalBinding();';
+  const source = (await readFile(new URL('../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const start = "  begin('one-explicit-same-Main-Retry', 10000);";
+  const end = '  await originalBinding();\n  await within(() => fixture.afterRetry(activeDeadline));';
   assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
-  const from = source.indexOf(start) + start.length, to = source.indexOf(end, from);
+  const from = source.indexOf(start), to = source.indexOf(end, from);
   assert(to > from);
-  const execute = Function('ui', 'proof', 'surface', 'remaining', 'desktopJsLiteral', 'assertHostBirths',
-    '"use strict"; return (async () => {' + source.slice(from, to) + '\n})();');
+  const execute = Function('environment', '"use strict"; const {assert,begin,proof,ui,surface,poll,readWriter,writerA,' +
+    'assertHost,captureCensus,hostA,assertHostBirths,desktopJsLiteral,remaining,performance,startedAt}=environment;' +
+    'let hostB; return (async () => {' + source.slice(from, to) + '\n})();') as
+    (environment: Record<string, unknown>) => Promise<void>;
   const surface = '[data-testid="host-backend-recovery"]';
   const label = 'original refreshed Team after positive product recovery';
-  const button = (text: string, disabled: boolean | Error = false, busy: unknown = 'false') => {
-    const calls = { text: 0, disabled: 0, busy: 0 };
+  const button = (text: string, disabled: boolean | Error = false, busy: unknown = 'false', trace?: string[]) => {
+    const calls = { text: 0, disabled: 0, busy: 0 }, kind = text === 'Retry' ? 'retry' : 'refresh';
     return { calls, node: {
-      get textContent() { calls.text++; return text; },
-      get disabled() { calls.disabled++; if (disabled instanceof Error) throw disabled; return disabled; },
+      get textContent() { calls.text++; trace?.push(kind + ':text'); return text; },
+      get disabled() {
+        calls.disabled++; trace?.push(kind + ':disabled');
+        if (text === 'Retry') return assert.fail('Retry disabled is not read by the original predicate');
+        if (disabled instanceof Error) throw disabled; return disabled;
+      },
       getAttribute(name: string) {
-        assert.equal(name, 'aria-busy'); calls.busy++;
+        assert.equal(name, 'aria-busy'); calls.busy++; trace?.push(kind + ':busy');
         if (busy instanceof Error) throw busy;
         return busy;
       },
     } };
   };
-  const frame = (buttons: ReturnType<typeof button>[], present = true, alert = false) => {
+  const frame = (buttons: ReturnType<typeof button>[], present = true, alert = false, trace?: string[]) => {
     const calls = { surface: 0, buttons: 0, alert: 0 };
     const root = {
       querySelectorAll(selector: string) {
-        assert.equal(selector, 'button'); calls.buttons++; return buttons.map(value => value.node);
+        assert.equal(selector, 'button'); calls.buttons++; trace?.push('buttons'); return buttons.map(value => value.node);
       },
       querySelector(selector: string) {
-        assert.equal(selector, '[role="alert"]'); calls.alert++; return alert ? {} : null;
+        assert.equal(selector, '[role="alert"]'); calls.alert++; trace?.push('alert'); return alert ? {} : null;
       },
     };
     return { calls, document: { querySelector(selector: string) {
-      assert.equal(selector, surface); calls.surface++; return present ? root : null;
+      assert.equal(selector, surface); calls.surface++; trace?.push('surface'); return present ? root : null;
     } } };
   };
   const observe = (frames: (ReturnType<typeof frame> | Error)[], options: {
     proof?: Record<string, unknown>; guardError?: Error; remainingError?: Error; budget?: number;
+    clock?: 'throw' | 'nan' | 'negative' | 'unsafe'; originFault?: boolean;
   } = {}) => {
     const proof: Record<string, unknown> = options.proof ?? {};
+    const effects = { retryClicks: 0 }, phases: { phase: string; atMs: number; budgetMs: number }[] = [];
+    proof.counts = effects; proof.phases = phases;
     const counts = { waits: 0, reads: 0, guards: 0, remaining: 0, births: 0, sends: 0, steps: 0 };
-    let capturedReady: ((value: unknown) => boolean) | undefined;
+    const setup = { begins: 0, clicks: 0, polls: 0, writers: 0, censuses: 0, hosts: 0 }, events: string[] = [];
+    let capturedReady: ((value: unknown) => boolean) | undefined, clocks = 0, scripts = 0;
     const controls = createDesktopUiControls({
       async evaluate(expression: string): Promise<unknown> {
-        const current = frames[counts.reads++]; assert(current);
+        events.push('evaluate'); const current = frames[counts.reads++]; assert(current);
         if (current instanceof Error) throw current;
-        return Function('document', 'return ' + expression)(current.document);
+        scripts++; return Function('document', 'return ' + expression)(current.document);
       },
       async send() { counts.sends++; throw new Error('TEST no input is authorized by this observation'); },
     }, {
-      assertOwnedRenderer() { counts.guards++; if (options.guardError) throw options.guardError; },
+      assertOwnedRenderer() { events.push('guard'); counts.guards++; if (options.guardError) throw options.guardError; },
       step() { counts.steps++; },
     });
-    const ui = { waitRead(expression: string, actualLabel: string, budget: number,
-      isReady?: (value: unknown) => boolean) {
-      counts.waits++; assert.equal(actualLabel, label); assert.equal(budget, options.budget ?? 2000);
-      capturedReady = isReady;
-      return controls.waitRead(expression, actualLabel, budget, isReady);
-    } };
-    return { proof, counts, ready: () => capturedReady,
-      done: Promise.resolve<unknown>(execute(ui, proof, surface, () => {
-        counts.remaining++; if (options.remainingError) throw options.remainingError;
-        return options.budget ?? 2000;
-      }, desktopJsLiteral, () => { counts.births++; })),
+    const ui = {
+      async click(selector: string, actualLabel: string, text: string) {
+        events.push('click'); setup.clicks++; assert.equal(selector, surface + ' button');
+        assert.equal(actualLabel, 'explicit product Retry once'); assert.equal(text, 'Retry');
+      },
+      waitRead(expression: string, actualLabel: string, budget: number, isReady?: (value: unknown) => boolean) {
+        events.push('waitRead'); counts.waits++; assert.equal(actualLabel, label);
+        assert.equal(budget, options.budget ?? 2000); capturedReady = isReady;
+        return controls.waitRead(expression, actualLabel, budget, isReady);
+      },
     };
+    const writer = { pid: 2, token: 'TEST-successor' }, host = { pid: 2 }, census = [host];
+    const done = execute({ assert, proof, ui, surface, desktopJsLiteral, startedAt: 1000,
+      begin(phase: string, budgetMs: number) {
+        events.push('begin'); setup.begins++; assert.equal(phase, 'one-explicit-same-Main-Retry');
+        assert.equal(budgetMs, 10000); phases.push({ phase, atMs: 0, budgetMs });
+        if (options.originFault) Object.defineProperty(phases.at(-1)!, 'atMs', {
+          get() { return assert.fail('TEST diagnostic phase origin failed'); },
+        });
+      },
+      async poll(readWriter: () => unknown, actualLabel: string) {
+        events.push('poll'); setup.polls++; assert.equal(actualLabel, 'actual successor writer acquisition');
+        return readWriter();
+      },
+      readWriter() { events.push('writer'); setup.writers++; return writer; },
+      writerA: { pid: 1, token: 'TEST-original' }, hostA: { pid: 1 },
+      captureCensus() { events.push('census'); setup.censuses++; return census; },
+      assertHost(actual: unknown, observed: unknown) {
+        events.push('host'); setup.hosts++; assert.equal(actual, writer); assert.equal(observed, census); return host;
+      },
+      assertHostBirths() { events.push('births'); counts.births++; },
+      remaining() {
+        events.push('remaining'); counts.remaining++; if (options.remainingError) throw options.remainingError;
+        return options.budget ?? 2000;
+      },
+      performance: { now() {
+        clocks++; if (options.clock === 'throw') throw new Error('TEST diagnostic clock failed');
+        if (options.clock === 'nan') return NaN; if (options.clock === 'negative') return 999;
+        if (options.clock === 'unsafe') return Number.MAX_SAFE_INTEGER + 10000;
+        return 1000 + clocks;
+      } },
+    });
+    return { proof, counts, setup, effects, events, clocks: () => clocks, scripts: () => scripts,
+      ready: () => capturedReady, done };
   };
-  const ready = { surfacePresent: true, refresh: 'enabled', firstRefreshBusy: false,
+  type RecoveryFacts = { surfacePresent: boolean; refresh: string; firstRefreshBusy: boolean | null;
+    retryPresent: boolean | null; alertPresent: boolean | null; ready: boolean };
+  const ready: RecoveryFacts = { surfacePresent: true, refresh: 'enabled', firstRefreshBusy: false,
     retryPresent: false, alertPresent: false, ready: true };
-  const expected = (last: unknown, sampleCount = 1, sampleCountCapped = false) => ({
+  const expected = (last: RecoveryFacts | null, sampleCount = 1, sampleCountCapped = false,
+    lastAtMs: number | null = last === null ? null : 4, uiReadyMs: number | null = last?.ready ? 5 : null) => ({
     schemaVersion: 1, source: 'original-recovery-wait', atomicWithFailure: false,
-    sampleCount, sampleCountCapped, last,
+    stages: { clickReturnedMs: 1, writerObservedMs: 2, hostCheckedMs: 3, uiReadyMs },
+    sampleCount, sampleCountCapped, lastAtMs, last,
   });
+  const initialEvents = ['begin', 'click', 'poll', 'writer', 'census', 'host', 'births', 'remaining', 'waitRead'];
+  const expectedSetup = { begins: 1, clicks: 1, polls: 1, writers: 1, censuses: 1, hosts: 1 };
   const initial = button('Refresh'), initialFrame = frame([initial]);
   const success = observe([initialFrame]);
   await success.done;
-  assert.deepEqual(success.proof.retryUiObservation, expected(ready),
-    'the original successful evaluation must retain its closed recovery observation');
+  assert.deepEqual(success.setup, expectedSetup); assert.equal(success.effects.retryClicks, 1);
+  assert.deepEqual(success.events, [...initialEvents, 'guard', 'evaluate']);
   assert.deepEqual(success.counts, { waits: 1, reads: 1, guards: 1, remaining: 1, births: 1, sends: 0, steps: 0 });
   assert.deepEqual(initial.calls, { text: 2, disabled: 1, busy: 1 });
   assert.deepEqual(initialFrame.calls, { surface: 1, buttons: 1, alert: 1 });
+  assert.deepEqual(success.proof.retryUiObservation, expected(ready),
+    'the same successful original wait must retain its selected stage and sample timings');
+  assert.equal(success.clocks(), 5);
 
   const stop = new Error('TEST original finite evaluation stops after its retained false sample');
   const falseFrames = [
@@ -383,12 +434,88 @@ test('Windows Retry retains same-evaluation operands without changing the origin
     error.message === 'UI read timed out: ' + label + '; no mutation retry');
   assert.equal(expired.counts.reads + expired.counts.guards, 0);
   assert.deepEqual(expired.proof.retryUiObservation, expected(null, 0));
-  const unwritable = observe([frame([button('Refresh')])], { proof: Object.freeze({}) });
+  const blockedProof = Object.defineProperty({}, 'retryUiObservation', { value: null, writable: false });
+  const unwritable = observe([frame([button('Refresh')])], { proof: blockedProof });
   await unwritable.done; assert.equal(unwritable.counts.reads, 1);
   const hostileProof = {};
   Object.defineProperty(hostileProof, 'retryUiObservation', { set() { throw stop; } });
   const observerFailure = observe([frame([button('Refresh')])], { proof: hostileProof });
   await observerFailure.done; assert.equal(observerFailure.counts.reads, 1);
+  const observerRefusal = observe([frame([], false), stop], { proof: hostileProof });
+  await assert.rejects(observerRefusal.done, error => error === stop);
+  assert.deepEqual(observerRefusal.events, [...initialEvents, 'guard', 'evaluate', 'guard', 'evaluate']);
+  const noValue = observe([stop]);
+  await assert.rejects(noValue.done, error => error === stop);
+  assert.deepEqual(noValue.events, [...initialEvents, 'guard', 'evaluate']);
+  assert.deepEqual(noValue.setup, expectedSetup); assert.equal(noValue.effects.retryClicks, 1);
+  assert.equal(noValue.scripts(), 0);
+  assert.deepEqual(noValue.proof.retryUiObservation, expected(null, 0));
+  const siblingTrace: string[] = [], disabled = button('Refresh', true, 'true', siblingTrace);
+  const sibling = button('Retry', false, 'false', siblingTrace);
+  const disabledFrame = frame([disabled, sibling], true, false, siblingTrace);
+  const refreshBlocked = observe([disabledFrame, stop]);
+  await assert.rejects(refreshBlocked.done, error => error === stop);
+  assert.deepEqual(refreshBlocked.events, [...initialEvents, 'guard', 'evaluate', 'guard', 'evaluate']);
+  assert.deepEqual(siblingTrace, ['surface', 'buttons', 'refresh:text', 'refresh:disabled', 'retry:text', 'refresh:busy']);
+  assert.equal(sibling.calls.disabled + disabledFrame.calls.alert, 0);
+  assert.deepEqual(refreshBlocked.proof.retryUiObservation, expected({ ...ready, refresh: 'disabled',
+    firstRefreshBusy: true, retryPresent: null, alertPresent: null, ready: false }));
+  assert.deepEqual(refreshBlocked.setup, expectedSetup); assert.equal(refreshBlocked.effects.retryClicks, 1);
+  const orderedTraces: string[][] = [];
+  const orderedFrames = [0, 1, 2, 3, 4].map(mode => {
+    const trace: string[] = []; orderedTraces.push(trace);
+    const buttons = [button('Refresh', mode === 1, 'false', trace)];
+    if (mode === 2) buttons.push(button('Retry', false, 'false', trace));
+    return frame(buttons, mode !== 0, mode === 3, trace);
+  });
+  const ordered = observe(orderedFrames); await ordered.done;
+  assert.deepEqual(ordered.events, [...initialEvents, ...Array.from({ length: 5 }, () => ['guard', 'evaluate']).flat()]);
+  assert.deepEqual(ordered.setup, expectedSetup); assert.equal(ordered.effects.retryClicks, 1);
+  assert.deepEqual(orderedTraces, [
+    ['surface'], ['surface', 'buttons', 'refresh:text', 'refresh:disabled', 'refresh:busy'],
+    ['surface', 'buttons', 'refresh:text', 'refresh:disabled', 'refresh:text', 'retry:text', 'refresh:busy'],
+    ['surface', 'buttons', 'refresh:text', 'refresh:disabled', 'refresh:text', 'alert', 'refresh:busy'],
+    ['surface', 'buttons', 'refresh:text', 'refresh:disabled', 'refresh:text', 'alert', 'refresh:busy'],
+  ]);
+  assert.deepEqual(ordered.proof.retryUiObservation, expected(ready, 5, false, 8, 9));
+  const nullStages = { clickReturnedMs: null, writerObservedMs: null, hostCheckedMs: null, uiReadyMs: null };
+  for (const fault of ['throw', 'nan', 'negative', 'unsafe', 'origin'] as const) {
+    const faultOptions = fault === 'origin' ? { originFault: true } : { clock: fault };
+    const clockReady = observe([frame([button('Refresh')])], faultOptions); await clockReady.done;
+    assert.deepEqual(clockReady.proof.retryUiObservation, { ...expected(ready, 1, false, null, null), stages: nullStages });
+    const clockRefused = observe([frame([], false), stop], faultOptions);
+    await assert.rejects(clockRefused.done, error => error === stop);
+    assert.deepEqual(clockRefused.proof.retryUiObservation, { ...expected({ ...ready, surfacePresent: false,
+      refresh: 'not-observed', firstRefreshBusy: null, retryPresent: null, alertPresent: null, ready: false },
+    1, false, null, null), stages: nullStages });
+    assert.deepEqual(clockReady.setup, expectedSetup); assert.deepEqual(clockRefused.setup, expectedSetup);
+    assert.equal(clockReady.clocks(), 5); assert.equal(clockRefused.clocks(), 4);
+    assert.deepEqual(clockReady.events, [...initialEvents, 'guard', 'evaluate']);
+    assert.deepEqual(clockRefused.events, [...initialEvents, 'guard', 'evaluate', 'guard', 'evaluate']);
+  }
+  const frozen = observe([frame([button('Refresh')])]); await frozen.done;
+  const frozenRecord = Object.freeze(frozen.proof.retryUiObservation as Record<string, unknown>);
+  const frozenBefore = structuredClone(frozenRecord), frozenEvents = [...frozen.events];
+  const frozenAccept = frozen.ready(); assert(frozenAccept);
+  assert.equal(frozenAccept(ready), true);
+  assert.equal(frozenAccept({ ...ready, alertPresent: true, ready: false }), false);
+  assert.deepEqual(frozenRecord, frozenBefore);
+  Object.defineProperty(frozen.proof, 'retryUiObservation', { value: frozenRecord, writable: false });
+  assert.equal(frozenAccept(ready), true);
+  assert.equal(frozenAccept({ ...ready, alertPresent: true, ready: false }), false);
+  assert.equal(frozen.proof.retryUiObservation, frozenRecord); assert.deepEqual(frozenRecord, frozenBefore);
+  assert.deepEqual(frozen.events, frozenEvents);
+  for (const observedReady of [true, false]) {
+    const mutatingProof = {};
+    Object.defineProperty(mutatingProof, 'retryUiObservation', { set(value: { last: { ready: boolean } | null }) {
+      if (value.last) value.last.ready = !observedReady;
+    } });
+    const altered = observe(observedReady ? [frame([button('Refresh')])] : [frame([], false), stop],
+      { proof: mutatingProof });
+    if (observedReady) await altered.done; else await assert.rejects(altered.done, error => error === stop);
+    assert.equal(altered.counts.reads, observedReady ? 1 : 2);
+    assert.equal(altered.counts.sends + altered.counts.steps, 0);
+  }
   const accept = success.ready(); assert(accept);
   let getterReads = 0;
   const accessor = { ...ready };
@@ -396,23 +523,30 @@ test('Windows Retry retains same-evaluation operands without changing the origin
   const reflection = new Proxy({}, { getPrototypeOf() { throw stop; },
     getOwnPropertyDescriptor() { throw stop; } });
   for (const malformed of [undefined, null, true, [], {}, Object.create(ready), accessor, reflection,
+    { toString() { return assert.fail('no result coercion'); } },
     { ...ready, refresh: 'TEST private invalid' }, { ...ready, ready: 'true' },
     { ...ready, surfacePresent: false }]) assert.equal(accept(malformed), false);
   assert.equal(getterReads, 0);
   assert.deepEqual(success.proof.retryUiObservation, expected(ready));
   for (let index = 0; index < 127; index++) assert.equal(accept(ready), true);
-  assert.deepEqual(success.proof.retryUiObservation, expected(ready, 128, false));
+  assert.deepEqual(success.proof.retryUiObservation, expected(ready, 128, false, success.clocks(), 5));
   assert.equal(accept(ready), true);
-  assert.deepEqual(success.proof.retryUiObservation, expected(ready, 128, true));
+  assert.deepEqual(success.proof.retryUiObservation, expected(ready, 128, true, success.clocks(), 5));
   const latestFalse = { ...ready, alertPresent: true, ready: false };
   assert.equal(accept(latestFalse), false);
-  assert.deepEqual(success.proof.retryUiObservation, expected(latestFalse, 128, true));
+  assert.deepEqual(success.proof.retryUiObservation, expected(latestFalse, 128, true, success.clocks(), 5));
   assert(Buffer.byteLength(JSON.stringify(success.proof.retryUiObservation), 'utf8') <= 512);
+  const maximum = { ...expected({ ...ready, surfacePresent: false, refresh: 'not-observed',
+    firstRefreshBusy: null, retryPresent: null, alertPresent: null, ready: false }, 128, false,
+  Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER), stages: {
+    clickReturnedMs: Number.MAX_SAFE_INTEGER, writerObservedMs: Number.MAX_SAFE_INTEGER,
+    hostCheckedMs: Number.MAX_SAFE_INTEGER, uiReadyMs: Number.MAX_SAFE_INTEGER } };
+  assert(Buffer.byteLength(JSON.stringify(maximum), 'utf8') <= 512, 'the maximum-width valid canonical observation fits its byte bound');
   assert.deepEqual(success.counts, { waits: 1, reads: 1, guards: 1, remaining: 1, births: 1, sends: 0, steps: 0 });
 });
 
 test('Windows primary failure is emitted once before cleanup without replacing the original error', async () => {
-  const source = await readFile(new URL('../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8');
+  const source = (await readFile(new URL('../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
   const start = '} catch (error) {\n  primaryError = error;\n  proof.error = errorText(error);\n';
   const end = '\n} finally {\n  if (app && !quitStarted) {';
   assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
@@ -424,7 +558,7 @@ test('Windows primary failure is emitted once before cleanup without replacing t
   const execute = Function('error', 'proof', 'errorText', 'writeSync', 'Buffer', 'activePhase', 'finish',
     '"use strict"; let primaryError; try {' + source.slice(from, to) + '\n} finally { finish(); } return primaryError;');
   const phase = 'one-explicit-same-Main-Retry';
-  const exercise = (text: string, observation: unknown = null, failWrite = false) => {
+  const exercise = (text: string, observation: unknown = null, sink: 'ok' | 'throw' | 'partial' = 'ok', activePhase = phase) => {
     let stackReads = 0, messageReads = 0, writes = 0, finished = 0;
     const error = new Error('TEST original error');
     Object.defineProperty(error, 'stack', { get() { stackReads++; return text; } });
@@ -432,9 +566,9 @@ test('Windows primary failure is emitted once before cleanup without replacing t
     const proof: Record<string, unknown> = { retryUiObservation: observation };
     const lines: string[] = [];
     const result = execute(error, proof, formatter, (fd: number, line: string) => {
-      assert.equal(fd, 1); writes++; if (failWrite) throw new Error('TEST original stdout unavailable');
-      lines.push(line);
-    }, Buffer, phase, () => { finished++; });
+      assert.equal(fd, 1); writes++; if (sink === 'throw') throw new Error('TEST original stdout unavailable');
+      lines.push(line); return sink === 'partial' ? 1 : Buffer.byteLength(line, 'utf8');
+    }, Buffer, activePhase, () => { finished++; });
     assert.equal(result, error); assert.equal(proof.error, text.slice(0, 4000));
     assert.equal(stackReads, 1); assert.equal(messageReads, 0); assert.equal(finished, 1);
     return { proof, lines, writes };
@@ -446,7 +580,8 @@ test('Windows primary failure is emitted once before cleanup without replacing t
     phase, error: 'TEST original primary failure', errorTruncated: false, retryUiObservation: null });
   assert(original.lines[0]!.endsWith('\n'));
   const observation = { schemaVersion: 1, source: 'original-recovery-wait', atomicWithFailure: false,
-    sampleCount: 1, sampleCountCapped: false, last: { surfacePresent: true, refresh: 'disabled',
+    stages: { clickReturnedMs: 1, writerObservedMs: 2, hostCheckedMs: 3, uiReadyMs: null },
+    sampleCount: 1, sampleCountCapped: false, lastAtMs: 4, last: { surfacePresent: true, refresh: 'disabled',
       firstRefreshBusy: true, retryPresent: null, alertPresent: null, ready: false } };
   const long = '\u{1f642}'.repeat(1600), retained = exercise(long, observation);
   const decoded = JSON.parse(retained.lines[0]!);
@@ -458,8 +593,22 @@ test('Windows primary failure is emitted once before cleanup without replacing t
   const overflow = exercise('TEST original', { unexpected: 'x'.repeat(9000) });
   assert.equal(overflow.writes, 1);
   assert.equal(overflow.lines[0], '{"kind":"TEST_WINDOWS_PACKAGED_UI_FAILURE","reason":"projection-limit"}\n');
-  const unwritable = exercise('TEST original', null, true);
+  const unwritable = exercise('TEST original', null, 'throw');
   assert.equal(unwritable.writes, 1); assert.deepEqual(unwritable.lines, []);
+  const partial = exercise('TEST original', null, 'partial');
+  assert.equal(partial.writes, 1); assert.equal(partial.lines.length, 1);
+  const text = 'TEST byte boundary', overhead = Buffer.byteLength(JSON.stringify({
+    kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase: '', error: text, errorTruncated: false, retryUiObservation: null,
+  }) + '\n', 'utf8');
+  const atLimit = exercise(text, null, 'ok', 'A'.repeat(8192 - overhead));
+  assert.equal(atLimit.writes, 1); assert.equal(Buffer.byteLength(atLimit.lines[0]!, 'utf8'), 8192);
+  assert.equal(JSON.parse(atLimit.lines[0]!).error, text);
+  const overLimit = exercise(text, null, 'ok', 'A'.repeat(8193 - overhead));
+  const unicodeLimit = exercise(text, null, 'ok', '\u754c'.repeat(3000));
+  for (const rejected of [overLimit, unicodeLimit]) {
+    assert.equal(rejected.writes, 1);
+    assert.equal(rejected.lines[0], '{"kind":"TEST_WINDOWS_PACKAGED_UI_FAILURE","reason":"projection-limit"}\n');
+  }
   const projectionFailure = exercise('TEST original', { toJSON() { throw new Error('TEST projection failed'); } });
   assert.equal(projectionFailure.writes, 0);
   const formatterFailure = new Error('TEST original formatter failed'), error = new Error('TEST original');
