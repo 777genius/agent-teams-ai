@@ -248,6 +248,11 @@ describe('finite Runtime activity facade', () => {
             factory: {
               open: async () => {
                 nativeOpens++;
+                context.observeProcessOutput?.({
+                  kind: 'process-output',
+                  stream: 'stderr',
+                  text: 'TEST original startup stderr',
+                });
                 return { driver: session, capabilities: ['session.conversation'] };
               },
             },
@@ -370,7 +375,12 @@ describe('finite Runtime activity facade', () => {
         operation: 'team.launch.configuration.read',
         payload: {},
       });
-      if (!selected.ok || !selected.value || !('launch' in selected.value) || !selected.value.launch)
+      if (
+        !selected.ok ||
+        !selected.value ||
+        !('launch' in selected.value) ||
+        !selected.value.launch
+      )
         throw new Error('Missing actual launch');
       const runId = hostTeamRunId(
         'captured-handle',
@@ -415,6 +425,39 @@ describe('finite Runtime activity facade', () => {
       expect(JSON.stringify(projected)).not.toContain('PRIVATE-');
       expect(JSON.stringify(projected)).not.toContain(nativeInput.operationRef);
       expect(JSON.stringify(projected)).not.toContain(root);
+      expect(JSON.stringify(projected)).not.toContain('TEST original startup stderr');
+      const memberLogs = await facade.invoke({
+        ...request,
+        operation: 'team.activity.logs.read',
+        payload: { memberName: 'alice' },
+      });
+      if (
+        !memberLogs.ok ||
+        !memberLogs.value ||
+        !('kind' in memberLogs.value) ||
+        memberLogs.value.kind !== 'team-activity-logs'
+      )
+        throw new Error('Missing captured member logs');
+      const memberLog = memberLogs.value.logs[0]!;
+      const stderr = memberLog.events.find((event) => event.data.kind === 'process-output');
+      expect(stderr?.data).toEqual({
+        kind: 'process-output',
+        stream: 'stderr',
+        text: 'TEST original startup stderr',
+      });
+      expect(stderr).not.toHaveProperty('inputId');
+      expect(memberLog.messageCount).toBe(1);
+      expect(memberLog.lastOutputPreview).toBe('Actual host observation');
+      expect(
+        await facade.invoke({
+          ...request,
+          operation: 'team.activity.stats.read',
+          payload: { memberName: 'alice' },
+        })
+      ).toMatchObject({ ok: true, value: { stats: { observedMessages: 1, outputTokens: 3 } } });
+      expect(JSON.stringify(await teams.getData(key))).not.toContain(
+        'TEST original startup stderr'
+      );
       expect((await teams.getData(key)).isAlive).toBe(true);
       await teams.cancelProvisioning(runId);
       expect((await teams.getProvisioningStatus(runId)).state).toBe('disconnected');
@@ -767,6 +810,92 @@ describe('finite Runtime activity facade', () => {
       expect(serialized).not.toContain(privateField);
   });
 
+  it('decodes retained thinking and child thinking without admitting private fields or stream inference', async () => {
+    const { router, facade } = setup();
+    const thought = {
+      kind: 'thinking',
+      messageRef: 'message-A',
+      block: 0,
+      text: 'Retained thought',
+      phase: 'complete',
+    };
+    const child = {
+      kind: 'subagent',
+      phase: 'fact',
+      childId: `child-${'a'.repeat(64)}`,
+      parentToolRef: `tool-${'b'.repeat(64)}`,
+      fact: thought,
+    };
+    router.request.mockResolvedValue({
+      ok: true,
+      value: feed([
+        event(1, { ...thought, signature: 'PRIVATE-signature', stream: 'stdout' }),
+        event(2, { ...child, fact: { ...thought, native: 'PRIVATE-native' } }),
+      ]),
+    } as JsonValue);
+    const result = await facade.invoke(request);
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        events: [
+          { inputId: 'input-A', data: thought },
+          { inputId: 'input-A', data: child },
+        ],
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain('PRIVATE-');
+    expect(JSON.stringify(result)).not.toContain('stream');
+    expect(router.request).toHaveBeenCalledExactlyOnceWith(request.handle, {
+      commandId: request.commandId,
+      method: 'runtime.activity.feed',
+      payload: request.payload,
+      control: true,
+    });
+  });
+
+  it('projects only bounded top-level stderr and refuses stream, byte, NUL, nested or input attribution violations', async () => {
+    const { router, facade } = setup();
+    const data = { kind: 'process-output', stream: 'stderr', text: 'é'.repeat(12 * 1024) };
+    const stderr = { sequence: 1, eventId: 'stderr-original', data };
+    router.request.mockResolvedValueOnce({
+      ok: true,
+      value: feed([
+        {
+          ...stderr,
+          operationRef: 'PRIVATE-operation',
+          data: { ...data, token: 'PRIVATE-token', nativePath: '/PRIVATE/source' },
+        },
+      ]),
+    } as JsonValue);
+    const result = await facade.invoke(request);
+    expect(result).toMatchObject({ ok: true, value: { events: [stderr] } });
+    expect(JSON.stringify(result)).not.toContain('PRIVATE');
+    expect(JSON.stringify(result)).not.toContain('inputId');
+    expect(JSON.stringify(result)).not.toContain('operationRef');
+    const malformed = [
+      ...[
+        { stream: 'stdout' },
+        { stream: null },
+        { text: 1 },
+        { text: 'invalid\0text' },
+        { text: 'x'.repeat(24 * 1024 + 1) },
+        { text: 'é'.repeat(12 * 1024 + 1) },
+      ].map((patch) => ({ ...stderr, data: { ...data, ...patch } })),
+      { ...stderr, inputId: 'guessed-input' },
+      event(2, {
+        kind: 'subagent',
+        phase: 'fact',
+        childId: `child-${'a'.repeat(64)}`,
+        parentToolRef: `tool-${'b'.repeat(64)}`,
+        fact: data,
+      }),
+    ];
+    for (const invalid of malformed) {
+      router.request.mockResolvedValueOnce({ ok: true, value: feed([invalid]) } as JsonValue);
+      expect(await facade.invoke(request)).toEqual({ ok: false, code: 'hold', outcome: 'unknown' });
+    }
+  });
+
   it('preserves snapshot/gap semantics and unknown usage without fabricating attribution', async () => {
     const { router, facade } = setup();
     const sessionUsage = {
@@ -841,6 +970,41 @@ describe('finite Runtime activity facade', () => {
           block: 0,
           phase: 'complete',
           text: 'x'.repeat(129 * 1024),
+        }),
+      ]),
+      ...[
+        { block: -1 },
+        { block: 0.5 },
+        { messageRef: 'x'.repeat(1025) },
+        { phase: 'invented' },
+        { text: 7 },
+        { text: 'invalid\0text' },
+        { text: 'x'.repeat(24 * 1024 + 1) },
+      ].map((patch) =>
+        feed([
+          event(1, {
+            kind: 'thinking',
+            messageRef: 'A',
+            block: 0,
+            text: 'Retained thought',
+            phase: 'complete',
+            ...patch,
+          }),
+        ])
+      ),
+      feed([
+        event(1, {
+          kind: 'subagent',
+          phase: 'interaction',
+          childId: `child-${'a'.repeat(64)}`,
+          parentToolRef: `tool-${'b'.repeat(64)}`,
+          fact: {
+            kind: 'thinking',
+            messageRef: 'A',
+            block: 0,
+            text: 'No interaction authority',
+            phase: 'complete',
+          },
         }),
       ]),
     ];

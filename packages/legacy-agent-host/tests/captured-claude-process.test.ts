@@ -20,7 +20,9 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { CapturedProcess } from '../dist/adapters/providers/CapturedProcess.js';
+import { observeMemberProcessStderr } from '../dist/adapters/providers/observeMemberProcessStderr.js';
 import type { RuntimeMemberProfile } from '../dist/composition/runtimeProfile.js';
+import type { RuntimeProcessOutput } from '../dist/runtime/providerActivityContracts.js';
 
 const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 20));
 const sha = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -66,6 +68,34 @@ async function setup(source: string) {
     },
   };
 }
+
+test('the original finite captured child retains sanitized stderr and excludes its stdout protocol',
+  { skip: process.platform === 'win32' }, async () => {
+    const { root, profile, request } = await setup(
+      '#!/bin/sh\nprintf "%s\\n" "$TEAM_MCP_TOKEN" >&2\nprintf "%s\\n" "TEST protocol stdout"\nprintf "%s" "TEST stderr tail" >&2\n'
+    );
+    profile.environment.TEAM_MCP_TOKEN = 'TEST_CAPTURED_STDERR_PRIVATE';
+    const custody = new CapturedProcess(profile), observations: RuntimeProcessOutput[] = [];
+    try {
+      const child = custody.launch(request);
+      observeMemberProcessStderr(child, { profile,
+        endpoint: { bearerToken: profile.environment.TEAM_MCP_TOKEN },
+        observeProcessOutput: value => { observations.push(value); } }, request.args);
+      child.stdout.resume();
+      await new Promise<void>((resolve, reject) => {
+        child.once('error', reject);
+        child.once('close', () => { child.removeListener('error', reject); resolve(); });
+      });
+      assert.deepEqual(observations, [
+        { kind: 'process-output', stream: 'stderr', text: '[redacted]' },
+        { kind: 'process-output', stream: 'stderr', text: 'TEST stderr tail' },
+      ]);
+      assert.equal(await custody.confirmStopped(), true);
+    } finally {
+      await custody.confirmStopped();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 
 test('captured native executable is pinned again at launch and sealing forbids late allocation', async () => {
   const { root, profile, request } = await setup('#!/bin/sh\nexit 0\n');

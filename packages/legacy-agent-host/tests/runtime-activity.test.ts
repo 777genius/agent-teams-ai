@@ -1001,3 +1001,68 @@ test('private child activity shares the original Runtime input/fence and snapsho
   owner.observeProviderActivity(binding(), session.sessionRef, { ...attribution, data });
   assert.equal(owner.readActivitySnapshot(binding()).cursor.sequence, closed.cursor.sequence, 'sealed parent cannot publish late child activity');
 });
+
+test('original process diagnostics keep config and incarnation fences and survive only unreleased closing', async t => {
+  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+  const original = owner.readSession(binding()).record!, config = original.config!;
+  const before = owner.readActivitySnapshot(binding());
+  const conversation = owner.readConversation(binding(), 'messages');
+  const data = { kind: 'process-output' as const, stream: 'stderr' as const, text: 'TEST stderr' };
+  let grant = true, checks = 0;
+  const current = () => { checks++; if (!grant) throw new RuntimeOwnerError('forbidden'); };
+  owner.observeProcessOutput(binding(), config, { ...data, ...attribution }, current);
+  const retained = owner.readActivityFeed(binding(), before.cursor);
+  assert.deepEqual(retained.events.map(event => event.data), [data]);
+  assert.equal(retained.events[0]!.inputId, undefined);
+  assert.equal(retained.events[0]!.operationRef, undefined);
+  assert.deepEqual(owner.readConversation(binding(), 'messages'), conversation);
+  const { activitySequence: ignored, ...after } = owner.readSession(binding()).record!;
+  const { activitySequence: previous, ...prior } = original; void ignored; void previous;
+  assert.deepEqual(after, prior, 'diagnostics change only the existing journal high water');
+  owner.observeProcessOutput(binding(), { ...config, checkpointRef: 'TEST-other-checkpoint' }, data, current);
+  owner.observeProcessOutput(binding(), { ...config, configRevision: 'TEST-other-config' }, data, current);
+  owner.observeProcessOutput(binding('TEST-foreign'), config, data, current);
+  f.make('other-host').observeProcessOutput(binding(), config, data, current);
+  f.make('host-1', { profileId: 'other-profile' }).observeProcessOutput(binding(), config, data, current);
+  grant = false;
+  owner.observeProcessOutput(binding(), config, data, current);
+  assert.equal(owner.readActivitySnapshot(binding()).cursor.sequence, retained.cursor.sequence);
+  grant = true;
+  session.close = async () => {
+    const closing = owner.readSession(binding()).record!;
+    assert.equal(closing.phase, 'closing'); assert.equal(closing.sealed, true);
+    owner.observeProcessOutput(binding(), config, { ...data, text: 'TEST closing' }, current);
+    session.end();
+    return { logicallyClosed: true, cleanup: 'confirmed' };
+  };
+  assert.equal((await owner.stopCapturedSession(binding())).custody, 'released');
+  const closed = owner.readActivitySnapshot(binding());
+  assert.ok(owner.readActivityFeed(binding(), retained.cursor).events.some(event => event.data.text === 'TEST closing'));
+  owner.observeProcessOutput(binding(), config, data, current);
+  assert.equal(owner.readActivitySnapshot(binding()).cursor.sequence, closed.cursor.sequence);
+  assert.equal(checks, 9, 'every observation checks the captured source under the member fence');
+});
+
+test('process diagnostics use the existing serialized event budget and storage degradation without changing control', async t => {
+  const f = await setup(t), owner = f.make();
+  await f.open(owner);
+  const original = owner.readSession(binding()).record!, config = original.config!;
+  const before = owner.readActivitySnapshot(binding());
+  owner.observeProcessOutput(binding(), config, { kind: 'process-output', stream: 'stderr', text: '\\'.repeat(24 * 1024) }, () => {});
+  const oversized = owner.readActivityFeed(binding(), before.cursor);
+  assert.deepEqual(oversized.events.map(event => event.data), [{ kind: 'gap', reason: 'oversized' }]);
+  assert.equal(oversized.cursor.sequence, before.cursor.sequence + 1);
+  const failed = t.mock.method(f.store, 'writeActivity', () => { throw Error('TEST-storage-failure'); });
+  assert.doesNotThrow(() => owner.observeProcessOutput(binding(), config, { kind: 'process-output', stream: 'stderr', text: 'TEST lost' }, () => {}));
+  assert.equal(owner.readActivitySnapshot(binding()).gap?.reason, 'storage');
+  failed.mock.restore();
+  owner.observeProcessOutput(binding(), config, { kind: 'process-output', stream: 'stderr', text: 'TEST recovered' }, () => {});
+  const recovered = owner.readActivityFeed(binding(), oversized.cursor);
+  assert.deepEqual(recovered.events.map(event => event.data), [
+    { kind: 'gap', reason: 'storage' }, { kind: 'process-output', stream: 'stderr', text: 'TEST recovered' },
+  ]);
+  const { activitySequence: ignored, ...after } = owner.readSession(binding()).record!;
+  const { activitySequence: previous, ...prior } = original; void ignored; void previous;
+  assert.deepEqual(after, prior);
+  assert.ok((await stat(f.path())).size <= f.store.activityLimits.maxBytes);
+});

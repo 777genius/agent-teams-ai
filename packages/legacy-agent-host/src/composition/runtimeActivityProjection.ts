@@ -59,6 +59,8 @@ function activityEvent(event: RuntimeActivityEvent): Record<string, JsonValue> {
   const data = event.data;
   const fields: Record<string, readonly string[]> = {
     text: ['kind', 'messageRef', 'block', 'text', 'phase'],
+    thinking: ['kind', 'messageRef', 'block', 'text', 'phase'],
+    'process-output': ['kind', 'stream', 'text'],
     tool: ['kind', 'messageRef', 'toolRef', 'name', 'input'],
     'tool-result': ['kind', 'toolRef', 'content', 'isError'],
     usage: ['kind', 'inputTokens', 'outputTokens', 'cumulativeCostUsd'],
@@ -66,7 +68,17 @@ function activityEvent(event: RuntimeActivityEvent): Record<string, JsonValue> {
     result: ['kind', 'outcome', 'code'],
     diagnostic: ['kind', 'code'],
     gap: ['kind', 'reason'],
-    subagent: ['kind', 'childId', 'parentToolRef', 'phase', 'fact', 'childTotalTokens', 'childToolUses', 'childDurationMs', 'reason'],
+    subagent: [
+      'kind',
+      'childId',
+      'parentToolRef',
+      'phase',
+      'fact',
+      'childTotalTokens',
+      'childToolUses',
+      'childDurationMs',
+      'reason',
+    ],
   };
   let projected: Record<string, JsonValue>;
   if (data.kind === 'state')

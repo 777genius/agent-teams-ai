@@ -132,14 +132,122 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     const matches = array(value.inputs).filter(row => record(row.intent).inputId === inputId);
     assert.equal(matches.length, 1); assert.equal(matches[0]!.terminal, outcome); return value;
   };
+  const leadLogs = '[data-section-id="claude-logs"]';
+  const openLeadLogs = async () => {
+    const expand = leadLogs + ' button[aria-label="Expand section"]';
+    if (await cdp.evaluate(`Boolean(document.querySelector(${literal(expand)}))`)) {
+      await ui.scrollTo(expand, 'original Lead Logs section'); await ui.click(expand, 'expand original Lead Logs');
+    }
+    await ui.waitRead(`document.querySelector(${literal(leadLogs)})?.textContent.includes('alice · Captured runtime activity')`,
+      'default actual Lead uses the typed Host log route');
+  };
+  const logFactSelector = (scope: string, event: Row) => `${scope} [data-host-log-event-id=${literal(event.eventId)}]`;
+  const visibleLogFact = async (scope: string, event: Row) => {
+    const selector = logFactSelector(scope, event), text = String(record(event.data).text);
+    assert.ok(['text', 'process-output'].includes(String(record(event.data).kind)));
+    await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll(${literal(selector)})];return rows.length===1&&
+      rows[0].dataset.hostLogSequence===${literal(String(event.sequence))}&&rows[0].dataset.hostLogKind===${literal(record(event.data).kind)}})()`,
+      'exact original retained Logs event identity');
+    if (!await cdp.evaluate(`Boolean(document.querySelector(${literal(selector + ' [data-host-log-content]')}))`)) {
+      await ui.scrollTo(selector + ' [role="button"]', 'original output disclosure');
+      await ui.click(selector + ' [role="button"]', 'expand original output');
+    }
+    await ui.scrollTo(selector + ' [data-host-log-content] p', 'actual rich output', text, 12, { requireCenterHit: true });
+    return record(await ui.waitRead(`(()=>{const e=document.querySelector(${literal(selector)});
+      if(!e)return null;
+      const bodies=[...e.querySelectorAll('[data-host-log-content] p')].filter(p=>p.textContent.trim()===${literal(text)});
+      if(bodies.length!==1||!bodies[0].getClientRects().length)return null;
+      return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim()}})()`,
+      'actual retained output is visible inside Logs'));
+  };
+  const leadActivityPath = join(fixture.root, 'hoststore/runtime-events', runtimeDigest(record((await session()).binding)) + '.json');
   const stream = await send('TEST_UI_STREAM');
   await visible('TEST stream partial');
   assert.equal(await cdp.evaluate('document.body.innerText.includes("TEST stream partial complete")'), false);
   assert.notEqual(array((await session()).inputs).find(row => record(row.intent).inputId === stream.inputId)?.phase, 'terminal');
   proof.partialScreenshot = await screenshot('partial');
+  const streamEvent = async (text: string) => {
+    const event = await poll(async () => array((await json(leadActivityPath)).events).filter(row =>
+      row.inputId === stream.inputId && record(row.data).kind === 'text' && record(row.data).text === text).at(-1),
+    value => value !== undefined, 'original stream fact retained before Logs observation');
+    assert.ok(event); return event;
+  };
+  await openLeadLogs();
+  const partialEvent = await streamEvent('TEST stream partial');
+  const partialLog = await visibleLogFact(leadLogs, partialEvent);
   await writeFile(join(fixture.emulatedRuntime.peers[0]!.root, 'release-stream'), 'TEST release once\n', { mode: 0o600, flag: 'wx' });
   await terminal(stream.inputId); await visible('TEST stream partial complete');
   proof.completedScreenshot = await screenshot('completed');
+  const completeEvent = await streamEvent('TEST stream partial complete');
+  const completeLog = await visibleLogFact(leadLogs, completeEvent);
+  const stderrText = 'TEST selected member stderr';
+  const stderrEvent = provider === 'opencode' ? null : await poll(async () =>
+    array((await json(leadActivityPath)).events).find(event => record(event.data).kind === 'process-output' &&
+      record(event.data).stream === 'stderr' && record(event.data).text === stderrText),
+  value => value !== undefined, 'original selected process stderr is retained');
+  if (stderrEvent) {
+    assert.equal(stderrEvent.inputId, undefined); assert.equal(stderrEvent.operationRef, undefined);
+    await visibleLogFact(leadLogs, stderrEvent);
+  }
+  const beforeLogControls = { inputs: structuredClone((await session()).inputs), commands: await commandRows(),
+    inputEffects: (await effects()).filter(row => row.event === 'input').length };
+  const logSearch = leadLogs + ' input[placeholder="Search logs..."]';
+  await fill(logSearch, 'TEST no such retained Logs fact');
+  await ui.waitRead(`!document.querySelector(${literal(leadLogs + ' [data-host-log-kind="text"]')})`, 'Logs search excludes nonmatching output');
+  if (stderrEvent) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, stderrEvent))})`,
+    'Logs search also excludes nonmatching captured stderr');
+  await ui.click(leadLogs + ' button[aria-label="Clear search"]', 'clear original Logs search');
+  await visibleLogFact(leadLogs, completeEvent);
+  if (stderrEvent) await visibleLogFact(leadLogs, stderrEvent);
+  const filterLogs = async () => {
+    await ui.scrollTo(leadLogs + ' button[aria-label="Filter logs"]', 'original Logs filters');
+    await ui.click(leadLogs + ' button[aria-label="Filter logs"]', 'open original Logs filters');
+  };
+  await filterLogs();
+  for (const id of ['filter-stream-stdout', 'filter-stream-stderr', 'filter-kind-output', 'filter-kind-thinking', 'filter-kind-tool'])
+    assert.equal(await cdp.evaluate(`document.getElementById(${literal(id)})?.getAttribute('data-state')`), 'checked');
+  await ui.click('#filter-stream-stdout', 'select stderr while native protocol facts remain unmarked');
+  await ui.click('[data-radix-popper-content-wrapper] button', 'save original stream filter', 'Save');
+  await visibleLogFact(leadLogs, completeEvent);
+  if (stderrEvent) await visibleLogFact(leadLogs, stderrEvent);
+  await filterLogs(); await ui.click('#filter-stream-stdout', 'restore stdout');
+  await ui.click('#filter-stream-stderr', 'select stdout while native protocol facts remain unmarked');
+  await ui.click('[data-radix-popper-content-wrapper] button', 'save original stdout filter', 'Save');
+  await visibleLogFact(leadLogs, completeEvent);
+  if (stderrEvent) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, stderrEvent))})`,
+    'actual stderr provenance is excluded by stdout-only filter');
+  await filterLogs(); await ui.click('#filter-kind-output', 'exclude Output');
+  await ui.click('[data-radix-popper-content-wrapper] button', 'save original content filter', 'Save');
+  await ui.waitRead(`!document.querySelector(${literal(leadLogs + ' [data-host-log-kind="text"]')})`, 'Output filter applies to actual facts');
+  await filterLogs(); await ui.click('[data-radix-popper-content-wrapper] button', 'reset original Logs filters', 'Reset');
+  await ui.click('[data-radix-popper-content-wrapper] button', 'close restored Logs filters', 'Save');
+  const fullscreenEvent = stderrEvent ?? completeEvent, fullscreenText = String(record(fullscreenEvent.data).text);
+  await fill(logSearch, fullscreenText); await visibleLogFact(leadLogs, fullscreenEvent);
+  const fullscreen = leadLogs + ' button[aria-label="Open fullscreen logs"]';
+  await ui.scrollTo(fullscreen, 'original fullscreen Logs'); await ui.click(fullscreen, 'open original fullscreen Logs');
+  const logsDialog = '[role="dialog"]:has(input[placeholder="Search logs..."])';
+  await ui.waitRead(`document.querySelector(${literal(logsDialog + ' input')})?.value===${literal(fullscreenText)}&&
+    !document.querySelector(${literal(logFactSelector(leadLogs, fullscreenEvent))})`, 'one fullscreen read owner retains query');
+  await ui.waitRead(`Boolean(document.querySelector(${literal(logFactSelector(logsDialog, fullscreenEvent) + ' [data-host-log-content]')}))`,
+    'original expanded output survives fullscreen remount');
+  const fullscreenLog = await visibleLogFact(logsDialog, fullscreenEvent);
+  const copy = logFactSelector(logsDialog, fullscreenEvent) + ' button[title="Copy to clipboard"]';
+  await ui.scrollTo(copy, 'original rich output copy'); await ui.click(copy, 'copy actual retained output');
+  await ui.waitRead(`Boolean(document.querySelector(${literal(copy + ' svg.lucide-check')}))`, 'original clipboard write acknowledged');
+  assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), fullscreenText);
+  const disclosure = logFactSelector(logsDialog, fullscreenEvent) + ' [role="button"]';
+  await ui.click(disclosure, 'collapse original output');
+  await ui.waitRead(`!document.querySelector(${literal(logFactSelector(logsDialog, fullscreenEvent) + ' [data-host-log-content]')})`, 'rich content collapses');
+  await ui.click(disclosure, 'restore original expanded output');
+  proof.leadLogsScreenshot = await screenshot('lead-logs');
+  await escape(); await visibleLogFact(leadLogs, fullscreenEvent);
+  await ui.click(leadLogs + ' button[aria-label="Clear search"]', 'restore unfiltered Lead Logs');
+  assert.deepEqual((await session()).inputs, beforeLogControls.inputs);
+  assert.deepEqual(await commandRows(), beforeLogControls.commands);
+  assert.equal((await effects()).filter(row => row.event === 'input').length, beforeLogControls.inputEffects);
+  proof.leadLogs = { partial: partialLog, complete: completeLog, fullscreen: fullscreenLog, actualClipboard: true,
+    stderr: stderrEvent ? { eventId: stderrEvent.eventId, sequence: stderrEvent.sequence, text: stderrText, inputId: null } : null,
+    defaultLeadRoute: true, filtersAndSearch: true, addedInputs: 0, addedBusinessCommands: 0 };
   const sheet = 'div.fixed.bottom-4';
   for (const [marker, allowed] of [['TEST_UI_APPROVAL_DENY', false], ['TEST_UI_APPROVAL_ALLOW', true]] as const) {
     const sent = await send(marker);
@@ -263,6 +371,9 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   await ui.observeInput(); await ui.clickSidebar(fixture.uiSeed.subject);
   await ui.click('button[aria-label^="alice,"]', 'reopen original lead conversation');
   await visible('TEST stream partial complete');
+  await openLeadLogs();
+  proof.leadLogsAfterReload = await visibleLogFact(leadLogs, completeEvent);
+  if (stderrEvent) proof.stderrLogsAfterReload = await visibleLogFact(leadLogs, stderrEvent);
   assert.deepEqual((await session()).inputs, reloadInputs); assert.equal((await effects()).filter(row => row.event === 'input').length, reloadEffects);
   proof.reloadedScreenshot = await screenshot('reloaded'); proof.reloadWithoutReplay = true;
 
@@ -506,14 +617,20 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     assert.ok(typeof title === 'string');
     await ui.scrollTo(`${panel} button[aria-expanded="false"]`, 'original ' + tab + ' disclosure', title);
     await ui.click(`${panel} button[aria-expanded="false"]`, 'open original ' + tab + ' facts', title);
-    await ui.scrollTo(`${panel} pre`, 'original retained completion in ' + tab,
-      String(record(completion.data).text), 12, { requireCenterHit: true });
-    const rendered = await ui.waitRead(`(()=>{const panel=document.querySelector(${literal(panel)});if(!panel)return null;
-      const facts=[...panel.querySelectorAll('pre')].filter(e=>e.textContent===${literal(record(completion.data).text)}&&
-        e.parentElement.querySelector('span')?.textContent.trim()===${literal('#' + completion.sequence + ' text')});
-      if(facts.length!==1||!facts[0].getClientRects().length)return null;
-      return {sequence:${literal(completion.sequence)},text:facts[0].textContent,
-        source:panel.querySelector('button[aria-expanded="true"]')?.textContent.trim()}})()`, 'exact original retained event in ' + tab);
+    let rendered: unknown;
+    if (tab === 'Task Log Stream') rendered = await visibleLogFact(panel, completion);
+    else {
+      await ui.scrollTo(`${panel} pre`, 'original retained completion in ' + tab,
+        String(record(completion.data).text), 12, { requireCenterHit: true });
+      rendered = await ui.waitRead(`(()=>{const panel=document.querySelector(${literal(panel)});if(!panel)return null;
+        const facts=[...panel.querySelectorAll('pre')].filter(e=>e.textContent===${literal(record(completion.data).text)}&&
+          e.parentElement.querySelector('span')?.textContent.trim()===${literal('#' + completion.sequence + ' text')});
+        if(facts.length!==1||!facts[0].getClientRects().length)return null;
+        return {sequence:${literal(completion.sequence)},text:facts[0].textContent,
+          source:panel.querySelector('button[aria-expanded="true"]')?.textContent.trim()}})()`, 'exact original retained event in ' + tab);
+    }
+    assert.equal(await cdp.evaluate(`document.querySelector(${literal(panel)})?.textContent.includes(${literal(stderrText)})`), false,
+      'unattributed member stderr cannot enter exact Task logs');
     activityViews.push({ tab, rendered, screenshot: await screenshot(tab === 'Task Activity' ? 'task-activity' : 'task-log-stream') });
   }
   await ui.click('[role="dialog"] button', 'close original Task detail', 'Close');

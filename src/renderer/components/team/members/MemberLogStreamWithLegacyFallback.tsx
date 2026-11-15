@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   isMemberLogStreamUiEnabled,
@@ -8,18 +9,21 @@ import {
 
 import { MemberLogsTab } from './MemberLogsTab';
 
+import type { HostLogViewOptions } from './HostMemberActivityLog';
 import type { ResolvedTeamMember } from '@shared/types';
 
 interface MemberLogStreamWithLegacyFallbackProps {
   teamName: string;
   member: ResolvedTeamMember;
   enabled?: boolean;
+  hostView?: HostLogViewOptions;
 }
 
 export const MemberLogStreamWithLegacyFallback = ({
   teamName,
   member,
   enabled = true,
+  hostView,
 }: Readonly<MemberLogStreamWithLegacyFallbackProps>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const streamUiEnabled = isMemberLogStreamUiEnabled();
@@ -29,8 +33,15 @@ export const MemberLogStreamWithLegacyFallback = ({
     setShowLegacyLogsFallback(false);
   }, [member.name, streamUiEnabled, teamName]);
 
-  if (!streamUiEnabled) {
-    return <MemberLogsTab teamName={teamName} memberName={member.name} />;
+  if (isHostTeamSelectionKey(teamName) || !streamUiEnabled) {
+    return (
+      <MemberLogsTab
+        teamName={teamName}
+        memberName={member.name}
+        enabled={enabled}
+        hostView={hostView}
+      />
+    );
   }
 
   return (
@@ -46,7 +57,7 @@ export const MemberLogStreamWithLegacyFallback = ({
           <div className="mb-3 text-xs font-semibold uppercase text-[var(--color-text-muted)]">
             {t('members.detail.legacyLogsFallback')}
           </div>
-          <MemberLogsTab teamName={teamName} memberName={member.name} />
+          <MemberLogsTab teamName={teamName} memberName={member.name} enabled={enabled} />
         </div>
       ) : null}
     </div>

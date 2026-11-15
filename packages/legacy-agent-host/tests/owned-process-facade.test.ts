@@ -4,8 +4,10 @@ import { PassThrough, Writable } from 'node:stream';
 import { test } from 'node:test';
 
 import { OwnedProcessFacade } from '../dist/owned-process/processFacade.js';
+import { observeMemberProcessStderr } from '../dist/adapters/providers/observeMemberProcessStderr.js';
 
 import type { PreparedOwnedProcess, ProcessOwner, RootExit } from '../dist/owned-process/contract.js';
+import type { RuntimeProcessOutput } from '../dist/runtime/providerActivityContracts.js';
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
 function gate() {
@@ -104,20 +106,25 @@ for (const boundary of ['abort-during-prepare', 'authority-loss-during-install']
 test('target exit before resume acknowledgement preserves its native code and final stdout/stderr', async () => {
   const f = fixture(), ack = gate();
   f.onResume(async () => {
+    assert.equal(child.stderr.listenerCount('data'), 2, 'Logs observer is installed before original resume');
     f.exit(7); f.stdout.end('TEST final output'); f.stderr.end('TEST final stderr'); await ack.promise;
   });
   const child = new OwnedProcessFacade({ owner: f.owner,
     prepare: async () => ({ kind: 'prepared', process: f.process }), current: () => true,
     installOwner: async () => {}, requestStop: () => { f.calls.push('stop-request'); return true; } });
   const output: Buffer[] = [], errors: Buffer[] = [];
+  const observations: RuntimeProcessOutput[] = [];
   child.stdout.on('data', (chunk: Buffer) => output.push(chunk));
   child.stderr.on('data', (chunk: Buffer) => errors.push(chunk));
+  observeMemberProcessStderr(child, { endpoint: { bearerToken: 'TEST-private-bearer' },
+    profile: { environment: {} }, observeProcessOutput: value => { observations.push(value); } }, []);
   const exited = once(child, 'exit'), closed = once(child, 'close');
   assert.deepEqual(await exited, [7, null]);
   assert.equal(child.exitCode, 7);
   await closed; ack.release(); await child.ready;
   assert.equal(Buffer.concat(output).toString(), 'TEST final output');
   assert.equal(Buffer.concat(errors).toString(), 'TEST final stderr');
+  assert.deepEqual(observations, [{ kind: 'process-output', stream: 'stderr', text: 'TEST final stderr' }]);
   assert.equal(f.calls.includes('stop-request'), false);
   assert.equal(child.killed, false);
 });
@@ -132,12 +139,16 @@ test('prepare/control failure requests original cleanup once and never invents t
       current: () => true, installOwner: async () => {},
       requestStop: () => { f.calls.push('stop-request'); return true; } });
     const observed: Error[] = [];
+    const observations: RuntimeProcessOutput[] = [];
+    observeMemberProcessStderr(child, { endpoint: { bearerToken: 'TEST-private-bearer' },
+      profile: { environment: {} }, observeProcessOutput: value => { observations.push(value); } }, []);
     child.on('error', (error: Error) => observed.push(error));
     if (phase === 'prepare') await assert.rejects(child.ready, /unavailable/);
     else { await child.ready; f.fail(); f.fail(); }
     await turn();
     assert.equal(observed.length, 1);
     assert.ok(observed.every((error) => !error.message.includes('TEST private')));
+    assert.deepEqual(observations, [], 'Broker/control failures are not target stderr');
     assert.equal(f.calls.filter((name) => name === 'stop-request').length, 1);
     assert.equal(child.exitCode, null);
     assert.equal(child.signalCode, null);

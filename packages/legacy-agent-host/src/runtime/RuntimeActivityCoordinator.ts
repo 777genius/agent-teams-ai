@@ -1,5 +1,5 @@
-import type { Event } from '@agent-teams/provider-session-contracts';
-import type { RuntimeProviderActivity } from './providerActivityContracts.js';
+import type { Event, OpenConfig } from '@agent-teams/provider-session-contracts';
+import type { RuntimeProcessOutput, RuntimeProviderActivity } from './providerActivityContracts.js';
 import { RuntimeOwnerError } from './contracts.js';
 import type { JsonValue } from '../contracts.js';
 import { normalizeBinding, runtimeDigest } from './identity.js';
@@ -31,7 +31,7 @@ export class RuntimeActivityCoordinator implements RuntimeStore {
   constructor(
     private readonly options: Pick<
       RuntimeOwnerOptions,
-      'store' | 'events' | 'hostIncarnation' | 'authorize' | 'contextObserved'
+      'store' | 'events' | 'hostIncarnation' | 'profileId' | 'authorize' | 'contextObserved'
     >
   ) {
     if (options.events && options.events.activityLimits.maxEventBytes > 64 * 1024)
@@ -154,6 +154,34 @@ export class RuntimeActivityCoordinator implements RuntimeStore {
       const prepared = this.prepare(record, [entry], this.unprojected(record));
       tx.put(record); this.persist(record, prepared);
     });
+  }
+
+  /** An original source grant permits diagnostics during opening/closing, never Runtime actions. */
+  observeProcessOutput(binding: RuntimeBinding, config: OpenConfig, observation: RuntimeProcessOutput, assertSourceCurrent: () => void): void {
+    try {
+      this.options.store.fenced(binding, tx => {
+        try { assertSourceCurrent(); } catch { return; }
+        const record = tx.get();
+        if (!record || record.profileId !== this.options.profileId ||
+            record.hostIncarnation !== this.options.hostIncarnation ||
+            runtimeDigest(record.binding) !== runtimeDigest(binding) ||
+            runtimeDigest(record.config) !== runtimeDigest(config) ||
+            record.openFingerprint !== runtimeDigest({ profileId: this.options.profileId, config }) ||
+            !['opening', 'allocated', 'held', 'closing'].includes(record.phase) ||
+            record.custody === 'released' || !this.options.events) return;
+        const data: RuntimeProcessOutput | undefined = observation.kind === 'process-output' &&
+          observation.stream === 'stderr' && typeof observation.text === 'string'
+          ? { kind: 'process-output', stream: 'stderr', text: observation.text }
+          : observation.kind === 'gap' && observation.reason === 'oversized'
+            ? { kind: 'gap', reason: 'oversized' } : undefined;
+        if (!data) return;
+        const prepared = this.prepare(record, [{ data }], this.unprojected(record));
+        tx.put(record);
+        this.persist(record, prepared);
+      });
+    } catch {
+      this.degraded.add(runtimeDigest(binding));
+    }
   }
 
   snapshot(raw: RuntimeBinding): RuntimeActivitySnapshot {
