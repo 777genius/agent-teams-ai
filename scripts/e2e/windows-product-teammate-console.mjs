@@ -348,37 +348,33 @@ async function run() {
     client.evaluate('window.__winProductAttach?.done ? window.__winProductAttach : null'),
     180_000);
   if (attachResult.error) throw new Error('Product member attachment failed: ' + attachResult.error);
-  originalMember = await wait('real app-managed added teammate process', async () => {
-    const snapshot = await api(
-      `window.electronAPI.teams.getTeamAgentRuntime(${literal(teamName)})`);
-    const member = snapshot?.members?.[attachedName];
-    const pid = member?.runtimePid ?? member?.pid;
-    if (!member?.alive || !Number.isSafeInteger(pid) || pid <= 0 ||
-        pid === initialMember.pid) return false;
-    const added = await getProcess(pid);
-    return added?.command?.includes(teamName) &&
-      added.command.includes('--agent-name') &&
-      added.command.includes(attachedName) ? added : false;
-  }, 180_000);
-  assert(originalMember.pid !== initialMember.pid,
-    'App-managed teammate must use a distinct original PID');
-  // Bind acceptance to the real direct-process member_added launch path in
-  // production, not an initial deterministic spawn or unrelated fixture.
-  await wait('original app-managed direct-process attachment event', async () => {
+  // The original process_spawned event proves the exact app-managed launch
+  // path. Runtime liveness projections can lag this original event on Windows;
+  // neither a cached alive flag nor a numeric PID alone qualifies the launch.
+  const attachedEvent = await wait('original app-managed direct-process attachment event', async () => {
     const filePath = path.join(env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT,
       'teams', teamName, 'runtime', attachedName + '.runtime.jsonl');
     const contents = await readFile(filePath, 'utf8').catch(error => {
       if (error?.code === 'ENOENT') return '';
       throw error;
     });
-    return contents.split('\n').filter(Boolean).some(line => {
-      const event = JSON.parse(line);
-      return event.type === 'process_spawned' &&
-        event.source === 'TeamProvisioningService.direct_process_member_added' &&
-        event.teamName === teamName && event.agentName === attachedName &&
-        event.pid === originalMember.pid;
-    });
+    const events = contents.split('\n').filter(Boolean).map(line => JSON.parse(line));
+    return events.find(event =>
+      event.type === 'process_spawned' &&
+      event.source === 'TeamProvisioningService.direct_process_member_added' &&
+      event.teamName === teamName && event.agentName === attachedName &&
+      Number.isSafeInteger(event.pid) && event.pid > 0) || false;
+  }, 180_000);
+  assert(attachedEvent.pid !== initialMember.pid,
+    'App-managed teammate must use a distinct original PID');
+  originalMember = await wait('real app-managed added teammate original Windows process', async () => {
+    const observed = await getProcess(attachedEvent.pid);
+    return observed?.command?.includes(teamName) &&
+      observed.command.includes('--agent-name') &&
+      observed.command.includes(attachedName) ? observed : false;
   }, 30_000);
+  assert.equal(originalMember.pid, attachedEvent.pid,
+    'Observed original Windows process must match the app-managed spawn event');
   appManagedRosterAttachConfirmed = true;
   await client.screenshot(screenshot);
   phase = 'native-tool-invocations';
