@@ -66,7 +66,11 @@ describe('original query witness protocol', () => {
     assert.deepEqual(vi.mocked(spawn).mock.calls[0]?.[1], ['query-wait-gated', '42', birth]);
     assert.equal(vi.mocked(spawn).mock.calls[0]?.[2]?.env, undefined);
     assert.deepEqual(tracked, [witness.process]);
-    for (const state of ['alive', 'absent', 'alive', 'absent']) assert.equal(await witness.observe(), state);
+    for (const state of ['alive', 'absent', 'alive', 'absent']) {
+      assert.equal(await witness.observe(), state);
+      if (state === 'absent') assert.equal(witness.process.exitCode, null,
+        'The gated witness staying alive is not evidence that its original target survived');
+    }
     await assert.rejects(witness.observe(), /Finite sequential original HANDLE observations/);
     const stopped = witness.wait();
     assert.equal(witness.wait(), stopped, 'The original wait is never replayed');
