@@ -1,0 +1,36 @@
+{
+  "stage": "B",
+  "commandName": "B-runtime-red",
+  "sourceHead": "a4c32a3247b6c39731e4ec12a257b894eaeac887",
+  "sourceTree": "924ca292df67231b2777b937930279072eb30649",
+  "parents": [
+    "107e56e9821cabf94760848f77474197017986d2",
+    "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+  ],
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--test",
+    "--test-concurrency=1",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T20:32:30.459937+00:00",
+  "finishedAtUTC": "2026-11-15T20:32:40.116419+00:00",
+  "elapsedSeconds": 9.656290163999074,
+  "exitCode": 1,
+  "preflightMetadataSHA256": "c2e8ce78c0b071f263f8c0040a1fa77dc45b294ec81b0b008419e326998bd502",
+  "logBytes": 6477,
+  "logSHA256": "46098186c0ae226ff560e7e00bb262ab15ebd02abf6867ff84b2d987047f3664",
+  "postflightExact": true,
+  "postflightError": null,
+  "nonBuildOutputBytesPreserved": true,
+  "outputInventoryBefore": null,
+  "outputInventoryAfter": null,
+  "builtOutputsCountAfter": 1446,
+  "freshSelectedOutputs": null,
+  "selectedSourceCount": 31,
+  "hostSourceCount": 615,
+  "selectedDependencyCount": 17
+}

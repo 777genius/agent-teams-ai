@@ -1,0 +1,371 @@
+{
+  "kind": "source-bound-original-Darwin-Process-evidence",
+  "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+  "sourceParent": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "sourceJoin": {
+    "completeDelta": "source-2cb-seven-path-delta.json",
+    "selectedUnchangedSource": [
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "bytes": 30399,
+        "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0",
+        "gitBlob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+        "join": "Exact 9a34 Git blob plus complete seven-path 2cb delta excluding this path"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+        "bytes": 9469,
+        "sha256": "fa169ace7cdfff654abe970d64a9c9ea2862883aedc8bb44ee7957615bb03709",
+        "gitBlob": "1bdd368dc281a59fb1a5b2fca629a18e201945a5",
+        "join": "Exact 9a34 Git blob plus complete seven-path 2cb delta excluding this path"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts",
+        "bytes": 42655,
+        "sha256": "3cb9951ac6c712fb5911ebf83598d1c81d62a6fa6aa9bd03dc6c2df745e3a420",
+        "gitBlob": "eaf21d42dc203d22778cfec4f02eb9bc6d62c0fa",
+        "join": "Exact 9a34 Git blob plus complete seven-path 2cb delta excluding this path"
+      }
+    ],
+    "scope": "Official artifact/source-head receipt and original full checkout/tuple assertion; no independent full per-file native source-pin census is claimed."
+  },
+  "records": [
+    {
+      "platform": "darwin-arm64",
+      "runId": 43755682747,
+      "jobId": 132939165678,
+      "artifactId": 14179001604,
+      "jobLog": {
+        "path": "job-132939165678.log",
+        "bytes": 106358,
+        "sha256": "450c83c32b6101c16516fc42192c0d98c21289bf8a341851e97aae7c5b0c3936",
+        "gitBlob": "4f1d37e172a2a6bfa0cc3b943c6f369fdf40804e"
+      },
+      "archiveAudit": "archive-audit-process_darwin_arm.json",
+      "scopeReceipt": {
+        "path": "process_darwin_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+        "bytes": 495,
+        "sha256": "be87d550f8d9cd6376e7ae5a0841d592ab2e0d9ced3b219f14d145a488768fea",
+        "gitBlob": "0579ce73063cb3406ec4f70c29f1b5b6ae84b017",
+        "value": {
+          "kind": "TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE",
+          "status": "PASS",
+          "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+          "platform": "darwin-arm64",
+          "nodeVersion": "v24.21.0",
+          "controlledContracts": true,
+          "retainedMainTransport": true,
+          "posixProcessGroups": true,
+          "native": [],
+          "nativeProviderRuntimeQualified": false,
+          "darwinNativeRegistrationQualified": false,
+          "posixExecutableAdmissionQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false
+        }
+      },
+      "sourceHeadFile": {
+        "path": "process_darwin_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "bytes": 41,
+        "sha256": "4fe61c0226fd807e52541f8979705f10372dd6ff43dfc9f394a90328de3718d1",
+        "gitBlob": "70cd92259f34d89ad6a2fadb2bc58182fa383521"
+      },
+      "originalCommands": [
+        "node --test packages/legacy-agent-host/tests/claude-management-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts packages/legacy-agent-host/tests/management-model-probe.test.ts packages/legacy-agent-host/tests/saved-team-model-probe.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log",
+        "node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log",
+        "node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log",
+        "node --test packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts 2>&1 | tee process-acceptance-evidence/posix-lifecycle.log"
+      ],
+      "originalReportedSummaries": {
+        "host-contracts.log": {
+          "identity": {
+            "bytes": 20223,
+            "sha256": "55f425eb6a9eb82fbc98143e056a06b6c108542bdfac384c0b185ca123908f26",
+            "gitBlob": "cbb4a98c3fb5dedd109234e33515bfc9ed4cc2df"
+          },
+          "reportedSummary": [
+            "\u2139 tests 163",
+            "\u2139 suites 0",
+            "\u2139 pass 161",
+            "\u2139 fail 0",
+            "\u2139 cancelled 0",
+            "\u2139 skipped 2",
+            "\u2139 todo 0",
+            "\u2139 duration_ms 20168.5905"
+          ],
+          "numbers": {
+            "tests": 163,
+            "suites": 0,
+            "pass": 161,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 2,
+            "todo": 0
+          }
+        },
+        "posix-lifecycle.log": {
+          "identity": {
+            "bytes": 2803,
+            "sha256": "24211566f55b99bb5a1038678a26b9450b6ad182cf75a8263bcfe4877dbadb3c",
+            "gitBlob": "ab9b29d20fdae316a41a34499be9c5709c9ab377"
+          },
+          "reportedSummary": [
+            "\u2139 tests 23",
+            "\u2139 suites 0",
+            "\u2139 pass 23",
+            "\u2139 fail 0",
+            "\u2139 cancelled 0",
+            "\u2139 skipped 0",
+            "\u2139 todo 0",
+            "\u2139 duration_ms 9075.711333"
+          ],
+          "numbers": {
+            "tests": 23,
+            "suites": 0,
+            "pass": 23,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          }
+        },
+        "protocol.log": {
+          "identity": {
+            "bytes": 771,
+            "sha256": "f2893e55b011df75ea8c159fd866b645abde8a9b6f94310c6da9fefb9db63710",
+            "gitBlob": "68871671743b6694e40ecac8df6ee182034d52e6"
+          },
+          "reportedSummary": [
+            " Test Files  3 passed (3)",
+            "      Tests  53 passed (53)",
+            "   Duration  2.61s (transform 382ms, setup 0ms, collect 1.29s, tests 237ms, environment 0ms, prepare 629ms)"
+          ],
+          "numbers": {
+            "filePass": 3,
+            "fileTotal": 3,
+            "pass": 53,
+            "tests": 53
+          }
+        },
+        "retained-main.log": {
+          "identity": {
+            "bytes": 9176,
+            "sha256": "b75285e4e609f03b81ffc273b9fe36dae0f256b2da2ea6dcad3e8e92cbf8540d",
+            "gitBlob": "3ac0abdccb34d9d7fa7491bd4c72e8d9fc2af2d7"
+          },
+          "reportedSummary": [
+            " Test Files  8 passed (8)",
+            "      Tests  81 passed (81)",
+            "   Duration  54.67s (transform 4.13s, setup 2.22s, collect 14.68s, tests 35.76s, environment 1ms, prepare 506ms)"
+          ],
+          "numbers": {
+            "filePass": 8,
+            "fileTotal": 8,
+            "pass": 81,
+            "tests": 81
+          }
+        }
+      },
+      "originalSkippedCases": [
+        "\ufe63 Linux builder refuses an existing or linked output leaf before any compiler dispatch (1.35075ms) # SKIP",
+        "\ufe63 Linux original executable compares signed Node and unsigned native inode bits exactly (0.831209ms) # SKIP"
+      ],
+      "aggregatedOriginalCommands": {
+        "commands": 4,
+        "files": 31,
+        "pass": 318,
+        "fail": 0,
+        "skip": 2,
+        "cancelled": 0
+      },
+      "posixRetainedDiagnostics": [
+        {
+          "cleanupConfirmed": true,
+          "descendantAbsent": true,
+          "neighborPreserved": true
+        },
+        {
+          "cleanupConfirmed": false,
+          "descendantAbsent": true,
+          "neighborPreserved": true
+        }
+      ]
+    },
+    {
+      "platform": "darwin-x64",
+      "runId": 43755682747,
+      "jobId": 132939165768,
+      "artifactId": 14179310387,
+      "jobLog": {
+        "path": "job-132939165768.log",
+        "bytes": 117138,
+        "sha256": "27572c7c89943d1ff1466a23d698b7bc88077a3d9b9f2c1eb0be868b22c43f71",
+        "gitBlob": "22fdcbc91e858b57446d6294fd4be297f1e81ca8"
+      },
+      "archiveAudit": "archive-audit-process_darwin_x64.json",
+      "scopeReceipt": {
+        "path": "process_darwin_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+        "bytes": 493,
+        "sha256": "7eff1684c089046a6373ae715f145d5bf02449196133f2c2a676297e3d0d6f8e",
+        "gitBlob": "aa06da50d30843b6cc775c4a1692101c66f52320",
+        "value": {
+          "kind": "TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE",
+          "status": "PASS",
+          "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+          "platform": "darwin-x64",
+          "nodeVersion": "v24.21.0",
+          "controlledContracts": true,
+          "retainedMainTransport": true,
+          "posixProcessGroups": true,
+          "native": [],
+          "nativeProviderRuntimeQualified": false,
+          "darwinNativeRegistrationQualified": false,
+          "posixExecutableAdmissionQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false
+        }
+      },
+      "sourceHeadFile": {
+        "path": "process_darwin_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "bytes": 41,
+        "sha256": "4fe61c0226fd807e52541f8979705f10372dd6ff43dfc9f394a90328de3718d1",
+        "gitBlob": "70cd92259f34d89ad6a2fadb2bc58182fa383521"
+      },
+      "originalCommands": [
+        "node --test packages/legacy-agent-host/tests/claude-management-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts packages/legacy-agent-host/tests/management-model-probe.test.ts packages/legacy-agent-host/tests/saved-team-model-probe.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log",
+        "node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log",
+        "node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log",
+        "node --test packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts 2>&1 | tee process-acceptance-evidence/posix-lifecycle.log"
+      ],
+      "originalReportedSummaries": {
+        "host-contracts.log": {
+          "identity": {
+            "bytes": 20307,
+            "sha256": "b43e2b30720c185dc7608653046be536dc9403d6fbc990a0b29453c9a6a69c98",
+            "gitBlob": "6eb33ddce8b5709c68fd87f06049df7007694b58"
+          },
+          "reportedSummary": [
+            "\u2139 tests 163",
+            "\u2139 suites 0",
+            "\u2139 pass 161",
+            "\u2139 fail 0",
+            "\u2139 cancelled 0",
+            "\u2139 skipped 2",
+            "\u2139 todo 0",
+            "\u2139 duration_ms 32333.58221"
+          ],
+          "numbers": {
+            "tests": 163,
+            "suites": 0,
+            "pass": 161,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 2,
+            "todo": 0
+          }
+        },
+        "posix-lifecycle.log": {
+          "identity": {
+            "bytes": 2811,
+            "sha256": "beb7410751f4720b8b9e0dd41b4771f7fa3fc0341f84e5ee9e83fbf871fd08ae",
+            "gitBlob": "5018d6f4eb9d5f618551110bb9f3447f7798b868"
+          },
+          "reportedSummary": [
+            "\u2139 tests 23",
+            "\u2139 suites 0",
+            "\u2139 pass 23",
+            "\u2139 fail 0",
+            "\u2139 cancelled 0",
+            "\u2139 skipped 0",
+            "\u2139 todo 0",
+            "\u2139 duration_ms 9464.800971"
+          ],
+          "numbers": {
+            "tests": 23,
+            "suites": 0,
+            "pass": 23,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          }
+        },
+        "protocol.log": {
+          "identity": {
+            "bytes": 771,
+            "sha256": "2d91c0f0abe80a506230f6d99b335e7379d349b6f56165d6071f18919a44896d",
+            "gitBlob": "7ce2b57faabb0ef18ea797eeed2a27ddfa1c70c8"
+          },
+          "reportedSummary": [
+            " Test Files  3 passed (3)",
+            "      Tests  53 passed (53)",
+            "   Duration  5.10s (transform 739ms, setup 0ms, collect 2.78s, tests 536ms, environment 1ms, prepare 748ms)"
+          ],
+          "numbers": {
+            "filePass": 3,
+            "fileTotal": 3,
+            "pass": 53,
+            "tests": 53
+          }
+        },
+        "retained-main.log": {
+          "identity": {
+            "bytes": 9928,
+            "sha256": "7728eca98832aa0fed38f5a0e2df5d838b32e6eb93e043b62cf734dec0a1fce1",
+            "gitBlob": "83e1541262d3806ed08110f9b35974edaccb9600"
+          },
+          "reportedSummary": [
+            " Test Files  8 passed (8)",
+            "      Tests  81 passed (81)",
+            "   Duration  125.76s (transform 8.25s, setup 6.23s, collect 30.68s, tests 84.24s, environment 2ms, prepare 1.15s)"
+          ],
+          "numbers": {
+            "filePass": 8,
+            "fileTotal": 8,
+            "pass": 81,
+            "tests": 81
+          }
+        }
+      },
+      "originalSkippedCases": [
+        "\ufe63 Linux builder refuses an existing or linked output leaf before any compiler dispatch (3.474477ms) # SKIP",
+        "\ufe63 Linux original executable compares signed Node and unsigned native inode bits exactly (1.793871ms) # SKIP"
+      ],
+      "aggregatedOriginalCommands": {
+        "commands": 4,
+        "files": 31,
+        "pass": 318,
+        "fail": 0,
+        "skip": 2,
+        "cancelled": 0
+      },
+      "posixRetainedDiagnostics": [
+        {
+          "cleanupConfirmed": true,
+          "descendantAbsent": true,
+          "neighborPreserved": true
+        },
+        {
+          "cleanupConfirmed": false,
+          "descendantAbsent": true,
+          "neighborPreserved": true
+        }
+      ]
+    }
+  ],
+  "cleanupSemantics": {
+    "liveOriginalGroup": "Original controlled Node/shell case confirms stop, observes descendant ESRCH and neighboring process still live.",
+    "alreadyExitedParent": "First confirmStopped deliberately returns false. The test writes its TEST release file, requires a second confirmStopped true, then checks descendant ESRCH and neighbor presence. The diagnostic preserves the first false value.",
+    "neighborFinally": "Both cases terminate their independent original neighbor, await its exit and remove the disposable fixture directory.",
+    "replacementGroupNegative": "Original child really exits; a mocked positive numeric process.kill probe represents a reused PGID. The test requires no TERM/KILL and later fresh absence. It does not force or observe OS identifier reuse.",
+    "evidenceLimit": "These are completed original test assertions and two bounded diagnostics, not an independent all-process census or raw PID custody ledger."
+  },
+  "qualificationLimits": [
+    "Both scope receipts retain native:[] and nativeProviderRuntimeQualified=false, darwinNativeRegistrationQualified=false, posixExecutableAdmissionQualified=false, desktopQualified=false and releaseQualified=false.",
+    "The native identity version fixtures construct their own TEST shell executables, including simulated Codex/Claude/OpenCode version strings; no actual vendor CLI version execution is inferred.",
+    "The independent P09 mutation-oracle failure is unchanged and is not qualified by these Process PASS jobs.",
+    "The two Linux-specific skips remain unqualified.",
+    "No tests, native processes, providers, CI reruns, cancellations, source changes or refs were executed by this auditor.",
+    "This later audit does not rewrite the earlier 20:35 checkpoint or 20:38 terminal snapshot; their Darwin Process status-only statements reflect the evidence available then."
+  ]
+}

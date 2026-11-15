@@ -1,0 +1,33 @@
+{
+  "stage": "D",
+  "commandName": "D-architecture",
+  "sourceHead": "7e8e37c282e9cc653efd79799dc862d116310065",
+  "sourceTree": "e77d05767aa3cb4be469e3763b19236601dbc762",
+  "parents": [
+    "3184acb5f000c2ce2e368ff9babc6105c5adc5c1"
+  ],
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "./scripts/ci/check-team-provisioning-architecture.mjs"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T20:50:05.032427+00:00",
+  "finishedAtUTC": "2026-11-15T20:50:05.149032+00:00",
+  "elapsedSeconds": 0.11657839499821421,
+  "exitCode": 0,
+  "preflightMetadataSHA256": "6f6b29c5bbd3a45a9e8f6e2118ee27664600c0c8623867e73d6977c209b1973d",
+  "logBytes": 184,
+  "logSHA256": "0f72f211f9285332305dc9d63650e47a7d741f2216f712df043bdccbc02f473d",
+  "postflightExact": true,
+  "postflightError": null,
+  "nonBuildOutputBytesPreserved": true,
+  "outputInventoryBefore": null,
+  "outputInventoryAfter": null,
+  "builtOutputsCountAfter": 1446,
+  "freshSelectedOutputs": null,
+  "selectedSourceCount": 31,
+  "hostSourceCount": 615,
+  "selectedDependencyCount": 17
+}

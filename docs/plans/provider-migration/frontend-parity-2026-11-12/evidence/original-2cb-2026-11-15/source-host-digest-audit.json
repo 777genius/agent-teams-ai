@@ -1,0 +1,2478 @@
+{
+  "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+  "sourceTree": "4fd42ca2d74bfb29a834638b25675c51bfd6701a",
+  "baseHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "join": "Complete seven-path incoming commit delta from sole parent9a34 changes only Host source index.ts; preserve all614 other Host .ts Git blobs. Windows checked-out source bytes match CRLF form.",
+  "changedSourceBlob": "755158699496506a62132c540f19b225c5a6222d",
+  "fileCount": 615,
+  "algorithm": "sorted relative path + NUL + exact checked-out file bytes + NUL",
+  "computed": {
+    "LF": "7a1229966bdf7b230657d9a8e509a3cedfda01419c24d6aa26fbdca7c669f77e",
+    "CRLF": "5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052"
+  },
+  "receiptHostSourceDigest": "5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052",
+  "matched": "CRLF",
+  "files": [
+    {
+      "relativePath": "adapters/cross-team/createHostCrossTeamOutbox.ts",
+      "gitBlob": "014b4178828b2c07df41c8f2a646396080707de3"
+    },
+    {
+      "relativePath": "adapters/cross-team/fileLock.ts",
+      "gitBlob": "458446859063620af3ea160c7a2bf4ed9c4c9060"
+    },
+    {
+      "relativePath": "adapters/lifecycle/KeyedMutex.ts",
+      "gitBlob": "d2255b415e351b8cff1e32df68461cce1a28f62c"
+    },
+    {
+      "relativePath": "adapters/lifecycle/OwnerBackupResourceAccess.ts",
+      "gitBlob": "24f00bb1ea4033f369820b8869695de70422e85a"
+    },
+    {
+      "relativePath": "adapters/lifecycle/OwnerScopedTeamBackup.ts",
+      "gitBlob": "aa80e11833209204a2315e5951d356286544e01f"
+    },
+    {
+      "relativePath": "adapters/lifecycle/OwnerScopedTeamPurge.ts",
+      "gitBlob": "9f379372d3ac25d20a9277548e533ca2a93ff5fd"
+    },
+    {
+      "relativePath": "adapters/lifecycle/TeamBackupFileCollection.ts",
+      "gitBlob": "f9ca176bc46ad98d9525ba1f51ab0ab7ac3e64d9"
+    },
+    {
+      "relativePath": "adapters/lifecycle/TeamBackupStartupRegistry.ts",
+      "gitBlob": "57c6225d2f19f3f38931a2ed10635f7dc6ada367"
+    },
+    {
+      "relativePath": "adapters/lifecycle/TeamPermanentDeletionCoordinator.ts",
+      "gitBlob": "6127e40f949ffe9c9418068325679bfc4ac74ffc"
+    },
+    {
+      "relativePath": "adapters/lifecycle/TeamPermanentDeletionIdentity.ts",
+      "gitBlob": "c9552eaf8533da4f93088e6c6f8f79d982391bb8"
+    },
+    {
+      "relativePath": "adapters/lifecycle/TeamPermanentDeletionIntentStore.ts",
+      "gitBlob": "a476c7c7cf46a5344fd71dc74744d154f380f55c"
+    },
+    {
+      "relativePath": "adapters/lifecycle/TeamPermanentDeletionLock.ts",
+      "gitBlob": "3a340db42bf1c6e41a14c2fa6bca92a5d89eb95c"
+    },
+    {
+      "relativePath": "adapters/lifecycle/TeamPermanentDeletionTypes.ts",
+      "gitBlob": "32ba2b9718b5ab6efca25f6799c3716c01e4a8c2"
+    },
+    {
+      "relativePath": "adapters/lifecycle/TeamWorkSyncIdentityAccess.ts",
+      "gitBlob": "4738256c7b8f195353d8f15f854a896b5e75fea6"
+    },
+    {
+      "relativePath": "adapters/lifecycle/TeamWorkSyncPriorIdentity.ts",
+      "gitBlob": "e265264ffc2052cf577b49d804c0608e9f34a74b"
+    },
+    {
+      "relativePath": "adapters/lifecycle/TeamWorkSyncRestoreReadiness.ts",
+      "gitBlob": "0cf57dbb9013c4edd9750537c3a8f036900c99eb"
+    },
+    {
+      "relativePath": "adapters/lifecycle/atomicWriteSync.ts",
+      "gitBlob": "f5dd079992f2b92581f974b0eeca8303ddc6628e"
+    },
+    {
+      "relativePath": "adapters/lifecycle/createOwnerBackupRegistry.ts",
+      "gitBlob": "5f813d4a90e1207ef46efcd7fde8bb0a9868de1a"
+    },
+    {
+      "relativePath": "adapters/lifecycle/createOwnerLifecycleIdentity.ts",
+      "gitBlob": "0ee5002833ceecaa36e2f8c72234f3fad4faa507"
+    },
+    {
+      "relativePath": "adapters/lifecycle/durablePathOperations.ts",
+      "gitBlob": "02bd5eaac4792ea11ed5c97c00d7c5141ed7c510"
+    },
+    {
+      "relativePath": "adapters/lifecycle/lifecycleIo.ts",
+      "gitBlob": "027e63ff04658c56cf1eba354c1fb379222804d4"
+    },
+    {
+      "relativePath": "adapters/lifecycle/lifecycleRoots.ts",
+      "gitBlob": "d3e06d534ec51fb001dce1434e7ed9a339139965"
+    },
+    {
+      "relativePath": "adapters/lifecycle/ownerPurgeRequest.ts",
+      "gitBlob": "839b8d7f0c2ba2f87e1bd514264985cdd3ce0b41"
+    },
+    {
+      "relativePath": "adapters/lifecycle/ownerTeamBackupCensus.ts",
+      "gitBlob": "f5827637c4559656001a4b393c4ad746ace3f3ee"
+    },
+    {
+      "relativePath": "adapters/lifecycle/permanentDeletionPorts.ts",
+      "gitBlob": "b045df780033a832a702b3cfdfbd95de925d645f"
+    },
+    {
+      "relativePath": "adapters/lifecycle/pruneDeletedTeamBackups.ts",
+      "gitBlob": "d04f354096aa81da4484fd4432456222b55654d7"
+    },
+    {
+      "relativePath": "adapters/lifecycle/teamBackupManifest.ts",
+      "gitBlob": "aee8f53a3ee9997bc8406002b08d9afe6f244013"
+    },
+    {
+      "relativePath": "adapters/profile/FileRuntimeSourceIndex.ts",
+      "gitBlob": "cf01a4b31ad0ac5f74baffb0f265dee8961bfd81"
+    },
+    {
+      "relativePath": "adapters/profile/ProfileWriterLease.ts",
+      "gitBlob": "761cfba79bd4a993442681d4ec2decdad57efc3b"
+    },
+    {
+      "relativePath": "adapters/providers/CapturedProcess.ts",
+      "gitBlob": "c3670e3828e2b9470a2997d29d6cad225107d8fc"
+    },
+    {
+      "relativePath": "adapters/providers/ClaudeAuthConversation.ts",
+      "gitBlob": "a4d47563cffaed2ea48381887e47820ed727422e"
+    },
+    {
+      "relativePath": "adapters/providers/ClaudeManagementHost.ts",
+      "gitBlob": "12d3ce0c8b8423cc86abbe1f39feb0cdd46562d2"
+    },
+    {
+      "relativePath": "adapters/providers/ClaudeMemberProvider.ts",
+      "gitBlob": "4d1ff99143e5ddfb157ddaa7ee5ed48caa608e91"
+    },
+    {
+      "relativePath": "adapters/providers/ClaudeSubagentLogProjection.ts",
+      "gitBlob": "d74ffdfb51f5c5cf14e152ecb2b688602de3f65b"
+    },
+    {
+      "relativePath": "adapters/providers/CodexLoginConversation.ts",
+      "gitBlob": "2b2958ef3dfc4b2f8924be42fe228c52c434ce26"
+    },
+    {
+      "relativePath": "adapters/providers/CodexManagementHost.ts",
+      "gitBlob": "ac87419633085b2ea517b9a0c3df442bf1982b78"
+    },
+    {
+      "relativePath": "adapters/providers/CodexMemberProvider.ts",
+      "gitBlob": "537cc17c207699eadba99bfae09b5853a3eaf1be"
+    },
+    {
+      "relativePath": "adapters/providers/FileManagementCommandStore.ts",
+      "gitBlob": "d3068dcabf3ea7334a252967b43931f8751f7d58"
+    },
+    {
+      "relativePath": "adapters/providers/MemberProvider.ts",
+      "gitBlob": "4169f9ed08441561bda739ab79eedfca32b62e73"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeConfigurationSource.ts",
+      "gitBlob": "6efd49158d9f3ab93d916fdb562fa61b2f8aa039"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeCoordinationEndpoint.ts",
+      "gitBlob": "80f2d9a32b149614b2f0ee28edec86f0e216a963"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeCoordinationProbe.ts",
+      "gitBlob": "ed25bfd57ff19730328fd13c4d338e8a3649e2a3"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeLocalModelReadiness.ts",
+      "gitBlob": "7dbf688520e735df192d7294d17e5db8685830ab"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeManagementHost.ts",
+      "gitBlob": "cc3f0253c360dd407720e62bc8c71f3e84926296"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeMcpPolicyPlugin.ts",
+      "gitBlob": "7d83b7e868a8d637d4d80e3a98a9db8bea309c04"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeMemberProvider.ts",
+      "gitBlob": "78b22adbb55ab285186285e4e3f6ada38f413ecb"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeReadinessOrigin.ts",
+      "gitBlob": "57c68f58a158bc4c6e9f0ea93c349b7abf8daeaa"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2AttachmentPort.ts",
+      "gitBlob": "9dfe8e2c38fa4230f0a4acf255a576a97d3f878b"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2CapturedConfiguration.ts",
+      "gitBlob": "0449edd82efd8becbb12364faaa80d4ebd9aacda"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2CapturedMcp.ts",
+      "gitBlob": "b83c82e80a920e21857499a7dd0fa27226902884"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2ConfiguredPackages.ts",
+      "gitBlob": "5f29eb242ae7dce6c96953214029c819bb992bc2"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2CredentialOperation.ts",
+      "gitBlob": "0b7b2bbf7c0538b965551c795a776ec6ed92c1e6"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2CredentialScope.ts",
+      "gitBlob": "0c13f94a649dee82ffd2cfb034c7b044584ca8a3"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2CustodyReadback.ts",
+      "gitBlob": "13e42373819467ed2c472c9ddb600009765013e5"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2EmbeddedChild.ts",
+      "gitBlob": "4484155afc95c7b685b139e181b685548b92a00a"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2EmbeddedConfig.ts",
+      "gitBlob": "cdb6403f390b40bdc544af801adbc891f861e632"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2EmbeddedGraph.ts",
+      "gitBlob": "91e35a9ba6a414bb143487632add356171d21b83"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2EmbeddedMemberProvider.ts",
+      "gitBlob": "d8a6a5e614ce90c9055a2b1298d4c9edaf07ef01"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2EmbeddedServer.ts",
+      "gitBlob": "c03bedfba9577adeb24120b5ef98cb3d82ff33b8"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2InitialContextReadback.ts",
+      "gitBlob": "59bc679221b44817ca2470fc23cff9effbe68172"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2ManagementHost.ts",
+      "gitBlob": "384b4c00a05d5886cce267ae76166c93d5892262"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2MemberProvider.ts",
+      "gitBlob": "89f2eb8711025416f7afd07727ed62fcd4ad3dad"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2ModelProbe.ts",
+      "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2ModelSelection.ts",
+      "gitBlob": "f9e48b8099cf459b1e80745af819dc89177be4d0"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2ModelVariant.ts",
+      "gitBlob": "0df38e070a24cf3f2f6762954d2f706e50409d37"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2NativeFileKey.ts",
+      "gitBlob": "03ecaca36da1fd0816ff92d43dfc6fdd6e85893e"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2ObserverCleanup.ts",
+      "gitBlob": "28b36478809ec874019651863d437fde6d18c2d9"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2OwnedSession.ts",
+      "gitBlob": "ea6c1410e29b134387fb11a93b0c7d8f3b93df74"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2OwnerReadback.ts",
+      "gitBlob": "37beeaff4ccdbc21110ce56a9968e0a37d98b3a2"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2PermissionReadback.ts",
+      "gitBlob": "f9cd9e71b05e870ffc685c0bc7d9189d077e8563"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2ReadOnlySnapshot.ts",
+      "gitBlob": "d3caa510f6c7a11b65fbb11bf8661e5dc57de453"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2RequestAdmission.ts",
+      "gitBlob": "613894e51cb4f13b9f64130a57286a62033d5756"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2RevocationWait.ts",
+      "gitBlob": "d833aa51b0dd7e533a7d122de21d5672bef5f4e9"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2SelectedFileKey.ts",
+      "gitBlob": "ad5a603d60b0d88f0ea1e3a679f74b20aee37501"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2SessionCredential.ts",
+      "gitBlob": "2e1de9f12e75050c3186324ba3543022622cc273"
+    },
+    {
+      "relativePath": "adapters/providers/OpenCodeV2StopAckWait.ts",
+      "gitBlob": "e2f9fd9450fd040637925b1d7f4b1ceddb4092e0"
+    },
+    {
+      "relativePath": "adapters/providers/RuntimeSourceNativeVersion.ts",
+      "gitBlob": "5c3e39fa4f77c9534625396204df6cc68e108170"
+    },
+    {
+      "relativePath": "adapters/providers/ScheduledRunProvider.ts",
+      "gitBlob": "85929131823d19197651cc5f984096cde9b1fd6e"
+    },
+    {
+      "relativePath": "adapters/providers/WindowsCapturedProcess.ts",
+      "gitBlob": "b63b0c2b97bc196d0c1c87c0f106c2e2346e3de9"
+    },
+    {
+      "relativePath": "adapters/providers/WindowsJobCustody.ts",
+      "gitBlob": "ae448df3308298f2857fb2923af289b0671697f6"
+    },
+    {
+      "relativePath": "adapters/providers/WindowsJobKernel.ts",
+      "gitBlob": "994399c3757bbb6bc97b03fb6543237b2f3a0b53"
+    },
+    {
+      "relativePath": "adapters/providers/capturedNativeProcessFactory.ts",
+      "gitBlob": "6eed54e3253a8e714cdc984835c74474d7edb054"
+    },
+    {
+      "relativePath": "adapters/providers/claudeActivityReference.ts",
+      "gitBlob": "1280ac762f166ec64c217cc55d7fc9a21e693276"
+    },
+    {
+      "relativePath": "adapters/providers/claudeAuthStatus.ts",
+      "gitBlob": "3ce5814e42e72d0a46f229791dfec25668e22896"
+    },
+    {
+      "relativePath": "adapters/providers/claudeMcpServers.ts",
+      "gitBlob": "3a8b2fa2106461369810948c6b7bf5c1777d256e"
+    },
+    {
+      "relativePath": "adapters/providers/claudeSessionCommands.ts",
+      "gitBlob": "f8cdb5633d63c6b2e6c34a14740e83d5fa9eebd9"
+    },
+    {
+      "relativePath": "adapters/providers/claudeSessionExists.ts",
+      "gitBlob": "4b34a0e1413651e402dd0027eb1af65c48497ccb"
+    },
+    {
+      "relativePath": "adapters/providers/codexByteTransport.ts",
+      "gitBlob": "ec76625a5aa141fc1deea021a62e18488fb4a3f7"
+    },
+    {
+      "relativePath": "adapters/providers/codexMcpPolicy.ts",
+      "gitBlob": "05312f8665c88e4aa65fb3775afd88e5a1b58de8"
+    },
+    {
+      "relativePath": "adapters/providers/createClaudeCloseDiagnostic.ts",
+      "gitBlob": "6c8bfdfcf34298a7b513f7a9600301d0256bed32"
+    },
+    {
+      "relativePath": "adapters/providers/openCodeAgentPolicy.ts",
+      "gitBlob": "7d43387d03b0d68c4ee16876ee7da5f1e7357bb5"
+    },
+    {
+      "relativePath": "adapters/providers/openCodeConfiguredAuthless.ts",
+      "gitBlob": "14b91af7788556021b884211526e296f1511c61d"
+    },
+    {
+      "relativePath": "adapters/providers/openCodeMcpPolicy.ts",
+      "gitBlob": "792b4280d6ac9488274ac6a60533eee46f3a8661"
+    },
+    {
+      "relativePath": "adapters/providers/readCodexMcpCatalog.ts",
+      "gitBlob": "7230804bd10e8a521cb3e1b1e9760920e9ebcef5"
+    },
+    {
+      "relativePath": "adapters/providers/readOpenCodeCatalog.ts",
+      "gitBlob": "4de1ad06637fbcd7d9c53f2032ce1ce87c464d11"
+    },
+    {
+      "relativePath": "adapters/providers/readOpenCodeInputModalities.ts",
+      "gitBlob": "027b69bf4e41772fc1514a06a12e25a755111511"
+    },
+    {
+      "relativePath": "adapters/providers/readProviderAuthMethods.ts",
+      "gitBlob": "fedeea2f66cf009e322fab5ac4fc6261eb6f9375"
+    },
+    {
+      "relativePath": "adapters/providers/runOpenCodeModelProbe.ts",
+      "gitBlob": "c1240460eeac5c7ed26269ef6e86d3b89b31c17d"
+    },
+    {
+      "relativePath": "adapters/providers/runtimeSourceVersionProfile.ts",
+      "gitBlob": "0d14ea8c8934962b1111e22bb12bef379e5566a1"
+    },
+    {
+      "relativePath": "adapters/providers/withOpenCodeModelLimits.ts",
+      "gitBlob": "4b3402b8a1c327b2e9f1f4cde289590827e0be08"
+    },
+    {
+      "relativePath": "adapters/runtime/FileCheckpointStorage.ts",
+      "gitBlob": "587eb73bd2d2c519b55b33756e87c84806e3b405"
+    },
+    {
+      "relativePath": "adapters/runtime/FileRuntimeEventStorage.ts",
+      "gitBlob": "08764b5e21c0e56807db16747442cf40233748bb"
+    },
+    {
+      "relativePath": "adapters/runtime/FileRuntimeStore.ts",
+      "gitBlob": "60873a7a750aacfd4affbff90b21e1a739f127d4"
+    },
+    {
+      "relativePath": "adapters/team-registry/FileTeamRegistryStore.ts",
+      "gitBlob": "10d3c80f150d51812ed63f3bdcc9c6d60827f090"
+    },
+    {
+      "relativePath": "adapters/team-registry/admitRegistryTeamNamespace.ts",
+      "gitBlob": "3665796440fd008682d0bfc554006b1db7b6a2c5"
+    },
+    {
+      "relativePath": "adapters/team/ControllerAdapter.ts",
+      "gitBlob": "45ca266cf44afd3a65c5db3312640d71f67328eb"
+    },
+    {
+      "relativePath": "adapters/team/FileTeamRuntimeBindings.ts",
+      "gitBlob": "2955a8c6dd0bcbb7825ae7f153ab0c7d4dbd3e13"
+    },
+    {
+      "relativePath": "adapters/team/HostGroupStorage.ts",
+      "gitBlob": "f251c45cbe8303bdce6c369c140a756d5e794f73"
+    },
+    {
+      "relativePath": "adapters/team/TaskEffectPlan.ts",
+      "gitBlob": "c95e49036c46753e459c484057493ede46cb05a8"
+    },
+    {
+      "relativePath": "adapters/team/TaskStartNotifier.ts",
+      "gitBlob": "d96029723a81dd7c45b6cd894e34876d383af800"
+    },
+    {
+      "relativePath": "adapters/team/TeamMemberStoragePaths.ts",
+      "gitBlob": "83768924e93dfbada5e3609116aff1182f6a0561"
+    },
+    {
+      "relativePath": "adapters/team/TeamOwnerStore.ts",
+      "gitBlob": "17c422fbabf290e582dad1f48f973d85d42dc082"
+    },
+    {
+      "relativePath": "adapters/team/admitTeamNamespace.ts",
+      "gitBlob": "9b77968f5a9cb3b84d8390c435730c204fbd818b"
+    },
+    {
+      "relativePath": "adapters/team/createFilesystemTeamOwner.ts",
+      "gitBlob": "f46d39fe38e189f9e618296248650a83c76e5033"
+    },
+    {
+      "relativePath": "adapters/team/groupStorageFiles.ts",
+      "gitBlob": "c1476373ec4c567f730e0c54744450a2c2981659"
+    },
+    {
+      "relativePath": "adapters/worktrees/HostWorktreeGit.ts",
+      "gitBlob": "3344af7b2f74265eb124f5c37859ab8039a74b52"
+    },
+    {
+      "relativePath": "approval/policy.ts",
+      "gitBlob": "aa98b3b670412f35e1ce5d5ecc5b50d78c8a6811"
+    },
+    {
+      "relativePath": "approval/settings.ts",
+      "gitBlob": "e66babc33c1a7ab2623751887406498c3df92cfa"
+    },
+    {
+      "relativePath": "attachments/AttachmentArtifactStore.ts",
+      "gitBlob": "22aad548d6cbbe0d5683681248009ea272554ebb"
+    },
+    {
+      "relativePath": "attachments/attachmentTypes.ts",
+      "gitBlob": "503260c3c970c51e567b9e8d30f30df5faeda2b8"
+    },
+    {
+      "relativePath": "attachments/capabilities.ts",
+      "gitBlob": "f232186efb6ea93599efd2b9d74f2e3dae27b6fc"
+    },
+    {
+      "relativePath": "attachments/contracts.ts",
+      "gitBlob": "511871b8844074c9c0f297b5035af09a9901ed04"
+    },
+    {
+      "relativePath": "attachments/importedMessageReference.ts",
+      "gitBlob": "e44d3655b7e7fa122cab38904371cb0b5ffb721b"
+    },
+    {
+      "relativePath": "attachments/messageFileReferences.ts",
+      "gitBlob": "b5d21232c1d06d2786481acc5827926e390972e4"
+    },
+    {
+      "relativePath": "attachments/mimeTypes.ts",
+      "gitBlob": "0924f0678d8956e2ea23b6fdf0f414b183b99a33"
+    },
+    {
+      "relativePath": "attachments/portable.ts",
+      "gitBlob": "a875e671a08789f10cb5f0ceec97e505499b4bd6"
+    },
+    {
+      "relativePath": "attachments/readImportedTaskAttachment.ts",
+      "gitBlob": "6389cf20c45e102f273d7c682f4803db60cc7cba"
+    },
+    {
+      "relativePath": "attachments/storage.ts",
+      "gitBlob": "94ce9507f6b55300a392ef2428dabd9601e0530e"
+    },
+    {
+      "relativePath": "attachments/uploadContracts.ts",
+      "gitBlob": "a025f06196af6f3dbfaf5e4f0b6bb93b1c02c144"
+    },
+    {
+      "relativePath": "cli.ts",
+      "gitBlob": "255c0952a3a58e511c7bd790b1b34dd0d1330393"
+    },
+    {
+      "relativePath": "composition/CapturedInteractionPreview.ts",
+      "gitBlob": "5b5b48a87bc70d6067cd43782160d3569173e7b1"
+    },
+    {
+      "relativePath": "composition/CapturedReviewWorkspaces.ts",
+      "gitBlob": "1aa22f7ad05ebc08e56efc2d70de801c989391b3"
+    },
+    {
+      "relativePath": "composition/CapturedRuntimeInteraction.ts",
+      "gitBlob": "196ea799cbf8e37f2a741c285eef1afe57d25978"
+    },
+    {
+      "relativePath": "composition/ClaudeAuthenticationCoordinator.ts",
+      "gitBlob": "5f129052b232eed045304284167bc9258141b720"
+    },
+    {
+      "relativePath": "composition/ClaudeManagementCoordinator.ts",
+      "gitBlob": "40e4b8297dfcddeea4685b6f0187d598e1071c4c"
+    },
+    {
+      "relativePath": "composition/CodexManagementCoordinator.ts",
+      "gitBlob": "d147444535c4ab4d36827db315f1f92a0e15ce4a"
+    },
+    {
+      "relativePath": "composition/CreateTeamLaunchCoordinator.ts",
+      "gitBlob": "dd5da1dda396a299a0b9b04ff492134e96ac87e2"
+    },
+    {
+      "relativePath": "composition/CrossTeamPairAuthority.ts",
+      "gitBlob": "383ddca6d64fb030389901ff40c630feaffd89a2"
+    },
+    {
+      "relativePath": "composition/HostInteractionControls.ts",
+      "gitBlob": "fe2fbac56aaebec8c2f6b04241dbf36869db0796"
+    },
+    {
+      "relativePath": "composition/HostScheduledRuns.ts",
+      "gitBlob": "1db38b33e308071130543fecb62e8caaaa2c90b2"
+    },
+    {
+      "relativePath": "composition/HostTeamReview.ts",
+      "gitBlob": "23732e186b88b3474ad2e65defdeadc5ff2deb59"
+    },
+    {
+      "relativePath": "composition/HostToolApprovalPolicy.ts",
+      "gitBlob": "20af74cbe5d1624f9371f8316d8c1fbc453fdbf5"
+    },
+    {
+      "relativePath": "composition/MemberEntry.ts",
+      "gitBlob": "5534fe49df37b2635fb118c4d22359bccf3426d7"
+    },
+    {
+      "relativePath": "composition/ProviderManagementCoordinator.ts",
+      "gitBlob": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead"
+    },
+    {
+      "relativePath": "composition/ProviderModelProbePreparation.ts",
+      "gitBlob": "e55795dcfd065139c0e798fa4e062f4e3ffcc6c6"
+    },
+    {
+      "relativePath": "composition/RuntimeSourceIndex.ts",
+      "gitBlob": "0ba80099a7bd5e11bb9fd2440cbd49c330f3c4f2"
+    },
+    {
+      "relativePath": "composition/RuntimeTeamCaptures.ts",
+      "gitBlob": "c1761129841c27ef2cb9801e37a88425f8473dbd"
+    },
+    {
+      "relativePath": "composition/RuntimeTeamCoordinator.ts",
+      "gitBlob": "879c120b7d9b2226701f58e832914adde5a3dd58"
+    },
+    {
+      "relativePath": "composition/TeamHost.ts",
+      "gitBlob": "6145e95c323207893e55b20daf1fa2e74e0cee97"
+    },
+    {
+      "relativePath": "composition/TeamLaunchComposition.ts",
+      "gitBlob": "c7c0b311ad46e331d3ced426fa23bad14c978d14"
+    },
+    {
+      "relativePath": "composition/TeamReviewComposition.ts",
+      "gitBlob": "72963fb246daccfbe70632f04d1ae286956bd7a5"
+    },
+    {
+      "relativePath": "composition/applyOpenCodeRuntimeSource.ts",
+      "gitBlob": "958e53a9d61cb007b25d2614b8587f5956bf3dcc"
+    },
+    {
+      "relativePath": "composition/assertAccountNamespaces.ts",
+      "gitBlob": "448d4273fd7458a0d00dde28a7a2a27c616a5be6"
+    },
+    {
+      "relativePath": "composition/captureCreateTeamDraft.ts",
+      "gitBlob": "0bb36b4d5333ef38bcd7a17ba0ad277b1cece4e5"
+    },
+    {
+      "relativePath": "composition/captureLiveRosterMember.ts",
+      "gitBlob": "89cf75a520df20decefc0a3e2ac908d42ea4f223"
+    },
+    {
+      "relativePath": "composition/captureMemberProviderAuthority.ts",
+      "gitBlob": "d82301bbd815a73c6ddb03d3d71a364aac20c6d7"
+    },
+    {
+      "relativePath": "composition/captureNativeInputAuthority.ts",
+      "gitBlob": "001b92f5124af2e511507c238c739b4f06277caa"
+    },
+    {
+      "relativePath": "composition/captureRuntimeMcp.ts",
+      "gitBlob": "3e98f6ab325cd91aabf8cdf00b3ef6006e605b31"
+    },
+    {
+      "relativePath": "composition/captureRuntimeProcessOrigin.ts",
+      "gitBlob": "aa9e3dd69d557a2fd759015a76a4bf66a86a5c41"
+    },
+    {
+      "relativePath": "composition/captureTeamProbePreparation.ts",
+      "gitBlob": "9f14490bb913ae82de918861c3b4ed233f9eb9f4"
+    },
+    {
+      "relativePath": "composition/capturedRuntimeMcpRecipes.ts",
+      "gitBlob": "80e5681ca56624e70ab3a239559b3508b73e6d59"
+    },
+    {
+      "relativePath": "composition/capturedRuntimeMcpReferences.ts",
+      "gitBlob": "0034cf38d244c06a5d2fe2498bbbf728be9635f1"
+    },
+    {
+      "relativePath": "composition/capturedWorkspaceIdentity.ts",
+      "gitBlob": "5a7895e3adef8a58e0e0cfaa2776288d2ed807d5"
+    },
+    {
+      "relativePath": "composition/claudeSettingSources.ts",
+      "gitBlob": "4695f754b393200aa08bce0cf2e711ef897db604"
+    },
+    {
+      "relativePath": "composition/claudeSubagentActivity.ts",
+      "gitBlob": "c4a5ba7090424d053d374a684aa2735f12331b39"
+    },
+    {
+      "relativePath": "composition/createClaudeCheckpointSource.ts",
+      "gitBlob": "2c5bdf8132e95af6913f35d8e3e6126dfde36c4a"
+    },
+    {
+      "relativePath": "composition/createClaudeEvidenceCapture.ts",
+      "gitBlob": "d4f18e18cb3d470ec40d307aca6cfb553e3e8366"
+    },
+    {
+      "relativePath": "composition/createClaudeSubagents.ts",
+      "gitBlob": "a1665a20e86dfc1065c3243256ad6e03d755aad6"
+    },
+    {
+      "relativePath": "composition/createCodexEvidenceCapture.ts",
+      "gitBlob": "56f215eeb15b8b8f96330585917ed0424efb2d32"
+    },
+    {
+      "relativePath": "composition/createHostCrossTeamComposition.ts",
+      "gitBlob": "0e7ae787e0459d2ccab331aed0d97c18c7747b5e"
+    },
+    {
+      "relativePath": "composition/createHostGroupComposition.ts",
+      "gitBlob": "10aa970fa8a7c9ddd6f5bd49b1c01541815f829d"
+    },
+    {
+      "relativePath": "composition/createHostProviderManagementComposition.ts",
+      "gitBlob": "07a6ca89c88c7f6f82b45c679f32b329babeeac8"
+    },
+    {
+      "relativePath": "composition/createHostScheduledRunComposition.ts",
+      "gitBlob": "1efba5e74683b8fcfd60b52df66dfa71517fa2c5"
+    },
+    {
+      "relativePath": "composition/createHostTeamLifecycleComposition.ts",
+      "gitBlob": "4a96ebc2bfc28c704794f3db5b9afa8ec38cf609"
+    },
+    {
+      "relativePath": "composition/createHostWorkSyncComposition.ts",
+      "gitBlob": "3f6ecbfaa55319ab7438d4fb61a08b9c90fc55ac"
+    },
+    {
+      "relativePath": "composition/createMemberAttachmentPort.ts",
+      "gitBlob": "d788f865ee8e14cdc39fc25bfb231cbb7ae76064"
+    },
+    {
+      "relativePath": "composition/createMemberEntry.ts",
+      "gitBlob": "48e6e6ca24e09966297a2461bd1b3b0abd14ed17"
+    },
+    {
+      "relativePath": "composition/createMemberEvidenceCapture.ts",
+      "gitBlob": "fe584485d34f9fce440a79aa2cb5acb609d4b90a"
+    },
+    {
+      "relativePath": "composition/createMemberProcessMcpPort.ts",
+      "gitBlob": "3b94bd3777d509989dd2cff77e61095af79009fd"
+    },
+    {
+      "relativePath": "composition/createNativeMemberCreation.ts",
+      "gitBlob": "86f8c6a57e4fdafb9db2601ee9c4778c6f46aa4d"
+    },
+    {
+      "relativePath": "composition/createOpenCodeEvidenceCapture.ts",
+      "gitBlob": "0deede087dce3ed93829caf167405f0d9a59092c"
+    },
+    {
+      "relativePath": "composition/createProviderManagementMethods.ts",
+      "gitBlob": "708d880bb9be0dcaae978b97b0686b548b7873a3"
+    },
+    {
+      "relativePath": "composition/createRuntimeHostMethods.ts",
+      "gitBlob": "552a0319b25be43cc64dd17098d174eb03198f1c"
+    },
+    {
+      "relativePath": "composition/createRuntimeLifecyclePorts.ts",
+      "gitBlob": "2353eb333b3cc5b91c03c8ae78624b8fd8948c55"
+    },
+    {
+      "relativePath": "composition/createRuntimeMemberProviderFactory.ts",
+      "gitBlob": "0482d11bb2a051a0710905c5393495ee7cec64bf"
+    },
+    {
+      "relativePath": "composition/createRuntimeNativeMemberCreation.ts",
+      "gitBlob": "bacab71056fc04b9490381d9e340f246e879974f"
+    },
+    {
+      "relativePath": "composition/createRuntimeSourceMethods.ts",
+      "gitBlob": "404d35f2cd9d62d933a846eb5b464ee1cf52014c"
+    },
+    {
+      "relativePath": "composition/createRuntimeTeamLaunch.ts",
+      "gitBlob": "4d05640870611bd47d495b571452947372685b84"
+    },
+    {
+      "relativePath": "composition/createRuntimeTeamReadViews.ts",
+      "gitBlob": "cbd8829a21e4b05c6d4b96642b7b9a87ce4f14d3"
+    },
+    {
+      "relativePath": "composition/createRuntimeWorkSyncWake.ts",
+      "gitBlob": "493eed3ec7e53aeef50ea3dd2b46ffac852a7db9"
+    },
+    {
+      "relativePath": "composition/createStoppedImportComposition.ts",
+      "gitBlob": "d78c4032a0e6ba4f2db4c09cf8b49189e8ed9a3f"
+    },
+    {
+      "relativePath": "composition/createTeamAttachmentComposition.ts",
+      "gitBlob": "492c85100d0e2f5ba6dbbbeac44ee4dd5a6e9c31"
+    },
+    {
+      "relativePath": "composition/createTeamBackupComposition.ts",
+      "gitBlob": "f4f41f4370763daf90d8e27f51b76598ed86f7a7"
+    },
+    {
+      "relativePath": "composition/createTeamContextPreparation.ts",
+      "gitBlob": "5dbc0b8b271c05b34053bd0c6c0133d83b53f11f"
+    },
+    {
+      "relativePath": "composition/createTeamCreationMethods.ts",
+      "gitBlob": "a20b0336ed4b1816b668a95c5c9d41777342b3d0"
+    },
+    {
+      "relativePath": "composition/createTeamLifecycleMethods.ts",
+      "gitBlob": "5a965498bb60409fda787384ac691a1857a827f2"
+    },
+    {
+      "relativePath": "composition/createTeamLifecycleRetirement.ts",
+      "gitBlob": "990a2c38cc8185da70c0e759642f11fefbac6087"
+    },
+    {
+      "relativePath": "composition/createTeamMemberActionMethods.ts",
+      "gitBlob": "11165131b9c84e676901eed036d6287c4b162c67"
+    },
+    {
+      "relativePath": "composition/createTeamProcessComposition.ts",
+      "gitBlob": "4a4e5dd50e548e59318a3acd83709141c695ffa4"
+    },
+    {
+      "relativePath": "composition/executeCapturedRuntimeControl.ts",
+      "gitBlob": "76a6cc219ac606a44e9b26f0198be85096f6a34a"
+    },
+    {
+      "relativePath": "composition/executeLiveRosterMembership.ts",
+      "gitBlob": "91f8d851e73cd65f33b5cce560354c8b4d40ba19"
+    },
+    {
+      "relativePath": "composition/executeMemberAction.ts",
+      "gitBlob": "3fd7a6b5e85ced037fa52c08fc7f676ddd359a57"
+    },
+    {
+      "relativePath": "composition/executeNativeMemberAction.ts",
+      "gitBlob": "ba3b68d5bfed626244f1cfa095e6dae40b06c3a6"
+    },
+    {
+      "relativePath": "composition/executeNativeRuntimeMemberAction.ts",
+      "gitBlob": "b3dcb1a563c1e870f88ef7eea18ca5a9d771226a"
+    },
+    {
+      "relativePath": "composition/executeRuntimeLaunch.ts",
+      "gitBlob": "2b4704eb7c2357fc3e4f045e8469031ff6b326e7"
+    },
+    {
+      "relativePath": "composition/executeRuntimeMemberAction.ts",
+      "gitBlob": "686d487d7b068d016706b50e616b79759ee0026a"
+    },
+    {
+      "relativePath": "composition/executeTeamLaunch.ts",
+      "gitBlob": "f83bdfca970aba9396fb7a08f8b3231fec9d5635"
+    },
+    {
+      "relativePath": "composition/executeUnconfiguredSkip.ts",
+      "gitBlob": "a236f2d3783ec23db30db3251bc1cc173eab1234"
+    },
+    {
+      "relativePath": "composition/inheritNativeMemberMcp.ts",
+      "gitBlob": "cd2d9a3ed3a5cbfd2831e7f5a8cf87fcb371870a"
+    },
+    {
+      "relativePath": "composition/initialRuntimeModelAdmission.ts",
+      "gitBlob": "e709df02ff4ce926c6d1721b5549024f6c945949"
+    },
+    {
+      "relativePath": "composition/launchConfiguration.ts",
+      "gitBlob": "ecb0e8061d1e27685cc099e3a7121cb5ebb03329"
+    },
+    {
+      "relativePath": "composition/liveRuntimeCaptureSchema.ts",
+      "gitBlob": "3ee5a8c31e40cea1788ee480b7e82dfe481e3f3b"
+    },
+    {
+      "relativePath": "composition/nativeMemberActionAdmission.ts",
+      "gitBlob": "36b81a62a22459b9fb1697730376a3ff86247c9b"
+    },
+    {
+      "relativePath": "composition/nativeMemberRuntimeCapture.ts",
+      "gitBlob": "7ed6cb55c446b388098d91f87f1c1a5547cadea0"
+    },
+    {
+      "relativePath": "composition/nativeProcessProfile.ts",
+      "gitBlob": "34daeaecc7fa6d9f809bb3c69e0b7acdcde7fd73"
+    },
+    {
+      "relativePath": "composition/nativeSessionCommandAdmission.ts",
+      "gitBlob": "b17104727ff31901626141e0fa6317ad1c19fba5"
+    },
+    {
+      "relativePath": "composition/nativeWorkSyncContext.ts",
+      "gitBlob": "800312cead25ff9522ed35f291f16ca312ebea2a"
+    },
+    {
+      "relativePath": "composition/openCodeConfigurationReference.ts",
+      "gitBlob": "930edcd5332fa2bccb8ed82158c093b26adb40a7"
+    },
+    {
+      "relativePath": "composition/openCodeManagedPreferences.ts",
+      "gitBlob": "c6212d7ae8e03958a6fafba7de439132fc8f4fbd"
+    },
+    {
+      "relativePath": "composition/openCodeSelectedProviderConfiguration.ts",
+      "gitBlob": "bd9b3f2ebaa6c16009fb35917eec870c2c2ff520"
+    },
+    {
+      "relativePath": "composition/openCodeV2EmbeddedProfile.ts",
+      "gitBlob": "b7d21f8369988a8226e3cd86a916932c49b10b43"
+    },
+    {
+      "relativePath": "composition/openCodeV2Environment.ts",
+      "gitBlob": "70858ce661b154c84ad2f447af6537c3ee294363"
+    },
+    {
+      "relativePath": "composition/openCodeV2ModelSelection.ts",
+      "gitBlob": "77f26b866e9aba755d32f055c309ea9bcdb5ddd3"
+    },
+    {
+      "relativePath": "composition/openCodeV2StaticPreflight.ts",
+      "gitBlob": "e4ef669047f308bcb4378283d92a4064b3e3e062"
+    },
+    {
+      "relativePath": "composition/parseMessagesPageQuery.ts",
+      "gitBlob": "517b4e9709da8e2a6c5d77cd3d17833f5751deee"
+    },
+    {
+      "relativePath": "composition/preflightNativeMemberModel.ts",
+      "gitBlob": "576ad59bf33abbe59b7df9f6611403bd6380a3ad"
+    },
+    {
+      "relativePath": "composition/prepareLaunchResume.ts",
+      "gitBlob": "51606a48fb4a32da571dba57dbe241054d10e11e"
+    },
+    {
+      "relativePath": "composition/prepareTeamModelReadiness.ts",
+      "gitBlob": "b9dd573db23b3033b5f3db7024b317681ce31499"
+    },
+    {
+      "relativePath": "composition/processCustody.ts",
+      "gitBlob": "7e537486aaa681c9e11cdd517f1e48e9291c3c64"
+    },
+    {
+      "relativePath": "composition/projectRuntimeMember.ts",
+      "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f"
+    },
+    {
+      "relativePath": "composition/publishNativeCommandOutput.ts",
+      "gitBlob": "a527ac03b9691f48319a6bc682d05261c25130c2"
+    },
+    {
+      "relativePath": "composition/readGroupRuntime.ts",
+      "gitBlob": "2a0ab7edbadf2d6e9008b049b82353bd1fbd5e5c"
+    },
+    {
+      "relativePath": "composition/readHostTeamActivity.ts",
+      "gitBlob": "bc2819c4ce3f5d4f1c4a7bdfc1c5ab053514b4e2"
+    },
+    {
+      "relativePath": "composition/readLaunchRestorations.ts",
+      "gitBlob": "28ea1191bf4c5c718875f47a1c8224797f4abe10"
+    },
+    {
+      "relativePath": "composition/readLeadObservation.ts",
+      "gitBlob": "9735190532f4f3f0cb72525985393390d39ffbb7"
+    },
+    {
+      "relativePath": "composition/readMemberActions.ts",
+      "gitBlob": "7697d48b28f2dd827d7ab7867493d5f4287178c0"
+    },
+    {
+      "relativePath": "composition/readMemberCheckpoints.ts",
+      "gitBlob": "7d40a5c937f1546a303ce3205fd7023aa3b83195"
+    },
+    {
+      "relativePath": "composition/readProfile.ts",
+      "gitBlob": "39524282358bb2f18cb3013f1b30889dc078b83a"
+    },
+    {
+      "relativePath": "composition/readTeamActivity.ts",
+      "gitBlob": "774f2453b5ced1698046e0f0724bc9bbb034ebb1"
+    },
+    {
+      "relativePath": "composition/readTeamConversation.ts",
+      "gitBlob": "53e3b3ad7efe96688a6958f3d4c775d911168c46"
+    },
+    {
+      "relativePath": "composition/resolveRuntimeControlEntry.ts",
+      "gitBlob": "cc527f6c765f4d829c386011c610bb0bf0358bf8"
+    },
+    {
+      "relativePath": "composition/restoreMemberSession.ts",
+      "gitBlob": "cb6387751fad78da0ae161a8a96ea002aae3537a"
+    },
+    {
+      "relativePath": "composition/restoreNativeRuntimeEntries.ts",
+      "gitBlob": "c31e53c113faef53e220189e3ec158100c3fda0e"
+    },
+    {
+      "relativePath": "composition/reviewOrigin.ts",
+      "gitBlob": "84e3cd2e7c3233ced9474f17d67c20892bd6d94c"
+    },
+    {
+      "relativePath": "composition/runtimeActivityProjection.ts",
+      "gitBlob": "1fa667f3513afd9065ecc6ac7b9402855ccab73a"
+    },
+    {
+      "relativePath": "composition/runtimeActivitySources.ts",
+      "gitBlob": "0f3f9de67fe7e835d96d1853d62fc3255474aa13"
+    },
+    {
+      "relativePath": "composition/runtimeCaptureSource.ts",
+      "gitBlob": "06fa9aecd2b9202583686fba830ff198129bf2f2"
+    },
+    {
+      "relativePath": "composition/runtimeControlAuthority.ts",
+      "gitBlob": "9ad5c6a374d358fb5230d4c6c225bece297d7e2e"
+    },
+    {
+      "relativePath": "composition/runtimeControlValues.ts",
+      "gitBlob": "2415f5141bd1607f9b6d0ef938c1ff9ec8cab6a4"
+    },
+    {
+      "relativePath": "composition/runtimeExtraArgs.ts",
+      "gitBlob": "e60476f05f6a87619b3ea89128388abf7dc9dbeb"
+    },
+    {
+      "relativePath": "composition/runtimeLaunchMembers.ts",
+      "gitBlob": "62a7d1efb66c762d1a73485237181e3f15691bb5"
+    },
+    {
+      "relativePath": "composition/runtimeProfile.ts",
+      "gitBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1"
+    },
+    {
+      "relativePath": "composition/runtimeRecipe.ts",
+      "gitBlob": "01985ea2d0407bd69177c02bdf0e151cca71c356"
+    },
+    {
+      "relativePath": "composition/runtimeSourceContracts.ts",
+      "gitBlob": "c50550eb815ae6083b1f20a299423e3f037ffccc"
+    },
+    {
+      "relativePath": "composition/runtimeSourceGrantAuthority.ts",
+      "gitBlob": "211a867ac614a93ec684b0757955e8215e9e3ac8"
+    },
+    {
+      "relativePath": "composition/runtimeSourceProcessOrigin.ts",
+      "gitBlob": "5c72ca4a21c5249f05e8095f62768d9c75767ce0"
+    },
+    {
+      "relativePath": "composition/runtimeSourceQualification.ts",
+      "gitBlob": "fb25a317426e009f7920f2270a7f72d7f384f462"
+    },
+    {
+      "relativePath": "composition/runtimeWorktreeCapture.ts",
+      "gitBlob": "d2466a7e3ba6b91c77d8121c8dea510c07bfb822"
+    },
+    {
+      "relativePath": "composition/savedTeamModelProbe.ts",
+      "gitBlob": "28820fd5d5380410512146b8900a532b9aba6ec2"
+    },
+    {
+      "relativePath": "composition/scheduledRunCapture.ts",
+      "gitBlob": "87ba64ee70f374021a04429c680eb9c7683cde4b"
+    },
+    {
+      "relativePath": "composition/scheduledRunContracts.ts",
+      "gitBlob": "1f38032d7d11d8f71a262d5275a2cf264c6e4126"
+    },
+    {
+      "relativePath": "composition/scheduledRunProjection.ts",
+      "gitBlob": "86d4ec120fb4deba4c53bb5426fc771f4e1ee5b7"
+    },
+    {
+      "relativePath": "composition/teamHostEnvelope.ts",
+      "gitBlob": "74b0e697a7cc6cb8d320a831dfc3cdfaea10fd66"
+    },
+    {
+      "relativePath": "composition/teamLaunchModelProbe.ts",
+      "gitBlob": "7e377e0b51ea453e90f4f2dde5c9bb782c983c99"
+    },
+    {
+      "relativePath": "composition/teamModelProbeRecipe.ts",
+      "gitBlob": "18e65e7abba9a561163a60170997dc2637eb0e0c"
+    },
+    {
+      "relativePath": "composition/teamRoster.ts",
+      "gitBlob": "dccbc1b57913b1f713b6f45ae75c4a0659fe22a7"
+    },
+    {
+      "relativePath": "composition/transitionRuntimeMember.ts",
+      "gitBlob": "3c8c94f3e448d4cf4562d7ff7690a1f7752ade26"
+    },
+    {
+      "relativePath": "composition/verifyRuntimeSourceCandidate.ts",
+      "gitBlob": "b08299f6d342f12da8fff60ddaadf3f121c94bc3"
+    },
+    {
+      "relativePath": "contracts.ts",
+      "gitBlob": "5d5743e8728ff3f16dcc09ad822804e4952632e1"
+    },
+    {
+      "relativePath": "cross-team/CascadeGuard.ts",
+      "gitBlob": "c7569abaff56c85e15b43d0cb2388366fd58b1c5"
+    },
+    {
+      "relativePath": "cross-team/CrossTeamConversationPolicy.ts",
+      "gitBlob": "6c87ad3139f15ea8a2d8613ead2afc5e60de8232"
+    },
+    {
+      "relativePath": "cross-team/CrossTeamOutbox.ts",
+      "gitBlob": "db7b4b150a8f0b142a95248a36da80319157a84b"
+    },
+    {
+      "relativePath": "cross-team/CrossTeamRecipientIdentity.ts",
+      "gitBlob": "7ef4af3bceaa5fff452ec177b4f7ce15d5bef1e5"
+    },
+    {
+      "relativePath": "cross-team/CrossTeamResourceIdentity.ts",
+      "gitBlob": "1ce3f192a9e575b997e8080d6aae432bb0c8d60f"
+    },
+    {
+      "relativePath": "cross-team/HostCrossTeamCoordinator.ts",
+      "gitBlob": "e44a88bf291296bd77a915de51f26ed769cea201"
+    },
+    {
+      "relativePath": "cross-team/TeamCrossTeamCommands.ts",
+      "gitBlob": "c32860b4764dffed782c198603d6c71032f2bd5e"
+    },
+    {
+      "relativePath": "cross-team/contracts.ts",
+      "gitBlob": "5d992d93ccec5ae334ad0e3a8c727c5fb94319ae"
+    },
+    {
+      "relativePath": "cross-team/crossTeamInbound.ts",
+      "gitBlob": "6c6f21be824aa912f8218bb4e01d675f75ab9369"
+    },
+    {
+      "relativePath": "cross-team/crossTeamRecords.ts",
+      "gitBlob": "deece1025c47a178e8aa81f69b19c77a80f7c958"
+    },
+    {
+      "relativePath": "cross-team/index.ts",
+      "gitBlob": "1a8b51357725bfc950388a06d0bc45dab7f95add"
+    },
+    {
+      "relativePath": "cross-team/leadDetection.ts",
+      "gitBlob": "5d6e14946ea2cf64cb6c3c20e9eb92a17e164266"
+    },
+    {
+      "relativePath": "cross-team/projectCrossTeamMessages.ts",
+      "gitBlob": "a019c0dbbe4d301717e92e10b5443a33af9084ec"
+    },
+    {
+      "relativePath": "cross-team/validateCrossTeamIntent.ts",
+      "gitBlob": "86b740d48cefa7a07baac8eb8b9cffcebbd269cf"
+    },
+    {
+      "relativePath": "evidence/ClaudeToolEvidenceWriter.ts",
+      "gitBlob": "90809417b3ca7ea17af465cb65a8b2c80fa22bfb"
+    },
+    {
+      "relativePath": "evidence/CodexInputEvidenceWriter.ts",
+      "gitBlob": "6af77e2d8d6b2721d204bda64b0953bef36b5471"
+    },
+    {
+      "relativePath": "evidence/GitChangePathProvider.ts",
+      "gitBlob": "d8495fd83f98a057a4767ff2914965fcec5e6692"
+    },
+    {
+      "relativePath": "evidence/NativeFailedToolObservation.ts",
+      "gitBlob": "3ba877d3d51b49d1e54f3f741e655108344ab78c"
+    },
+    {
+      "relativePath": "evidence/OpenCodeInputEvidenceWriter.ts",
+      "gitBlob": "6a9de6eacf2da4697b502712084371550a3adf80"
+    },
+    {
+      "relativePath": "evidence/TaskEvidenceJournal.ts",
+      "gitBlob": "812327b7ebfbe7edda8024606e9f1c062084d4b6"
+    },
+    {
+      "relativePath": "evidence/ToolEvidenceWindows.ts",
+      "gitBlob": "7ed3afb4be82fc499c802937d975833e1c68b3a8"
+    },
+    {
+      "relativePath": "evidence/WorkspaceSnapshot.ts",
+      "gitBlob": "f8c54437c12479d62405c960b9ec14a3861eb17f"
+    },
+    {
+      "relativePath": "evidence/bindRuntimeInputEvidence.ts",
+      "gitBlob": "90fb5762591fe7d85f07b359301a8d26c38f2ff2"
+    },
+    {
+      "relativePath": "evidence/bindTaskToolEvidence.ts",
+      "gitBlob": "6cfc986430c4e853947473dda52d7a3dae1b8942"
+    },
+    {
+      "relativePath": "evidence/captureContracts.ts",
+      "gitBlob": "3f2d93065bb88747032b5e739fd5f8cd2f1dfa3e"
+    },
+    {
+      "relativePath": "evidence/codexCaptureContracts.ts",
+      "gitBlob": "ef92b96524d778b2f4aec66d1cc677834269ff31"
+    },
+    {
+      "relativePath": "evidence/evidenceProjectDir.ts",
+      "gitBlob": "e91cc518c60e241ba111cbd5d5a293d9d99ae263"
+    },
+    {
+      "relativePath": "evidence/exactCodexUpdatePatch.ts",
+      "gitBlob": "8c802f77e6f18609432f1c1d0a08216f178d99ff"
+    },
+    {
+      "relativePath": "evidence/exactOpenCodeUpdatePatch.ts",
+      "gitBlob": "dafa643a28f87da565034a5ecd4289907f5f3005"
+    },
+    {
+      "relativePath": "evidence/exactTextUpdatePatch.ts",
+      "gitBlob": "1ee17a1b2d9834c6caf6295e573e363115127eac"
+    },
+    {
+      "relativePath": "evidence/opencodeCaptureContracts.ts",
+      "gitBlob": "2613972de95ed6570cbfa4f015040fc7d97c5fa0"
+    },
+    {
+      "relativePath": "evidence/qualifyCodexFileChange.ts",
+      "gitBlob": "ac827cbad49904a98e3046feaadae898506ad83b"
+    },
+    {
+      "relativePath": "evidence/qualifyNativeFileEffect.ts",
+      "gitBlob": "d35ca2188a232bba3bd5ed96a6867de2d31cdc5d"
+    },
+    {
+      "relativePath": "evidence/qualifyOpenCodeFileChange.ts",
+      "gitBlob": "c680e2cbdbe3f6773af77727b95ec57829a70642"
+    },
+    {
+      "relativePath": "evidence/qualifyOpenCodeV2FileChange.ts",
+      "gitBlob": "5996cbb2abcc420f347f8149df9ecafb78b42741"
+    },
+    {
+      "relativePath": "evidence/snapshotWarningCodes.ts",
+      "gitBlob": "56f4d870259df07445d86c533728d9583cde3bdf"
+    },
+    {
+      "relativePath": "extensions/ExtensionMutationOwner.ts",
+      "gitBlob": "b8bdd3353aa4641b78e94f50de42869105df8be5"
+    },
+    {
+      "relativePath": "extensions/NativeExtensionCoordinator.ts",
+      "gitBlob": "4d74163d36cf6331fa9b9ae31486386c80950c69"
+    },
+    {
+      "relativePath": "extensions/NativeExtensionProcess.ts",
+      "gitBlob": "990b8ba9f9d67925abccb3ac2126920ddd9c9cd2"
+    },
+    {
+      "relativePath": "extensions/captureNativeClaudeFile.ts",
+      "gitBlob": "1757985fc206af3235ea9003c2aa567ff3595ba6"
+    },
+    {
+      "relativePath": "extensions/captureNativeExtensionTarget.ts",
+      "gitBlob": "1a5a20257b5ef69fbdf120753c322ebfc85e8145"
+    },
+    {
+      "relativePath": "extensions/contracts.ts",
+      "gitBlob": "ff868c2754adfc546e9dbf4f9f7ee06ce1734f53"
+    },
+    {
+      "relativePath": "extensions/extensionProtocol.ts",
+      "gitBlob": "756488c8769a3fcb7d89620d57632e6473adfe40"
+    },
+    {
+      "relativePath": "extensions/extensionRecords.ts",
+      "gitBlob": "3785a6a4940ccf23f84cd2445ef7a71ba59f8a5e"
+    },
+    {
+      "relativePath": "extensions/mcpTargets.ts",
+      "gitBlob": "56175ed4c67d12d43c6cf45cbe2c34644d1d3acc"
+    },
+    {
+      "relativePath": "extensions/nativeCommands.ts",
+      "gitBlob": "795f0e0806444313dfc9d820cdcdf3c959fd4f4f"
+    },
+    {
+      "relativePath": "extensions/qualifyNativeMcpDiagnostics.ts",
+      "gitBlob": "b563b44f7b45c3b19bb0c24432fa0c2b3fa8cd56"
+    },
+    {
+      "relativePath": "extensions/readNativeExtensionState.ts",
+      "gitBlob": "2049b0049eda2b7be0354f8268af6ffe5ec43312"
+    },
+    {
+      "relativePath": "framing.ts",
+      "gitBlob": "f9778216d3a0836b1cbf8ab4d35f195aa9e34b2a"
+    },
+    {
+      "relativePath": "group-chats/GroupCommands.ts",
+      "gitBlob": "b6f74ef19c0a63b4653e9919729efbc4bce4b0c9"
+    },
+    {
+      "relativePath": "group-chats/application.ts",
+      "gitBlob": "ba61f8c286156c86f56c5919c08bc38069944157"
+    },
+    {
+      "relativePath": "group-chats/contracts.ts",
+      "gitBlob": "de19c24cdc6773a20b48e7dae2df87f6118a20de"
+    },
+    {
+      "relativePath": "group-chats/createGroupCommandAccess.ts",
+      "gitBlob": "00e2ff6d73bf05796d963657d60c839493de69e0"
+    },
+    {
+      "relativePath": "group-chats/createGroupCreation.ts",
+      "gitBlob": "09dad13ceecae8a74e10b90d7a638c84b848d56a"
+    },
+    {
+      "relativePath": "group-chats/createGroupReactions.ts",
+      "gitBlob": "1206676a3b77bf1a5683a5b436ffda15051d44a2"
+    },
+    {
+      "relativePath": "group-chats/createTeamGroupChatsFeature.ts",
+      "gitBlob": "9081da776c80aa07e8ea9384b4139e5519e38bba"
+    },
+    {
+      "relativePath": "group-chats/defaultTeamGroup.ts",
+      "gitBlob": "736008bdce2df7053dc5426571a0e729a94a83d8"
+    },
+    {
+      "relativePath": "group-chats/envelope.ts",
+      "gitBlob": "3a23a065746bf92ad1fcf3c16b7a14f7ef2edb89"
+    },
+    {
+      "relativePath": "group-chats/groupCommandRecords.ts",
+      "gitBlob": "8af3026cc8cdfb8db7d15b390527aad97949d876"
+    },
+    {
+      "relativePath": "group-chats/groupCreation.ts",
+      "gitBlob": "b8b4124b3e66a0ca99c6b6ccd9637a9fbe6dc9e2"
+    },
+    {
+      "relativePath": "group-chats/groupDelivery.ts",
+      "gitBlob": "a031a4f715b5f9196a42b86e131b68dd8fafe9f5"
+    },
+    {
+      "relativePath": "group-chats/groupReactions.ts",
+      "gitBlob": "cb43794815aec684b4249aaba2565837d31a5b33"
+    },
+    {
+      "relativePath": "group-chats/message.ts",
+      "gitBlob": "4314607414db8905c0d87df67d0624d19df5f992"
+    },
+    {
+      "relativePath": "group-chats/model.ts",
+      "gitBlob": "b1ec2220ab6d364af326b1a86c57ce6919f79d0b"
+    },
+    {
+      "relativePath": "group-chats/operations.ts",
+      "gitBlob": "1337c958cf316215ffd9c57a4942c35569a4970e"
+    },
+    {
+      "relativePath": "group-chats/policy.ts",
+      "gitBlob": "bdfccaa3fa3989f7dca928bcf62745f06df3fb47"
+    },
+    {
+      "relativePath": "group-chats/publicValues.ts",
+      "gitBlob": "575dcfc7f138889684895a78bf6c317503d9f43a"
+    },
+    {
+      "relativePath": "group-chats/readGroupInputSource.ts",
+      "gitBlob": "6338078f9b9ad3c50e7820f78784db115d6448f2"
+    },
+    {
+      "relativePath": "group-chats/storage.ts",
+      "gitBlob": "4ff83b26656a8d00d43ceabc93bf4c979a32b15b"
+    },
+    {
+      "relativePath": "group-chats/storageSchema.ts",
+      "gitBlob": "2bb8f12b06952f0c3297f5addc1abbefd9c59325"
+    },
+    {
+      "relativePath": "index.ts",
+      "gitBlob": "755158699496506a62132c540f19b225c5a6222d"
+    },
+    {
+      "relativePath": "lifecycle.ts",
+      "gitBlob": "71bc1938c9f8ec141eab30a11b4a470dad7f4900"
+    },
+    {
+      "relativePath": "management/CredentialCommandOwner.ts",
+      "gitBlob": "741ad6e143b8405358e5f5d1e1a172c761dca10d"
+    },
+    {
+      "relativePath": "management/ManagementResourceFence.ts",
+      "gitBlob": "303cca9973a60cb7d3258cdcd16c5c639220e3c8"
+    },
+    {
+      "relativePath": "management/ModelProbeOwner.ts",
+      "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e"
+    },
+    {
+      "relativePath": "management/OAuthOperationOwner.ts",
+      "gitBlob": "1bd14cffca7577b375444d60daf447252cf68ee4"
+    },
+    {
+      "relativePath": "management/captureExtensionRoots.ts",
+      "gitBlob": "3254969675cac58bc05ec84d4b2260fd90ccb8e8"
+    },
+    {
+      "relativePath": "management/commandIdentity.ts",
+      "gitBlob": "75c6290116231a8bb97ecb2a156c0dbae3565fa4"
+    },
+    {
+      "relativePath": "management/commandRecords.ts",
+      "gitBlob": "9cd092f5d78e9a80cb922d65a29be5f2b7b96976"
+    },
+    {
+      "relativePath": "management/contracts.ts",
+      "gitBlob": "e533b66ea059611e7020c6ab75d26b84b21e597c"
+    },
+    {
+      "relativePath": "management/identity.ts",
+      "gitBlob": "d4e5631330f08ccc4138353f6e2b5f49f7cac01f"
+    },
+    {
+      "relativePath": "management/modelLimits.ts",
+      "gitBlob": "cf31894c6fd988139f9d9d3bbf38325652082050"
+    },
+    {
+      "relativePath": "management/openCodeV2CredentialRecord.ts",
+      "gitBlob": "46ee236586413b223d97168979b7eadffe8504b2"
+    },
+    {
+      "relativePath": "management/profile.ts",
+      "gitBlob": "ccefb500c16a228e03b7a1e4a47e04897fbca4f1"
+    },
+    {
+      "relativePath": "management/runtimeSourceVerification.ts",
+      "gitBlob": "d3282dc67aaab0b23ff33d5666b69b98a1783fb2"
+    },
+    {
+      "relativePath": "mcp-catalog/captureClaudeCatalog.ts",
+      "gitBlob": "244279245e52586110078d441d25aae5b41b023f"
+    },
+    {
+      "relativePath": "mcp-catalog/capturedFile.ts",
+      "gitBlob": "599520a07a1e26938cab3091905908fe1b6119da"
+    },
+    {
+      "relativePath": "mcp-catalog/capturedServer.ts",
+      "gitBlob": "7880cec0ed11eae966beaee3f1e6698ea734aee5"
+    },
+    {
+      "relativePath": "mcp-catalog/capturedSource.ts",
+      "gitBlob": "49561e08ed6a2f2c9098479b08530178462eacef"
+    },
+    {
+      "relativePath": "mcp-catalog/catalog.ts",
+      "gitBlob": "84a310d581ef371d104ba184f12f44d2f6228294"
+    },
+    {
+      "relativePath": "mcp-catalog/index.ts",
+      "gitBlob": "4cbd6a804d02ea67f86f4249f85c2277932c51af"
+    },
+    {
+      "relativePath": "mcp-catalog/memberPolicy.ts",
+      "gitBlob": "fe9e9025462af646ae1ef5012d92387e448b8094"
+    },
+    {
+      "relativePath": "mcp/contracts.ts",
+      "gitBlob": "5297555f96698d373daad6d5a9c230a31785eaaa"
+    },
+    {
+      "relativePath": "mcp/crossTeamTools.ts",
+      "gitBlob": "73fce2280d3ed5e090265daa53c5164112b57439"
+    },
+    {
+      "relativePath": "mcp/endpoint.ts",
+      "gitBlob": "1c9bdf5c98165030ee955b17f7c606d01d1627f6"
+    },
+    {
+      "relativePath": "mcp/groupChatTools.ts",
+      "gitBlob": "1584383feb81715806c0737f9c312ecca40c4379"
+    },
+    {
+      "relativePath": "mcp/index.ts",
+      "gitBlob": "41645c4e35871f55ae1f9d8ad9dd6e2a1854f28d"
+    },
+    {
+      "relativePath": "mcp/nativeCrossTeamContracts.ts",
+      "gitBlob": "fdf4230392da352a273471be08d7f23a0c521f8d"
+    },
+    {
+      "relativePath": "mcp/nativeMemberActionContracts.ts",
+      "gitBlob": "0a7827654433da5cbafdf1c4de575ccf237a6d79"
+    },
+    {
+      "relativePath": "mcp/nativeMemberActionTools.ts",
+      "gitBlob": "8d7abc90704f259bf9f7654f995d7eab9b016025"
+    },
+    {
+      "relativePath": "mcp/nativeMemberCreationContracts.ts",
+      "gitBlob": "faede215a53bd7de0bbc4aaa43993dd62c3bae88"
+    },
+    {
+      "relativePath": "mcp/nativeMemberCreationTools.ts",
+      "gitBlob": "587aba5c697fea65496247e87ec2f50fb7ae0611"
+    },
+    {
+      "relativePath": "mcp/processTools.ts",
+      "gitBlob": "afaf6e1a834cc3973d8111d1f496db7aadf7a6de"
+    },
+    {
+      "relativePath": "mcp/readTools.ts",
+      "gitBlob": "247769d278d77e34131674642598f08fb0d97f72"
+    },
+    {
+      "relativePath": "mcp/toolDefinition.ts",
+      "gitBlob": "71ca575bacc720bb3226cbe04cbbad2802e1c34c"
+    },
+    {
+      "relativePath": "mcp/tools.ts",
+      "gitBlob": "325c8a7474641840604aa58d55380ee6e8217dea"
+    },
+    {
+      "relativePath": "mcp/workSyncContracts.ts",
+      "gitBlob": "9be785996fb85b63ab244b22912dbcd7beebc45a"
+    },
+    {
+      "relativePath": "mcp/workSyncTools.ts",
+      "gitBlob": "714b2a37f3e91b4c9c2340e905dd34bfc0ccdfce"
+    },
+    {
+      "relativePath": "output.ts",
+      "gitBlob": "78ba126a830231da8a22bca8601de20f8a51853d"
+    },
+    {
+      "relativePath": "owned-process/HostWindowsLaunch.ts",
+      "gitBlob": "3b5a244c27d004af6e82fffa092fa83e1894de73"
+    },
+    {
+      "relativePath": "owned-process/HostWindowsServices.ts",
+      "gitBlob": "c2f10e7f1302895dc96686cef362c6537757cb6a"
+    },
+    {
+      "relativePath": "owned-process/RetainedWindowsCustody.ts",
+      "gitBlob": "10e1a457bb65a136128eb1db5176a4701d2fe4e2"
+    },
+    {
+      "relativePath": "owned-process/RetainedWindowsServices.ts",
+      "gitBlob": "840e021b3dae5d4ad7a637b495c4e7f6c6cd5a4a"
+    },
+    {
+      "relativePath": "owned-process/WindowsServiceOperations.ts",
+      "gitBlob": "9cef2b31f755cca4df39d3aa4ad8b837c20f2ac1"
+    },
+    {
+      "relativePath": "owned-process/brokerArtifact.ts",
+      "gitBlob": "b9af1928d473c8fea81ed2239c245b8731886758"
+    },
+    {
+      "relativePath": "owned-process/brokerEvidence.ts",
+      "gitBlob": "b54085fbab6f9ed7531cc87ef20795605cc776ed"
+    },
+    {
+      "relativePath": "owned-process/capturedWindowsLauncher.ts",
+      "gitBlob": "56ab4c2e99279396dee1cb72c7c87b061c3510fb"
+    },
+    {
+      "relativePath": "owned-process/codec.ts",
+      "gitBlob": "7a2aedea1413e3c2af3be85889451bd015534d79"
+    },
+    {
+      "relativePath": "owned-process/contract.ts",
+      "gitBlob": "25f3b5be5f3bf83e618ca286af9e376f9372fa2e"
+    },
+    {
+      "relativePath": "owned-process/hostCustody.ts",
+      "gitBlob": "af69d8430ffd473d471a5e663606fcaea640d2e5"
+    },
+    {
+      "relativePath": "owned-process/index.ts",
+      "gitBlob": "3b37705c8ea34439d7e8a2bc89753912d9c5e120"
+    },
+    {
+      "relativePath": "owned-process/nativePath.ts",
+      "gitBlob": "14ca716b45b68483f2bce6ea5b20f72a23ab90bd"
+    },
+    {
+      "relativePath": "owned-process/processFacade.ts",
+      "gitBlob": "76ad8e4e7ed91619be875cbff4b65b8811495e05"
+    },
+    {
+      "relativePath": "owned-process/readCapturedProfile.ts",
+      "gitBlob": "170a541781c1cc8bc88d667ea526fde219fe24b5"
+    },
+    {
+      "relativePath": "owned-process/releaseConfirmation.ts",
+      "gitBlob": "66477df64870b895a560ce81d1148b172cdbc32f"
+    },
+    {
+      "relativePath": "owned-process/retainedServiceContracts.ts",
+      "gitBlob": "690d366bacb01c2ff92c09ea1d5c4d457fb27c93"
+    },
+    {
+      "relativePath": "owned-process/runtimeSourceSelections.ts",
+      "gitBlob": "372f37480811ee29c91c114867c11d4c955de400"
+    },
+    {
+      "relativePath": "owned-process/windowsBroker.ts",
+      "gitBlob": "32b3315f04d91ae6da375bcca710e16948e09ad3"
+    },
+    {
+      "relativePath": "owned-process/windowsCliLauncher.ts",
+      "gitBlob": "af047d52d5b36eaa48fe87e3d5690dc4cc159f0e"
+    },
+    {
+      "relativePath": "process/ControllerProcessPolicy.ts",
+      "gitBlob": "31c70455c12d16084e4dc621b0b562e699f2bda3"
+    },
+    {
+      "relativePath": "process/DarwinRegisteredProcess.ts",
+      "gitBlob": "4978aefb5c3adada81b5b962c33e48324fdce34f"
+    },
+    {
+      "relativePath": "process/LinuxRegisteredProcess.ts",
+      "gitBlob": "e6ba065fa5ca2de79f4d6d1fe7aa03df68c2d899"
+    },
+    {
+      "relativePath": "process/LinuxWarmProcess.ts",
+      "gitBlob": "2e05306067e97f644d68c21c7cada8bc4cda1d1a"
+    },
+    {
+      "relativePath": "process/TeamProcessCommands.ts",
+      "gitBlob": "e25f31210e8ccd5ed1fb2637b6b45efe49a6f3c3"
+    },
+    {
+      "relativePath": "process/WindowsTeamProcessCommands.ts",
+      "gitBlob": "b41629b7ed483f1ab9f42e2e234933999647e7bd"
+    },
+    {
+      "relativePath": "process/createTeamProcessMethods.ts",
+      "gitBlob": "3cd7b32bf633246b2cb4ef2bf5c2c631b7872beb"
+    },
+    {
+      "relativePath": "process/loadProcessNativeArtifact.ts",
+      "gitBlob": "c1ef9543c9950014059d45573f4c3283c521af86"
+    },
+    {
+      "relativePath": "process/projectProcessViews.ts",
+      "gitBlob": "83c0c9dd7a07767c3b9895deb16283a13375c077"
+    },
+    {
+      "relativePath": "process/qualifiedDarwinBuild.ts",
+      "gitBlob": "ca10512904b6abc3f110d4ebb852a7a0baf62548"
+    },
+    {
+      "relativePath": "process/readPackagedProcessArtifact.ts",
+      "gitBlob": "926327a2f072814f41e9c08cee03e48985404175"
+    },
+    {
+      "relativePath": "process/registeredProcessContracts.ts",
+      "gitBlob": "83caa9c3f1a2f57eca67b329dd5e8ec7065a1f79"
+    },
+    {
+      "relativePath": "process/validateProcessRecords.ts",
+      "gitBlob": "dd1a705e054e5fe7df4addf97aa48bf4d0638444"
+    },
+    {
+      "relativePath": "review/createTeamReviewMethods.ts",
+      "gitBlob": "2a90e2da1a18b9459eed402033851e1bcf782ccd"
+    },
+    {
+      "relativePath": "runtime/CheckpointCoordinator.ts",
+      "gitBlob": "cc6a36675b183d68ed29c9fd409694a0754adbdb"
+    },
+    {
+      "relativePath": "runtime/RuntimeActivityCoordinator.ts",
+      "gitBlob": "504be286f7ef7eb147310503a2a5ed3a6f339381"
+    },
+    {
+      "relativePath": "runtime/RuntimeOwner.ts",
+      "gitBlob": "7ef05204eb696e2b498595a5f04a544fe20d0036"
+    },
+    {
+      "relativePath": "runtime/activityContracts.ts",
+      "gitBlob": "22503cf7430200a8e221c7495a320740bbe7a474"
+    },
+    {
+      "relativePath": "runtime/checkpointContracts.ts",
+      "gitBlob": "490dde3b6e247a7c6869be010c94db05ace6f2f1"
+    },
+    {
+      "relativePath": "runtime/checkpointIdentity.ts",
+      "gitBlob": "6d0e6a8e95707df6fa960acccb771449080b11e6"
+    },
+    {
+      "relativePath": "runtime/contracts.ts",
+      "gitBlob": "a0ffc0ad8504e65ffb0113bd534f950647a997b3"
+    },
+    {
+      "relativePath": "runtime/identity.ts",
+      "gitBlob": "e2b5fc6216637c1d78ff807bf0e11c63d5ec5f63"
+    },
+    {
+      "relativePath": "runtime/inputPreparation.ts",
+      "gitBlob": "dacdad601edf16358b22fbeb47423dbaf76d564c"
+    },
+    {
+      "relativePath": "runtime/normalizeActivity.ts",
+      "gitBlob": "195541f5f1e98746728b11844dd68fdf845721b4"
+    },
+    {
+      "relativePath": "runtime/prepareSessionOpen.ts",
+      "gitBlob": "f02e7aaa2b12d337c43c25aec58a1c113b96728b"
+    },
+    {
+      "relativePath": "runtime/providerActivityContracts.ts",
+      "gitBlob": "01b12ef6f147495d72c46145d8e85622e78de77b"
+    },
+    {
+      "relativePath": "runtime/runtimeConversation.ts",
+      "gitBlob": "4d7423aba0e58061de54112b5c907534e9ab1b97"
+    },
+    {
+      "relativePath": "runtime/runtimeDelivery.ts",
+      "gitBlob": "4c704a088f806b23f3f5e6329f788bc1f95eb728"
+    },
+    {
+      "relativePath": "runtime/sessionState.ts",
+      "gitBlob": "13136f8f34d8172370cf59da5a2e6b4972933714"
+    },
+    {
+      "relativePath": "runtime/settledRuntimeInput.ts",
+      "gitBlob": "9f64cd40614d9040bd55207970e0b40b16968a98"
+    },
+    {
+      "relativePath": "skills/CapturedSkillRoots.ts",
+      "gitBlob": "b94a49c6fdb9db80cf8873cd02a7ce0004fc4847"
+    },
+    {
+      "relativePath": "skills/SkillCoordinator.ts",
+      "gitBlob": "5f3bf3e48ef6a6e57b15e073ad24646e839bd656"
+    },
+    {
+      "relativePath": "skills/SkillFilesystem.ts",
+      "gitBlob": "4873c4290c64c3141b2929332a7047725e9002e6"
+    },
+    {
+      "relativePath": "skills/SkillImportGrant.ts",
+      "gitBlob": "600b52d247ad6895773765aa37dd4e57dde91c2e"
+    },
+    {
+      "relativePath": "skills/contracts.ts",
+      "gitBlob": "2559fa1a171ff964941de6884b921c59c9e01ede"
+    },
+    {
+      "relativePath": "skills/index.ts",
+      "gitBlob": "2a8df24b39f31fba7520b854be2c57bb771f99c1"
+    },
+    {
+      "relativePath": "skills/skillPolicy.ts",
+      "gitBlob": "241a083ee2904e7dc1175ac2ff9a62b7526085f6"
+    },
+    {
+      "relativePath": "skills/skillRecords.ts",
+      "gitBlob": "5b45aa4e147a09b3666811b8927f2e8c227bf75e"
+    },
+    {
+      "relativePath": "stopped-team-import/FileStoppedSnapshotResolver.ts",
+      "gitBlob": "f54d3ed4cfc1236e7201c5bf539350368ce72b96"
+    },
+    {
+      "relativePath": "stopped-team-import/FileStoppedTeamImport.ts",
+      "gitBlob": "593c28bc90ce1b82cea0a60d4f1a034bb77ca924"
+    },
+    {
+      "relativePath": "stopped-team-import/contracts.ts",
+      "gitBlob": "9c454a5668354f41554698b46f2557c1e0d13e44"
+    },
+    {
+      "relativePath": "stopped-team-import/importPublication.ts",
+      "gitBlob": "cd94fd329536922e0e1fbdf1b3a1d4be4b2099f4"
+    },
+    {
+      "relativePath": "stopped-team-import/index.ts",
+      "gitBlob": "fa474c7b58b7380dc7c03c35b0e3d9d48632db5f"
+    },
+    {
+      "relativePath": "stopped-team-import/references.ts",
+      "gitBlob": "f9e0d290dd1cb52932f60822021aec7af70722a5"
+    },
+    {
+      "relativePath": "stopped-team-import/snapshot.ts",
+      "gitBlob": "3bfbfd2c6c83f8f7ffb81f526a8207047c89d9e3"
+    },
+    {
+      "relativePath": "stopped-team-import/stoppedTeamImportRoutes.ts",
+      "gitBlob": "8937aa8fd908109dc82d8af0f18555c2c0dbcb81"
+    },
+    {
+      "relativePath": "task-workflow/taskState.ts",
+      "gitBlob": "af3ee3349971682b0682267fa8b5d7cfea119df8"
+    },
+    {
+      "relativePath": "team-launch/TeamLaunchOwner.ts",
+      "gitBlob": "c069249fdaef5ee789ed5e8445b6222bd5fc2238"
+    },
+    {
+      "relativePath": "team-launch/applyUnconfiguredMemberSelections.ts",
+      "gitBlob": "715a07addf00c612388505668630254d4336e989"
+    },
+    {
+      "relativePath": "team-launch/cliArgs.ts",
+      "gitBlob": "d36fe1d23d51fb33a6ed709f09c5af10ce8d638b"
+    },
+    {
+      "relativePath": "team-launch/context.ts",
+      "gitBlob": "03f264613cbdfc553675a7263ed6124ca475efe3"
+    },
+    {
+      "relativePath": "team-launch/contracts.ts",
+      "gitBlob": "d24b5d0f02da6ca2eb7ee0a5466dad2279631496"
+    },
+    {
+      "relativePath": "team-launch/launchPreparation.ts",
+      "gitBlob": "0f935ee0d85983c46514aaee2ef57f78dcce5ed4"
+    },
+    {
+      "relativePath": "team-launch/launchReadiness.ts",
+      "gitBlob": "41c00a77d21a2ea910d238a4a862c9e2f8240a1b"
+    },
+    {
+      "relativePath": "team-launch/launchResume.ts",
+      "gitBlob": "52472eedc1104752d0aa2f005cfc42371b72a746"
+    },
+    {
+      "relativePath": "team-launch/launchRetry.ts",
+      "gitBlob": "43bb9471a324f7bdc81441fa540c78ae096f2749"
+    },
+    {
+      "relativePath": "team-launch/liveRosterMembership.ts",
+      "gitBlob": "6ad18f7477d1c9729e89f1576b759fb630888843"
+    },
+    {
+      "relativePath": "team-launch/materializeWorktree.ts",
+      "gitBlob": "2ecab9652d830a940d8fb583668cba9eee1a8967"
+    },
+    {
+      "relativePath": "team-launch/memberActions.ts",
+      "gitBlob": "6340c865078fa30ebd96a5c2ba29d511eeb655d1"
+    },
+    {
+      "relativePath": "team-launch/nativeLaunchAddition.ts",
+      "gitBlob": "e3f7b62499ed59662a0b5104b174af828151c8bc"
+    },
+    {
+      "relativePath": "team-launch/projectLaunchRestorations.ts",
+      "gitBlob": "5af2716cbfb415328ac3310003e36a60a3513efe"
+    },
+    {
+      "relativePath": "team-launch/validateLaunchRecord.ts",
+      "gitBlob": "45f70d56972c959b25ed13e175d2a2eabf9606c8"
+    },
+    {
+      "relativePath": "team-launch/validateRestoreJournal.ts",
+      "gitBlob": "c91d16732cc77dda73743c844da0c9714e7a30de"
+    },
+    {
+      "relativePath": "team-launch/worktreeContracts.ts",
+      "gitBlob": "5e4b18c2dc7507cfd4a2c8ccc3c895669a24811b"
+    },
+    {
+      "relativePath": "team-launch/worktreePreparation.ts",
+      "gitBlob": "5024657d62f7752f86403e96f64f1240f6da8c65"
+    },
+    {
+      "relativePath": "team-launch/worktreeSchema.ts",
+      "gitBlob": "fa121821065ca1a01ccaee8af1683a17f8876020"
+    },
+    {
+      "relativePath": "team-registry/TeamRegistry.ts",
+      "gitBlob": "edd8aacac38cbd063612a6bbf3910138abe74ec2"
+    },
+    {
+      "relativePath": "team-registry/contracts.ts",
+      "gitBlob": "6770ceea810847fab6551ce778604692ce478e28"
+    },
+    {
+      "relativePath": "team-registry/createLaunchContracts.ts",
+      "gitBlob": "a4195cf8612c220502ecd69526d24aaa4c8c58ea"
+    },
+    {
+      "relativePath": "team-registry/definition.ts",
+      "gitBlob": "0c18b6d5583ceaad8e4a04128968e62c6d59a8bd"
+    },
+    {
+      "relativePath": "team-registry/state.ts",
+      "gitBlob": "12c71b8a2b24b76fc91e9a1f05db34f6df3d412d"
+    },
+    {
+      "relativePath": "team/DeliveryRecovery.ts",
+      "gitBlob": "2512d2aa5e0728a5ee00b7f75d043945383f8ddf"
+    },
+    {
+      "relativePath": "team/NativeMcpAuthority.ts",
+      "gitBlob": "58284e4cf0622aa858b9da46504716b1ec36e19f"
+    },
+    {
+      "relativePath": "team/NativeMemberActionAuthority.ts",
+      "gitBlob": "d17056aaa8910606ed70b560c44182ce02a89ce4"
+    },
+    {
+      "relativePath": "team/TaskRecovery.ts",
+      "gitBlob": "3bf4ee2bfb29758039cac1e3a8dede66bcea8ac6"
+    },
+    {
+      "relativePath": "team/TaskStartCause.ts",
+      "gitBlob": "346febab704352fdb4e645936b476d0ea6c8e1a1"
+    },
+    {
+      "relativePath": "team/TeamContextReminders.ts",
+      "gitBlob": "8a9b1baa10dfdcd00e924eb014115f5fb1fa0cb4"
+    },
+    {
+      "relativePath": "team/TeamDeliveryAuthority.ts",
+      "gitBlob": "fe83bc67a4cbaf4f97175f29b8ce04564ea309ab"
+    },
+    {
+      "relativePath": "team/TeamLifecycleTransitions.ts",
+      "gitBlob": "0980e622f83a40dda8760765ab3310ad84fc7737"
+    },
+    {
+      "relativePath": "team/TeamNativeMemberCreation.ts",
+      "gitBlob": "9c52ea2e5f6b88850d6afcf749b74a796c8da5e6"
+    },
+    {
+      "relativePath": "team/TeamOwner.ts",
+      "gitBlob": "d00e6006bab718d7ed27e21db87ee1c2773a9858"
+    },
+    {
+      "relativePath": "team/TeamProductChanges.ts",
+      "gitBlob": "3821c1e977cba31acc87ad2adec67d48f67172e2"
+    },
+    {
+      "relativePath": "team/TeamQueuedMessages.ts",
+      "gitBlob": "03b13d3cba32ddd03d1163822515eecbb6d5e4ca"
+    },
+    {
+      "relativePath": "team/TeamReviewCommands.ts",
+      "gitBlob": "47ed7b7d5cecd936919765d9f4c5b12d99f8b003"
+    },
+    {
+      "relativePath": "team/TeamRosterTransitions.ts",
+      "gitBlob": "752276bef3e0ef480bbe5bf4ecdbdc6e00058f92"
+    },
+    {
+      "relativePath": "team/TeamRuntimeRegistration.ts",
+      "gitBlob": "37268ad69e08c79c3b9da1b66a377a6d8df2a6e3"
+    },
+    {
+      "relativePath": "team/applyTeamTask.ts",
+      "gitBlob": "c78f2196db3d1f6527122c2990638a6984eef53d"
+    },
+    {
+      "relativePath": "team/boundProductCommandReceipt.ts",
+      "gitBlob": "53fa602c951273ab918526961eec472b40d04133"
+    },
+    {
+      "relativePath": "team/cancelRetainedDeliveries.ts",
+      "gitBlob": "fa8745ed1d1d98456ac3d1ad5ce33605be2f158f"
+    },
+    {
+      "relativePath": "team/captureCommandSelection.ts",
+      "gitBlob": "b0f8b7abacd329b95231c58256af740ebc951ee8"
+    },
+    {
+      "relativePath": "team/commandEntries.ts",
+      "gitBlob": "7ef543a9e12b4d2cab894e090704dc094311037b"
+    },
+    {
+      "relativePath": "team/commitTeamMessage.ts",
+      "gitBlob": "5a9a9dc00972d751c032070a166247aab363b41c"
+    },
+    {
+      "relativePath": "team/continueTeamLifecycleCleanup.ts",
+      "gitBlob": "a3d685b99c66a605cea909d2ba8fd3e90e1a5ec8"
+    },
+    {
+      "relativePath": "team/contracts.ts",
+      "gitBlob": "19243f38ac85ee2757e41301f4c494050dba040e"
+    },
+    {
+      "relativePath": "team/createTeamCommandAccess.ts",
+      "gitBlob": "e2cce66f1a792f880ce8518968d71354d6d95824"
+    },
+    {
+      "relativePath": "team/createTeamReadQueries.ts",
+      "gitBlob": "e3e7e6f2add5f6061ee1cf8298b0887ad12b97bf"
+    },
+    {
+      "relativePath": "team/createTeamTask.ts",
+      "gitBlob": "f7c4d406e6b13eea4b1fcb3fd0030ddf65ccf1a9"
+    },
+    {
+      "relativePath": "team/executeTeamCommand.ts",
+      "gitBlob": "947c10f33d1b8e62f1e5612150123243a67afdf8"
+    },
+    {
+      "relativePath": "team/expectedTaskRecipient.ts",
+      "gitBlob": "cacf29d2235ee6e3b927bf632d96b5f0376f31b6"
+    },
+    {
+      "relativePath": "team/formatTeamMessage.ts",
+      "gitBlob": "9d79719b300c1a2aff954d6e27f4ea32868f8137"
+    },
+    {
+      "relativePath": "team/hostCostCommand.ts",
+      "gitBlob": "b606e2c17c1810c5fcb5452d18d18bd33e943c6e"
+    },
+    {
+      "relativePath": "team/identity.ts",
+      "gitBlob": "a86e937f6874b0f2bb51fb727e4d526784846486"
+    },
+    {
+      "relativePath": "team/inboxMessageIdentity.ts",
+      "gitBlob": "cae49e5fa08c89d146bfd51ae9c1e442d4138783"
+    },
+    {
+      "relativePath": "team/initializeTeamOwner.ts",
+      "gitBlob": "289569b0251dd4756f36aa4bdd21292fe766650a"
+    },
+    {
+      "relativePath": "team/lifecycleContracts.ts",
+      "gitBlob": "576c08b2306510d4a7e4fdee009205729ac461db"
+    },
+    {
+      "relativePath": "team/liveRosterMembership.ts",
+      "gitBlob": "6db6717ea168cde27d5716f639f784512bee9c66"
+    },
+    {
+      "relativePath": "team/lookupEvidenceCause.ts",
+      "gitBlob": "1d5adb26cbd4c74b6c79634f1838902c2d1c3edf"
+    },
+    {
+      "relativePath": "team/lookupRetainedTaskStartCause.ts",
+      "gitBlob": "d46e6cd8b3e16f17654d4b11710dcbd7aad5c443"
+    },
+    {
+      "relativePath": "team/memberSettingsRelaunch.ts",
+      "gitBlob": "314b7d6e815907db8be177eced2946d6489e29bb"
+    },
+    {
+      "relativePath": "team/nativeMemberCreationContracts.ts",
+      "gitBlob": "77a4ce2bba7467db4b9d2f9379c33455d1e7aa1f"
+    },
+    {
+      "relativePath": "team/nativeRosterSuccessor.ts",
+      "gitBlob": "3be1ea06fb50ccf733a71469a4b0502d7c323dd6"
+    },
+    {
+      "relativePath": "team/nativeSessionCommand.ts",
+      "gitBlob": "bbe5042581e5d0eac65dac8e988011c9b96e3034"
+    },
+    {
+      "relativePath": "team/ordinarySubagentPolicy.ts",
+      "gitBlob": "8ef696d7c3cf7d1d0670483c64bebc7ce1e6c79f"
+    },
+    {
+      "relativePath": "team/ownerMessageReads.ts",
+      "gitBlob": "d8bc621be87c7f0d5e74e846a80a7b6e671b6cdc"
+    },
+    {
+      "relativePath": "team/ownerState.ts",
+      "gitBlob": "571529d973f5e183c04f0c5d8b7c4b61b24ca00a"
+    },
+    {
+      "relativePath": "team/pageOwnerKanban.ts",
+      "gitBlob": "2675ecc520e892d708cc957facea41f42dd51f37"
+    },
+    {
+      "relativePath": "team/pageOwnerMessages.ts",
+      "gitBlob": "559a444da55c44e9a069dc78e222b1ac2033f7b9"
+    },
+    {
+      "relativePath": "team/pageOwnerSnapshot.ts",
+      "gitBlob": "a393b94a7ce4ecde5691cb53c27068b26ce18724"
+    },
+    {
+      "relativePath": "team/pageOwnerTaskDetail.ts",
+      "gitBlob": "295c85b174e677d2b563e88d0a1cc9cd0403cf00"
+    },
+    {
+      "relativePath": "team/ports.ts",
+      "gitBlob": "d97280bc0f8a2680a2efe2f2e9223791e4c55600"
+    },
+    {
+      "relativePath": "team/queuedDiscardContracts.ts",
+      "gitBlob": "ea6f0b352713e06a8844db6b5727d54e2df3ea53"
+    },
+    {
+      "relativePath": "team/queuedUserMessageRows.ts",
+      "gitBlob": "38a4f9b5603a35d3d070cd5542cde03dc4f5b28d"
+    },
+    {
+      "relativePath": "team/readCrossTeamReplyHints.ts",
+      "gitBlob": "f633de71332587092f34beae71cf5738c5c208e1"
+    },
+    {
+      "relativePath": "team/retainedDeliverySchema.ts",
+      "gitBlob": "c316c9ab4536ff863d3cb3d788df0c28a8a65585"
+    },
+    {
+      "relativePath": "team/reviewCommandContracts.ts",
+      "gitBlob": "4b9e27d906407fe590a12d417204c67d71779405"
+    },
+    {
+      "relativePath": "team/reviewMethodKind.ts",
+      "gitBlob": "ccee81e65ca3620292af9612a59d0897fcc73d13"
+    },
+    {
+      "relativePath": "team/rosterContracts.ts",
+      "gitBlob": "ade088608f2b65e5fcd8b9fc4da032a08c4a0fe0"
+    },
+    {
+      "relativePath": "team/rosterSchema.ts",
+      "gitBlob": "cf6bafacbda97630009c6011049daebdd99adbe3"
+    },
+    {
+      "relativePath": "team/runtimeRegistrationContracts.ts",
+      "gitBlob": "3f189ac70249430a4bee3ce2640a611059312022"
+    },
+    {
+      "relativePath": "team/settledRuntimeAdmission.ts",
+      "gitBlob": "a17531ef8b7d9d8d7bd9339afdade29923ef2a00"
+    },
+    {
+      "relativePath": "team/taskStartIntent.ts",
+      "gitBlob": "d7f341b62359d3582fc73990b901faa195514343"
+    },
+    {
+      "relativePath": "team/teamBackupResourceVersion.ts",
+      "gitBlob": "17161b1df80feaaee6e82e9a783acfea9edc9a15"
+    },
+    {
+      "relativePath": "team/teamCommandFingerprint.ts",
+      "gitBlob": "c9b52f495d85d85540fe65f8698affecf9787d6c"
+    },
+    {
+      "relativePath": "team/teamLifecycleAdmission.ts",
+      "gitBlob": "a63557d4cb0012ae4802a27d334f44c9925c341a"
+    },
+    {
+      "relativePath": "team/validateCommandAttachments.ts",
+      "gitBlob": "a1978141802b221946ef9ee41ff65c065ffb9e2f"
+    },
+    {
+      "relativePath": "team/validateNativeMemberCreation.ts",
+      "gitBlob": "47f45095fd0c3501512f2e18d4dcf5763d69972f"
+    },
+    {
+      "relativePath": "team/validateTeamCommand.ts",
+      "gitBlob": "bea634c0739acb718fbe73cbfa9b032a55497c7c"
+    },
+    {
+      "relativePath": "work-sync/TeamWorkSyncCommands.ts",
+      "gitBlob": "5528adccc37ada9a35da9cd4a52e9cad5b90c955"
+    },
+    {
+      "relativePath": "work-sync/assertAcceptedNativeWorkSyncInput.ts",
+      "gitBlob": "12264d12e902820e19372a8525b753d135cbda5d"
+    },
+    {
+      "relativePath": "work-sync/commandContracts.ts",
+      "gitBlob": "4ab5a6413531c44713198b833b836ceffb07feb1"
+    },
+    {
+      "relativePath": "work-sync/createNativeMemberWorkSyncAgendaSource.ts",
+      "gitBlob": "abe66bdd2b898b0b0cde7864c35e6d3b54144aff"
+    },
+    {
+      "relativePath": "work-sync/createNativeWorkSyncDelivery.ts",
+      "gitBlob": "2b98190e1fb9ff421533b9dbaf0ec393eab1aff8"
+    },
+    {
+      "relativePath": "work-sync/createNativeWorkSyncMessagePorts.ts",
+      "gitBlob": "ac6d89ff3bb9b853770c800153b072cf416840db"
+    },
+    {
+      "relativePath": "work-sync/policy/contracts/index.ts",
+      "gitBlob": "06c33f562f4ee7a92fbd9d58777193aefeaeb78b"
+    },
+    {
+      "relativePath": "work-sync/policy/contracts/types.ts",
+      "gitBlob": "4bba061c88852fa6cd69019694d4b0450fa126ae"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncAudit.ts",
+      "gitBlob": "e588c551ad03a7fba2cb3f2a408327b4fb218683"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncConditionalStatusPort.ts",
+      "gitBlob": "985c3db6b69f356f4d1eae818791595e80314af6"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncEarlyContinuationPlanner.ts",
+      "gitBlob": "86e51be7704aa3dcdfc9362c73d7262838f6243e"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncNudgeActivationPolicy.ts",
+      "gitBlob": "f6daf56c8048ae370cdcc442b2e7e9a3be793b2e"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncNudgeAgendaPredicates.ts",
+      "gitBlob": "539e923b21432c39b05cb08b9d535a3ab26bc1de"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncNudgeDispatchPolicy.ts",
+      "gitBlob": "9a206fc4e9b6803df3a357ca6a679a2562b40113"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncNudgeDispatcher.ts",
+      "gitBlob": "64ee3f1ab7ab17201aa993f386552436a8dfe224"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncNudgeOutboxPlanHelpers.ts",
+      "gitBlob": "afd355d9c17f7b63f6646fbb472d00643595ee98"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncNudgeOutboxPlanner.ts",
+      "gitBlob": "29e6a4e68bd751901dff83239f32cb69765529f7"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncNudgeRecoveryPolicy.ts",
+      "gitBlob": "01f9cd7a2bc1b6019b2e3b8aa42466155386def5"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncNudgeRevalidator.ts",
+      "gitBlob": "7d8b5bd816baca3ffd3cc80ffb871d2eea7f5d57"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncNudgeSuppressionPolicy.ts",
+      "gitBlob": "94ca7be8446aeec392e35a6fad4c99fc9f1c7b25"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncReconciler.ts",
+      "gitBlob": "1056c93d3b04b38ce571ce8b9f78786e24f9e914"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncRecoveryAllocator.ts",
+      "gitBlob": "baac847f04c4d8bf14cff020accd83791c788484"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncRecoveryCommands.ts",
+      "gitBlob": "71fc13238a6b2fe2be38dc4cb9ffcc7b3b8d957a"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncRecoveryDispatchOutcome.ts",
+      "gitBlob": "4e51cfcb3d4725992d724f47a24cadfe61a164ea"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncReportJournalPort.ts",
+      "gitBlob": "85324ded79896d547bc85561325342b36b42cc9b"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncReportJournalProtocol.ts",
+      "gitBlob": "6c72399954cc8304221eb960bd2f9ab8cd46e76e"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncReporter.ts",
+      "gitBlob": "dcdd4de6600f44172703db8002f95ad845c97ee5"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncRuntimeActivity.ts",
+      "gitBlob": "edfad03f55657562349dc5511cf3901898420045"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncRuntimeStallDiagnostics.ts",
+      "gitBlob": "86564057d18757c48608344504a4dede7d9c29d4"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncStatusMutation.ts",
+      "gitBlob": "c61ea0d5a91a9cb8b8abb6d2d98e1789e74843e4"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncTargetedRecoveryPolicy.ts",
+      "gitBlob": "8accf164ee3ccfcb78d9d2fc935028924ad4353c"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/MemberWorkSyncTeamOperationGate.ts",
+      "gitBlob": "9b3824b1b66b74adef3239d9b3bc23a8a91dbd8b"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/memberWorkSyncAllocatedRecovery.ts",
+      "gitBlob": "c47db24122ad0c5e26e891cc4dfa776ecb4b6d86"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/memberWorkSyncQualifiedAutomaticGate.ts",
+      "gitBlob": "d17a5bb62b20b2c9d6c9dca64c48014c243d329d"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/memberWorkSyncReviewPickupPlan.ts",
+      "gitBlob": "31fecffda935f21a13f2a5b4381cee114121bbed"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/memberWorkSyncSettlementReplay.ts",
+      "gitBlob": "24bee3898bd06cdd0728dc08f5f2fa546539497c"
+    },
+    {
+      "relativePath": "work-sync/policy/core/application/ports.ts",
+      "gitBlob": "a717294d090eebc958938a505666a71a6f52932c"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/ActionableWorkAgenda.ts",
+      "gitBlob": "c3e0b4cdd416481da7730556bed873fb1afa7676"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/AgendaFingerprint.ts",
+      "gitBlob": "6b2a373d5517fda24ea09acc5b377ccda4a926e6"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/MemberWorkSyncAcceptedReport.ts",
+      "gitBlob": "e9595e9ac5f951dd754ffa2d43d38f2ad9873b81"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/MemberWorkSyncNudge.ts",
+      "gitBlob": "591734be83bb1b3a4c6dae2d3cf2eb4b0ff7b094"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/MemberWorkSyncPhase2Readiness.ts",
+      "gitBlob": "28b5fa52a17a04f19270809be0e54d8b9cc348d0"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/MemberWorkSyncRecoveryControl.ts",
+      "gitBlob": "935a571b8ec6ecce2b36f3b1df4a1df843db948e"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/MemberWorkSyncRecoveryHealth.ts",
+      "gitBlob": "fd57a2272f80d1a1a64ed2be87b90e37ff38e1e1"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/MemberWorkSyncRecoveryTerminal.ts",
+      "gitBlob": "e56d22b779454cea33650910fbb03b18bb046315"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/MemberWorkSyncReportJournalMetadata.ts",
+      "gitBlob": "5b2aca9bb07cdee96e03bffa557149399838b1ea"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/MemberWorkSyncReportJournalRow.ts",
+      "gitBlob": "f4ebc00572e222dea4ff71ca75122e26023888d2"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/MemberWorkSyncReportReceipt.ts",
+      "gitBlob": "1aa6f9801506ae1270dd020c94bf8cde3fd625ea"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/MemberWorkSyncReportValidator.ts",
+      "gitBlob": "617b0e2dd169f37d826f1cf1429a8b4da7fab37b"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/MemberWorkSyncStatusRevision.ts",
+      "gitBlob": "f5696ff37425bb66bbbf9c52917c90271a5e6da4"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/RuntimeTurnSettledEvent.ts",
+      "gitBlob": "beb732e303bd90294479a03fc7f75028763992c8"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/RuntimeTurnSettledProvider.ts",
+      "gitBlob": "7ea4ef8fc9e5d0c1323d27a90b12f0aaa09e8591"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/SyncDecisionPolicy.ts",
+      "gitBlob": "5398a8252c30657116e47c27ad4f1c31aa924d64"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/currentReviewCycle.ts",
+      "gitBlob": "5dd320d636b5a8c51ba9d139cdea2cb93c0858be"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/index.ts",
+      "gitBlob": "8ecfc43e76a07a9c7f982781baaedcd1970d71f6"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/memberName.ts",
+      "gitBlob": "4a61540fa5b0e9f510587986eb818f9adcb7146e"
+    },
+    {
+      "relativePath": "work-sync/policy/core/domain/memberWorkSyncRecentDelivered.ts",
+      "gitBlob": "3d273866b0969eca3564d8f267025cb910cdbac4"
+    },
+    {
+      "relativePath": "work-sync/scheduling/MemberWorkSyncNudgeDispatchScheduler.ts",
+      "gitBlob": "29e60b6af26bde5fa7be9afdd70d2693b72502af"
+    },
+    {
+      "relativePath": "work-sync/storage/HmacMemberWorkSyncReportTokenAdapter.ts",
+      "gitBlob": "eac3d4ccae0f984077cc044e97677e177a5127a5"
+    },
+    {
+      "relativePath": "work-sync/storage/JsonMemberWorkSyncReportJournal.ts",
+      "gitBlob": "dc12201901c6fcc1cf9796f9fbdf2ea591865939"
+    },
+    {
+      "relativePath": "work-sync/storage/MemberWorkSyncOutboxOperations.ts",
+      "gitBlob": "cb89d3795c3a976697b001484b71377e6f419367"
+    },
+    {
+      "relativePath": "work-sync/storage/MemberWorkSyncStatusAuthority.ts",
+      "gitBlob": "70b2d71f6b68caf3ec59aa3b5a03b039f7ea71f2"
+    },
+    {
+      "relativePath": "work-sync/storage/MemberWorkSyncStorePaths.ts",
+      "gitBlob": "167c4782fd43ca42ca80b524c9335f65794acf32"
+    },
+    {
+      "relativePath": "work-sync/storage/MemberWorkSyncWriteQueue.ts",
+      "gitBlob": "d2727b5489ae32793d62d4c923c7dc49e2650fc7"
+    },
+    {
+      "relativePath": "work-sync/storage/createMemberWorkSyncJsonBackend.ts",
+      "gitBlob": "30c28e7dedee7fa19c00626245890bbb5904647a"
+    },
+    {
+      "relativePath": "work-sync/storage/createNativeMemberWorkSyncPersistence.ts",
+      "gitBlob": "6ed6f269c3c375f99f536755e9eb488e106ee057"
+    },
+    {
+      "relativePath": "work-sync/storage/createNativeWorkSyncOutbox.ts",
+      "gitBlob": "6e8f105d478353e64db8a4a85d925378c7ac6aa0"
+    },
+    {
+      "relativePath": "work-sync/storage/decodeMemberWorkSyncStoredStatus.ts",
+      "gitBlob": "00136a46bb098fb63a27d4c996c6dfe24cd1aefc"
+    },
+    {
+      "relativePath": "work-sync/storage/jsonStoreFiles.ts",
+      "gitBlob": "b8d9329785e3b44d48037e9bb2e44a8263ac3ceb"
+    },
+    {
+      "relativePath": "work-sync/storage/jsonStorePolicy.ts",
+      "gitBlob": "eafd0d244dc31534ba16430e161a0a4b8b2ac78f"
+    },
+    {
+      "relativePath": "work-sync/storage/memberWorkSyncJsonStatusPersistence.ts",
+      "gitBlob": "28ed8161fa965ee5038280ac87d382d89719c4b6"
+    },
+    {
+      "relativePath": "work-sync/storage/memberWorkSyncMetricsProjection.ts",
+      "gitBlob": "15aaef2fdcba818c1e2deeab0dd5806b59f072db"
+    },
+    {
+      "relativePath": "work-sync/storage/memberWorkSyncReportJournalOwnership.ts",
+      "gitBlob": "832a0de5317b0a7a35ed01859c653ad1d105bccc"
+    },
+    {
+      "relativePath": "work-sync/storage/memberWorkSyncSafetyJson.ts",
+      "gitBlob": "1197e1e8220081eec1887a1dd6206734de2db2e6"
+    },
+    {
+      "relativePath": "work-sync/storage/memberWorkSyncStatusVersion.ts",
+      "gitBlob": "3bc7cfc22c6a27922d8312323c07912ac2500beb"
+    },
+    {
+      "relativePath": "work-sync/storage/memberWorkSyncStoreIdentity.ts",
+      "gitBlob": "a934339c6c38ae3f7e2ccc4601a44b8a5225d92f"
+    },
+    {
+      "relativePath": "work-sync/storage/memberWorkSyncTokenSecret.ts",
+      "gitBlob": "f4d4b88cd2b6882ef620235b83ac62c317937fb1"
+    },
+    {
+      "relativePath": "work-sync/storage/reportJournalPaths.ts",
+      "gitBlob": "a981f99c23b50d76559eeddd21c275d37e4f511d"
+    },
+    {
+      "relativePath": "work-sync/storage/reportTokenPorts.ts",
+      "gitBlob": "df92aa9eec32f95405a46bef50d4d8a99c55ebf2"
+    },
+    {
+      "relativePath": "work-sync/storage/scanMemberWorkSyncNames.ts",
+      "gitBlob": "784f7534e93b84ebc35fd12179f25d408fb6b3f9"
+    }
+  ],
+  "noBuildExecuted": true
+}

@@ -1,0 +1,1018 @@
+{
+  "kind": "ORIGINAL_2CB_DARWIN_X64_HOST_PASS_P09_FAILURE_AUDIT",
+  "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+  "runId": 43755682505,
+  "attempt": 1,
+  "jobId": 132939135634,
+  "artifactId": 14178596921,
+  "archiveAudit": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/archive-audit-v2_darwin_x64.json",
+    "bytes": 1860,
+    "sha256": "f2c0bb9e2a0fd3b13a3db32c94e0be7111b24b7c883ae35f8a475e905d1318a5",
+    "gitBlobSha1": "9d49df9cab58d7c9780e5e331c844e93ed2c28f9"
+  },
+  "jobLog": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/job-132939135634.log",
+    "bytes": 111486,
+    "sha256": "848b207cde0aa86bffad05fbb3c20c2469298d770e19fa4cc97fe5da8178353b",
+    "gitBlobSha1": "a21b16e996dda34e6bd8f4e8543bac078f9b5294"
+  },
+  "originalCommands": [
+    {
+      "line": 767,
+      "command": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts",
+      "tests": 58,
+      "pass": 57,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 1
+    },
+    {
+      "line": 890,
+      "command": "node --experimental-test-module-mocks --test packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+      "tests": 2,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 1
+    },
+    {
+      "line": 965,
+      "command": "node --test scripts/legacy-agent-host/desktop-opencode-v2-fixture.test.ts",
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "line": 998,
+      "command": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "line": 1097,
+      "command": "node --test --test-name-pattern='^POSIX original-path' packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  ],
+  "total": {
+    "cases": 63,
+    "pass": 60,
+    "fail": 1,
+    "skip": 2,
+    "cancelled": 0
+  },
+  "inputs": {
+    "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+    "status": "READY",
+    "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+    "platform": "darwin-x64",
+    "nodeVersion": "v24.21.0",
+    "productQualified": false,
+    "stage": "prepared",
+    "baseArchiveSha256": "fbaab0cb2a1b46241985ecabf4f256abf8f80051be264786cbf301857e46969a",
+    "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+    "bun": {
+      "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+      "sha256": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+      "version": "1.4.4"
+    },
+    "osBuild": "24G830",
+    "productTupleAdmitted": true,
+    "processArtifact": {
+      "manifest": {
+        "schemaVersion": 1,
+        "abi": "napi-8",
+        "platform": "darwin",
+        "architecture": "x64",
+        "osBuild": "24G830",
+        "library": "registered-process.node",
+        "sourceSha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+        "binarySha256": "50e8af2e01f9a79387b13548d2d84f963e543baaa5c3fc842f4a38580ed6c973",
+        "compilerSha256": "4c458256bcdf913774de1bb4a37768244d3b41f32ad55afb2dfec3432f46f4fe",
+        "sdkSettingsSha256": "58a133735f0a55a624a1703067059f6e78925e51725ec6e1f966072e142c9c42",
+        "headers": [
+          {
+            "file": "node_api.h",
+            "sha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a"
+          },
+          {
+            "file": "node_api_types.h",
+            "sha256": "a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00"
+          },
+          {
+            "file": "js_native_api.h",
+            "sha256": "8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788"
+          },
+          {
+            "file": "js_native_api_types.h",
+            "sha256": "4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0"
+          },
+          {
+            "file": "node_version.h",
+            "sha256": "bd056729fddf4bfa58687036219f07417c334c4ecfcb513ac256fa254451bfc9"
+          }
+        ]
+      },
+      "manifestSha256": "160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e",
+      "directory": "/Users/runner/work/_temp/TEST-opencode-v2-inputs-OBC6F1/process-artifact"
+    },
+    "supportArchiveSha256": "f80837d4659bcd0ccc0275dbbff3731e517a50567572d24635bfdcf6447f1111",
+    "manifestSha256": "7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb"
+  },
+  "hostReceipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/v2_darwin_x64/opencode-v2-embedded-host.json",
+    "bytes": 95027,
+    "sha256": "3791521f944ca688b50c6ff9de259ca57886c921c36cd47f9a5567c0e3fa1453",
+    "gitBlobSha1": "5156f2188dfadbb5860317fc20236d419794424c"
+  },
+  "host": {
+    "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+    "status": "PASS",
+    "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+    "platform": "darwin-x64",
+    "version": "2.1.4",
+    "approvalMode": "manual",
+    "nodeVersion": "v24.21.0",
+    "modelSelection": {
+      "providerId": "TEST-local",
+      "modelId": "TEST-model-B",
+      "variant": "high"
+    },
+    "configurationSelection": {
+      "scope": "project",
+      "original": "project-A",
+      "later": "project-B"
+    },
+    "preferencesSelection": {
+      "nativeDefault": "TEST-local/TEST-model",
+      "appDefault": "TEST-local/TEST-model-B"
+    },
+    "digests": {
+      "bun": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+      "manifest": "7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb",
+      "node": "7abcf39bd37ab251015337ff75304d7555f0d8e88c6e0fbf04bce8ce34636f49",
+      "hostSource": "7a1229966bdf7b230657d9a8e509a3cedfda01419c24d6aa26fbdca7c669f77e",
+      "hostDist": "ab274ebbc672bda9fa91cc3d8f4680405e85e65e10a1fda8426072508965e227",
+      "provider": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94"
+    },
+    "steps": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "cleanup": true,
+    "phaseElapsedMs": {
+      "original_host_embedded_native_and_mcp_ready": 50466,
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 84734,
+      "changed_project_config_did_not_retarget_running_native_session": 84734,
+      "original_uploaded_PNG_native_image_inference_and_public_readback": 84734,
+      "checkpoint_and_original_host_native_cleanup_confirmed": 85243,
+      "cold_host_restored_native_history_without_model_or_tool_replay": 127998
+    },
+    "elapsedMs": 129640,
+    "cancelled": false,
+    "inputObservation": {
+      "reads": 148,
+      "last": {
+        "phase": "allocated",
+        "custody": "owned",
+        "nativeReady": true,
+        "attached": true,
+        "sealed": false,
+        "diagnostic": null,
+        "inputs": [
+          {
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ],
+        "interactions": [
+          {
+            "kind": "permission",
+            "phase": "resolved"
+          },
+          {
+            "kind": "permission",
+            "phase": "resolved"
+          }
+        ]
+      }
+    },
+    "launchObservation": {
+      "openElapsedMs": 40414,
+      "afterOpen": {
+        "available": true,
+        "status": "ready",
+        "reason": "context-applied",
+        "elapsedSinceAttemptMs": 39706,
+        "capturedTimeoutMs": 120000,
+        "claimed": true,
+        "nativeReady": true,
+        "contextApplied": true,
+        "everReady": true,
+        "usable": true,
+        "controlAvailable": true,
+        "noAllocation": false
+      }
+    },
+    "failureCode": null,
+    "hosts": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "modelOrigin": "localhost-scripted",
+    "modelRequests": 11,
+    "modelProgress": [
+      {
+        "elapsedMs": 50604,
+        "requests": 0
+      },
+      {
+        "elapsedMs": 60056,
+        "requests": 1
+      },
+      {
+        "elapsedMs": 60262,
+        "requests": 2
+      },
+      {
+        "elapsedMs": 60515,
+        "requests": 3
+      },
+      {
+        "elapsedMs": 60715,
+        "requests": 4
+      },
+      {
+        "elapsedMs": 64644,
+        "requests": 5
+      },
+      {
+        "elapsedMs": 64886,
+        "requests": 6
+      },
+      {
+        "elapsedMs": 65122,
+        "requests": 7
+      },
+      {
+        "elapsedMs": 65285,
+        "requests": 8
+      },
+      {
+        "elapsedMs": 79163,
+        "requests": 9
+      },
+      {
+        "elapsedMs": 81415,
+        "requests": 10
+      },
+      {
+        "elapsedMs": 81631,
+        "requests": 11
+      }
+    ],
+    "coordination": {
+      "status": "unqualified",
+      "cleanup": null
+    },
+    "modelFailures": [],
+    "vendorAuthQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+  },
+  "passiveTrace": {
+    "entries": 254,
+    "projectedBytesIncludingLF": 54853,
+    "maxProjectedLineBytesIncludingLF": 229,
+    "epochs": [
+      1
+    ],
+    "events": {
+      "child-spawn": 1,
+      "child-ready": 1,
+      "request": 103,
+      "response": 103,
+      "request-send-headers": 18,
+      "request-body-sent": 18,
+      "response-end": 9,
+      "trace-limit": 1
+    },
+    "bounds": {
+      "projectedRows": 257,
+      "lineBytes": 513,
+      "captureBytes": 65536,
+      "wireBytes": 512
+    },
+    "partial": true
+  },
+  "originalHostCpu": {
+    "epoch": 1,
+    "scope": "original-source-host-including-cleanup",
+    "status": "available",
+    "rawDiscarded": true,
+    "samplingIntervalUs": 10000,
+    "profileDurationUs": 76857732,
+    "sampledUs": 76857488,
+    "unsampledUs": 244,
+    "nodeCount": 9606,
+    "sampleCount": 2437,
+    "attribution": "nearest-allowlisted-stack-frame",
+    "categories": [
+      {
+        "category": "configuration-read",
+        "exclusiveSamples": 61,
+        "exclusiveSampledUs": 1397206,
+        "inclusiveSamples": 800,
+        "inclusiveSampledUs": 25280067
+      },
+      {
+        "category": "credential-read",
+        "exclusiveSamples": 145,
+        "exclusiveSampledUs": 5055496,
+        "inclusiveSamples": 783,
+        "inclusiveSampledUs": 25370774
+      },
+      {
+        "category": "team-writer-authority",
+        "exclusiveSamples": 793,
+        "exclusiveSampledUs": 25593157,
+        "inclusiveSamples": 793,
+        "inclusiveSampledUs": 25593157
+      },
+      {
+        "category": "custody-image",
+        "exclusiveSamples": 499,
+        "exclusiveSampledUs": 17714772,
+        "inclusiveSamples": 731,
+        "inclusiveSampledUs": 25257405
+      },
+      {
+        "category": "provider-transport",
+        "exclusiveSamples": 20,
+        "exclusiveSampledUs": 631481,
+        "inclusiveSamples": 246,
+        "inclusiveSampledUs": 7800557
+      },
+      {
+        "category": "other",
+        "exclusiveSamples": 546,
+        "exclusiveSampledUs": 14997142,
+        "inclusiveSamples": 546,
+        "inclusiveSampledUs": 14997142
+      },
+      {
+        "category": "idle",
+        "exclusiveSamples": 373,
+        "exclusiveSampledUs": 11468234,
+        "inclusiveSamples": 373,
+        "inclusiveSampledUs": 11468234
+      }
+    ],
+    "teamWriterDetails": [
+      {
+        "family": "namespace-fence",
+        "exclusiveSamples": 696,
+        "exclusiveSampledUs": 22201742
+      },
+      {
+        "family": "team-state",
+        "exclusiveSamples": 8,
+        "exclusiveSampledUs": 256039
+      },
+      {
+        "family": "team-state-validation",
+        "exclusiveSamples": 2,
+        "exclusiveSampledUs": 101065
+      },
+      {
+        "family": "launch-binding-read",
+        "exclusiveSamples": 31,
+        "exclusiveSampledUs": 1086911
+      },
+      {
+        "family": "launch-binding-current",
+        "exclusiveSamples": 3,
+        "exclusiveSampledUs": 89439
+      },
+      {
+        "family": "launch-binding-clone",
+        "exclusiveSamples": 5,
+        "exclusiveSampledUs": 224232
+      },
+      {
+        "family": "other-writer",
+        "exclusiveSamples": 48,
+        "exclusiveSampledUs": 1633729
+      }
+    ],
+    "namespaceFenceDetails": [
+      {
+        "family": "directoryPath",
+        "exclusiveSamples": 63,
+        "exclusiveSampledUs": 2237311
+      },
+      {
+        "family": "tree",
+        "exclusiveSamples": 145,
+        "exclusiveSampledUs": 4832841
+      },
+      {
+        "family": "controller-lock",
+        "exclusiveSamples": 431,
+        "exclusiveSampledUs": 13290320
+      },
+      {
+        "family": "residual",
+        "exclusiveSamples": 57,
+        "exclusiveSampledUs": 1841270
+      }
+    ],
+    "teamWriterCallers": {
+      "attribution": "outermost-allowlisted-caller-on-sampled-stack",
+      "rows": [
+        {
+          "caller": "node-timer",
+          "exclusiveSamples": 33,
+          "exclusiveSampledUs": 1335283,
+          "namespaceSamples": 29,
+          "namespaceSampledUs": 1197396
+        },
+        {
+          "caller": "v2-request-admission",
+          "exclusiveSamples": 13,
+          "exclusiveSampledUs": 472030,
+          "namespaceSamples": 8,
+          "namespaceSampledUs": 275232
+        },
+        {
+          "caller": "v2-request-password",
+          "exclusiveSamples": 107,
+          "exclusiveSampledUs": 3343407,
+          "namespaceSamples": 96,
+          "namespaceSampledUs": 2983921
+        },
+        {
+          "caller": "v2-read-snapshot",
+          "exclusiveSamples": 90,
+          "exclusiveSampledUs": 3091608,
+          "namespaceSamples": 79,
+          "namespaceSampledUs": 2668063
+        },
+        {
+          "caller": "runtime-session-read",
+          "exclusiveSamples": 1,
+          "exclusiveSampledUs": 85410,
+          "namespaceSamples": 0,
+          "namespaceSampledUs": 0
+        },
+        {
+          "caller": "provider-attestation-wait",
+          "exclusiveSamples": 11,
+          "exclusiveSampledUs": 354693,
+          "namespaceSamples": 10,
+          "namespaceSampledUs": 310178
+        },
+        {
+          "caller": "unclassified",
+          "exclusiveSamples": 538,
+          "exclusiveSampledUs": 16910726,
+          "namespaceSamples": 474,
+          "namespaceSampledUs": 14766952
+        }
+      ]
+    },
+    "fileBytes": 2375028,
+    "fileOverLimit": false
+  },
+  "separateCustody": {
+    "kind": "TEST_DARWIN_CUSTODY_PRODUCT_PATH",
+    "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+    "hostBuild": {
+      "hostSourceDigest": "7a1229966bdf7b230657d9a8e509a3cedfda01419c24d6aa26fbdca7c669f77e",
+      "hostDistDigest": "ab274ebbc672bda9fa91cc3d8f4680405e85e65e10a1fda8426072508965e227",
+      "providerDigest": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94"
+    },
+    "platform": "darwin",
+    "arch": "x64",
+    "osBuild": "24G830",
+    "productQualified": false,
+    "bunSha256": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+    "processArtifactManifestSha256": "160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e",
+    "original": {
+      "executablePath": "/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-native-darwin-executable-0BiHIQ/bun",
+      "executableSha256": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+      "pid": 13050,
+      "startIdentity": "47046561-FA28-4B91-B88D-7E569D9BCDF6:13050:25032:905953746056"
+    },
+    "sibling": {
+      "executablePath": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+      "executableSha256": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+      "pid": 13052,
+      "startIdentity": "47046561-FA28-4B91-B88D-7E569D9BCDF6:13052:25034:906475299974"
+    },
+    "replacementRefused": true,
+    "siblingSurvivedTargetStop": true,
+    "cleanup": "confirmed",
+    "status": "PASS"
+  },
+  "sourceReview": [
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "gitBlob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "bytes": 33259,
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff",
+      "unchangedThroughIncomingSevenPathDelta": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+      "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1",
+      "bytes": 27709,
+      "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+      "unchangedThroughIncomingSevenPathDelta": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+      "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d",
+      "bytes": 21219,
+      "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+      "unchangedThroughIncomingSevenPathDelta": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+      "bytes": 37181,
+      "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+      "unchangedThroughIncomingSevenPathDelta": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "gitBlob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+      "bytes": 15303,
+      "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+      "unchangedThroughIncomingSevenPathDelta": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+      "gitBlob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+      "bytes": 9765,
+      "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979",
+      "unchangedThroughIncomingSevenPathDelta": true
+    }
+  ],
+  "hostSourceReconstruction": {
+    "fileCount": 615,
+    "form": "Git LF",
+    "computedDigest": "7a1229966bdf7b230657d9a8e509a3cedfda01419c24d6aa26fbdca7c669f77e",
+    "audit": {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/source-host-digest-audit.json",
+      "bytes": 84915,
+      "sha256": "4c3ca2da1ba7f5fb6143a5b93ca7a842670f34487b0dbeca7d7017fa3d1731c9",
+      "gitBlobSha1": "ddbae83cbede62701650d9e5c743766081c8bcd1"
+    }
+  },
+  "posixReceipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/v2_darwin_x64/opencode-v2-posix-exec.json",
+    "bytes": 14545,
+    "sha256": "f057cfddfea9a8daa293868ab75419aa7a71dc9eaf0437607e7e637d5f00c709",
+    "gitBlobSha1": "f01071038f7f8f460dcbb5ef09316afc3d3f850a"
+  },
+  "posix": {
+    "kind": "TEST_POSIX_PRE_USER_EXEC_IMAGE",
+    "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+    "sourceSha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+    "platform": "darwin",
+    "arch": "x64",
+    "nodeVersion": "v24.21.0",
+    "osBuild": "24G830",
+    "tools": {
+      "compiler": "7f30f076d0e9c38f772a76449fca9da8cf97f6a3d43b94c90a00e4f9ce7ad39e",
+      "hashTool": "0812595f981a26f813d98dc380af14d4af427626c9339eda29eb849ae13de1e3",
+      "node": "7abcf39bd37ab251015337ff75304d7555f0d8e88c6e0fbf04bce8ce34636f49"
+    },
+    "observations": [
+      {
+        "label": "compiler-default:plain",
+        "expectedSha256": "2f8774269bc3fdc8c7d44013bd150ec31106b910298b4c85d03212ecfd750960",
+        "replacementSha256": "a4f590d15b8128697aa54862b3361f3da824eeb78aa438c62612a070c1d0ee31",
+        "stage": "plain-exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": false,
+        "payloadMarkersAbsentBeforeGate": false,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 0,
+        "codeSigningError": 0,
+        "originalPid": 15923,
+        "originalBirth": "0",
+        "originalDev": "16777220",
+        "originalIno": "12888754684",
+        "kernelDev": "0",
+        "kernelIno": "0",
+        "originalSha256": "2f8774269bc3fdc8c7d44013bd150ec31106b910298b4c85d03212ecfd750960",
+        "kernelSha256": "",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "outputBytes": 314,
+        "outputSha256": "48500395f74325424f9889613595a45f00f0ce1c5dc09311edbf15ee0dce93c0",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "compiler-default:baseline",
+        "expectedSha256": "2f8774269bc3fdc8c7d44013bd150ec31106b910298b4c85d03212ecfd750960",
+        "replacementSha256": "a4f590d15b8128697aa54862b3361f3da824eeb78aa438c62612a070c1d0ee31",
+        "stage": "kernel-image-validity",
+        "errno": 13,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 0,
+        "codeSigningError": -67062,
+        "originalPid": 15926,
+        "originalBirth": "1064857505766",
+        "originalDev": "16777220",
+        "originalIno": "12888754692",
+        "kernelDev": "0",
+        "kernelIno": "0",
+        "originalSha256": "2f8774269bc3fdc8c7d44013bd150ec31106b910298b4c85d03212ecfd750960",
+        "kernelSha256": "",
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [],
+        "outputBytes": 0,
+        "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "controllerInterrupted": false,
+        "result": "INCOMPLETE"
+      },
+      {
+        "label": "adhoc-test-only:plain",
+        "expectedSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "replacementSha256": "9b86c008e495915f378389cc9215c9160cdd5b88f5084e5ef6de36b1c35cddf3",
+        "stage": "plain-exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": false,
+        "payloadMarkersAbsentBeforeGate": false,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 0,
+        "codeSigningError": 0,
+        "originalPid": 15929,
+        "originalBirth": "0",
+        "originalDev": "16777220",
+        "originalIno": "12888754698",
+        "kernelDev": "0",
+        "kernelIno": "0",
+        "originalSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "kernelSha256": "",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "outputBytes": 314,
+        "outputSha256": "10a256d1f394afcee30b39001e2ff9e807d086ab2b19c87f3f24d88529ea9c9b",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:baseline",
+        "expectedSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "replacementSha256": "9b86c008e495915f378389cc9215c9160cdd5b88f5084e5ef6de36b1c35cddf3",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "originalPid": 15932,
+        "originalBirth": "1064968057092",
+        "originalDev": "16777220",
+        "originalIno": "12888754705",
+        "kernelDev": "16777220",
+        "kernelIno": "12888754705",
+        "originalSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "kernelSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "outputBytes": 314,
+        "outputSha256": "50e32a6ad7bb0418f2548b11c6595ce5d65c06902213f750b45c6922b7ffbed7",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:rename",
+        "expectedSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "replacementSha256": "9b86c008e495915f378389cc9215c9160cdd5b88f5084e5ef6de36b1c35cddf3",
+        "stage": "rejected-image",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "originalPid": 15936,
+        "originalBirth": "1065052264828",
+        "originalDev": "16777220",
+        "originalIno": "12888754712",
+        "kernelDev": "16777220",
+        "kernelIno": "12888754713",
+        "originalSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "kernelSha256": "9b86c008e495915f378389cc9215c9160cdd5b88f5084e5ef6de36b1c35cddf3",
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [],
+        "outputBytes": 0,
+        "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:inplace",
+        "expectedSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "replacementSha256": "9b86c008e495915f378389cc9215c9160cdd5b88f5084e5ef6de36b1c35cddf3",
+        "stage": "rejected-image",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "originalPid": 15940,
+        "originalBirth": "1065135310716",
+        "originalDev": "16777220",
+        "originalIno": "12888754718",
+        "kernelDev": "16777220",
+        "kernelIno": "12888754718",
+        "originalSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "kernelSha256": "9b86c008e495915f378389cc9215c9160cdd5b88f5084e5ef6de36b1c35cddf3",
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [],
+        "outputBytes": 0,
+        "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:after-check",
+        "expectedSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "replacementSha256": "9b86c008e495915f378389cc9215c9160cdd5b88f5084e5ef6de36b1c35cddf3",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "originalPid": 15944,
+        "originalBirth": "1065215185100",
+        "originalDev": "16777220",
+        "originalIno": "12888754724",
+        "kernelDev": "16777220",
+        "kernelIno": "12888754724",
+        "originalSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "kernelSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "outputBytes": 314,
+        "outputSha256": "e5cc4e0776adad2aace6ceb913fe6cf41980633438452939556a91da0c4d7575",
+        "controllerInterrupted": false,
+        "result": "INCOMPLETE"
+      },
+      {
+        "label": "adhoc-test-only:writer-open",
+        "expectedSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "replacementSha256": "9b86c008e495915f378389cc9215c9160cdd5b88f5084e5ef6de36b1c35cddf3",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "originalPid": 15951,
+        "originalBirth": "1065298643026",
+        "originalDev": "16777220",
+        "originalIno": "12888754731",
+        "kernelDev": "16777220",
+        "kernelIno": "12888754731",
+        "originalSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "kernelSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "outputBytes": 314,
+        "outputSha256": "95d883fb543af2619f36c2183521933231a5ee98c15831036863fd20a9081917",
+        "controllerInterrupted": false,
+        "result": "INCOMPLETE"
+      },
+      {
+        "label": "script:plain",
+        "expectedSha256": "1ea2668c13c11caf71b5b9bb3a0cdf0bd7370550243829101ca23c01a173a3c8",
+        "replacementSha256": "791d676ecf89b15602d48544cf502c449229eb926902e2375fa86d24a31fed3e",
+        "stage": "plain-exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": false,
+        "payloadMarkersAbsentBeforeGate": false,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 0,
+        "codeSigningError": 0,
+        "originalPid": 15955,
+        "originalBirth": "0",
+        "originalDev": "16777220",
+        "originalIno": "12888754738",
+        "kernelDev": "0",
+        "kernelIno": "0",
+        "originalSha256": "1ea2668c13c11caf71b5b9bb3a0cdf0bd7370550243829101ca23c01a173a3c8",
+        "kernelSha256": "",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "SCRIPT:A"
+        ],
+        "outputBytes": 303,
+        "outputSha256": "a580e05f4dc110637172638a597c25a65292ce9ccbc9865bbe1217a242e8ec20",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "script:script-negative",
+        "expectedSha256": "1ea2668c13c11caf71b5b9bb3a0cdf0bd7370550243829101ca23c01a173a3c8",
+        "replacementSha256": "791d676ecf89b15602d48544cf502c449229eb926902e2375fa86d24a31fed3e",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "codeSigningFlags": 637618177,
+        "codeSigningError": 0,
+        "originalPid": 15958,
+        "originalBirth": "1065425941984",
+        "originalDev": "16777220",
+        "originalIno": "12888754744",
+        "kernelDev": "16777220",
+        "kernelIno": "1152921500312522867",
+        "originalSha256": "1ea2668c13c11caf71b5b9bb3a0cdf0bd7370550243829101ca23c01a173a3c8",
+        "kernelSha256": "fcde7861d5e4f86f3a90d4fc3132f8712cf139f9fda52a59361d35007b605d61",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "SCRIPT:B"
+        ],
+        "outputBytes": 303,
+        "outputSha256": "ded1dc635f7badb3f73c357ae746dc09839ccf916707b311a0b42d017d6c8e1d",
+        "controllerInterrupted": false,
+        "result": "COUNTEREXAMPLE"
+      }
+    ],
+    "productQualified": false,
+    "installedRuntimeQualified": false,
+    "customExecutableQualified": false,
+    "scriptQualified": false,
+    "adhocSignerSha256": "1ee421cb4ddc493c4a5312294a36c4f76742381abdd7e46d745ecd62db9839b5",
+    "binaryDigests": {
+      "controller": "f7661275e39afe25c698b38d3043443ba1c9b89db57a6be1c8474270b5759ca7",
+      "compiler-default/libTESTsibling.dylib": "6ec8d7457f544f151511c007d8b581b13bafebe2a1f4fa8c0b421870f4edb508",
+      "compiler-default/A": "2f8774269bc3fdc8c7d44013bd150ec31106b910298b4c85d03212ecfd750960",
+      "compiler-default/B": "a4f590d15b8128697aa54862b3361f3da824eeb78aa438c62612a070c1d0ee31",
+      "adhoc-test-only/libTESTsibling.dylib": "0961cacba11ec53bdf51726717297b49075828aeae1717d70d100da105e8a2a7",
+      "adhoc-test-only/A": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+      "adhoc-test-only/B": "9b86c008e495915f378389cc9215c9160cdd5b88f5084e5ef6de36b1c35cddf3"
+    },
+    "cleanup": true,
+    "nativeFixtureQualified": false,
+    "status": "INCOMPLETE"
+  },
+  "firstFailure": {
+    "sourcePath": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+    "sourceBlob": "f1e1d1145898e201723be343fa8768d73332fcb1",
+    "line": 476,
+    "expression": "baseline expected result PASS; actual INCOMPLETE",
+    "case": "compiler-default:baseline",
+    "workflowExitCode": 1
+  },
+  "limits": [
+    "Darwin manual Host success is a separate prerequisite from the failed original P09 command; no overall V2/Darwin P09 qualification.",
+    "All ten P09 process/group cleanups are confirmed, including failed baseline and later explicit mutation/script counterexamples; cleanup does not establish byte-consumption binding.",
+    "Separate custody receipt proves its captured original/sibling scenario, not an independent PID census of the embedded Host runs.",
+    "Trace stops at epoch1 limit; allowlisted CPU sample attribution is not per-operation latency or a cause of PASS/failure.",
+    "Host source bytes are independently joined to Git; generated binaries and native tools are not archived for independent byte reconstruction or replay.",
+    "No native/provider/test/compiler/CI action, source mutation or ref update by auditor; result belongs solely to original2cb."
+  ]
+}
