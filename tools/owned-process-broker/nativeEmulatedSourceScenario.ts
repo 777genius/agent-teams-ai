@@ -162,6 +162,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     const jobs: Job[] = [], pending = { admitted: 0, revoked: 0 }, counts = { service: 0 };
     const phaseClock = performance.now();
     let firstCloseEntryMs: number | null = null;
+    let projectionHostExit: 'confirmed' | 'unknown' | null = null;
     let available = true, foreground = true, closed = false;
     const observed: HostCustodyOwner = { mainEpoch: physical.mainEpoch,
       attach(context) {
@@ -268,12 +269,13 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     });
     return { physical, client, jobs, pending, counts, sources, rpc, management, current,
       get firstCloseEntryMs() { return firstCloseEntryMs; },
+      get projectionHostExit() { return projectionHostExit; },
       revokeForeground: () => { foreground = false; },
       async close() {
         firstCloseEntryMs ??= performance.now() - phaseClock;
         if (closed) return;
         const failures: unknown[] = [];
-        try { await client.shutdown(); } catch (error) { failures.push(error); }
+        try { projectionHostExit = (await client.shutdown()).childExit; } catch (error) { failures.push(error); }
         try { assert.equal(await physical.close(), true); } catch (error) { failures.push(error); }
         available = false;
         for (const [jobSlot, job] of jobs.entries()) {
@@ -672,7 +674,10 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     // Original Job/HANDLE cleanup above is mandatory; these are only gate-owned observer children.
     for (const child of observedChildren) if (child.exitCode === null && child.signalCode === null) child.kill();
     if (errors.length) failure = new AggregateError([...(failure ? [failure] : []), ...errors], 'TEST source scenario cleanup incomplete');
+    // TEST_RUNTIME_PROJECTION_READER_BEGIN
     if (failure) try {
+      assert.equal(epochs.length, 1);
+      assert.equal(epochs[0]?.projectionHostExit, 'confirmed');
       const stat = lstatSync(fixture.runtimeProjectionLedger);
       assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 512);
       const raw = readFileSync(fixture.runtimeProjectionLedger, 'utf8'); assert.ok(Buffer.byteLength(raw) <= 512);
@@ -692,6 +697,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const matches = records.filter(row => row.viewDigest === lastRuntimeViewDigest); assert.equal(matches.length, 1);
       evidence.runtimeProjection = { status: 'observed', atomicWithFailure: false, ...matches[0] };
     } catch { evidence.runtimeProjection = { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' }; }
+    // TEST_RUNTIME_PROJECTION_READER_END
     if (failure) try {
       const stat = lstatSync(fixture.refusals); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 65536);
       const raw = readFileSync(fixture.refusals, 'utf8'); assert.ok(raw === '' || raw.endsWith('\n'));
