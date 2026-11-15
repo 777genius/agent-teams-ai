@@ -202,14 +202,16 @@ export const ProviderModelBadges = ({
       return;
     }
 
-    const container = listRef.current;
-    if (!container) {
+    // Observe the available width, not the list whose own width changes as
+    // badges are trimmed; otherwise the observer can repeatedly reset the trim.
+    const sizingContainer = listRef.current?.parentElement;
+    if (!sizingContainer) {
       return;
     }
 
-    let lastWidth = container.clientWidth;
+    let lastWidth = sizingContainer.clientWidth;
     const observer = new ResizeObserver((entries) => {
-      const width = Math.round(entries[0]?.contentRect.width ?? container.clientWidth);
+      const width = Math.round(entries[0]?.contentRect.width ?? sizingContainer.clientWidth);
       if (width === lastWidth) {
         return;
       }
@@ -218,7 +220,7 @@ export const ProviderModelBadges = ({
       setMeasureTick((value) => value + 1);
     });
 
-    observer.observe(container);
+    observer.observe(sizingContainer);
     return () => observer.disconnect();
   }, [expanded, maxCollapsedRows, shouldCollapse]);
 
@@ -286,7 +288,7 @@ export const ProviderModelBadges = ({
 
   return (
     <div className="flex flex-col items-start gap-1.5">
-      <div ref={listRef} className={listClassName}>
+      <div ref={listRef} className={cn(listClassName, 'w-full')}>
         {displayedModels.map(renderModelText)}
         {shouldCollapse && !expanded ? (
           <button type="button" className={buttonClassName} onClick={() => setExpanded(true)}>
