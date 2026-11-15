@@ -1,0 +1,499 @@
+{
+  "kind": "Frozen actual Stage J evidence-only publication inventory",
+  "sourceHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+  "sourceTree": "7e3d627c23816db232cf6dbdc3497954f5f0ab85",
+  "orderedParents": [
+    "6f74d7e8ecaa7f046826b6421ad105ab35eb09fa",
+    "462845722260dfd91111c37cb66fc54a01a3ecb7"
+  ],
+  "recordedDocumentationParent": "6f74d7e8ecaa7f046826b6421ad105ab35eb09fa",
+  "recordedPlan29Prefix": {
+    "bytes": 1126080,
+    "blob": "ee173c2f6610efd71ace3c907508d9e8ceec3397",
+    "sha256": "775a030bd5c4c27e45157335abc9d548758fbc482dae562e34fb394810b68765"
+  },
+  "appendRule": "Preserve the entire then-current Plan29; this is an evidence appendix, not source authorization.",
+  "originalCommandRecords": 3,
+  "additionalOriginalBindingAndPublicationProofs": 5,
+  "verbatimOriginalFiles": 8,
+  "verbatimOriginalBytes": 84842,
+  "listedNewPayloads": 9,
+  "files": [
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/J-diff.log",
+      "originalWorkspaceRelativePath": "stage-j-adoption/J-diff.log",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/J-evidence-publication/raw/J-diff.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-actual-2026-11-15/raw/J-diff.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/J-diff-metadata.json",
+      "originalWorkspaceRelativePath": "stage-j-adoption/J-diff-metadata.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/J-evidence-publication/raw/J-diff-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-actual-2026-11-15/raw/J-diff-metadata.json",
+      "bytes": 1250,
+      "blob": "da225f6c6207b236e6a90cdedd45f33bcdec54c4",
+      "sha256": "ce7adc518c52945a48cab6f4b032c4156735b4ee6bc88299121f3a54b673f409"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/J-diff-preflight.json",
+      "originalWorkspaceRelativePath": "stage-j-adoption/J-diff-preflight.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/J-evidence-publication/raw/J-diff-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-actual-2026-11-15/raw/J-diff-preflight.json",
+      "bytes": 28893,
+      "blob": "ed158607414a277a4261338ab13f7644ae5b2325",
+      "sha256": "cfa400556cfc3829797cf007016a0a628e5963d5f962673aff7442e949b3b343"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/stage-bindings.json",
+      "originalWorkspaceRelativePath": "stage-j-adoption/stage-bindings.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/J-evidence-publication/raw/stage-bindings.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-actual-2026-11-15/raw/stage-bindings.json",
+      "bytes": 1026,
+      "blob": "cbba11e221a1c59fa72e4d6877a3896423155079",
+      "sha256": "91b6908b1627c2c268d6bb0daf2707a35ddcf6e85aff72549849f962fca542f3"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/published-source-readback.json",
+      "originalWorkspaceRelativePath": "stage-j-adoption/published-source-readback.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/J-evidence-publication/raw/published-source-readback.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-actual-2026-11-15/raw/published-source-readback.json",
+      "bytes": 19605,
+      "blob": "1ce06b8d8ed4e38512168da1c879fb61fb8633b4",
+      "sha256": "01e8edf0e2e218505aeab62471f3d908abc10101cd3652e639d774c382687fab"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/independent-published-source-review.json",
+      "originalWorkspaceRelativePath": "stage-j-adoption/independent-published-source-review.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/J-evidence-publication/raw/independent-published-source-review.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-actual-2026-11-15/raw/independent-published-source-review.json",
+      "bytes": 2683,
+      "blob": "89e04dba75e5ecdced269dc3296d141e4442817f",
+      "sha256": "91d3ac2c49b09b65e98d82924d7e5ea0ae0a99d422c08240ee5f065f89124da2"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-publication/published-readback.json",
+      "originalWorkspaceRelativePath": "stage-j-publication/published-readback.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/J-evidence-publication/raw/docs-published-readback.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-actual-2026-11-15/raw/docs-published-readback.json",
+      "bytes": 30181,
+      "blob": "4fca140ef2b4b3f576646c3672ad62d92d9b2ebe",
+      "sha256": "3ef09fb8919064517a4788263f10fa603c5d669c8b7dcbcf8892e2c32c5bf5b2"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-publication-independent-published-review.json",
+      "originalWorkspaceRelativePath": "stage-j-publication-independent-published-review.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/J-evidence-publication/raw/stage-j-publication-independent-published-review.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-actual-2026-11-15/raw/stage-j-publication-independent-published-review.json",
+      "bytes": 1204,
+      "blob": "3475ed4f9cf9fc5add0793460ec6f6b06947841b",
+      "sha256": "4a2497c8866098898a0135100b4dadf848a8a794d786dfa01e0e08c9a33a8834"
+    },
+    {
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/J-evidence-publication/independent-actual-review.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-actual-2026-11-15/independent-actual-review.json",
+      "bytes": 5907,
+      "blob": "9ece42eb6e47a0ef92af71b70635f4419e3dca57",
+      "sha256": "e1264a9cd444b99f1e1801861189ac4724892b773347d68007bea9bf0ef4a6c0",
+      "classification": "new derived independent actual J audit; no reviewer project execution"
+    }
+  ],
+  "alreadyDurableReuses": [
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-architecture-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-architecture-metadata.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 2769,
+      "blob": "39b4fc8283efa238cd25232c17c9d4246300630e",
+      "sha256": "49d0745ed632d1176257326d770067dbd187f2aed6832490fc97b699d2ecb7bb"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-architecture-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-architecture-preflight.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 79109,
+      "blob": "6fee4c5d65b99b7624d7bb407ec6af2c1d60e39d",
+      "sha256": "50fe85186dd590a4abbd04383aa4a0222bdc6554ae218520247aceba944d6f6c"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-architecture.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-architecture.log",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 184,
+      "blob": "8cb9d8cb2385eb2e1c022c79e0af379ff3a1c601",
+      "sha256": "0f72f211f9285332305dc9d63650e47a7d741f2216f712df043bdccbc02f473d"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-diff-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-diff-metadata.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 3964,
+      "blob": "d5533a11d04e7639947c9fb67d60d2ba7319754f",
+      "sha256": "ccb973bd26953deb5c9db4875401b061b8ce4eb32d9bd1be471563b259b429d9"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-diff-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-diff-preflight.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 81838,
+      "blob": "84bd0695761065253ef378b458671c59953ce9f3",
+      "sha256": "c08b47172c8b0f6bc8301a768e56efb945e972f2724b7400747f21e4bf20820b"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-diff.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-diff.log",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-helpers-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-helpers-metadata.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 3266,
+      "blob": "6e1228b59becdbe05cd19ab39eb97431efbba7f5",
+      "sha256": "a9efdf58a8e3cfe2b9cb134bb2acc7d2a0f592897b599b652154aa4617d25ec9"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-helpers-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-helpers-preflight.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 74257,
+      "blob": "3012ee1c33e454c658f19f79c092c893cee3accd",
+      "sha256": "09ee222e745b854ef96e37415cd7d14685df1446ebf37f8c9858e65011acb6d5"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-helpers.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-helpers.log",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 12416,
+      "blob": "8fe1062b22269c9b8a3d0dfcb6ae571f0dfef95c",
+      "sha256": "79309dff5f44a99018c41fdddde4d31b57c5d0253d9f68b78c76f65cc4837445"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-independent-published-source-review.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-independent-published-source-review.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 3560,
+      "blob": "585e190acd07c21cc29c595fcd292788194d259c",
+      "sha256": "565af81819f40c9851e807ecd09718d2749c5ae1664a5e2f48b807ebcc900801"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-native-finite-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-native-finite-metadata.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 2845,
+      "blob": "7adc406705d3837d7c4bc0282c1a251b3fc13aee",
+      "sha256": "1a8c86e65917f29ae23dedc3435fd9d96b7f3a990e434132e3df4f1c180a63fd"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-native-finite-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-native-finite-preflight.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 76903,
+      "blob": "ffd1ab857711e3100bf84bb8aaa617a10b9ecf7d",
+      "sha256": "b675fc40c80652366ec8085f99def999bc50e0169c15af20150d1bb23771fbd9"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-native-finite.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-native-finite.log",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 459,
+      "blob": "aac2dd883fdfb864e899237711339c171a2ab198",
+      "sha256": "3b4fcb5fcc017b6eda0b335eb5b6f36dfdb6e7b20ab48e597d7abe1d4c4d31f1"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-native-types-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-native-types-metadata.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 2826,
+      "blob": "fc825fc177e388e1b6ee3e5415100d283087b087",
+      "sha256": "707179e6862d02eae37305448cf5faf0ec28b86366ba728effb6076f36e8d634"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-native-types-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-native-types-preflight.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 75338,
+      "blob": "77457c002eddb0c2cca40511ac76ad8dd541ec1a",
+      "sha256": "fa1d97dc321bebae1d0279bce1ce93d164a27022815c22a3b10f8c2036868aa5"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-native-types.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-native-types.log",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-retained-host-types-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-retained-host-types-metadata.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 2847,
+      "blob": "5fb4209132edaa3cb5d11c9c88226fe8ca77538a",
+      "sha256": "dd2021f7c912bb1c27c5072ca7cec204bfaf0a7fca684390fa62637f588babe4"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-retained-host-types-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-retained-host-types-preflight.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 76122,
+      "blob": "2d1cf3899b4a29ba2eec8372f964c5485db8d16c",
+      "sha256": "e52bbb393e42035f140e7cba65ee8d3f0fccf10946a03c1073c1a3d9d222beb8"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-retained-host-types.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-retained-host-types.log",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-scoped-fast-lint-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-scoped-fast-lint-metadata.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 3697,
+      "blob": "fa442b5978ffe73d723bbb0ca23ddd4f4371dae8",
+      "sha256": "1779505a124c4bd53fcec71cd31d4d9ba0574c54ee811ce81fc6fcc70f762b5d"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-scoped-fast-lint-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-scoped-fast-lint-preflight.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 78526,
+      "blob": "abd360ad92126aa9a0a8da937195d54f999d6c11",
+      "sha256": "189a7e3f308b7a64dde4f89f00ef713179d5ceb41cbe8ed81011f6b882d7b986"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-scoped-fast-lint.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-scoped-fast-lint.log",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-scripts-types-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-scripts-types-metadata.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 2815,
+      "blob": "e94127e6327ab6b5d18355f6752c4d3b7c0718da",
+      "sha256": "4d7ea1389e8548097bd7f035a5a36fa9460fdbc2b25bf9fa8857bb598fc557eb"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-scripts-types-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-scripts-types-preflight.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 74563,
+      "blob": "71a3019758c8f5a91ca6fcbe483a969a38fb2ede",
+      "sha256": "29ffbb2e91b31140afb6445429ed922d5998a9d3caee22cf0b45edaa2d57e0ad"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-scripts-types.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-scripts-types.log",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-size-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-size-metadata.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 2747,
+      "blob": "d1a2f86c03cd26fa5e70bd4ba18940d9fea65843",
+      "sha256": "dd494fd78d10c561ebf62035d4a100d0513e30d1db0e9e3803df8bb1e6883df9"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-size-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-size-preflight.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 78346,
+      "blob": "bfd16739f1e7402e49ed4e2fce52e5f67a0b5c70",
+      "sha256": "5af0ede296f6c2169f519dea3c1bf627a346595d94522a4824af88a0068a2299"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-size.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-size.log",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 202,
+      "blob": "edaab622b182eaa8a0f724a28d1a80bc5d775889",
+      "sha256": "97aba38b21a1a5d9722a56b57664e431fd2d6a9df9dbcadd0a43d0cc4a47657b"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-workflow-yaml-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-workflow-yaml-metadata.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 4269,
+      "blob": "6da5b262b6a821b716815cbe50db636866a2de39",
+      "sha256": "84b855531edd985a24fb577d1d93c6d2ec266e4608f1fe86d273553f61c31c04"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-workflow-yaml-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-workflow-yaml-preflight.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 81374,
+      "blob": "2442d3ea105ef626364e56a1096dab2eb551e178",
+      "sha256": "471c3109ccf5b5a3d34ed33487de9c95382c3c0b10c9829cf1ad68a6029e691c"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-workflow-yaml.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-workflow-yaml.log",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 216,
+      "blob": "df8cb1b3a75b2371ad4a3bb20f5aa536d18e98f3",
+      "sha256": "3c0206cd76f8103b7a0ae68899ddde2e1bdc7e52e801e48540f69fdf6917ab5a"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/published-source-readback.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/published-source-readback.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 19867,
+      "blob": "d268335336d2f999309f1924cde2e95e0c504b08",
+      "sha256": "62b1d48e22b26c15377cd7d630a5b54656847e419527897be9c705d9b7a143dd"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/stage-bindings.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/stage-bindings.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 9197,
+      "blob": "45ba72f6b7bba3dbb48f8a3f350ef269d93202cd",
+      "sha256": "4e86da127c5c11d528cf0ee94c7b9e5e0ab6c06118e4d1830ab4e8a603c3f851"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/source-deadline-handoff-r1/host-source-closure.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/bcd-reconciliation-2026-11-15/raw/host-source-closure.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 144977,
+      "blob": "92fe358082aa8c5892c084798b2bdb8b5bdb106f",
+      "sha256": "288b4a26f4e81dc3d65bcaaab061b09af4800efafe575cb1e29e798f33234a10"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/canonical-R1.md",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-prospective-adoption-2026-11-15/canonical-R1.md",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 9854,
+      "blob": "8307899381400248fc021c164f95889e4b338c5d",
+      "sha256": "4c8682ee6ef1f894e0444cf4cc9add8cfbfb08d303414d467513002a9183d2e0"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/incoming-plan29-appendix.md",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-prospective-adoption-2026-11-15/incoming-plan29-appendix.md",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 7520,
+      "blob": "df3939ae097bb3bffd92b2b01a46bd80b4487cdd",
+      "sha256": "3c19f551a65f33dd94f05ca2e001667281d79a0a00bbf865d6be64a769e6840a"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/independent-prospective-review.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-prospective-adoption-2026-11-15/independent-prospective-review.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 7610,
+      "blob": "4e0890cb06b1f1d881df337de3ff2006c187b56f",
+      "sha256": "0b16a92b7eb306a01d7ddafd0315920ed1f057e4948fc15cd3ab7e6b07f35e5e"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/nativeFixture.cpp.patch",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-prospective-adoption-2026-11-15/nativeFixture.cpp.patch",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 1540,
+      "blob": "46164e2e119683ef9439283dbf979f188252da6c",
+      "sha256": "126c7ec6277ef315ceb15c8ac9543dcbf90ac0e60f28ce7d237d7af649b6825f"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/run_check.py",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-prospective-adoption-2026-11-15/run_check.py",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 8592,
+      "blob": "b0c938c0ab371c624ad6dcb05c92a5431bc5c8f9",
+      "sha256": "c67d952401c18e039a3cb791a446daf440b2aefaec8075dc7192effd45bfc31b"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/source-and-history.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-prospective-adoption-2026-11-15/source-and-history.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 5945,
+      "blob": "a3973f1c92bd2e319493acfc94c41d4bcc5920d3",
+      "sha256": "ba5ab604455f7267c376af68963ed942ded94fa89475c5f0216fb7083890538b"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/validation-manifest.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-prospective-adoption-2026-11-15/validation-manifest.json",
+      "verifiedAtHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "mode": "100644",
+      "bytes": 32984,
+      "blob": "784dc90ea7ba0f8761c25365eb985784d56515d7",
+      "sha256": "89533177f3dd2c8b2da41c89e09aa28aa3c1a33372f0c593c6dbb6a417d05064"
+    }
+  ],
+  "alreadyDurableReuseCount": 41,
+  "actualCommand": {
+    "argv": [
+      "git",
+      "diff",
+      "--check",
+      "6f74d7e8ecaa7f046826b6421ad105ab35eb09fa..9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+      "--",
+      "tools/owned-process-broker/nativeFixture.cpp"
+    ],
+    "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+    "startedAtUTC": "2026-11-15T22:36:50.921777+00:00",
+    "finishedAtUTC": "2026-11-15T22:36:50.926200+00:00",
+    "elapsedSeconds": 0.004405149011290632,
+    "exitCode": 0,
+    "postflightExact": true
+  },
+  "storage": "Keep all eight original paths, including the zero-byte log; reuse prior evidence by exact Git bytes. Inventory and Plan29 appendix are envelope files, excluded from their own list.",
+  "qualificationLimits": [
+    "This actual result is the single original Git whitespace check, not a unit, compiler, Windows native or provider test.",
+    "No Node invocation, Host/ledger rebuild, native process launch or replay of the ten I commands occurred in Stage J.",
+    "Original I test/type/lint/guard/YAML results retain I source provenance; their preserved raw identities do not become J Windows qualification.",
+    "The planned loader API-set change remains subject to resulting-source original Windows build/runtime/controller gates and the unchanged broader acceptance requirements.",
+    "No project execution, tracked source/ref change or CI polling was performed by this reviewer."
+  ]
+}

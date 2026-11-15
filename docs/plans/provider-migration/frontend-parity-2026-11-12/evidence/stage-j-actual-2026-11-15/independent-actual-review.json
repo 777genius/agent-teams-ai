@@ -1,0 +1,133 @@
+{
+  "kind": "Independent actual sole Stage J diff-command result; no reviewer execution of that command",
+  "verdict": "APPROVE within the declared non-native scope",
+  "sourceHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+  "sourceTree": "7e3d627c23816db232cf6dbdc3497954f5f0ab85",
+  "parents": [
+    "6f74d7e8ecaa7f046826b6421ad105ab35eb09fa",
+    "462845722260dfd91111c37cb66fc54a01a3ecb7"
+  ],
+  "argv": [
+    "git",
+    "diff",
+    "--check",
+    "6f74d7e8ecaa7f046826b6421ad105ab35eb09fa..9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+    "--",
+    "tools/owned-process-broker/nativeFixture.cpp"
+  ],
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "startedAtUTC": "2026-11-15T22:36:50.921777+00:00",
+  "finishedAtUTC": "2026-11-15T22:36:50.926200+00:00",
+  "elapsedSeconds": 0.004405149011290632,
+  "exitCode": 0,
+  "postflightExact": true,
+  "postflightError": null,
+  "rawLog": {
+    "bytes": 0,
+    "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "metadata": {
+    "bytes": 1250,
+    "blob": "da225f6c6207b236e6a90cdedd45f33bcdec54c4",
+    "sha256": "ce7adc518c52945a48cab6f4b032c4156735b4ee6bc88299121f3a54b673f409"
+  },
+  "preflight": {
+    "bytes": 28893,
+    "blob": "ed158607414a277a4261338ab13f7644ae5b2325",
+    "sha256": "cfa400556cfc3829797cf007016a0a628e5963d5f962673aff7442e949b3b343"
+  },
+  "binding": {
+    "bytes": 1026,
+    "blob": "cbba11e221a1c59fa72e4d6877a3896423155079",
+    "sha256": "91b6908b1627c2c268d6bb0daf2707a35ddcf6e85aff72549849f962fca542f3"
+  },
+  "manifest": {
+    "bytes": 32984,
+    "blob": "784dc90ea7ba0f8761c25365eb985784d56515d7",
+    "sha256": "89533177f3dd2c8b2da41c89e09aa28aa3c1a33372f0c593c6dbb6a417d05064"
+  },
+  "recorder": {
+    "bytes": 8592,
+    "blob": "b0c938c0ab371c624ad6dcb05c92a5431bc5c8f9",
+    "sha256": "c67d952401c18e039a3cb791a446daf440b2aefaec8075dc7192effd45bfc31b"
+  },
+  "gitExecutable": {
+    "path": "/usr/local/bin/git",
+    "bytes": 19295504,
+    "blob": "d51aaf6e2f66bdf456e2d198085d4d35054433df",
+    "sha256": "8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352"
+  },
+  "selectedSourceFiles": 76,
+  "unchangedHostFiles": 615,
+  "hostBytes": 4084414,
+  "priorIProofFilesRehashed": 33,
+  "allRecordedChecksJoined": true,
+  "currentSourceAndProofBytesRehashed": true,
+  "cleanWorktree": true,
+  "originalFiles": [
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/J-diff.log",
+      "workspaceRelativePath": "stage-j-adoption/J-diff.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/J-diff-metadata.json",
+      "workspaceRelativePath": "stage-j-adoption/J-diff-metadata.json",
+      "bytes": 1250,
+      "blob": "da225f6c6207b236e6a90cdedd45f33bcdec54c4",
+      "sha256": "ce7adc518c52945a48cab6f4b032c4156735b4ee6bc88299121f3a54b673f409"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/J-diff-preflight.json",
+      "workspaceRelativePath": "stage-j-adoption/J-diff-preflight.json",
+      "bytes": 28893,
+      "blob": "ed158607414a277a4261338ab13f7644ae5b2325",
+      "sha256": "cfa400556cfc3829797cf007016a0a628e5963d5f962673aff7442e949b3b343"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/stage-bindings.json",
+      "workspaceRelativePath": "stage-j-adoption/stage-bindings.json",
+      "bytes": 1026,
+      "blob": "cbba11e221a1c59fa72e4d6877a3896423155079",
+      "sha256": "91b6908b1627c2c268d6bb0daf2707a35ddcf6e85aff72549849f962fca542f3"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/published-source-readback.json",
+      "workspaceRelativePath": "stage-j-adoption/published-source-readback.json",
+      "bytes": 19605,
+      "blob": "1ce06b8d8ed4e38512168da1c879fb61fb8633b4",
+      "sha256": "01e8edf0e2e218505aeab62471f3d908abc10101cd3652e639d774c382687fab"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/independent-published-source-review.json",
+      "workspaceRelativePath": "stage-j-adoption/independent-published-source-review.json",
+      "bytes": 2683,
+      "blob": "89e04dba75e5ecdced269dc3296d141e4442817f",
+      "sha256": "91d3ac2c49b09b65e98d82924d7e5ea0ae0a99d422c08240ee5f065f89124da2"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/stage-j-publication/published-readback.json",
+      "workspaceRelativePath": "stage-j-publication/published-readback.json",
+      "bytes": 30181,
+      "blob": "4fca140ef2b4b3f576646c3672ad62d92d9b2ebe",
+      "sha256": "3ef09fb8919064517a4788263f10fa603c5d669c8b7dcbcf8892e2c32c5bf5b2"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/stage-j-publication-independent-published-review.json",
+      "workspaceRelativePath": "stage-j-publication-independent-published-review.json",
+      "bytes": 1204,
+      "blob": "3475ed4f9cf9fc5add0793460ec6f6b06947841b",
+      "sha256": "4a2497c8866098898a0135100b4dadf848a8a794d786dfa01e0e08c9a33a8834"
+    }
+  ],
+  "limits": [
+    "This actual result is the single original Git whitespace check, not a unit, compiler, Windows native or provider test.",
+    "No Node invocation, Host/ledger rebuild, native process launch or replay of the ten I commands occurred in Stage J.",
+    "Original I test/type/lint/guard/YAML results retain I source provenance; their preserved raw identities do not become J Windows qualification.",
+    "The planned loader API-set change remains subject to resulting-source original Windows build/runtime/controller gates and the unchanged broader acceptance requirements.",
+    "No project execution, tracked source/ref change or CI polling was performed by this reviewer."
+  ]
+}

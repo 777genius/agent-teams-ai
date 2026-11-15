@@ -1,0 +1,537 @@
+{
+  "source": "27b1acf48278dcd0fb348c626696eac2dc64de73",
+  "parent": "18bb4a22fa3e6e496bb53e73ae97d0d95a8bfa1e",
+  "scope": "Read-only source bytes, not execution/CI/native qualification",
+  "primitivesInverseExact": true,
+  "activityBlockInverseExact": true,
+  "runtimeRedactorOldBodyInverseExact": true,
+  "diagnosticsRedactorMoveByteExact": true,
+  "activityCodecChanges": "--- original-activity-block\n+++ extracted-extended-block\n@@ -136,6 +136,7 @@\n           fact.kind === 'subagent' ||\n           fact.kind === 'usage' ||\n           fact.kind === 'result' ||\n+          fact.kind === 'process-output' ||\n           (phase === 'interaction') !== (fact.kind === 'interaction')\n         )\n           throw new Error('Invalid subagent fact');\n@@ -149,13 +150,20 @@\n       return result;\n     }\n     case 'text':\n-      return {\n-        kind: 'text',\n+    case 'thinking':\n+      return {\n+        kind: data.kind,\n         messageRef: activityText(data.messageRef),\n         block: finite(data.block, true),\n         text: activityText(data.text, 24 * 1024),\n         phase: oneOf(data.phase, ['snapshot', 'complete'] as const),\n       };\n+    case 'process-output': {\n+      if (nested) throw new Error('Nested process output');\n+      const text = activityText(data.text, 24 * 1024);\n+      if (Buffer.byteLength(text) > 24 * 1024) throw new Error('Oversized process output');\n+      return { kind: 'process-output', stream: oneOf(data.stream, ['stderr'] as const), text };\n+    }\n     case 'tool':\n       return {\n         kind: 'tool',\n@@ -220,11 +228,14 @@\n }\n function activityEvent(value: unknown): BackendActivityEvent {\n   const source = row(value);\n+  const data = activityData(source.data);\n+  if (data.kind === 'process-output' && source.inputId !== undefined)\n+    throw new Error('Attributed process output');\n   return {\n     sequence: finite(source.sequence, true),\n     eventId: activityText(source.eventId),\n     ...(source.inputId === undefined ? {} : { inputId: activityText(source.inputId) }),\n-    data: activityData(source.data),\n+    data,\n   };\n }\n function activity(\n",
+  "activityEventEvaluationOrdering": "New decoder computes activityData before existing outer sequence/eventId/inputId validation, then rejects attributed process-output. Original checks remain; property-access and first-error order are not claimed identical.",
+  "sourcePins": [
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "candidate": {
+        "bytes": 12180,
+        "lines": 300,
+        "blob": "c6248499ad8a3d7355cf3cc51062cc0207fbde04",
+        "sha256": "e2a0afb664136d6b79e694987fc0027ac1adde819a7d1c4d11cc3ec6ab9cf22d"
+      },
+      "preimage": {
+        "bytes": 11847,
+        "lines": 292,
+        "blob": "063d101c59bbdcc9a6bb9d9961d12b468a5a944b",
+        "sha256": "fdb818b611e7dbb24371397f53cbe8fdbd4c9d7c546abd9784f8a719cd3fca1e"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "candidate": {
+        "bytes": 9039,
+        "lines": 196,
+        "blob": "a2158e62d439c0ee0b29ffd28df64cf848cee99f",
+        "sha256": "5a7e5ab19c9f486c21e518c117c2637e0125b38f7ef2850ee6e1295bbad2123d"
+      },
+      "preimage": {
+        "bytes": 8826,
+        "lines": 191,
+        "blob": "4d1ff99143e5ddfb157ddaa7ee5ed48caa608e91",
+        "sha256": "dc026c748d5bda639f5996b76012822e3226ea9d1772b5c5c54f19fff8999eb2"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "candidate": {
+        "bytes": 11592,
+        "lines": 294,
+        "blob": "2fe449639596cdb07bf5ef39d8040c65d9d6538c",
+        "sha256": "b5c6b9e8924c4eb897f14c2ac4a355e6d505f515fe811c86667144bba4e362f9"
+      },
+      "preimage": {
+        "bytes": 11439,
+        "lines": 291,
+        "blob": "537cc17c207699eadba99bfae09b5853a3eaf1be",
+        "sha256": "b48a1d965b9f4649534b8c65fa36e84efa2f2ba4288316ed8507a0b75d35ea26"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "candidate": {
+        "bytes": 3589,
+        "lines": 62,
+        "blob": "1fc098d27f67825b7cf48318329d1a809e41e1f4",
+        "sha256": "bb9963c1a45be8e59ff9b257b1d560d6355ddcdc4bc7665b27e7e378fed61ab9"
+      },
+      "preimage": {
+        "bytes": 3435,
+        "lines": 60,
+        "blob": "4169f9ed08441561bda739ab79eedfca32b62e73",
+        "sha256": "fa3c7fd6d0a9e97de66f0633bc55774ad3891bdab82503495fe8371e39c4fa4d"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "candidate": {
+        "bytes": 6214,
+        "lines": 121,
+        "blob": "2d407fff63c9529c2d5933daeb01b81c08443c8f",
+        "sha256": "63e0001652cf96bf1aa08c6c7a647536ab06a753d9b3bd74baa123cb5c126810"
+      },
+      "preimage": null,
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "candidate": {
+        "bytes": 35008,
+        "lines": 800,
+        "blob": "0f5e2258b2af33c55673aa0fdc4c660e3629e784",
+        "sha256": "1d86d1616645c2c0169806777415097e1523e294322b047699294ddfac03f1e0"
+      },
+      "preimage": {
+        "bytes": 34835,
+        "lines": 798,
+        "blob": "879c120b7d9b2226701f58e832914adde5a3dd58",
+        "sha256": "c59356ab79a7a1af8cb8696859fce8e80e34133dfcf245cc678cca962eb18666"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "candidate": {
+        "bytes": 15423,
+        "lines": 315,
+        "blob": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+        "sha256": "189b8a98f8708d22b1ffabc84ef235efd320a910bf7a9ee19c266846ccd3f1ac"
+      },
+      "preimage": {
+        "bytes": 14724,
+        "lines": 301,
+        "blob": "0482d11bb2a051a0710905c5393495ee7cec64bf",
+        "sha256": "bf1390ca8efbbcfffb4b61c138f1925d0c295f37def36d73c15377f013794438"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+      "candidate": {
+        "bytes": 12110,
+        "lines": 289,
+        "blob": "f6243d55f628833ef797cce0afa2e1339a01e609",
+        "sha256": "47f2d9a185d618e35fce54b27dec45102d4600c5184771f25758e7109fc713ab"
+      },
+      "preimage": {
+        "bytes": 11862,
+        "lines": 278,
+        "blob": "774f2453b5ced1698046e0f0724bc9bbb034ebb1",
+        "sha256": "da57051798a87474d0be06541e0424cf3e4d60bd9b12d2d5130c477781262a20"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+      "candidate": {
+        "bytes": 6110,
+        "lines": 171,
+        "blob": "4a7d1e5330d4de65f95c9cd2cfc5c87e8027b773",
+        "sha256": "1b9edac01901dda2f4b01eb39bc4268064163f402608d3be00d2dd63c13730c3"
+      },
+      "preimage": {
+        "bytes": 5935,
+        "lines": 159,
+        "blob": "1fa667f3513afd9065ecc6ac7b9402855ccab73a",
+        "sha256": "29163c5a98c2fbeafc27e8e44999157c73966c1e96f60702e2d5808504e999a1"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "candidate": {
+        "bytes": 1836,
+        "lines": 50,
+        "blob": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b",
+        "sha256": "ce6281ee65275c72fc67d540bfb3fd70d902276ef0fabcefc4d471fa3df5efe2"
+      },
+      "preimage": null,
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "candidate": {
+        "bytes": 2888,
+        "lines": 60,
+        "blob": "49183056d50b7815bde238e758c47c13302117f3",
+        "sha256": "6c8d7217b45893446430419d689185c0d3420183e6d003324c1f4cf5d7838c5e"
+      },
+      "preimage": null,
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "candidate": {
+        "bytes": 25074,
+        "lines": 589,
+        "blob": "48f51dc20a9253c81c9b231b6aa115f6244bd18f",
+        "sha256": "c43e4da640daed957b098161fd0f85479eb24df4f7b1ccfe4b03c4d9690009cb"
+      },
+      "preimage": {
+        "bytes": 23428,
+        "lines": 561,
+        "blob": "504be286f7ef7eb147310503a2a5ed3a6f339381",
+        "sha256": "90a7a2e4b2d7ef294c68bc23cc84a07a947116eeeade9798dc484d0fc9b4d083"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "candidate": {
+        "bytes": 30469,
+        "lines": 757,
+        "blob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+        "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d"
+      },
+      "preimage": {
+        "bytes": 30070,
+        "lines": 752,
+        "blob": "7ef05204eb696e2b498595a5f04a544fe20d0036",
+        "sha256": "3ab3928664f7e83fabda0547de2f6ecfa3f0e4180df971d6987901314c606bfc"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+      "candidate": {
+        "bytes": 557,
+        "lines": 13,
+        "blob": "d0ee6a31ded14c9af572a12ecc2dee4352f4eacf",
+        "sha256": "e235782823b292c8ec51ae467c49684a348254e4fb9e7744cab3adce5ad766e4"
+      },
+      "preimage": {
+        "bytes": 321,
+        "lines": 8,
+        "blob": "01b12ef6f147495d72c46145d8e85622e78de77b",
+        "sha256": "6e80db1ba45b79c38cd889c0dd13bd97c3fd72ff53d6c0aec23b174d15bb682b"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "candidate": {
+        "bytes": 11044,
+        "lines": 264,
+        "blob": "9e821dc3669a249411ef7999cb01aa566dc4ddb7",
+        "sha256": "46750c17a7bb630208cfd4e07167bee66e41f9542b47d0e6a1e9377079f781e7"
+      },
+      "preimage": {
+        "bytes": 9469,
+        "lines": 234,
+        "blob": "1bdd368dc281a59fb1a5b2fca629a18e201945a5",
+        "sha256": "fa169ace7cdfff654abe970d64a9c9ea2862883aedc8bb44ee7957615bb03709"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "candidate": {
+        "bytes": 38315,
+        "lines": 1028,
+        "blob": "414525958b459ccb9d4c20e4b185e03d71d46867",
+        "sha256": "b328bdcfbbf8eb92e6b2215ee413fd0f723f3c85ac535e9d2cd470030dbf9905"
+      },
+      "preimage": {
+        "bytes": 37205,
+        "lines": 1008,
+        "blob": "13cba7f4f29acc4edc08e5ae582773564c160d15",
+        "sha256": "6b854bb1793c70821bbe569448a1d9dce54c18be2c1ac41377015057b2fab3c0"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "candidate": {
+        "bytes": 6951,
+        "lines": 130,
+        "blob": "dc9658bb5b5802eb9f8e6749b5a09994f1806e8d",
+        "sha256": "6a29fb9c6b8040d467df0a36ff71b7a86433af9aa545d9a21985a560f2724496"
+      },
+      "preimage": null,
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "candidate": {
+        "bytes": 33047,
+        "lines": 564,
+        "blob": "011875b3a5bcab4d6f0775fdbc419157e0d48cba",
+        "sha256": "e535ebe42ecbc8bb1904d9b3636985c2029c17f3c109430164fb4fe4b491dae2"
+      },
+      "preimage": {
+        "bytes": 27933,
+        "lines": 490,
+        "blob": "df2deba6e265720b59227a5afba9a3086557e8d5",
+        "sha256": "c467608bf88fd6325ec08585ca04d84229d690b88b4fb07bb14c1c8038e81a20"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "candidate": {
+        "bytes": 9208,
+        "lines": 164,
+        "blob": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+        "sha256": "ee1ba17e9fd9f52dc825c067a17038a5de36af4541ede3201621e62007614dec"
+      },
+      "preimage": {
+        "bytes": 8217,
+        "lines": 153,
+        "blob": "c52c8cf9349798754192b2faf92a201186dbfb2b",
+        "sha256": "af78cbe0e5c9e0fa4f118216dff3152b7b5037b3d35bbdd7c6427c188d4b52f0"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "candidate": {
+        "bytes": 52390,
+        "lines": 1068,
+        "blob": "48d997a1308919dabaa141075b1666be9c960c4e",
+        "sha256": "befefa0db8afcf488c555d8806ab95bab9c2ebeef42b138f9550949bccd62d29"
+      },
+      "preimage": {
+        "bytes": 47742,
+        "lines": 1003,
+        "blob": "c506a68f03167abfc674c4fc109796fffcf985aa",
+        "sha256": "4e8bec1d651805653f6fa130de4d5a37ed2d98bb85f7dcdbcedde9733a161426"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "candidate": {
+        "bytes": 13673,
+        "lines": 373,
+        "blob": "4f2de43f25fa57005dec41cd9f3501b72d17eb6f",
+        "sha256": "ec56b1bea503eae250a4c2e7c9c3e7e8fc7fa53775b200a3c12a85bea43837be"
+      },
+      "preimage": {
+        "bytes": 9583,
+        "lines": 271,
+        "blob": "ebe99d411da6689282ff499f936d40479dc36a35",
+        "sha256": "7e02ffded2e7072c7e514332078949de7d7ccd09d7baa8de878f47fce569e1c6"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "src/features/agent-backend/contracts/operations.ts",
+      "candidate": {
+        "bytes": 17358,
+        "lines": 538,
+        "blob": "788c1ff6bb4a2a737c0a8d1399ffd43e134e6a38",
+        "sha256": "29ef5c69ce683182bde2085fcbf10290f61a2eb6a3c317d2ac4572a627eff26b"
+      },
+      "preimage": {
+        "bytes": 17118,
+        "lines": 520,
+        "blob": "2a8959f75a70a76d85bea32a20ccb1277a8a16f2",
+        "sha256": "8456baf31af985b8c9f54557c8d13d8a5b73fd36b6cb160f9f513e726494df22"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "candidate": {
+        "bytes": 20076,
+        "lines": 500,
+        "blob": "dbeb14ba7d4a0de1ae97662e74d2929a51f9106c",
+        "sha256": "b34c2c8ac933fa322792c75934a7a8675c66e6809955f4c48f7f116bc58d1d55"
+      },
+      "preimage": {
+        "bytes": 30672,
+        "lines": 793,
+        "blob": "87ca79e7a3d0d1bc219ad79385f231f2ffe4dd0b",
+        "sha256": "4ca439e6d99f644346c814439a5c0cea62268606e5e9cf6a7361c143144d4bee"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+      "candidate": {
+        "bytes": 11387,
+        "lines": 317,
+        "blob": "4df980788dc6b990fcd555439c53bb4a329cef36",
+        "sha256": "fb686dd83830031ae319f646b50a9df9c5e0ab8d51e3b8914dfb9cec75dbf1db"
+      },
+      "preimage": null,
+      "unchanged": false
+    },
+    {
+      "path": "src/shared/utils/diagnosticsRedaction.ts",
+      "candidate": {
+        "bytes": 126,
+        "lines": 1,
+        "blob": "2e345624c752ebac3024d579c1501dff7fe84a9e",
+        "sha256": "b34a34f5dece120ef8f93aa23cf63b15b35675bdd52394b0b8654117a2c580d8"
+      },
+      "preimage": {
+        "bytes": 1836,
+        "lines": 50,
+        "blob": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b",
+        "sha256": "ce6281ee65275c72fc67d540bfb3fd70d902276ef0fabcefc4d471fa3df5efe2"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "src/shared/utils/runtimeDiagnosticText.ts",
+      "candidate": {
+        "bytes": 105,
+        "lines": 1,
+        "blob": "1410cd6d6d9accf6f3c29802884b8acd58dc0568",
+        "sha256": "8a60c16fdac834916afd006104e328fcb2936e1e665d86c4253f26f2fe7f491c"
+      },
+      "preimage": {
+        "bytes": 2300,
+        "lines": 49,
+        "blob": "1444ee99085670ffb786b5419dd9cd6e5fc29579",
+        "sha256": "e422acbb851f2b2747dc6663bca462a4e14cbcf000eba9d9a3fa602af7df96a8"
+      },
+      "unchanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts",
+      "candidate": {
+        "bytes": 5117,
+        "lines": 140,
+        "blob": "d82301bbd815a73c6ddb03d3d71a364aac20c6d7",
+        "sha256": "286d423c495586fb040ec8331f7f784be1797f9af8c2f6f84588a7577ce2a36b"
+      },
+      "preimage": {
+        "bytes": 5117,
+        "lines": 140,
+        "blob": "d82301bbd815a73c6ddb03d3d71a364aac20c6d7",
+        "sha256": "286d423c495586fb040ec8331f7f784be1797f9af8c2f6f84588a7577ce2a36b"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "candidate": {
+        "bytes": 5813,
+        "lines": 160,
+        "blob": "195541f5f1e98746728b11844dd68fdf845721b4",
+        "sha256": "d82735f9e66a78c4f2fc30631d6ed2daf829f554158d03fecc3a456134c39e94"
+      },
+      "preimage": {
+        "bytes": 5813,
+        "lines": 160,
+        "blob": "195541f5f1e98746728b11844dd68fdf845721b4",
+        "sha256": "d82735f9e66a78c4f2fc30631d6ed2daf829f554158d03fecc3a456134c39e94"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+      "candidate": {
+        "bytes": 11502,
+        "lines": 291,
+        "blob": "c3670e3828e2b9470a2997d29d6cad225107d8fc",
+        "sha256": "ccf4bd25cb828b6ea08b437337552f7a8d662dd49fb6aeabb2d7af4d9c29897f"
+      },
+      "preimage": {
+        "bytes": 11502,
+        "lines": 291,
+        "blob": "c3670e3828e2b9470a2997d29d6cad225107d8fc",
+        "sha256": "ccf4bd25cb828b6ea08b437337552f7a8d662dd49fb6aeabb2d7af4d9c29897f"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts",
+      "candidate": {
+        "bytes": 9559,
+        "lines": 179,
+        "blob": "b63b0c2b97bc196d0c1c87c0f106c2e2346e3de9",
+        "sha256": "07f000974d765d3608924302865e27ba638bba64b47ca4303a359c33c0dd47c8"
+      },
+      "preimage": {
+        "bytes": 9559,
+        "lines": 179,
+        "blob": "b63b0c2b97bc196d0c1c87c0f106c2e2346e3de9",
+        "sha256": "07f000974d765d3608924302865e27ba638bba64b47ca4303a359c33c0dd47c8"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/processFacade.ts",
+      "candidate": {
+        "bytes": 7201,
+        "lines": 169,
+        "blob": "76ad8e4e7ed91619be875cbff4b65b8811495e05",
+        "sha256": "63971263561baf601e576cd4e5b71d16673e44f3b3afa7291c6cdebc2b432d57"
+      },
+      "preimage": {
+        "bytes": 7201,
+        "lines": 169,
+        "blob": "76ad8e4e7ed91619be875cbff4b65b8811495e05",
+        "sha256": "63971263561baf601e576cd4e5b71d16673e44f3b3afa7291c6cdebc2b432d57"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/runtime/FileRuntimeStore.ts",
+      "candidate": {
+        "bytes": 12625,
+        "lines": 325,
+        "blob": "60873a7a750aacfd4affbff90b21e1a739f127d4",
+        "sha256": "b33e3d6a60c0af5b84aa2c90e307f2fccffb659c57458bf056dc289cb09dde4b"
+      },
+      "preimage": {
+        "bytes": 12625,
+        "lines": 325,
+        "blob": "60873a7a750aacfd4affbff90b21e1a739f127d4",
+        "sha256": "b33e3d6a60c0af5b84aa2c90e307f2fccffb659c57458bf056dc289cb09dde4b"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+      "candidate": {
+        "bytes": 19629,
+        "lines": 248,
+        "blob": "52227dc108a65347aa5dea7995d0ee6e3f3fbc45",
+        "sha256": "0d73881d457e53587d139129987b8ab24327509c9bc6f46e071400b363c793aa"
+      },
+      "preimage": {
+        "bytes": 19629,
+        "lines": 248,
+        "blob": "52227dc108a65347aa5dea7995d0ee6e3f3fbc45",
+        "sha256": "0d73881d457e53587d139129987b8ab24327509c9bc6f46e071400b363c793aa"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md",
+      "candidate": {
+        "bytes": 14790,
+        "lines": 236,
+        "blob": "5fbc886bdd2f4fe9c2914844b94bbd16f3224075",
+        "sha256": "7abcc59e586b8534f612f6edd90cd3e3db3b0a039403801db638fec5330b65f4"
+      },
+      "preimage": {
+        "bytes": 14790,
+        "lines": 236,
+        "blob": "5fbc886bdd2f4fe9c2914844b94bbd16f3224075",
+        "sha256": "7abcc59e586b8534f612f6edd90cd3e3db3b0a039403801db638fec5330b65f4"
+      },
+      "unchanged": true
+    }
+  ],
+  "qualificationLimits": [
+    "Renderer behavior and common proof-roster correction belong to ui_failures review.",
+    "No provider archive adoption or producer thinking normalization.",
+    "No test, compiler, project build, native process or provider execution by this reviewer."
+  ]
+}
