@@ -85,10 +85,38 @@ export async function runDesktopComposerUiSmoke(
   await ui.observeInput();
   await ui.clickSidebar(options.seed.subject);
   await ui.click('button[aria-label^="alice,"]', 'open ordinary alice direct chat');
-  await ui.waitRead(
-    `Boolean(document.querySelector('.message-composer-flat-layout textarea'))`,
-    'direct chat Composer is visible'
-  );
+  try {
+    await ui.waitRead(
+      `Boolean(document.querySelector('.message-composer-flat-layout textarea'))`,
+      'direct chat Composer is visible'
+    );
+  } catch (error) {
+    // Observe only closed TEST metadata. Do not log private messages or DOM text.
+    const renderer = await cdp.evaluate(`(() => {
+      const root = document.getElementById('root');
+      const state = window.__agentTeamsDevStore?.getState?.();
+      const selected = state?.selectedTeamData;
+      const members = Array.isArray(selected?.members) ? selected.members : [];
+      const alice = members.find(row => row.name === 'alice');
+      return {
+        rootPresent: !!root, rootChildren: Math.min(root?.childElementCount ?? 0, 16),
+        fatalFallback: Boolean(root?.firstElementChild?.querySelector('svg.size-10.text-red-500')),
+        storePresent: !!state, selectedHostTeam: typeof state?.selectedTeamName === 'string' &&
+          state.selectedTeamName.startsWith('host-team:'),
+        capturedAlice: alice?.runtimeOwner === 'captured-host',
+        aliceIdMatches: alice?.hostMemberId === 'alice-id',
+        selectedDirectChat: state?.selectedTeamName != null && members.some(row => row.name === 'alice'),
+        anyTextareas: Math.min(document.querySelectorAll('textarea').length, 16),
+        composerRoots: Math.min(document.querySelectorAll('.message-composer-flat-layout').length, 16),
+        targetTextareas: Math.min(document.querySelectorAll('.message-composer-flat-layout textarea').length, 16),
+        documentComplete: document.readyState === 'complete',
+      };
+    })()`).catch(() => null);
+    const facts = { phase: 'direct-composer-bootstrap', renderer };
+    step({ assertion: 'direct chat composer missing', ...facts });
+    process.stderr.write('TEST_NATIVE_COMPOSER_BOOTSTRAP_DIAGNOSTIC ' + JSON.stringify(facts) + '\n');
+    throw new Error('TEST direct chat Composer not visible: ' + JSON.stringify(facts), { cause: error });
+  }
   if (nativeNextPromptUi) {
     // The real Electron config, not the fixture's written file, owns billing opt-in.
     assert.equal(await cdp.evaluate(`window.electronAPI.config.get().then(
