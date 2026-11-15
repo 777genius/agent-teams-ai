@@ -3712,3 +3712,28 @@ Apply the three reviewed source files only after that review/test observation. R
 All prior tests are preserved. The seven original suspended-native failure modes add assertions for exactly one native-ready row while preserving no HTTP/POST before readiness, no late session creation, one original launch, stop/cleanup witnesses and original failure behavior. One additional finite test revokes allocation at the existing config-provider reply: require exactly the original three GETs, zero POSTs, cleanup and session-authority, then retain the first row after a repeated denied open. These controlled children/fetch/preparation objects are not physical Windows qualification.
 
 At this prospective R1 no stage-only candidate has been applied or executed. Original resulting-source Windows x64/ARM source journeys, A/B, cold behavior, all original actions and physical cleanup remain mandatory; results under incoming2cb's widened clocks do not establish the retained 15-second gates. P08/P09, vendor/Desktop/Stage2, Draft/original base and no-Ready/no-main/no-release/no-default-activation restrictions remain unchanged.
+
+### Actual bounded validation of the stage-only observation
+
+Separate R1 `3aad103ec41df02fd501615c28c802bbc04e2ba1` was published and fully read back before application. Test-only tree `f4b85aef2f5525c0f9423c28c54ffda2ea6b78f1` differed from that R1 only in the existing provider test. The verified canonical Host build from the preceding reconciliation supplied its unchanged provider baseline; source mode was explicitly disabled and the actual provider dist hash was retained. The complete file produced 26 PASS / 8 FAIL, with no skips/cancellations: all eight failures were the new expected missing observation arrays (seven native-ready, one session-authority), not setup, cleanup or readiness-performance failures. Assertions after each missing-row assertion are qualified by GREEN, not by the early-failing RED.
+
+Applying only the three approved source files produced tree `d7dbe6e2ad9334e2ff04385abc4a5daf2d482c0b`. Canonical Host rebuild and the same complete 34-test file passed with 0 FAIL/SKIP/CANCEL. This includes the original cleanup, late completion, no-HTTP/no-POST and repeated-open assertions. The actual rebuilt provider dist contains the observation and is independently hashed; no source-mode shortcut was used. Node remained 24.21.0 and the unchanged project compiler remained TypeScript 7.0.2.
+
+The complete Host test compiler did NOT qualify this source. Its original execution ended with exit 137 after 11.303 seconds, printing Killed without any TypeScript diagnostic. One sequential retry of the identical canonical command, source and flags also ended 137 after 44.984 seconds. Both executions and their raw output are retained; available process/memory inspection did not establish the kill cause, so no OOM or product-error diagnosis is claimed. No further local retry, heap/timeout/config change or narrower compiler substitute was used. The earlier reconciliation's Host test-type PASS does not transfer to this stage cut. This exact-source gate remains mandatory in CI, alongside full workspace types/typed lint and original platform acceptance.
+
+The independently runnable remaining planned checks then passed serially. A complete temporary-index scan still produced the exact d7dbe6e source tree, and the original diff check was clean.
+
+| Execution | Actual outcome | Raw stdout/stderr SHA-256 |
+| --- | --- | --- |
+| red-provider-file | 26 PASS / 8 expected assertion FAIL; exit 1 | 310a5ae3d20384bdbaff9cbf15d09dad35158a53b7ce3e704b88390b293b1133 |
+| green-host-build | PASS; exit 0 | d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789 |
+| green-provider-file | 34/34 PASS; exit 0 | 1395009fc286462ea7d41cdd0b6d8a336c92c3ae109912c565b52b8f2dec1273 |
+| green-host-test-types | KILLED / unqualified; exit 137 | 43956e57aa2bc4f036aed1137801b6ca0402c15ae9e40363f0f30f4d9b56d7c1 |
+| host-test-types-retry | KILLED / unqualified; exit 137 | 43956e57aa2bc4f036aed1137801b6ca0402c15ae9e40363f0f30f4d9b56d7c1 |
+| green-scripts-types | PASS; exit 0 | 497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015 |
+| green-scoped-lint | PASS; exit 0 | af7a1fadb2a66a2d72656e93c409010435296af9ec73723054e809da80cb3ad7 |
+| green-source-guard | PASS; exit 0 | 961492c3971768c144057514917b4179f695089b172a31e2d3d3d62b9efdc8f3 |
+| green-provisioning-guard | PASS; exit 0 | 7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c |
+| Exact diff check | PASS, empty output | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 |
+
+This publishes a reviewed failure observation for the existing Draft continuation, not a readiness repair or completed migration. The new closed writer/reader join is source-reviewed; no real native Windows or provider execution was performed locally. The original 15-second predicates, all P08/P09 obligations and failed receipts remain intact. Resulting-source native/Desktop/vendor and the killed Host test-type gate remain unqualified until their original checks complete successfully.

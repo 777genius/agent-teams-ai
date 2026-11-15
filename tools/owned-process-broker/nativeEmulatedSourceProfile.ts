@@ -142,7 +142,7 @@ if(argv.length===1&&argv[0]==='--version'){
   });
   const cli = realpathSync(fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url)));
   const hostEntry = join(root, 'TEST-source-host.mjs');
-  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner', 'composition/projectRuntimeMember']
+  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner', 'composition/projectRuntimeMember', 'adapters/providers/OpenCodeMemberProvider']
     .flatMap(name => (['src', 'dist'] as const).map(directory => {
       const path = fileURLToPath(new URL(`../../packages/legacy-agent-host/${directory}/${name}${directory === 'src' ? '.ts' : '.js'}`, import.meta.url));
       assert.equal(realpathSync(path), path); return { path, sha256: fileHash(path) };
@@ -159,6 +159,7 @@ function validateSourceRefusal(value, persisted) {
   const hash = raw => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = raw => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
   const fields = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired',
     consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt',
+    'opencode-open': 'bindingDigest phase reason',
     reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
   assert.ok(typeof value.kind === 'string' && Object.hasOwn(fields, value.kind));
   const keys = fields[value.kind]; assert.ok(typeof keys === 'string'); assert.deepEqual(Object.keys(value).sort(), ['kind', ...keys.split(' ').filter(Boolean), ...(persisted ? ['ordinal'] : [])].sort());
@@ -170,6 +171,9 @@ function validateSourceRefusal(value, persisted) {
     assert.ok('sealed current-false current-threw launch-deadline refused unknown result-mismatch preparation-failed'.split(' ').includes(value.reason));
     assert.ok(['dispatched', 'staged', 'rootCaptured'].every(key => typeof value[key] === 'boolean'));
     assert.equal(value.deadlineExpired, value.reason === 'launch-deadline' ? true : null);
+  } else if (value.kind === 'opencode-open') {
+    assert.ok(hash(value.bindingDigest)); assert.equal(value.reason, 'threw');
+    assert.ok('configuration server-launch native-ready startup-authority startup-configuration startup-delay session-authority session-create driver-readiness'.split(' ').includes(value.phase));
   } else {
     assert.ok(value.reason === 'held' || value.reason === 'threw'); const consumer = value.kind === 'consumer';
     assert.ok((consumer ? ['actionDigest', 'groupDigest', 'bindingDigest', 'consumerId'] : ['commandDigest', 'contextDigest']).every(key => hash(value[key])));
