@@ -10,6 +10,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { TeamOwnerStore } from '../../packages/legacy-agent-host/dist/adapters/team/TeamOwnerStore.js';
 import { readScheduledRunCapture } from '../../packages/legacy-agent-host/dist/composition/scheduledRunCapture.js';
 import { runtimeCaptureSourceSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeCaptureSource.js';
+import { resolveRuntimeRecipe } from '../../packages/legacy-agent-host/dist/composition/runtimeRecipe.js';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { managementDigest } from '../../packages/legacy-agent-host/dist/management/identity.js';
 import { BackendOwnerRouter } from '../../src/features/agent-backend/main/application/BackendOwnerRouter';
@@ -55,8 +56,8 @@ function journal(path: string): Record<string, unknown>[] {
   assert.ok(value.endsWith('\n'));
   return value.trimEnd().split('\n').map(line => object(JSON.parse(line)));
 }
-async function poll(check: () => Promise<boolean>, message: string, budget = 15000, absoluteDeadline?: number): Promise<void> {
-  const deadline = absoluteDeadline ?? performance.now() + budget;
+async function poll(check: () => Promise<boolean>, message: string, budget = 15000): Promise<void> {
+  const deadline = performance.now() + budget;
   for (;;) {
     assert.ok(performance.now() < deadline, message);
     const ready = await check();
@@ -394,8 +395,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const before = first.jobs.length, inputsBefore = inputs().length;
       const commandId = `TEST-start-${image}`, payload = { launchId, rosterRevision: text(selectedLaunch.rosterRevision) };
       diagnosticLaunches.push({ actionDigest: runtimeDigest(commandId), bindingDigests: rows(capturedDefinition.members).map(member => managementDigest(object(member.binding))), launchId, source: sourceRef(source) });
-      let codexReadinessDeadline: number | undefined;
-      if (provider === 'codex') {
+      let memberReadinessDeadline: number | undefined;
+      if (provider !== 'claude') {
         assert.equal(capturedDefinition.launchId, payload.launchId);
         assert.equal(capturedDefinition.rosterRevision, payload.rosterRevision);
         assert.equal(record.startCommandId, undefined);
@@ -411,7 +412,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         const timeoutMs = member.timeoutMs;
         assert.ok(typeof timeoutMs === 'number' && Number.isSafeInteger(timeoutMs) && timeoutMs > 0);
         // Start and its acknowledgement consume the original captured member budget.
-        codexReadinessDeadline = performance.now() + timeoutMs;
+        memberReadinessDeadline = performance.now() + timeoutMs;
       }
       if (provider === 'opencode') {
         // Reuse the original Main aggregate phases with this fixture's private native inputs.
@@ -466,7 +467,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
               sealed: view.sealed, custody: view.custody, nativeReady: view.nativeReady, attached: view.attached,
               ...(view.diagnostic === undefined ? {} : { diagnostic: view.diagnostic }) } });
           return view.nativeReady === true; }, 'Original source Team readiness',
-          undefined, codexReadinessDeadline);
+          memberReadinessDeadline === undefined ? undefined : memberReadinessDeadline - performance.now());
       } finally {
         console.log(JSON.stringify({ kind: 'TEST_SOURCE_READINESS', provider, ...readiness }));
       }
@@ -583,7 +584,21 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
           ...(provider === 'claude' ? { effort: 'low', resolvedFastMode: false } : {}) },
         ...(provider === 'claude' ? { maxTurns: 6, maxBudgetUsd: 0.25 } : {}) };
       const before = first.jobs.length;
+      const standaloneStarted = performance.now();
       await first.rpc(1, 'schedule.run.start', scheduled.runId, scheduled);
+      const capture = readScheduledRunCapture(new TeamOwnerStore(fixture.profile.owner.storageRoot,
+        fixture.profile.teams[1]!.binding.teamName), scheduled.runId);
+      assert.ok(capture); assert.deepEqual(capture.input, scheduled); assert.deepEqual(capture.source, sourceRef(b.source));
+      let standaloneDeadline: number | undefined;
+      if (provider === 'codex') {
+        assert.equal(capture.memberId, 'alice-id');
+        assert.equal(capture.teamScope, runtimeDigest(fixture.profile.teams[1]!.scope));
+        const recipe = resolveRuntimeRecipe(fixture.profile.runtime, fixture.profile.teams[1]!.binding.teamId,
+          capture.memberId, scheduled.config.providerId);
+        assert.equal(runtimeDigest(recipe), capture.recipeDigest);
+        // Bound this TEST observation by the original recipe, including Start and acknowledgement.
+        standaloneDeadline = standaloneStarted + recipe.limits.timeoutMs;
+      }
       let completed: Record<string, unknown> = {};
       const completion = { source: sourceRef(b.source), runId: scheduled.runId, scheduleId: scheduled.scheduleId,
         readCount: 0, elapsedMs: 0, lastRunRead: null as Record<string, unknown> | null };
@@ -598,15 +613,13 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
               ...(result && typeof result === 'object' && !Array.isArray(result)
                 ? { exitCode: (result as Record<string, unknown>).exitCode } : {}) } });
           return completed.phase === 'completed';
-        }, 'Original standalone completion');
+        }, 'Original standalone completion',
+        standaloneDeadline === undefined ? undefined : standaloneDeadline - performance.now());
       } finally {
         console.log(JSON.stringify({ kind: 'TEST_SOURCE_STANDALONE', provider, ...completion }));
       }
       assert.equal(completed.cleanup, 'confirmed'); assert.equal(object(completed.result).exitCode, 0);
       assert.ok(text(object(completed.result).stdout).includes(provider === 'claude' ? 'TEST standalone complete' : 'OK'));
-      const capture = readScheduledRunCapture(new TeamOwnerStore(fixture.profile.owner.storageRoot,
-        fixture.profile.teams[1]!.binding.teamName), scheduled.runId);
-      assert.ok(capture); assert.deepEqual(capture.input, scheduled); assert.deepEqual(capture.source, sourceRef(b.source));
       const jobs = first.jobs.slice(before); assertSourceJobs(jobs, b.source, 'B', 'runtime', fixture.profile.teams[1]!.binding.teamId);
       noTeamConnection(jobs); assert.ok(quiescent(jobs));
       if (provider === 'codex') assert.deepEqual(jobs.flatMap(job => job.threadEphemeral), [true]);

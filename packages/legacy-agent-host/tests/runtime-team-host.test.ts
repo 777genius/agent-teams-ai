@@ -3615,12 +3615,12 @@ async function sourceReadinessDeadlineFixture(input: {
   }) as Poll;
   const readiness: Record<string, unknown> = { readCount: 0, elapsedMs: 0, lastRuntimeRead: null };
   const run = Function('environment', `'use strict';
-    const {poll,first,team,image,runtimeDigest,readiness,readinessStarted,performance,codexReadinessDeadline}=environment;
+    const {poll,first,team,image,runtimeDigest,readiness,readinessStarted,performance,memberReadinessDeadline}=environment;
     let view={},lastRuntimeViewDigest;
     return (async()=>{${callerSource}})();`) as (environment: Record<string, unknown>) => Promise<void>;
   return {
     run: () => run({ team: 0, image: 'A', runtimeDigest, readiness, readinessStarted: input.now,
-      performance, codexReadinessDeadline: input.deadline,
+      performance, memberReadinessDeadline: input.deadline,
       poll: (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number) => {
         assert.equal(message, 'Original source Team readiness'); argumentsSeen.push([budget, deadline]);
         now += input.handoffPause ?? 0;
@@ -3634,7 +3634,7 @@ async function sourceReadinessDeadlineFixture(input: {
           custody: 'owned', nativeReady: input.ready?.[index] ?? true, attached: true };
       } },
     }),
-    actualPoll, readiness, argumentsSeen, delays,
+    actualPoll, readiness, argumentsSeen, delays, source, performance,
     advance: (milliseconds: number) => { now += milliseconds; }, counts: () => ({ now, reads }),
   };
 }
@@ -3679,4 +3679,131 @@ test('source readiness keeps its timely success, other original budgets, 25ms ca
   await assert.rejects(refused.run(), error => error === failure);
   assert.deepEqual(refused.counts(), { now: 0, reads: 1 }); assert.deepEqual(refused.delays, []);
   assert.equal(refused.readiness.readCount, 0);
+});
+
+async function sourceStandaloneDeadlineFixture(input: {
+  now?: number; provider?: 'codex' | 'claude'; ackMs?: number; handoffPause?: number; readCost?: number;
+  changeSourceOnRead?: boolean; invalidCapture?: 'input' | 'source' | 'member' | 'scope' | 'recipe';
+  cleanup?: 'confirmed' | 'unresolved'; exitCode?: number; throwRead?: Error;
+}) {
+  const clock = await sourceReadinessDeadlineFixture({ now: input.now ?? 0 });
+  const { stripTypeScriptTypes } = await import('node:module');
+  const begin = '      const before = first.jobs.length;\n      const standaloneStarted = performance.now();';
+  const end = "\n      const jobs = first.jobs.slice(before); assertSourceJobs(jobs, b.source, 'B', 'runtime', fixture.profile.teams[1]!.binding.teamId);";
+  for (const marker of [begin, end]) assert.equal(clock.source.split(marker).length, 2);
+  const body = stripTypeScriptTypes(clock.source.slice(clock.source.indexOf(begin), clock.source.indexOf(end)));
+  const provider = input.provider ?? 'codex', scope = { projectId: 'TEST-project', contextId: 'TEST-context' };
+  const source = { sourceId: 'a'.repeat(64), revision: 'b'.repeat(64) };
+  const recipe = { limits: { timeoutMs: 90_000 } }, runtime = { members: ['TEST original recipe'] };
+  const scheduled = { runId: 'TEST-source-standalone-B', scheduleId: 'TEST-source-schedule-B',
+    expectedRosterRevision: 'TEST-original-roster', config: { cwd: '/TEST/workspace', prompt: 'TEST prompt',
+      providerId: provider === 'codex' ? 'codex' : 'anthropic', model: 'TEST-original-model', skipPermissions: true } };
+  const capture = { schemaVersion: 1, input: structuredClone(scheduled), source: structuredClone(source),
+    memberId: 'alice-id', teamScope: runtimeDigest(scope), recipeDigest: runtimeDigest(recipe),
+    authorityRevision: 1, workspaceIdentity: 'c'.repeat(64), capturedAt: '2026-11-15T00:00:00.000Z' };
+  if (input.invalidCapture === 'input') capture.input.config.model = 'TEST-other-model';
+  if (input.invalidCapture === 'source') capture.source.revision = 'd'.repeat(64);
+  if (input.invalidCapture === 'member') capture.memberId = 'TEST-other-member';
+  if (input.invalidCapture === 'scope') capture.teamScope = 'd'.repeat(64);
+  if (input.invalidCapture === 'recipe') capture.recipeDigest = 'd'.repeat(64);
+  const trace: string[] = [], captureTimes: number[] = [], argumentsSeen: [number | undefined, number | undefined][] = [];
+  const evidence: Record<string, unknown> = {}, output: string[] = [];
+  let starts = 0, reads = 0;
+  class OriginalStore {
+    constructor(root: string, teamName: string) {
+      assert.equal(root, '/TEST/original-owner'); assert.equal(teamName, 'TEST Team B');
+    }
+  }
+  const run = Function('environment', `'use strict';
+    const {first,performance,readScheduledRunCapture,TeamOwnerStore,fixture,scheduled,assert,sourceRef,b,
+      provider,runtimeDigest,resolveRuntimeRecipe,evidence,poll,console,object,text}=environment;
+    return (async()=>{${body}\nreturn {completed,capture};})();`) as (environment: Record<string, unknown>) => Promise<unknown>;
+  return {
+    run: () => run({ performance: clock.performance, provider, runtimeDigest, scheduled, evidence, assert,
+      b: { source }, sourceRef: (value: typeof source) => ({ ...value }),
+      fixture: { profile: { owner: { storageRoot: '/TEST/original-owner' }, runtime,
+        teams: [null, { binding: { teamId: 'TEST-Team-B', teamName: 'TEST Team B' }, scope }] } },
+      TeamOwnerStore: OriginalStore, readScheduledRunCapture: (store: OriginalStore, runId: string) => {
+        assert.ok(store instanceof OriginalStore); assert.equal(runId, scheduled.runId);
+        trace.push('capture'); captureTimes.push(clock.counts().now); return structuredClone(capture);
+      }, resolveRuntimeRecipe: (selected: unknown, teamId: string, memberId: string, providerId: string) => {
+        assert.equal(selected, runtime); assert.equal(teamId, 'TEST-Team-B');
+        assert.equal(memberId, 'alice-id'); assert.equal(providerId, 'codex');
+        trace.push('recipe'); return structuredClone(recipe);
+      }, poll: (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number) => {
+        assert.equal(message, 'Original standalone completion'); argumentsSeen.push([budget, deadline]);
+        clock.advance(input.handoffPause ?? 0); return clock.actualPoll(check, message, budget, deadline);
+      }, first: { jobs: [], rpc: async (team: number, method: string, command: string, payload: unknown) => {
+        assert.equal(team, 1);
+        if (method === 'schedule.run.start') {
+          assert.equal(command, scheduled.runId); assert.deepEqual(payload, scheduled);
+          trace.push('start'); starts++; clock.advance(input.ackMs ?? 0); return { phase: 'running' };
+        }
+        assert.equal(method, 'schedule.run.read'); assert.equal(command, 'TEST-schedule-read');
+        assert.deepEqual(payload, { runId: scheduled.runId, scheduleId: scheduled.scheduleId });
+        trace.push('read'); reads++; clock.advance(input.readCost ?? 0);
+        if (input.throwRead) throw input.throwRead;
+        if (input.changeSourceOnRead) capture.source.revision = 'd'.repeat(64);
+        return { phase: 'completed', cleanup: input.cleanup ?? 'confirmed',
+          result: { exitCode: input.exitCode ?? 0, stdout: provider === 'codex' ? 'OK' : 'TEST standalone complete' } };
+      } }, console: { log: (value: string) => { output.push(value); } },
+      object: (value: unknown) => value, text: (value: unknown) => value,
+    }),
+    trace, captureTimes, argumentsSeen, evidence, output, delays: clock.delays,
+    counts: () => ({ now: clock.counts().now, starts, reads }),
+  };
+}
+
+test('source standalone refuses expiry during the poll handoff after Start consumed its captured recipe budget', async () => {
+  const f = await sourceStandaloneDeadlineFixture({ ackMs: 89_990, handoffPause: 20 });
+  await assert.rejects(f.run(), /Original standalone completion/);
+  assert.deepEqual(f.counts(), { now: 90_010, starts: 1, reads: 0 });
+  assert.deepEqual(f.delays, []); assert.deepEqual(f.trace, ['start', 'capture', 'recipe']);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000]]);
+  assert.equal((f.evidence.lastStandaloneCompletion as Record<string, unknown>).readCount, 0);
+});
+
+test('source standalone refuses a completed result delivered after the captured absolute deadline', async () => {
+  const f = await sourceStandaloneDeadlineFixture({ ackMs: 89_900, handoffPause: 50, readCost: 60 });
+  await assert.rejects(f.run(), /Original standalone completion/);
+  assert.deepEqual(f.counts(), { now: 90_010, starts: 1, reads: 1 }); assert.deepEqual(f.delays, []);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000]]);
+  const completion = f.evidence.lastStandaloneCompletion as Record<string, unknown>;
+  assert.equal(completion.readCount, 1); assert.equal(completion.elapsedMs, 110);
+  assert.equal((completion.lastRunRead as Record<string, unknown>).phase, 'completed');
+});
+
+for (const provider of ['codex', 'claude'] as const)
+test(`source ${provider} standalone preserves the original fresh capture check after successful completion`, async () => {
+  const f = await sourceStandaloneDeadlineFixture({ provider, readCost: 1, changeSourceOnRead: true });
+  await assert.rejects(f.run(), { code: 'ERR_ASSERTION' });
+  assert.deepEqual(f.counts(), { now: 1, starts: 1, reads: 1 });
+  assert.deepEqual(f.trace, provider === 'codex'
+    ? ['start', 'capture', 'recipe', 'read', 'capture'] : ['start', 'read', 'capture']);
+  assert.deepEqual(f.captureTimes, provider === 'codex' ? [0, 1] : [1]);
+  assert.deepEqual(f.delays, []);
+});
+
+test('source standalone keeps captured authority, original relative defaults, cleanup refusals and exact read errors', async () => {
+  const timely = await sourceStandaloneDeadlineFixture({ ackMs: 100, handoffPause: 25, readCost: 50 });
+  await timely.run(); assert.deepEqual(timely.counts(), { now: 175, starts: 1, reads: 1 });
+  const original = await sourceStandaloneDeadlineFixture({ provider: 'claude', ackMs: 20_000, handoffPause: 20_000, readCost: 14_999 });
+  await original.run(); assert.deepEqual(original.counts(), { now: 54_999, starts: 1, reads: 1 });
+  const boundary = await sourceStandaloneDeadlineFixture({ provider: 'claude', ackMs: 20_000, handoffPause: 20_000, readCost: 15_000 });
+  await assert.rejects(boundary.run(), /Original standalone completion/);
+  assert.deepEqual(boundary.counts(), { now: 55_000, starts: 1, reads: 1 });
+  for (const invalidCapture of ['input', 'source', 'member', 'scope', 'recipe'] as const) {
+    const f = await sourceStandaloneDeadlineFixture({ invalidCapture });
+    await assert.rejects(f.run(), { code: 'ERR_ASSERTION' });
+    assert.deepEqual(f.counts(), { now: 0, starts: 1, reads: 0 }); assert.deepEqual(f.delays, []);
+  }
+  for (const invalidResult of [{ cleanup: 'unresolved' as const }, { exitCode: 1 }]) {
+    const f = await sourceStandaloneDeadlineFixture(invalidResult);
+    await assert.rejects(f.run(), { code: 'ERR_ASSERTION' });
+    assert.deepEqual(f.counts(), { now: 0, starts: 1, reads: 1 }); assert.deepEqual(f.delays, []);
+  }
+  const failure = new Error('TEST original standalone read failed');
+  const refused = await sourceStandaloneDeadlineFixture({ throwRead: failure });
+  await assert.rejects(refused.run(), error => error === failure);
+  assert.deepEqual(refused.counts(), { now: 0, starts: 1, reads: 1 }); assert.deepEqual(refused.delays, []);
 });

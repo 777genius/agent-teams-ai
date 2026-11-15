@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
 import { acquireProfileWriterLease } from '../../packages/legacy-agent-host/dist/adapters/profile/ProfileWriterLease.js';
 import { createFilesystemTeamOwner } from '../../packages/legacy-agent-host/dist/adapters/team/createFilesystemTeamOwner.js';
@@ -8,7 +10,7 @@ import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/compo
 import { runtimeMemberProfileSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
 import { providerManagementProfileSchema } from '../../packages/legacy-agent-host/dist/management/profile.js';
 import { desktopNodeScriptHeader, digest, fileDigest, prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
-import { assertOwnedCdpListener, command, processTable } from './desktop-backend-observations.ts';
+import { assertOwnedCdpListener, processTable } from './desktop-backend-observations.ts';
 import { prepareDesktopOpenCodeVersionSentinel } from './desktop-emulated-management-fixture.ts';
 import { reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
 import { seedDesktopLegacySchedule } from './desktop-schedule-fixture.ts';
@@ -213,18 +215,55 @@ export async function observeDesktopEmulatedRuntimeChildren(group: number,
   fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedRuntimeFixture>>, phase: 'before-first-team-read' | 'after-team-read') {
   if (isDesktopEmulatedCollaborationFixture(fixture)) return observeDesktopEmulatedCollaborationChildren(group, fixture, phase);
   assertOwnedCdpListener(group); await verifyDesktopEmulatedRuntimeFixture(fixture);
-  const table = processTable(), hosts = table.filter(row => row.pgid === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+  const deadline = performance.now() + 3000;
+  // One observation budget, including the original census; these facts never authorize signals.
+  const census = () => {
+    const remaining = Math.floor(deadline - performance.now());
+    assert.ok(remaining > 0, 'Original peer observation deadline');
+    const output = execFileSync('/bin/ps', ['-axww', '-o', 'pid=,ppid=,pgid=,lstart=,command='], {
+      encoding: 'utf8', timeout: remaining, maxBuffer: 2 * 1024 * 1024,
+      env: { PATH: '/usr/bin:/bin', LC_ALL: process.platform === 'linux' ? 'C.UTF-8' : 'en_US.UTF-8' },
+    });
+    const lines = output.trim().split('\n'); assert.ok(lines.length <= 20_000);
+    const rows = lines.map(line => {
+      const match = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S{3}\s+\S{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(.+)$/u.exec(line);
+      assert.ok(match, 'Original census includes peer birth and argv');
+      const pid = Number(match[1]), ppid = Number(match[2]), pgid = Number(match[3]);
+      assert.ok(Number.isSafeInteger(pid) && pid > 0 && Number.isSafeInteger(ppid) && ppid >= 0 && Number.isSafeInteger(pgid) && pgid >= 0);
+      return { pid, ppid, pgid, birth: match[4]!, command: match[5]!.trim() };
+    });
+    assert.equal(new Set(rows.map(row => row.pid)).size, rows.length, 'Unambiguous original census');
+    assert.ok(performance.now() < deadline, 'Original peer census exceeded its deadline');
+    return rows;
+  };
+  const table = census(), hosts = table.filter(row => row.pgid === group && row.command === `${fixture.node} ${fixture.hostEntry}`);
   if (phase === 'before-first-team-read') assert.ok(hosts.length <= 1); else assert.equal(hosts.length, 1);
-  const launches = (await readDesktopEmulatedRuntimeEffects(fixture)).filter(row => row.event === 'launch');
   const installed = fixture.emulatedRuntime.installer ? await readDesktopEmulatedCodexInstallation(fixture.emulatedRuntime.installer) : undefined;
   const prefixes = [fixture.emulatedRuntime.commandPrefix,
     ...(installed ? [`${fixture.node} ${installed.executable.path} `] : [])];
   for (const host of hosts) for (const child of table.filter(row => row.ppid === host.pid)) {
     assert.equal(child.pgid, child.pid);
-    assert.ok(prefixes.some(prefix => command(child.pid).startsWith(prefix)), 'Only an exact pinned TEST executable from the original seed or stock installation');
-    assert.ok(launches.some(row => row.pid === child.pid && row.parentPid === host.pid), 'Original peer birth under this captured Host');
+    assert.ok(prefixes.some(prefix => child.command.startsWith(prefix)), 'Only an exact pinned TEST executable from the original seed or stock installation');
+    let absent = false;
+    for (;;) {
+      assert.ok(performance.now() < deadline, 'Original peer observation deadline');
+      const launches: Row[] = (await readDesktopEmulatedRuntimeEffects(fixture)).filter(row => row.event === 'launch' && row.pid === child.pid);
+      assert.ok(performance.now() < deadline, 'Original peer launch read exceeded its deadline');
+      assert.ok(launches.length <= 1, 'One original peer launch; PID reuse remains ambiguous');
+      if (launches.length) assert.equal(launches[0]!.parentPid, host.pid, 'Original peer parent');
+      const current = census();
+      assert.deepEqual(current.find(row => row.pid === host.pid), host, 'Original Host birth and argv remain current');
+      const peer = current.find(row => row.pid === child.pid);
+      if (peer) {
+        assert.equal(absent, false, 'An absent original peer PID must not reappear');
+        assert.deepEqual(peer, child, 'Original peer birth, parent, group and argv remain current');
+      } else absent = true;
+      if (launches.length) break;
+      await new Promise<void>(resolve => setTimeout(resolve, Math.min(25, Math.max(0, deadline - performance.now()))));
+    }
     if (!fixture.emulatedRuntime.observedPeerPids.includes(child.pid)) fixture.emulatedRuntime.observedPeerPids.push(child.pid);
   }
+  assert.ok(performance.now() < deadline, 'Original peer observation deadline');
 }
 
 /** PIDs are absence observations only; original Host custody performs all stopping. */

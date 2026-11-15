@@ -1656,7 +1656,7 @@ async function selectionStoppedConvergence(options: {
   const { hostTeamRunId } = await import('../../src/features/agent-backend/contracts/teamRunSelection.ts');
   const { desktopJsLiteral: literal } = await import('./desktop-ui-controls.ts');
   const source = (await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
-  const pollBegin = '  const poll = async <T>(', pollEnd = '  const visible = ';
+  const pollBegin = '  const poll = async <T>(', pollEnd = '  const visible = (text: string) =>';
   const stopBegin = '  const stop = async (', stopEnd = '\n\n  await ui.observeInput();';
   for (const marker of [pollBegin, pollEnd, stopBegin, stopEnd]) assert.equal(source.split(marker).length, 2);
   assert.ok(source.includes('proof.bStop = await stop(liveB);'));
