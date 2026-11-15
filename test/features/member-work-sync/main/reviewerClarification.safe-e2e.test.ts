@@ -1,12 +1,13 @@
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
 import { createMemberWorkSyncFeature } from '@features/member-work-sync/main';
 import { TeamKanbanManager } from '@main/services/team/TeamKanbanManager';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { TeamTaskReader } from '@main/services/team/TeamTaskReader';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { createController } from 'agent-teams-controller';
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createTestWorkSyncIdentity } from '../helpers/createTestWorkSyncIdentity';
