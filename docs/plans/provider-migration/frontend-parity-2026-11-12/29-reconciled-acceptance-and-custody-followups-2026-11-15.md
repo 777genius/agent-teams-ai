@@ -958,3 +958,116 @@ The7d collaboration artifact remains FAIL before prompt mutation. The cancelled 
 Independently retained artifact14146146870 ZIP SHA-256: `4010c59e29a24797791f35443228d6c29e2f5c116b69a458df1b4aee30e6e0e7`.
 
 Independently retained artifact14146502530 ZIP SHA-256: `067d685a73372c73c1d44a1891406d13ad188ac67b923f8b61ed1a9526bda790`.
+
+## 2026-11-15 captured V1 OAuth presentation and original-gate corrections
+
+This reviewed continuation builds on exact source95da89d786546bf1bb2afe4c047afe3e4dba78ad.
+It preserves the preceding21-file b00 continuation, all eight95da paths and the
+original base/provider/frontend pins. The thirteen-path cut contains the OAuth
+presentation seam and its original unit/Main/Host/Desktop checks, two observed
+test/verifier corrections and this evidence record. No new workflow or matrix is
+introduced.
+
+### Observed frontend gap and implementation
+
+The original provider-settings renderer already renders and copies a device code
+from native instructions, applies its existing copyable authorization-link policy
+and offers Cancel while waiting for the browser. CapturedProviderOAuth previously
+discarded the native instructions and mapped a still-pending automatic native
+callback to the public completing phase. That hid the device code and disabled
+the existing cancellation controls.
+
+The three existing presentation functions are moved byte-for-byte, apart from
+their export keywords, from AgentTeamsRuntimeProviderManagementCliClient into
+runtimeProviderOAuthPresentation. The legacy CLI client and captured OpenCode V1
+path now share the original text sanitizer,1000-character instruction projection,
+8192-character public URL check and provider/path-specific copyable-link policy.
+This is not a second URL policy. The private16384-character authorization guard
+and original external opener remain unchanged.
+
+Main keeps only the sanitized presentation in the original running operation.
+After the once-only opener, a fresh oauth.read must still match the original
+operation/profile/configuration/method, monotonic sequence and fixed expiry.
+Currentness and that same expiry are checked before and after the await.
+Cancellation, completion or a context switch that wins while the opener waits
+prevents late presentation. The existing automatic callback is submitted once;
+while it remains pending, public progress stays waiting-for-browser with the
+sanitized instructions and existing Cancel control. Manual/terminal progress
+clears presentation. Durable Main intents and Host command records receive no
+native instruction, device code or authorization URL.
+
+The presentation and automatic-phase mapping apply to captured OpenCode V1.
+Captured Claude behavior is preserved. OpenCode V2 keeps its original API-key-only
+provider-management boundary; this change adds no V2 OAuth protocol.
+
+### Original checks extended, with no execution claim
+
+- The original capturedProviderOAuth file retains all four prior cases and now
+  contains22 cases covering canonical sanitization/link projection, held automatic
+  completion, cancellation, original opener races, late/stale context, mismatched
+  operation/profile/method/sequence, immutable expiry and one-time effects.
+- The existing finite V1 peer returns an actual device instruction plus a private
+  token and callback URL. Its original automatic callback still waits for the
+  existing release-auto file.
+- The original actual Main/Host safe E2E observes the same durable automatic
+  command in native completing with resourceHeld, while public progress remains
+  waiting-for-browser. It joins the original command/fingerprint, verifies one
+  authorize/callback pair and one original peer PID, then requires cancellation,
+  released custody, observed PID absence and no later credential/effect write.
+  The original manual-code success, forget/model/cold checks remain.
+- The original Electron management journey keeps its API-key, reload and manual
+  OAuth checks, then performs one automatic Connect, displays the native device
+  code, clicks the actual CopyButton, observes its clipboard-write acknowledgement
+  and clicks the enabled Cancel control. The original two command records must
+  be cancelled/released, with exactly two TEST openers, one automatic authorize
+  and callback, no private display/link and no credential write. Copy acknowledgement
+  does not claim an independent clipboard-value read or native PID-absence check.
+- The same Desktop proof retains and verifies the additional device-waiting PNG,
+  its exact path/hash and the closed automatic-cancellation receipt. Both the
+  fixed Desktop roster and actual Main/Host test roster append the new helper and
+  its existing sanitizer dependency. Every preceding roster entry/order and the
+  Windows Retry suffix remain intact.
+
+These are source-reviewed assertions pending execution on the new commit. The
+offline continuation cannot run Node, TypeScript, lint, Electron or native tests.
+No local PASS, screenshot inspection or artifact extraction is claimed. The
+existing safe shards, Desktop jobs and compiler/guard gates must run unchanged.
+
+### Two failures in the original preceding29741 CI
+
+The sole failure in safe shard4 job132699452505 occurred before Task Detail
+origin/loading assertions: its renderer API mock omitted the existing
+isElectronMode export now read by teamSlice. The test mock now supplies that
+export and the existing negative metadata case explicitly checks its expected
+logger call before its original console cleanup. All stale-read/loading/finally
+assertions and production code are unchanged. That failed attempt reported536
+passing files,2 skipped files,1 failed file;6561 passing tests,7 skipped tests and
+1 failed test. It is not retroactively relabeled PASS.
+
+Extensions job132699452517 produced its original UI PASS receipt and cleanup, then
+failed the workflow's expected scope tuple. The original global MCP install is
+canonically inventoried as user in the same captured native configuration file.
+The UI correctly removes that inventoried user entry. The expected uninstall
+tuple is corrected to user. The existing finite settings roundtrip now captures
+that original inventory removal target and joins both distinct scope-bound target
+IDs to the same canonical private file/root, original native CLI user arguments,
+four completed/released receipts and unchanged neighboring bytes. No production
+scope or peer contract is broadened.
+
+### Source-bound CI observations retained separately
+
+| Original source and gate | Observed result |
+| --- | --- |
+| 95da process Darwin x64 job132701878293, run43677852465 | PASS:Host161 PASS/2 SKIP of163,protocol53,Main69 including lifecycle4,POSIX23. Artifact14146952765 SHA25691d7f9750097159a01475041fb09f7646ad3a98fc7f471df52c622b7d7eb40c8. This is preceding-source evidence, not a new-commit aggregate. |
+| 95da native V2 Darwin x64 job132701851559, run43677852461 | FAIL after earlier business/custody checks. The existing failure-only diagnostic now identifies compiler-default:baseline, kernel-image-validity, errno13, codeSigningError-67062. Artifact14147588161 SHA256ef7130ea4177f7bf687e26343514aed1db1348a24dc33a04e89f578c9c63f6b5. The original assertion and cleanup remain unchanged. |
+| 29741 Windows x64 source scenario | FAIL at the original one-entry match assertion:2!==1 after the original Codex A/B/standalone readiness work. The25 original Jobs were drained/released and outer cleanup reported root1/active0/controller104. Artifact14147335287 SHA256dc3044e898ec09f43188dcf8b7004452c229bc2e95149aeb0858f05d51c5b9e4. The two matching rows have not been independently extracted by this offline continuation; PID reuse or parent alias is not established. |
+| 29741 safe shard4 failure above | Artifact14147495123 SHA256e9e37ac0123bc68dd5374fa25a215a3e1e30b60abff5b0c4e5c2a02d9eb2865e. |
+| 29741 Extensions verifier failure above | Artifact14146772588 SHA256104fd7748eab0f8df84b0501c9eceefd994f816ce3c5cc79e33a9934875eab15. |
+
+All pending/cancelled/skipped jobs remain unqualified. Actual packaged same-Main
+Windows Retry and the complete current-source frontend/native/packaged/full
+workspace aggregate remain open. P09's selected-image/script-consumption contract
+under its permitted noncooperating writer remains unqualified; no source freeze,
+signature/rebinding, assertion relaxation or universal impossibility claim is
+introduced. The private scope, original ownership/custody, deadlines, no-replay
+rules and finite Codex/Claude prohibition remain mandatory.

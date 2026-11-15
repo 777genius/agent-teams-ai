@@ -42,7 +42,7 @@ const apiMock = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@renderer/api', () => ({ api: apiMock }));
+vi.mock('@renderer/api', () => ({ api: apiMock, isElectronMode: () => true }));
 
 function snapshot(projectPath: string, taskId = 'X'): TeamViewSnapshot {
   return {
@@ -328,6 +328,10 @@ describe('task detail origin and loading postconditions', () => {
     try {
       full.reject(new Error('TEST newest metadata failed'));
       await refresh;
+      expect(console.error).toHaveBeenCalledWith(
+        '[Renderer:unwrapIpc]',
+        '[team:getData] TEST newest metadata failed'
+      );
       vi.mocked(console.error).mockClear();
       vi.mocked(console.warn).mockClear();
       expect(isTaskDetailTeamUnavailable(store.getState(), identity.teamName, scope)).toBe(true);

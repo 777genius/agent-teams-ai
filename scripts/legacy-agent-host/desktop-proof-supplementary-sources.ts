@@ -200,6 +200,8 @@ export const desktopProofSupplementarySources = [
   'scripts/legacy-agent-host/fixtures/process-bootstrap.ts',
   'scripts/legacy-agent-host/fixtures/process-service.ts',
   'src/features/runtime-provider-management/main/readiness.ts',
+  'src/features/runtime-provider-management/main/infrastructure/runtimeProviderOAuthPresentation.ts',
+  'src/features/runtime-provider-management/main/infrastructure/runtimeProviderModelTestBoundary.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */

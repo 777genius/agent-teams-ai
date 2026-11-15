@@ -186,7 +186,10 @@ const server = createServer((request, response) => {
         events({ event: 'authorize', providerId });
         json(response, {
           url: `http://127.0.0.1:${port}/TEST-browser?state=TEST-private-state`,
-          instructions: 'TEST-private-instructions',
+          instructions: (providerId.endsWith('auto')
+            ? 'Enter A7F0-835A in your browser.'
+            : 'Finish sign-in in your browser and paste the returned code.') +
+            ` token=TEST-private-instructions http://127.0.0.1:${port}/TEST-browser?state=TEST-private-state`,
           method: providerId.endsWith('auto') ? 'auto' : 'code',
         });
         return;

@@ -13,6 +13,7 @@ import { ClaudeAuthConversation } from '../../packages/legacy-agent-host/dist/ad
 import { teamModelProbeProfile } from '../../packages/legacy-agent-host/dist/composition/teamLaunchModelProbe.js';
 import { runtimeMemberProfileSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
 import { NativeExtensionCoordinator } from '../../packages/legacy-agent-host/dist/extensions/NativeExtensionCoordinator.js';
+import { captureNativeExtensionTarget } from '../../packages/legacy-agent-host/dist/extensions/captureNativeExtensionTarget.js';
 import { claudeManagementProfileSchema } from '../../packages/legacy-agent-host/dist/management/profile.js';
 import { ManagementResourceFence } from '../../packages/legacy-agent-host/dist/management/ManagementResourceFence.js';
 import { ModelProbeOwner } from '../../packages/legacy-agent-host/dist/management/ModelProbeOwner.js';
@@ -138,19 +139,40 @@ test('finite extensions run through original Host ownership, persist four comman
     installSpec: { type: 'http', transportType: 'http', url: extensionMcpUrl }, envValues: {}, headers: [] } })).phase, 'completed');
   const inventory = reloaded.read(mcp).entries;
   assert.equal(inventory.length, 1); assert.ok('name' in inventory[0]!);
-  assert.equal(inventory[0]!.name, extensionMcpName);
+  assert.deepEqual(inventory[0], { name: extensionMcpName, scope: 'user', transport: 'http',
+    targetKey: 'http:' + extensionMcpUrl });
+  const mcpRemoval = owner.capture({ ...identity, panel: 'mcp', scope: inventory[0]!.scope });
+  for (const selection of [mcp, mcpRemoval]) {
+    const target = captureNativeExtensionTarget(f.profile,
+      { panel: selection.panel, scope: selection.scope }, () => {});
+    assert.equal(target.targetId, selection.targetId);
+    assert.equal(target.nativeUserConfigPath, nativeConfig);
+    assert.equal(target.rootPath, join(f.peerRoot, 'config'));
+    assert.equal(target.projectRoot, null);
+  }
+  assert.notEqual(mcpRemoval.targetId, mcp.targetId, 'each requested scope retains its own captured identity');
   const diagnostics = (await owner.diagnose({ ...mcp, panel: 'mcp' })).entries;
   assert.equal(diagnostics.length, 1); assert.equal(diagnostics[0]!.name, extensionMcpName);
   assert.equal(diagnostics[0]!.status, 'failed', 'finite disconnected TEST target never claims connected');
-  assert.equal((await owner.mutations.execute({ ...mcp, commandId: 'TEST-mcp-uninstall', command: {
-    action: 'mcp.uninstall', scope: 'global', serverName: extensionMcpName } })).phase, 'completed');
+  assert.equal((await owner.mutations.execute({ ...mcpRemoval, commandId: 'TEST-mcp-uninstall', command: {
+    action: 'mcp.uninstall', scope: inventory[0]!.scope, serverName: extensionMcpName } })).phase, 'completed');
   assert.deepEqual(reloaded.read(mcp).entries, []);
   const records = [...f.store.list()];
   assert.equal(records.length, 4); assert.equal(new Set(records.map(row => row.commandId)).size, 4);
   assert.ok(records.every(row => row.kind === 'extension.mutation' && row.phase === 'completed' && !row.resourceHeld));
+  const mutations = records.filter(row => row.kind === 'extension.mutation');
+  assert.deepEqual(mutations.map(row => [row.action, row.scope]).sort(),
+    [['mcp.install', 'global'], ['mcp.uninstall', 'user'], ['plugin.install', 'user'], ['plugin.uninstall', 'user']]);
+  assert.equal(mutations.find(row => row.commandId === 'TEST-mcp-install')!.targetId, mcp.targetId);
+  assert.equal(mutations.find(row => row.commandId === 'TEST-mcp-uninstall')!.targetId, mcpRemoval.targetId);
   assert.deepEqual(JSON.parse(await readFile(nativeConfig, 'utf8')), { TEST_neighbor: { exact: true }, mcpServers: {} });
   assert.deepEqual(JSON.parse(await readFile(settings, 'utf8')), { TEST_neighbor: 'unchanged', enabledPlugins: {} });
-  assert.equal((await f.effects()).filter(row => row.event === 'extension-command').length, 4);
+  const commands = (await f.effects()).filter(row => row.event === 'extension-command');
+  assert.equal(commands.length, 4);
+  assert.deepEqual(commands.filter(row => (row.command as string[])[0] === 'mcp').map(row => row.command), [
+    ['mcp', 'add', '-s', 'user', '-t', 'http', extensionMcpName, extensionMcpUrl],
+    ['mcp', 'remove', '-s', 'user', extensionMcpName],
+  ]);
 });
 
 test('finite extension CLI refuses changed names/scopes and does not overwrite selected config', async t => {

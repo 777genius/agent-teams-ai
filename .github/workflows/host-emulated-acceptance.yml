@@ -632,7 +632,7 @@ jobs:
               const mutations = readRecords(join(root, 'hoststore/management-commands')).filter(row => row.kind === 'extension.mutation');
               assert.deepEqual(mutations.map(row => row.commandId).sort(), [...proof.completedOriginalCommandIds].sort());
               assert.deepEqual(mutations.map(row => [row.action, row.scope]).sort(),
-                [['mcp.install', 'global'], ['mcp.uninstall', 'global'], ['plugin.install', 'user'], ['plugin.uninstall', 'user']]);
+                [['mcp.install', 'global'], ['mcp.uninstall', 'user'], ['plugin.install', 'user'], ['plugin.uninstall', 'user']]);
               assert.ok(mutations.every(row => row.phase === 'completed' && row.resourceHeld === false && row.profileId === selected.profile.profileId));
               const effects = receipt.emulatedRuntimeCleanup.effects;
               assert.equal(effects.some(row => row.event === 'input'), false);
@@ -698,6 +698,13 @@ jobs:
               assert.ok(receipt.emulatedManagementCleanup.originalPeerPids.length > 0);
               assert.deepEqual(receipt.emulatedManagementCleanup.remaining, []);
               assert.deepEqual(proof.oauthCancellation, { phase: 'cancelled', resourceHeld: false, credentialAbsent: true, testOpenerCount: 1 });
+              assert.deepEqual(proof.oauthDeviceCancellation, { phaseBeforeCancel: 'completing', phase: 'cancelled',
+                resourceHeld: false, credentialAbsent: true, deviceCodeRendered: true, copyAcknowledged: true,
+                privateTextAbsent: true, privateLinkAbsent: true, cancelEnabled: true,
+                testOpenerCount: 2, authorizeCount: 1, callbackCount: 1 });
+              assert.equal(proof.oauthDeviceWaitingScreenshot.path, join(root, 'ui-emulated-oauth-device-waiting.png'));
+              assert.equal(proof.oauthDeviceWaitingScreenshot.sha256, sha(join(root, 'ui-emulated-oauth-device-waiting.png')));
+
               for (const key of ['peerSha256', 'sourceSha256', 'versionSentinelSha256', 'openerSha256'])
                 assert.match(proof.fixturePins[key], /^[a-f0-9]{64}$/);
             }
@@ -924,7 +931,7 @@ jobs:
                 skills ? ['initialScreenshot', 'importPreviewScreenshot', 'knownRejectedScreenshot', 'importAppliedScreenshot', 'editAppliedScreenshot', 'trashCompletedScreenshot', 'unknownHeldScreenshot', 'staleContextScreenshot'] :
                 savedImport ? ['importedDialogScreenshot', 'reloadedDialogScreenshot'] :
                 codexLogin ? ['finalScreenshot'] :
-                mode === 'emulated-management-ui' ? ['selectionScreenshot', 'reloadedScreenshot', 'connectedScreenshot', 'oauthWaitingScreenshot', 'finalScreenshot'] :
+                mode === 'emulated-management-ui' ? ['selectionScreenshot', 'reloadedScreenshot', 'connectedScreenshot', 'oauthWaitingScreenshot', 'oauthDeviceWaitingScreenshot', 'finalScreenshot'] :
                 selection ? ['aLaunchScreenshot', 'selectedScreenshot', 'reloadedScreenshot', 'bLaunchScreenshot', 'aSurvivedScreenshot', 'completedScreenshot', 'stoppedScreenshot'] :
                 processes ? ['beforeScreenshot', 'afterScreenshot'] :
                 lifecycle ? ['launchScreenshot', 'stoppedScreenshot', 'resumeSelectedScreenshot'] :

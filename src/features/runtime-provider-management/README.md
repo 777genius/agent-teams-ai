@@ -21,8 +21,13 @@ projected without private native extensions. Unknown prompt semantics disable th
 method. Main persists only original OAuth routing/fingerprints before native start;
 URLs/instructions/codes/field values never enter this intent journal. Code/cancel
 restore that exact selection after restart; replay never starts another login.
-Browser authorization stays private and safe progress contains app-owned text.
-Native device-code/instruction presentation still needs parity work.
+Native authorization replies stay private. Captured OpenCode V1 presents native
+instructions and device codes through the same text sanitizer and copyable-link
+policy as the original CLI path. Sanitized presentation is volatile and requires a
+fresh read of the original operation within its existing expiry; it is cleared on
+terminal progress. An automatic callback that still awaits the browser retains
+its instructions and cancellation controls. OpenCode V2 retains its existing
+API-key-only provider authentication boundary.
 
 Explicit model tests now use `CapturedModelProbe`: only a completed native probe
 can produce available. Group cancellation and context changes retain the original

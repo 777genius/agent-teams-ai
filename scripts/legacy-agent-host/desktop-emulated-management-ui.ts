@@ -197,9 +197,87 @@ export async function runDesktopEmulatedManagementUi(
   assert.deepEqual(opened, [{ accepted: true, peerOnly: true }]);
   proof.credentialEffects = effects.filter(row => ['authorize', 'credential-written', 'credential-forgotten'].includes(String(row.event)));
   proof.oauthCancellation = { phase: oauth[0]!.phase, resourceHeld: false, credentialAbsent: true, testOpenerCount: opened.length };
+  const autoRow = '[data-testid="runtime-provider-directory-row-TEST-oauth-auto"]';
+  const device = autoRow + ' [data-testid="runtime-provider-oauth-device-code"]';
+  await ui.scrollTo(autoRow + ' button', 'original automatic OAuth connection', 'Connect');
+  await ui.click(autoRow + ' button', 'open original automatic OAuth form', 'Connect');
+  await ui.waitRead('Boolean(document.querySelector(' +
+    desktopJsLiteral(autoRow + ' form button[type="submit"]') + '))', 'original automatic OAuth submit');
+  const autoOpeningDeadline = performance.now() + 30_000;
+  const autoRemaining = () => {
+    const value = Math.floor(autoOpeningDeadline - performance.now());
+    assert.ok(value > 0, 'original automatic OAuth observation deadline remains current');
+    return value;
+  };
+  await ui.click(autoRow + ' form button[type="submit"]', 'start one original automatic OAuth');
+  const automatic = await waitOriginal(async () => {
+    const current = await oauthCommands(), currentOpened = await openedRecords();
+    assert.ok(current.length <= 2, 'exactly the original manual and automatic OAuth commands');
+    assert.ok(currentOpened.length <= 2, 'one TEST opener per original OAuth operation');
+    const previous = current.find(row => row.commandId === originalOAuth.commandId);
+    assert.ok(previous); assert.equal(previous.phase, 'cancelled'); assert.equal(previous.resourceHeld, false);
+    const selected = current.filter(row => row.providerId === 'TEST-oauth-auto');
+    assert.ok(selected.length <= 1, 'one original automatic OAuth command');
+    return { command: selected[0], opened: currentOpened };
+  }, value => value.command?.phase === 'completing' && value.command.resourceHeld === true &&
+    value.opened.length === 2, autoOpeningDeadline, 'original automatic callback remains pending');
+  const originalAuto = automatic.command!;
+  assert.equal(typeof originalAuto.commandId, 'string');
+  assert.notEqual(originalAuto.commandId, originalOAuth.commandId);
+  assert.equal(originalAuto.completionMethod, 'auto');
+  assert.equal(originalAuto.completionCommandId, originalAuto.commandId + ':auto');
+  await ui.waitRead('(() => { const rows=[...document.querySelectorAll(' + desktopJsLiteral(device) +
+    ')]; return rows.length===1 && rows[0].querySelector(".font-mono")?.textContent.trim()==="A7F0-835A"; })()',
+    'original device code from the pending native callback', autoRemaining());
+  const display = record(await cdp.evaluate('(() => { const row=document.querySelector(' +
+    desktopJsLiteral(autoRow) + '); if(!row)return null; const buttons=[...row.querySelectorAll("form button")]' +
+    '.filter(button=>button.textContent.trim()==="Cancel"); return {' +
+    'privateTextAbsent:!row.textContent.includes("TEST-private"),' +
+    'privateLinkAbsent:!row.querySelector("[data-testid=runtime-provider-oauth-authorization-link]"),' +
+    'cancelEnabled:buttons.length===1&&!buttons[0].disabled }; })()'));
+  assert.deepEqual(display, { privateTextAbsent: true, privateLinkAbsent: true, cancelEnabled: true });
+  const autoBeforeCancel = (await peerLog()).filter(row => row.providerId === 'TEST-oauth-auto');
+  assert.deepEqual(autoBeforeCancel.map(row => row.event), ['authorize', 'callback-start']);
+  const copy = device + ' button[title]';
+  await ui.scrollTo(copy, 'original device-code copy control');
+  await ui.click(copy, 'copy original pending device code');
+  await ui.waitRead('Boolean(document.querySelector(' + desktopJsLiteral(copy + ' svg.lucide-check') + '))',
+    'original clipboard write acknowledged', autoRemaining());
+  assert.ok(performance.now() < autoOpeningDeadline, 'copy acknowledges within the original observation deadline');
+  proof.oauthDeviceWaitingScreenshot = await screenshot('ui-emulated-oauth-device-waiting.png');
+  const autoCancellationDeadline = performance.now() + 30_000;
+  await ui.click(autoRow + ' form button', 'cancel the original pending automatic OAuth', 'Cancel');
+  await ui.waitRead('!document.querySelector(' + desktopJsLiteral(autoRow + ' form') + ')',
+    'original automatic OAuth form closes', Math.max(1, autoCancellationDeadline - performance.now()));
+  const finalOAuth = await waitOriginal(async () => {
+    const current = await oauthCommands();
+    assert.equal(current.length, 2);
+    const previous = current.find(row => row.commandId === originalOAuth.commandId);
+    assert.ok(previous); assert.equal(previous.phase, 'cancelled'); assert.equal(previous.resourceHeld, false);
+    const selected = current.find(row => row.commandId === originalAuto.commandId);
+    assert.ok(selected);
+    assert.equal(selected.fingerprint, originalAuto.fingerprint);
+    assert.equal(selected.completionCommandId, originalAuto.completionCommandId);
+    return current;
+  }, value => value.every(row => row.phase === 'cancelled' && row.resourceHeld === false),
+    autoCancellationDeadline, 'same original automatic OAuth releases before completion');
+  const finalEffects = await peerLog(), finalOpened = await openedRecords();
+  assert.deepEqual(finalOpened, [{ accepted: true, peerOnly: true }, { accepted: true, peerOnly: true }]);
+  assert.equal(finalEffects.filter(row => row.event === 'authorize').length, 2);
+  assert.deepEqual(finalEffects.filter(row => row.providerId === 'TEST-oauth-auto').map(row => row.event),
+    ['authorize', 'callback-start']);
+  assert.equal(finalEffects.filter(row => row.event === 'credential-written' &&
+    (row.providerId === 'TEST-oauth-code' || row.providerId === 'TEST-oauth-auto')).length, 0);
+  assert.deepEqual(await json(authPath), {});
+  for (const forbidden of ['TEST-private', 'A7F0-835A', 'authorizationUrl'])
+    assert.equal(JSON.stringify(finalOAuth).includes(forbidden), false, 'private authorization stays out of Host receipts');
+  proof.oauthDeviceCancellation = { phaseBeforeCancel: 'completing', phase: 'cancelled',
+    resourceHeld: false, credentialAbsent: true, deviceCodeRendered: true, copyAcknowledged: true,
+    ...display, testOpenerCount: finalOpened.length, authorizeCount: 1, callbackCount: 1 };
+
   proof.finalScreenshot = await screenshot('ui-emulated-management-final.png');
   proof.fixturePins = await verifyDesktopEmulatedManagementFixture(fixture);
-  await writeFile(join(fixture.root, 'ui-emulated-management-effects.json'), JSON.stringify({ effects, oauth }, null, 2), { mode: 0o600, flag: 'wx' });
+  await writeFile(join(fixture.root, 'ui-emulated-management-effects.json'), JSON.stringify({ effects: finalEffects, oauth: finalOAuth }, null, 2), { mode: 0o600, flag: 'wx' });
   proof.status = 'PASS';
   proof.visualReview = 'original screenshots retained for independent inspection';
 }
