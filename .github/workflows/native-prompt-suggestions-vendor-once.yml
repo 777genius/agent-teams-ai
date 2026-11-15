@@ -363,6 +363,7 @@ jobs:
       LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI: "1"
       LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EXTENDED: "1"
       LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EDIT_GUARDS: "1"
+      LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_SHIFT_TAB: "1"
       LEGACY_DESKTOP_PROOF_MODE: native-conversation-ui
     steps:
       - name: Checkout only the published source-qualified consumer commit
@@ -404,6 +405,7 @@ jobs:
           pnpm --filter @agent-teams/legacy-agent-host build
           pnpm --filter agent-teams-controller build
           pnpm --filter agent-teams-mcp build
+          pnpm typecheck:legacy-host-scripts
       - name: Prepare fixed original Corepack, native SDK, and source identity
         shell: bash
         run: |
@@ -444,6 +446,7 @@ jobs:
           }
           JS
       - name: Real native Claude SDK through original captured Host and Electron Composer
+        id: native_claude_composer
         shell: bash
         run: |
           set -euo pipefail
@@ -451,6 +454,7 @@ jobs:
           "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 |
             tee "$RUNNER_TEMP/native-next-prompt-electron-ui.log"
       - name: Independently check actual Electron proof and collect real screenshots
+        if: ${{ always() && (steps.native_claude_composer.outcome == 'success' || steps.native_claude_composer.outcome == 'failure') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -458,47 +462,69 @@ jobs:
           import assert from 'node:assert/strict';
           import { execFileSync } from 'node:child_process';
           import { createHash } from 'node:crypto';
-          import { copyFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-          import { join } from 'node:path';
+          import { copyFileSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+          import { basename, dirname, join } from 'node:path';
           const log = readFileSync(join(process.env.RUNNER_TEMP, 'native-next-prompt-electron-ui.log'), 'utf8');
           assert.ok(Buffer.byteLength(log) < 8 * 1024 * 1024);
-          const matches = [...log.matchAll(/\{"status":"PASS","receipt":"([^"]+)"\}/g)];
-          assert.equal(matches.length, 1, 'one original Electron UI PASS receipt');
-          const path = realpathSync(matches[0][1]);
+          const terminal = log.split(/\r?\n/).flatMap(line => {
+            try {
+              const value = JSON.parse(line);
+              return value && ['PASS', 'INCOMPLETE'].includes(value.status) &&
+                typeof value.receipt === 'string' ? [value] : [];
+            } catch { return []; }
+          });
+          assert.equal(terminal.length, 1, 'one original terminal Electron receipt');
+          const path = realpathSync(terminal[0].receipt);
           assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/[^/]+\.json$/);
-          const r = JSON.parse(readFileSync(path, 'utf8'));
-          assert.equal(r.status, 'PASS');
-          assert.equal(r.conversationUiProof?.status, 'PASS');
-          const ui = r.nativeNextPromptUi;
-          assert.equal(ui?.status, 'PASS');
-          assert.equal(ui?.extended, true);
-          assert.equal(ui?.editGuards, true);
-          assert.equal(ui?.originalHumanInputs, 7,
-            'one ordinary first-turn warm-up and six independently qualified human turns');
-          assert.equal(ui?.qualifiedSamples, 6,
-            'all post-warm-up native turns must have one actual suggestion sample');
-          assert.ok(ui?.nativeSdkSamples === 6 || ui?.nativeSdkSamples === 7,
-            'first native session turn may or may not emit one optional sample');
-          assert.equal(ui?.noAutoSend, true);
-          assert.equal(ui?.originalNativeCustodyReleased, true);
-          assert.equal(ui?.shiftTabPreserved, true);
-          assert.equal(ui?.imePreserved, true);
-          assert.equal(ui?.attachmentInvalidation, true);
-          assert.equal(ui?.chipInvalidation, true);
-          assert.equal(ui?.screenshots?.length, 6);
-          assert.deepEqual(ui.screenshots.map(shot => [shot.theme, shot.compact]),
-            [['dark', false], ['dark', false], ['dark', false], ['light', true],
-             ['light', false], ['light', false]]);
-          for (const [index, shot] of ui.screenshots.entries()) {
+          assert.ok(statSync(path).isFile() && statSync(path).size < 8 * 1024 * 1024);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          writeFileSync(join(process.env.RUNNER_TEMP, 'native-next-prompt-electron-evidence.json'),
+            JSON.stringify({publishedSource:execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+              triggerSha:process.env.GITHUB_SHA, receipt}, null, 2));
+          const proof = receipt.nativeNextPromptUi;
+          const screenshots = proof?.screenshots ?? [];
+          assert.ok(Array.isArray(screenshots) && screenshots.length <= 7);
+          function retainPng(shot, name) {
             const png = realpathSync(shot.path);
-            assert.ok(png.startsWith('/private/tmp/TEST-desktop-backend-'));
+            assert.equal(dirname(png), dirname(path), 'PNG belongs to this exact TEST fixture');
+            assert.ok(statSync(png).isFile() && statSync(png).size <= 8 * 1024 * 1024);
+            assert.match(shot.sha256, /^[a-f0-9]{64}$/);
             const bytes = readFileSync(png);
             assert.ok(bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])));
             assert.equal(createHash('sha256').update(bytes).digest('hex'), shot.sha256);
-            copyFileSync(png, join(process.env.RUNNER_TEMP, 'native-next-prompt-' + index + '.png'));
+            copyFileSync(png, join(process.env.RUNNER_TEMP, name));
           }
-          writeFileSync(join(process.env.RUNNER_TEMP, 'native-next-prompt-electron-evidence.json'),
-            JSON.stringify({source:execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), triggerSha:process.env.GITHUB_SHA, receipt:r}, null, 2));
+          assert.equal(new Set(screenshots.map(shot => realpathSync(shot.path))).size, screenshots.length);
+          for (const [index, shot] of screenshots.entries()) {
+            retainPng(shot, 'native-next-prompt-' + index + '.png');
+          }
+          if (receipt.failureScreenshot) {
+            assert.equal(basename(receipt.failureScreenshot.path), 'ui-failure.png');
+            retainPng(receipt.failureScreenshot, 'native-next-prompt-failure.png');
+          }
+          assert.equal(terminal[0].status, 'PASS');
+          assert.equal(receipt.status, 'PASS');
+          assert.equal(receipt.conversationUiProof?.status, 'PASS');
+          assert.equal(proof?.status, 'PASS');
+          assert.equal(proof?.extended, true);
+          assert.equal(proof?.editGuards, true);
+          assert.equal(proof?.originalHumanInputs, 8,
+            'one ordinary first-turn warm-up and seven independently qualified human turns');
+          assert.equal(proof?.qualifiedSamples, 7,
+            'all post-warm-up native turns must have one actual suggestion sample');
+          assert.ok(proof?.nativeSdkSamples === 7 || proof?.nativeSdkSamples === 8,
+            'first native session turn may or may not emit one optional sample');
+          assert.equal(proof?.noAutoSend, true);
+          assert.equal(proof?.originalNativeCustodyReleased, true);
+          assert.equal(proof?.shiftTabPreserved, true);
+          assert.equal(proof?.shiftTabWithVisibleOffer, true);
+          assert.equal(proof?.imePreserved, true);
+          assert.equal(proof?.attachmentInvalidation, true);
+          assert.equal(proof?.chipInvalidation, true);
+          assert.equal(screenshots.length, 7);
+          assert.deepEqual(screenshots.map(shot => [shot.theme, shot.compact]),
+            [['dark', false], ['dark', false], ['dark', false], ['light', true],
+             ['light', false], ['light', false], ['light', false]]);
           JS
       - name: Retain actual Electron screenshots, receipt and setup diagnostics
         if: always()
@@ -732,6 +758,7 @@ jobs:
           }
           JS
       - name: Actual Electron Composer with reversed Claude and Codex lead and peer teams
+        id: native_mixed_composer
         env:
           LEGACY_DESKTOP_BACKEND_GO: "1"
           LEGACY_DESKTOP_PROOF_MODE: native-next-prompt-mixed-ui
@@ -742,6 +769,7 @@ jobs:
           "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 |
             tee "$RUNNER_TEMP/native-next-prompt-mixed-ui.log"
       - name: Independently verify mixed native role and privacy proof and screenshot bytes
+        if: ${{ always() && (steps.native_mixed_composer.outcome == 'success' || steps.native_mixed_composer.outcome == 'failure') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -749,17 +777,48 @@ jobs:
           import assert from 'node:assert/strict';
           import { execFileSync } from 'node:child_process';
           import { createHash } from 'node:crypto';
-          import { copyFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-          import { join } from 'node:path';
+          import { copyFileSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+          import { basename, dirname, join } from 'node:path';
           const log = readFileSync(join(process.env.RUNNER_TEMP, 'native-next-prompt-mixed-ui.log'), 'utf8');
           assert.ok(Buffer.byteLength(log) < 8 * 1024 * 1024);
-          const matches = [...log.matchAll(/\{"status":"PASS","receipt":"([^"]+)"\}/g)];
-          assert.equal(matches.length, 1, 'one original mixed Electron UI PASS receipt');
-          const path = realpathSync(matches[0][1]);
+          const terminal = log.split(/\r?\n/).flatMap(line => {
+            try {
+              const value = JSON.parse(line);
+              return value && ['PASS', 'INCOMPLETE'].includes(value.status) &&
+                typeof value.receipt === 'string' ? [value] : [];
+            } catch { return []; }
+          });
+          assert.equal(terminal.length, 1, 'one original terminal Electron receipt');
+          const path = realpathSync(terminal[0].receipt);
           assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/[^/]+\.json$/);
+          assert.ok(statSync(path).isFile() && statSync(path).size < 8 * 1024 * 1024);
           const receipt = JSON.parse(readFileSync(path, 'utf8'));
-          assert.equal(receipt.status, 'PASS');
+          writeFileSync(join(process.env.RUNNER_TEMP, 'native-next-prompt-mixed-evidence.json'),
+            JSON.stringify({publishedSource:execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+              triggerSha:process.env.GITHUB_SHA, receipt}, null, 2));
           const proof = receipt.nativeNextPromptMixedUi;
+          const screenshots = proof?.screenshots ?? [];
+          assert.ok(Array.isArray(screenshots) && screenshots.length <= 4);
+          function retainPng(shot, name) {
+            const png = realpathSync(shot.path);
+            assert.equal(dirname(png), dirname(path), 'PNG belongs to this exact TEST fixture');
+            assert.ok(statSync(png).isFile() && statSync(png).size <= 8 * 1024 * 1024);
+            assert.match(shot.sha256, /^[a-f0-9]{64}$/);
+            const bytes = readFileSync(png);
+            assert.ok(bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])));
+            assert.equal(createHash('sha256').update(bytes).digest('hex'), shot.sha256);
+            copyFileSync(png, join(process.env.RUNNER_TEMP, name));
+          }
+          assert.equal(new Set(screenshots.map(shot => realpathSync(shot.path))).size, screenshots.length);
+          for (const [index, shot] of screenshots.entries()) {
+            retainPng(shot, 'native-next-prompt-mixed-' + index + '.png');
+          }
+          if (receipt.failureScreenshot) {
+            assert.equal(basename(receipt.failureScreenshot.path), 'ui-failure.png');
+            retainPng(receipt.failureScreenshot, 'native-next-prompt-mixed-failure.png');
+          }
+          assert.equal(terminal[0].status, 'PASS');
+          assert.equal(receipt.status, 'PASS');
           assert.equal(proof?.status, 'PASS');
           assert.equal(proof?.originalHumanInputs, 10);
           assert.equal(proof?.noAutoSend, true);
@@ -769,18 +828,7 @@ jobs:
              ['codex', 'lead', 'Insert'], ['claude', 'member', 'Tab']]);
           assert.deepEqual(proof.isolated.map(row => [row.sameTeam, row.sameMemberId]),
             [[true, false], [false, true]]);
-          assert.equal(proof.screenshots.length, 4);
-          for (const [index, shot] of proof.screenshots.entries()) {
-            const png = realpathSync(shot.path);
-            assert.ok(png.startsWith('/private/tmp/TEST-desktop-backend-'));
-            const bytes = readFileSync(png);
-            assert.ok(bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])));
-            assert.equal(createHash('sha256').update(bytes).digest('hex'), shot.sha256);
-            copyFileSync(png, join(process.env.RUNNER_TEMP, 'native-next-prompt-mixed-' + index + '.png'));
-          }
-          writeFileSync(join(process.env.RUNNER_TEMP, 'native-next-prompt-mixed-evidence.json'),
-            JSON.stringify({publishedSource:execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
-              triggerSha:process.env.GITHUB_SHA, receipt}, null, 2));
+          assert.equal(screenshots.length, 4);
           JS
       - name: Retain native Codex 0.1690 prompt-suggestion proof
         if: always()

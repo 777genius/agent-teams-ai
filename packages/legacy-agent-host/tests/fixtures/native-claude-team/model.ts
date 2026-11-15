@@ -561,7 +561,7 @@ export async function startNativeTeamModel(
         });
       }
       assert.ok(
-        observations.length + notificationObservations.length < (options.peerMessaging ? 48 : options.nativeNextPromptDirectUi ? 5 : options.nativeNextPromptUi ? 22 : 16),
+        observations.length + notificationObservations.length < (options.peerMessaging ? 48 : options.nativeNextPromptDirectUi ? 5 : options.nativeNextPromptUi ? 24 : 16),
         'finite native model request budget'
       );
       let turn = '';
@@ -580,7 +580,7 @@ export async function startNativeTeamModel(
                 .join('\n');
         const group = options.mixedGroups ? readMixedGroupTurn(text, 'team-lead') : undefined;
         const match = (options.nativeNextPromptUi
-          ? /NATIVE_TEAM_(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN)/ : /NATIVE_TEAM_(ONE|TWO|THREE|FOUR)/).exec(text);
+          ? /NATIVE_TEAM_(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT)/ : /NATIVE_TEAM_(ONE|TWO|THREE|FOUR)/).exec(text);
         const peer = options.peerMessaging ? nativePeerTurn(text, 'alice') : undefined;
         if (options.mixedTaskNotifications) {
           const currentText = text;
@@ -611,7 +611,7 @@ export async function startNativeTeamModel(
       // original finished source turn, never another business tool or user
       // input. The counters are advanced only by real source actions.
       if (options.nativeNextPromptUi &&
-          ['NATIVE_TEAM_ONE', 'NATIVE_TEAM_TWO', 'NATIVE_TEAM_THREE', 'NATIVE_TEAM_FOUR', 'NATIVE_TEAM_FIVE', 'NATIVE_TEAM_SIX', 'NATIVE_TEAM_SEVEN'].includes(turn)) {
+          ['NATIVE_TEAM_ONE', 'NATIVE_TEAM_TWO', 'NATIVE_TEAM_THREE', 'NATIVE_TEAM_FOUR', 'NATIVE_TEAM_FIVE', 'NATIVE_TEAM_SIX', 'NATIVE_TEAM_SEVEN', 'NATIVE_TEAM_EIGHT'].includes(turn)) {
         const complete = options.nativeNextPromptDirectUi ? 2
           : turn === 'NATIVE_TEAM_ONE' ? 8 : turn === 'NATIVE_TEAM_TWO' ? 3 : 2;
         if (step >= complete) {
@@ -620,7 +620,7 @@ export async function startNativeTeamModel(
           assert.ok(source.includes('NATIVE_TEAM_ONE'), 'native followup inherits original user context');
           assert.ok(source.includes(turn), 'native followup is attached to current source turn');
           suggestionRequests.push({ turn, step, inheritedHumanContext: true });
-          assert.ok(suggestionRequests.length <= (options.nativeNextPromptDirectUi ? 2 : 7),
+          assert.ok(suggestionRequests.length <= (options.nativeNextPromptDirectUi ? 2 : 8),
             'at most one auxiliary sample per original native turn');
           emitResponse(response, ++sequence,
             { type: 'text', text: turn === 'NATIVE_TEAM_ONE'
@@ -635,7 +635,9 @@ export async function startNativeTeamModel(
                       ? 'Check the final report and summarize the remaining work.'
                       : turn === 'NATIVE_TEAM_SIX'
                         ? 'Review the attachment changes and verify the result.'
-                        : 'Review the referenced file and summarize the result.' },
+                        : turn === 'NATIVE_TEAM_SEVEN'
+                          ? 'Review the referenced file and summarize the result.'
+                          : 'Review the current action mode and verify the result.' },
             typeof body.model === 'string' ? body.model : undefined);
           return;
         }
@@ -838,6 +840,10 @@ export async function startNativeTeamModel(
         name: 'message_send',
         input: { commandId: 'native-reply-seven', to: 'user', text: 'REPLY_NATIVE_SEVEN' },
       }];
+      const eight: { name: string; input: RecordValue }[] = [{
+        name: 'message_send',
+        input: { commandId: 'native-reply-eight', to: 'user', text: 'REPLY_NATIVE_EIGHT' },
+      }];
       const action = notice
         ? undefined
         : (options.nativeNextPromptDirectUi ? (turn === 'NATIVE_TEAM_ONE' ? one : two).slice(-1)
@@ -846,7 +852,8 @@ export async function startNativeTeamModel(
           turn === 'NATIVE_TEAM_FOUR' && options.nativeNextPromptUi ? four :
           turn === 'NATIVE_TEAM_FIVE' && options.nativeNextPromptUi ? five :
           turn === 'NATIVE_TEAM_SIX' && options.nativeNextPromptUi ? six :
-          turn === 'NATIVE_TEAM_SEVEN' && options.nativeNextPromptUi ? seven : two))[step];
+          turn === 'NATIVE_TEAM_SEVEN' && options.nativeNextPromptUi ? seven :
+          turn === 'NATIVE_TEAM_EIGHT' && options.nativeNextPromptUi ? eight : two))[step];
       if (!action) {
         counters.set(turn, step + 1);
         emitResponse(

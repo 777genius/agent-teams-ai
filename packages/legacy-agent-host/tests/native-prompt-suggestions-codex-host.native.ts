@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
+import { assertAccountNamespaces } from '../dist/composition/assertAccountNamespaces.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import {
   createCodexSuggestionProfile,
@@ -123,6 +124,7 @@ test(
     const model = await startCodexSuggestionModel({ sources });
     const notices: Record<string, unknown>[] = [];
     let host: ReturnType<typeof startHost> | undefined;
+    let primaryFailed = false;
     let receipt: Record<string, unknown> = {
       passed: false,
       nativeVersion: '0.169.0',
@@ -182,6 +184,7 @@ test(
           })
         )
       );
+      assertAccountNamespaces(profiles);
       const version = execFileSync(pins.executable.path, ['--version'], {
         cwd: profiles[0]!.cwd,
         env: profiles[0]!.environment,
@@ -498,6 +501,7 @@ test(
         localhostModelCalls: model.requests.length,
       };
     } catch (error) {
+      primaryFailed = true;
       receipt = {
         ...receipt,
         passed: false,
@@ -523,7 +527,7 @@ test(
         await writeFile(destination, `${JSON.stringify(receipt, null, 2)}\n`, { mode: 0o600 });
       t.diagnostic(JSON.stringify(receipt));
       await rm(root, { recursive: true, force: true });
-      if (cleanupError) throw cleanupError;
+      if (cleanupError && !primaryFailed) throw cleanupError;
     }
   }
 );

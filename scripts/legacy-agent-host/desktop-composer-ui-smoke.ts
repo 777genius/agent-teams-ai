@@ -54,10 +54,13 @@ export async function runDesktopComposerUiSmoke(
   const nativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI === '1';
   const extendedNativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EXTENDED === '1';
   const nativeNextPromptEditGuards = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EDIT_GUARDS === '1';
+  const nativeNextPromptShiftTab = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_SHIFT_TAB === '1';
   assert.ok(!extendedNativeNextPromptUi || nativeNextPromptUi,
     'extended suggestion proof requires its original native conversation fixture');
   assert.ok(!nativeNextPromptEditGuards || extendedNativeNextPromptUi,
     'suggestion edit guards require the original extended native UI fixture');
+  assert.ok(!nativeNextPromptShiftTab || nativeNextPromptEditGuards,
+    'visible-offer Shift+Tab requires the original native edit-guard fixture');
   if (nativeNextPromptUi) {
     assert.ok(!openCode && options.model?.suggestionRequests,
       'original TEST Claude SDK must supply the actual follow-up model oracle');
@@ -175,7 +178,8 @@ export async function runDesktopComposerUiSmoke(
         ...(nativeNextPromptEditGuards ? [
           ['NATIVE_TEAM_SIX', 'REPLY_NATIVE_SIX'] as const,
           ['NATIVE_TEAM_SEVEN', 'REPLY_NATIVE_SEVEN'] as const,
-        ] : [])]
+        ] : []),
+        ...(nativeNextPromptShiftTab ? [['NATIVE_TEAM_EIGHT', 'REPLY_NATIVE_EIGHT'] as const] : [])]
     : turns;
   for (const [turn, reply] of selectedTurns) {
     if (nativeNextPromptUi && turn === 'NATIVE_TEAM_FIVE')
@@ -296,7 +300,7 @@ export async function runDesktopComposerUiSmoke(
       assert.ok(
         turn === 'NATIVE_TEAM_ONE' || turn === 'NATIVE_TEAM_TWO' ||
           turn === 'NATIVE_TEAM_THREE' || turn === 'NATIVE_TEAM_FOUR' || turn === 'NATIVE_TEAM_FIVE' ||
-          turn === 'NATIVE_TEAM_SIX' || turn === 'NATIVE_TEAM_SEVEN',
+          turn === 'NATIVE_TEAM_SIX' || turn === 'NATIVE_TEAM_SEVEN' || turn === 'NATIVE_TEAM_EIGHT',
         'original Claude native conversation only',
       );
       // Claude SDK's first native turn may not emit a follow-up. Only
@@ -432,14 +436,16 @@ export async function runDesktopComposerUiSmoke(
     assert.deepEqual(qualified, [
       ...(extendedNativeNextPromptUi ? ['NATIVE_TEAM_FIVE'] : []),
       ...(nativeNextPromptEditGuards ? ['NATIVE_TEAM_SIX', 'NATIVE_TEAM_SEVEN'] : []),
+      ...(nativeNextPromptShiftTab ? ['NATIVE_TEAM_EIGHT'] : []),
       'NATIVE_TEAM_FOUR', 'NATIVE_TEAM_THREE', 'NATIVE_TEAM_TWO',
     ].sort(), 'all post-warm-up human turns each produce exactly one real native suggestion');
-    assert.ok(sampled.length <= (nativeNextPromptEditGuards ? 7 : extendedNativeNextPromptUi ? 5 : 4),
+    assert.ok(sampled.length <= (nativeNextPromptShiftTab ? 8 : nativeNextPromptEditGuards ? 7 : extendedNativeNextPromptUi ? 5 : 4),
       'warm-up can optionally produce at most one native suggestion');
     assert.equal(Array.isArray(proof.screenshots) ? proof.screenshots.length : 0,
-      nativeNextPromptEditGuards ? 6 : extendedNativeNextPromptUi ? 4 : 3,
+      nativeNextPromptShiftTab ? 7 : nativeNextPromptEditGuards ? 6 : extendedNativeNextPromptUi ? 4 : 3,
       'each actual Electron row has a screenshot');
     assert.equal(proof.shiftTabPreserved, true);
+    if (nativeNextPromptShiftTab) assert.equal(proof.shiftTabWithVisibleOffer, true);
     if (extendedNativeNextPromptUi) assert.equal(proof.imePreserved, true);
     if (nativeNextPromptEditGuards) {
       assert.equal(proof.attachmentInvalidation, true);
@@ -447,7 +453,8 @@ export async function runDesktopComposerUiSmoke(
     }
     assert.deepEqual((proof.screenshots as Record<string, unknown>[]).map(shot => [shot.theme, shot.compact]),
       [['dark', false], ['dark', false], ['dark', false], ...(extendedNativeNextPromptUi ? [['light', true]] : []),
-        ...(nativeNextPromptEditGuards ? [['light', false], ['light', false]] : [])]);
+        ...(nativeNextPromptEditGuards ? [['light', false], ['light', false]] : []),
+        ...(nativeNextPromptShiftTab ? [['light', false]] : [])]);
     options.evidence.nativeNextPromptUi = {
       ...proof, status: 'PASS', originalHumanInputs: inputIds.length,
       nativeSdkSamples: sampled.length, qualifiedSamples: qualified.length,

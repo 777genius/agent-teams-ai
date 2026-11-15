@@ -162,7 +162,7 @@ stream_max_retries = 0
     protocolRevision: '0.169.0',
     cwd: join(root, 'workspace'),
     model: 'mock-model',
-    accountBinding: 'TEST-no-vendor-auth',
+    accountBinding: `TEST-no-vendor-auth-${createHash('sha256').update(root).digest('hex')}`,
     executable: options.executable,
     environment,
     nativeOptions: {

@@ -11,7 +11,7 @@ import type { UiCdpPort, createDesktopUiControls } from './desktop-ui-controls.t
 type Ui = ReturnType<typeof createDesktopUiControls>;
 export type NativeNextPromptUiTurn =
   'NATIVE_TEAM_TWO' | 'NATIVE_TEAM_THREE' | 'NATIVE_TEAM_FOUR' | 'NATIVE_TEAM_FIVE' |
-  'NATIVE_TEAM_SIX' | 'NATIVE_TEAM_SEVEN';
+  'NATIVE_TEAM_SIX' | 'NATIVE_TEAM_SEVEN' | 'NATIVE_TEAM_EIGHT';
 
 // Real SDK generation may filter machine-like markers; use genuine user phrasing.
 const expectedPrompt = (turn: NativeNextPromptUiTurn) =>
@@ -20,7 +20,8 @@ const expectedPrompt = (turn: NativeNextPromptUiTurn) =>
       turn === 'NATIVE_TEAM_FOUR' ? 'Verify the final results and prepare a report.' :
         turn === 'NATIVE_TEAM_FIVE' ? 'Check the final report and summarize the remaining work.' :
           turn === 'NATIVE_TEAM_SIX' ? 'Review the attachment changes and verify the result.' :
-            'Review the referenced file and summarize the result.';
+            turn === 'NATIVE_TEAM_SEVEN' ? 'Review the referenced file and summarize the result.' :
+              'Review the current action mode and verify the result.';
 
 /** Actual CDP keyboard interaction; never assign a controlled draft through DOM evaluation. */
 async function key(cdp: UiCdpPort, name: string, code: string, virtual: number, modifiers = 0) {
@@ -44,6 +45,53 @@ async function clearInsertedDraft(cdp: UiCdpPort, ui: Ui) {
     "document.querySelector('.message-composer-flat-layout textarea')?.value === ''",
     'ordinary editor is empty after physical clear',
   );
+}
+
+/** Shift+Tab belongs to the existing action-mode shortcut, not browser focus navigation. */
+async function qualifyActionModeShiftTab(cdp: UiCdpPort, ui: Ui, visibleOffer: boolean) {
+  const selector = '.message-composer-flat-layout .message-composer-action-modes';
+  type ModeState = {
+    modes: string[]; mode: string; empty: boolean; focused: boolean; offer: boolean;
+  };
+  const readState = `(() => {
+    const groups=[...document.querySelectorAll(${desktopJsLiteral(selector)})];
+    const editor=document.querySelector('.message-composer-flat-layout textarea');
+    if(groups.length!==1||!editor)return null;
+    const radios=[...groups[0].querySelectorAll('button[role="radio"]')];
+    const selected=radios.filter(radio=>radio.getAttribute('aria-checked')==='true');
+    if(selected.length!==1||radios.some(radio=>radio.disabled||!radio.getClientRects().length))return null;
+    return {modes:radios.map(radio=>radio.textContent.trim()),mode:selected[0].textContent.trim(),
+      empty:editor.value==='',focused:document.activeElement===editor,
+      offer:!!document.querySelector('[data-testid="native-next-prompt-row"]')};
+  })()`;
+  const before = await ui.waitRead(readState, 'original selected action mode') as ModeState;
+  assert.deepEqual(before.modes, before.modes.includes('Delegate')
+    ? ['Do', 'Ask', 'Delegate'] : ['Do', 'Ask']);
+  assert.ok(before.empty && before.focused, 'physical shortcut starts in the empty original editor');
+  assert.equal(before.offer, visibleOffer, 'the shortcut starts with the expected real offer state');
+  const nextMode = before.modes[(before.modes.indexOf(before.mode) + 1) % before.modes.length];
+  assert.ok(typeof nextMode === 'string' && nextMode !== before.mode);
+  const waitMode = async (mode: string, label: string) => {
+    const value = await ui.waitRead(readState, label, 30_000, value => {
+      const state = value as ModeState | null;
+      return Boolean(state?.mode === mode && state.empty && state.focused && !state.offer);
+    }) as ModeState;
+    assert.deepEqual(value.modes, before.modes, 'the original action modes remain available');
+    return value;
+  };
+  await key(cdp, 'Tab', 'Tab', 9, 8);
+  const after = await waitMode(nextMode,
+    'Shift+Tab cycles the original mode, refocuses the empty editor and invalidates any offer');
+  await ui.click(selector + ' button[role="radio"]',
+    'restore original action mode through its existing radio', before.mode);
+  const restored = await waitMode(before.mode, 'original action mode restored without inserting text');
+  // Observe a later renderer turn after mode restoration, not just a transient hidden row.
+  await new Promise<void>(resolve => setTimeout(resolve, 100));
+  const settled = await cdp.evaluate(readState) as ModeState | null;
+  assert.ok(settled?.mode === before.mode && settled.empty && settled.focused && !settled.offer,
+    'restoring the original mode cannot resurrect or insert the invalidated offer');
+  return { beforeMode: before.mode, nextMode: after.mode, restoredMode: restored.mode,
+    visibleOffer: before.offer, draftStayedEmpty: true, offerAbsentAfterRestore: true };
 }
 
 /** Change the real isolated app through its existing Appearance and layout controls. */
@@ -119,7 +167,9 @@ export async function qualifyNativeNextPromptUiStep(
 ): Promise<void> {
   assert.equal(process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI, '1');
   const editGuard = options.turn === 'NATIVE_TEAM_SIX' || options.turn === 'NATIVE_TEAM_SEVEN';
-  if (editGuard) {
+  const shiftTabGuard = options.turn === 'NATIVE_TEAM_EIGHT';
+  if (shiftTabGuard) assert.equal(process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_SHIFT_TAB, '1');
+  if (editGuard || shiftTabGuard) {
     assert.equal(process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EDIT_GUARDS, '1');
     assert.equal(process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EXTENDED, '1');
   }
@@ -160,7 +210,8 @@ export async function qualifyNativeNextPromptUiStep(
   assert.ok(appearance.plainText && appearance.previewMatches);
   assert.deepEqual(appearance.controls.map(control => control.label), ['Insert', 'Dismiss suggestion']);
   assert.ok(appearance.controls.every(control => control.reachable && control.height >= 43 && control.width > 0));
-  assert.equal(appearance.theme, options.turn === 'NATIVE_TEAM_FIVE' || editGuard ? 'light' : 'dark');
+  assert.equal(appearance.theme,
+    options.turn === 'NATIVE_TEAM_FIVE' || editGuard || shiftTabGuard ? 'light' : 'dark');
   assert.equal(appearance.compact, options.turn === 'NATIVE_TEAM_FIVE');
 
   const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
@@ -171,7 +222,8 @@ export async function qualifyNativeNextPromptUiStep(
   await writeFile(imagePath, Buffer.from(data, 'base64'), { mode: 0o600 });
   const proof = options.evidence.nativeNextPromptUi as {
     screenshots: Array<{turn:string;path:string;sha256:string;theme:string;compact:boolean}>;
-    shiftTabPreserved?: boolean; imePreserved?: boolean;
+    shiftTabPreserved?: boolean; shiftTabWithVisibleOffer?: boolean; imePreserved?: boolean;
+    shiftTabActionMode?: Record<string, unknown>;
     attachmentInvalidation?: boolean; chipInvalidation?: boolean;
     attachmentEdit?: Record<string, unknown>; chipEdit?: Record<string, unknown>;
   };
@@ -179,18 +231,11 @@ export async function qualifyNativeNextPromptUiStep(
     theme: appearance.theme, compact: appearance.compact });
   await ui.click('.message-composer-flat-layout textarea', 'focus ordinary native suggestion editor');
 
-  if (options.turn === 'NATIVE_TEAM_TWO') {
-    await key(cdp, 'Tab', 'Tab', 9, 8);
-    await ui.waitRead(`(() => {
-      const editor=document.querySelector('.message-composer-flat-layout textarea');
-      return editor?.value==='' && document.activeElement!==editor &&
-        !!document.querySelector('[data-testid="native-next-prompt-row"]');
-    })()`, 'Shift+Tab preserves the offer and ordinary focus navigation');
+  if (shiftTabGuard) {
+    proof.shiftTabActionMode = await qualifyActionModeShiftTab(cdp, ui, true);
     proof.shiftTabPreserved = true;
-    await ui.click('.message-composer-flat-layout textarea', 'return to original suggestion editor');
-  }
-
-  if (options.turn === 'NATIVE_TEAM_SIX') {
+    proof.shiftTabWithVisibleOffer = true;
+  } else if (options.turn === 'NATIVE_TEAM_SIX') {
     proof.attachmentEdit = await qualifyNativeNextPromptAttachmentEdit(cdp, ui, options);
     proof.attachmentInvalidation = true;
   } else if (options.turn === 'NATIVE_TEAM_SEVEN') {
@@ -243,10 +288,17 @@ export async function qualifyNativeNextPromptUiStep(
       'a consumed suggestion cannot remain interactive',
     );
     await clearInsertedDraft(cdp, ui);
+    if (options.turn === 'NATIVE_TEAM_TWO' &&
+        process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_SHIFT_TAB !== '1') {
+      // Older workflow definitions retain their original turn count. Their shortcut
+      // proof runs after Insert/clear; the flagged eighth turn proves a visible offer.
+      proof.shiftTabActionMode = await qualifyActionModeShiftTab(cdp, ui, false);
+      proof.shiftTabPreserved = true;
+    }
   }
 
   assert.equal(await options.originalHumanSendCount(), options.expectedHumanInputs,
-    'Tab, Escape, Insert, IME, attachment and chip edits never send a new human message');
+    'Tab, Shift+Tab, Escape, Insert, IME, attachment and chip edits never send a new human message');
   assert.equal(options.modelSampleCountForTurn(), 1,
     'composer interactions cannot start a second native sample');
   options.step({
@@ -256,7 +308,8 @@ export async function qualifyNativeNextPromptUiStep(
       : options.turn === 'NATIVE_TEAM_THREE' ? 'Escape'
         : options.turn === 'NATIVE_TEAM_FOUR' ? 'Tab'
           : options.turn === 'NATIVE_TEAM_FIVE' ? 'IME'
-            : options.turn === 'NATIVE_TEAM_SIX' ? 'Attachment add/remove' : 'File chip add/remove',
+            : options.turn === 'NATIVE_TEAM_SIX' ? 'Attachment add/remove'
+              : options.turn === 'NATIVE_TEAM_SEVEN' ? 'File chip add/remove' : 'Shift+Tab action mode',
     appearance,
     modelSampleCount: options.modelSampleCount(),
     sentHumanMessages: options.expectedHumanInputs,
