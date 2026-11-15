@@ -153,7 +153,8 @@ export async function runDesktopComposerUiSmoke(
             'Verify the final results and prepare a report.',
             'Check the final report and summarize the remaining work.',
             'Review the attachment changes and verify the result.',
-            'Review the referenced file and summarize the result.'
+            'Review the referenced file and summarize the result.',
+            'Review the current action mode and verify the result.'
           ].includes(value.text)
         });
       });
@@ -182,6 +183,10 @@ export async function runDesktopComposerUiSmoke(
         ...(nativeNextPromptShiftTab ? [['NATIVE_TEAM_EIGHT', 'REPLY_NATIVE_EIGHT'] as const] : [])]
     : turns;
   for (const [turn, reply] of selectedTurns) {
+    if (nativeNextPromptUi) {
+      record(options.evidence.nativeNextPromptUi).currentTurn = turn;
+      process.stderr.write('TEST_NATIVE_COMPOSER_STAGE ' + JSON.stringify({ turn }) + '\n');
+    }
     if (nativeNextPromptUi && turn === 'NATIVE_TEAM_FIVE')
       await prepareNativeNextPromptImeUi(cdp, ui);
     await ui.click('.message-composer-flat-layout textarea', 'focus ordinary Composer');

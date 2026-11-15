@@ -78,22 +78,42 @@ async function readOriginalNativeTurns(home: string) {
   const started = events.filter((row) => row.type === 'task_started').map((row) => row.turn_id);
   const completed = events.filter((row) => row.type === 'task_complete').map((row) => row.turn_id);
   assert.ok(started.every((id) => typeof id === 'string' && id.length > 0));
+  // Codex rust-v0.169.0 (d32063f96c2dff1dc96af839b3952abb6acfeda4):
+  // codex-rs/rollout/src/policy.rs persists paginated item_completed / UserMessage;
+  // codex-rs/protocol/src/{protocol,items,user_input}.rs defines these source fields.
+  const sourceTurns = events
+    .filter((row) => row.type === 'item_completed' && record(row.item).type === 'UserMessage')
+    .map((row) => {
+      assert.equal(row.thread_id, nativeSession, 'human item retains its original native session');
+      const turnId = row.turn_id;
+      assert.ok(
+        typeof turnId === 'string' && started.includes(turnId),
+        'human item retains an original started native turn'
+      );
+      const content = record(row.item).content;
+      assert.ok(Array.isArray(content) && content.length > 0);
+      const text = content
+        .map((part) => {
+          const input = record(part);
+          assert.equal(input.type, 'text', 'this finite source contains original text inputs');
+          assert.ok(typeof input.text === 'string');
+          return input.text;
+        })
+        .join('');
+      assert.ok(text.length > 0);
+      return { turnId, text };
+    });
+  assert.equal(
+    new Set(sourceTurns.map((row) => row.turnId)).size,
+    sourceTurns.length,
+    'each original native turn has exactly one human source item'
+  );
   return {
     nativeSession,
     started,
     completed,
-    // Codex 0.169 persists authored user content as response_item/message rows.
-    // Count actual native records, never the separate auxiliary model calls.
-    sourceMessages: [
-      ...events.filter((row) => row.type === 'user_message').map((row) => String(row.message)),
-      ...history.filter((row) => row.type === 'response_item')
-        .map((row) => record(row.payload))
-        .filter((row) => row.type === 'message' && row.role === 'user')
-        .flatMap((row) => Array.isArray(row.content) ? row.content : [])
-        .map(record)
-        .filter((part) => part.type === 'input_text' && typeof part.text === 'string')
-        .map((part) => String(part.text)),
-    ],
+    sourceTurnRefs: sourceTurns.map((row) => row.turnId),
+    sourceMessages: sourceTurns.map((row) => row.text),
   };
 }
 
@@ -488,6 +508,15 @@ test(
           history.sourceMessages.length,
           2,
           'auxiliary sampling never persists another native user message'
+        );
+        assert.equal(
+          history.sourceTurnRefs[
+            history.sourceMessages.findIndex((message) =>
+              message.includes(sources[members.indexOf(member)]!.marker)
+            )
+          ],
+          qualified.nativeTurnRef,
+          'Host notice names the completed turn of this exact original human message'
         );
         for (const source of sources) {
           assert.equal(
