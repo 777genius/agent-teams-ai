@@ -121,7 +121,7 @@ it('Main admits each finite process-backed provider without requiring a Claude m
 
 for (const outcome of ['intact', 'changed-tail', 'replaced-during-read', 'read-error'] as const) {
   it(`Main streaming verification keeps full-file and descriptor guarantees: ${outcome}`, async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-windows-stream-')));
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'TEST-windows-stream-')));
     const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
     const providerPath = join(root, 'provider.exe'), brokerPath = join(root, 'owned-process-broker.exe');
     const selectedProvider = 'C:\\TEST\\provider.exe', selectedBroker = 'C:\\TEST\\owned-process-broker.exe';
