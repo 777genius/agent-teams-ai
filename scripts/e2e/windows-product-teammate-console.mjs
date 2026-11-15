@@ -301,6 +301,35 @@ async function run() {
   // manual restart. Attach a NEW teammate through ordinary product IPC: a
   // restarted existing member would be refused while its PID is unverified.
   // Never downgrade the production PID safety guard to pass this test.
+  // Establish and pin a focused Electron foreground baseline immediately
+  // before app-managed roster attachment; watch the member spawn, tool calls,
+  // and token-usage importers in the same native HWND/focus interval.
+  const focusReady = await mainInspector.evaluate(`(() => {
+    const req = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);
+    const win = req('electron').BrowserWindow.getAllWindows()
+      .find(w => w.webContents.getURL().startsWith('http://localhost:'));
+    if (!win) return false;
+    if (!win.isFocused()) win.focus();
+    globalThis.__winProductFocus.before = win.isFocused();
+    globalThis.__winProductFocus.blur = 0;
+    return win.isFocused();
+  })()`);
+  assert(focusReady, 'Could not establish focused owned Electron window before tool E2E');
+  phase = 'native-window-observer';
+  hwndObserver = spawn('powershell.exe', [
+    '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+    '-File', path.join(repoRoot, 'scripts/e2e/windows-product-console-hwnd.ps1'),
+    '-ReadyPath', hwndReady, '-StopPath', hwndStop,
+    '-EvidencePath', hwndProof, '-MainPid', String(mainBirth.pid),
+  ], { windowsHide: true, cwd: repoRoot, stdio: ['ignore', 'pipe', 'pipe'] });
+  for (const stream of [hwndObserver.stdout, hwndObserver.stderr]) stream.on('data', chunk => {
+    hwndObserverLog = (hwndObserverLog + chunk.toString()).slice(-4000);
+  });
+  await wait('owned native HWND observer ready', async () => {
+    if (hwndObserver.exitCode !== null)
+      throw new Error('Native HWND observer failed: ' + hwndObserverLog);
+    return (await readFile(hwndReady, 'utf8').catch(() => '')) === 'ready';
+  }, 45_000);
   phase = 'app-managed-teammate-attach';
   initialMember = originalMember;
   const attachedName = 'bob';
@@ -352,34 +381,6 @@ async function run() {
   }, 30_000);
   appManagedRosterAttachConfirmed = true;
   await client.screenshot(screenshot);
-  // Establish and pin a focused Electron foreground baseline immediately
-  // before the tool probes; earlier startup/teammate activity is a separate gate.
-  const focusReady = await mainInspector.evaluate(`(() => {
-    const req = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);
-    const win = req('electron').BrowserWindow.getAllWindows()
-      .find(w => w.webContents.getURL().startsWith('http://localhost:'));
-    if (!win) return false;
-    if (!win.isFocused()) win.focus();
-    globalThis.__winProductFocus.before = win.isFocused();
-    globalThis.__winProductFocus.blur = 0;
-    return win.isFocused();
-  })()`);
-  assert(focusReady, 'Could not establish focused owned Electron window before tool E2E');
-  phase = 'native-window-observer';
-  hwndObserver = spawn('powershell.exe', [
-    '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-    '-File', path.join(repoRoot, 'scripts/e2e/windows-product-console-hwnd.ps1'),
-    '-ReadyPath', hwndReady, '-StopPath', hwndStop,
-    '-EvidencePath', hwndProof, '-MainPid', String(mainBirth.pid),
-  ], { windowsHide: true, cwd: repoRoot, stdio: ['ignore', 'pipe', 'pipe'] });
-  for (const stream of [hwndObserver.stdout, hwndObserver.stderr]) stream.on('data', chunk => {
-    hwndObserverLog = (hwndObserverLog + chunk.toString()).slice(-4000);
-  });
-  await wait('owned native HWND observer ready', async () => {
-    if (hwndObserver.exitCode !== null)
-      throw new Error('Native HWND observer failed: ' + hwndObserverLog);
-    return (await readFile(hwndReady, 'utf8').catch(() => '')) === 'ready';
-  }, 45_000);
   phase = 'native-tool-invocations';
   for (const kind of ['cmd', 'git', 'powershell']) {
     const token = randomUUID(), key = kind + ':' + token;
