@@ -300,9 +300,20 @@ async function run() {
   // exercise that production IPC path and use its replacement process for tools.
   phase = 'app-managed-teammate-restart';
   initialMember = originalMember;
-  const restartResult = await api(
-    `window.electronAPI.teams.restartMember(${literal(teamName)}, 'alice')`);
-  assert.equal(restartResult?.status, 'restarted', 'Product IPC did not restart alice');
+  // Real member restart can exceed the CDP transport's 30s evaluate timeout.
+  // Submit exactly once, then poll the same original product IPC promise.
+  await api(`(() => {
+    window.__winProductRestart={done:false};
+    window.electronAPI.teams.restartMember(${literal(teamName)}, 'alice').then(
+      value => window.__winProductRestart={done:true,value},
+      error => window.__winProductRestart={done:true,error:String(error)}
+    ); return true;
+  })()`);
+  const restartResult = await wait('original app-managed member restart IPC', () =>
+    client.evaluate('window.__winProductRestart?.done ? window.__winProductRestart : null'),
+    180_000);
+  if (restartResult.error) throw new Error('Product member restart failed: ' + restartResult.error);
+  assert.equal(restartResult.value?.status, 'restarted', 'Product IPC did not restart alice');
   await wait('original provisioned teammate retired after app-managed restart',
     async () => !(await ownedStillAlive(initialMember)), 60_000);
   originalMember = await wait('new app-managed teammate process', async () => {
