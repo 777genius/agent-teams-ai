@@ -11,6 +11,7 @@ import { desktopShellEnvironmentProbeSource } from './desktop-backend-fixture.ts
 import { readRendererBackendConnections } from './desktop-backend-observations.ts';
 import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
 import { assertDesktopOwnerRoutingAvailability } from './desktop-owner-routing-availability-ui.ts';
+import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-comment-input-target.ts';
 import { runDesktopTaskBoardAttachmentsUi } from './desktop-task-board-attachments-ui.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
@@ -1549,3 +1550,101 @@ test('original owner availability refuses invalid captured discovery before navi
     assert.equal(f.screenshots(), 0, variant);
   }
 });
+
+const ownerAvailabilityPrefix = [
+  'open original availability menu', 'open original available Teams list', 'original healthy B Team',
+];
+
+function ownerAvailabilityFixture() {
+  const ownerA = 'a'.repeat(64), ownerB = 'b'.repeat(64), ownerForeign = 'c'.repeat(64);
+  const aPublic = { handle: { handleId: 'TEST-original-A' }, ownerResourceRef: ownerA };
+  const bPublic = { handle: { handleId: 'TEST-healthy-B' }, ownerResourceRef: ownerB };
+  const bindings: Record<string, unknown>[] = [aPublic,
+    { handle: { handleId: 'TEST-cross-handle-0' }, ownerResourceRef: ownerA },
+    { handle: { handleId: 'TEST-cross-handle-1' }, ownerResourceRef: ownerA }, bPublic,
+    { handle: { handleId: 'TEST-foreign' }, ownerResourceRef: ownerForeign }];
+  const unavailableOwner = { kind: 'owner', ownerResourceRef: ownerA,
+    code: 'unavailable', outcome: 'not-dispatched' };
+  const unavailable: Record<string, unknown>[] = [unavailableOwner,
+    ...['TEST-original-A', 'TEST-cross-handle-0', 'TEST-cross-handle-1'].map(handleId => ({
+      kind: 'team', teamName: hostTeamSelectionKey(handleId), displayName: handleId,
+      code: 'unavailable', outcome: 'not-dispatched',
+    }))];
+  const observed = { contextId: 'TEST-context', loaded: 1, unavailable, targets: 1,
+    healthy: { teamName: hostTeamSelectionKey(bPublic.handle.handleId), ownerResourceRef: ownerB },
+    notice: { state: 'partial', teams: 3, owners: 1, loaded: 1, visible: true,
+      loadedLabel: true, unknownCount: true, refresh: true } };
+  const steps: string[] = [], checkpoint = new Error('TEST first availability screenshot checkpoint');
+  let screenshots = 0;
+  const task = { id: 'TEST-task', subject: 'TEST healthy B Task', status: 'pending' };
+  type Options = Parameters<typeof assertDesktopOwnerRoutingAvailability>[0];
+  const options: Options = {
+    cdp: {
+      on() { assert.fail('unexpected availability CDP listener'); },
+      async send(method: string) {
+        assert.equal(method, 'Page.captureScreenshot'); screenshots++; throw checkpoint;
+      },
+      async evaluate() { assert.fail('unexpected availability CDP evaluation'); },
+      async close() { assert.fail('unexpected availability CDP close'); },
+    },
+    ui: {
+      async click(_selector: string, label: string) { steps.push(label); },
+      async scrollTo(_selector: string, label: string) { steps.push(label); },
+      async waitRead(_expression: string, label: string) {
+        assert.equal(label, 'original teams partial availability'); return observed;
+      },
+    } as Options['ui'],
+    evidence: {}, root: '/TEST-owner-availability', deadline: Date.now() + 5000,
+    assertCurrent() {}, contextId: observed.contextId, aPublic, bPublic,
+    discovery: { state: 'ready', bindings, unavailableOwners: [unavailableOwner] },
+    bTask: { handle: bPublic.handle, task,
+      receipt: { phase: 'completed', command: { operation: 'task.create', payload: { subject: task.subject } },
+        effects: { taskId: task.id }, result: { id: task.id } } },
+    async openTeam() { assert.fail('first observation must finish before further original navigation'); },
+  };
+  return { options, observed, bindings, steps, checkpoint, screenshots: () => screenshots };
+}
+
+test('owner availability admits every captured A Team through the actual first observation', async () => {
+  const f = ownerAvailabilityFixture();
+  await assert.rejects(assertDesktopOwnerRoutingAvailability(f.options), error => {
+    assert.equal(error, f.checkpoint, 'all original identity, owner, notice and healthy B checks pass before the screenshot');
+    return true;
+  });
+  assert.equal(f.screenshots(), 1);
+  assert.deepEqual(f.steps, ownerAvailabilityPrefix);
+  assert.equal((f.options.evidence.availability as Record<string, unknown>).status, 'INCOMPLETE',
+    'the deliberate checkpoint does not qualify later actions or cleanup');
+});
+
+for (const [label, teamName] of [
+  ['healthy B', hostTeamSelectionKey('TEST-healthy-B')],
+  ['captured foreign owner', hostTeamSelectionKey('TEST-foreign')],
+  ['unknown Team', hostTeamSelectionKey('TEST-unknown')],
+  ['malformed Team', 123],
+] as const) {
+  test('owner availability refuses ' + label + ' in unavailable A rows', async () => {
+    const f = ownerAvailabilityFixture();
+    f.observed.unavailable[2]!.teamName = teamName;
+    await assert.rejects(assertDesktopOwnerRoutingAvailability(f.options), assert.AssertionError);
+    assert.equal(f.screenshots(), 0);
+    assert.deepEqual(f.steps, ownerAvailabilityPrefix);
+  });
+}
+
+for (const label of ['missing selected A', 'non-string A handle', 'empty A handle', 'duplicate A handle', 'over-bound capture'] as const) {
+  test('owner availability refuses ' + label + ' before original navigation', async () => {
+    const f = ownerAvailabilityFixture();
+    if (label === 'missing selected A') f.bindings.shift();
+    if (label === 'non-string A handle') f.bindings[1]!.handle = { handleId: 123 };
+    if (label === 'empty A handle') f.bindings[1]!.handle = { handleId: '' };
+    if (label === 'duplicate A handle') f.bindings.push(f.bindings[1]!);
+    if (label === 'over-bound capture') while (f.bindings.length <= 16) f.bindings.push({
+      handle: { handleId: 'TEST-extra-' + f.bindings.length }, ownerResourceRef: 'c'.repeat(64),
+    });
+    await assert.rejects(assertDesktopOwnerRoutingAvailability(f.options),
+      label === 'empty A handle' ? /Invalid Host team/ : assert.AssertionError);
+    assert.equal(f.screenshots(), 0);
+    assert.deepEqual(f.steps, []);
+  });
+}

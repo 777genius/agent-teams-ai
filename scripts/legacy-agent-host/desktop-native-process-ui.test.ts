@@ -172,13 +172,13 @@ test('original same-Main Retry retains a bounded first UI refusal without changi
   const begin = "  begin('one-explicit-same-Main-Retry', 10000);", end = '  await originalBinding();\n  await within(() => fixture.afterRetry(activeDeadline));';
   assert.equal(source.split(begin).length, 2); assert.equal(source.split(end).length, 2);
   const block = source.slice(source.indexOf(begin), source.indexOf(end));
-  const run = Function('environment', `const {assert,begin,proof,ui,surface,poll,readWriter,writerA,assertHost,
+  const run = Function('environment', `'use strict'; const {assert,begin,proof,ui,surface,poll,readWriter,writerA,assertHost,
     captureCensus,hostA,assertHostBirths,desktopJsLiteral,remaining,performance,startedAt}=environment;
     let hostB; return (async()=>{${block}})();`) as (environment: Record<string, unknown>) => Promise<void>;
   type Mode = 'surface-missing' | 'refresh-not-enabled' | 'retry-present' | 'alert-present' | 'ready';
   type Diagnostic = { stages: Record<string, number | null>; returnedReads: number; countTruncated: boolean;
     last: { atMs: number | null; result: string } | null };
-  const exercise = async (modes: Mode[], fault?: 'clock' | 'write') => {
+  const exercise = async (modes: Mode[], fault?: 'clock' | 'write', retrySibling = false) => {
     const failure = new Error('TEST retained original read refusal');
     const calls: string[] = [], dom: string[][] = [];
     const proof: { counts: { retryClicks: number }; phases: { phase: string; atMs: number; budgetMs: number }[];
@@ -197,7 +197,7 @@ test('original same-Main Retry retains a bounded first UI refusal without changi
           get disabled() { return assert.fail('Retry disabled is not read by the original predicate'); } };
         const surface = {
           querySelectorAll: (selector: string) => { assert.equal(selector, 'button'); trace.push('buttons');
-            return mode === 'retry-present' ? [refresh, retry] : [refresh]; },
+            return mode === 'retry-present' || retrySibling ? [refresh, retry] : [refresh]; },
           querySelector: (selector: string) => { assert.equal(selector, '[role="alert"]'); trace.push('alert');
             return mode === 'alert-present' ? {} : null; },
         };
@@ -274,6 +274,27 @@ test('original same-Main Retry retains a bounded first UI refusal without changi
     assert.deepEqual(ready.calls, [...initialCalls, 'guard', 'evaluate']);
     assert.equal(refused.proof.counts.retryClicks, 1); assert.equal(ready.proof.counts.retryClicks, 1);
   }
+
+  const noRead = await exercise([]);
+  assert.equal(noRead.error, noRead.failure, 'preserve a refusal before the first completed UI value');
+  assert.deepEqual(noRead.calls, [...initialCalls, 'guard', 'evaluate']);
+  assert.deepEqual(noRead.dom, []); assert.equal(noRead.proof.counts.retryClicks, 1);
+  assert.deepEqual(noRead.proof.retryUi, { stages: { clickReturnedMs: 1, writerObservedMs: 2, hostCheckedMs: 3, uiReadyMs: null },
+    returnedReads: 0, countTruncated: false, last: null });
+
+  const refreshBlocked = await exercise(['refresh-not-enabled'], undefined, true);
+  assert.equal(refreshBlocked.error, refreshBlocked.failure);
+  assert.deepEqual(refreshBlocked.calls, [...initialCalls, 'guard', 'evaluate', 'guard', 'evaluate']);
+  assert.deepEqual(refreshBlocked.dom, [['surface', 'buttons', 'refresh:text', 'refresh:disabled', 'retry:text']]);
+  assert.equal(refreshBlocked.proof.retryUi?.last?.result, 'refresh-not-enabled');
+  assert.equal(refreshBlocked.proof.retryUi?.returnedReads, 1); assert.equal(refreshBlocked.proof.counts.retryClicks, 1);
+
+  const frozenRecord = Object.freeze(refused.proof.retryUi!);
+  const frozenBefore = structuredClone(frozenRecord), frozenCalls = [...refused.calls];
+  assert.equal(refused.predicate('ready'), true);
+  assert.equal(refused.predicate('retry-present'), false);
+  assert.deepEqual(refused.proof.retryUi, frozenBefore, 'diagnostic immutability does not decide readiness');
+  assert.deepEqual(refused.calls, frozenCalls, 'diagnostic refusal adds no reads or input');
 });
 
 
