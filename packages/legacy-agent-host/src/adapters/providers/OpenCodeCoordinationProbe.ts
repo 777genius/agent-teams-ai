@@ -217,7 +217,7 @@ async function observeCoordination(
         return challenge ? { status: 'unavailable', reason: 'native-rejected' }
           : { status: 'incompatible', reason: 'challenge-failed' };
       return undefined; // Unknown/cancelled/foreign/expired is not a warning.
-    } else if (event.kind !== 'usage') return undefined;
+    } else if (event.kind !== 'usage' && event.kind !== 'thinking') return undefined;
   }
   return undefined;
 }

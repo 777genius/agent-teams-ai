@@ -200,14 +200,25 @@ export class RuntimeActivityCoordinator implements RuntimeStore {
         interactions: [],
       };
       const text = new Map<string, RuntimeActivityEvent>(),
+        thinking = new Map<string, RuntimeActivityEvent>(),
         tools = new Map<string, RuntimeActivityEvent>(),
         usage = new Map<string, RuntimeActivityEvent>(),
         interactions = new Map<string, RuntimeActivityEvent>();
+      const logProjection: NonNullable<RuntimeActivitySnapshot['logProjection']> = {
+        thinking: [], stderr: [], truncated: false,
+      };
       for (const event of feed.events) {
         const data = event.data;
         if (data.kind === 'subagent') latest.subagents.push(event);
         else if (data.kind === 'text')
           text.set(`${event.operationRef}:${String(data.messageRef)}:${String(data.block)}`, event);
+        else if (data.kind === 'thinking') {
+          const key = JSON.stringify([event.inputId, event.operationRef, data.messageRef, data.block]);
+          if (thinking.get(key)?.data.phase !== 'complete' || data.phase === 'complete')
+            thinking.set(key, event);
+        } else if (data.kind === 'process-output' && data.stream === 'stderr' &&
+            event.inputId === undefined && event.operationRef === undefined)
+          logProjection.stderr.push(event);
         else if (data.kind === 'tool' || data.kind === 'tool-result')
           tools.set(`${event.operationRef}:${String(data.toolRef)}:${data.kind}`, event);
         else if (data.kind === 'usage') usage.set(event.operationRef ?? 'session', event);
@@ -218,6 +229,7 @@ export class RuntimeActivityCoordinator implements RuntimeStore {
       latest.tools = [...tools.values()];
       latest.usage = [...usage.values()];
       latest.interactions = [...interactions.values()];
+      logProjection.thinking = [...thinking.values()].sort((a, b) => a.sequence - b.sequence);
       const state = record ? this.state(record) : null;
       let bytes = 0,
         partial = false;
@@ -234,12 +246,21 @@ export class RuntimeActivityCoordinator implements RuntimeStore {
           })
           .reverse();
       }
+      // Auxiliary run logs use only remaining space; trimming them cannot invalidate Stats.
+      for (const group of ['thinking', 'stderr'] as const) {
+        logProjection[group] = logProjection[group].filter(event => {
+          bytes += Buffer.byteLength(JSON.stringify(event));
+          if (bytes > 256 * 1024) { logProjection.truncated = true; return false; }
+          return true;
+        });
+      }
       return {
         ...feed,
         ...(lastObservedAt === undefined ? {} : { lastObservedAt }),
         events: [],
         state,
         latest,
+        logProjection,
         ...((state?.partial || partial) && !feed.gap
           ? { gap: { reason: 'retention' as const } }
           : {}),

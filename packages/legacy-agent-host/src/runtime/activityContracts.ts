@@ -121,4 +121,10 @@ export interface RuntimeActivitySnapshot extends RuntimeActivityFeed {
     subagents: RuntimeActivityEvent[];
     interactions: RuntimeActivityEvent[];
   };
+  /** Derived during the same bounded read; omitted by the outward snapshot mapper. */
+  logProjection?: {
+    thinking: RuntimeActivityEvent[];
+    stderr: RuntimeActivityEvent[];
+    truncated: boolean;
+  };
 }

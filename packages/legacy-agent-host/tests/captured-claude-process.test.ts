@@ -21,6 +21,7 @@ import { test } from 'node:test';
 
 import { CapturedProcess } from '../dist/adapters/providers/CapturedProcess.js';
 import { createClaudeMemberProvider } from '../dist/adapters/providers/ClaudeMemberProvider.js';
+import { createScheduledRunProvider } from '../dist/adapters/providers/ScheduledRunProvider.js';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { startTeamMcpEndpoint } from '../dist/mcp/endpoint.js';
 import { observeMemberProcessStderr } from '../dist/adapters/providers/observeMemberProcessStderr.js';
@@ -146,6 +147,57 @@ process.exit(7);
       } finally { await endpoint.close(); }
     } finally { await rm(root, { recursive: true, force: true }); }
   });
+
+for (const providerName of ['claude', 'codex'] as const) test(
+  `original standalone ${providerName} child retains startup stderr and its closing tail without an endpoint`,
+  { skip: process.platform === 'win32' }, async () => {
+    const { root, profile } = await setup(`#!${process.execPath}
+const { writeSync } = require('node:fs');
+writeSync(2, 'TEST standalone startup diagnostic\\n');
+writeSync(1, 'TEST_STANDALONE_PROTOCOL_ONLY\\n');
+writeSync(2, process.env.TEST_SECRET_KEY + '\\n');
+writeSync(2, 'TEST standalone closing tail');
+process.exit(7);
+`);
+    profile.environment.TEST_SECRET_KEY = 'TEST_STANDALONE_PRIVATE_CANARY';
+    const selected: RuntimeMemberProfile = providerName === 'claude' ? profile : {
+      provider: 'codex', protocolRevision: '0.162.0',
+      teamId: profile.teamId, memberId: profile.memberId, principalId: profile.principalId,
+      sessionId: profile.sessionId, generation: profile.generation, configRevision: profile.configRevision,
+      cwd: profile.cwd, model: profile.model, accountBinding: profile.accountBinding,
+      executable: profile.executable, limits: profile.limits,
+      environment: { ...profile.environment, CODEX_HOME: root },
+      nativeOptions: { approvalPolicy: 'never', sandbox: 'read-only' },
+    };
+    const request = { tenantId: 'TEST-tenant', projectId: 'TEST-project',
+      sessionId: selected.sessionId, generation: selected.generation, configRevision: selected.configRevision,
+      requiredCapabilities: providerName === 'claude' ? ['session.conversation'] : ['text', 'tools'] };
+    const observations: RuntimeProcessOutput[] = [];
+    let progress = 0;
+    const context = { profile: selected, request,
+      binding: { backendId: 'TEST-backend', teamId: selected.teamId, runId: 'scheduled-standalone',
+        memberId: 'TEST-scheduled-member', generation: 'TEST-occurrence' },
+      isCurrent: () => true, onProgress: () => { progress++; },
+      observeProcessOutput: (value: RuntimeProcessOutput) => { observations.push(value); },
+    };
+    assert.equal('endpoint' in context, false);
+    const provider = createScheduledRunProvider(context);
+    try {
+      await assert.rejects(provider.factory.open(request), /Scheduled native session unavailable/);
+      assert.equal(await provider.cleanup(), true, 'the original finite child is physically stopped');
+      assert.deepEqual(observations, [
+        { kind: 'process-output', stream: 'stderr', text: 'TEST standalone startup diagnostic' },
+        { kind: 'process-output', stream: 'stderr', text: '[redacted]' },
+        { kind: 'process-output', stream: 'stderr', text: 'TEST standalone closing tail' },
+      ]);
+      assert.equal(progress, 0, 'startup diagnostics do not synthesize Session observations');
+    } finally {
+      provider.seal();
+      assert.equal(await provider.cleanup(), true);
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+);
 
 test('captured native executable is pinned again at launch and sealing forbids late allocation', async () => {
   const { root, profile, request } = await setup('#!/bin/sh\nexit 0\n');

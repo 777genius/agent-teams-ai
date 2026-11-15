@@ -189,6 +189,8 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   const partialThought = provider === 'codex' ? null : await streamEvent('TEST stream thought partial', 'thinking');
   if (partialThought) {
     assert.equal(record(partialThought.data).phase, 'snapshot');
+    assert.equal(record(partialThought.data).block, 1);
+    assert.equal(record(partialThought.data).messageRef, record(partialEvent.data).messageRef);
     await visibleLogFact(leadLogs, partialThought);
   }
   assert.notEqual(array((await session()).inputs).find(row => record(row.intent).inputId === stream.inputId)?.phase, 'terminal');
@@ -226,8 +228,11 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   await ui.waitRead(`!document.querySelector(${literal(leadLogs + ' [data-host-log-kind="text"]')})`, 'Logs search excludes nonmatching output');
   if (stderrEvent) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, stderrEvent))})`,
     'Logs search also excludes nonmatching captured stderr');
+  if (completeThought) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, completeThought))})`,
+    'Logs search excludes nonmatching Thinking');
   await ui.click(leadLogs + ' button[aria-label="Clear search"]', 'clear original Logs search');
   await visibleLogFact(leadLogs, completeEvent);
+  if (completeThought) await visibleLogFact(leadLogs, completeThought);
   if (stderrEvent) await visibleLogFact(leadLogs, stderrEvent);
   const filterLogs = async () => {
     await ui.scrollTo(leadLogs + ' button[aria-label="Filter logs"]', 'original Logs filters');
@@ -239,11 +244,13 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   await ui.click('#filter-stream-stdout', 'select stderr while native protocol facts remain unmarked');
   await ui.click('[data-radix-popper-content-wrapper] button', 'save original stream filter', 'Save');
   await visibleLogFact(leadLogs, completeEvent);
+  if (completeThought) await visibleLogFact(leadLogs, completeThought);
   if (stderrEvent) await visibleLogFact(leadLogs, stderrEvent);
   await filterLogs(); await ui.click('#filter-stream-stdout', 'restore stdout');
   await ui.click('#filter-stream-stderr', 'select stdout while native protocol facts remain unmarked');
   await ui.click('[data-radix-popper-content-wrapper] button', 'save original stdout filter', 'Save');
   await visibleLogFact(leadLogs, completeEvent);
+  if (completeThought) await visibleLogFact(leadLogs, completeThought);
   if (stderrEvent) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, stderrEvent))})`,
     'actual stderr provenance is excluded by stdout-only filter');
   await filterLogs(); await ui.click('#filter-kind-output', 'exclude Output');
@@ -274,6 +281,18 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   await ui.click(disclosure, 'collapse original output');
   await ui.waitRead(`!document.querySelector(${literal(logFactSelector(logsDialog, fullscreenEvent) + ' [data-host-log-content]')})`, 'rich content collapses');
   await ui.click(disclosure, 'restore original expanded output');
+  if (completeThought) {
+    const thoughtText = String(record(completeThought.data).text), thoughtRow = logFactSelector(logsDialog, completeThought);
+    await fill(logsDialog + ' input', thoughtText); await visibleLogFact(logsDialog, completeThought);
+    const thoughtCopy = thoughtRow + ' button[title="Copy to clipboard"]';
+    await ui.scrollTo(thoughtCopy, 'original Thinking copy'); await ui.click(thoughtCopy, 'copy actual retained Thinking');
+    await ui.waitRead(`Boolean(document.querySelector(${literal(thoughtCopy + ' svg.lucide-check')}))`, 'Thinking clipboard write acknowledged');
+    assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), thoughtText);
+    await ui.click(thoughtRow + ' [role="button"]', 'collapse original Thinking');
+    await ui.waitRead(`!document.querySelector(${literal(thoughtRow + ' [data-host-log-content]')})`, 'Thinking rich content collapses');
+    await ui.click(thoughtRow + ' [role="button"]', 'restore original expanded Thinking');
+    await fill(logsDialog + ' input', fullscreenText); await visibleLogFact(logsDialog, fullscreenEvent);
+  }
   proof.leadLogsScreenshot = await screenshot('lead-logs');
   await escape(); await visibleLogFact(leadLogs, fullscreenEvent);
   await ui.click(leadLogs + ' button[aria-label="Clear search"]', 'restore unfiltered Lead Logs');
@@ -447,6 +466,8 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   proof.leadLogsAfterReload = await visibleLogFact(leadLogs, completeEvent);
   if (stderrEvent) proof.stderrLogsAfterReload = await visibleLogFact(leadLogs, stderrEvent);
   if (completeThought) proof.thinkingLogsAfterReload = await visibleLogFact(leadLogs, completeThought);
+  if (partialThought) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, partialThought))})`,
+    'cold Thinking read retains complete precedence');
   assert.deepEqual((await session()).inputs, reloadInputs); assert.equal((await effects()).filter(row => row.event === 'input').length, reloadEffects);
   proof.reloadedScreenshot = await screenshot('reloaded'); proof.reloadWithoutReplay = true;
 
@@ -502,11 +523,45 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     assert.equal(input.scheduleId, LEGACY_SCHEDULE_ID); assert.equal(input.maxTurns, 6); assert.equal(input.maxBudgetUsd, 0.25);
     assert.equal(record(input.config).prompt, 'TEST_UI_STANDALONE_DONE');
     assert.deepEqual(await rows(taskDirectory), beforeStandaloneTasks, 'standalone creates no hidden Team task');
+    const completedSession = (await readDesktopNativeStopSessions(fixture.root)).find(row =>
+      record(row.binding).runId === 'scheduled-standalone' && record(row.binding).generation === completedRunId);
+    assert.ok(completedSession);
+    const standaloneBinding = record(completedSession.binding);
+    const retained = await json(join(fixture.root, 'hoststore/runtime-events', runtimeDigest(standaloneBinding) + '.json'));
+    const { digest, ...body } = retained;
+    assert.equal(runtimeDigest(body), digest); assert.deepEqual(retained.binding, standaloneBinding);
+    const thought = array(retained.events).find(row => record(row.data).kind === 'thinking');
+    const output = array(retained.events).find(row => record(row.data).kind === 'text' && record(row.data).text === 'TEST standalone complete');
+    const diagnostic = array(retained.events).find(row => record(row.data).kind === 'process-output');
+    assert.ok(thought && output && diagnostic);
+    assert.deepEqual(record(thought.data), { kind: 'thinking', messageRef: record(output.data).messageRef,
+      block: 1, text: 'TEST standalone thought complete', phase: 'complete' });
+    assert.equal(thought.inputId, completedRunId);
+    assert.equal(array(completedSession.inputs).length, 1);
+    assert.equal(thought.operationRef, array(completedSession.inputs)[0]!.operationRef);
+    assert.deepEqual(diagnostic.data, { kind: 'process-output', stream: 'stderr', text: 'TEST standalone stderr' });
+    assert.equal(diagnostic.inputId, undefined); assert.equal(diagnostic.operationRef, undefined);
+    const savedLogs = record(await cdp.evaluate(`window.electronAPI.schedules.getRunLogs(${literal(LEGACY_SCHEDULE_ID)},${literal(completedRunId)})`));
+    const savedThought = String(savedLogs.stdout).split('\n').map(line => record(JSON.parse(line))).filter(row => row.uuid === thought.eventId);
+    assert.equal(savedThought.length, 1);
+    assert.deepEqual(record(savedThought[0]!.message).content, [{ type: 'thinking', thinking: record(thought.data).text }]);
+    assert.ok(String(savedLogs.stderr).split('\n').includes(String(record(diagnostic.data).text)));
+    assert.equal(completedRuns[0]!.summary, 'TEST standalone complete');
     await ui.scrollTo(`${scheduleRow(EDITED_SCHEDULE_LABEL)} button[aria-label=${literal(EDITED_SCHEDULE_LABEL)}]`, 'original standalone history');
     await ui.click(`${scheduleRow(EDITED_SCHEDULE_LABEL)} button[aria-label=${literal(EDITED_SCHEDULE_LABEL)}]`, 'expand original standalone history');
     await ui.scrollTo(`${scheduleRow(EDITED_SCHEDULE_LABEL)} div[role="button"]`, 'reveal original completed standalone log');
     await ui.click(`${scheduleRow(EDITED_SCHEDULE_LABEL)} div[role="button"]`, 'open original completed standalone log');
     await ui.waitRead(`document.querySelector('[role="dialog"]')?.textContent.includes('TEST standalone complete')`, 'original completed standalone stdout');
+    const thoughtRow = '[role="dialog"] div.rounded:has(> [role="button"] svg.lucide-brain)';
+    await ui.scrollTo(thoughtRow + ' [role="button"]', 'original scheduled Thinking');
+    await ui.click(thoughtRow + ' [role="button"]', 'expand original scheduled Thinking');
+    await ui.scrollTo(thoughtRow + ' p', 'actual scheduled Thinking Markdown', String(record(thought.data).text), 12, { requireCenterHit: true });
+    const thoughtCopy = thoughtRow + ' button[title="Copy to clipboard"]';
+    await ui.scrollTo(thoughtCopy, 'original scheduled Thinking copy'); await ui.click(thoughtCopy, 'copy scheduled Thinking');
+    await ui.waitRead(`Boolean(document.querySelector(${literal(thoughtCopy + ' svg.lucide-check')}))`, 'scheduled Thinking clipboard acknowledged');
+    assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), record(thought.data).text);
+    await ui.scrollTo('[role="dialog"] pre', 'original scheduled stderr', String(savedLogs.stderr).trim(), 12, { requireCenterHit: true });
+    await ui.waitRead(`document.querySelector('[role="dialog"] pre')?.textContent===${literal(savedLogs.stderr)}`, 'saved stderr renders unchanged');
     proof.standaloneCompletedScreenshot = await screenshot('standalone-completed');
     await escape(); await ui.waitRead(`!document.querySelector('[role="dialog"]')`, 'original standalone log closed');
     await menu(EDITED_SCHEDULE_LABEL, 'Edit'); await fill('[role="dialog"] #dialog-prompt', 'TEST_UI_STANDALONE_HOLD'); await save();
@@ -532,6 +587,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     assert.deepEqual(await rows(taskDirectory), beforeStandaloneTasks);
     proof.standaloneDeletedScreenshot = await screenshot('standalone-deleted');
     proof.standalone = { scheduleId: LEGACY_SCHEDULE_ID, completedRunId, heldRunId, logVisible: true,
+      thinkingEventId: thought.eventId, stderrEventId: diagnostic.eventId, activityDigest: digest, actualThinkingClipboard: true,
       limits: { maxTurns: 6, maxBudgetUsd: 0.25 }, originalPids, deletedWhileActive: true, cleanup: 'confirmed',
       releasedRecord: heldRecord, capture: selected[0], taskWrites: 0 };
   }
