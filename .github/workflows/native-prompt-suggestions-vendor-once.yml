@@ -380,8 +380,12 @@ jobs:
           assert.equal(r.conversationUiProof?.status, 'PASS');
           const ui = r.nativeNextPromptUi;
           assert.equal(ui?.status, 'PASS');
-          assert.equal(ui?.originalHumanInputs, 3);
-          assert.equal(ui?.nativeSdkSamples, 3);
+          assert.equal(ui?.originalHumanInputs, 4,
+            'one ordinary first-turn warm-up and three independently qualified human turns');
+          assert.equal(ui?.qualifiedSamples, 3,
+            'all post-warm-up native turns must have one actual suggestion sample');
+          assert.ok(ui?.nativeSdkSamples === 3 || ui?.nativeSdkSamples === 4,
+            'first native session turn may or may not emit one optional sample');
           assert.equal(ui?.noAutoSend, true);
           assert.equal(ui?.originalNativeCustodyReleased, true);
           assert.equal(ui?.screenshots?.length, 3);
