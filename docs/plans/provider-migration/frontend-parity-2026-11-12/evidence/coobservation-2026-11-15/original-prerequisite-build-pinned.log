@@ -1,0 +1,17 @@
+11.22.0
+v24.21.0
+$ pnpm --filter @agent-teams/task-change-ledger build
+$ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+$ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+$ node ./scripts/build.mjs
+$ tsup
+CLI Building entry: src/index.ts
+CLI Using tsconfig: tsconfig.json
+CLI tsup v8.5.1
+CLI Using tsup config: /workspace/scratch/c714f5bce554/agent-teams-reconciled-local/mcp-server/tsup.config.ts
+CLI Target: node24
+CLI Cleaning output folder
+ESM Build start
+ESM dist/index.js     3.04 MB
+ESM dist/index.js.map 4.78 MB
+ESM ⚡️ Build success in 273ms

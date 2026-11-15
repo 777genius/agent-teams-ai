@@ -1,0 +1,15 @@
+
+ RUN  v3.2.6 /workspace/scratch/c714f5bce554/agent-teams-reconciled-local
+
+ ✓ test/features/agent-backend/hostMemberSpawnStatuses.test.ts (37 tests) 286ms
+ ✓ test/features/agent-backend/hostProvisioningProgress.test.ts (15 tests) 126ms
+ ✓ test/features/agent-backend/hostTeamChanges.test.ts (7 tests) 15ms
+ ✓ test/renderer/store/teamRuntimeRunAdoption.test.ts (14 tests) 5ms
+ ✓ test/renderer/store/teamSlice.test.ts (280 tests) 544ms
+ ✓ test/renderer/store/teamProvisioningStateRules.test.ts (5 tests) 3ms
+
+ Test Files  6 passed (6)
+      Tests  358 passed (358)
+   Start at  19:52:38
+   Duration  9.49s (transform 2.50s, setup 88ms, collect 5.71s, tests 979ms, environment 1.17s, prepare 356ms)
+

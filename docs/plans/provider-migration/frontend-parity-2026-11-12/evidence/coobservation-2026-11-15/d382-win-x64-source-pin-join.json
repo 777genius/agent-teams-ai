@@ -1,0 +1,12 @@
+{
+  "scope": "Root receipt arrays equal before/after; raw Git blob hashes compared, with explicitly distinguished deterministic CRLF checkout-byte joins. Source payload bytes are not included in the downloaded archive.",
+  "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+  "count": 1736,
+  "beforeEqualsAfter": true,
+  "counts": {
+    "rawGitBytes": 0,
+    "crlfCheckoutConversion": 1736
+  },
+  "missing": [],
+  "mismatches": []
+}

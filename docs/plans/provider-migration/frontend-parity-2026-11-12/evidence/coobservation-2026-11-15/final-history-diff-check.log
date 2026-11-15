@@ -1,0 +1,19 @@
+docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/reconciliation-2026-11-15/checks/retained-main-eight-files.log:38: new blank line at EOF.
+docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/reconciliation-2026-11-15/cross/cross-red.log:49: trailing whitespace.
++  
+docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/reconciliation-2026-11-15/cross/cross-red.log:51: trailing whitespace.
++  + 
+docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/reconciliation-2026-11-15/cross/cross-red.log:53: trailing whitespace.
++  + 
+docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/reconciliation-2026-11-15/cross/cross-red.log:77: trailing whitespace.
++  
+docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/reconciliation-2026-11-15/cross/cross-red.log:88: trailing whitespace.
++    
+docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/reconciliation-2026-11-15/cross/cross-red.log:90: trailing whitespace.
++    
+docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/reconciliation-2026-11-15/renderer/renderer-reset-green.log:15: new blank line at EOF.
+docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/reconciliation-2026-11-15/renderer/renderer-reset-red.log:294: trailing whitespace.
++- Expected: 
+docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/reconciliation-2026-11-15/renderer/renderer-reset-red.log:297: trailing whitespace.
+++ Received: 
+docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/reconciliation-2026-11-15/renderer/renderer-reset-red.log:331: new blank line at EOF.

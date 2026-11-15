@@ -1,0 +1,13 @@
+✔ post-Stop observer continues past stale original and pending alternate to fresh stopped props (2.771258ms)
+✔ initial original-ref observation remains exact and cannot select a replacement ref (1.917766ms)
+✔ background acceptance waits for atomic service publication without masking corrupt readiness (146.630018ms)
+﹣ captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime (0.275681ms) # requires the isolated Processes lane original native artifact capture
+✔ Windows outage membership requires both original process owners in one renderer sample (2.631929ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 2119.859583

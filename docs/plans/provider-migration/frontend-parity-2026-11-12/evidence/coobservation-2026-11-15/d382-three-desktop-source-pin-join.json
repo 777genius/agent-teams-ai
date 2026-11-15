@@ -1,0 +1,1478 @@
+{
+  "head": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+  "uniqueSourceFiles": 1693,
+  "missingGitPaths": [],
+  "receipts": [
+    {
+      "receipt": "/workspace/scratch/c714f5bce554/d382-evidence/d382TaskboardArchive/TEST-desktop-backend-NYhAEO/desktop-backend-receipt.json",
+      "receiptSha256": "43b048d440537b5c023c8dba30b6a5ff5940e195cbe82bf1b16acdf30e390f33",
+      "source": {
+        "head": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+        "dirty": false
+      },
+      "status": "PASS",
+      "checks": {
+        "selectedSourceHashesBeforeApp": {
+          "count": 1693,
+          "unique": 1693,
+          "mismatches": []
+        },
+        "selectedSourceHashesAfterFlow": {
+          "count": 1693,
+          "unique": 1693,
+          "mismatches": []
+        }
+      },
+      "beforeEqualsAfter": true,
+      "cleanup": {
+        "processGroup": 3773,
+        "remaining": [],
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "capturedHostObserved": true,
+        "capturedHostAbsent": true,
+        "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+      },
+      "originalRequestedQuitExit": {
+        "initialExitCode": null,
+        "initialSignalCode": null,
+        "exitCode": 0,
+        "signalCode": null
+      },
+      "emulatedRuntimeCleanup": null
+    },
+    {
+      "receipt": "/workspace/scratch/c714f5bce554/d382-evidence/d382InstallerArchive/TEST-desktop-backend-xBpnMY/desktop-backend-receipt.json",
+      "receiptSha256": "644236bb65326eeb85d1c2e2f5ae46d068e0b48cd11cab29c2a400ec1c5e60ac",
+      "source": {
+        "head": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+        "dirty": false
+      },
+      "status": "PASS",
+      "checks": {
+        "selectedSourceHashesBeforeApp": {
+          "count": 1693,
+          "unique": 1693,
+          "mismatches": []
+        },
+        "selectedSourceHashesAfterFlow": {
+          "count": 1693,
+          "unique": 1693,
+          "mismatches": []
+        }
+      },
+      "beforeEqualsAfter": true,
+      "cleanup": {
+        "processGroup": 7469,
+        "remaining": [],
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "capturedHostObserved": true,
+        "capturedHostAbsent": true,
+        "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+      },
+      "originalRequestedQuitExit": {
+        "initialExitCode": null,
+        "initialSignalCode": null,
+        "exitCode": 0,
+        "signalCode": null
+      },
+      "emulatedRuntimeCleanup": {
+        "originalPeerPids": [
+          11797,
+          12555,
+          12568,
+          12573,
+          12597,
+          12613,
+          12624,
+          12656,
+          12666,
+          12667,
+          12668,
+          12699,
+          12714,
+          12974,
+          12980,
+          13033,
+          13036,
+          13037,
+          13045,
+          13046,
+          13047,
+          13066,
+          13459,
+          13598,
+          13603,
+          13769,
+          13954,
+          13980,
+          13988,
+          14029,
+          14320,
+          14325,
+          14364,
+          14405,
+          14865,
+          15032,
+          15035,
+          15044,
+          15061,
+          15076,
+          15085,
+          15124,
+          15138,
+          15144,
+          15146,
+          15436,
+          15443,
+          15444,
+          15445,
+          15446,
+          15449,
+          15450,
+          15451,
+          15600,
+          15888,
+          15965,
+          15992,
+          15997,
+          16160,
+          16264,
+          16549,
+          16727
+        ],
+        "remaining": [],
+        "absent": true,
+        "effects": [
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 11797
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 11797
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12555
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12555
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12568
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12568
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12573
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12573
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 12597
+          },
+          {
+            "event": "thread-selection",
+            "threadId": "TEST-thread-12597",
+            "model": "TEST-model",
+            "effort": null,
+            "runtimeMcp": false,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 12597
+          },
+          {
+            "event": "input",
+            "marker": "TEST_MODEL_PROBE",
+            "turnId": "TEST-turn-12597-1",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 12597
+          },
+          {
+            "event": "terminal",
+            "marker": "TEST_MODEL_PROBE",
+            "turnId": "TEST-turn-12597-1",
+            "status": "completed",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 12597
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 12597
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12613
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12613
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12624
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12624
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12656
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12656
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12666
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12666
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12667
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12667
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12668
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12668
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12699
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12699
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 5,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 12714
+          },
+          {
+            "event": "thread-selection",
+            "threadId": "TEST-thread-12714",
+            "model": "TEST-model",
+            "effort": "low",
+            "runtimeMcp": false,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 12714
+          },
+          {
+            "event": "input",
+            "marker": "TEST_MODEL_PROBE",
+            "turnId": "TEST-turn-12714-1",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 12714
+          },
+          {
+            "event": "terminal",
+            "marker": "TEST_MODEL_PROBE",
+            "turnId": "TEST-turn-12714-1",
+            "status": "completed",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 12714
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 12714
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 12974
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 12974
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12980
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 12980
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13033
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13033
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 9,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13037
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13037
+          },
+          {
+            "event": "managed-configuration-read",
+            "selectedServers": [
+              "team"
+            ],
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "connected",
+            "tools": [
+              "group_chat_list",
+              "group_chat_create",
+              "group_chat_send",
+              "group_chat_react",
+              "group_chat_lookup",
+              "task_create",
+              "task_update",
+              "task_set_owner",
+              "task_lifecycle",
+              "task_set_status",
+              "task_add_comment",
+              "task_set_clarification",
+              "task_link",
+              "task_unlink",
+              "review_request",
+              "review_start",
+              "review_approve",
+              "review_request_changes",
+              "task_get",
+              "message_send",
+              "command_lookup",
+              "task_start",
+              "task_complete",
+              "task_restore",
+              "task_delete",
+              "cross_team_send",
+              "cross_team_list_targets",
+              "cross_team_get_outbox",
+              "cross_team_lookup",
+              "process_register",
+              "process_list",
+              "process_stop",
+              "process_unregister",
+              "process_lookup",
+              "team_member_create",
+              "team_member_create_lookup",
+              "team_member_action_prepare",
+              "team_member_action_execute",
+              "team_member_actions_read",
+              "team_member_action_lookup",
+              "team_member_retry",
+              "member_work_sync_status",
+              "member_work_sync_report",
+              "member_briefing",
+              "team_get",
+              "kanban_get",
+              "kanban_list_reviewers",
+              "task_get_comment",
+              "task_list",
+              "task_briefing",
+              "lead_briefing"
+            ],
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "thread-selection",
+            "threadId": "TEST-thread-13036",
+            "model": "TEST-model",
+            "effort": "low",
+            "runtimeMcp": true,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13045
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13045
+          },
+          {
+            "event": "managed-configuration-read",
+            "selectedServers": [
+              "team"
+            ],
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13046
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13046
+          },
+          {
+            "event": "managed-configuration-read",
+            "selectedServers": [
+              "team"
+            ],
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13047
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13047
+          },
+          {
+            "event": "managed-configuration-read",
+            "selectedServers": [
+              "team"
+            ],
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "input",
+            "marker": "TEST_UI_BOOT",
+            "turnId": "TEST-turn-13036-1",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "terminal",
+            "marker": "TEST_UI_BOOT",
+            "turnId": "TEST-turn-13036-1",
+            "status": "completed",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13066
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13066
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13459
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13459
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13598
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13598
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13603
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13603
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13769
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13769
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13954
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13954
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13980
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13980
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13988
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 13988
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 14029
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 14029
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 14320
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 14320
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 14325
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 14325
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 14364
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 14364
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 14405
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 14405
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 14865
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 14865
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15032
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15032
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15035
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15035
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15044
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15044
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 5,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15061
+          },
+          {
+            "event": "thread-selection",
+            "threadId": "TEST-thread-15061",
+            "model": "TEST-model-next",
+            "effort": "high",
+            "runtimeMcp": false,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15061
+          },
+          {
+            "event": "input",
+            "marker": "TEST_MODEL_PROBE",
+            "turnId": "TEST-turn-15061-1",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15061
+          },
+          {
+            "event": "terminal",
+            "marker": "TEST_MODEL_PROBE",
+            "turnId": "TEST-turn-15061-1",
+            "status": "completed",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15061
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15061
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15076
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15076
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15085
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15085
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15124
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15124
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15138
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15138
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15144
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15144
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15146
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15146
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15436
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15436
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15443
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15443
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15444
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15444
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 9,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15445
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15446
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15446
+          },
+          {
+            "event": "managed-configuration-read",
+            "selectedServers": [
+              "team"
+            ],
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15445
+          },
+          {
+            "event": "connected",
+            "tools": [
+              "group_chat_list",
+              "group_chat_create",
+              "group_chat_send",
+              "group_chat_react",
+              "group_chat_lookup",
+              "task_create",
+              "task_update",
+              "task_set_owner",
+              "task_lifecycle",
+              "task_set_status",
+              "task_add_comment",
+              "task_set_clarification",
+              "task_link",
+              "task_unlink",
+              "review_request",
+              "review_start",
+              "review_approve",
+              "review_request_changes",
+              "task_get",
+              "message_send",
+              "command_lookup",
+              "task_start",
+              "task_complete",
+              "task_restore",
+              "task_delete",
+              "cross_team_send",
+              "cross_team_list_targets",
+              "cross_team_get_outbox",
+              "cross_team_lookup",
+              "process_register",
+              "process_list",
+              "process_stop",
+              "process_unregister",
+              "process_lookup",
+              "team_member_create",
+              "team_member_create_lookup",
+              "team_member_action_prepare",
+              "team_member_action_execute",
+              "team_member_actions_read",
+              "team_member_action_lookup",
+              "team_member_retry",
+              "member_work_sync_status",
+              "member_work_sync_report",
+              "member_briefing",
+              "team_get",
+              "kanban_get",
+              "kanban_list_reviewers",
+              "task_get_comment",
+              "task_list",
+              "task_briefing",
+              "lead_briefing"
+            ],
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15445
+          },
+          {
+            "event": "thread-selection",
+            "threadId": "TEST-thread-15445",
+            "model": "TEST-model-next",
+            "effort": "high",
+            "runtimeMcp": true,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15445
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15449
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15449
+          },
+          {
+            "event": "managed-configuration-read",
+            "selectedServers": [
+              "team"
+            ],
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15445
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15450
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15450
+          },
+          {
+            "event": "managed-configuration-read",
+            "selectedServers": [
+              "team"
+            ],
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15445
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15451
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15451
+          },
+          {
+            "event": "managed-configuration-read",
+            "selectedServers": [
+              "team"
+            ],
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15445
+          },
+          {
+            "event": "input",
+            "marker": "TEST_UI_BOOT",
+            "turnId": "TEST-turn-15445-1",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15445
+          },
+          {
+            "event": "terminal",
+            "marker": "TEST_UI_BOOT",
+            "turnId": "TEST-turn-15445-1",
+            "status": "completed",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15445
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15600
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15600
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15888
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15888
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15965
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15965
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15992
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15992
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15997
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 15997
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 16160
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 16160
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 16264
+          },
+          {
+            "event": "mcp-catalog",
+            "configuredServers": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 16264
+          },
+          {
+            "event": "managed-configuration-read",
+            "selectedServers": [
+              "team"
+            ],
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "input",
+            "marker": "TEST_UI_STREAM",
+            "turnId": "TEST-turn-13036-2",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "partial",
+            "turnId": "TEST-turn-13036-2",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 16549
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 16549
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 15445
+          },
+          {
+            "event": "launch",
+            "parentPid": 9043,
+            "argc": 3,
+            "provider": "codex",
+            "role": "management",
+            "pid": 16727
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "management",
+            "pid": 16727
+          },
+          {
+            "event": "terminal",
+            "marker": "TEST_UI_STREAM",
+            "turnId": "TEST-turn-13036-2",
+            "status": "completed",
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          },
+          {
+            "event": "exit",
+            "code": 0,
+            "provider": "codex",
+            "role": "runtime",
+            "pid": 13036
+          }
+        ]
+      }
+    },
+    {
+      "receipt": "/workspace/scratch/c714f5bce554/cross-d382-evidence/d382CrossTeam/TEST-desktop-backend-9k2ncQ/desktop-backend-receipt.json",
+      "receiptSha256": "7d9ae3da8b15ebce93c74cbc7d121c1e6169e7fbcf8e758beea77a6ea36150d6",
+      "source": {
+        "head": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+        "dirty": false
+      },
+      "status": "INCOMPLETE",
+      "checks": {
+        "selectedSourceHashesBeforeApp": {
+          "count": 1693,
+          "unique": 1693,
+          "mismatches": []
+        },
+        "selectedSourceHashesAfterFlow": {
+          "count": 1693,
+          "unique": 1693,
+          "mismatches": []
+        }
+      },
+      "beforeEqualsAfter": true,
+      "cleanup": {
+        "processGroup": 3786,
+        "remaining": [],
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "capturedHostObserved": true,
+        "capturedHostAbsent": true,
+        "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+      },
+      "originalRequestedQuitExit": {
+        "initialExitCode": null,
+        "initialSignalCode": null,
+        "exitCode": 0,
+        "signalCode": null
+      },
+      "emulatedRuntimeCleanup": null
+    }
+  ]
+}

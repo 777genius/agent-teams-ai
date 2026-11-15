@@ -1,0 +1,14 @@
+✔ synchronous OpenCode configuration observation preserves clone isolation and closing freshness (12.730707ms)
+✔ captured OpenCode config keeps donor precedence and stores only original source identities (241.975696ms)
+✔ new or replaced config invalidates its original reference; malformed JSONC is never an empty success (3.704596ms)
+✔ selected V2 declaration preserves alias, limits, variant body and captured environment without importing another model (2.454224ms)
+✔ incompatible selected aliases and native declaration fields are refused without normalizing away intent (0.438794ms)
+✔ original Main source, exact approval and whole-command commitment survive bounded grouped probes (182.149396ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 828.710939

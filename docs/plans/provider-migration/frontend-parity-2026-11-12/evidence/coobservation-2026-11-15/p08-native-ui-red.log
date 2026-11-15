@@ -1,0 +1,28 @@
+✔ post-Stop observer continues past stale original and pending alternate to fresh stopped props (1.659532ms)
+✔ initial original-ref observation remains exact and cannot select a replacement ref (0.992037ms)
+✔ background acceptance waits for atomic service publication without masking corrupt readiness (143.964712ms)
+﹣ captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime (0.316962ms) # requires the isolated Processes lane original native artifact capture
+✖ Windows outage membership requires both original process owners in one renderer sample (4.755151ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 1159.209213
+
+✖ failing tests:
+
+test at scripts/legacy-agent-host/desktop-native-process-ui.test.ts:168:1
+✖ Windows outage membership requires both original process owners in one renderer sample (4.755151ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-native-process-ui.test.ts:230:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }

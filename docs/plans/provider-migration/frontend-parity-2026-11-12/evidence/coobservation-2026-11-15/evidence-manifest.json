@@ -1,0 +1,277 @@
+{
+  "kind": "TEST_FRONTEND_PARITY_COOBSERVATION_LOCAL_EVIDENCE",
+  "finalSource": {
+    "sourceHead": "8fd964723a2b50ef22b845b2759c5ef40258202f",
+    "sourceTree": "a8a3f5214e23b07efb3e42df99461973b3cb50e5",
+    "status": "",
+    "historyDiffExitCode": 2,
+    "unchangedBuildSourceDiff": "",
+    "logs": [
+      {
+        "name": "cross-incoming-regression-green.log",
+        "bytes": 3751,
+        "sha256": "fd5e6d7c21c3ffee0cbe3ac4c59eedbe683043d3cba011ee5129c1f3de9bd2dc"
+      },
+      {
+        "name": "final-original-shared-eight.log",
+        "bytes": 9861,
+        "sha256": "864a71759f17fd5e1abc91bd9531f8ebf4b85f60d47cec060572f028546f17eb"
+      },
+      {
+        "name": "final-opencode-configuration-source.log",
+        "bytes": 829,
+        "sha256": "343c0b898492fbe59ec986f061d95636a5fd222856cc2d172548b648c7b6c9a3"
+      },
+      {
+        "name": "final-workspace-types.log",
+        "bytes": 1361,
+        "sha256": "30c31d7a2b5c85e85ea9ef1deeeff39ce2ca5017aef49f2d759902b30a2e44bd"
+      },
+      {
+        "name": "final-scoped-lint-and-guards.log",
+        "bytes": 2327,
+        "sha256": "d4923274f87e06e1516eb3266bd38a007c70b6c42ebc69e99b7970aa87677e1d"
+      },
+      {
+        "name": "final-history-diff-check.log",
+        "bytes": 1643,
+        "sha256": "798f0418bafca8e3776140c2a3ef669e679ee069381f17e27488119499544dc3"
+      }
+    ],
+    "node": "v24.21.0",
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "pnpm": "11.22.0",
+    "cross": {
+      "pass": 33,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    "shared": {
+      "files": 8,
+      "pass": 90,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    "configSource": {
+      "pass": 6,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    "types": {
+      "command": "export PATH=/workspace/scratch/c714f5bce554/reconciled-local-evidence/pinned-toolbin:/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin:$PATH\nexport AGENT_TEAMS_INSTALL_PROFILE=node-ci\npnpm typecheck:workspace > /workspace/scratch/c714f5bce554/reconciled-local-evidence/final-workspace-types.log 2>&1\ntask_workspace_types_exit=$?\ntail -25 /workspace/scratch/c714f5bce554/reconciled-local-evidence/final-workspace-types.log\nexit \"$task_workspace_types_exit\"",
+      "exitCode": 137,
+      "qualification": "UNQUALIFIED: Killed; termination cause not established; no local retry"
+    },
+    "scopedChecks": {
+      "command": "export PATH=/workspace/scratch/c714f5bce554/reconciled-local-evidence/pinned-toolbin:/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin:$PATH\nexport AGENT_TEAMS_INSTALL_PROFILE=node-ci\n(\nset -e\npnpm lint:fast:files -- packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts packages/legacy-agent-host/tests/opencode-configuration-source.test.ts scripts/e2e/opencode-diagnostics/platform.mjs scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts scripts/legacy-agent-host/desktop-task-comment-input-target.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts scripts/legacy-agent-host/run-packaged-opencode-v2.ts src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts src/features/agent-backend/renderer/createHostTeamChanges.ts src/features/agent-backend/renderer/createHostTeamProvisioning.ts src/features/agent-backend/renderer/index.ts src/renderer/store/slices/teamSlice.ts src/renderer/store/team/teamRuntimeRunAdoption.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/hostMemberSpawnStatuses.test.ts test/features/agent-backend/runtimeActivityFacade.test.ts test/renderer/store/teamRuntimeRunAdoption.test.ts test/renderer/store/teamSlice.test.ts tools/owned-process-broker/nativeWindowsAppGate.mjs scripts/legacy-agent-host/desktop-native-process-ui.test.ts\npnpm guard:source-file-size\npnpm guard:team-provisioning-architecture\nnode --check tools/owned-process-broker/nativeWindowsAppGate.mjs\ngit diff --check d382c393898d35c9340cd903d1c02fb868c18a8e HEAD -- .github packages scripts src test tools\ngit diff --check d382c393898d35c9340cd903d1c02fb868c18a8e HEAD -- docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md\n) > /workspace/scratch/c714f5bce554/reconciled-local-evidence/final-scoped-lint-and-guards.log 2>&1\ntask_final_checks_exit=$?\ntail -30 /workspace/scratch/c714f5bce554/reconciled-local-evidence/final-scoped-lint-and-guards.log\nexit \"$task_final_checks_exit\"",
+      "paths": [
+        "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+        "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+        "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+        "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+        "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+        "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+        "src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts",
+        "src/features/agent-backend/renderer/createHostTeamChanges.ts",
+        "src/features/agent-backend/renderer/createHostTeamProvisioning.ts",
+        "src/features/agent-backend/renderer/index.ts",
+        "src/renderer/store/slices/teamSlice.ts",
+        "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+        "test/features/agent-backend/capturedWindowsSelection.test.ts",
+        "test/features/agent-backend/hostMemberSpawnStatuses.test.ts",
+        "test/features/agent-backend/runtimeActivityFacade.test.ts",
+        "test/renderer/store/teamRuntimeRunAdoption.test.ts",
+        "test/renderer/store/teamSlice.test.ts",
+        "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "scripts/legacy-agent-host/desktop-native-process-ui.test.ts"
+      ],
+      "exitCode": 0
+    },
+    "testsCommand": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts > /workspace/scratch/c714f5bce554/reconciled-local-evidence/cross-incoming-regression-green.log 2>&1\ntask_cross_green_exit=$?\ntail -15 /workspace/scratch/c714f5bce554/reconciled-local-evidence/cross-incoming-regression-green.log\nif test \"$task_cross_green_exit\" -ne 0; then exit \"$task_cross_green_exit\"; fi\n/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts > /workspace/scratch/c714f5bce554/reconciled-local-evidence/final-original-shared-eight.log 2>&1\ntask_final_shared_exit=$?\ntail -15 /workspace/scratch/c714f5bce554/reconciled-local-evidence/final-original-shared-eight.log\nif test \"$task_final_shared_exit\" -ne 0; then exit \"$task_final_shared_exit\"; fi\n/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node --test packages/legacy-agent-host/tests/opencode-configuration-source.test.ts > /workspace/scratch/c714f5bce554/reconciled-local-evidence/final-opencode-configuration-source.log 2>&1\ntask_final_config_exit=$?\ntail -20 /workspace/scratch/c714f5bce554/reconciled-local-evidence/final-opencode-configuration-source.log\nexit \"$task_final_config_exit\"",
+    "historyDiff": {
+      "exitCode": 2,
+      "scope": "Complete merge diff includes preserved raw evidence logs with original output whitespace. No raw bytes normalized, no Git/lint ignores added. Separate source and both plan-document whitespace checks passed; the complete-history check is not PASS."
+    }
+  },
+  "priorEvidence": [
+    {
+      "reviewTree": "eef5865f54472ce15188f144cb29001999d02ade",
+      "sourceHead": "b3a23a8f0f8d694d28546551acf801129a895688",
+      "result": {
+        "pass": 353,
+        "fail": 5,
+        "skipped": 0
+      },
+      "scope": "Original six renderer/adapter files; RED"
+    },
+    {
+      "reviewTree": "a7b61f9d9ce5248115b83f3434d3ebf59c611fa5",
+      "sourceHead": "f05242ce16e9de20b4afad20143bc0935797c128",
+      "sourceTree": "b1fc254aa3240a222693f2244c60d3b83ecf4cd5",
+      "renderer": {
+        "pass": 358,
+        "fail": 0,
+        "skipped": 0
+      },
+      "shared": {
+        "pass": 87,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "reviewTree": "dd6516dc41c3a8d12f32085029f6777b5924b481",
+      "sourceHead": "f05242ce16e9de20b4afad20143bc0935797c128",
+      "result": {
+        "pass": 3,
+        "fail": 1,
+        "skipped": 1
+      },
+      "scope": "Full native-process UI file; RED; existing capture-only skip retained"
+    },
+    {
+      "reviewTree": "7414365252f8ecdaa0f011acae05a6f382bb61c3",
+      "sourceHead": "37aef8d5b3b1f3d741c0ddef9b797ffe088d6ce1",
+      "sourceTree": "e962c2b6c525266e2638e834686f63b140f27a9f",
+      "ui": {
+        "pass": 4,
+        "fail": 0,
+        "skipped": 1
+      },
+      "platformAndPackaged": {
+        "pass": 77,
+        "fail": 0,
+        "skipped": 1
+      },
+      "scope": "Linux finite prerequisite evidence only; not Windows acceptance"
+    },
+    {
+      "reviewTree": "84b4ae801d90357ff45da1b18fbfe279a9f03fb4",
+      "sourceHead": "b76cecf03db8538b108c5de72911cb1ccc543b99",
+      "sourceTree": "ee4bcc4157a525de75671a33d6e2fc17b150721a",
+      "result": {
+        "pass": 32,
+        "fail": 1,
+        "skipped": 0
+      },
+      "scope": "Full incoming Cross test file against unchanged original helper; RED"
+    },
+    {
+      "reviewTree": "500513ccd27bd71714c29071e208624e43bd9f59",
+      "sourceHead": "8fd964723a2b50ef22b845b2759c5ef40258202f",
+      "sourceTree": "a8a3f5214e23b07efb3e42df99461973b3cb50e5"
+    }
+  ],
+  "logs": [
+    {
+      "name": "renderer-red.log",
+      "bytes": 46262,
+      "sha256": "e3c7abb2154c5d2e2b9178946349abb1263c227f028a13aa18530732037db054",
+      "sourceHead": "b3a23a8f0f8d694d28546551acf801129a895688"
+    },
+    {
+      "name": "renderer-green.log",
+      "bytes": 710,
+      "sha256": "681647a0971f71d8c4747988f5bfdebeb5e9794a346b04016d985cde1891d6df",
+      "sourceHead": "f05242ce16e9de20b4afad20143bc0935797c128"
+    },
+    {
+      "name": "shared-desktop-prerequisites-built.log",
+      "bytes": 9517,
+      "sha256": "99c3fc0fc2d561742768585010b440d175d0a6a68b248823a8364e068947f778",
+      "sourceHead": "f05242ce16e9de20b4afad20143bc0935797c128"
+    },
+    {
+      "name": "original-prerequisite-build-pinned.log",
+      "bytes": 582,
+      "sha256": "0a37f4df8af2e8943a28b01d20fe0b625886cc3d11aa8acd0aca99963e12a3e5",
+      "sourceHead": "f05242ce16e9de20b4afad20143bc0935797c128"
+    },
+    {
+      "name": "isolated-install-offline.log",
+      "bytes": 1473,
+      "sha256": "27ca38cfc253eac53ab33bbc71de13742f08932800a78595e9179a4da82bf658",
+      "sourceHead": "f05242ce16e9de20b4afad20143bc0935797c128"
+    },
+    {
+      "name": "p08-native-ui-red.log",
+      "bytes": 1442,
+      "sha256": "d73d71628fb7e61139ec897c315456e9b295392fccdfd64cace8ca6443f78a46",
+      "sourceHead": "f05242ce16e9de20b4afad20143bc0935797c128"
+    },
+    {
+      "name": "p08-native-ui-green.log",
+      "bytes": 731,
+      "sha256": "b1e56f42d0fb80c79c5ab1097acafdc610865b6c3022701108ba5e23c6635e7e",
+      "sourceHead": "37aef8d5b3b1f3d741c0ddef9b797ffe088d6ce1"
+    },
+    {
+      "name": "p08-original-platform-packaged.log",
+      "bytes": 7869,
+      "sha256": "d4e1fa1f79b6748dfe6d82fffb9f6b3535ce3e53a044764610faedafc313a85f",
+      "sourceHead": "37aef8d5b3b1f3d741c0ddef9b797ffe088d6ce1"
+    },
+    {
+      "name": "cross-incoming-regression-red.log",
+      "bytes": 8585,
+      "sha256": "ea009c19c8f4aa5b1773abb010af97761850b232aa5c61fbf8b58fee4203c7a3",
+      "sourceHead": "b76cecf03db8538b108c5de72911cb1ccc543b99"
+    },
+    {
+      "name": "cross-incoming-regression-green.log",
+      "bytes": 3751,
+      "sha256": "fd5e6d7c21c3ffee0cbe3ac4c59eedbe683043d3cba011ee5129c1f3de9bd2dc",
+      "sourceHead": "8fd964723a2b50ef22b845b2759c5ef40258202f"
+    },
+    {
+      "name": "final-original-shared-eight.log",
+      "bytes": 9861,
+      "sha256": "864a71759f17fd5e1abc91bd9531f8ebf4b85f60d47cec060572f028546f17eb",
+      "sourceHead": "8fd964723a2b50ef22b845b2759c5ef40258202f"
+    },
+    {
+      "name": "final-opencode-configuration-source.log",
+      "bytes": 829,
+      "sha256": "343c0b898492fbe59ec986f061d95636a5fd222856cc2d172548b648c7b6c9a3",
+      "sourceHead": "8fd964723a2b50ef22b845b2759c5ef40258202f"
+    },
+    {
+      "name": "final-workspace-types.log",
+      "bytes": 1361,
+      "sha256": "30c31d7a2b5c85e85ea9ef1deeeff39ce2ca5017aef49f2d759902b30a2e44bd",
+      "sourceHead": "8fd964723a2b50ef22b845b2759c5ef40258202f"
+    },
+    {
+      "name": "final-scoped-lint-and-guards.log",
+      "bytes": 2327,
+      "sha256": "d4923274f87e06e1516eb3266bd38a007c70b6c42ebc69e99b7970aa87677e1d",
+      "sourceHead": "8fd964723a2b50ef22b845b2759c5ef40258202f"
+    },
+    {
+      "name": "final-history-diff-check.log",
+      "bytes": 1643,
+      "sha256": "798f0418bafca8e3776140c2a3ef669e679ee069381f17e27488119499544dc3",
+      "sourceHead": "8fd964723a2b50ef22b845b2759c5ef40258202f"
+    }
+  ],
+  "limitations": [
+    "Raw logs retain exact original bytes, including whitespace; no source/acceptance relaxation.",
+    "Full workspace compiler ended Killed/137 without established cause; no local retry; dedicated backend compiler remains CI-only.",
+    "Complete merge-history diff check ended 2 on incoming raw log whitespace; separately scoped source and both plan checks passed.",
+    "Finite local suites do not qualify the original resulting-head frontend, desktop, native, process, packaged, P08, P09 or full M16 gates.",
+    "No real Claude or Codex execution, including version checks, is authorized or claimed."
+  ]
+}

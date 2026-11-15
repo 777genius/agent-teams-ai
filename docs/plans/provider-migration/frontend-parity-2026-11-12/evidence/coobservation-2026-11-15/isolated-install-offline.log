@@ -1,0 +1,22 @@
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 24m ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +1
++
+Progress: resolved 1, reused 1, downloaded 0, added 1, done
+[WARN] Failed to create bin at /workspace/scratch/c714f5bce554/agent-teams-reconciled-local/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/dist/cli.js'
+
+landing postinstall$ node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/transitive-security.ts --apply
+landing postinstall: [landing postinstall] skipped npm layout patch; pnpm patchedDependencies handles compatibility
+landing postinstall: Verified braces security backport in 1 package(s)
+landing postinstall: Verified http-cache-semantics security backport in 1 package(s)
+landing postinstall: Done
+[WARN] Failed to create bin at /workspace/scratch/c714f5bce554/agent-teams-reconciled-local/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/workspace/scratch/c714f5bce554/agent-teams-reconciled-local/node_modules/@agent-teams/legacy-agent-host/dist/cli.js'
+. preinstall$ node ./scripts/ci/enforce-pnpm-install.mjs
+. preinstall: Done
+. postinstall$ node ./scripts/postinstall-electron.cjs
+. postinstall: Done
+. prepare$ husky
+. prepare: Done
+Done in 3.6s using pnpm v11.22.0
