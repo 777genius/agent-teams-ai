@@ -43,6 +43,8 @@ let stopped = false;
 let stopSubmitted = false;
 let phase = 'setup';
 let logs = '';
+let creationResponse;
+let latestRuntime;
 const pause = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const isRecord = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const literal = v => JSON.stringify(v);
@@ -270,9 +272,13 @@ async function run() {
   const launch = await wait('real createTeam IPC', () =>
     client.evaluate('window.__peerLaunch?.done ? window.__peerLaunch : null'), 240_000);
   if (launch.error) throw Error('OpenCode team create failed: ' + launch.error);
+  creationResponse = launch.value;
+  assert(typeof creationResponse?.runId === 'string' && creationResponse.runId,
+    'Real createTeam IPC did not return a runId');
   launched = true;
   const snapshot = await wait('two distinct original OpenCode runtime lanes', async () => {
     const value = await api(`window.electronAPI.teams.getTeamAgentRuntime(${literal(teamName)})`);
+    latestRuntime = value;
     const a = value?.members?.alice, b = value?.members?.bob;
     return a?.alive && b?.alive && a.historicalBootstrapConfirmed && b.historicalBootstrapConfirmed &&
       a.laneId && b.laneId && a.runtimeSessionId && b.runtimeSessionId &&
@@ -336,8 +342,24 @@ async function run() {
 }
 try { await run(); }
 catch (error) {
+  // Capture owned product launch and bootstrap state before cleanup. A timeout
+  // without these original artifacts cannot distinguish a bad model route from
+  // a genuine teammate launch failure; never infer success from a healthy probe.
+  const teamRoot = path.join(env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT,
+    'teams', teamName);
+  const persisted = {};
+  for (const name of ['launch-state.json', 'bootstrap-state.json',
+    'launch-failure-artifacts/latest.json']) {
+    try { persisted[name] = JSON.parse(await readFile(path.join(teamRoot, name), 'utf8')); }
+    catch (readError) { persisted[name] = { unavailable: String(readError) }; }
+  }
+  const progress = creationResponse?.runId && client
+    ? await api(`window.electronAPI.teams.getProvisioningStatus(${literal(creationResponse.runId)})`)
+      .catch(readError => ({ unavailable: String(readError) }))
+    : null;
   await writeFile(ledgerOutput, JSON.stringify({
     schemaVersion: 1, success: false, phase, error: String(error),
+    creationResponse, latestRuntime, progress, persisted,
     modelErrors: model?.errors ?? [], actions: [...actions.values()],
     logTail: logs.slice(-4000),
   }, null, 2) + '\n');
