@@ -19,6 +19,8 @@ The adopted provider is PR #9 source `18a1c276474388a38e2bb00e5a11958c936566e0`,
 
 Local evidence: **61/61 focused feature tests PASS**; the original Claude Host gate **7/7 PASS**, including its real native localhost-model journey; **focused native TypeScript 7 checks PASS**. Full-application TypeScript checking was terminated with **exit 137** in the constrained local environment and is **not PASS**. The focused checks do not replace full-application CI or the new macOS native/visual gates. Native inference uses disposable TEST roots and localhost endpoints, without vendor authentication or paid requests.
 
+The existing workflow now separates already-adopted-pin qualification from publication. Its read-only source job uses the existing macOS ARM runner, retains the complete provider `pnpm check`, and compares the reproduced implementation and contracts archives with the exact event consumer commit, deterministic receipt and frozen lockfile resolution. Only then can native jobs consume its verified SHA. The publisher is skipped for that already-adopted pin; the recognized old pin still takes the original serialized publication path. A skipped publisher is not test evidence, and the new macOS source reproduction still needs its actual CI result.
+
 After actual feature acceptance, independent review and required checks, the scoped merges are consumer **#1197 → existing #1186 branch** and provider **#9 → existing #8 branch**. No `main`/default-path/release cutover or automatic merge of the broader #1186/#982 migration is included. Pending, queued, skipped and previous-SHA results never qualify the final source.
 
 ## Purpose and exact scope
