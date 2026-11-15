@@ -11,6 +11,7 @@ import {
 } from '@agent-teams/provider-implementations/opencode';
 
 import { CapturedProcess } from './CapturedProcess.js';
+import { OwnedProcessFacade } from '../../owned-process/processFacade.js';
 import {
   canonicalOpenCodeAgentPermission,
   requiredOpenCodeToolsAllowed,
@@ -312,6 +313,27 @@ export function createOpenCodeMemberProvider(
       child.stdout.on('data', () => {});
       const deadline = Date.now() + profile.limits.timeoutMs;
       const api = client(abort.signal, deadline);
+      if (child instanceof OwnedProcessFacade) {
+        const waiting = new AbortController();
+        const cancelWaiting = () => waiting.abort();
+        abort.signal.addEventListener('abort', cancelWaiting, { once: true });
+        try {
+          const remaining = deadline - Date.now();
+          if (abort.signal.aborted || remaining <= 0)
+            throw new Error('OpenCode configuration unavailable');
+          await Promise.race([
+            child.ready,
+            delay(remaining, undefined, { signal: waiting.signal }).then(() => {
+              throw new Error('OpenCode configuration unavailable');
+            }),
+          ]);
+          if (abort.signal.aborted || Date.now() >= deadline)
+            throw new Error('OpenCode configuration unavailable');
+        } finally {
+          abort.signal.removeEventListener('abort', cancelWaiting);
+          waiting.abort();
+        }
+      }
       // Retry only read-only startup qualification; never repeat a session-creation mutation.
       for (;;) {
         if (!context.isCurrent() || !context.canAllocate() || sealed)

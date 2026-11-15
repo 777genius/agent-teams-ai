@@ -14,6 +14,7 @@ import type {
 } from '../src/adapters/providers/CapturedProcess.ts';
 import type { OpenCodeMemberProfile } from '../src/composition/runtimeProfile.ts';
 import type { Event } from '@agent-teams/provider-session-contracts';
+import type { PreparedOwnedProcess } from '../src/owned-process/contract.ts';
 
 // Source mode permits controlled qualification while root's prior dist proof stays frozen.
 const sourceMode = process.env.LEGACY_PROVIDER_SOURCE_TEST === '1';
@@ -28,6 +29,8 @@ const { runtimeProfileSchema }: typeof import('../src/composition/runtimeProfile
   await import(
     sourceMode ? '../src/composition/runtimeProfile.ts' : '../dist/composition/runtimeProfile.js'
   );
+const { OwnedProcessFacade }: typeof import('../src/owned-process/processFacade.ts') =
+  await import(sourceMode ? '../src/owned-process/processFacade.ts' : '../dist/owned-process/processFacade.js');
 const record = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Record<string, unknown>;
@@ -78,6 +81,7 @@ function fixture(
     extraArgs?: string[];
     onCreateProcess?(): void;
     nativeLimitsCwd?: string;
+    suspendedNative?: ReturnType<typeof suspendedNativeFixture>;
     cwd?: string;
     attachments?: MemberProviderContext['attachments'];
   } = {}
@@ -212,6 +216,8 @@ function fixture(
       order.push('launch');
       launches.push(request);
       running = true;
+      if (options.suspendedNative)
+        return options.suspendedNative.launch(() => current && allocate && !sealed);
       return child;
     },
     seal() {
@@ -222,6 +228,7 @@ function fixture(
       cleanup++;
       running = false;
       sealed = true;
+      options.suspendedNative?.stop();
       child.stdin.end();
       child.stdout.end();
       child.stderr.end();
@@ -900,3 +907,145 @@ test('native media uses the exact current OpenCode declaration before submit wit
     }
   }
 });
+
+/** Structural native protocol only; these controlled objects are not native cleanup proof. */
+function suspendedNativeFixture() {
+  const gate = () => {
+    let release!: () => void;
+    const promise = new Promise<void>(resolve => { release = resolve; });
+    return { promise, release };
+  };
+  const prepare = gate(), preparing = gate(), resume = gate(), resuming = gate();
+  const owner = Object.freeze({ teamIncarnation: 'TEST-team', runId: 'TEST-run',
+    laneId: 'TEST-member', processGeneration: 'TEST-generation' });
+  const calls: string[] = [];
+  const stdin = new PassThrough(), stdout = new PassThrough(), stderr = new PassThrough();
+  let failure: Error | undefined, child: InstanceType<typeof OwnedProcessFacade> | undefined;
+  const native: PreparedOwnedProcess = {
+    owner, root: Object.freeze({ pid: 421, birth: '0000000000001234' }), stdin, stdout, stderr,
+    diagnostics: () => ({ writeCompleted: false }),
+    observeRootExit: () => () => {}, observeTransportFailure: () => () => {},
+    async resume(expected, installOwner) {
+      assert.deepEqual(expected, owner); calls.push('resume-enter');
+      await installOwner(); resuming.release(); await resume.promise; calls.push('resume-ack');
+    },
+    stop: async request => ({ kind: 'unknown', owner, attemptId: request.attemptId,
+      reason: 'TEST is not native evidence', creation: 'uncertain', deadlineExpired: false }),
+    drain: async () => ({ kind: 'incomplete', reason: 'No native drain proof' }),
+    abandonControl() {}, release: async () => { throw new Error('No genuine native receipt'); },
+  };
+  return {
+    prepare, preparing, resume, resuming, calls, native,
+    launch(current: () => boolean) {
+      assert.equal(child, undefined, 'one original facade');
+      child = new OwnedProcessFacade({
+        owner, current,
+        prepare: async () => {
+          calls.push('prepare'); preparing.release(); await prepare.promise;
+          if (failure) throw failure;
+          return { kind: 'prepared', process: native };
+        },
+        installOwner: async selected => { assert.equal(selected, native); calls.push('install-owner'); },
+        requestStop: () => { calls.push('stop-request'); return true; },
+      });
+      return child;
+    },
+    reject() { failure = new Error('TEST private prepare refusal'); prepare.release(); },
+    child() { assert.ok(child); return child; },
+    finish() { prepare.release(); resume.release(); },
+    stop() { child?.kill(); stdin.end(); stdout.end(); stderr.end(); },
+  };
+}
+
+test('OpenCode joins the original suspended preparation and resume before HTTP qualification',
+  { timeout: 5000 }, async t => {
+    const native = suspendedNativeFixture(), f = fixture({ suspendedNative: native });
+    const emptyReads: typeof f.reads = [], emptyWrites: typeof f.writes = [];
+    let allocationChecks = 0, checksAtLaunch = -1;
+    const canAllocate = f.context.canAllocate, launch = native.launch.bind(native);
+    f.context.canAllocate = () => { allocationChecks++; return canAllocate(); };
+    native.launch = current => { checksAtLaunch = allocationChecks; return launch(current); };
+    const opening = f.provider.factory.open(f.context.request);
+    void opening.catch(() => {});
+    t.after(async () => {
+      f.provider.seal(); native.finish();
+      const opened = await opening.catch(() => undefined);
+      if (opened) await opened.driver.close();
+      assert.equal(await f.provider.cleanup(), true);
+    });
+    await native.preparing.promise;
+    assert.deepEqual(f.reads, emptyReads, 'no HTTP before original preparation completes');
+    assert.deepEqual(f.writes, emptyWrites);
+    await tick();
+    assert.equal(allocationChecks, checksAtLaunch, 'no HTTP-loop allocation checks during preparation');
+    assert.equal(f.provider.isReady(), false);
+    native.prepare.release(); await native.resuming.promise; await tick();
+    assert.deepEqual(f.reads, emptyReads, 'owner installation does not replace the original resume acknowledgement');
+    assert.deepEqual(f.writes, emptyWrites);
+    assert.equal(allocationChecks, checksAtLaunch, 'no HTTP-loop allocation checks during resume');
+    native.resume.release();
+    const opened = await opening;
+    assert.equal(await native.child().ready, native.native);
+    assert.equal((await opened.driver.checkReadiness()).ok, true);
+    assert.equal(f.provider.isReady(), true);
+    assert.deepEqual(native.calls, ['prepare', 'resume-enter', 'install-owner', 'resume-ack']);
+    for (const route of ['/config', '/agent', '/config/providers', '/mcp', '/session/ses_TESTowned'])
+      assert.ok(f.reads.includes(route), 'original native HTTP qualification remains required');
+    assert.equal(f.launches.length, 1);
+    assert.deepEqual(f.writes.map(row => row.path), ['/session']);
+    assert.deepEqual(f.messages, []);
+  });
+
+for (const mode of ['prepare-rejected', 'owner-revoked', 'seal', 'pending-deadline',
+  'cutoff-ack', 'late-ack', 'unknown-cleanup'] as const) {
+  test('OpenCode original native join refuses ' + mode + ' without HTTP or late session creation',
+    { timeout: 5000 }, async t => {
+      const clock = Date.now();
+      let now = clock;
+      const delayedAck = mode === 'cutoff-ack' || mode === 'late-ack';
+      if (delayedAck) t.mock.method(Date, 'now', () => now);
+      const native = suspendedNativeFixture();
+      const f = fixture({ suspendedNative: native, unknownCleanup: mode === 'unknown-cleanup' });
+      const opening = f.provider.factory.open(f.context.request);
+      const outcome = opening.then(value => ({ kind: 'opened' as const, value }),
+        (error: unknown) => ({ kind: 'failed' as const, error }));
+      t.after(async () => {
+        f.provider.seal(); native.finish();
+        const observed = await outcome;
+        if (observed.kind === 'opened') await observed.value.driver.close();
+        await f.provider.cleanup();
+      });
+      await native.preparing.promise;
+      assert.deepEqual(f.reads, []); assert.deepEqual(f.writes, []);
+      let readySettled = false;
+      void native.child().ready.then(() => { readySettled = true; }, () => { readySettled = true; });
+      if (mode === 'prepare-rejected' || mode === 'unknown-cleanup') native.reject();
+      else if (mode === 'owner-revoked') { f.revoke(); native.prepare.release(); }
+      else if (mode === 'seal') f.provider.seal();
+      else if (delayedAck) {
+        native.prepare.release(); await native.resuming.promise;
+        now = clock + f.profile.limits.timeoutMs + (mode === 'late-ack' ? 1 : 0);
+        native.resume.release();
+      }
+      assert.equal(f.profile.limits.timeoutMs, 150, 'original HTTP allowance is unchanged');
+      const result = await outcome;
+      assert.equal(result.kind, 'failed');
+      if (result.kind !== 'failed') throw new Error('Original native join unexpectedly opened');
+      assert.ok(result.error instanceof Error);
+      assert.equal(result.error.message, 'OpenCode member unavailable');
+      if (mode === 'seal' || mode === 'pending-deadline')
+        assert.equal(readySettled, false, 'abort/cutoff does not await unresolved native preparation');
+      assert.deepEqual(f.reads, []); assert.deepEqual(f.writes, []);
+      assert.equal(f.launches.length, 1); assert.equal(f.cleanup(), 1);
+      assert.equal(f.running(), false); assert.equal(f.provider.isReady(), false);
+      native.finish();
+      if (delayedAck) assert.equal(await native.child().ready, native.native);
+      else await assert.rejects(native.child().ready, /unavailable|TEST private prepare refusal/);
+      await tick();
+      assert.deepEqual(f.reads, []); assert.deepEqual(f.writes, []);
+      assert.equal(native.calls.filter(call => call === 'stop-request').length, 1);
+      assert.equal(native.calls.includes('resume-ack'), delayedAck);
+      assert.equal(native.child().exitCode, null, 'refusal does not invent native root exit');
+      assert.equal(await f.provider.cleanup(), mode !== 'unknown-cleanup');
+    });
+}

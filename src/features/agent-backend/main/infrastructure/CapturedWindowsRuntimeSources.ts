@@ -36,13 +36,13 @@ import type { RuntimeConfigurationRefreshIntent, RuntimeSourceCandidate, Runtime
 
 export type SelectedWindowsProcessProfile = NativeProcessProfile & {
   provider: 'claude' | 'codex' | 'opencode';
-  nativeGeneration?: 'v1' | undefined;
+  nativeGeneration?: 'v1';
   association?: WindowsOriginalSourceAssociation;
 };
 export interface WindowsLaunchAdmission {
   capability: string;
   phase: 'prepare' | 'resume' | 'service';
-  runtimeSourceOrigin?: RuntimeSourceProcessOrigin | undefined;
+  runtimeSourceOrigin?: RuntimeSourceProcessOrigin;
 }
 export interface WindowsSourceLaunchSelection {
   profile: NativeProcessProfile;
@@ -186,7 +186,8 @@ export class CapturedWindowsRuntimeSources {
     const original = pending;
     let closed = false;
     return () => {
-      if (closed) return; closed = true;
+      if (closed) return;
+      closed = true;
       if (--original.references === 0 && this.pending.get(key) === original) this.pending.delete(key);
     };
   }
