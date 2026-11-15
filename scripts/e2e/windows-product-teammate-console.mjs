@@ -334,6 +334,8 @@ async function run() {
   }, 150_000);
   assert(forceExitMember.pid !== originalMember.pid,
     'Forced-exit product member must be a new process, not a recycled stopped member');
+  assert(await ownedStillAlive(forceExitMember),
+    'Forced-exit teammate had already retired before Electron Main was killed');
   const liveMain = await getProcess(mainBirth.pid);
   assert(liveMain?.creation === mainBirth.creation &&
     liveMain.command.toLowerCase().includes('electron.exe'),
