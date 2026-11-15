@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { DEFAULT_HOST_LIMITS } from '@agent-teams/legacy-agent-host/contracts';
 import { RetainedWindowsCustody } from '@agent-teams/legacy-agent-host/owned-process';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -766,6 +767,25 @@ describe('captured legacy host client over real subprocess stdio', () => {
       code: 'protocol-error',
       outcome: 'unknown',
     });
+    expect((await transport.shutdown()).childExit).toBe('confirmed');
+  });
+
+  it.each([DEFAULT_HOST_LIMITS.reservedControlRequests, DEFAULT_HOST_LIMITS.reservedControlRequests - 1])(
+    'rejects a handshake with %i priority slots that cannot admit work', async maxPriorityMessages => {
+      const transport = client(await fixture('', 'server', `limits: { maxPriorityMessages: ${maxPriorityMessages} },`));
+      await expect(transport.start()).rejects.toMatchObject({ code: 'protocol-error', outcome: 'unknown' });
+      expect((await transport.shutdown()).childExit).toBe('confirmed');
+    }
+  );
+
+  it('keeps one work output slot alongside the full control reserve', async () => {
+    const transport = client(await fixture('', 'server',
+      `limits: { maxPriorityMessages: ${DEFAULT_HOST_LIMITS.reservedControlRequests + 1} },`));
+    const { limits } = await transport.start();
+    expect(limits.reservedControlRequests).toBe(DEFAULT_HOST_LIMITS.reservedControlRequests);
+    expect(limits.maxPriorityMessages).toBe(limits.reservedControlRequests + 1);
+    expect(await transport.request('echo', 'TEST-work-capacity')).toBe('TEST-work-capacity');
+    expect(await transport.request('control', undefined, { control: true })).toBe('control-progress');
     expect((await transport.shutdown()).childExit).toBe('confirmed');
   });
 

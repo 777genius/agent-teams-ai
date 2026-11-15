@@ -89,6 +89,8 @@ function isRequest(value: unknown): value is RpcRequest {
 
 export function createHostServer(options: HostServerOptions): HostServer {
   const limits = resolveHostProfileLimits(options.reviewTransport, options.limits);
+  if (options.nativeCustody && limits.maxPriorityMessages <= limits.reservedControlRequests)
+    throw new RangeError('Control reserve must be below priority message limit for native custody');
   const handshake: HostHandshake = {
     protocolVersion: HOST_PROTOCOL_VERSION,
     buildId: options.buildId,

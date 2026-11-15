@@ -345,3 +345,69 @@ integration и exact variant catalog повторная credential/model-probe �
 на новых source остаётся INCOMPLETE из-за неожиданного завершения Host;
 сохраняются неуспешные receipts, проверяются исходный сигнал и память процесса.
 Ни timeout, ни cleanup assertion ради зелёного результата не ослаблены.
+
+## 15 ноября: проверка оставшегося замечания о транспортном резерве
+
+На объединённом `9a34bb28de0a0deee2eecc42099fd9500563eb1b` замечание
+[#1192/4568304854](https://github.com/777genius/agent-teams-ai/pull/1192#discussion_r4568304854)
+остаётся воспроизводимым по исходному пути: при `maxPriorityMessages <=
+reservedControlRequests` исходящие work-запросы не получают ни одного места.
+Штатные лимиты 64/8 корректны; это отдельный дефект явной конфигурации,
+не диагноз текущего Windows OpenCode E2E.
+
+Проверенный ограниченный объём: отказ при создании Host с `nativeCustody`
+и при принятии Main handshake, до готовности к work-запросам. Общие resolvers,
+лимиты, control reserve и transport-only Host с очередью из одного сообщения
+сохраняются. Два существующих fixture-файла проверяют неверную конфигурацию,
+минимальную рабочую ёмкость и прежний overflow; новые абстракции не нужны.
+Ожидается менее 10 production LOC. Root проверил границы независимо; исходные
+проверки выполняются последовательно до и после исправления. Их результаты
+не заменяют ожидающие Electron/native проверки на опубликованном source.
+
+Фактическая проверка на Node 24.21.0: до изменения production исходный полный
+transport-файл дал 12 PASS / 1 ожидаемый FAIL, полный Main client-файл —
+31 PASS / 2 ожидаемых FAIL; все три отказа проверок вызваны принятием неверной
+конфигурации. После двух guards те же файлы дали 13/13 и 33/33 PASS, без SKIP.
+Host build, полный Host test typecheck на TS 7.0.2, scoped fast lint четырёх
+изменённых файлов, source-size, provisioning guard и diff check прошли.
+Текущий source cap 800 и прежний transport-only overflow сохранены.
+
+## 15 ноября: наблюдатель Windows source использует захваченный бюджет
+
+На `9a34bb28` исходные Windows source проверки корректно остались INCOMPLETE:
+x64 OpenCode отказал по истёкшему 15-секундному preparation, ARM64 Codex был
+остановлен наблюдателем во время повторной обязательной проверки готовности.
+Оба original receipt подтверждают cleanup. Неуспешные результаты сохраняются:
+[x64](https://github.com/777genius/agent-teams-ai/actions/runs/43751070810/job/132924970626),
+[ARM64](https://github.com/777genius/agent-teams-ai/actions/runs/43751070810/job/132924970687).
+
+Проверка истории установила несоответствие TEST-настроек. `d894df69792` добавил
+общий poll 15 с и Host request 15 с вместе с уже выбранным runtime 90 с.
+Desktop non-V2 fixture с `2dc2e18af8f` использует request 60 с и прямо отделяет
+workflow acceptance от проверки скорости запуска. Исходные Stage 1/P09 не
+задают 15-секундный startup SLO. Поздние записи Plan29, сохранявшие 15 с для
+отдельных исправлений, остаются историей тех срезов; эта ограниченная поправка
+меняет только следующие TEST-настройки после независимого review.
+
+- OpenCode source Host получает тот же request budget 60 с, что существующий
+  Desktop non-V2 fixture. Это относится ко всем его RPC; Claude/Codex request
+  остаётся 15 с. Production продолжает соблюдать выбранный caller profile;
+  универсальный production default 60 с не вводится. Private Team probe по
+  runtime profile имеет 90 с и ограничивается исходным Main anchor (теперь не
+  более 60 с), а отдельный management model probe сохраняет 30 с.
+- Только Codex Team-ready observer берёт timeout исходного captured member,
+  проверяя его полный binding, launch/roster и fresh unclaimed attempt. Один
+  монотонный deadline начинается перед исходным Start; в прежний poll передаётся
+  остаток. Получение ACK и опросы не возобновляют бюджет. Остальные poll calls,
+  включая OpenCode post-Start, сохраняют прежний default 15 с.
+
+Production, provider SPI, проверки свежести/источника, модельные и бизнес-вызовы,
+actor lifetime, Stop/cleanup и внешний controller 120 с не меняются. Изменения
+не доказывают успех нового source: обе оригинальные Windows архитектуры должны
+пройти тот же полный A/B и cold scenario после публикации.
+
+Root и независимый reviewer проверили фактический двухфайловый diff, исходные
+summary/binding поля и включение обоих файлов в прежние source pins. Полный
+scripts typecheck (TS 7.0.2), scoped fast lint, source-size и diff check прошли;
+новых тестовых helpers, profiling protocol или production performance changes
+не добавлено. Native Windows результат этой поправки пока не заявляется.
