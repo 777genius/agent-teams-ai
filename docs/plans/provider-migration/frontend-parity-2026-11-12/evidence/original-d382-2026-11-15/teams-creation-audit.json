@@ -1,0 +1,463 @@
+{
+  "run": 43736377081,
+  "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+  "runAttempt": 1,
+  "conclusion": "success",
+  "sourceJoinLimit": "Original checkout/git-log and API run/artifact/upload join; the result JSON has no per-file source-pin roster. No resulting-source qualification.",
+  "platforms": [
+    {
+      "platform": "windows",
+      "jobId": 132879767458,
+      "artifactId": 14170119470,
+      "archive": {
+        "bytes": 1905388,
+        "sha256": "29da317e0312cc38a0e7fcea86d16e8e45d86394e4584aa5fc00a845706744f6",
+        "crcAndPathsVerified": true
+      },
+      "jobLog": {
+        "bytes": 88893,
+        "sha256": "bacbe3e78b9bf187f6f8f6894d04d75f84ecd9bb3e0596673fb035011c1e834b"
+      },
+      "receipt": {
+        "bytes": 2916,
+        "sha256": "dd8602cd40db880fc69617a9309f58c9b9c2a4d3cc30fe45255c26f8a5fbfe89",
+        "matchesPrintedOriginalResult": true
+      },
+      "nodeVersion": "26.12.1",
+      "ownedProcessTests": {
+        "tests": 3,
+        "pass": 3,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "stepMarkers": [
+        "start isolated Electron profile",
+        "click real Create Team button",
+        "restore unedited Advanced CLI defaults for a saved team name",
+        "edit Advanced CLI while the team name is explicitly empty",
+        "naming and renaming a team preserves in-progress Advanced CLI overrides",
+        "Back to Teams and resume saved draft",
+        "open Providers Settings through the real model picker and resume the draft",
+        "click provider refresh and verify native-store checks in the isolated Electron session",
+        "render creation page in both themes and at 200% CSS zoom",
+        "verify actual BrowserWindow.zoomFactor=2 in isolated Electron main process",
+        "split into two panes and prevent duplicate creation editors",
+        "restart real Electron process retaining the same isolated data root",
+        "Launch existing sandbox team must still open a modal",
+        "close launch dialog without starting the deny-all runtime",
+        "create an actual config-only team from the restored screen",
+        "native config-only save rejection retains the editor and its working directory",
+        "copy an existing sandbox team using the real Teams card",
+        "template replacement must be cancelable without losing copied draft",
+        "create from actual Organization Map and verify native placement",
+        "duplicate team-name validation and recovery in organization editor",
+        "reject invalid cron and timezone at the actual native IPC boundary",
+        "open real Schedules UI in isolated Electron",
+        "select the fixture team and review its saved one-time startup prompt",
+        "invalid cron is field-level visible and blocks Save",
+        "exercise list presentation in dark/light and native Electron 200% zoom",
+        "capture the schedule UI at a genuinely narrow viewport",
+        "edit the real schedule without migrating its task-first semantics",
+        "pause and resume the schedule through the real actions menu",
+        "run now and inspect the actual schedule run history",
+        "destructive action demands confirmation and Cancel preserves the record",
+        "restart isolated native Electron in zh-TW for member MCP UI qualification",
+        "inspect native zh-TW task detail dialog and separate task tab"
+      ],
+      "completedBooleanResults": {
+        "success": true,
+        "retainedAcrossBack": true,
+        "retainedAcrossTabSwitch": true,
+        "manageProvidersNavigationRetainsDraft": true,
+        "retainedAcrossProcessRestart": true,
+        "advancedCliRetainedAcrossRename": true,
+        "teammateModeOverridePersistedThroughNativeUi": true,
+        "teammateModeOverrideValidatedThroughNativeUi": true,
+        "missingRequiredCliValueRejectedThroughNativeUi": true,
+        "advancedCliRetainedAcrossPaneSplit": true,
+        "advancedCliRetainedAcrossBackRemount": true,
+        "advancedCliRestoresUneditedDefaults": true,
+        "unnamedAdvancedCliEditsRetained": true,
+        "launchStillModal": true,
+        "launchContentLoaded": true,
+        "configOnlyCreatedThroughUi": true,
+        "nativeConfigOnlyRejectionKeepsDraft": true,
+        "copiedTeamUsesSharedEditor": true,
+        "copiedDraftDoesNotReplaySeed": true,
+        "templateReplacementCancelledAndConfirmed": true,
+        "organizationPlacementPersistedViaNativeApi": true,
+        "duplicateNameValidationRecovered": true,
+        "themeDarkLightRendered": true,
+        "cssZoom200Rendered": true,
+        "nativeElectronZoom200Rendered": true,
+        "splitPaneSingleEditor": true
+      },
+      "schedule": {
+        "scheduleLabel": "schedule-visual-e2e-f1156b7f",
+        "scheduleId": "4e7292de-83dc-4280-adbe-a64b145998f9",
+        "createdAndDeleted": true
+      },
+      "zhTw": {
+        "locale": "zh-TW",
+        "taskDetailUiEvidence": {
+          "taskId": "77",
+          "locale": "zh-TW",
+          "dialogOpenTabAction": "在獨立分頁中開啟",
+          "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+          "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+          "nativeTaskTabVisible": true
+        },
+        "strictAllowlistVisible": true,
+        "placeholder": "github, sentry",
+        "parsedServerNames": [
+          "github",
+          "sentry"
+        ],
+        "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+        "controlEditedThroughNativeCdp": true
+      },
+      "cleanup": {
+        "processGroupAbsent": null,
+        "windowsTaskkillExitedZero": true,
+        "windowsExactOwnedProcessesAbsent": true,
+        "windowsTeardowns": [
+          {
+            "launcherPid": 6000,
+            "taskkillAttempted": true,
+            "taskkillExitCode": 0,
+            "observedIdentityCount": 17,
+            "exactOwnedProcessesAbsent": true,
+            "cdpPortAbsent": true
+          },
+          {
+            "launcherPid": 3988,
+            "taskkillAttempted": true,
+            "taskkillExitCode": 0,
+            "observedIdentityCount": 17,
+            "exactOwnedProcessesAbsent": true,
+            "cdpPortAbsent": true
+          },
+          {
+            "launcherPid": 5400,
+            "taskkillAttempted": true,
+            "taskkillExitCode": 0,
+            "observedIdentityCount": 17,
+            "exactOwnedProcessesAbsent": true,
+            "cdpPortAbsent": true
+          }
+        ],
+        "temporaryProfileRemoved": true
+      },
+      "macInputSelectionFallbackCount": 0,
+      "representativeOriginalImagesViewed": [
+        {
+          "path": "teams-create-schedules-delete-confirm.png",
+          "bytes": 45212,
+          "sha256": "2dfe8d7b35fd9c28c2eee0d7b1fbf8ba9c9e4369bc35d00fa238deececf7fc16"
+        },
+        {
+          "path": "teams-create-schedules-deleted.png",
+          "bytes": 32744,
+          "sha256": "bb23db0ccb827d2e852139240bcf939f668cd147cf79cf57b98b578f8f3587f8"
+        }
+      ]
+    },
+    {
+      "platform": "ubuntu",
+      "jobId": 132879767800,
+      "artifactId": 14171646539,
+      "archive": {
+        "bytes": 2918451,
+        "sha256": "ed9b8925ea8071ff0caab796797b322da7af1f12ae60af9aa839fd511b6419c1",
+        "crcAndPathsVerified": true
+      },
+      "jobLog": {
+        "bytes": 74350,
+        "sha256": "d43a85d747c657583b1456992f31a36e796edfe508c800c145a835f1641bc698"
+      },
+      "receipt": {
+        "bytes": 2207,
+        "sha256": "ba956f6b58d9f1f2887e171b8530d17fbb88f2a83dc580fe12390995f393cb3c",
+        "matchesPrintedOriginalResult": true
+      },
+      "nodeVersion": "26.12.1",
+      "ownedProcessTests": {
+        "tests": 3,
+        "pass": 3,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "stepMarkers": [
+        "start isolated Electron profile",
+        "click real Create Team button",
+        "restore unedited Advanced CLI defaults for a saved team name",
+        "edit Advanced CLI while the team name is explicitly empty",
+        "naming and renaming a team preserves in-progress Advanced CLI overrides",
+        "Back to Teams and resume saved draft",
+        "open Providers Settings through the real model picker and resume the draft",
+        "click provider refresh and verify native-store checks in the isolated Electron session",
+        "render creation page in both themes and at 200% CSS zoom",
+        "verify actual BrowserWindow.zoomFactor=2 in isolated Electron main process",
+        "split into two panes and prevent duplicate creation editors",
+        "restart real Electron process retaining the same isolated data root",
+        "Launch existing sandbox team must still open a modal",
+        "close launch dialog without starting the deny-all runtime",
+        "create an actual config-only team from the restored screen",
+        "native config-only save rejection retains the editor and its working directory",
+        "copy an existing sandbox team using the real Teams card",
+        "template replacement must be cancelable without losing copied draft",
+        "create from actual Organization Map and verify native placement",
+        "duplicate team-name validation and recovery in organization editor",
+        "reject invalid cron and timezone at the actual native IPC boundary",
+        "open real Schedules UI in isolated Electron",
+        "select the fixture team and review its saved one-time startup prompt",
+        "invalid cron is field-level visible and blocks Save",
+        "exercise list presentation in dark/light and native Electron 200% zoom",
+        "capture the schedule UI at a genuinely narrow viewport",
+        "edit the real schedule without migrating its task-first semantics",
+        "pause and resume the schedule through the real actions menu",
+        "run now and inspect the actual schedule run history",
+        "destructive action demands confirmation and Cancel preserves the record",
+        "restart isolated native Electron in zh-TW for member MCP UI qualification",
+        "inspect native zh-TW task detail dialog and separate task tab"
+      ],
+      "completedBooleanResults": {
+        "success": true,
+        "retainedAcrossBack": true,
+        "retainedAcrossTabSwitch": true,
+        "manageProvidersNavigationRetainsDraft": true,
+        "retainedAcrossProcessRestart": true,
+        "advancedCliRetainedAcrossRename": true,
+        "teammateModeOverridePersistedThroughNativeUi": true,
+        "teammateModeOverrideValidatedThroughNativeUi": true,
+        "missingRequiredCliValueRejectedThroughNativeUi": true,
+        "advancedCliRetainedAcrossPaneSplit": true,
+        "advancedCliRetainedAcrossBackRemount": true,
+        "advancedCliRestoresUneditedDefaults": true,
+        "unnamedAdvancedCliEditsRetained": true,
+        "launchStillModal": true,
+        "launchContentLoaded": true,
+        "configOnlyCreatedThroughUi": true,
+        "nativeConfigOnlyRejectionKeepsDraft": true,
+        "copiedTeamUsesSharedEditor": true,
+        "copiedDraftDoesNotReplaySeed": true,
+        "templateReplacementCancelledAndConfirmed": true,
+        "organizationPlacementPersistedViaNativeApi": true,
+        "duplicateNameValidationRecovered": true,
+        "themeDarkLightRendered": true,
+        "cssZoom200Rendered": true,
+        "nativeElectronZoom200Rendered": true,
+        "splitPaneSingleEditor": true
+      },
+      "schedule": {
+        "scheduleLabel": "schedule-visual-e2e-75bc571b",
+        "scheduleId": "98b998b8-18d4-476d-b441-83dffffe4970",
+        "createdAndDeleted": true
+      },
+      "zhTw": {
+        "locale": "zh-TW",
+        "taskDetailUiEvidence": {
+          "taskId": "77",
+          "locale": "zh-TW",
+          "dialogOpenTabAction": "在獨立分頁中開啟",
+          "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+          "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+          "nativeTaskTabVisible": true
+        },
+        "strictAllowlistVisible": true,
+        "placeholder": "github, sentry",
+        "parsedServerNames": [
+          "github",
+          "sentry"
+        ],
+        "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+        "controlEditedThroughNativeCdp": true
+      },
+      "cleanup": {
+        "processGroupAbsent": true,
+        "windowsTaskkillExitedZero": null,
+        "windowsExactOwnedProcessesAbsent": null,
+        "windowsTeardowns": null,
+        "temporaryProfileRemoved": true
+      },
+      "macInputSelectionFallbackCount": 0,
+      "representativeOriginalImagesViewed": [
+        {
+          "path": "teams-create-copy-resumed-edits.png",
+          "bytes": 74172,
+          "sha256": "7b6e8be0284ddc82f9d734e062a47bdf51e798e683df821462d52e8ae1df137d"
+        },
+        {
+          "path": "teams-create-config-only-created.png",
+          "bytes": 45085,
+          "sha256": "5ae89903a8fa78883f68b90e4aa3e0ad806cfb712f6100986ed3d3a3f4b57963"
+        }
+      ]
+    },
+    {
+      "platform": "macos",
+      "jobId": 132879767832,
+      "artifactId": 14170996372,
+      "archive": {
+        "bytes": 2338838,
+        "sha256": "9df3bb096f2fe8890dadee54ebc6095cbf1b849417e32d499f0ee3226901677b",
+        "crcAndPathsVerified": true
+      },
+      "jobLog": {
+        "bytes": 53203,
+        "sha256": "18f6c506479c8c4b0ed67693f5a743492f5241632c291b9d3ae13a7066dd4f5c"
+      },
+      "receipt": {
+        "bytes": 2259,
+        "sha256": "a690d042bcfbd6c21206db680db03e3d84626cb5402497484c97b97d2241b1e5",
+        "matchesPrintedOriginalResult": true
+      },
+      "nodeVersion": "26.12.1",
+      "ownedProcessTests": {
+        "tests": 3,
+        "pass": 3,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "stepMarkers": [
+        "start isolated Electron profile",
+        "click real Create Team button",
+        "restore unedited Advanced CLI defaults for a saved team name",
+        "edit Advanced CLI while the team name is explicitly empty",
+        "naming and renaming a team preserves in-progress Advanced CLI overrides",
+        "Back to Teams and resume saved draft",
+        "open Providers Settings through the real model picker and resume the draft",
+        "click provider refresh and verify native-store checks in the isolated Electron session",
+        "render creation page in both themes and at 200% CSS zoom",
+        "verify actual BrowserWindow.zoomFactor=2 in isolated Electron main process",
+        "split into two panes and prevent duplicate creation editors",
+        "restart real Electron process retaining the same isolated data root",
+        "Launch existing sandbox team must still open a modal",
+        "close launch dialog without starting the deny-all runtime",
+        "create an actual config-only team from the restored screen",
+        "native config-only save rejection retains the editor and its working directory",
+        "copy an existing sandbox team using the real Teams card",
+        "template replacement must be cancelable without losing copied draft",
+        "create from actual Organization Map and verify native placement",
+        "duplicate team-name validation and recovery in organization editor",
+        "reject invalid cron and timezone at the actual native IPC boundary",
+        "open real Schedules UI in isolated Electron",
+        "select the fixture team and review its saved one-time startup prompt",
+        "invalid cron is field-level visible and blocks Save",
+        "exercise list presentation in dark/light and native Electron 200% zoom",
+        "capture the schedule UI at a genuinely narrow viewport",
+        "edit the real schedule without migrating its task-first semantics",
+        "pause and resume the schedule through the real actions menu",
+        "run now and inspect the actual schedule run history",
+        "destructive action demands confirmation and Cancel preserves the record",
+        "restart isolated native Electron in zh-TW for member MCP UI qualification",
+        "inspect native zh-TW task detail dialog and separate task tab"
+      ],
+      "completedBooleanResults": {
+        "success": true,
+        "retainedAcrossBack": true,
+        "retainedAcrossTabSwitch": true,
+        "manageProvidersNavigationRetainsDraft": true,
+        "retainedAcrossProcessRestart": true,
+        "advancedCliRetainedAcrossRename": true,
+        "teammateModeOverridePersistedThroughNativeUi": true,
+        "teammateModeOverrideValidatedThroughNativeUi": true,
+        "missingRequiredCliValueRejectedThroughNativeUi": true,
+        "advancedCliRetainedAcrossPaneSplit": true,
+        "advancedCliRetainedAcrossBackRemount": true,
+        "advancedCliRestoresUneditedDefaults": true,
+        "unnamedAdvancedCliEditsRetained": true,
+        "launchStillModal": true,
+        "launchContentLoaded": true,
+        "configOnlyCreatedThroughUi": true,
+        "nativeConfigOnlyRejectionKeepsDraft": true,
+        "copiedTeamUsesSharedEditor": true,
+        "copiedDraftDoesNotReplaySeed": true,
+        "templateReplacementCancelledAndConfirmed": true,
+        "organizationPlacementPersistedViaNativeApi": true,
+        "duplicateNameValidationRecovered": true,
+        "themeDarkLightRendered": true,
+        "cssZoom200Rendered": true,
+        "nativeElectronZoom200Rendered": true,
+        "splitPaneSingleEditor": true
+      },
+      "schedule": {
+        "scheduleLabel": "schedule-visual-e2e-4abf7639",
+        "scheduleId": "8babacf6-f04d-460a-b0f2-8fbbfd337a46",
+        "createdAndDeleted": true
+      },
+      "zhTw": {
+        "locale": "zh-TW",
+        "taskDetailUiEvidence": {
+          "taskId": "77",
+          "locale": "zh-TW",
+          "dialogOpenTabAction": "在獨立分頁中開啟",
+          "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+          "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+          "nativeTaskTabVisible": true
+        },
+        "strictAllowlistVisible": true,
+        "placeholder": "github, sentry",
+        "parsedServerNames": [
+          "github",
+          "sentry"
+        ],
+        "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+        "controlEditedThroughNativeCdp": true
+      },
+      "cleanup": {
+        "processGroupAbsent": true,
+        "windowsTaskkillExitedZero": null,
+        "windowsExactOwnedProcessesAbsent": null,
+        "windowsTeardowns": null,
+        "temporaryProfileRemoved": true
+      },
+      "macInputSelectionFallbackCount": 0,
+      "representativeOriginalImagesViewed": [
+        {
+          "path": "teams-create-restarted.png",
+          "bytes": 58637,
+          "sha256": "94afc36109efc53fa47ef3d6aaa0c084a793be494885cd5d667367ce7f3593d2"
+        },
+        {
+          "path": "teams-create-launch-controls-loaded.png",
+          "bytes": 76059,
+          "sha256": "7b7675fe7c1e4b4fa3037e1ce5486959ff003cba70199e6d0c3e04d134ab37ab"
+        }
+      ]
+    }
+  ],
+  "reviewedOriginalSource": {
+    ".github/workflows/teams-create-page-desktop-e2e.yml": {
+      "blob": "ef939f224a1642cb596906324c8d61441780ccc7",
+      "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f",
+      "bytes": 6522,
+      "lines": 130,
+      "sameAs90d": true
+    },
+    "scripts/e2e/teams-create-page-desktop.mjs": {
+      "blob": "764d42763c8eab6592235acf75073253538cfe38",
+      "sha256": "e1c09e6efffa777bd7f042c813f49cb93d20957d07bed45582474a2930312c1e",
+      "bytes": 103360,
+      "lines": 2105,
+      "sameAs90d": true
+    },
+    "scripts/e2e/teams-create-page-owned-processes.mjs": {
+      "blob": "d73d56bdbc40e3abc70b53ad5db1690c53ed4c5a",
+      "sha256": "4acd26c18441682b134edc480b6659c72f9033904bf5b1110d73285f2f65bc69",
+      "bytes": 1349,
+      "lines": 30,
+      "sameAs90d": true
+    },
+    "scripts/e2e/teams-create-page-owned-processes.test.mjs": {
+      "blob": "d3779ede535583c88f81fa5e747d008f45863c48",
+      "sha256": "67c040e8c87f11ce09ce56d3dfe2734bc6f352c0dc170073fa4861ee2794938a",
+      "bytes": 1404,
+      "lines": 28,
+      "sameAs90d": true
+    }
+  }
+}
