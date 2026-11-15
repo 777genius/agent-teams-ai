@@ -346,7 +346,7 @@ async function receive(frame) {
       inputModalities: ['text'], supportsPersonality: false })), nextCursor: null }; break;
     case 'thread/start':
       assert.equal(active, undefined); assert.equal(params.cwd, process.cwd()); assert.ok(codexModels.includes(params.model));
-      if (role === 'runtime' && !runtimeMcp) assert.equal(params.ephemeral, true, 'Standalone runtime must remain ephemeral');
+      if (standaloneMcp) assert.equal(params.ephemeral, true, 'Standalone runtime must remain ephemeral');
       if (managedMcp !== undefined) { assert.equal(managedConfigObserved, true); if (runtimeMcp) await connectTeam(); }
       if (standaloneMcp) {
         assert.equal(standaloneThread, false); standaloneThread = true;

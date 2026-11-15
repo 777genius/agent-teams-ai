@@ -629,7 +629,7 @@ async function cleanup(fixture) {
     const deadline = Date.now() + 12_000;
     let remaining = [];
     let debugStillListening = false;
-    do {
+    for (;;) {
       current = processes();
       history = extendOwnedHistory(history, current);
       remaining = remainingOwned(history, current);
@@ -650,7 +650,7 @@ async function cleanup(fixture) {
         );
       }
       await new Promise((resolve) => setTimeout(resolve, 250));
-    } while (true);
+    }
     windowsTeardowns.push({
       launcherPid: launcher.pid,
       taskkillAttempted: taskkillExitCode !== null,

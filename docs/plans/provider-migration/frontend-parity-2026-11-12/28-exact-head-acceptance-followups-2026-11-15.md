@@ -121,3 +121,74 @@ no assigned runner; that is an unexecuted gate, not a source failure or PASS.
 Do not dispatch an extra diagnostic matrix, cancel unrelated work, widen
 timeouts, narrow the platform/provider scope, or mark the Draft Ready to
 obtain prohibited vendor jobs.
+
+## Executed local correction evidence
+
+The plan was published as `c6ca02296ab46713b3f79dadfb44b5af3577f1c6`
+before source edits. desktop_fixes reproduced both new actual Host/D cases
+on the old finite predicate: zero of two passed, with held/ok=false, one
+runtime-role launch and an assertion exit before thread selection/input.
+Default and Low retained the observed argument counts of three and five.
+
+After the one-condition correction, the entire existing finite group passed
+8/8 with zero skips/cancellations on the exact locked Node 24.21.0. All six
+earlier cases remain unchanged. The two additions confirm the original
+completed durable receipt, no held resource, exact single peer/turn and
+no effect from lookup/replay. They do not invoke a real vendor executable.
+
+Root separately completed the existing TS7 legacy-host-scripts project and
+the existing retained-host project with their original configurations.
+Scoped fast lint, source-size and provisioning guards and diff checks passed.
+The follow-up changes one TEST predicate, adds 71 lines to the existing test,
+and retains one 17-line bounded Windows observation; production source and
+all original native/Desktop assertions remain unchanged.
+
+scope_plan_audit completed independent R3 review of both final finite files,
+the actual red/green output and the final explicit pid/birth projection.
+Root reviewed the complete source diff. No process factory/result is mocked,
+no original negative case is removed, and cleanup failures still propagate.
+Both reviews found no blocking issue in this bounded correction.
+
+These scoped results do not replace the required full exact-head workspace
+compiler, typed lint or original UI/native gates. All five original source61
+workflow aggregates became cancelled after the plan publication. Completed
+individual PASS/FAIL results above remain valid for that exact source; Team
+types, 17 Linux Desktop lanes, four safe shards and packaged classification
+did not obtain runners or execute. The subsequent source correction needs
+its own original acceptance and source/cleanup review.
+
+## Concurrent residual publication
+
+Before the source update, the expected-head check observed independent
+`0d25c3dcdf156918c1563c764326e4845df47837`, a child of the published plan
+commit c6ca0229. The prepared correction was not written over that head.
+Its four-file patch and executed logs were preserved, then applied with
+three-way checks in a separate worktree based on 0d25c3d. All four paths
+applied cleanly, including the two separate Windows observation blocks.
+The resulting commit must retain 0d25c3d and thus both prior integration
+histories as ancestors. Plan 29's original evidence and limits remain intact.
+
+Three independent reviewers checked the incoming sixteen-path delta:
+desktop_fixes reviewed the import/wrapper/installer/resolver and Host
+regression paths; scope_plan_audit reviewed both workflows, the finite
+Teams metadata peers and plan 29; ci_audit reviewed Windows/CDP observations
+and the Main preparation/path regressions. No blocking issue was found.
+The incoming cleanup log precedes witness.wait and is intermediate evidence;
+its originalHandleAbsent value is not the final cleanup verdict. It does
+not close the ARM Stop-receipt evidence gap. The full assertions and actual
+cleanup remain mandatory in the combined candidate.
+
+The isolated combined checkout used a frozen offline dependency install and
+rebuilt the original Host. Its four affected Node suites passed 70/70, the
+three affected resolver/Main/path suites passed 74/74, and the existing
+workflow contracts passed 17/17, all with zero skips or cancellations. Both
+existing scoped TS7 projects passed again on the combined bytes. These are
+separate groups, not a new full-safe-suite or Desktop qualification.
+
+Changed-file lint found one existing constant-condition loop in the now
+touched Teams E2E file. The sole correction changes do/while(true) to for(;;),
+preserving its unconditional first iteration, complete body, original
+12-second deadline, 250-ms pause, break/throw and cleanup checks. Independent
+review confirmed equivalence. No UI or Windows execution result is inferred
+from that syntactic lint repair. Source-size and provisioning guards pass;
+full exact-source CI and the previously listed native uncertainties remain.
