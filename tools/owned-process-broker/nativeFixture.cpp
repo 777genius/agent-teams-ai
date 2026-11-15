@@ -79,6 +79,17 @@ int wmain(int argc,wchar_t** argv) {
     return result==WAIT_OBJECT_0?0:25;
   }
   if(mode==L"exit-fast") return 0;
+  if(mode==L"source-sentinel") {
+    // Only the source gate holds this original pipe inside its existing 120s outer Job.
+    // Ordinary sentinel and vendor actors keep their original lifetime contracts.
+    BOOL inJob=FALSE;
+    if(argc!=2||!IsProcessInJob(GetCurrentProcess(),nullptr,&inJob)||!inJob) return 58;
+    std::puts("sentinel"); std::fflush(stdout);
+    char command; DWORD count=0;
+    if(!ReadFile(GetStdHandle(STD_INPUT_HANDLE),&command,1,&count,nullptr))
+      return GetLastError()==ERROR_BROKEN_PIPE?0:59;
+    return count==0?0:60; // Any byte is refused; only original parent EOF can finish normally.
+  }
   if(mode==L"leaf") { Sleep(vendorHeld?INFINITE:60000); return 0; }
   if(mode==L"sentinel") { std::puts("sentinel"); std::fflush(stdout); Sleep(vendorHeld?INFINITE:60000); return 0; }
   if(mode==L"selection") {

@@ -255,3 +255,158 @@ invocation in the process workflow. The same five OS/architecture tuples,
 Node pin, single-worker execution, default test budget and original job deadline
 remain. No additional workflow, matrix, native opt-in or diagnostic dispatch
 is introduced. The complete safe frontend inventory also includes this file.
+
+## Subsequent original results and source-gate corrections
+
+The following are source-bound results, not a promotion of all checks to the
+current or any later head. Logs and GitHub artifact metadata were read. This
+continuation has not downloaded or independently hashed these ZIPs after the
+executor outage.
+
+| Original head and job | Observed result |
+| --- | --- |
+| `0d25c3dcdf156918c1563c764326e4845df47837`, [Windows x64 process job 132659867568](https://github.com/777genius/agent-teams-ai/actions/runs/43664201254/job/132659867568) | FAIL. A/B readiness and B standalone completed; standalone retained cleanup was confirmed. All 25 source slots had their original root/witness and stopped/drained/released booleans before the unchanged HANDLE waits. The next failure was the unrelated sentinel's natural exit `0` at source scenario line 419. The separately retained controller exit was `103`. |
+| `0d25c3dcdf156918c1563c764326e4845df47837`, Darwin ARM process job 132659867447 | PASS: Host 150 PASS / 2 Linux-only SKIP, protocol 53 PASS, retained Main 65 PASS, POSIX 23 PASS. This predates the four ModelProbe lifecycle cases and cannot validate them. |
+| `01349f7ecca1a7ff1dba916292fb4b77752603ee`, [Teams creation macOS job 132661511686](https://github.com/777genius/agent-teams-ai/actions/runs/43664725896/job/132661511686) | PASS. The original Electron receipt confirms Create/Back/tab-switch/restart/Copy/Launch hydration, advanced CLI/MCP controls, config-only refusal, schedule create/delete, zh-TW task controls, both themes and 200% zoom. Original process-group absence and temporary-profile removal are true. This executes the new finite metadata fence source on macOS; no independent provider-ledger or screenshot-byte audit is claimed. |
+| `01349f7ecca1a7ff1dba916292fb4b77752603ee`, [OpenCode V2 Darwin ARM job 132661526164](https://github.com/777genius/agent-teams-ai/actions/runs/43664725782/job/132661526164) | FAIL only at the separate POSIX selected-image gate. Original native Host business, MCP, approval, Stop, cold Resume and product receipt checks passed. The after-check mutation was accepted while `LIB / BIN:A / MAIN:A` markers ran, contradicting the unchanged no-constructor-after-mutation oracle at line 490. P09 section 75 remains open; no native image qualification follows from the preceding business result. |
+| `01349f7ecca1a7ff1dba916292fb4b77752603ee`, installer job 132661463778 | FAIL at the original preflight wait before initial Team Launch and before installer getStatus/Update. The ordinary Runtime-derived Codex model-probe correction was absent at this head; it is subsequently preserved from plan 28's external merge below. |
+
+The [original safe frontend shard 3](https://github.com/777genius/agent-teams-ai/actions/runs/43664725858/job/132661463548)
+on `01349f7ecca1a7ff1dba916292fb4b77752603ee` also completed successfully:
+541 files (538 PASS / 3 SKIP), 6243 tests (6236 PASS / 7 SKIP).
+All four new finite ModelProbe lifecycle cases actually executed and passed,
+including the unchanged custody-drain/late-release negative. This Linux
+frontend shard used Node 26.12.1 and the captured Host Node 24.21.0; the
+separate five-tuple retained-Main invocation remains necessary for its own
+Node 24.21.0 result. No other safe shard, native-process or credential
+qualification is inferred from this result.
+
+The associated upload/server digests are:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Safe frontend shard 3 `14141273565` | `d433a77dd4e2697c195efefae20c0b1571e17d4abc484ddff3731a962afc89cd` |
+| Windows x64 process `14141791525` | `f73cc604c18a8437bcbee1e020cb7efb4f7d1cc2294094872506235fb3b8df93` |
+| Darwin ARM process `14141581212` | `d780ded540cb8ca5a517b583dc6bc82c0cc9e3b27fa24fddf362da4903b3c417` |
+| Teams creation macOS `14142360104` | `c807bf3231495ad9193c1ebc9a84602dcec1ddef59c0bebc0498e999399c18a2` |
+| OpenCode V2 Darwin ARM `14141982243` | `3c1cf0ff66710085bf48d8ec825370cfddccef150341830f1dc4af6c5931f3e9` |
+| Installer Darwin ARM `14141532229` | `2e676faae53d7ab201057085ef60adaa6b6a195cd9fd7fa006a652d98c2a1d34` |
+
+### Original unrelated sentinel lifetime
+
+The source controller started at 01:45:43.576 UTC and the retained-cleanup
+assertion ran at 01:46:48.644. The unchanged ordinary fixture mode sleeps
+60 seconds and exits zero. Its expiration is therefore distinct from a scoped
+Stop reaching an unrelated child. The assertion follows the completed original
+`first.close()`; it cannot make an expired sentinel a valid scope witness.
+
+Only the already-validated `--test-source-provider` branch now selects
+`source-sentinel` with its original piped stdin. That exact two-argument actor
+requires existing Job membership, emits the same readiness marker and holds
+only that original pipe. Any byte is refused; only parent EOF can finish it
+normally. The original captured ChildProcess kill and exit wait still own final
+cleanup, and the existing 120-second outer kill-on-close Job remains its bound.
+Ordinary and vendor actor bodies, all unrelated-alive assertions, 15-second
+native waits and source readiness deadlines are unchanged. No PID is reopened
+or rediscovered and no new observer process is added.
+
+Controller exit 103 is separate. Its existing order requires original root exit,
+fresh zero Job membership and successful Job-handle closure before filesystem
+removal. The removal error still fails with 103. Only that retained
+`std::error_code` numeric value and a closed system/generic/other category are
+now printed, together with the already-retained root exit-code variable and
+emergency flag. Under emergency=true, that variable may retain the original
+initial value 99; it is not a fresh post-kill exit observation. No filesystem
+retry, permission change, path/message disclosure or additional probe is added. The actual deletion cause remains unproven until
+that original failure yields its error code.
+
+### One owner for nested Settings evidence
+
+The actual producer assigns Settings evidence to
+`mixedCreateLaunchProof.providerSettings`. The canonical failure projection
+already reads that owner, but the final receipt summary had a 126-line duplicate
+that instead read a root-level Settings record. The duplicate is removed and
+the existing canonical function is imported and re-exported without changing
+its output fields or 4096-byte bound.
+
+One regression in the existing admitted Settings test file calls the actual
+final summary. A conflicting root-level PASS record cannot replace the nested
+INCOMPLETE proof, and an absent nested owner remains absent. The test also
+checks getter refusal, redaction, unchanged original evidence, fresh projected
+arrays/rows, and omission for successful or non-mixed summaries. This corrects
+lost diagnostic evidence; it does not change UI acceptance or cleanup outcomes.
+
+These residual source/test changes received independent review. Their existing
+Windows builds/source-provider scenarios and Desktop prerequisite test remain
+the validation gates; no local execution is claimed while the executor is
+offline. No workflow, matrix, timeout or native opt-in is added by this cut.
+
+## Preserve the independently executed finite-probe correction
+
+Before this residual publication, the branch advanced to merge
+`bc4ae63b7ad712c851fe2da23511e94b026347e6`, with parents `01349f7e` and
+`862a5defdf0582cdc01994168611d4f328cc47b0`. Its exact five-path delta was
+read and independently reviewed. It already narrows the TEST peer's ephemeral
+assertion to its explicit standalone-MCP branch and adds actual Host/D probes
+for Default and Low. Both earlier standalone refusal cases and all other
+original finite tests remain. The separate owner's executed before/after
+results, scoped compiler/lint checks and incomplete full compiler exit 137 are
+recorded with their source and limits in [plan 28](28-exact-head-acceptance-followups-2026-11-15.md);
+they are not local execution by this continuation.
+
+The unused parallel candidate was discarded. Preserve the external actual
+Host tests, its bounded first ambiguous Windows entry-match projection and
+the Teams cleanup loop's equivalent `for (;;)` lint correction. No duplicate
+probe test or alternative matchset filter is introduced.
+
+One residual observation correction checks the existing monotonic five-second
+deadline after the final original probe read. Otherwise a completion arriving
+after the while-loop budget could be accepted by that last read. It adds no
+read, request, retry, owner or timeout; late completion now fails the same
+original observation bound.
+
+## Later results from the original 01349 head
+
+| Original job | Observed result and limit |
+| --- | --- |
+| [Windows ARM native OpenCode V2 132661526105](https://github.com/777genius/agent-teams-ai/actions/runs/43664725782/job/132661526105) | PASS, including actual original Windows custody, manual and automatic approval, tools/MCP, Stop, cold Resume and original receipt checks. No vendor-auth, Desktop or release qualification is implied. |
+| [Darwin x64 native OpenCode V2 132661526086](https://github.com/777genius/agent-teams-ai/actions/runs/43664725782/job/132661526086) | Original business/cold-Resume checks PASS; entire job FAIL at the unchanged POSIX image gate, errno 13 versus 0 at line 470. |
+| [Darwin x64 process 132661557179](https://github.com/777genius/agent-teams-ai/actions/runs/43664725903/job/132661557179) | PASS: Host 150 PASS / 2 SKIP, protocol 53 PASS, retained Main 69 PASS in eight files, POSIX 23 PASS. All four new lifecycle cases ran on Node 24.21.0. |
+| [Windows ARM process 132661557568](https://github.com/777genius/agent-teams-ai/actions/runs/43664725903/job/132661557568) | Host 149 PASS / 3 SKIP, protocol 53 PASS, retained Main 69 PASS including all four lifecycle cases. Original source A readiness then FAIL after 105 reads / 15.484 seconds: nativeReady remained false. Slot 6 was allocated and reported stopped/drained/released but retained no root/witness and no completed preparation observation. The strict source cleanup check and controller103 remain failures. |
+| [Windows x64 process 132661557540](https://github.com/777genius/agent-teams-ai/actions/runs/43664725903/job/132661557540) | Host 149 PASS / 3 SKIP, protocol 53 PASS, retained Main 69 PASS including all four lifecycle cases. Source A/B readiness and standalone completed; the original cold-read/replay stage was reached with no JS assertion in the log, then controller103 failed filesystem removal. The original root exit/cold completion cannot be inferred from that suppressed final controller receipt. |
+| [V2-management Desktop prerequisite 132661463720](https://github.com/777genius/agent-teams-ai/actions/runs/43664725858/job/132661463720) | Original prerequisite 68/68 and install-helper 7/7 PASS. The actual credential/scoped-model UI step was cancelled by the external merge; it did not qualify that UI. |
+
+The four lifecycle regressions now have original execution evidence on the
+Linux frontend shard and both Windows/Darwin-x64 retained-Main runs. The prior
+0d25 Darwin-ARM result predates them. Unexecuted or cancelled Linux/Darwin-ARM
+process jobs and safe shards 1/2/4 remain unqualified.
+
+| Artifact | Upload/server SHA-256 |
+| --- | --- |
+| Native OpenCode Windows ARM `14142213486` | `42062737c1bf9f43cecd4d858cee1e30908e0a2f1796216d6c325ecc17239c9c` |
+| Native OpenCode Darwin x64 `14141184611` | `401de95a84adf407eb80432eddc337b6c9a5f8d22f11da9a6d11c083955cd874` |
+| Process Darwin x64 `14141224526` | `d38388fcf594f5f206bd77ae6ee9355492432b06abc6bd97b5ee36db0d4b1fdd` |
+| Process Windows ARM `14141144615` | `c5abdb53574e05b8be2833f6b688f35ff82cbcbdd67fdd5a0481a028623035eb` |
+| Process Windows x64 `14142243715` | `4cf4819d39e34f8974d804229dc6074549e4a7414dce50cf8221d21ae0923535` |
+| Cancelled V2-management Desktop `14141324639` | `4d694dc6118018e18def795ec0e39549438460d49d8071c1cf9c919327365cdc` |
+
+### Teams Windows summary counts the three actual launches
+
+[Teams Windows job 132661512148](https://github.com/777genius/agent-teams-ai/actions/runs/43664725896/job/132661512148)
+completed its original UI scenario. Its original receipt has three teardown
+records; each confirms exact owned-process absence, closed CDP and taskkill
+exit zero. The summary nevertheless reports
+`windowsExactOwnedProcessesAbsent: false`, because it still expected two
+launches. Current source has exactly three: initial, retained-data restart and
+the added zh-TW restart.
+
+Only the summary's exact count changes from two to three. The original
+per-teardown physical checks, strict cardinality, original cleanup loop and
+error propagation remain. The old false aggregate is not relabelled as a
+qualified result or an observed leak; the corrected current-source receipt
+still requires its original Windows E2E. Artifact `14141983835` has upload/server
+SHA-256 `6d69f621abc2cda324c209efbafb8387f9247fce65cdb425ec33599b9aa3002f`.
+
+The residual publication consists of seven reviewed source/test files plus
+this evidence document. Existing matrices execute their validation; no extra
+dispatch, native opt-in, scope reduction or budget expansion is introduced.

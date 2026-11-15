@@ -198,7 +198,9 @@ await import(${JSON.stringify(pathToFileURL(f.source).href)});
   const deadline = performance.now() + 5000;
   while (probes.read(identity)?.phase === 'running' && performance.now() < deadline)
     await new Promise(resolve => setTimeout(resolve, 10));
-  const original = probes.read(identity), effects = await f.effects();
+  const original = probes.read(identity);
+  assert.ok(performance.now() < deadline, 'original finite protocol deadline');
+  const effects = await f.effects();
   assert.equal(original?.phase, 'completed', JSON.stringify({ original, effects }));
   assert.equal(original.ok, true);
   const receipts = [...store.list()]; assert.equal(receipts.length, 1);

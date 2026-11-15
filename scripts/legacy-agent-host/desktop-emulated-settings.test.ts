@@ -17,6 +17,8 @@ import { claudeManagementProfileSchema } from '../../packages/legacy-agent-host/
 import { ManagementResourceFence } from '../../packages/legacy-agent-host/dist/management/ManagementResourceFence.js';
 import { ModelProbeOwner } from '../../packages/legacy-agent-host/dist/management/ModelProbeOwner.js';
 import { desktopNodeScriptHeader, digest, fileDigest } from './desktop-backend-fixture.ts';
+import { projectDesktopMixedSettingsFailure } from './desktop-backend-failures.ts';
+import { projectDesktopProofReceiptSummary } from './desktop-proof-evidence.ts';
 import { assertDesktopEmulatedImportModelChecks } from './desktop-emulated-import-ui.ts';
 import { desktopEmulatedClaudeSettingsWrapper } from './desktop-emulated-claude-settings-fixture.ts';
 import { extensionMcpName, extensionMcpUrl, extensionPlugin } from './desktop-native-extensions-fixture.ts';
@@ -257,4 +259,53 @@ test('saved-import peer refuses a business input without producing a probe or to
   for (const name of ['settings.json', '.claude.json'])
     await assert.rejects(readFile(join(f.peerRoot, 'config', name)), { code: 'ENOENT' });
   assert.deepEqual([...f.store.list()], []);
+});
+
+test('receipt summaries retain only the original nested mixed Settings owner', () => {
+  const secret = 'TEST-private-settings-URL-path-credential';
+  const settings = { status: 'INCOMPLETE', secret,
+    steps: [{ step: 'project-default', phase: 'completed', resourceHeld: false }],
+    projectOverride: { secret }, originalSettingsOwnersReleased: true, sameSettingsAfterCold: false };
+  const evidence = { status: 'INCOMPLETE', providerSettings: { status: 'PASS', secret, steps: [] },
+    mixedCreateLaunchProof: { status: 'INCOMPLETE', openCodeGeneration: 'v2', steps: [], providerSettings: settings },
+    coldSettingsBoundary: { status: 'INCOMPLETE', firstQuit: { attempted: true } },
+    cleanup: { remaining: [], appExitCode: 0, capturedHostAbsent: true, writerLockReleased: true } };
+  const before = structuredClone(evidence);
+  const options = { receiptPath: 'TEST-receipt', mode: 'mixed-create-launch-ui', mixedMode: true };
+  const summary = projectDesktopProofReceiptSummary(evidence, options);
+  const projection = projectDesktopMixedSettingsFailure(evidence);
+  assert.ok('settingsRecorded' in projection);
+  assert.equal(projection.settingsRecorded, true);
+  assert.equal(projection.settingsStatus, 'INCOMPLETE');
+  assert.deepEqual(projection.settingsSteps, settings.steps);
+  assert.notEqual(projection.settingsSteps, settings.steps);
+  assert.notEqual(projection.settingsSteps?.[0], settings.steps[0]);
+  assert.equal(projection.milestones.projectOverrideRecorded, true);
+  assert.equal(projection.originalSettingsOwnersReleased, true);
+  assert.equal(projection.sameSettingsAfterCold, false);
+  assert.equal(projection.quitAttempted, true);
+  assert.deepEqual(summary.mixedSettingsFailure, projection, 'the final receipt uses the same original owner');
+  assert.equal(JSON.stringify(summary).includes(secret), false);
+  assert.deepEqual(evidence, before, 'the original retained proof is not rewritten or aliased');
+
+  const missing = { ...evidence, mixedCreateLaunchProof: { steps: [] } };
+  const missingProjection = projectDesktopMixedSettingsFailure(missing);
+  assert.ok('settingsRecorded' in missingProjection);
+  assert.equal(missingProjection.settingsRecorded, false);
+  assert.equal(missingProjection.settingsStatus, null);
+  assert.deepEqual(projectDesktopProofReceiptSummary(missing, options).mixedSettingsFailure, missingProjection,
+    'a foreign root Settings record cannot substitute for the missing nested owner');
+  let getterReads = 0;
+  const malformed = { ...evidence, mixedCreateLaunchProof: Object.defineProperty(
+    { ...evidence.mixedCreateLaunchProof }, 'providerSettings',
+    { get() { getterReads++; throw new Error(secret); } }) };
+  const malformedProjection = projectDesktopMixedSettingsFailure(malformed);
+  assert.ok('settingsRecorded' in malformedProjection);
+  assert.equal(malformedProjection.settingsRecorded, null);
+  assert.deepEqual(projectDesktopProofReceiptSummary(malformed, options).mixedSettingsFailure, malformedProjection);
+  assert.equal(getterReads, 0, 'summary extraction does not invoke retained accessors');
+  assert.equal('mixedSettingsFailure' in projectDesktopProofReceiptSummary(
+    { ...evidence, status: 'PASS' }, options), false);
+  assert.equal('mixedSettingsFailure' in projectDesktopProofReceiptSummary(
+    evidence, { ...options, mixedMode: false }), false);
 });

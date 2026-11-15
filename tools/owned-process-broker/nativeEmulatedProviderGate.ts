@@ -184,7 +184,8 @@ async function main() {
   assert.equal(existsSync(receiptPath), false);
   const paths = [wholeBroker, actor, scopedBroker].map(path => realpathSync(path));
   const pins = paths.map(path => ({ path, sha256: fileHash(path) }));
-  const sentinel = spawn(paths[1]!, ['sentinel'], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  const sentinel = spawn(paths[1]!, [sourceProvider === undefined ? 'sentinel' : 'source-sentinel'],
+    { stdio: [sourceProvider === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'], windowsHide: true });
   const exited = new Promise<number | null>((resolveExit, reject) => { sentinel.once('exit', resolveExit); sentinel.once('error', reject); });
   void exited.catch(() => undefined);
   const providers: unknown[] = [], wrappers: string[] = [], sourceScenarios: Record<string, unknown>[] = [];

@@ -2078,7 +2078,7 @@ async function main() {
     windowsTaskkillExitedZero: process.platform === 'win32'
       ? windowsTeardowns.every((item) => item.taskkillExitCode === 0) : null,
     windowsExactOwnedProcessesAbsent: process.platform === 'win32'
-      ? windowsTeardowns.length === 2 && windowsTeardowns.every((item) => item.exactOwnedProcessesAbsent) : null,
+      ? windowsTeardowns.length === 3 && windowsTeardowns.every((item) => item.exactOwnedProcessesAbsent) : null,
     windowsTeardowns: process.platform === 'win32' ? windowsTeardowns : null,
     temporaryProfileRemoved: process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1',
   };
