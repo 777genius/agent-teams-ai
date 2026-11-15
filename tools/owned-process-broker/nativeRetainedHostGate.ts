@@ -351,16 +351,16 @@ export async function runNativeRetainedHostGate(
     payload,
   });
   let failedRpc: { method: string; code: string; outcome: string; read: Record<string, JsonValue> } | null = null;
-  const rpc = async (method: string, commandId: string, payload: JsonValue, cutoff?: number) => {
-    const deadline = cutoff ?? (performance.now() + captured.host.requestTimeoutMs);
-    if (cutoff !== undefined) assert.ok(performance.now() < cutoff, 'Original native turn deadline');
+  const rpc = async (method: string, commandId: string, payload: JsonValue, cutoff = Infinity) => {
+    const deadline = Math.min(cutoff, performance.now() + captured.host.requestTimeoutMs);
+    assert.ok(performance.now() < deadline, 'Original Host RPC deadline');
     const result = row(
       await client.request(method, envelope(commandId, payload), {
         control: method === 'runtime.read',
-        ...(cutoff === undefined ? {} : { remainingMs: () => cutoff - performance.now() }),
+        remainingMs: () => deadline - performance.now(),
       })
     );
-    if (cutoff !== undefined) assert.ok(performance.now() < cutoff, 'Original native turn deadline');
+    assert.ok(performance.now() < deadline, 'Original Host RPC deadline');
     try { assert.equal(result.ok, true, 'Actual original Host route succeeded'); }
     catch (error) {
       if (!failedRpc) {
