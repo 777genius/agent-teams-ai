@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/e2e/provider-real-runtime-*.ts'
+      - 'scripts/e2e/opencode-alice-bob-local-model.mjs'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'
       - 'scripts/e2e/opencode-diagnostics/run.mjs'
@@ -27,6 +28,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - 'scripts/e2e/provider-real-runtime-*.ts'
+      - 'scripts/e2e/opencode-alice-bob-local-model.mjs'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'
       - 'scripts/e2e/opencode-diagnostics/run.mjs'
@@ -123,6 +125,23 @@ jobs:
         run: |
           node scripts/e2e/opencode-diagnostics/run.mjs --real-runtime
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # Model decisions are local/deterministic, while OpenCode, team IPC,
+      # physical inboxes and delivery-ledger read commits are genuine.
+      - name: Real OpenCode Alice/Bob peer delivery with localhost model
+        if: runner.os == 'Linux'
+        env:
+          OPENCODE_PEER_E2E_EVIDENCE: ${{ runner.temp }}/opencode-peer-local-model
+        run: |
+          node --check scripts/e2e/opencode-alice-bob-local-model.mjs
+          xvfb-run -a node scripts/e2e/opencode-alice-bob-local-model.mjs
+      - name: Preserve Alice/Bob original peer/read receipts
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-alice-bob-local-model-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/opencode-peer-local-model/
       - name: Preserve sanitized real Electron connection evidence
         if: always()
         uses: actions/upload-artifact@v4
