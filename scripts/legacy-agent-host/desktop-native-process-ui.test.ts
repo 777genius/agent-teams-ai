@@ -164,3 +164,92 @@ test('captured no-provider Processes fixture rejects mixed inputs before allocat
   assert.equal(fixture.controlledProcess.proof.providersConfigured, false);
   assert.equal(fixture.controlledProcess.proof.status, 'INCOMPLETE', 'preparation does not claim actual process/UI qualification');
 });
+
+test('Windows outage membership requires both original process owners in one renderer sample', async () => {
+  const source = await readFile(new URL('../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8');
+  const start = "  'genuine closed Host read marker with separate controls', remaining());\n";
+  const end = "\n\n  assertHostBirths();\n  begin('one-explicit-same-Main-Retry', 10000);";
+  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+  const from = source.indexOf(start) + start.length, to = source.indexOf(end, from);
+  assert(to > from);
+  const execute = Function('assert', 'ui', 'original', 'processOwner', 'remaining', 'object',
+    'return (async () => {' + source.slice(from, to) + '\n})();');
+  const selectedStart = 'const processOwner = (row, stopped = false) =>';
+  const selectedEnd = '\nconst readProcesses = async () => {';
+  assert.equal(source.split(selectedStart).length, 2); assert.equal(source.split(selectedEnd).length, 2);
+  const selectedFrom = source.indexOf(selectedStart), selectedTo = source.indexOf(selectedEnd, selectedFrom);
+  assert(selectedTo > selectedFrom);
+  const selectedTeam = 'TEST-original-owner-qualified-team';
+  const processOwner = Function('desktopProcessOwnerExpression', 'selection',
+    source.slice(selectedFrom, selectedTo) + '\nreturn processOwner;')(desktopProcessOwnerExpression, selectedTeam);
+  const rows = [
+    { id: 'TEST-primary', processRef: 'TEST-original-primary' },
+    { id: 'TEST-neighbor', processRef: 'TEST-original-neighbor' },
+  ];
+  const object = (value: unknown) => {
+    assert(value && typeof value === 'object' && !Array.isArray(value)); return value;
+  };
+  const unavailable = new Error('TEST original remaining observation allowance exhausted');
+  const frame = (processes: typeof rows, teamName = selectedTeam) => ({ processes, teamName });
+  const observe = (
+    frames: (ReturnType<typeof frame> | Error)[],
+    { guardError, remainingError }: { guardError?: Error; remainingError?: Error } = {}
+  ) => {
+    let waits = 0, reads = 0, checks = 0, remainingReads = 0;
+    return {
+      run: () => execute(assert, {
+        waitRead: async (expression: string, label: string, budget: number): Promise<unknown> => {
+          waits++;
+          assert.equal(label, 'original rows retained during outage'); assert.equal(budget, 7500);
+          for (let sample = 0; sample < frames.length; sample++) {
+            checks++;
+            if (guardError) throw guardError;
+            const current = frames[Math.min(reads++, frames.length - 1)]; assert(current);
+            if (current instanceof Error) throw current;
+            const section = { querySelectorAll: () => [],
+              __reactFiber$TEST: { memoizedProps: { ...current, isTeamAlive: false }, alternate: null, return: null } };
+            const document = { querySelector: (selector: string) => {
+              assert.equal(selector, '[data-section-id="processes"]'); return section;
+            } };
+            const value = Function('document', 'return ' + expression)(document);
+            if (value) return value;
+          }
+          throw unavailable;
+        },
+      }, { rows }, processOwner, () => {
+        remainingReads++;
+        if (remainingError) throw remainingError;
+        return 7500;
+      }, object),
+      counts: () => ({ waits, reads, checks, remainingReads }),
+    };
+  };
+
+  // The old two waits accepted primary from one sample and neighbor from another.
+  const separate = observe([frame([rows[0]!]), frame([rows[1]!])]);
+  await assert.rejects(separate.run(), error => error === unavailable);
+  assert.deepEqual(separate.counts(), { waits: 1, reads: 2, checks: 2, remainingReads: 1 });
+  const together = observe([frame(rows)]);
+  await together.run();
+  assert.deepEqual(together.counts(), { waits: 1, reads: 1, checks: 1, remainingReads: 1 });
+  const laterTogether = observe([frame([rows[0]!]), frame([rows[1]!]), frame(rows)]);
+  await laterTogether.run();
+  assert.deepEqual(laterTogether.counts(), { waits: 1, reads: 3, checks: 3, remainingReads: 1 });
+
+  for (const invalid of [
+    frame(rows, 'TEST-foreign-owner-qualified-team'),
+    frame([{ ...rows[0]!, id: 'TEST-wrong-id' }, rows[1]!]),
+    frame([{ ...rows[0]!, processRef: 'TEST-replacement-ref' }, rows[1]!]),
+    frame([rows[0]!, rows[0]!, rows[1]!]),
+    frame([]),
+  ]) await assert.rejects(observe([invalid]).run(), error => error === unavailable);
+  const guard = new Error('TEST original owner changed'), cutoff = new Error('TEST original phase expired');
+  const blocked = observe([frame(rows)], { guardError: guard });
+  await assert.rejects(blocked.run(), error => error === guard);
+  assert.deepEqual(blocked.counts(), { waits: 1, reads: 0, checks: 1, remainingReads: 1 });
+  const expired = observe([frame(rows)], { remainingError: cutoff });
+  await assert.rejects(expired.run(), error => error === cutoff);
+  assert.deepEqual(expired.counts(), { waits: 0, reads: 0, checks: 0, remainingReads: 1 });
+  const evaluation = new Error('TEST original renderer evaluation failed');
+  await assert.rejects(observe([evaluation]).run(), error => error === evaluation);
+});

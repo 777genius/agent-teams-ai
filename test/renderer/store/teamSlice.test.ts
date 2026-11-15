@@ -9800,6 +9800,111 @@ describe('teamSlice actions', () => {
       };
     }
 
+
+    it.each(['original', 'unseen-roster'] as const)(
+      'keeps the latest captured Host roster after a deferred %s status result',
+      async (lateRoster) => {
+        const f = await fixture();
+        if (lateRoster === 'unseen-roster') f.add();
+        const requestedRun = f.runId();
+        const late = await f.control.getProvisioningStatus(requestedRun);
+        const deferred = createDeferredPromise<TeamProvisioningProgress>();
+        hoisted.getProvisioningStatus.mockReturnValueOnce(deferred.promise);
+        const pending = f.store.getState().getProvisioningStatus(requestedRun);
+
+        if (lateRoster === 'original') f.add();
+        f.restorePending();
+        Object.assign(f.view.launch.members[2]!, {
+          status: 'ready', nativeReady: true, usable: true,
+        });
+        Object.assign(f.view.launch, { status: 'ready', ready: 3 });
+        const latest = await f.control.getProvisioningStatus(f.runId());
+        f.store.getState().onProvisioningProgress(latest);
+        expect(f.store.getState().currentProvisioningRunIdByTeam[key]).toBe(latest.runId);
+        expect(f.store.getState().currentRuntimeRunIdByTeam[key]).toBe(latest.runId);
+
+        const publication = vi.spyOn(f.store.getState(), 'onProvisioningProgress');
+        try {
+          deferred.resolve(late);
+          expect(await pending).toBe(late);
+          expect(publication).not.toHaveBeenCalled();
+        } finally {
+          publication.mockRestore();
+        }
+        expect(f.store.getState().currentProvisioningRunIdByTeam[key]).toBe(latest.runId);
+        expect(f.store.getState().currentRuntimeRunIdByTeam[key]).toBe(latest.runId);
+        expect(Object.keys(f.store.getState().provisioningRuns)).toEqual([latest.runId]);
+
+        f.store.getState().onProvisioningProgress({
+          ...latest, state: 'disconnected', message: 'Team launch stopped.',
+        });
+        expect(getCurrentProvisioningProgressForTeam(f.store.getState(), key)?.state)
+          .toBe('disconnected');
+        expect(f.store.getState().memberSpawnStatusesByTeam[key]).toBeUndefined();
+      }
+    );
+
+    it('keeps the newer captured Runtime pin while its provisioning result is still pending', async () => {
+      const f = await fixture();
+      f.add();
+      const intermediateRun = f.runId();
+      const intermediateProgress = await f.control.getProvisioningStatus(intermediateRun);
+      const intermediate = createDeferredPromise<TeamProvisioningProgress>();
+      const latest = createDeferredPromise<TeamProvisioningProgress>();
+      hoisted.getProvisioningStatus
+        .mockReturnValueOnce(intermediate.promise)
+        .mockReturnValueOnce(latest.promise);
+      const pending = f.store.getState().getProvisioningStatus(intermediateRun);
+
+      f.restorePending();
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(await f.readMembers(key));
+      await f.store.getState().fetchMemberSpawnStatuses(key);
+      expect(f.store.getState().currentProvisioningRunIdByTeam[key]).toBe(f.initial.runId);
+      expect(f.store.getState().currentRuntimeRunIdByTeam[key]).toBe(f.runId());
+
+      const publication = vi.spyOn(f.store.getState(), 'onProvisioningProgress');
+      try {
+        intermediate.resolve(intermediateProgress);
+        expect(await pending).toBe(intermediateProgress);
+        expect(publication).not.toHaveBeenCalled();
+      } finally {
+        publication.mockRestore();
+      }
+      expect(f.store.getState().currentProvisioningRunIdByTeam[key]).toBe(f.initial.runId);
+      expect(f.store.getState().currentRuntimeRunIdByTeam[key]).toBe(f.runId());
+
+      latest.resolve(await f.control.getProvisioningStatus(f.runId()));
+      await flushMicrotasks();
+      expect(f.store.getState().currentProvisioningRunIdByTeam[key]).toBe(f.runId());
+      expect(f.store.getState().currentRuntimeRunIdByTeam[key]).toBe(f.runId());
+    });
+
+    it('adopts a fresh roster while its ready lead has an assembling teammate', async () => {
+      const f = await fixture('assembling');
+      Object.assign(f.view.launch.members[0]!, { status: 'ready', usable: true });
+      Object.assign(f.view.launch.members[1]!, {
+        status: 'pending-bootstrap', nativeReady: false, usable: false,
+      });
+      const original = await f.readMembers(key);
+      f.store.setState({
+        memberSpawnStatusesByTeam: { [key]: original.statuses },
+        memberSpawnSnapshotsByTeam: { [key]: original },
+      });
+      f.subscribe();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(f.store.getState().provisioningRuns[f.initial.runId].state).toBe('assembling');
+      f.add();
+      for (const member of f.view.launch.members)
+        Object.assign(member, {
+          status: 'ready', nativeReady: true, usable: true,
+        });
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(f.store.getState().currentRuntimeRunIdByTeam[key]).toBe(f.runId());
+      expect(f.store.getState().currentProvisioningRunIdByTeam[key]).toBe(f.runId());
+      expect(f.store.getState().provisioningRuns[f.runId()].state).toBe('ready');
+      expect(f.store.getState().ignoredRuntimeRunIds).toEqual({ [f.initial.runId]: key });
+    });
+
     it.each(['ready', 'assembling'] as const)(
       'converges the original global poll from a %s predecessor without a new member RPC',
       async (phase) => {
