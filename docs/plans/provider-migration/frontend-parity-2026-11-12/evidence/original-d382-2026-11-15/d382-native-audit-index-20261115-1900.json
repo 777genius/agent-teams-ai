@@ -1,0 +1,482 @@
+{
+  "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+  "snapshotUtc": "2026-11-15 19:00:43 UTC",
+  "archives": [
+    {
+      "key": "v2_linux",
+      "artifactId": 14172821539,
+      "runId": 43736377045,
+      "jobId": 132879768185,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-v2-linux-x64.zip",
+      "zipBytes": 23512,
+      "zipSha256": "99ce71d24e23b52a017c45e6836b293e79542cef6ccd47055b3a5910c2e21118",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132879768185.log",
+      "jobLog": {
+        "bytes": 97068,
+        "sha256": "1c457c97e1118e8ee29c1eb38d08d7c6c3022df71282417a061e0226f54b2175"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/v2_linux"
+    },
+    {
+      "key": "packaged_darwin_arm",
+      "artifactId": 14173351874,
+      "runId": 43736377103,
+      "jobId": 132896821967,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-packaged-darwin-arm64.zip",
+      "zipBytes": 346953,
+      "zipSha256": "f97efa36f9b01883c96349893b41bac739d6d9abd27ad6c27d065c0c2d847543",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132896821967.log",
+      "jobLog": {
+        "bytes": 153208,
+        "sha256": "a4c55d9c65b4d9e7e903fc0b14332356f9b73d9caaa2e575e33bf45b4245b0e9"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_darwin_arm"
+    },
+    {
+      "key": "packaged_darwin_x64",
+      "artifactId": 14174585879,
+      "runId": 43736377103,
+      "jobId": 132896822023,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-packaged-darwin-x64.zip",
+      "zipBytes": 346979,
+      "zipSha256": "2af98e40b77d997008c61550cb2b7d2b8da41fe1e2363ce24f9f2c52a77816bc",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132896822023.log",
+      "jobLog": {
+        "bytes": 163978,
+        "sha256": "c328ceba4fa388876d9fa323cd3ca43d4e7ea355dae4e2ce0d3648f8c31a8335"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_darwin_x64"
+    },
+    {
+      "key": "packaged_win_x64",
+      "artifactId": 14174176364,
+      "runId": 43736377103,
+      "jobId": 132896821996,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-packaged-win-x64.zip",
+      "zipBytes": 616083,
+      "zipSha256": "5ca3d420c35d1151b75003d5a7a0aa18d1f74bd08f7bf276ab9e0fd8d5ba3d7a",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132896821996.log",
+      "jobLog": {
+        "bytes": 310419,
+        "sha256": "728048342acbaa379168b4d9e1fabcddf6cd76cc1265a002a62aafd74a45c47e"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_x64"
+    },
+    {
+      "key": "process_linux",
+      "artifactId": 14173006026,
+      "runId": 43736377219,
+      "jobId": 132879798898,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-process-linux-x64.zip",
+      "zipBytes": 1522228,
+      "zipSha256": "f8b8bb91eb371d1329f2ba53c932bfe4bbc2ba746db0414c3d3c3dcb704367f4",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132879798898.log",
+      "jobLog": {
+        "bytes": 115830,
+        "sha256": "10368f581356d59f8513eb7cc7f2ed14c8151ccb958b6501b9aff95eb1bc0b87"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/process_linux"
+    },
+    {
+      "key": "process_darwin_x64",
+      "artifactId": 14171590916,
+      "runId": 43736377219,
+      "jobId": 132879799168,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-process-darwin-x64.zip",
+      "zipBytes": 12336,
+      "zipSha256": "af09a23089ab289ddb1feec6c8e713c0214efc5b67da289967d51bbb92ef4256",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132879799168.log",
+      "jobLog": {
+        "bytes": 113501,
+        "sha256": "556c7d5300f0b2ee8766077f051b2630784d84c2b441aca13f139f742c9d5f3f"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/process_darwin_x64"
+    },
+    {
+      "key": "process_darwin_arm",
+      "artifactId": 14171993636,
+      "runId": 43736377219,
+      "jobId": 132879799199,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-process-darwin-arm64.zip",
+      "zipBytes": 12001,
+      "zipSha256": "9bed9378e378e33ce5ec223a5c560fb3ab5a52a18c55de3ef3c2041e734054b8",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132879799199.log",
+      "jobLog": {
+        "bytes": 109476,
+        "sha256": "0e2690f5717543effe1c10148aac6a48141c8542476e9ce58ffab05e08f44e4e"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/process_darwin_arm"
+    },
+    {
+      "key": "v2_win_arm",
+      "artifactId": 14171541925,
+      "runId": 43736377045,
+      "jobId": 132879768061,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-v2-win-arm64.zip",
+      "zipBytes": 13430,
+      "zipSha256": "933d2ab2e8f6c6c3f8211e3a928736a13296a2ff992985ea653142ceb83e8fb9",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132879768061.log",
+      "jobLog": {
+        "bytes": 102008,
+        "sha256": "17d4e010ef85ac7341869325e0be4c54b7d87f16888289fe751149b549dddb85"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/v2_win_arm"
+    },
+    {
+      "key": "v2_win_x64",
+      "artifactId": 14170943823,
+      "runId": 43736377045,
+      "jobId": 132879768193,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-v2-win-x64.zip",
+      "zipBytes": 12354,
+      "zipSha256": "f22152a9e9aba6b7ede361c1c5e471e31fc10858966a8a0123f6713c8fbf7911",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132879768193.log",
+      "jobLog": {
+        "bytes": 88125,
+        "sha256": "f9e1175103cb7661cf01e837f5b177bb123781ea88beab09e77793020498c5c3"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/v2_win_x64"
+    },
+    {
+      "key": "win_arm",
+      "artifactId": 14171316320,
+      "runId": 43736377219,
+      "jobId": 132879799028,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-process-win-arm64.zip",
+      "zipBytes": 11140,
+      "zipSha256": "eddc3a80ed28b1282853cbfe3bade4533390faaf03fde1c77cb92e270ded8499",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132879799028.log",
+      "jobLog": {
+        "bytes": 126591,
+        "sha256": "d0f0384007bff366a2f83bc416df63f69bd3ae0a83b1f1d42cd0890d8a12c42e"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/win_arm"
+    },
+    {
+      "key": "win_x64",
+      "artifactId": 14170801111,
+      "runId": 43736377219,
+      "jobId": 132879799170,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-process-win-x64.zip",
+      "zipBytes": 11106,
+      "zipSha256": "11fb815130d43ecccd7d9f104f9a01bb6a45ffdaa2fc28323bbcf5901bf69c4a",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132879799170.log",
+      "jobLog": {
+        "bytes": 97719,
+        "sha256": "8b26d32315b27bf5646576782eb0e4cbaefc8934bb8235ce7e5711b331e5504a"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/win_x64"
+    },
+    {
+      "key": "p09_darwin_x64",
+      "artifactId": 14170963292,
+      "runId": 43736377045,
+      "jobId": 132879768059,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-p09-darwin-x64.zip",
+      "zipBytes": 10623,
+      "zipSha256": "04b244a638d99d791feefb252dc6efce1c36ac1c5874b38926c466409859f101",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132879768059.log",
+      "jobLog": {
+        "bytes": 113272,
+        "sha256": "40ad017f7c6342a79fbcebba2208c67a60f1cc7af9dc3a3c093be99c0c26934d"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/p09_darwin_x64"
+    },
+    {
+      "key": "p09_darwin_arm",
+      "artifactId": 14171586579,
+      "runId": 43736377045,
+      "jobId": 132879768113,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-p09-darwin-arm64.zip",
+      "zipBytes": 10402,
+      "zipSha256": "3e2fd38b31bbf7efc8293943962c7d3bbefd7e844f246046a9d94cbc5f81d62a",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132879768113.log",
+      "jobLog": {
+        "bytes": 105274,
+        "sha256": "cf91ad88264c8a1289d919f7a027f9cebbce3bb762e3e40c1a121145bd4f68cd"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/p09_darwin_arm"
+    },
+    {
+      "key": "packaged_win_arm",
+      "artifactId": 14174527243,
+      "runId": 43736377103,
+      "jobId": 132896821958,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-packaged-win-arm64.zip",
+      "zipBytes": 425701,
+      "zipSha256": "d10fae2e66d4184f39f9c1554068c3a5e32b3cc2847d64f2b7cbc129057042ce",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132896821958.log",
+      "jobLog": {
+        "bytes": 304263,
+        "sha256": "1308c58b8b4664d8ca2000b60b8dced1a1dd89da350157c84fee2d3e34d26853"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_arm"
+    },
+    {
+      "key": "packaged_linux",
+      "artifactId": 14175672501,
+      "runId": 43736377103,
+      "jobId": 132896822005,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-packaged-linux-x64.zip",
+      "zipBytes": 346203,
+      "zipSha256": "f0153246e97645ae924451ecd246fcaed4e5d58c63d89ae86703f21c6f60ac4d",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132896822005.log",
+      "jobLog": {
+        "bytes": 185353,
+        "sha256": "b378107630540efa38cc940776e777ef69b132a0797e64cd8e7fb8ace36cce85"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_linux"
+    }
+  ],
+  "appendices": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/plan29-d382-linux-v2-appendix.md",
+      "bytes": 6285,
+      "sha256": "241a2bf75c9a13c0c651bb2da723349bbaa0e9b06e65f1ebbce07ded93db0538",
+      "gitBlob": "965482455896328b18cd88dc473600dcfb1c1034",
+      "gitObjectCreated": false
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/plan29-d382-original-failures-appendix.md",
+      "bytes": 6310,
+      "sha256": "513b95c0ebf25669c1ad152522058072890afe67f212fd821293fa4e5fe6281d",
+      "gitBlob": "8fa808ae0a22e50aabb80e054df5b7da3f3f6668",
+      "gitObjectCreated": true
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/plan29-d382-packaged-darwin-arm-appendix.md",
+      "bytes": 5463,
+      "sha256": "421cb5abbb4bcc7744849aeec66f27d5292fa1629ef14b2f93966a8680b55d9f",
+      "gitBlob": "3437f9c92e88f29e1278a9fdb21f34f14d0e6c43",
+      "gitObjectCreated": false
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/plan29-d382-packaged-darwin-x64-appendix.md",
+      "bytes": 5627,
+      "sha256": "a13bea7b94e4fe93260b0402486263e5570d50c6c8c0555563310ed1725f4e0b",
+      "gitBlob": "e6cd3b06c293c76d97c258e915c94d205078f512",
+      "gitObjectCreated": false
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/plan29-d382-packaged-win-x64-appendix.md",
+      "bytes": 8384,
+      "sha256": "aa1224ca496070cfee215ace63f9558d888b2089d03ba3b31eab759c1116b631",
+      "gitBlob": "b3d634c8be21bece2a72166a21f5370b0c92bb14",
+      "gitObjectCreated": false
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/plan29-d382-process-positive-appendix.md",
+      "bytes": 4462,
+      "sha256": "3ba6a45463ab4ef4c88761b6d672f69dbcc432c168d288f2ae6a352383913146",
+      "gitBlob": "47bf1bacc3df7f670a60c40288ec6a8b1f055497",
+      "gitObjectCreated": false
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/plan29-d382-windows-v2-appendix.md",
+      "bytes": 4716,
+      "sha256": "da3f368753e3ba0f963fc64767183f72c64a030fb37de7e744c9d2f2cf1164e6",
+      "gitBlob": "c88077dc572ad72eb456d31675348d8e145fbeba",
+      "gitObjectCreated": false
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/plan29-d382-packaged-win-arm-appendix.md",
+      "bytes": 7852,
+      "sha256": "ecb71445d3971edbf09563f875431a3c8693cc492144407c44313cbfd6b24ca8",
+      "gitBlob": "38a82f38031d6d4e5ed886d00615a8a3b122cfcb",
+      "gitObjectCreated": false
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/plan29-d382-packaged-linux-appendix.md",
+      "bytes": 5231,
+      "sha256": "4075eb2b4809dd2525d06e55caffe145a092f9c2f60d66055bf6ea17e43db062",
+      "gitBlob": "6c5d123349d629dee2b40354d2830042cdb9b560",
+      "gitObjectCreated": false
+    }
+  ],
+  "receiptAudits": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/receipt-audit-linux-v2.json",
+      "bytes": 34159,
+      "sha256": "2d82372b81a2b4a643e4ee6bdee3f1aa11289f2a93e6c392674e8a5782522293"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/receipt-audit-packaged-darwin-arm.json",
+      "bytes": 12656,
+      "sha256": "ae5cabbdd4a42e657aacb28dcb253a3882eb3c6a0f7a88bc2e72cdac9f8a3b9a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/receipt-audit-packaged-darwin-x64.json",
+      "bytes": 12831,
+      "sha256": "3dfc7a150d379c7c4220bc0dbc0eca3e41f3324e265e222ab64df58475b3a36c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/receipt-audit-packaged-win-x64.json",
+      "bytes": 36117,
+      "sha256": "ef778f2195c6c2f099fb42ae4967b1cdbd9f6a9b89ba4e1b5380c717cbb1a0b3"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/receipt-audit-process-positive.json",
+      "bytes": 70204,
+      "sha256": "b044cbad7e6f38b0dc9cdd0195100ddb3df37c17f3264611c0a16c05804717d3"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/receipt-audit-win-v2.json",
+      "bytes": 21742,
+      "sha256": "2a412aa26ff4552bcfaab3bfd01c8dea8c3f38b5a4d94cec6f1069068c17a476"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/receipt-audit.json",
+      "bytes": 27617,
+      "sha256": "721f43e35779cbbf9b659a26400561ae987d5604c77d88e5006136ee14bbf2da"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/receipt-audit-packaged-win-arm.json",
+      "bytes": 17285,
+      "sha256": "381ff474486c8b67d52f05a567e1a58fb565ad80af7d056c4929702e69d66096"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/receipt-audit-packaged-linux.json",
+      "bytes": 12465,
+      "sha256": "0c0b09d14b9eb88328a3c0ff1e6df6663fce3e9297a18575db780beb9d151165"
+    }
+  ],
+  "packagedStatus": {
+    "observedAt": "2026-11-15 18:58:59 UTC",
+    "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+    "runId": 43736377103,
+    "attempt": 1,
+    "status": "queued",
+    "conclusion": null,
+    "jobs": [
+      {
+        "id": 132879770312,
+        "name": "classify packaged smoke",
+        "status": "completed",
+        "conclusion": "success",
+        "activeSteps": [],
+        "failedSteps": []
+      },
+      {
+        "id": 132896821958,
+        "name": "packaged smoke (win32-arm64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "activeSteps": [],
+        "failedSteps": [
+          {
+            "name": "Qualify packaged Windows same-Main Retry and original Processes UI Kill with finite peers",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 38
+          }
+        ]
+      },
+      {
+        "id": 132896821967,
+        "name": "packaged smoke (darwin-arm64)",
+        "status": "completed",
+        "conclusion": "success",
+        "activeSteps": [],
+        "failedSteps": []
+      },
+      {
+        "id": 132896821996,
+        "name": "packaged smoke (win32-x64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "activeSteps": [],
+        "failedSteps": [
+          {
+            "name": "Qualify packaged Windows same-Main Retry and original Processes UI Kill with finite peers",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 38
+          }
+        ]
+      },
+      {
+        "id": 132896822005,
+        "name": "packaged smoke (linux-x64)",
+        "status": "completed",
+        "conclusion": "success",
+        "activeSteps": [],
+        "failedSteps": []
+      },
+      {
+        "id": 132896822023,
+        "name": "packaged smoke (darwin-x64)",
+        "status": "completed",
+        "conclusion": "success",
+        "activeSteps": [],
+        "failedSteps": []
+      },
+      {
+        "id": 132920256725,
+        "name": "packaged full gate",
+        "status": "queued",
+        "conclusion": null,
+        "activeSteps": [],
+        "failedSteps": []
+      }
+    ]
+  },
+  "limits": "Original source/attempt evidence only; statuses retain existing skips/failures. No native tests/providers/compilers/CI replay or tracked edits executed by this auditor. All new appendices are scratch candidates, not source authority or publication.",
+  "previousCheckpoint": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-native-audit-index-20261115-1837.json",
+    "bytes": 17964,
+    "sha256": "2dc9b232445d8e7bffd9bd74924ec0b79fc44235877c0113a9819fc212b5e24b"
+  },
+  "precisionCandidate": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/plan29-d382-packaged-win-arm-appendix-v2.md",
+    "bytes": 7857,
+    "sha256": "9752ab2478bd4cb016dacc7652eaaded4b7ba1e12278ef4db66a5e576d54c1b2",
+    "gitBlob": "bbd67104c5c8920757be079a8c7e2b92ebd52d13",
+    "gitObjectCreated": false,
+    "changes": "Only two phase admission phrases corrected to recorded phase starts; old38a82f candidate/index preserved. Parent notified; no publication by auditor."
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "stage": "green-fixed",
+  "sourceHead": "e935176e908d99c73de18964aac02fc5f86e3497",
+  "sourceTree": "a0fa8b21dbff5efc3656bf6ec9d51117ed2be59b",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--test",
+    "scripts/legacy-agent-host/desktop-native-process-ui.test.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T18:57:03.112264+00:00",
+  "finishedAtUTC": "2026-11-15T18:57:05.090125+00:00",
+  "elapsedSeconds": 1.9778408179990947,
+  "exitCode": 0,
+  "preflightMetadataSHA256": "75966263a7da6b4ea8ad36f7e2ed3363ca6154cc0dcbf053fa4fcbca002691a0",
+  "logBytes": 855,
+  "logSHA256": "044c3d0b55ee5c6278da0a3ec1fed092437e0f8ef402d78da34044b4492e56c8",
+  "sourceHeadAfter": "e935176e908d99c73de18964aac02fc5f86e3497",
+  "statusAfter": "",
+  "selectedLeavesUnchanged": true,
+  "selectedDependencyInputsUnchanged": true
+}
