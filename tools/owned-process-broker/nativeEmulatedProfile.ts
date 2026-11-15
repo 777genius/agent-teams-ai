@@ -12,6 +12,12 @@ import type { RuntimeMemberProfile } from '../../packages/legacy-agent-host/dist
 
 export const fileHash = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 
+interface PackagedEmulatedHost {
+  nodeExecutable: string;
+  nodeVersion: string;
+  hostEntry: string;
+}
+
 async function reservePort(): Promise<number> {
   const server = createServer();
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
@@ -22,11 +28,17 @@ async function reservePort(): Promise<number> {
 
 /** Every executable is this checkout's Node or C++ actor; no runtime installation/discovery. */
 export async function prepareEmulatedProfile(sandbox: string, broker: string, actor: string,
-  provider: 'codex' | 'opencode') {
+  provider: 'codex' | 'opencode', packaged?: PackagedEmulatedHost) {
+  if (packaged) {
+    assert.deepEqual(Object.keys(packaged).sort(), ['hostEntry', 'nodeExecutable', 'nodeVersion']);
+    assert.equal(provider, 'codex'); assert.equal(packaged.nodeVersion, 'v24.21.0');
+    for (const path of [packaged.nodeExecutable, packaged.hostEntry]) assert.equal(realpathSync.native(path), path);
+  }
   const selectedRoot = join(sandbox, `TEST ${provider} Я`); mkdirSync(selectedRoot);
   const root = realpathSync.native(selectedRoot);
-  for (const name of ['home', 'tmp', 'config', 'data', 'cache', 'workspace', 'storage']) mkdirSync(join(root, name));
-  const node = realpathSync.native(process.execPath), systemRoot = process.env.SystemRoot;
+  const storage = packaged ? 'hoststore' : 'storage';
+  for (const name of ['home', 'tmp', 'config', 'data', 'cache', 'workspace', storage]) mkdirSync(join(root, name));
+  const node = realpathSync.native(packaged?.nodeExecutable ?? process.execPath), systemRoot = process.env.SystemRoot;
   assert.ok(systemRoot && /^[A-Za-z]:\\/.test(systemRoot));
   const peer = realpathSync(fileURLToPath(new URL('./fixtures/providerPeer.mjs', import.meta.url)));
   const wrapper = join(root, `TEST ${provider}.cmd`), effects = join(root, 'effects.ndjson');
@@ -56,17 +68,21 @@ export async function prepareEmulatedProfile(sandbox: string, broker: string, ac
     ? { ...common, provider, protocolRevision: '0.162.0', nativeOptions: { approvalPolicy: 'never', sandbox: 'read-only' } }
     : { ...common, provider, protocolRevision: '1.18.35', endpoint: `http://127.0.0.1:${await reservePort()}`,
       nativeOptions: { providerId: 'TEST-provider', agent: 'build' } };
-  const cli = realpathSync(fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url)));
+  const cli = packaged ? realpathSync.native(packaged.hostEntry)
+    : realpathSync(fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url)));
   const hostEntry = join(root, 'TEST-host.mjs');
-  writeFileSync(hostEntry, `await import(${JSON.stringify(pathToFileURL(cli).href)});\n`, { flag: 'wx' });
+  const crash = packaged ? join(root, 'TEST-crash-original-host') : undefined;
+  const barrier = crash ? "import { existsSync } from 'node:fs';\n" +
+    `setInterval(() => { if (existsSync(${JSON.stringify(crash)})) process.exit(91); }, 25);\n` : '';
+  writeFileSync(hostEntry, barrier + `await import(${JSON.stringify(pathToFileURL(cli).href)});\n`, { flag: 'wx' });
   const profile: TeamHostProfile = { schemaVersion: 1,
-    owner: { ownerId: binding.backendId, revision: 'TEST-1', storageRoot: join(root, 'storage'),
+    owner: { ownerId: binding.backendId, revision: 'TEST-1', storageRoot: join(root, storage),
       profileId, protocolVersion: 1, buildId: 'TEST-emulated-processes',
       nodeSha256: fileHash(node), hostEntrySha256: fileHash(hostEntry) },
     principalId: 'human', processCustody: { kind: 'main-windows-v1' },
     teams: [{ binding, scope: { projectId: 'TEST-project', workspaceId: 'TEST-workspace',
       teamId: binding.teamId, runId: 'TEST-run', memberId: 'human', generation: '1' },
-      members: [{ memberId: 'alice-id', name: 'alice', role: 'member',
+      members: [{ memberId: 'alice-id', name: 'alice', role: packaged ? 'lead' : 'member',
         delivery: { ...binding, runId: 'TEST-run', memberId: 'alice-id', generation: '1' } }],
       grants: [{ principalId: 'human', memberName: 'user', permissions: ['read', 'task.write', 'message.write', 'admin'] },
         { principalId: 'alice-session', memberName: 'alice', permissions: ['read', 'task.write', 'message.write', 'process.write'] }] }],
@@ -75,11 +91,12 @@ export async function prepareEmulatedProfile(sandbox: string, broker: string, ac
     method: 'runtime.open', teamId: binding.teamId, commandId: 'TEST-open', payload: { memberId: 'alice-id' },
   })];
   const source = join(root, 'TEST-profile.json'); writeFileSync(source, JSON.stringify(profile), { flag: 'wx' });
-  const host: SelectedHostProfile = { profileId, nodeExecutable: node, nodeVersion: process.version,
+  const host: SelectedHostProfile = { profileId, nodeExecutable: node, nodeVersion: packaged?.nodeVersion ?? process.version,
     nodeSha256: profile.owner.nodeSha256, hostEntry: realpathSync.native(hostEntry), hostEntrySha256: profile.owner.hostEntrySha256,
     expectedBuildId: profile.owner.buildId, cwd: root,
     env: { ...environment, LEGACY_AGENT_HOST_PROFILE_PATH: source, LEGACY_AGENT_HOST_PROFILE_SHA256: fileHash(source) },
     startupTimeoutMs: 10000, requestTimeoutMs: 15000, writeTimeoutMs: 5000, shutdownTimeoutMs: 1000 };
-  return { root, profile, host, effects,
-    pins: { node: fileHash(node), peer: fileHash(peer), wrapper: fileHash(wrapper), cli: fileHash(cli), source: fileHash(source) } };
+  return { root, profile, host, effects, source, crash,
+    pins: { node: fileHash(node), peer: fileHash(peer), wrapper: fileHash(wrapper), cli: fileHash(cli), source: fileHash(source) },
+    pathPins: [node, peer, wrapper, cli, source, hostEntry].map(path => ({ path, sha256: fileHash(path) })) };
 }

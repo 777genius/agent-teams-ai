@@ -35,6 +35,8 @@ import { loadDesktopBackendDescriptor } from '../infrastructure/loadDesktopBacke
 import { readCapturedTeamRetirements } from '../infrastructure/readCapturedTeamRetirements';
 import { CapturedStoppedTeamImport } from '../infrastructure/stopped-import/CapturedStoppedTeamImport';
 
+import { recoverCapturedHost } from './recoverCapturedHost';
+
 import type { BackendHandle } from '../../contracts';
 import type { BackendConnectionSnapshot } from '../../contracts/connections';
 import type {
@@ -142,7 +144,12 @@ export class DesktopBackendFeature {
         lookup: async (handle, commandId, method, guard) =>
           (await target(handle, guard)).lookup(handle, commandId, method, guard),
       },
-      rosterCommands
+      rosterCommands,
+      (request, guard) => recoverCapturedHost(request, guard, {
+        selection: this.options.descriptor, descriptor: () => this.descriptor,
+        router: () => this.router, definitions: () => this.handleDefinitions(), clients: this.clients,
+        isCurrent: () => !this.sealed && this.state === 'ready',
+      })
     );
   }
 

@@ -1,3 +1,4 @@
+import { isHostReadUnavailable } from '@features/agent-backend/renderer';
 import {
   captureManualQueueNamespace,
   discardManualMessageQueueNamespace,
@@ -20,7 +21,7 @@ import {
   recordTeamLaunchEnd,
 } from '@renderer/analytics/productAnalytics';
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
-import { api } from '@renderer/api';
+import { api, isElectronMode } from '@renderer/api';
 import { composerDraftRepository } from '@renderer/services/composerDraftRepository';
 import { isOrdinaryTeamTab } from '@renderer/types/tabs';
 import {
@@ -3156,7 +3157,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         set({
           selectedTeamLoading: false,
           selectedTeamData: existingSelectedTeamData,
-          selectedTeamError: null,
+          selectedTeamError: isHostReadUnavailable(teamName, message, isElectronMode())
+            ? message
+            : null,
         });
         return;
       }
@@ -3399,10 +3402,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       logger.warn(`refreshTeamData(${teamName}) failed: ${msg}`);
 
       // Non-destructive: if we already have data, keep it visible.
-      // Only set error when there's nothing to show.
+      // Retain only the closed Host presentation errors for explicit recovery.
       if (get().selectedTeamData) {
         logger.debug(`refreshTeamData(${teamName}) preserving existing data after transient error`);
-        set({ selectedTeamLoading: false, selectedTeamError: null });
+        set({
+          selectedTeamLoading: false,
+          selectedTeamError: isHostReadUnavailable(teamName, msg, isElectronMode()) ? msg : null,
+        });
         return;
       }
       set({ selectedTeamLoading: false, selectedTeamError: msg });

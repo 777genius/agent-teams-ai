@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
+import { performance } from 'node:perf_hooks';
 
 import { readinessPreparationWire, readinessRemaining } from '../infrastructure/CapturedLocalModelReadiness';
 import { HostClientError } from '../infrastructure/selectedHostProfile';
@@ -14,6 +16,7 @@ import {
   ownerKey,
 } from './backendBinding';
 
+import type { BackendHostRecoveryRequest, BackendHostRecoveryResult } from '../../contracts/operations';
 import type {
   CapturedHostClient,
   CapturedHostShutdown,
@@ -35,7 +38,42 @@ import type { LiveRosterPrivateInput, LocalModelReadinessCapture, LocalModelRead
 interface RegisteredOwner {
   readonly binding: BackendOwnerBinding;
   readonly client: CapturedHostClient;
+  readonly nativeCustody?: RetainedWindowsCustody;
   sealed: boolean;
+  closing?: boolean;
+  recovery?: CapturedRecovery;
+}
+
+/** Private composition keeps both maps and the original physical owner current. */
+export interface CapturedHostRecoverySource {
+  readonly owner: BackendOwnerRef;
+  readonly scope: BackendScope;
+  readonly nativeCustody: RetainedWindowsCustody;
+  isCurrent(client: CapturedHostClient): boolean;
+  verify(assertCurrent: () => void): Promise<void>;
+  create(remainingMs: () => number): CapturedHostClient;
+  install(previous: CapturedHostClient, candidate: CapturedHostClient): void;
+}
+
+interface CapturedRecovery {
+  readonly key: string;
+  readonly capability: string;
+  readonly commandId: string;
+  readonly handleId: string;
+  readonly scope: BackendScope;
+  readonly cutoff: number;
+  readonly predecessor: CapturedHostClient;
+  readonly source: CapturedHostRecoverySource;
+  readonly guard: BackendRequestGuard;
+  owner: RegisteredOwner;
+  binding?: StoredBackendBinding;
+  captured: boolean;
+  failed: boolean;
+  finished: boolean;
+  candidate?: CapturedHostClient;
+  startGuard?: BackendRequestGuard;
+  captureFlight?: Promise<BackendHostRecoveryResult>;
+  flight?: Promise<BackendHostRecoveryResult>;
 }
 
 /** Trusted composition inputs; renderer supplies only opaque handle IDs via validated callers. */
@@ -91,7 +129,10 @@ export class BackendOwnerRouter {
     ) {
       throw new BackendRoutingError('binding-conflict');
     }
-    this.owners.set(key, { binding, client: owner.client, sealed: false });
+    this.owners.set(key, {
+      binding, client: owner.client, sealed: false,
+      ...(owner.nativeCustody ? { nativeCustody: owner.nativeCustody } : {}),
+    });
   }
 
   setDefault(owner: BackendOwnerRef): void {
@@ -108,6 +149,172 @@ export class BackendOwnerRouter {
 
   ownerBinding(owner: BackendOwnerRef): BackendOwnerBinding {
     return this.requireOwner(ownerKey(owner)).binding;
+  }
+
+
+  /** One explicit continuation; ordinary owner resolution remains sealed after loss. */
+  async recover(
+    request: BackendHostRecoveryRequest,
+    source: CapturedHostRecoverySource,
+    guard?: BackendRequestGuard
+  ): Promise<BackendHostRecoveryResult> {
+    this.requireAdmission();
+    if (!guard) throw new BackendRoutingError('forbidden');
+    assertBackendRequestGuard(guard);
+    assertIdentity(request.commandId);
+    assertIdentity(request.handle.handleId);
+    const key = ownerKey(source.owner), owner = this.owners.get(key);
+    if (!owner || owner.closing || owner.nativeCustody !== source.nativeCustody ||
+      !owner.nativeCustody || !source.isCurrent(owner.client))
+      throw new BackendRoutingError('hold');
+    const scope = captureScope(source.scope);
+    let state = owner.recovery;
+    if (request.operation === 'host.recovery.capture' &&
+      owner.client.recoveryState(source.nativeCustody) === 'ready') {
+      if (state?.flight && !state.finished) throw new BackendRoutingError('hold');
+      const current = () => {
+        this.requireAdmission();
+        assertBackendRequestGuard(guard);
+        if (this.owners.get(key) !== owner || owner.closing ||
+          !source.isCurrent(owner.client) || owner.client.recoveryState(source.nativeCustody) !== 'ready')
+          throw new BackendRoutingError('hold');
+      };
+      current();
+      const binding = await this.readBinding(request.handle.handleId);
+      current();
+      if (!binding || JSON.stringify(binding.owner) !== JSON.stringify(owner.binding) ||
+        JSON.stringify(binding.scope) !== JSON.stringify(scope))
+        throw new BackendRoutingError('hold');
+      await source.verify(current);
+      current();
+      return { phase: 'ready' };
+    }
+    if (request.operation === 'host.recovery.capture' && state?.commandId !== request.commandId) {
+      if (owner.client.recoveryState(source.nativeCustody) !== 'closed' ||
+        state && !(state.finished || state.failed && !state.flight ||
+          state.captured && !state.flight && state.cutoff <= performance.now()))
+        throw new BackendRoutingError('hold');
+      state = {
+        key, capability: randomUUID(), commandId: request.commandId,
+        handleId: request.handle.handleId, scope,
+        cutoff: performance.now() + owner.client.profile.startupTimeoutMs,
+        predecessor: owner.client, source, guard, owner,
+        captured: false, failed: false, finished: false,
+      };
+      owner.recovery = state;
+    }
+    if (!state || state.handleId !== request.handle.handleId || state.commandId !== request.commandId ||
+      JSON.stringify(state.scope) !== JSON.stringify(scope) || state.failed ||
+      request.operation === 'host.recovery.start' && request.payload.capability !== state.capability)
+      throw new BackendRoutingError('hold');
+    this.remainingRecovery(state, guard);
+    if (request.operation === 'host.recovery.capture') {
+      if (state.flight) throw new BackendRoutingError('hold');
+      state.captureFlight ??= this.captureRecovery(state);
+      const result = await state.captureFlight;
+      this.remainingRecovery(state, guard);
+      return result;
+    }
+    if (!state.captured) throw new BackendRoutingError('hold');
+    if (!state.flight) {
+      state.startGuard = guard;
+      state.flight = this.continueRecovery(state);
+    }
+    const result = await state.flight;
+    this.remainingRecovery(state, guard, 'unknown');
+    if (state.owner.client !== state.candidate ||
+      state.owner.client.recoveryState(state.source.nativeCustody) !== 'ready')
+      throw new BackendRoutingError('hold', 'unknown');
+    return result;
+  }
+
+  private remainingRecovery(
+    state: CapturedRecovery,
+    guard?: BackendRequestGuard,
+    outcome: 'not-dispatched' | 'unknown' = 'not-dispatched'
+  ): number {
+    if (this.sealed) throw new BackendRoutingError('shutting-down', outcome);
+    assertBackendRequestGuard(state.guard, outcome);
+    assertBackendRequestGuard(state.startGuard, outcome);
+    assertBackendRequestGuard(guard, outcome);
+    if (this.owners.get(state.key) !== state.owner || state.owner.closing ||
+      state.owner.recovery !== state || state.owner.nativeCustody !== state.source.nativeCustody ||
+      !state.source.isCurrent(state.owner.client))
+      throw new BackendRoutingError('hold', outcome);
+    const remaining = Math.floor(state.cutoff - performance.now());
+    if (remaining <= 0) throw new BackendRoutingError('hold', outcome);
+    return remaining;
+  }
+
+  private async captureRecovery(state: CapturedRecovery): Promise<BackendHostRecoveryResult> {
+    try {
+      this.remainingRecovery(state);
+      const binding = await this.readBinding(state.handleId);
+      this.remainingRecovery(state);
+      if (!binding || JSON.stringify(binding.owner) !== JSON.stringify(state.owner.binding) ||
+        JSON.stringify(binding.scope) !== JSON.stringify(state.scope) ||
+        state.owner.client !== state.predecessor ||
+        state.predecessor.recoveryState(state.source.nativeCustody) !== 'closed')
+        throw new BackendRoutingError('hold');
+      state.binding = binding;
+      await state.source.verify(() => { this.remainingRecovery(state); });
+      this.remainingRecovery(state);
+      if (state.predecessor.recoveryState(state.source.nativeCustody) !== 'closed')
+        throw new BackendRoutingError('hold');
+      state.captured = true;
+      return { phase: 'captured', capability: state.capability };
+    } catch (error) {
+      state.failed = true;
+      throw error;
+    }
+  }
+
+  private async continueRecovery(state: CapturedRecovery): Promise<BackendHostRecoveryResult> {
+    const remaining = () => this.remainingRecovery(state);
+    try {
+      remaining();
+      await state.source.verify(remaining);
+      remaining();
+      const binding = await this.readBinding(state.handleId);
+      remaining();
+      if (!binding || JSON.stringify(binding) !== JSON.stringify(state.binding) ||
+        state.owner.client !== state.predecessor ||
+        state.predecessor.recoveryState(state.source.nativeCustody) !== 'closed')
+        throw new BackendRoutingError('hold');
+      const candidate = state.source.create(remaining);
+      if (candidate === state.predecessor ||
+        JSON.stringify(candidate.profile) !== JSON.stringify(state.predecessor.profile))
+        throw new BackendRoutingError('hold');
+      remaining();
+      const successor: RegisteredOwner = {
+        binding: state.owner.binding, client: candidate, nativeCustody: state.source.nativeCustody,
+        sealed: true, recovery: state,
+      };
+      state.candidate = candidate;
+      // Both maps change synchronously. Late catches retain their old RegisteredOwner object.
+      state.source.install(state.predecessor, candidate);
+      this.owners.set(state.key, successor);
+      state.owner = successor;
+      await candidate.start();
+      remaining();
+      const after = await this.readBinding(state.handleId);
+      remaining();
+      if (JSON.stringify(after) !== JSON.stringify(state.binding) ||
+        candidate.recoveryState(state.source.nativeCustody) !== 'ready')
+        throw new BackendRoutingError('hold', 'unknown');
+      successor.sealed = false;
+      return { phase: 'ready' };
+    } catch (error) {
+      state.failed = true;
+      if (state.candidate) {
+        state.owner.sealed = true;
+        await state.candidate.shutdown();
+        throw new BackendRoutingError('hold', 'unknown');
+      }
+      throw error;
+    } finally {
+      state.finished = true;
+    }
   }
 
   async createHandle(
@@ -294,13 +501,29 @@ export class BackendOwnerRouter {
     const registered = this.owners.get(ownerKey(owner));
     if (!registered) return Promise.reject(new BackendRoutingError('unavailable'));
     registered.sealed = true;
-    return registered.client.shutdown();
+    registered.closing = true;
+    return this.disposeOwner(ownerKey(owner), registered);
   }
 
   shutdown(): Promise<PromiseSettledResult<CapturedHostShutdown>[]> {
     this.sealed = true;
-    for (const owner of this.owners.values()) owner.sealed = true;
-    return Promise.allSettled([...this.owners.values()].map((owner) => owner.client.shutdown()));
+    for (const owner of this.owners.values()) {
+      owner.sealed = true;
+      owner.closing = true;
+    }
+    return Promise.allSettled([...this.owners].map(([key, owner]) => this.disposeOwner(key, owner)));
+  }
+
+  private async disposeOwner(key: string, owner: RegisteredOwner): Promise<CapturedHostShutdown> {
+    const client = owner.client;
+    const stopped = client.shutdown();
+    const flight = owner.recovery?.flight ?? owner.recovery?.captureFlight;
+    const results = await Promise.allSettled([stopped, flight]);
+    const original = results[0];
+    const current = this.owners.get(key);
+    const successor = current && current.client !== client ? await current.client.shutdown() : undefined;
+    if (original.status === 'rejected') throw original.reason;
+    return successor ?? original.value;
   }
 
   private requireAdmission(): void {

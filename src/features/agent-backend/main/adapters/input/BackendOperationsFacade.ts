@@ -10,6 +10,8 @@ import { isBackendReviewOperation } from './reviewValues';
 import { parseBackendOperation } from './validateBackendOperation';
 
 import type {
+  BackendHostRecoveryRequest,
+  BackendHostRecoveryResult,
   BackendOperationRequest,
   BackendOperationResult,
 } from '../../../contracts/operations';
@@ -24,7 +26,10 @@ export class BackendOperationsFacade {
   constructor(
     private readonly router: Pick<BackendOwnerRouter, 'request' | 'lookup'> &
       Partial<Pick<BackendOwnerRouter, 'requestPair'>>,
-    private readonly rosterCommands?: CapturedRosterCommands
+    private readonly rosterCommands?: CapturedRosterCommands,
+    private readonly recoverHost?: (
+      request: BackendHostRecoveryRequest, guard?: BackendRequestGuard
+    ) => Promise<BackendHostRecoveryResult>
   ) {}
 
   validate(value: unknown): BackendOperationRequest {
@@ -65,6 +70,20 @@ export class BackendOperationsFacade {
       if (readiness && request.operation !== 'team.launch.probe.start')
         throw new BackendRoutingError('invalid-binding');
       if (target && request.operation !== 'runtime.open') throw new BackendRoutingError('invalid-binding');
+      if (request.operation === 'host.recovery.capture' || request.operation === 'host.recovery.start') {
+        if (!this.recoverHost) throw new BackendRoutingError('unavailable');
+        const result = await this.recoverHost(request, guard);
+        assertBackendRequestGuard(guard, 'unknown');
+        const keys = Object.keys(result);
+        if (result.phase === 'ready' && keys.length === 1 && keys[0] === 'phase')
+          return { ok: true, value: { phase: 'ready' } };
+        if (request.operation === 'host.recovery.capture' && result.phase === 'captured' &&
+          keys.length === 2 && keys.includes('phase') && keys.includes('capability') &&
+          typeof result.capability === 'string' &&
+          /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(result.capability))
+          return { ok: true, value: { phase: 'captured', capability: result.capability } };
+        throw new BackendRoutingError('hold', 'unknown');
+      }
       let raw: JsonValue;
       if (request.operation === 'crossTeam.send') {
         if (!this.router.requestPair) throw new BackendRoutingError('unavailable');

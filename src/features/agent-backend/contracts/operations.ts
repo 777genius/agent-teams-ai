@@ -207,6 +207,8 @@ export interface BackendOperationPayloads
     memberIds: string[];
   };
   'command.lookup': Record<string, never>;
+  'host.recovery.capture': Record<string, never>;
+  'host.recovery.start': { capability: string };
   'runtime.open': { memberId: string; expectedGeneration?: string };
   'runtime.read': { memberId: string; expectedGeneration?: string };
   'runtime.activity.snapshot': { memberId: string; expectedGeneration?: string };
@@ -245,6 +247,13 @@ export type BackendOperationRequest = {
     readonly payload: BackendOperationPayloads[Operation];
   };
 }[BackendOperation];
+
+export type BackendHostRecoveryRequest = Extract<BackendOperationRequest, {
+  operation: 'host.recovery.capture' | 'host.recovery.start';
+}>;
+export type BackendHostRecoveryResult =
+  | { phase: 'ready' }
+  | { phase: 'captured'; capability: string };
 
 export interface BackendComment {
   id: string;
@@ -478,6 +487,7 @@ export type BackendOperationResult =
         | BackendDeletedTasks
         | BackendCommandReceipt
         | BackendRuntimeSnapshot
+        | BackendHostRecoveryResult
         | BackendCheckpoint
         | BackendMemberCheckpoints
         | BackendLaunchRestorations

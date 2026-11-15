@@ -13,6 +13,7 @@ import {
 } from 'react';
 
 import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+import { HostBackendRetryAction, isHostReadUnavailable } from '@features/agent-backend/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   assertMemberSettingsRelaunchRoster,
@@ -31,7 +32,7 @@ import {
 } from '@features/team-task-detail/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
-import { api } from '@renderer/api';
+import { api, isElectronMode } from '@renderer/api';
 import { SessionPanel } from '@renderer/components/chat/session-panel';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { resolveBranchDeviation } from '@renderer/components/team/members/memberWorkspace';
@@ -136,6 +137,8 @@ import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { InboxMessage } from '@shared/types';
 import type { ComponentProps, CSSProperties } from 'react';
+
+const hostUi = { useStore, api, isElectronMode };
 
 const sumInjectionTokens = tokenMath[
   ['sum', 'Con' + 'text', 'InjectionTokens'].join('') as keyof typeof tokenMath
@@ -2815,7 +2818,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       );
     }
 
-    if (error) {
+    if (error && !(data && isHostReadUnavailable(teamName, error, isElectronMode()))) {
       return (
         <div className="flex size-full items-center justify-center p-6">
           <div className="text-center">
@@ -3707,7 +3710,9 @@ export const TeamDetailView = memo(function TeamDetailView({
     <>
       {spawnStatusWatcher}
       {teamAgentRuntimeWatcher}
-      {renderBody()}
+      <HostBackendRetryAction teamName={teamName} dependencies={hostUi} onReady={refreshTeamData}>
+        {renderBody()}
+      </HostBackendRetryAction>
       {launchDialogOpen && (
         <Suspense
           fallback={
