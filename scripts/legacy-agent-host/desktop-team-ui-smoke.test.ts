@@ -9,9 +9,8 @@ import { setImmediate } from 'node:timers/promises';
 
 import { desktopShellEnvironmentProbeSource } from './desktop-backend-fixture.ts';
 import { readRendererBackendConnections } from './desktop-backend-observations.ts';
-import { assertDesktopOwnerRoutingAvailability } from './desktop-owner-routing-availability-ui.ts';
-import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
+import { assertDesktopOwnerRoutingAvailability } from './desktop-owner-routing-availability-ui.ts';
 import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-comment-input-target.ts';
 import { runDesktopTaskBoardAttachmentsUi } from './desktop-task-board-attachments-ui.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
@@ -1376,100 +1375,177 @@ test('original clarification lookup refuses changed owner, revision, refresh and
   }
 });
 
-const ownerAvailabilityPrefix = [
-  'open original availability menu', 'open original available Teams list', 'original healthy B Team',
-];
+type OwnerAvailabilityRow = Record<string, unknown>;
 
-function ownerAvailabilityFixture() {
-  const ownerA = 'a'.repeat(64), ownerB = 'b'.repeat(64), ownerForeign = 'c'.repeat(64);
-  const aPublic = { handle: { handleId: 'TEST-original-A' }, ownerResourceRef: ownerA };
-  const bPublic = { handle: { handleId: 'TEST-healthy-B' }, ownerResourceRef: ownerB };
-  const bindings: Record<string, unknown>[] = [aPublic,
-    { handle: { handleId: 'TEST-cross-handle-0' }, ownerResourceRef: ownerA },
-    { handle: { handleId: 'TEST-cross-handle-1' }, ownerResourceRef: ownerA }, bPublic,
-    { handle: { handleId: 'TEST-foreign' }, ownerResourceRef: ownerForeign }];
-  const unavailableOwner = { kind: 'owner', ownerResourceRef: ownerA,
-    code: 'unavailable', outcome: 'not-dispatched' };
-  const unavailable: Record<string, unknown>[] = [unavailableOwner,
-    ...['TEST-original-A', 'TEST-cross-handle-0', 'TEST-cross-handle-1'].map(handleId => ({
-      kind: 'team', teamName: hostTeamSelectionKey(handleId), displayName: handleId,
-      code: 'unavailable', outcome: 'not-dispatched',
-    }))];
-  const observed = { contextId: 'TEST-context', loaded: 1, unavailable, targets: 1,
-    healthy: { teamName: hostTeamSelectionKey(bPublic.handle.handleId), ownerResourceRef: ownerB },
-    notice: { state: 'partial', teams: 3, owners: 1, loaded: 1, visible: true,
-      loadedLabel: true, unknownCount: true, refresh: true } };
-  const steps: string[] = [], checkpoint = new Error('TEST first availability screenshot checkpoint');
+function originalOwnerAvailability(teamCount = 3) {
+  const ownerA = 'a'.repeat(64), ownerB = 'b'.repeat(64);
+  const handles = ['TEST-original-a', 'TEST-cross/alpha', 'TEST-cross beta'].slice(0, teamCount);
+  const names = ['host-team:TEST-original-a', 'host-team:TEST-cross%2Falpha', 'host-team:TEST-cross%20beta'].slice(0, teamCount);
+  const aBindings = handles.map((handleId, index) => ({ handle: { handleId },
+    ownerResourceRef: ownerA, teamResourceRef: 'TEST-a-resource-' + index, label: 'TEST A ' + index }));
+  const aPublic = aBindings[0]!, bPublic = { handle: { handleId: 'TEST-healthy-b' },
+    ownerResourceRef: ownerB, teamResourceRef: 'TEST-b-resource', label: 'TEST B' };
+  const b = 'host-team:TEST-healthy-b', contextId = 'TEST-original-context';
+  const ownerRow = { kind: 'owner', ownerResourceRef: ownerA, code: 'unavailable', outcome: 'unknown' };
+  const unavailable: OwnerAvailabilityRow[] = [{ ...ownerRow }, ...names.map(teamName => ({
+    kind: 'team', teamName, code: 'unavailable', outcome: 'not-dispatched' }))];
+  const healthy: OwnerAvailabilityRow = { teamName: b, ownerResourceRef: ownerB };
+  const state = { activeContextId: contextId, teamsLoading: false, teamsError: null,
+    teams: [healthy], teamsUnavailable: unavailable };
+  const discovery = { state: 'ready', bindings: [...aBindings, bPublic], unavailableOwners: [{ ...ownerRow }] };
+  const task = { id: 'TEST-original-b-task', subject: 'TEST original B Task', status: 'pending' };
+  const bTask = { handle: bPublic.handle, task, receipt: { phase: 'completed',
+    command: { operation: 'task.create', payload: { subject: task.subject } },
+    effects: { taskId: task.id }, result: { id: task.id } } };
+  const controls = { active: true, invalidateAfterRead: false, targets: 1, notices: 1,
+    visible: true, loadedLabel: true, unknownCount: true, refresh: true };
+  const noticeOverrides: Record<string, string> = {}, actions: string[] = [], reads: string[] = [];
+  const screenshotBoundary = new Error('TEST original first availability screenshot boundary');
+  const evidence: OwnerAvailabilityRow = {};
   let screenshots = 0;
-  const task = { id: 'TEST-task', subject: 'TEST healthy B Task', status: 'pending' };
-  type Options = Parameters<typeof assertDesktopOwnerRoutingAvailability>[0];
-  const options: Options = {
-    cdp: {
-      on() { assert.fail('unexpected availability CDP listener'); },
-      async send(method: string) {
-        assert.equal(method, 'Page.captureScreenshot'); screenshots++; throw checkpoint;
-      },
-      async evaluate() { assert.fail('unexpected availability CDP evaluation'); },
-      async close() { assert.fail('unexpected availability CDP close'); },
+  const notice = {
+    getBoundingClientRect: () => ({ width: controls.visible ? 320 : 0, height: 40, top: 20, bottom: 60 }),
+    hasAttribute: () => true,
+    getAttribute(name: string) {
+      const attributes: Record<string, string> = { 'data-state': 'partial',
+        'data-team-count': String(unavailable.filter(entry => entry.kind === 'team').length),
+        'data-owner-count': String(unavailable.filter(entry => entry.kind === 'owner').length),
+        'data-loaded-count': String(state.teams.length) };
+      return noticeOverrides[name] ?? attributes[name];
     },
-    ui: {
-      async click(_selector: string, label: string) { steps.push(label); },
-      async scrollTo(_selector: string, label: string) { steps.push(label); },
-      async waitRead(_expression: string, label: string) {
-        assert.equal(label, 'original teams partial availability'); return observed;
-      },
-    } as Options['ui'],
-    evidence: {}, root: '/TEST-owner-availability', deadline: Date.now() + 5000,
-    assertCurrent() {}, contextId: observed.contextId, aPublic, bPublic,
-    discovery: { state: 'ready', bindings, unavailableOwners: [unavailableOwner] },
-    bTask: { handle: bPublic.handle, task,
-      receipt: { phase: 'completed', command: { operation: 'task.create', payload: { subject: task.subject } },
-        effects: { taskId: task.id }, result: { id: task.id } } },
-    async openTeam() { assert.fail('first observation must finish before further original navigation'); },
+    get textContent() { return controls.unknownCount ? 'Team count unknown' : 'TEST known count'; },
+    querySelectorAll(selector: string) {
+      if (selector === '*') return controls.loadedLabel ? [{ textContent: state.teams.length + ' loaded' }] : [];
+      assert.equal(selector, 'button');
+      return [{ textContent: 'Refresh', disabled: !controls.refresh }];
+    },
   };
-  return { options, observed, bindings, steps, checkpoint, screenshots: () => screenshots };
+  const unused = async () => { throw new Error('TEST unexpected availability operation'); };
+  const ui = {
+    observeInput: unused, clickExpression: unused, clickSidebar: unused, hoverExpression: unused,
+    async click(_selector: string, label: string) { actions.push(label); },
+    async scrollTo(_selector: string, label: string) { actions.push(label); },
+    async waitRead(expression: string, label: string, timeoutMs = 30_000) {
+      assert.equal(label, 'original teams partial availability');
+      assert.ok(timeoutMs > 0 && timeoutMs <= 30_000);
+      reads.push(expression);
+      const value = structuredClone(runInNewContext(expression, {
+        innerHeight: 1000, window: { __agentTeamsDevStore: { getState: () => state } },
+        document: { querySelectorAll(selector: string) {
+          if (selector === '[data-team-aggregate-notice="teams"]') return Array.from({ length: controls.notices }, () => notice);
+          assert.equal(selector, '[data-team-name="' + b + '"]');
+          return Array.from({ length: controls.targets }, () => ({}));
+        } },
+      }));
+      if (controls.invalidateAfterRead) controls.active = false;
+      return value;
+    },
+  };
+  const cdp = {
+    on() { throw new Error('TEST unexpected availability subscription'); },
+    evaluate: unused, close: unused,
+    async send(method: string) {
+      assert.equal(method, 'Page.captureScreenshot');
+      screenshots++;
+      throw screenshotBoundary;
+    },
+  };
+  const run = () => assertDesktopOwnerRoutingAvailability({ cdp, ui, evidence,
+    root: 'TEST-no-screenshot-write', deadline: Date.now() + 2000,
+    assertCurrent() { assert.ok(controls.active, 'TEST original owner epoch remains current'); },
+    contextId, discovery, aPublic, bPublic, bTask, openTeam: unused });
+  return { run, discovery, aPublic, bPublic, unavailable, healthy, controls, state, noticeOverrides,
+    evidence, actions, reads, screenshotBoundary, screenshots: () => screenshots };
 }
 
-test('owner availability admits every captured A Team through the actual first observation', async () => {
-  const f = ownerAvailabilityFixture();
-  await assert.rejects(assertDesktopOwnerRoutingAvailability(f.options), error => {
-    assert.equal(error, f.checkpoint, 'all original identity, owner, notice and healthy B checks pass before the screenshot');
+test('original owner availability admits three captured A Teams through its actual first DOM read', { timeout: 5000 }, async () => {
+  const f = originalOwnerAvailability();
+  const captured = structuredClone(f.discovery);
+  await assert.rejects(f.run(), error => {
+    assert.equal(error, f.screenshotBoundary, 'all original aggregate assertions precede the retained screenshot boundary');
     return true;
   });
+  assert.deepEqual(f.discovery, captured, 'the already captured discovery is read without mutation');
+  assert.equal(f.reads.length, 1, 'the actual retained DOM expression is evaluated once');
   assert.equal(f.screenshots(), 1);
-  assert.deepEqual(f.steps, ownerAvailabilityPrefix);
-  assert.equal((f.options.evidence.availability as Record<string, unknown>).status, 'INCOMPLETE',
-    'the deliberate checkpoint does not qualify later actions or cleanup');
+  assert.deepEqual(f.actions, ['open original availability menu', 'open original available Teams list', 'original healthy B Team']);
+  assert.equal((f.evidence.availability as OwnerAvailabilityRow).status, 'INCOMPLETE');
+  assert.deepEqual((f.evidence.availability as OwnerAvailabilityRow).observations, [],
+    'the finite boundary test does not manufacture a PNG or a complete UI proof');
 });
 
-for (const [label, teamName] of [
-  ['healthy B', hostTeamSelectionKey('TEST-healthy-B')],
-  ['captured foreign owner', hostTeamSelectionKey('TEST-foreign')],
-  ['unknown Team', hostTeamSelectionKey('TEST-unknown')],
-  ['malformed Team', 123],
-] as const) {
-  test('owner availability refuses ' + label + ' in unavailable A rows', async () => {
-    const f = ownerAvailabilityFixture();
-    f.observed.unavailable[2]!.teamName = teamName;
-    await assert.rejects(assertDesktopOwnerRoutingAvailability(f.options), assert.AssertionError);
-    assert.equal(f.screenshots(), 0);
-    assert.deepEqual(f.steps, ownerAvailabilityPrefix);
-  });
-}
-
-for (const label of ['missing selected A', 'non-string A handle', 'empty A handle', 'duplicate A handle', 'over-bound capture'] as const) {
-  test('owner availability refuses ' + label + ' before original navigation', async () => {
-    const f = ownerAvailabilityFixture();
-    if (label === 'missing selected A') f.bindings.shift();
-    if (label === 'non-string A handle') f.bindings[1]!.handle = { handleId: 123 };
-    if (label === 'empty A handle') f.bindings[1]!.handle = { handleId: '' };
-    if (label === 'duplicate A handle') f.bindings.push(f.bindings[1]!);
-    if (label === 'over-bound capture') while (f.bindings.length <= 16) f.bindings.push({
-      handle: { handleId: 'TEST-extra-' + f.bindings.length }, ownerResourceRef: 'c'.repeat(64),
+test('original owner availability retains singleton, subset and duplicate-row cardinality semantics', { timeout: 5000 }, async () => {
+  for (const variant of ['singleton', 'subset', 'duplicate'] as const) {
+    const f = originalOwnerAvailability(variant === 'singleton' ? 1 : 3);
+    if (variant !== 'singleton') f.unavailable.splice(2);
+    if (variant === 'duplicate') f.unavailable.push({ ...f.unavailable[1]! });
+    await assert.rejects(f.run(), error => {
+      assert.equal(error, f.screenshotBoundary, variant + ': no new completeness or uniqueness oracle');
+      return true;
     });
-    await assert.rejects(assertDesktopOwnerRoutingAvailability(f.options),
-      label === 'empty A handle' ? /Invalid Host team/ : assert.AssertionError);
-    assert.equal(f.screenshots(), 0);
-    assert.deepEqual(f.steps, []);
-  });
-}
+    assert.equal(f.reads.length, 1, variant);
+    assert.equal(f.screenshots(), 1, variant);
+  }
+});
+
+test('original owner availability refuses foreign identities and preserves its existing aggregate guards', { timeout: 5000 }, async () => {
+  const changes: [string, (f: ReturnType<typeof originalOwnerAvailability>) => void][] = [
+    ['healthy B as unavailable A', f => { f.unavailable[1]!.teamName = 'host-team:TEST-healthy-b'; }],
+    ['unregistered A-shaped key', f => { f.unavailable[1]!.teamName = 'host-team:TEST-unregistered-a'; }],
+    ['noncanonical key', f => { f.unavailable[2]!.teamName = 'host-team:TEST-cross/alpha'; }],
+    ['boxed key', f => { f.unavailable[1]!.teamName = Object('host-team:TEST-original-a'); }],
+    ['null key', f => { f.unavailable[1]!.teamName = null; }],
+    ['uncaptured key', f => { f.discovery.bindings.splice(1, 1); }],
+    ['uncaptured original A', f => { f.discovery.bindings.splice(0, 1); }],
+    ['non-string captured handle', f => { Reflect.set(f.discovery.bindings[1]!.handle, 'handleId', Object('TEST-cross/alpha')); }],
+    ['foreign binding owner', f => { f.discovery.bindings[1]!.ownerResourceRef = f.bPublic.ownerResourceRef; }],
+    ['foreign unavailable owner', f => { f.unavailable[0]!.ownerResourceRef = f.bPublic.ownerResourceRef; }],
+    ['missing unavailable owner', f => { f.unavailable.shift(); }],
+    ['duplicate unavailable owner', f => { f.unavailable.push({ ...f.unavailable[0]! }); }],
+    ['unknown row kind', f => { f.unavailable[1]!.kind = 'TEST-other-kind'; }],
+    ['unknown refusal code', f => { f.unavailable[1]!.code = 'TEST-other-code'; }],
+    ['unknown dispatch outcome', f => { f.unavailable[1]!.outcome = 'completed'; }],
+    ['original sixteen-row bound', f => { while (f.unavailable.length < 17) f.unavailable.push({ ...f.unavailable[1]! }); }],
+    ['healthy B owner', f => { f.healthy.ownerResourceRef = f.aPublic.ownerResourceRef; }],
+    ['missing healthy B', f => { f.state.teams.splice(0); }],
+    ['duplicate healthy B', f => { f.state.teams.push({ ...f.healthy }); }],
+    ['visible B target count', f => { f.controls.targets = 2; }],
+    ['notice count', f => { f.controls.notices = 2; }],
+    ['notice team count', f => { f.noticeOverrides['data-team-count'] = '99'; }],
+    ['notice owner count', f => { f.noticeOverrides['data-owner-count'] = '0'; }],
+    ['notice loaded count', f => { f.noticeOverrides['data-loaded-count'] = '0'; }],
+    ['notice visibility', f => { f.controls.visible = false; }],
+    ['loaded label', f => { f.controls.loadedLabel = false; }],
+    ['unknown-count label', f => { f.controls.unknownCount = false; }],
+    ['Refresh admission', f => { f.controls.refresh = false; }],
+    ['context', f => { f.state.activeContextId = 'TEST-other-context'; }],
+    ['original post-read epoch', f => { f.controls.invalidateAfterRead = true; }],
+  ];
+  for (const [label, change] of changes) {
+    const f = originalOwnerAvailability();
+    change(f);
+    await assert.rejects(f.run(), error => {
+      assert.ok(error instanceof Error, label);
+      assert.notEqual(error, f.screenshotBoundary, label);
+      assert.equal((error as { code?: string }).code, 'ERR_ASSERTION', label);
+      return true;
+    });
+    assert.equal(f.screenshots(), 0, label + ': no proof screenshot after refusal');
+  }
+});
+
+
+test('original owner availability refuses invalid captured discovery before navigation', { timeout: 5000 }, async () => {
+  for (const variant of ['empty A handle', 'duplicate A handle', 'over-bound capture'] as const) {
+    const f = originalOwnerAvailability();
+    if (variant === 'empty A handle') f.discovery.bindings[1]!.handle.handleId = '';
+    if (variant === 'duplicate A handle') f.discovery.bindings.push(f.discovery.bindings[1]!);
+    if (variant === 'over-bound capture') while (f.discovery.bindings.length <= 16) {
+      f.discovery.bindings.push({ ...f.bPublic, handle: { handleId: 'TEST-extra-' + f.discovery.bindings.length } });
+    }
+    await assert.rejects(f.run(), variant === 'empty A handle' ? /Invalid Host team/ : assert.AssertionError);
+    assert.deepEqual(f.actions, [], variant);
+    assert.deepEqual(f.reads, [], variant);
+    assert.equal(f.screenshots(), 0, variant);
+  }
+});

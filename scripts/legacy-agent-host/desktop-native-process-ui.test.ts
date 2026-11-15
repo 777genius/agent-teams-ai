@@ -164,3 +164,168 @@ test('captured no-provider Processes fixture rejects mixed inputs before allocat
   assert.equal(fixture.controlledProcess.proof.providersConfigured, false);
   assert.equal(fixture.controlledProcess.proof.status, 'INCOMPLETE', 'preparation does not claim actual process/UI qualification');
 });
+
+
+test('original same-Main Retry retains a bounded first UI refusal without changing the read or its error', async () => {
+  const { createDesktopUiControls, desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const source = (await readFile(new URL('../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = "  begin('one-explicit-same-Main-Retry', 10000);", end = '  await originalBinding();\n  await within(() => fixture.afterRetry(activeDeadline));';
+  assert.equal(source.split(begin).length, 2); assert.equal(source.split(end).length, 2);
+  const block = source.slice(source.indexOf(begin), source.indexOf(end));
+  const run = Function('environment', `const {assert,begin,proof,ui,surface,poll,readWriter,writerA,assertHost,
+    captureCensus,hostA,assertHostBirths,desktopJsLiteral,remaining,performance,startedAt}=environment;
+    let hostB; return (async()=>{${block}})();`) as (environment: Record<string, unknown>) => Promise<void>;
+  type Mode = 'surface-missing' | 'refresh-not-enabled' | 'retry-present' | 'alert-present' | 'ready';
+  type Diagnostic = { stages: Record<string, number | null>; returnedReads: number; countTruncated: boolean;
+    last: { atMs: number | null; result: string } | null };
+  const exercise = async (modes: Mode[], fault?: 'clock' | 'write') => {
+    const failure = new Error('TEST retained original read refusal');
+    const calls: string[] = [], dom: string[][] = [];
+    const proof: { counts: { retryClicks: number }; phases: { phase: string; atMs: number; budgetMs: number }[];
+      retryUi?: Diagnostic } = { counts: { retryClicks: 0 }, phases: [] };
+    if (fault === 'write') Object.defineProperty(proof, 'retryUi', { set() { throw new Error('TEST diagnostic write'); } });
+    let read = 0, clocks = 0, predicate: (value: unknown) => boolean = Boolean;
+    const controls = createDesktopUiControls({
+      send: async () => { assert.fail('the original waitRead sends no input'); },
+      evaluate: async (expression: string) => {
+        calls.push('evaluate');
+        const mode = modes[read++]; if (mode === undefined) throw failure;
+        const trace: string[] = []; dom.push(trace);
+        const refresh = { get textContent() { trace.push('refresh:text'); return 'Refresh'; },
+          get disabled() { trace.push('refresh:disabled'); return mode === 'refresh-not-enabled'; } };
+        const retry = { get textContent() { trace.push('retry:text'); return 'Retry'; },
+          get disabled() { return assert.fail('Retry disabled is not read by the original predicate'); } };
+        const surface = {
+          querySelectorAll: (selector: string) => { assert.equal(selector, 'button'); trace.push('buttons');
+            return mode === 'retry-present' ? [refresh, retry] : [refresh]; },
+          querySelector: (selector: string) => { assert.equal(selector, '[role="alert"]'); trace.push('alert');
+            return mode === 'alert-present' ? {} : null; },
+        };
+        return Function('document', 'return ' + expression)({ querySelector: (selector: string) => {
+          assert.equal(selector, '[data-testid="host-backend-recovery"]'); trace.push('surface');
+          return mode === 'surface-missing' ? null : surface;
+        } });
+      },
+    }, { assertOwnedRenderer: () => { calls.push('guard'); }, step: () => { assert.fail('no extra UI step'); } });
+    const writer = { pid: 2, token: 'TEST-successor' }, host = { pid: 2 }, census = [host];
+    let error: unknown;
+    try {
+      await run({ assert, proof, desktopJsLiteral, startedAt: 1000,
+        begin: (phase: string, budgetMs: number) => { calls.push('begin');
+          assert.equal(phase, 'one-explicit-same-Main-Retry'); assert.equal(budgetMs, 10000);
+          proof.phases.push({ phase, atMs: 0, budgetMs }); },
+        surface: '[data-testid="host-backend-recovery"]',
+        ui: {
+          click: async (selector: string, label: string, text: string) => { calls.push('click');
+            assert.equal(selector, '[data-testid="host-backend-recovery"] button');
+            assert.equal(label, 'explicit product Retry once'); assert.equal(text, 'Retry'); },
+          waitRead: (expression: string, label: string, budget: number, ready: (value: unknown) => boolean = Boolean) => {
+            calls.push('waitRead'); assert.equal(label, 'original refreshed Team after positive product recovery');
+            assert.equal(budget, 10000); predicate = ready;
+            return controls.waitRead(expression, label, budget, ready);
+          },
+        },
+        poll: async (readWriter: () => unknown, label: string) => { calls.push('poll');
+          assert.equal(label, 'actual successor writer acquisition'); return readWriter(); },
+        readWriter: () => { calls.push('writer'); return writer; }, writerA: { pid: 1, token: 'TEST-original' },
+        captureCensus: () => { calls.push('census'); return census; },
+        assertHost: (actual: unknown, observed: unknown) => { calls.push('host');
+          assert.equal(actual, writer); assert.equal(observed, census); return host; },
+        hostA: { pid: 1 }, assertHostBirths: () => { calls.push('births'); },
+        remaining: () => { calls.push('remaining'); return 10000; },
+        performance: { now: () => { clocks++; if (fault === 'clock') throw new Error('TEST diagnostic clock'); return 1000 + clocks; } },
+      });
+    } catch (caught) { error = caught; }
+    return { proof, error, failure, calls, dom, predicate };
+  };
+  const initialCalls = ['begin', 'click', 'poll', 'writer', 'census', 'host', 'births', 'remaining', 'waitRead'];
+  const retryTrace = ['surface', 'buttons', 'refresh:text', 'refresh:disabled', 'refresh:text', 'retry:text'];
+  const refused = await exercise(['retry-present']);
+  assert.equal(refused.error, refused.failure, 'retain the identical original read error after the false sample');
+  assert.deepEqual(refused.calls, [...initialCalls, 'guard', 'evaluate', 'guard', 'evaluate']);
+  assert.deepEqual(refused.dom, [retryTrace]); assert.equal(refused.proof.counts.retryClicks, 1);
+  assert.equal(refused.proof.retryUi?.last?.result, 'retry-present', 'retain the first original UI refusal');
+  assert.deepEqual(refused.proof.retryUi, { stages: { clickReturnedMs: 1, writerObservedMs: 2, hostCheckedMs: 3, uiReadyMs: null },
+    returnedReads: 1, countTruncated: false, last: { atMs: 4, result: 'retry-present' } });
+  const ready = await exercise(['surface-missing', 'refresh-not-enabled', 'retry-present', 'alert-present', 'ready']);
+  assert.equal(ready.error, undefined); assert.equal(ready.proof.counts.retryClicks, 1);
+  assert.deepEqual(ready.calls, [...initialCalls, ...Array.from({ length: 5 }, () => ['guard', 'evaluate']).flat()]);
+  assert.deepEqual(ready.dom, [
+    ['surface'], ['surface', 'buttons', 'refresh:text', 'refresh:disabled'], retryTrace,
+    ['surface', 'buttons', 'refresh:text', 'refresh:disabled', 'refresh:text', 'alert'],
+    ['surface', 'buttons', 'refresh:text', 'refresh:disabled', 'refresh:text', 'alert'],
+  ]);
+  assert.deepEqual(ready.proof.retryUi, { stages: { clickReturnedMs: 1, writerObservedMs: 2, hostCheckedMs: 3, uiReadyMs: 9 },
+    returnedReads: 5, countTruncated: false, last: { atMs: 8, result: 'ready' } });
+  for (const invalid of [true, false, null, 'unknown', ['ready'], { toString() { assert.fail('no result coercion'); } }])
+    assert.equal(refused.predicate(invalid), false);
+  for (let count = 0; count < 501; count++) assert.equal(refused.predicate('ready'), true);
+  assert.equal(refused.proof.retryUi?.returnedReads, 500); assert.equal(refused.proof.retryUi?.countTruncated, true);
+  assert.equal(refused.proof.retryUi?.last?.result, 'ready');
+  assert.deepEqual(refused.calls, [...initialCalls, 'guard', 'evaluate', 'guard', 'evaluate'], 'counter saturation adds no reads or actions');
+  const maximum = { ...refused.proof.retryUi,
+    stages: Object.fromEntries(Object.keys(refused.proof.retryUi!.stages).map(key => [key, Number.MAX_SAFE_INTEGER])),
+    last: { atMs: Number.MAX_SAFE_INTEGER, result: 'refresh-not-enabled' } };
+  assert.ok(JSON.stringify(maximum).length <= 1024, 'the closed ASCII diagnostic fits its separate byte bound');
+  for (const fault of ['clock', 'write'] as const) {
+    const refused = await exercise(['retry-present'], fault), ready = await exercise(['ready'], fault);
+    assert.equal(refused.error, refused.failure); assert.equal(ready.error, undefined);
+    assert.deepEqual(refused.calls, [...initialCalls, 'guard', 'evaluate', 'guard', 'evaluate']);
+    assert.deepEqual(ready.calls, [...initialCalls, 'guard', 'evaluate']);
+    assert.equal(refused.proof.counts.retryClicks, 1); assert.equal(ready.proof.counts.retryClicks, 1);
+  }
+});
+
+
+test('original first failure retains one bounded stdout prefix before the unchanged cleanup boundary', async () => {
+  const { Buffer } = await import('node:buffer');
+  const source = (await readFile(new URL('../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const start = '} catch (error) {\n  primaryError = error;', end = '} finally {\n  if (app && !quitStarted) {';
+  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+  const body = source.slice(source.indexOf(start) + '} catch (error) {\n'.length, source.indexOf(end));
+  const run = Function('environment', `const {error,errorText,proof,activePhase,Buffer,writeSync}=environment;
+    let primaryError; ${body} return {primaryError,proof};`) as (environment: Record<string, unknown>) => {
+      primaryError: unknown; proof: { error?: string } };
+  const originalError = new Error('TEST original failure'), phase = 'actual-Host-A-exit-and-metadata-Refresh';
+  const formatted = 'Error: TEST original failure\n    at TEST original frame';
+  const exercise = (text = formatted, activePhase = phase, sink: 'ok' | 'throw' | 'partial' = 'ok') => {
+    const calls: string[] = [], writes: { fd: number; line: string }[] = [];
+    const proof: { error?: string } = {};
+    let result: ReturnType<typeof run> | undefined;
+    try {
+      result = run({ error: originalError, proof, activePhase, Buffer,
+        errorText: (error: unknown) => { calls.push('format'); assert.equal(error, originalError); return text; },
+        writeSync: (fd: number, line: string) => { calls.push('write'); writes.push({ fd, line });
+          if (sink === 'throw') throw new Error('TEST unavailable diagnostic sink');
+          return sink === 'partial' ? 1 : Buffer.byteLength(line, 'utf8'); },
+      });
+    } finally { calls.push('cleanup-boundary'); }
+    assert.equal(result?.primaryError, originalError); assert.equal(result?.proof, proof);
+    assert.equal(proof.error, text); assert.equal(calls.filter(value => value === 'format').length, 1);
+    assert.equal(calls.at(-1), 'cleanup-boundary');
+    return { writes, calls };
+  };
+  const retained = exercise();
+  assert.equal(retained.writes.length, 1, 'retain the already formatted first failure before cleanup');
+  assert.deepEqual(retained.calls, ['format', 'write', 'cleanup-boundary']);
+  assert.equal(retained.writes[0]!.fd, 1); assert.ok(retained.writes[0]!.line.endsWith('\n'));
+  assert.deepEqual(JSON.parse(retained.writes[0]!.line), {
+    kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase, error: formatted,
+  });
+  const unicode = 'Error: ' + '\u{1f642}'.repeat(100) + ' TEST unretained suffix';
+  const truncated = exercise(unicode);
+  assert.equal(JSON.parse(truncated.writes[0]!.line).error, unicode.slice(0, 128));
+  assert.equal(JSON.parse(truncated.writes[0]!.line).error.length, 128);
+  assert.ok(Buffer.byteLength(truncated.writes[0]!.line, 'utf8') <= 1024);
+  const overhead = Buffer.byteLength(JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase: '', error: formatted }) + '\n', 'utf8');
+  const boundary = exercise(formatted, 'A'.repeat(1024 - overhead));
+  assert.equal(boundary.writes.length, 1); assert.equal(Buffer.byteLength(boundary.writes[0]!.line, 'utf8'), 1024);
+  const oversized = exercise(formatted, 'A'.repeat(1025 - overhead));
+  assert.equal(oversized.writes.length, 0); assert.deepEqual(oversized.calls, ['format', 'cleanup-boundary']);
+  const utf8 = exercise(formatted, '\u754c'.repeat(400));
+  assert.equal(utf8.writes.length, 0, 'the cap measures UTF8 bytes, not JavaScript character count');
+  for (const sink of ['throw', 'partial'] as const) {
+    const observed = exercise(formatted, phase, sink);
+    assert.equal(observed.writes.length, 1); assert.deepEqual(observed.calls, ['format', 'write', 'cleanup-boundary']);
+  }
+});

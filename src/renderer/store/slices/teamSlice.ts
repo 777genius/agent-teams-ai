@@ -1,9 +1,7 @@
 import {
-  hostTeamSelectionKey,
-  isHostTeamRunId,
-  parseHostTeamRunId,
-} from '@features/agent-backend/contracts';
-import { isHostReadUnavailable } from '@features/agent-backend/renderer';
+  hostProvisioningMemberSnapshot,
+  isHostReadUnavailable,
+} from '@features/agent-backend/renderer';
 import {
   captureManualQueueNamespace,
   discardManualMessageQueueNamespace,
@@ -184,6 +182,7 @@ import {
   shouldPreserveSelectedTeamSnapshot,
 } from '../team/teamResolvedMembers';
 import {
+  captureHostProvisioningStatusRead,
   nextRuntimeRunIdByTeamAfterAdoption,
   projectIncomingMemberSpawnSnapshot,
   resolveIncomingRuntimeRunAdoption,
@@ -4592,26 +4591,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   getProvisioningStatus: async (runId: string) => {
-    const hostTeam = isHostTeamRunId(runId)
-      ? hostTeamSelectionKey(parseHostTeamRunId(runId).handleId)
-      : null;
-    const scope = hostTeam ? captureTeamRequestScope(get, hostTeam) : null;
-    const previousRunId = hostTeam ? get().currentProvisioningRunIdByTeam[hostTeam] : undefined;
-    const previousRuntimeRunId = hostTeam ? get().currentRuntimeRunIdByTeam[hostTeam] : undefined;
+    const isCurrent = captureHostProvisioningStatusRead(runId, get, (teamName) => {
+      const scope = captureTeamRequestScope(get, teamName);
+      return () => isTeamRequestScopeCurrent(get, teamName, scope);
+    });
     const progress = await unwrapIpc('team:provisioningStatus', () =>
       api.teams.getProvisioningStatus(runId)
     );
-    // A newer Host notification may arrive while the original read resolves.
-    if (
-      hostTeam &&
-      scope &&
-      (!isTeamRequestScopeCurrent(get, hostTeam, scope) ||
-        get().currentProvisioningRunIdByTeam[hostTeam] !== previousRunId ||
-        get().currentRuntimeRunIdByTeam[hostTeam] !== previousRuntimeRunId)
-    ) {
-      return progress;
-    }
-    get().onProvisioningProgress(progress);
+    if (isCurrent()) get().onProvisioningProgress(progress);
     return progress;
   },
   clearMissingProvisioningRun: (runId: string) => {
@@ -4695,6 +4682,20 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     if (floor && progress.startedAt < floor) {
       // Ignore late progress from a previous run (common after stop→launch).
       return;
+    }
+
+    const members = hostProvisioningMemberSnapshot(progress);
+    if (members === null) return;
+    if (members) {
+      set((prev) =>
+        projectIncomingMemberSpawnSnapshot({
+          teamName: progress.teamName,
+          snapshot: members,
+          prev,
+          onEqualSuppressed: maybeLogMemberSpawnUiEqualSuppressed,
+        })
+      );
+      if (hostProvisioningMemberSnapshot(progress) !== members) return;
     }
 
     const currentRunId = get().currentProvisioningRunIdByTeam[progress.teamName];

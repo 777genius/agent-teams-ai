@@ -1,0 +1,28 @@
+{
+  "sourceHead": "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+  "sourceTree": "1db97f452abcd5996f061a8a3ed476a44cf33302",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "node_modules/@typescript/native/bin/tsc",
+    "--project",
+    "tsconfig.legacy-agent-host-scripts.json"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "compilerPackageVersion": "7.0.2",
+  "compilerPackageSHA256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e",
+  "projectBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+  "memoryFacts": [
+    "MemTotal:       10206472 kB",
+    "MemAvailable:    7266020 kB"
+  ],
+  "startedAtUTC": "2026-11-15T17:57:13.431491+00:00",
+  "finishedAtUTC": "2026-11-15T17:57:14.843876+00:00",
+  "elapsedSeconds": 1.4123878350073937,
+  "exitCode": 0,
+  "logBytes": 0,
+  "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "sourceHeadAfter": "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+  "statusAfter": ""
+}

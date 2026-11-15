@@ -44,7 +44,20 @@ export async function runDesktopEmulatedCollaborationUi(cdp: UiCdpPort, options:
     await cdp.send('Input.insertText', { text: value });
     await ui.waitRead(`document.querySelector(${literal(selector)})?.value===${literal(value)}`, 'exact original collaboration input');
   };
-  const visible = (text: string) => ui.waitRead(`document.body.innerText.includes(${literal(text)})`, 'original visible ' + text, 60_000);
+  const visible = (text: string, joined = false) => ui.waitRead(`document.body.innerText.includes(${literal(text)})${joined ? `&&(() => {
+    const visible = e => { const r = e.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility === 'visible'; };
+    const teams = [...document.querySelectorAll('[data-team-name]')].filter(e =>
+      e.getAttribute('data-team-name') === ${literal(hostTeamSelectionKey(fixture.handleId))} &&
+      e.querySelector('[data-section-id="team"]') && visible(e));
+    if (teams.length !== 1) return false;
+    const panels = [...teams[0].querySelectorAll(':scope > div')].filter(e =>
+      e.querySelector('button[aria-label="Copy diagnostics"], button[aria-label="Diagnostics copied"]'));
+    if (panels.length !== 1 || !visible(panels[0])) return false;
+    return [...panels[0].querySelectorAll('p')].filter(e => visible(e) &&
+      e.textContent.trim() === 'Team launched - all 2 teammates joined').length === 1 &&
+      !panels[0].innerText.includes('Finishing launch') && !panels[0].innerText.includes('still joining');
+  })()` : ''}`, 'original visible ' + text, 60_000);
   const screenshot = async (name: string) => {
     const image = record(await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }));
     assert.equal(typeof image.data, 'string'); const path = join(fixture.root, `ui-emulated-collaboration-${name}.png`);
@@ -173,7 +186,7 @@ export async function runDesktopEmulatedCollaborationUi(cdp: UiCdpPort, options:
   assert.equal(record(record(delivered.input.intent).binding).memberId, added.memberId);
   const reply = one(directCommands, row => commandText(row) === 'TEST collaboration Carol reply');
   assert.equal(reply.principalId, addedReady.selection.principalId); assert.equal(reply.phase, 'completed');
-  await openMember('carol'); await visible('TEST collaboration Carol reply');
+  await openMember('carol'); await visible('TEST collaboration Carol reply', true);
   proof.direct = { direct, dispatched: delivered, reply, screenshot: await screenshot('direct') };
 
   await openMember('alice'); const attachmentBefore = new Set((await records.commands()).map(row => row.commandId));
@@ -274,7 +287,7 @@ export async function runDesktopEmulatedCollaborationUi(cdp: UiCdpPort, options:
   assert.equal(restoredReply.phase, 'completed'); assert.equal(restoredReply.principalId, restoredReady.selection.principalId);
   assert.deepEqual(one(restoreSessions, row => runtimeDigest(row.binding) === runtimeDigest(addedReady.binding)), oldSession);
   await unchangedPeers(beforeRemoveSessions, await observeCollaborationPeers(fixture, ['claude', 'codex', 'opencode']));
-  await visible('TEST collaboration Carol restored');
+  await visible('TEST collaboration Carol restored', true);
   proof.restored = { ...restoredReady, allPhysical: [...restoredReady.allPhysical], reply: restoredReply,
     delivery: await records.delivery(restoredReceipt, restoreSessions), screenshot: await screenshot('restored') };
 

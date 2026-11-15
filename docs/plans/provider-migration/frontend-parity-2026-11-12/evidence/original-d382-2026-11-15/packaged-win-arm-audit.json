@@ -1,0 +1,481 @@
+{
+  "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+  "runId": 43736377103,
+  "runAttempt": 1,
+  "jobId": 132896821958,
+  "artifactId": 14174527243,
+  "archive": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-packaged-win-arm64.zip",
+    "bytes": 425701,
+    "sha256": "d10fae2e66d4184f39f9c1554068c3a5e32b3cc2847d64f2b7cbc129057042ce",
+    "crcPathAudit": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/archive-audit-packaged-win-arm.json"
+  },
+  "log": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132896821958.log",
+    "bytes": 304263,
+    "sha256": "1308c58b8b4664d8ca2000b60b8dced1a1dd89da350157c84fee2d3e34d26853"
+  },
+  "files": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_arm/_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 782,
+      "sha256": "fe584451bf3d4dd1cf2e2fa87d738f8250d1aa275e7f64ebe1724db06b798c28"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_arm/_temp/opencode-v2-packaged-native.json",
+      "bytes": 5389,
+      "sha256": "c53bf725dbec9176a3ec36c4cd1968b1de941ad6c6c9b7e57e4f4d3c92d49aaf"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_arm/_temp/opencode-v2-packaged.json",
+      "bytes": 1188,
+      "sha256": "a2e347ecc4627daa3678c5fbec2771ef4fa682e1f370c2eb3808df3df788f358"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_arm/agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1151393,
+      "sha256": "77506cbbf894336abeb9870a4d06f8ec3a4a4efbec95217a0c3a0c02dc6786a1"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_arm/_temp/windows-same-main-process-ui.app.log",
+      "bytes": 5506,
+      "sha256": "0899b2165eb7152b4ad75f709f60c3d52a4ba0d09b05e6ee5143d00682afcaa8"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_arm/_temp/windows-same-main-process-ui.controller.log",
+      "bytes": 25775,
+      "sha256": "3f96ac76d7c849d54d339e301069fda8c7a6fcb974ca75045f581088be10a362"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_arm/_temp/windows-same-main-process-ui.before-crash.png",
+      "bytes": 79516,
+      "sha256": "090ef8a6c647315a08502720f9521b5f195a5e053447a7c63749d49256dfbfd5"
+    }
+  ],
+  "reviewedSourceLeaves": [
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "blob": "eae01eedc52f8f83a4ffb7f4f9a0a80ab7b7822b",
+      "gitLFBytes": 31871,
+      "gitLFSha256": "57c5025eab6c6217c82be2d01e3f42f7820802a0d4a00901b469da66d2f0212c"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "blob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+      "gitLFBytes": 31223,
+      "gitLFSha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2"
+    },
+    {
+      "path": "tools/owned-process-broker/gateController.cpp",
+      "blob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+      "gitLFBytes": 5935,
+      "gitLFSha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "gitLFBytes": 25052,
+      "gitLFSha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "blob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+      "gitLFBytes": 12335,
+      "gitLFSha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.mjs",
+      "blob": "7da83c7a4e631f7599fc57861f19e14629db6036",
+      "gitLFBytes": 27780,
+      "gitLFSha256": "5fd9116cb656ce7804dc3253decb3f386e2c17feda57cc40586cc6e0df6fd8d5"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "gitLFBytes": 33259,
+      "gitLFSha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff"
+    },
+    {
+      "path": "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "blob": "44ccc655c11bb48dd354b10c09acb3d0e2d65c91",
+      "gitLFBytes": 14137,
+      "gitLFSha256": "b6f0893cda4210adaa754d7b2af96f3ddd43dc9af64e0656a5736e26e79060e4"
+    }
+  ],
+  "packagedV2": {
+    "native": {
+      "kind": "TEST_PACKAGED_NATIVE_V2_HOST",
+      "status": "PASS",
+      "packaged": {
+        "executionOrigin": "packaged-extraResources",
+        "appAsarSha256": "0d94dfbdb56a6bf8f186cd1ccf12d94ae61b7a7d9e05a3368252af777b16eeb1",
+        "candidateManifestSha256": "77506cbbf894336abeb9870a4d06f8ec3a4a4efbec95217a0c3a0c02dc6786a1",
+        "harnessSha256": "a17e501e88cb3b031c647fb511e8ebfdcb780964f70039f9c465c1a1533181dc",
+        "sourceCheckoutUnavailable": true,
+        "legacyRuntimeUnavailable": true,
+        "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "nodeArchiveSha256": "8779b1bde1d39f8d420e3b57aa657b39891af434d3de44a919044cec06785921",
+        "providerArtifacts": [
+          {
+            "name": "@agent-teams/provider-implementations",
+            "sha256": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94"
+          },
+          {
+            "name": "@agent-teams/provider-session-contracts",
+            "sha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db"
+          }
+        ],
+        "packages": 120,
+        "files": 8111
+      },
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "platform": "win32-arm64",
+      "version": "2.1.4",
+      "approvalMode": "manual",
+      "nodeVersion": "v24.21.0",
+      "modelSelection": {
+        "providerId": "TEST-local",
+        "modelId": "TEST-model-B",
+        "variant": "high"
+      },
+      "configurationSelection": {
+        "scope": "project",
+        "original": "project-A",
+        "later": "project-B"
+      },
+      "preferencesSelection": {
+        "nativeDefault": "TEST-local/TEST-model",
+        "appDefault": "TEST-local/TEST-model-B"
+      },
+      "digests": {
+        "bun": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+        "manifest": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5",
+        "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+        "hostSource": "3d3b738c08e5574fbad598b10904c98c27095cd72810fc9466d63574b54a979c",
+        "hostDist": "6c8c4b0cc19b33f7c6db5e456e51708a29f70c97eda769cfc24f441d8b68b1ce",
+        "provider": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94",
+        "windowsShell": "6a5b945e4c27a4eb819988018d219a48ff9bb1bcbdadc56a45539ff26875c617"
+      },
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "cleanup": true,
+      "phaseElapsedMs": {
+        "original_host_embedded_native_and_mcp_ready": 72493,
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 175713,
+        "changed_project_config_did_not_retarget_running_native_session": 175713,
+        "original_uploaded_PNG_native_image_inference_and_public_readback": 175713,
+        "checkpoint_and_original_host_native_cleanup_confirmed": 176518,
+        "cold_host_restored_native_history_without_model_or_tool_replay": 227653
+      },
+      "elapsedMs": 247826,
+      "cancelled": false,
+      "inputObservation": {
+        "reads": 302,
+        "last": {
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true,
+          "sealed": false,
+          "diagnostic": null,
+          "inputs": [
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            },
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            },
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            }
+          ]
+        }
+      },
+      "launchObservation": {
+        "openElapsedMs": 50839,
+        "afterOpen": {
+          "available": true,
+          "status": "ready",
+          "reason": "context-applied",
+          "elapsedSinceAttemptMs": 49501,
+          "capturedTimeoutMs": 120000,
+          "claimed": true,
+          "nativeReady": true,
+          "contextApplied": true,
+          "everReady": true,
+          "usable": true,
+          "controlAvailable": true,
+          "noAllocation": false
+        }
+      },
+      "failureCode": null,
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelOrigin": "localhost-scripted",
+      "modelRequests": 11,
+      "modelProgress": [
+        {
+          "elapsedMs": 72747,
+          "requests": 0
+        },
+        {
+          "elapsedMs": 83798,
+          "requests": 1
+        },
+        {
+          "elapsedMs": 84178,
+          "requests": 2
+        },
+        {
+          "elapsedMs": 84637,
+          "requests": 3
+        },
+        {
+          "elapsedMs": 85050,
+          "requests": 4
+        },
+        {
+          "elapsedMs": 118536,
+          "requests": 5
+        },
+        {
+          "elapsedMs": 119265,
+          "requests": 6
+        },
+        {
+          "elapsedMs": 119691,
+          "requests": 7
+        },
+        {
+          "elapsedMs": 120038,
+          "requests": 8
+        },
+        {
+          "elapsedMs": 142935,
+          "requests": 9
+        },
+        {
+          "elapsedMs": 170019,
+          "requests": 10
+        },
+        {
+          "elapsedMs": 170382,
+          "requests": 11
+        }
+      ],
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "modelFailures": [],
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "qualification": {
+      "kind": "TEST_PACKAGED_V2_QUALIFICATION",
+      "status": "PASS",
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "platform": "win32-arm64",
+      "cleanup": true,
+      "phase": "finished",
+      "desktopJourneyQualified": false,
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "cleanupObservation": {
+        "originalExitObserved": true,
+        "nativeReceiptParsed": true,
+        "nativeReceiptBound": true,
+        "nativeCleanupConfirmed": true,
+        "firstFailure": null,
+        "firstRestorationFailure": null
+      },
+      "appAsarSha256": "0d94dfbdb56a6bf8f186cd1ccf12d94ae61b7a7d9e05a3368252af777b16eeb1",
+      "candidateManifestSha256": "77506cbbf894336abeb9870a4d06f8ec3a4a4efbec95217a0c3a0c02dc6786a1",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "nodeSha256": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+      "nativeExit": {
+        "code": 0,
+        "signal": null
+      },
+      "nativeReceiptSha256": "c53bf725dbec9176a3ec36c4cd1968b1de941ad6c6c9b7e57e4f4d3c92d49aaf",
+      "sourceCheckoutUnavailable": true,
+      "legacyRuntimeUnavailable": true,
+      "sourceRestored": true,
+      "bundleRestored": true,
+      "legacyRuntimeRestored": true
+    },
+    "packages": 120,
+    "manifestFileEntries": 8111
+  },
+  "p08": {
+    "finalReceiptRetained": false,
+    "lastRetainedWorkPhase": "actual-Host-A-exit-and-metadata-Refresh",
+    "phaseRows": [
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "packaged-App-startup",
+        "atMs": 0.08780000000115251,
+        "budgetMs": 120000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-initial-Runtime-Open",
+        "atMs": 11347.272799999999,
+        "budgetMs": 45000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-original-business-input-and-UI",
+        "atMs": 17478.939,
+        "budgetMs": 35000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "atMs": 49220.58439999999,
+        "budgetMs": 10000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "original-product-Quit",
+        "atMs": 59693.8533,
+        "budgetMs": 30000
+      }
+    ],
+    "phaseLogTimestamps": [
+      {
+        "timestamp": "2026-11-15T18:27:19.1024787Z",
+        "row": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "packaged-App-startup",
+          "atMs": 0.08780000000115251,
+          "budgetMs": 120000
+        }
+      },
+      {
+        "timestamp": "2026-11-15T18:27:30.3985228Z",
+        "row": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-initial-Runtime-Open",
+          "atMs": 11347.272799999999,
+          "budgetMs": 45000
+        }
+      },
+      {
+        "timestamp": "2026-11-15T18:27:36.3945618Z",
+        "row": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-original-business-input-and-UI",
+          "atMs": 17478.939,
+          "budgetMs": 35000
+        }
+      },
+      {
+        "timestamp": "2026-11-15T18:28:08.2622293Z",
+        "row": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "atMs": 49220.58439999999,
+          "budgetMs": 10000
+        }
+      },
+      {
+        "timestamp": "2026-11-15T18:28:18.7253701Z",
+        "row": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "original-product-Quit",
+          "atMs": 59693.8533,
+          "budgetMs": 30000
+        }
+      }
+    ],
+    "refreshPhaseToQuitPhaseMs": 10473.26890000001,
+    "controller": {
+      "gateController": "emergency-fail",
+      "rootExitCode": 99,
+      "activeProcesses": 0
+    },
+    "controllerParserErrors": 51,
+    "originalExceptionRetained": false,
+    "mainHostPidBirthCensusRetained": false,
+    "nativeThreeHandleCleanupAttestationRetained": false,
+    "countsRetained": false,
+    "beforeAfterSourceHashesRetained": false,
+    "binaryInputFreezeRetained": false,
+    "controllerSandboxLogTimestamp": "2026-11-15T18:26:43.4023337Z",
+    "controllerEmergencyLogTimestamp": "2026-11-15T18:28:43.4520695Z",
+    "controllerLoggedWallIntervalMs": 120049.7358,
+    "specificEmergencyTriggerRetained": false,
+    "screenshotViewed": "only original pre-crash Running/lead-online Team and task; no recovery/Stop frame"
+  },
+  "otherOriginalChecks": {
+    "packagedBoundaryThreeFileCommand": {
+      "tests": 26,
+      "pass": 25,
+      "fail": 0,
+      "skip": 1,
+      "cancelled": 0,
+      "retainedSkip": "Windows builder preserves only the fully attested unused ia32 FFI with its real x64 target"
+    },
+    "scopedBrokerVitest": {
+      "files": 3,
+      "pass": 53,
+      "fail": 0
+    },
+    "managedGit": {
+      "pass": 11,
+      "fail": 0
+    },
+    "undiciPolicy": {
+      "pass": 2,
+      "fail": 0
+    },
+    "startupSmoke": {
+      "pid": 8664,
+      "stableMs": 8119,
+      "sqlite": true,
+      "leaderExit": {
+        "code": 1,
+        "signal": null
+      }
+    }
+  },
+  "limits": [
+    "P08 actual failed; no final receipt/status/cleanup/count/PID/birth/1736-pin proof can be transplanted from Windowsx64",
+    "protected best-effort phase writes: absence of Retry row is not a complete action-count or non-entry proof",
+    "A-exit/Refresh phase row precedes crashOriginal; positive Aabsence, actual Refresh and precise first failing observation are unretained",
+    "Quit phase admission does not confirm Browser.close delivery/ack/applicationexit/finalcensus/three-HANDLEStopcompletion",
+    "controller emergency-fail with zero membership is emergency containment only; approximately120s wall interval matches original root wait but does not identify exact emergency trigger",
+    "51 PowerShell XML diagnostics retained, not established root cause; app backend-unavailable/connections-handler errors cannot identify precise failure",
+    "separate packaged nativeV2PASS only; no trace/nativePID census, desktop/vendor/release false and coordination unqualified",
+    "native manifest/hashes joined only; ASAR/runtime/payload binaries absent; no performance, co-observation, P09 or later-composition qualification",
+    "source reviewed from exact d382Git; ARM original source freeze arrays notretained",
+    "no project source/tests/compilers/native/providers or CI actions executed"
+  ]
+}

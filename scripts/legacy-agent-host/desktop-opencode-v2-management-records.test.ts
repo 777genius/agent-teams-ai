@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { test } from 'node:test';
+import { runInNewContext } from 'node:vm';
 import { teamHostProfileSchema } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import { selectOpenCodeV2ManagementModel } from '../../packages/legacy-agent-host/dist/composition/openCodeV2ModelSelection.js';
 import { selectRuntimeSourceSeed } from '../../packages/legacy-agent-host/dist/composition/runtimeSourceGrantAuthority.js';
@@ -11,6 +12,7 @@ import { managementDigest } from '../../packages/legacy-agent-host/dist/manageme
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { assertDesktopV2ManagementSourceHistory, bindDesktopV2ManagementReceipt,
   captureDesktopV2ManagementAuthority, readDesktopV2ManagementPublication } from './desktop-opencode-v2-management-records.ts';
+import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { StoredRuntimeSourceCommand } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
 import type { PublishRuntimeSource } from '../../packages/legacy-agent-host/dist/composition/runtimeSourceContracts.js';
 
@@ -167,4 +169,122 @@ test('archived V2 tuple isolation restores the real runner and preserves foreign
     throw failure;
   }), error => error === failure);
   assert.deepEqual(original(), before, 'failed assertions also restore exact original property descriptors');
+});
+
+test('original V2 default intent joins its selected saving row within the same receipt deadline', async () => {
+  const source = await readFile(new URL('./desktop-opencode-v2-management-ui.ts', import.meta.url), 'utf8');
+  const start = '  const originalStep = async (', end = '  const dialog = \'[role="dialog"]\';';
+  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+  let block = source.slice(source.indexOf(start), source.indexOf(end));
+  for (const [before, after] of [
+    ['(step: DesktopV2ManagementStep, selector: string, label: string)', '(step, selector, label)'],
+    ['let receipt: Awaited<ReturnType<typeof commands>>[number] | undefined;', 'let receipt;'],
+    ['new Promise<void>', 'new Promise'],
+  ] as const) {
+    assert.equal(block.split(before).length, 2, 'only the original TypeScript annotation is erased');
+    block = block.replace(before, after);
+  }
+  type State = { now: number; commands: number; clicks: number; scrolls: number; reads: number;
+    pauses: number; finishes: number; begins: number; bindings: number; native: number; guards: number;
+    busy: boolean; selected: boolean; rowCount: number; buttonCount: number; width: number; revoked: boolean };
+  const setup = (step: string, settings: { initial?: Partial<State>;
+    onRead?: (state: State) => void; onPause?: (state: State) => void } = {}) => {
+    const state: State = { now: 0, commands: 0, clicks: 0, scrolls: 0, reads: 0, pauses: 0,
+      finishes: 0, begins: 0, bindings: 0, native: 0, guards: 0, busy: true, selected: true,
+      rowCount: 1, buttonCount: 1, width: 10, revoked: false, ...settings.initial };
+    const modelA = 'test-local/TEST-model', modelB = 'test-local/TEST-project-model';
+    const defaultIntent = step === 'global-default' || step === 'project-default';
+    const expectedModel = step === 'global-default' ? modelA : modelB;
+    const expectedRow = '[role="dialog"] [data-testid=' +
+      JSON.stringify('runtime-provider-model-row-' + expectedModel) + ']';
+    const receipt = { commandId: 'TEST-original-command', kind: 'model.probe', phase: 'completed',
+      resourceHeld: false, providerId: 'test-local', ok: true, modelId: expectedModel };
+    const effects: Record<string, unknown>[] = [], authority = {}, evidence = { original: true };
+    const revoked = new Error('TEST original owner revoked');
+    const button = {
+      disabled: true,
+      getBoundingClientRect: () => ({ width: state.width, height: 10 }),
+      getAttribute: (name: string) => { assert.equal(name, 'aria-pressed'); return String(state.selected); },
+      querySelector: (selector: string) => {
+        assert.equal(selector, ':scope > svg.animate-spin'); return state.busy ? {} : null;
+      },
+    };
+    const row = { querySelectorAll: (selector: string) => {
+      assert.equal(selector, 'button[aria-pressed]'); return Array.from({ length: state.buttonCount }, () => button);
+    } };
+    const run: (step: string, selector: string, label: string) => Promise<void> = runInNewContext(
+      '(function () {\n' + block + '\nreturn originalStep; })()', {
+        assert, desktopJsLiteral, desktopV2ProviderId: 'test-local', modelA, modelB,
+        dialog: '[role="dialog"]', authority, effects, Date: { now: () => state.now },
+        commands: async () => { state.commands++; return state.commands === 1 ? [] : [receipt]; },
+        bindDesktopV2ManagementReceipt: (owner: unknown, rows: unknown[], command: unknown, intent: string) => {
+          assert.equal(owner, authority); assert.equal(rows[0], receipt);
+          assert.equal(command, receipt); assert.equal(intent, step); state.bindings++; return { evidence };
+        },
+        options: {
+          assertOwnedRenderer: () => { state.guards++; if (state.revoked) throw revoked; },
+          observeNative: async () => { state.native++; },
+        },
+        model: {
+          begin: (intent: string) => { assert.equal(intent, step); state.begins++; },
+          finish: (intent: string) => {
+            assert.equal(intent, step);
+            if (defaultIntent) assert.equal(state.busy, false, 'terminal probe must not finish the still-saving default intent');
+            state.finishes++;
+          },
+        },
+        ui: {
+          scrollTo: async () => { state.scrolls++; },
+          click: async () => { state.clicks++; },
+        },
+        cdp: { evaluate: async (expression: string) => {
+          state.reads++;
+          const result = runInNewContext(expression, { document: { querySelectorAll: (selector: string) => {
+            assert.equal(selector, expectedRow, 'read only the exact original model and dialog');
+            return Array.from({ length: state.rowCount }, () => row);
+          } } });
+          settings.onRead?.(state); return result;
+        } },
+        setTimeout: (complete: () => void, delay: number) => {
+          assert.equal(delay, 100); state.pauses++; state.now += delay;
+          if (settings.onPause) settings.onPause(state); else state.busy = false;
+          complete();
+        },
+      });
+    return { state, receipt, effects, evidence, revoked, run: () => run(step, 'TEST original selector', 'TEST original label') };
+  };
+  for (const step of ['global-default', 'project-default']) {
+    const f = setup(step); await f.run();
+    assert.deepEqual({ clicks: f.state.clicks, scrolls: f.state.scrolls, reads: f.state.reads, pauses: f.state.pauses,
+      begins: f.state.begins, finishes: f.state.finishes, bindings: f.state.bindings, native: f.state.native,
+      commands: f.state.commands }, {
+      clicks: 1, scrolls: 1, reads: 2, pauses: 1, begins: 1, finishes: 1, bindings: 1, native: 2, commands: 4,
+    });
+    assert.equal(f.state.now, 100); assert.equal(f.state.busy, false);
+    assert.equal(f.effects.length, 1); assert.equal(f.effects[0]!.commandId, f.receipt.commandId);
+    assert.equal(f.effects[0]!.source, f.evidence);
+  }
+  for (const initial of [
+    { rowCount: 0 }, { rowCount: 2 }, { buttonCount: 0 }, { buttonCount: 2 },
+    { selected: false }, { width: 0 }, { busy: true },
+  ]) {
+    const f = setup('global-default', { initial: { busy: false, ...initial },
+      onPause: state => { state.now = 250_000; } });
+    await assert.rejects(f.run(), /original V2 Settings command settled before its deadline/u);
+    assert.equal(f.state.clicks, 1); assert.equal(f.state.reads, 1); assert.equal(f.state.pauses, 1);
+    assert.equal(f.state.finishes, 0); assert.equal(f.state.bindings, 0); assert.equal(f.effects.length, 0);
+  }
+  for (const now of [250_000, 250_001]) {
+    const f = setup('project-default', { initial: { busy: false }, onRead: state => { state.now = now; } });
+    await assert.rejects(f.run(), /original default intent completes before its deadline/u);
+    assert.equal(f.state.reads, 1); assert.equal(f.state.pauses, 0);
+    assert.equal(f.state.finishes, 0); assert.equal(f.effects.length, 0);
+  }
+  const revoked = setup('global-default', { initial: { busy: false }, onRead: state => { state.revoked = true; } });
+  await assert.rejects(revoked.run(), error => error === revoked.revoked);
+  assert.equal(revoked.state.clicks, 1); assert.equal(revoked.state.reads, 1);
+  assert.equal(revoked.state.finishes, 0); assert.equal(revoked.effects.length, 0);
+  const ordinary = setup('project-test'); await ordinary.run();
+  assert.equal(ordinary.state.clicks, 1); assert.equal(ordinary.state.reads, 0); assert.equal(ordinary.state.pauses, 0);
+  assert.equal(ordinary.state.finishes, 1); assert.equal(ordinary.effects.length, 1);
 });

@@ -129,14 +129,7 @@ const begin = (name, milliseconds) => {
   const phase = { phase: name, atMs: performance.now() - startedAt, budgetMs: milliseconds };
   proof.phases.push(phase);
   try {
-    const originalLine = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_PHASE', ...phase }) + '\n';
-    let line = originalLine;
-    if (name === 'original-product-Quit' && typeof proof.error === 'string') {
-      const observedLine = JSON.stringify({
-        kind: 'TEST_WINDOWS_PACKAGED_UI_PHASE', ...phase, errorPrefix: proof.error.slice(0, 160),
-      }) + '\n';
-      if (Buffer.byteLength(observedLine, 'utf8') <= 512) line = observedLine;
-    }
+    const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_PHASE', ...phase }) + '\n';
     if (Buffer.byteLength(line, 'utf8') <= 512) writeSync(1, line);
   } catch { /* The original phase admission remains authoritative. */ }
   remaining();
@@ -466,44 +459,42 @@ try {
 
   assertHostBirths();
   begin('one-explicit-same-Main-Retry', 10000);
+  const retryUi = { stages: { clickReturnedMs: null, writerObservedMs: null, hostCheckedMs: null, uiReadyMs: null },
+    returnedReads: 0, countTruncated: false, last: null };
+  const recordRetryUi = (stage, value) => {
+    try {
+      proof.retryUi = retryUi;
+      const elapsed = Math.round(performance.now() - startedAt - proof.phases.at(-1).atMs);
+      const atMs = Number.isSafeInteger(elapsed) && elapsed >= 0 ? elapsed : null;
+      if (stage === 'sample') {
+        if (retryUi.returnedReads < 500) retryUi.returnedReads++;
+        else retryUi.countTruncated = true;
+        retryUi.last = { atMs, result: ['surface-missing', 'refresh-not-enabled', 'retry-present', 'alert-present', 'ready'].includes(value) ? value : 'invalid' };
+      } else retryUi.stages[stage] = atMs;
+    } catch { /* Passive diagnostics never replace an original action, refusal or cleanup. */ }
+  };
   proof.counts.retryClicks++;
   await ui.click(surface + ' button', 'explicit product Retry once', 'Retry');
-  try { proof.retryClickCompletedAtMs = performance.now() - startedAt; } catch { /* Observation only. */ }
+  recordRetryUi('clickReturnedMs');
   const successorWriter = await poll(async () => {
     const writer = readWriter();
     if (!writer || writer.pid === writerA.pid) return false;
     assert.notEqual(writer.token, writerA.token); return writer;
   }, 'actual successor writer acquisition');
-  try { proof.successorWriterObservedAtMs = performance.now() - startedAt; } catch { /* Observation only. */ }
+  recordRetryUi('writerObservedMs');
   hostB = assertHost(successorWriter, captureCensus());
   assert.notEqual(hostB.pid, hostA.pid);
   proof.successorHost = { identity: hostB, writer: successorWriter };
   assertHostBirths();
-  try {
-    proof.retryUiRead = { startMs: performance.now() - startedAt, deadlineMs: activeDeadline - startedAt, completedEvaluations: 0 };
-  } catch { /* Observation only. */ }
-  await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) + ');' +
-    'const facts={surfacePresent:Boolean(s)};if(!s)return facts;const b=[...s.querySelectorAll("button")];' +
-    'facts.refreshEnabled=b.some(x=>x.textContent.trim()==="Refresh"&&!x.disabled);if(!facts.refreshEnabled)return facts;' +
-    'facts.retryPresent=b.some(x=>x.textContent.trim()==="Retry");if(facts.retryPresent)return facts;' +
-    'facts.alertPresent=Boolean(s.querySelector(\'[role="alert"]\'));return facts;})()',
+  recordRetryUi('hostCheckedMs');
+  await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) + ');if(!s)return "surface-missing";' +
+    'const b=[...s.querySelectorAll("button")];if(!b.some(x=>x.textContent.trim()==="Refresh"&&!x.disabled))return "refresh-not-enabled";' +
+    'if(b.some(x=>x.textContent.trim()==="Retry"))return "retry-present";' +
+    'if(s.querySelector(\'[role="alert"]\'))return "alert-present";return "ready";})()',
   'original refreshed Team after positive product recovery', remaining(), value => {
-    const keys = value && typeof value === 'object' && !Array.isArray(value) ? Object.keys(value) : [];
-    const valid = Boolean(keys.length && Object.hasOwn(value, 'surfacePresent') &&
-      (value.surfacePresent === false ? keys.length === 1 :
-        value.surfacePresent === true && Object.hasOwn(value, 'refreshEnabled') &&
-        (value.refreshEnabled === false ? keys.length === 2 :
-          value.refreshEnabled === true && Object.hasOwn(value, 'retryPresent') &&
-          (value.retryPresent === true ? keys.length === 3 :
-            value.retryPresent === false && keys.length === 4 &&
-            Object.hasOwn(value, 'alertPresent') && typeof value.alertPresent === 'boolean'))));
-    try {
-      proof.retryUiRead.completedEvaluations++;
-      proof.retryUiRead.last = { atMs: performance.now() - startedAt, facts: valid ? { ...value } : null };
-    } catch { /* Observation failure cannot change the original predicate. */ }
-    return valid && value.surfacePresent === true && value.refreshEnabled === true &&
-      value.retryPresent === false && value.alertPresent === false;
+    recordRetryUi('sample', value); return value === 'ready';
   });
+  recordRetryUi('uiReadyMs');
   await originalBinding();
   await within(() => fixture.afterRetry(activeDeadline));
   proof.afterRetryPublic = await readProcesses();
@@ -539,6 +530,11 @@ try {
 } catch (error) {
   primaryError = error;
   proof.error = errorText(error);
+  try {
+    const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase: activePhase,
+      error: proof.error.slice(0, 128) }) + '\n';
+    if (Buffer.byteLength(line, 'utf8') <= 1024) writeSync(1, line);
+  } catch { /* Keep the original failure and continue original cleanup after a diagnostic write error. */ }
 } finally {
   if (app && !quitStarted) {
     try {

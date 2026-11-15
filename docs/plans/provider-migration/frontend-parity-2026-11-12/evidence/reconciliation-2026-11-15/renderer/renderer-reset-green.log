@@ -1,0 +1,15 @@
+
+ RUN  v3.2.6 /workspace/scratch/82d3f9ba6b85/agent-teams-e2e
+
+ ✓ test/renderer/store/teamSlice.test.ts (276 tests) 874ms
+ ✓ test/features/agent-backend/hostMemberSpawnStatuses.test.ts (37 tests) 291ms
+ ✓ test/features/agent-backend/hostProvisioningProgress.test.ts (15 tests) 126ms
+ ✓ test/features/agent-backend/hostTeamChanges.test.ts (7 tests) 15ms
+ ✓ test/renderer/store/teamRuntimeRunAdoption.test.ts (14 tests) 5ms
+ ✓ test/renderer/store/teamProvisioningStateRules.test.ts (5 tests) 4ms
+
+ Test Files  6 passed (6)
+      Tests  354 passed (354)
+   Start at  19:37:45
+   Duration  9.54s (transform 2.88s, setup 98ms, collect 5.84s, tests 1.32s, environment 1.14s, prepare 380ms)
+

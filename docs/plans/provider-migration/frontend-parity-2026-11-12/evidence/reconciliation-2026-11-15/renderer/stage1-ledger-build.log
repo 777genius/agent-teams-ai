@@ -1,0 +1,25 @@
+Scope: all 7 workspace projects
+? Verifying lockfile against supply-chain policies (2533 entries)...
+
+   ╭──────────────────────────────────────────────────────────────────────╮
+   │                                                                      │
+   │                 Update available! 11.25.0 → 12.21.0.                 │
+   │                 Changelog: https://pnpm.io/v/12.21.0                 │
+   │   To update, run: curl -fsSL https://get.pnpm.io/install.sh | sh -   │
+   │                                                                      │
+   ╰──────────────────────────────────────────────────────────────────────╯
+
+✓ Lockfile passes supply-chain policies (2533 entries in 13.1s)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +1
++
+Progress: resolved 1, reused 1, downloaded 0, added 1, done
+
+landing postinstall$ node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/transitive-security.ts --apply
+. preinstall$ node ./scripts/ci/enforce-pnpm-install.mjs
+landing postinstall: [landing postinstall] skipped npm layout patch; pnpm patchedDependencies handles compatibility
+. preinstall: Done
+. postinstall$ node ./scripts/postinstall-electron.cjs
+landing postinstall: Installed braces escaped node_modules
+landing postinstall: Failed
