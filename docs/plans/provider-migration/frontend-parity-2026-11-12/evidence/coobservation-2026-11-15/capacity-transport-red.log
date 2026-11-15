@@ -1,0 +1,41 @@
+✔ frame bound applies before parse, including fragmented UTF-8 bytes at the exact boundary (13.068672ms)
+✔ malformed UTF-8 and incomplete frames close without executing a request (1.456941ms)
+✔ handshake gates handlers and method failures do not disclose private errors (2.578872ms)
+✔ reserved control capacity resolves a pending permission while prompt slots are full (1.258244ms)
+✖ private custody requires priority capacity beyond its control reserve (1.228139ms)
+✔ private custody hints are reliable/sticky and an old epoch reply cannot finish a current read (29.060288ms)
+✔ private stream frames leave byte capacity for control and yield the next frame to Stop (8.533862ms)
+✔ private admission waits for original slots in both lanes and never dispatches expired or sealed work (54.739621ms)
+✔ slow data consumer receives an explicit gap and control overtakes queued data (1.35638ms)
+✔ blocked stdout times out, seals handlers and finishes disposal even if cleanup hangs (42.163102ms)
+✔ priority queue exhaustion fails closed rather than dropping control or retaining unlimited responses (0.760262ms)
+✔ actual CLI speaks NDJSON from an unrelated TEST cwd with no native/provider operations (97.556817ms)
+✔ actual CLI exits on frame limit+1 without parsing or sending a fake outcome (85.825352ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 12
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 836.179708
+
+✖ failing tests:
+
+test at packages/legacy-agent-host/tests/transport.test.ts:206:1
+✖ private custody requires priority capacity beyond its control reserve (1.228139ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/transport.test.ts:211:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /Control reserve must be below priority message limit/,
+    operator: 'throws',
+    diff: 'simple'
+  }

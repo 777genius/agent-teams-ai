@@ -1,0 +1,71 @@
+{
+  "sourceHead": "328c9446be2bb0c55c273449cd19a569c3bfef9c",
+  "sourceTree": "da57a4d1efa56517d9e3694e2efd762ea8c55ec5",
+  "statusBefore": "",
+  "sourceBlobs": {
+    "packages/legacy-agent-host/src/index.ts": "c5ecfd9787e219cb2fe5050c38bbca252e9b1e86",
+    "packages/legacy-agent-host/tests/transport.test.ts": "24c83547be0ee43bb6f2481618a4356a3855d832",
+    "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts": "d8270d7ef415dbfaaf5a78bbde59176d07053b93",
+    "test/features/agent-backend/capturedHostClient.test.ts": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+    "tools/owned-process-broker/nativeEmulatedSourceProfile.ts": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts": "1d1133876a20ca7541d04b4c9d8d86e4e4c599bc"
+  },
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "AGENT_BACKEND_TEST_NODE": null,
+  "steps": [
+    {
+      "name": "capacity-old-host-build.log",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@agent-teams/legacy-agent-host",
+        "build"
+      ],
+      "startedAt": "2026-11-15T20:28:45.962161+00:00",
+      "completedAt": "2026-11-15T20:28:49.870820+00:00",
+      "exitCode": 0,
+      "bytes": 182,
+      "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789"
+    },
+    {
+      "name": "capacity-transport-red.log",
+      "argv": [
+        "node",
+        "--test",
+        "packages/legacy-agent-host/tests/transport.test.ts"
+      ],
+      "startedAt": "2026-11-15T20:28:49.873675+00:00",
+      "completedAt": "2026-11-15T20:28:50.795675+00:00",
+      "exitCode": 1,
+      "bytes": 2433,
+      "sha256": "f92e36716fccaf36d5a5e2a69e70c2c7fe539377bc448fc1cd942ca861eba0cc"
+    },
+    {
+      "name": "capacity-main-red.log",
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "test/features/agent-backend/capturedHostClient.test.ts"
+      ],
+      "startedAt": "2026-11-15T20:28:50.796213+00:00",
+      "completedAt": "2026-11-15T20:30:37.244876+00:00",
+      "exitCode": -9,
+      "bytes": 76,
+      "sha256": "33b91f903c32dde121364dc621bdb0ea357189617e6e3e49ac20b179c6751ae2"
+    }
+  ],
+  "builtHost": {
+    "path": "packages/legacy-agent-host/dist/index.js",
+    "bytes": 9675,
+    "sha256": "69838d1009c95c0fec008061450224e4d904cfd6ecfc1fd44e33d488a8adb095",
+    "capacityGuardPresent": false,
+    "buildExit": 0
+  },
+  "statusAfter": "",
+  "qualification": "Actual full original capacity files on old production and fresh old Host build. Independent substantive failure review is required before production application."
+}
