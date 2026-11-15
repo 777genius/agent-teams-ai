@@ -4021,3 +4021,24 @@ Root reviewed the full ten-path diff and the original compiler options. This ame
 | `tsconfig.app-selected.json` | `d77d91f619844775fd483855947953f9c48ccf11` | `42cc9075ea3acf27991514af44c30bd53898c2234ef2750afefe31676b6746b8` |
 
 No test selector is added to CI by this cut, and no source-budget exception is introduced. Prospective publication of this exact appendix is required before canonical test/source application and execution.
+
+
+### Plan 32 actual reader regression and scoped ambient context correction
+
+The prospectively published R1 is `e81f1b4f7c762e49142a9fa3a96e85074a09ac20`, tree `325555794805a3b86b44ea3ab78abca5661aae57`. Its exact ten source/test candidates remain unchanged. Baseline RED tree `2d14cb80e0939b2e75289ba39e57d00c10a3e7bd` changes only the four reviewed test files and that plan: the canonical Host build passed; the two complete Node files passed35/failed2 and the two complete Vitest files passed14/failed2. All four failures are the predicted Thinking projection/read/facade/message-count omissions. The malformed-input preservation case passed. No skips, cancellations or todo cases were recorded.
+
+After only the six reviewed production blobs, GREEN tree `4e3f74732f43657a279585ad1e5290b12f41405c` passed its canonical Host build, Node37/37 and Vitest16/16, with zero failures/skips/cancellations/todo. The original ten-file fast lint, source-size guard and Team Provisioning guard passed. These53 selected tests do not qualify provider delivery or Electron/native acceptance.
+
+The two originally reviewed scratch type configs first exited1 with TS2688 because their directory had no node_modules ancestor. A scratch-only node_modules symlink now resolves the same already installed canonical dependencies; no installation, compiler option, source or config bytes changed. Independent native-failures R2 approved that resolution repair. The unchanged selected Host test compilation then passed with empty output. The selected application compilation reached its actual transitive imports and exited1 because its narrowed files list omitted original ambient declarations for agent-teams-controller, Vite ImportMeta and build constants. Preserve all three unsuccessful app/Host compiler outcomes as their actual source-bound observations; none is a broad compiler retry or PASS.
+
+Before one further selected application invocation, include the five unchanged ambient declaration inputs that the original root configuration includes through src/**/*, in addition to the same four changed app sources and two complete tests. The new scratch config extends the same original root tsconfig, leaves all compiler options unchanged, keeps include empty and adds only those five canonical declarations to files. Do not fabricate declarations, suppress errors or change installed packages. The exact reviewed context is:
+
+| Unchanged declaration | Git blob |
+| --- | --- |
+| `src/types/agent-teams-controller.d.ts` | `d9211a4825dfecebecf5f3fd3a8834280360c4d9` |
+| `src/types/pica.d.ts` | `60f316f122761f676f6ce46f490bd6b1bacfc730` |
+| `src/renderer/vite-env.d.ts` | `33cda8d4fb22a8df0bf4d2e692bc60a8d4339358` |
+| `src/features/localization/renderer/i18next.d.ts` | `b1127ae950f59d4617ef48fc0f87e8429b05cd31` |
+| `src/features/localization/renderer/resources.d.ts` | `129d05e2374aacdb365c9b8de50de101cb95d8a6` |
+
+Scratch `tsconfig.app-context-selected.json`: Git blob `d033254b98353e79c805ecd12e34bba032a8fe65`, SHA256 `65a71dcfa1e600670fb76c67665fce30fb60fd0e14da782402a6af35433ebbd9`. Run only this selected app compilation on the same ten-path source after this amendment is published and independently reviewed; do not replay the passed Host compiler,53 tests,lint or guards. Both earlier broad exit137 outcomes remain unqualified and may not be retried. All producer/archive/native/P08/P09/genuine-upgrade/M16 and Draft/base restrictions remain unchanged.
