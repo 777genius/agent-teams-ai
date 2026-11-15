@@ -1,0 +1,38 @@
+
+ RUN  v3.2.6 /workspace/scratch/82d3f9ba6b85/agent-teams-e2e
+
+{"kind":"TEST_LAZY_HOST_STARTUP_OBSERVATION","point":"case-finally","observations":[{"phase":"profile-validation-start","kind":"handshake","elapsedMs":9781},{"phase":"profile-validation-complete","kind":"handshake","elapsedMs":9912},{"phase":"child-captured","kind":"handshake","elapsedMs":9917},{"phase":"request-admitted","kind":"handshake","elapsedMs":9917},{"phase":"response-accepted","kind":"handshake","elapsedMs":11136},{"phase":"ready","kind":"handshake","elapsedMs":11136}],"dropped":0,"pending":{"state":"resolved-failure","code":"forbidden","outcome":"not-dispatched"}}
+ ✓ test/features/agent-backend/desktopBackendFeature.test.ts (16 tests) 5542ms
+   ✓ captures global and exact project provider scopes without Team handles or default-owner fallback  660ms
+   ✓ uses two lazily captured subprocess hosts and captured context grants for finite IPC operations  874ms
+   ✓ keeps healthy owner discovery available after original transport loss  469ms
+   ✓ keeps malformed registry, binding conflicts and stale discovery context fatal  454ms
+   ✓ HTTP discovery uses the same captured context and rejects client context overrides  316ms
+   ✓ rechecks captured context after lazy host startup before dispatching a finite command  1367ms
+ ✓ test/features/agent-backend/capturedHostClient.test.ts (30 tests) 15515ms
+   ✓ captured legacy host client over real subprocess stdio > keeps the original service intent and scope through late ACK and a successor Host  665ms
+   ✓ captured legacy host client over real subprocess stdio > derives retained service absence only from the original whole-Job proof: no-local-dispatch  308ms
+   ✓ captured legacy host client over real subprocess stdio > retains Main launch/stdio/receipt ownership across graceful Host close  622ms
+   ✓ captured legacy host client over real subprocess stdio > retains Main launch/stdio/receipt ownership across crash Host close  481ms
+   ✓ captured legacy host client over real subprocess stdio > queues multi-member launch and graceful cleanup without caching capacity refusals  341ms
+   ✓ captured legacy host client over real subprocess stdio > queues multi-member launch and expired cleanup without caching capacity refusals  330ms
+   ✓ captured legacy host client over real subprocess stdio > keeps the original TEST physical owner across Host loss, without replaying an unacknowledged write  465ms
+   ✓ captured legacy host client over real subprocess stdio > request timeout retains unknown outcome while independent control remains available  300ms
+   ✓ captured legacy host client over real subprocess stdio > bounds notifications and exposes a gap without blocking responses  398ms
+   ✓ captured legacy host client over real subprocess stdio > rejects mismatched host build identity  6433ms
+   ✓ captured legacy host client over real subprocess stdio > seals pending startup before validation can spawn the host  523ms
+   ✓ captured legacy host client over real subprocess stdio > waits for advertised cleanup budget 200 before signaling the original Host  338ms
+   ✓ captured legacy host client over real subprocess stdio > waits for advertised cleanup budget 6000 before signaling the original Host  347ms
+ ✓ test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts (7 tests) 7248ms
+   ✓ pending original custody stays UNKNOWN after the existing drain bound and late release  7073ms
+ ✓ test/features/agent-backend/capturedWindowsSourceHistory.test.ts (5 tests) 103ms
+ ✓ test/features/agent-backend/capturedWindowsSelection.test.ts (5 tests) 54ms
+ ✓ test/features/agent-backend/fileTeamModelProbeIntents.test.ts (10 tests) 58ms
+ ✓ test/features/agent-backend/capturedWindowsSourcePending.test.ts (2 tests) 19ms
+ ✓ test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts (3 tests) 10ms
+
+ Test Files  8 passed (8)
+      Tests  78 passed (78)
+   Start at  19:55:11
+   Duration  41.05s (transform 3.61s, setup 1.44s, collect 9.06s, tests 28.55s, environment 1ms, prepare 567ms)
+

@@ -1,0 +1,22 @@
+{
+  "stage": "Cross test-only RED attempt",
+  "sourceHead": "68b1c0177044835d4700f2111b1c4179a25842d1",
+  "sourceTree": "548a5b20b2bc2fbeeeb077fba8c37204ac3b120d",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--test",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T17:51:07.208877+00:00",
+  "finishedAtUTC": "2026-11-15T17:51:13.255949+00:00",
+  "elapsedSeconds": 6.0469792439980665,
+  "exitCode": 1,
+  "preflightMetadataSHA256": "9b514f949dea34af14e9128de3c5fdacd6a005ea3e466f3c9dcff4f03e0a4d11",
+  "logBytes": 8430,
+  "logSHA256": "176d21f57536825d6be7b302a742efff6f5ee8517f3bf8e9ead8e6559d2dc064",
+  "sourceHeadAfter": "68b1c0177044835d4700f2111b1c4179a25842d1",
+  "statusAfter": ""
+}

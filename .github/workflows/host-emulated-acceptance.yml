@@ -111,7 +111,36 @@ jobs:
         if: matrix.lane == 'team'
         run: |
           set -euo pipefail
+          pnpm lint:fast:files -- \
+            packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts \
+            packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts \
+            packages/legacy-agent-host/tests/opencode-configuration-source.test.ts \
+            scripts/e2e/opencode-diagnostics/platform.mjs \
+            scripts/e2e/opencode-diagnostics/platform.test.mjs \
+            scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts \
+            scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts \
+            scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts \
+            scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts \
+            scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts \
+            scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts \
+            scripts/legacy-agent-host/desktop-task-comment-input-target.ts \
+            scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts \
+            scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts \
+            scripts/legacy-agent-host/run-packaged-opencode-v2.ts \
+            src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts \
+            src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts \
+            src/features/agent-backend/renderer/createHostTeamChanges.ts \
+            src/features/agent-backend/renderer/createHostTeamProvisioning.ts \
+            src/features/agent-backend/renderer/index.ts \
+            src/renderer/store/slices/teamSlice.ts \
+            src/renderer/store/team/teamRuntimeRunAdoption.ts \
+            test/features/agent-backend/capturedWindowsSelection.test.ts \
+            test/features/agent-backend/hostMemberSpawnStatuses.test.ts \
+            test/features/agent-backend/runtimeActivityFacade.test.ts \
+            test/renderer/store/teamRuntimeRunAdoption.test.ts \
+            test/renderer/store/teamSlice.test.ts
           pnpm typecheck:workspace
+          node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main
           pnpm lint:ci:files src/renderer --cache-location .eslintcache-renderer
           pnpm lint:ci:files src/features --cache-location .eslintcache-features
