@@ -283,6 +283,13 @@ export function createDesktopUiControls(
     assert.equal(typeof point.x, 'number');
     assert.equal(typeof point.y, 'number');
     options.assertOwnedRenderer();
+    const finalPoint = record(await cdp.evaluate(expression));
+    assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
+    assert.deepEqual(
+      [finalPoint.x, finalPoint.y, finalPoint.tag],
+      [point.x, point.y, point.tag],
+      'Original UI target moved after ownership check'
+    );
     step({
       action: 'mouseClick',
       label,

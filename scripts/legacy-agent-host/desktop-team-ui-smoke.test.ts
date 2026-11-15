@@ -1180,3 +1180,36 @@ test('Taskboard focus diagnostics preserve last samples and bounded transitions 
   assert.ok(JSON.stringify(bounded).length > 4096 && JSON.stringify(bounded).length <= 8192);
   assert.equal(JSON.stringify(bounded).includes(secret), false);
 });
+
+for (const [change, replacement] of [
+  ['unavailable', { unavailableTarget: true, matches: 1 }],
+  ['moved', { x: 100, y: 200, tag: 'BUTTON' }],
+] as const) {
+  test(`original desktop click refuses a target ${change} during the final ownership check`, { timeout: 5000 }, async () => {
+    const expression = 'TEST_originalOwnerAndHitTestedTarget()';
+    const expressions: string[] = [], dispatched: Record<string, unknown>[] = [];
+    let changed = false, guardChanges = 0;
+    const ui = createDesktopUiControls({
+      async evaluate(actual: string) {
+        expressions.push(actual);
+        return changed ? replacement : { x: 100, y: 100, tag: 'BUTTON' };
+      },
+      async send(method: string, params: Record<string, unknown> = {}) {
+        if (method === 'Input.dispatchMouseEvent') dispatched.push({ ...params });
+        return {};
+      },
+    }, { assertOwnedRenderer() {
+      // Initial point, pointer-enter point, and both original equal stable samples.
+      if (!changed && expressions.length === 4) { changed = true; guardChanges++; }
+    }, step() {} });
+    await assert.rejects(
+      ui.clickExpression(expression, 'TEST original final target'),
+      new RegExp(`Original UI target ${change} after ownership check`)
+    );
+    assert.equal(guardChanges, 1, 'the original final ownership guard changes the target once');
+    assert.deepEqual(expressions, Array.from({ length: 5 }, () => expression),
+      'one fresh complete target read follows the final guard');
+    assert.deepEqual(dispatched, [{ type: 'mouseMoved', x: 100, y: 100 }],
+      'no physical press or release after the original target changes');
+  });
+}
