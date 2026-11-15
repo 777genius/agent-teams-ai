@@ -55,8 +55,8 @@ function journal(path: string): Record<string, unknown>[] {
   assert.ok(value.endsWith('\n'));
   return value.trimEnd().split('\n').map(line => object(JSON.parse(line)));
 }
-async function poll(check: () => Promise<boolean>, message: string, budget = 15000): Promise<void> {
-  const deadline = performance.now() + budget;
+async function poll(check: () => Promise<boolean>, message: string, budget = 15000, absoluteDeadline?: number): Promise<void> {
+  const deadline = absoluteDeadline ?? performance.now() + budget;
   for (;;) {
     assert.ok(performance.now() < deadline, message);
     const ready = await check();
@@ -466,7 +466,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
               sealed: view.sealed, custody: view.custody, nativeReady: view.nativeReady, attached: view.attached,
               ...(view.diagnostic === undefined ? {} : { diagnostic: view.diagnostic }) } });
           return view.nativeReady === true; }, 'Original source Team readiness',
-          codexReadinessDeadline === undefined ? undefined : codexReadinessDeadline - performance.now());
+          undefined, codexReadinessDeadline);
       } finally {
         console.log(JSON.stringify({ kind: 'TEST_SOURCE_READINESS', provider, ...readiness }));
       }
