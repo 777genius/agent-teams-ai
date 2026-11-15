@@ -3616,3 +3616,38 @@ The actual whole `typecheck:legacy-host-scripts` command passed with pinned Type
 
 These are finite local results for the four reviewed candidates, not current-source Desktop/native/packaged/full-workspace acceptance. Keep the existing `9a34bb28` cohort intact while retaining this followup on the private branch. Original resulting-source gates and physical cleanup remain mandatory. P08/P09, Draft/base and all previously retained restrictions remain unchanged.
 
+
+## Reconcile 2cb and f08 while retaining the original qualifying clocks — prospective R1
+
+The public head is `2cb0c0a92c954ab04d081b7a5672270d7484f4a7`, tree `4fd42ca2d74bfb29a834638b25675c51bfd6701a`; its sole parent is `9a34bb28de0a0deee2eecc42099fd9500563eb1b`. The reviewed private continuation is `f08bda203ef4aca49d9004bd7bff3f7e37a20f4f`, tree `e0b978c0bcb9dd1e33da9ac67aa982c6edbf662c`, containing the published R1 and four validated UI/helper preservation changes. Neither head contains the other. Preserve both histories through an ordinary reviewed merge, with the documentation-only continuation containing this R1 as an ancestor. Do not force, reset or replace either history.
+
+This is prospective integration authority. Preserve the complete f08 Plan29 prefix `95926d4f4cb84d3be1dc25a37ba6f7f342a9931f` and the incoming completion document `94f41cf156b3a4c76bf19786e83aea742fad22df` in full. The incoming completion append and executable changes first appeared together in 2cb; this R1 does not retrospectively claim a separate earlier publication or transfer its reported local results. The previously reviewed six-file cumulative-current diagnostic proposal and its caeb documentation draft remain unpublished and unapplied; they are not part of this merge.
+
+### Retained implementation and acceptance boundary
+
+Keep all four incoming capacity source/test files byte-identical to 2cb: the native-custody Host admission guard, Main handshake guard and their existing transport/Main tests. Keep all four f08 UI/helper files byte-identical to f08: the immediate V2 owner guard, its actual-source regression, the zero-observation assertion and the Cross-team negative oracles. All other nonconflicting source, tests, workflows, rosters, dependencies and plan history remain unchanged.
+
+The incoming timeout rationale correctly identifies different historical TEST settings: d894df introduced a 90-second Runtime profile beside a 15-second Host caller and post-ACK readiness observer; the older Desktop fixture used a 60-second caller. That does not establish a product-wide 15-second startup SLO, nor make a different fixture's timing contract equivalent to the original Windows source gate. Plan26 retains deadline assertions; Plan29's original Main preparation and source-readiness cuts explicitly preserve the 15-second request/readiness predicates. Plan30's separate P08 phase maxima, actions and cleanup rules remain unchanged and do not supply another budget to this source scenario.
+
+Root selects the existing qualifying predicates for this integration. OpenCode source preparation and every ordinary/control source RPC retain the original 15000-ms caller profile. Codex Team readiness retains the original 15000-ms poll beginning after the original Start acknowledgement. The Runtime profile stays at 90000 ms; management model probe stays at 30000 ms; the native custody, shutdown/dispose and outer controller limits retain their original values. No timeout value becomes evidence of source, readiness or cleanup.
+
+The 2cb OpenCode change would extend both its Main preparation anchor and all ordinary/control request allowances, including runtime.stop; only separate physical/native cleanup predicates and shutdown clocks were unchanged. Its Codex duration would replace the post-ACK 15-second observer with a captured-member allowance beginning before Start. Passing a computed remainder into poll also reanchors it at a second clock. Preserve those incoming facts as history. This resolution restores the original qualifying predicates, so it introduces no absolute-deadline helper/API and makes no claim that the two timing contracts were equivalent.
+
+A success observed under 2cb's longer fixture budgets cannot retrospectively qualify the original 15-second gates. The original 9a Windows INCOMPLETE receipts remain failures with their separately confirmed cleanup. This R1 neither waives those gates nor claims to fix the underlying readiness duration. Any future proposal to replace them requires its own explicit acceptance decision; no such decision is made here.
+
+### Exact two-file integration resolution
+
+| Existing path | Incoming 2cb preimage | Resolved candidate | Added/deleted | Physical lines |
+| --- | --- | --- | ---: | ---: |
+| tools/owned-process-broker/nativeEmulatedSourceProfile.ts | 91098e2083ed64dc4bd551df2424f40fbec064ee | 0486ca44781ab8b9da889df212f3aeeb3879b6c3 | 1/3 | 266 to 264 |
+| tools/owned-process-broker/nativeEmulatedSourceScenario.ts | 8164e614ca3f6e6cb01013ea3ec1fc723b5d5c30 | 6f0cd901318dfbe46078c81b01d3a0c0a7a14ec4 | 1/5 | 754 to 750 |
+
+Profile restores only its original caller configuration and removes the now-inapplicable Desktop-budget comment. Its complete result is the original 9a/f08 Profile blob. Scenario retains the incoming capturedDefinition and all new Codex launch/roster, original-start, unique-member, full binding including generation, owner/team/run, unclaimed-attempt and positive captured-timeout assertions. It removes only the new Codex deadline variable, assignment/comment and relative-budget poll argument. The existing poll body, original before/after checks, all RPCs/actions/source joins, readiness predicate and physical cleanup remain unchanged. Total new resolution is two inserted/eight deleted lines across these two existing files; the unchanged 800-line ceiling is not raised.
+
+### Publication, verification and next work
+
+After root and independent exact review, publish/read back this documentation-only R1 on the existing private f08 continuation before applying the resolution. Materialize an isolated merged candidate from the exact two heads, verify the eight retained source/test blobs and all untouched paths, then apply only the two reviewed fixture resolutions. Preserve current useful 2cb CI; publish the integration on the private continuation and move PR #1192 only through a fresh expected-head ordinary fast-forward when appropriate.
+
+Build the actual merged Host with pinned Node 24.21.0 before executing the complete existing transport and Main client files. Verify their package/dist resolution belongs to this candidate; an older shared Host package is not candidate evidence. Run the whole Host test compiler, original legacy-host-scripts compiler, scoped lint and unchanged source-size/provisioning/diff guards serially. Preserve raw outcomes and exact source/dist binding. This clock restoration has no invented test-only RED, new test seam, numeric-string mirror test, native experiment or expanded matrix. Existing actual resulting-source Windows A/B/cold journeys and every unaffected original gate remain required.
+
+Stage-only OpenCode failure observation may follow as a separately reviewed and published cut after this integration base is fixed. No cumulative-current measurement, new diagnostic clock, provider action or additional public API is authorized here. Keep Draft, original base, finite TEST-only Claude/Codex, all P08/P09 limits and the no-Ready/main/release/default-activation/Stage2 boundaries. No new user permission is needed to retain the existing qualifying contract and preserve both histories; this R1 does not authorize an acceptance waiver.
