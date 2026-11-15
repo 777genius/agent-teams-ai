@@ -74,19 +74,24 @@ function modelToolDecision(body) {
   if (!expected.has(key)) return { id: 'unowned-request-' + token, text: 'No owned test action' };
   const toolId = 'toolu_' + token.replaceAll('-', '') + '_' + kind;
   const result = messages.flatMap(m => {
-    if (m?.role === 'tool' && m.tool_call_id === toolId) return [contentText(m.content)];
+    if (m?.role === 'tool' && m.tool_call_id === toolId)
+      return [{ text: contentText(m.content), isError: m.is_error === true }];
     if (!Array.isArray(m?.content)) return [];
     return m.content.filter(part => part?.type === 'tool_result' && part.tool_use_id === toolId)
-      .map(part => contentText(part.content));
+      .map(part => ({ text: contentText(part.content), isError: part.is_error === true }));
   }).at(-1);
   if (result !== undefined) {
+    if (result.isError) {
+      protocolFailure = 'Real ' + kind + ' Bash tool returned an error';
+      return { id: 'failed_' + token.replaceAll('-', ''), text: 'Tool failed.' };
+    }
     // The tool result must contain output of the actual native executable;
     // Git Bash built-in echo may be unable to write through Claude Code pipes.
-    if (kind === 'git' && !/git version\s+[0-9]/i.test(result)) {
+    if (kind === 'git' && !/git version\s+[0-9]/i.test(result.text)) {
       protocolFailure = 'Native git.exe did not produce its actual version text';
       return { id: 'failed_' + token.replaceAll('-', ''), text: 'Tool result did not qualify.' };
     }
-    if (!result.includes(expected.get(key))) {
+    if (!result.text.includes(expected.get(key))) {
       protocolFailure = 'Actual ' + kind + ' tool result omitted its OS execution marker';
       return { id: 'failed_' + token.replaceAll('-', ''), text: 'Tool result did not qualify.' };
     }
