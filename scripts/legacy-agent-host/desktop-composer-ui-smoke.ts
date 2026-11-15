@@ -199,7 +199,7 @@ export async function runDesktopComposerUiSmoke(
           (!('toolResultError' in row) || !row.toolResultError || (row.turn === 'NATIVE_TEAM_ONE' && row.step === 4))
       )
     );
-    if (nativeNextPromptUi) assert.ok(observations.every(row => !row.toolResultError),
+    if (nativeNextPromptUi) assert.ok(observations.every(row => !('toolResultError' in row) || !row.toolResultError),
       'native suggestion proof uses a clean SDK turn; original failure-path proof stays separate');
     if (turn.endsWith('_TEAM_TWO')) assert.ok(observations.every((row) => row.priorTurn));
     if (verifyAttachments) {
