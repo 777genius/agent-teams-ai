@@ -63,6 +63,7 @@ import {
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
 import { getVisibleTeamNamesInAnyPane } from './team/teamViewVisibility';
 import { applyToolApprovalEvent } from './team/toolApprovalEvents';
+import { installCodexStartupStatusRevalidation } from './codexStartupStatusRevalidation';
 import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
 import {
   decideProcessFanoutDryRun,
@@ -177,9 +178,7 @@ function noteTeamChangeEventBurst(teamName: string, eventType: string, visible: 
   teamChangeEventDiagnostics.set(teamName, diagnostic);
 }
 
-// =============================================================================
 // Store Creation
-// =============================================================================
 
 export const useStore = create<AppState>()((...args) => ({
   ...createProjectSlice(...args),
@@ -216,13 +215,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   window.__agentTeamsDevStore = useStore;
 }
 
-// =============================================================================
-// Re-exports
-// =============================================================================
-
-// =============================================================================
 // Store Initialization - Subscribe to IPC Events
-// =============================================================================
 
 /**
  * Initialize notification event listeners and fetch initial notification count.
@@ -231,6 +224,13 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
 export function initializeNotificationListeners(): () => void {
   void cleanupCommentReadState();
   const cleanupFns: (() => void)[] = [];
+  if (
+    api.cliInstaller &&
+    typeof api.onCodexAccountSnapshotChanged === 'function' &&
+    typeof api.getCodexAccountSnapshot === 'function'
+  ) {
+    cleanupFns.push(installCodexStartupStatusRevalidation(useStore, api));
+  }
   cleanupFns.push(installTeamRefreshFanoutDebugBridge());
   let cliStatusTimer: ReturnType<typeof setTimeout> | null = null;
   let deferredProviderStatusCleanup: (() => void) | null = null;
@@ -309,9 +309,7 @@ export function initializeNotificationListeners(): () => void {
         cliStatusTimer = null;
       }, delayMs);
     }
-
-    // Keep immediately visible startup data first; global task aggregation can
-    // scan all team task files, so hydrate it after the team list.
+    // Defer the global task scan until the initial team list is ready.
     await Promise.all([
       useStore.getState().fetchTeams(),
       useStore.getState().fetchNotifications(),
@@ -360,7 +358,6 @@ export function initializeNotificationListeners(): () => void {
   let inProgressChangePresencePollInFlight = false;
   let teamMessageFallbackPollInFlight = false;
   const inProgressChangePresenceCursorByTeam = new Map<string, number>();
-
   let teamListRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   let globalTasksRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   const pendingTeamListRefreshDiagnostics = new Map<string, Set<string>>();

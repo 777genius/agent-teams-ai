@@ -138,6 +138,7 @@ export async function runDesktopSkillsUiSmoke(
   };
   const clickCard = async (name: string) => {
     await fill('input[placeholder="Search by skill name or what it helps with..."]', name);
+    await ui.scrollTo('.skills-grid button', 'reveal skill card ' + name);
     const expression = `(() => {const rows=[...document.querySelectorAll('.skills-grid button')].filter(e=>e.querySelector('h3')?.textContent.trim()===${desktopJsLiteral(name)});if(rows.length!==1)return null;const e=rows[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y}:null})()`;
     const point = object(await ui.waitRead(expression, 'visible skill card ' + name));
     step({ action: 'mouseClick', label: 'skill card ' + name, target: point, state: 'attempted' });

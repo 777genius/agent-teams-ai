@@ -88,8 +88,15 @@ function getCodexNativeBackendTruth(
 
 function getProviderStatusMessage(
   snapshot: CodexAccountSnapshotDto,
-  fallback: string | null | undefined
+  provider: CliProviderStatus
 ): string | null {
+  // Account metadata cannot replace a failed runtime status check.
+  if (
+    provider.statusCheckErrorCode != null &&
+    provider.statusCheckErrorCode !== 'partial_response'
+  ) {
+    return provider.statusMessage ?? 'Unable to verify';
+  }
   if (snapshot.launchAllowed) {
     if (snapshot.effectiveAuthMode === 'chatgpt') {
       return snapshot.appServerState === 'degraded'
@@ -103,7 +110,9 @@ function getProviderStatusMessage(
     }
   }
 
-  return snapshot.launchIssueMessage ?? snapshot.appServerStatusMessage ?? fallback ?? null;
+  return (
+    snapshot.launchIssueMessage ?? snapshot.appServerStatusMessage ?? provider.statusMessage ?? null
+  );
 }
 
 function mergeCodexNativeBackendOption(
@@ -178,7 +187,7 @@ export function mergeCodexProviderStatusWithSnapshot(
     ...provider,
     supported:
       provider.supported || isCodexBootstrapPlaceholder(provider) || snapshot.launchAllowed,
-    statusMessage: getProviderStatusMessage(snapshot, provider.statusMessage),
+    statusMessage: getProviderStatusMessage(snapshot, provider),
     selectedBackendId: CODEX_NATIVE_BACKEND_ID,
     resolvedBackendId: CODEX_NATIVE_BACKEND_ID,
     availableBackends,

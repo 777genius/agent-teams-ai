@@ -8,6 +8,8 @@ import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { FileManagementCommandStore } from '../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js';
 import { ClaudeManagementCoordinator } from '../../packages/legacy-agent-host/dist/composition/ClaudeManagementCoordinator.js';
+import { ClaudeAuthConversation } from '../../packages/legacy-agent-host/dist/adapters/providers/ClaudeAuthConversation.js';
+import { teamModelProbeProfile } from '../../packages/legacy-agent-host/dist/composition/teamLaunchModelProbe.js';
 import { NativeExtensionCoordinator } from '../../packages/legacy-agent-host/dist/extensions/NativeExtensionCoordinator.js';
 import { claudeManagementProfileSchema } from '../../packages/legacy-agent-host/dist/management/profile.js';
 import { ManagementResourceFence } from '../../packages/legacy-agent-host/dist/management/ManagementResourceFence.js';
@@ -29,11 +31,15 @@ async function fixture(t: TestContext, kind: 'extensions' | 'saved-import') {
   const source = await realpath(join(import.meta.dirname, '../../tools/owned-process-broker/fixtures',
     kind === 'extensions' ? 'claudeExtensionsPeer.mjs' : 'claudeSavedImportPeer.mjs'));
   const sourceSha256 = await fileDigest(source);
+  const authSource = await realpath(join(import.meta.dirname, '../../tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts'));
+  const authSha256 = await fileDigest(authSource);
   const wrapper = `${desktopNodeScriptHeader(node)}import assert from 'node:assert/strict';
 import{createHash}from'node:crypto';import{readFileSync,realpathSync}from'node:fs';
 assert.equal(realpathSync(${JSON.stringify(source)}),${JSON.stringify(source)});
 assert.equal(createHash('sha256').update(readFileSync(${JSON.stringify(source)})).digest('hex'),${JSON.stringify(sourceSha256)});
-await import(${JSON.stringify(pathToFileURL(source).href)});
+assert.equal(realpathSync(${JSON.stringify(authSource)}),${JSON.stringify(authSource)});
+assert.equal(createHash('sha256').update(readFileSync(${JSON.stringify(authSource)})).digest('hex'),${JSON.stringify(authSha256)});
+await import(process.argv[2]==='auth'?${JSON.stringify(pathToFileURL(authSource).href)}:${JSON.stringify(pathToFileURL(source).href)});
 `;
   const executable = { path: join(root, 'TEST-selected-cli'), sha256: digest(wrapper) };
   await writeFile(executable.path, wrapper, { mode: 0o700, flag: 'wx' });
@@ -47,7 +53,8 @@ await import(${JSON.stringify(pathToFileURL(source).href)});
       TMPDIR: join(peerRoot, 'tmp'), PATH: `${dirname(node)}:/usr/bin:/bin`, SHELL: '/bin/sh',
       TEST_EMULATED_DESKTOP_PROVIDER: '1', TEST_PEER_SCENARIO: 'desktop-ui-v1', TEST_PEER_PROVIDER: 'claude',
       TEST_PEER_ROLE: 'management', TEST_DESKTOP_SETTINGS: kind, TEST_DESKTOP_PEER_ROOT: peerRoot,
-      TEST_DESKTOP_PEER_WORKSPACE: join(root, 'workspace'), TEST_PEER_EFFECTS: effectsPath },
+      TEST_DESKTOP_PEER_WORKSPACE: join(root, 'workspace'), TEST_PEER_EFFECTS: effectsPath,
+      ANTHROPIC_API_KEY: 'TEST-LOCALHOST-ONLY', ANTHROPIC_BASE_URL: 'http://127.0.0.1:9' },
   });
   const effects = async (): Promise<Row[]> => (await readFile(effectsPath, 'utf8')).trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
   const store = new FileManagementCommandStore(join(root, 'hoststore'));
@@ -55,6 +62,23 @@ await import(${JSON.stringify(pathToFileURL(source).href)});
   t.after(() => management.close());
   return { root, peerRoot, profile, store, management, effects };
 }
+
+for (const kind of ['extensions', 'saved-import'] as const)
+test(`${kind} Settings peer exposes only isolated auth status through original custody`, { timeout: 10000 }, async t => {
+  const f = await fixture(t, kind);
+  const auth = new ClaudeAuthConversation(f.profile, () => true); t.after(() => auth.close());
+  assert.deepEqual(await auth.read(new AbortController().signal), {
+    loggedIn: true, authMethod: 'api_key', forcedLoginMethod: null,
+  });
+  assert.equal((await f.effects()).filter(row => row.event === 'auth-status').length, 1);
+  for (const args of [['auth', 'logout'], ['auth', 'status'], ['auth', 'status', '--json', '--other']]) {
+    const result = spawnSync(f.profile.executable.path, args, { cwd: f.profile.cwd,
+      env: f.profile.environment, timeout: 3000 });
+    assert.notEqual(result.status, 0);
+  }
+  assert.equal((await f.effects()).filter(row => row.event === 'auth-status').length, 1);
+  assert.deepEqual([...f.store.list()], [], 'status never creates a management mutation receipt');
+});
 
 test('finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay', { timeout: 15000 }, async t => {
   const f = await fixture(t, 'extensions');
@@ -124,16 +148,31 @@ test('saved-import finite metadata and actual original probe receipt preserve mo
   const metadata = await f.management.read(identity);
   assert.equal(metadata.models.length, 1); assert.equal(metadata.models[0]!.modelId, 'claude-sonnet-4-6');
   assert.equal(metadata.models[0]!.displayName, 'Sonnet 4.6');
+  const probeProfile = teamModelProbeProfile({
+    provider: 'claude', teamId: 'TEST-team', memberId: 'TEST-member', principalId: 'TEST-principal',
+    sessionId: 'TEST-session', generation: 1, configRevision: 'TEST-runtime-selection',
+    executable: f.profile.executable, cwd: f.profile.cwd, accountBinding: f.profile.accountBinding,
+    environment: { ...f.profile.environment, TEST_PEER_ROLE: 'runtime' },
+    model: 'claude-sonnet-4-6', configNamespace: 'custom-directory', nativeTools: [], autoAllowedTools: [],
+    nativeOptions: { settingSources: [...f.profile.settingSources!], effort: 'low' },
+    limits: { queuedInputs: 1, inputBytes: 65536, outputBytes: 65536, outputEvents: 32,
+      pendingInteractions: 1, timeoutMs: 5000 },
+  });
+  assert.equal(probeProfile.provider, 'claude');
+  if (probeProfile.provider !== 'claude') throw new Error('Original Claude probe required');
+  f.management.admitProbeProfile(probeProfile);
   const probes = new ModelProbeOwner({ store: f.store, fence: new ManagementResourceFence(f.store.list()),
     assertWriter: () => {}, select: (id, revision) => f.management.target(id, revision),
     prepare: (input, current) => f.management.prepareProbe(input, current) });
   t.after(() => probes.close());
-  const input = { ...identity, commandId: 'TEST-original-import-probe', providerId: 'anthropic', modelId: 'claude-sonnet-4-6', effort: 'low' };
+  const input = { profileId: probeProfile.profileId, configRevision: probeProfile.configRevision,
+    commandId: 'TEST-original-import-probe', providerId: 'anthropic', modelId: 'claude-sonnet-4-6', effort: 'low' };
   probes.start(input);
   const deadline = performance.now() + 7000;
-  while (probes.read({ ...identity, commandId: input.commandId })?.phase === 'running' && performance.now() < deadline)
+  const probeIdentity = { profileId: input.profileId, configRevision: input.configRevision, commandId: input.commandId };
+  while (probes.read(probeIdentity)?.phase === 'running' && performance.now() < deadline)
     await new Promise(resolve => setTimeout(resolve, 20));
-  const original = probes.read({ ...identity, commandId: input.commandId });
+  const original = probes.read(probeIdentity);
   assert.equal(original?.phase, 'completed', JSON.stringify({ original, effects: await f.effects() }));
   assert.equal(original.ok, true, JSON.stringify({ original, effects: await f.effects() }));
   assert.deepEqual(probes.start(input), original);

@@ -26,7 +26,7 @@ import type { SshAuthMethod, SshConnectionProfile } from '@shared/types';
 
 const inputClass = 'w-full rounded-md border px-3 py-1.5 text-sm focus:outline-none focus:ring-1';
 const inputStyle = {
-  backgroundColor: 'var(--color-surface-raised)',
+  backgroundColor: 'var(--color-form-control-bg)',
   borderColor: 'var(--color-border)',
   color: 'var(--color-text)',
 };

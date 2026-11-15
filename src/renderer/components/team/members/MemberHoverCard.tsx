@@ -1,6 +1,7 @@
 import { memo, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import { Badge } from '@renderer/components/ui/badge';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@renderer/components/ui/hover-card';
 import {
@@ -270,7 +271,7 @@ const MemberHoverCardContent = ({
         {/* Header: avatar + name + presence */}
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
-            <img
+            <ParticipantAvatar
               src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name, 64)}
               alt={member.name}
               className="size-10 rounded-full bg-[var(--color-surface-raised)]"

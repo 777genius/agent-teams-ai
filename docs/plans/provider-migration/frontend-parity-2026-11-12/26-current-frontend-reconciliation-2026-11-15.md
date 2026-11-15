@@ -52,6 +52,16 @@ uses an unqualified key while its preparation stores a context-qualified key.
 Inspect Launch for the same mismatch and repair the existing key owner/readers,
 without another cache, a new preparation path or relaxed freshness checks.
 
+The completed P05 correction uses one existing key owner for both plans and
+presentation reads. Create reuses the Launch issue reader, including its original
+configuration-only hints, instead of duplicating the cache loop. Launch forwards
+its existing settings epoch to both paths. The regression first reproduced
+missing badges, then proved matching-context hints remain visible while separate
+create drafts/Teams and later settings epochs cannot reuse earlier results.
+desktop_fixes independently reviewed the final diff with no blocking objection.
+Root removed an unused future constant and inlined a single-use scalar diagnostic
+clone; the three affected legacy file caps are lowered, never increased.
+
 R3 uses the canonical TS7 workspace compiler, affected existing behavior suites,
 finite Main/Host regression, bounded diagnostic regressions, changed-file lint,
 and unchanged source-size/provisioning guards. Run resource-heavy checks
@@ -64,6 +74,29 @@ Merge glue estimate: 80–160 production lines excluding upstream changes and
 plan-25 corrections; no new production file. Complexity 6/10, expected
 reliability 8/10, confidence before executed acceptance 7/10. These are planning
 judgments, not results.
+
+## Local candidate verification
+
+The canonical workspace TS7 typecheck completed successfully on Node 24.22.1,
+including the Host build, application/tooling projects, Host scripts/tests and
+MCP projects. The initial attempt identified an optional array access in the new
+finite regression; that test-only access was corrected before the successful run.
+
+Executed groups, reported separately rather than as a sum of overlapping suites:
+
+| Group | Observed result |
+| --- | --- |
+| Current Create/Launch, Settings, installer/status and startup revalidation: ten complete existing suites | 346 passed, zero skipped |
+| CLI parser, safe schedules, captured preparation/status, actual finite Main-to-Host transfer, installer resolver and reply visibility | 137 passed, zero skipped |
+| Finite Codex, Settings/import and child-trace scripts | 18 passed, zero skipped |
+| Captured-context/cache/preflight regression group | 93 passed; selected dialog checks were followed by the complete dialog suite above |
+| Late passive failure retention with exact locked Node 24.21.0 | 1 passed, zero skipped |
+| Existing optional-workflow and required-gate contracts | 17 passed, zero skipped |
+
+These results are local behavioral/type evidence, not native-platform or Desktop
+acceptance. The previously published source's 14 Desktop failures and unqualified
+platform/packaged paths remain historical failures; only new exact-source
+receipts can close those gates. No real Claude or Codex binary was invoked.
 
 P09 section 75's selected-source writer contract remains unresolved and separate
 from this integration. Original Darwin source mutation failures and unconfirmed

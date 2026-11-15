@@ -1,15 +1,14 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, realpath, symlink, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { digest, fileDigest } from './desktop-backend-fixture.ts';
 import { json, record } from './desktop-resume-records.ts';
-import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 
 export const emulatedCodexInstallerSource = 'tools/owned-process-broker/fixtures/codexInstallerRegistry.cjs';
-type Fixture = Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
+type Fixture = { root: string; node: string; appEnvironment: Record<string, string> };
 type Source = { path: string; sha256: string };
 const binaryVersionA = '0.162.0', binaryVersionB = '0.169.0';
 const vendor = 'aarch64-apple-darwin';
@@ -79,6 +78,13 @@ else {assert.equal(process.env.TEST_EMULATED_DESKTOP_PROVIDER,'1');assert.equal(
     platformMetadata: { name: '@openai/codex', version: platformVersion, dist } };
   const fixturePath = join(root, 'fixture.json'), fixtureBytes = JSON.stringify(body);
   await writeFile(fixturePath, fixtureBytes, { mode: 0o600, flag: 'wx' });
+  // Cold CLI discovery prefers the private vendor directory before process PATH.
+  // Select the same canonical A there; an override would hide the installed B.
+  const pathAlias = join(fixture.root, 'claude/local/node_modules/.bin/codex');
+  const sentinel = await lstat(pathAlias);
+  assert.ok(sentinel.isFile() && !sentinel.isSymbolicLink());
+  await unlink(pathAlias);
+  await symlink(executable.path, pathAlias);
   const applicationEnvironment = fixture.appEnvironment as Record<string, string>;
   assert.ok(applicationEnvironment.NODE_OPTIONS === undefined || applicationEnvironment.NODE_OPTIONS === '--max-old-space-size=8192');
   applicationEnvironment.NODE_OPTIONS = [applicationEnvironment.NODE_OPTIONS, '--require=' + preload.path].filter(Boolean).join(' ');
@@ -86,7 +92,7 @@ else {assert.equal(process.env.TEST_EMULATED_DESKTOP_PROVIDER,'1');assert.equal(
   applicationEnvironment.TEST_CODEX_INSTALL_FIXTURE_SHA256 = digest(fixtureBytes);
   applicationEnvironment.PATH = dirname(executable.path) + ':' + applicationEnvironment.PATH;
   delete applicationEnvironment.CODEX_CLI_PATH;
-  return { root, executable, binaryVersionA, binaryVersionB, preload, tarball, integrity,
+  return { root, executable, pathAlias, binaryVersionA, binaryVersionB, preload, tarball, integrity,
     fixture: { path: fixturePath, sha256: digest(fixtureBytes) },
     packageFiles: packageFiles.map(file => ({ relativePath: file.name, sha256: digest(file.content), mode: file.mode })),
     aFiles: [{ path: join(root, 'path/rg'), sha256: digest(helper) },
@@ -98,6 +104,7 @@ else {assert.equal(process.env.TEST_EMULATED_DESKTOP_PROVIDER,'1');assert.equal(
 export type EmulatedCodexInstaller = Awaited<ReturnType<typeof prepareDesktopEmulatedCodexInstaller>>;
 
 export async function verifyDesktopEmulatedCodexInstaller(selected: EmulatedCodexInstaller) {
+  assert.equal(await realpath(selected.pathAlias), selected.executable.path);
   for (const pin of [selected.executable, selected.preload, selected.tarball, selected.fixture, ...selected.aFiles]) {
     assert.equal(await realpath(pin.path), pin.path); assert.equal(await fileDigest(pin.path), pin.sha256);
   }

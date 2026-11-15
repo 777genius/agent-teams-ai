@@ -2602,6 +2602,7 @@
       "allFlagsValid": "Усі прапорці дійсні",
       "unknownFlags": "Невідомі: {{flags}}",
       "protectedFlags": "Захищені: {{flags}}",
+      "missingValue": "Немає значення: {{flags}}",
       "failed": "Перевірка не вдалася"
     },
     "placeholders": {

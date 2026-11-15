@@ -38,7 +38,7 @@ const listEndpoint = `${prefix}/actions/workflows/456/runs?event=pull_request&he
 const context: ReuseContext = {
   repository: REPOSITORY,
   currentSha,
-  linuxRunner: 'ubicloud-standard-4',
+  linuxRunner: 'ubuntu-latest',
   linuxArch: 'X64',
   linuxImage,
   now,
@@ -987,14 +987,14 @@ const mutations: [string, (data: Map<string, unknown>) => void][] = [
   [
     'runner class changed',
     (data) => {
-      job(data).labels = ['ubuntu-latest'];
+      job(data).labels = ['ubuntu-22.04'];
     },
   ],
   [
     'actual OS mismatch',
     (data) => {
       (job(data).steps as JsonObject[])[0].name =
-        'CI runner proof: Windows | X64 | ubicloud-standard-4';
+        'CI runner proof: Windows | X64 | ubuntu-latest';
     },
   ],
   [

@@ -75,7 +75,7 @@ function projectMetadataReadFailure(value: unknown) {
 /** Project again at the receipt boundary; native text/IDs/credentials are never retained. */
 export function createPassiveNativeDiagnosticCapture() {
   const entries: Record<string, unknown>[] = [];
-  let pending = '', ordinary = 0, bytes = 0, metadataObserved = false, limitObserved = false, limited = false;
+  let pending = '', ordinary = 0, bytes = 0, readObserved = false, metadataObserved = false, limitObserved = false, limited = false;
   // These counters belong to this one original capture, including all of its Host epochs.
   return {
     entries,
@@ -103,15 +103,20 @@ export function createPassiveNativeDiagnosticCapture() {
             ...(failure ? { deadlineExpired: failure.deadlineExpired, aborted: failure.aborted } : {}) };
           const size = Buffer.byteLength(JSON.stringify(entry)) + 1;
           if (size > reservedLineBytes) continue;
+          const reserve = (readObserved ? 0 : reservedLineBytes) + (metadataObserved ? 0 : reservedLineBytes) +
+            (limitObserved ? 0 : reservedLineBytes);
           if (failedMetadata) {
-            if (metadataObserved || bytes + size > maximumTraceBytes - (limitObserved ? 0 : reservedLineBytes)) continue;
+            if (metadataObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
             metadataObserved = true;
+          } else if (failedCut) {
+            if (readObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
+            readObserved = true;
           } else if (event === 'trace-limit') {
-            if (limitObserved || bytes + size > maximumTraceBytes - (metadataObserved ? 0 : reservedLineBytes)) continue;
+            if (limitObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
             limitObserved = true; limited = true;
           } else {
-            const reserve = (metadataObserved ? 0 : reservedLineBytes) + (limitObserved ? 0 : reservedLineBytes);
-            if (ordinary >= maximum - 1 || bytes + size > maximumTraceBytes - reserve) { limited = true; continue; }
+            // Trade one ordinary row for the late read failure; retain the original 257-row ceiling.
+            if (ordinary >= maximum - 2 || bytes + size > maximumTraceBytes - reserve) { limited = true; continue; }
             ordinary++;
           }
           bytes += size;
@@ -394,20 +399,25 @@ function responseContentEncoding(headers: unknown): typeof contentEncodings[numb
 
 function observeOriginalHost(): void {
   const started = performance.now();
-  let ordinary = 0, emittedBytes = 0, children = 0, requests = 0, metadataObserved = false, limited = false;
+  let ordinary = 0, emittedBytes = 0, children = 0, requests = 0, readObserved = false, metadataObserved = false, limited = false;
   const elapsed = () => Math.max(0, Math.round(performance.now() - started));
   const line = (value: Record<string, unknown>) => prefix + JSON.stringify({ atMs: elapsed(), ...value }) + '\n';
   const write = (value: string) => { emittedBytes += Buffer.byteLength(value); process.stderr.write(value); };
   const emit = (value: Record<string, unknown>) => {
     const frame = line(value), size = Buffer.byteLength(frame);
     if (size > reservedLineBytes) return;
+    const reserve = (readObserved ? 0 : reservedLineBytes) + (metadataObserved ? 0 : reservedLineBytes) +
+      (limited ? 0 : reservedLineBytes);
     if (value.event === 'metadata-read-failed') {
-      if (metadataObserved || emittedBytes + size > maximumTraceBytes - (limited ? 0 : reservedLineBytes)) return;
+      if (metadataObserved || emittedBytes + size > maximumTraceBytes - reserve + reservedLineBytes) return;
       metadataObserved = true; write(frame); return;
     }
+    if (value.event === 'read-cut-failed') {
+      if (readObserved || emittedBytes + size > maximumTraceBytes - reserve + reservedLineBytes) return;
+      readObserved = true; write(frame); return;
+    }
     if (limited) return;
-    const reserve = (metadataObserved ? 0 : reservedLineBytes) + reservedLineBytes;
-    if (ordinary >= maximum - 1 || emittedBytes + size > maximumTraceBytes - reserve) {
+    if (ordinary >= maximum - 2 || emittedBytes + size > maximumTraceBytes - reserve) {
       limited = true; write(line({ event: 'trace-limit' })); return;
     }
     ordinary++; write(frame);

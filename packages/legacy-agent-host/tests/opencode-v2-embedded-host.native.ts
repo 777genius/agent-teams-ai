@@ -7,7 +7,6 @@ import { tmpdir } from 'node:os';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
-import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { NativeCoordinationFixture } from './fixtures/native-opencode-team/coordination-probe.ts';
 import { record } from './fixtures/native-claude-team/model.ts';
@@ -122,6 +121,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     typeof import('../dist/composition/launchConfiguration.js');
   const { applyOpenCodeRuntimeSource } = await import(pathToFileURL(join(pkg, 'dist/composition/applyOpenCodeRuntimeSource.js')).href) as
     typeof import('../dist/composition/applyOpenCodeRuntimeSource.js');
+  const { captureInitialRuntimeModelAdmission } = await import(pathToFileURL(join(pkg, 'dist/composition/initialRuntimeModelAdmission.js')).href) as
+    typeof import('../dist/composition/initialRuntimeModelAdmission.js');
   const node = packaged ? packaged.node : await realpath(process.execPath);
   const entry = packaged ? packaged.entry : join(pkg, 'dist/cli.js');
   assert.equal(await realpath(process.execPath), node, 'scenario and Host must use the selected original Node');

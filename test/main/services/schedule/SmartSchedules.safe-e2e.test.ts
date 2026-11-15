@@ -3,12 +3,12 @@
  * dispatch, with provider/process side effects replaced by deterministic ports.
  * Runs without credentials, installed agent CLI, or network access.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { JsonScheduleRepository } from '../../../../src/main/services/schedule/JsonScheduleRepository';
 import { SchedulerService } from '../../../../src/main/services/schedule/SchedulerService';
@@ -46,7 +46,7 @@ describe('Smart schedules filesystem safe E2E', () => {
       model: 'sonnet',
       members: [{ name: 'alice' }],
     };
-    let running = true;
+    const running = true;
     port = {
       isTeamAlive: vi.fn(() => running),
       isTeamLaunching: vi.fn(() => false),

@@ -19,6 +19,8 @@ export function createI18nextInstance(initialLocale = FALLBACK_APP_LOCALE): type
     defaultNS: DEFAULT_TRANSLATION_NAMESPACE,
     fallbackLng: FALLBACK_APP_LOCALE,
     initAsync: false,
+    // Region locales such as zh-TW fall back straight to English, never to the Simplified `zh` catalog.
+    load: 'currentOnly',
     interpolation: {
       escapeValue: false,
     },

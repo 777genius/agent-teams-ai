@@ -29,7 +29,96 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
-## v2.18.6 (Preparing draft)
+## v2.18.7 (Published 2026-11-11)
+
+Target branch: `main`. Includes the verified published runtime `0.0.160`. Live team checks passed core scenarios on macOS and Linux with documented limitations; a complete successful live Windows team run remains unconfirmed. All release artifact, signing, notarization, and updater gates still apply.
+
+<!-- RELEASE_BODY_START v2.18.7 -->
+
+Simplified the Dashboard and improved team creation and launch. Added a tasks table, built-in Git, improved schedules, and fixed OpenCode teammates sometimes not replying. Customize local fonts, text size, app scaling, and portable JSON themes. Simplified the Team screen.
+
+<img width="1312" height="823" alt="image" src="https://github.com/user-attachments/assets/443ec4eb-f2ca-4b31-890c-c1a97b78bdea" />
+
+<img width="1312" height="823" alt="image" src="https://github.com/user-attachments/assets/e7f8ecdf-752e-44b7-b684-5dabed7f3ae1" />
+
+<img width="981" height="422" alt="image" src="https://github.com/user-attachments/assets/06093eac-8903-4edb-99ec-50240a8608c3" />
+
+<img width="1312" height="823" alt="image" src="https://github.com/user-attachments/assets/534b81e3-41e9-4af7-ace5-83091ca77e35" />
+
+<img width="832" height="742" alt="image" src="https://github.com/user-attachments/assets/4cd91e21-2974-4dba-8c51-14db289b5880" />
+
+### What's New
+
+- Create teams from the Teams page; confirm templates before replacing an edited setup.
+- Sort tasks in a live table with selectable, resizable columns.
+- Schedule one agent or a whole team, with optional linked board tasks and avatar-based member selection.
+- Built-in Git handles app diffs, worktrees, and cloning without a separate Git installation.
+- Use OpenCode 2.x on Intel Macs.
+- Choose local UI fonts, text size, whole-app scaling, and portable JSON themes.
+
+### Improvements
+
+- Manage providers in Settings and refresh their models directly from the model selector.
+- Search time zones, preview scheduled runs, and open linked tasks from run history.
+- Settings use a sidebar; teammate controls appear on hover beside status badges.
+- Keep team creation and model selection usable at 200% zoom.
+
+### Fixes
+
+- Fix silent OpenCode teammates and missing plain-text replies to the lead, including delivery after app restarts.
+- Keep OpenCode counts consistent across catalogs and show loaders until checks finish; refresh Codex after sign-in.
+- Preserve descriptions, Advanced CLI arguments, and worktree settings when copying or renaming teams; show draft saves accurately.
+- Validate cron schedules, avoid interrupting busy teammates or replaying old prompts, and distinguish dispatched, skipped, and completed runs.
+- Handle OpenCode project-access errors and macOS cloud folders; prevent Windows inbox-write failures.
+- Protect saved OpenCode credentials during simultaneous connection updates.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/Agent.Teams.AI-2.18.7-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/Agent.Teams.AI-2.18.7-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/Agent.Teams.AI.Setup.2.18.7.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/Agent.Teams.AI.Setup.2.18.7-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/Agent.Teams.AI-2.18.7.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/agent-teams-ai_2.18.7_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/agent-teams-ai-2.18.7.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/agent-teams-ai-2.18.7.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+
+<!-- RELEASE_BODY_END v2.18.7 -->
+
+## v2.18.6 (Published 2026-11-05)
 
 Target branch: `main`. Build a fresh `v2.18.6` draft after runtime `0.0.157` is verified and publicly available, then pin its exact manifest in `runtime.lock.json`. The earlier `v2.18.5` draft is superseded; preserve its immutable tag. Notes cover the shipped changes since public `v2.18.4`. Sign and qualify all platform artifacts before any publication. The original 2.18.4 user's CPU source remains unconfirmed (issue #1098).
 
@@ -2427,6 +2516,15 @@ git push origin <branch>
 
 ### 2. Runtime release gate
 
+Owner policy: merge runtime-only bump PRs without waiting for CI/CD after reviewing
+that the diff changes only the runtime package version or the verified frontend
+`runtime.lock.json` pin, plus optional accompanying release documentation. No
+runtime or frontend implementation changes may use this fast path. Use the
+existing owner/admin merge permission when checks
+are pending; do not change branch protection. Runtime artifact builds,
+qualification, exact-draft promotion, and anonymous-download verification below
+remain mandatory. This fast path does not authorize a frontend release.
+
 Every app release must prove whether the packaged `claude-multimodel` runtime is
 current. The app release workflow stages runtime assets from `runtime.lock.json`,
 so an app draft can be built from fresh UI code while still bundling an old
@@ -3144,15 +3242,16 @@ gh run list --repo 777genius/agent-teams-ai --workflow release.yml --limit 3
 
 ### Managed GitHub Actions runners
 
-Linux jobs use Ubicloud (`CI_LINUX_RUNNER`, default `ubicloud-standard-4`).
+Linux jobs use GitHub-hosted Ubuntu (`CI_LINUX_RUNNER`, default `ubuntu-latest`).
 The Ubuntu 22.04 package test uses `CI_LINUX_2204_RUNNER` (default
-`ubicloud-standard-4-ubuntu-2204`) to preserve its host OS baseline.
+`ubuntu-22.04`) to preserve its host OS baseline.
 ARM macOS jobs use Namespace (`CI_MACOS_ARM_RUNNER`, default
 `namespace-profile-macos-15`, macOS 15 / Apple Silicon). Windows and Intel macOS
 jobs keep their GitHub-hosted runners to preserve platform and architecture coverage.
-Both provider GitHub Apps must include this repository in their allowed repositories.
+The Namespace GitHub App must include this repository in its allowed repositories.
 The runner variables can select a different provisioned label without editing every
-workflow. They are scalar labels, not JSON arrays. To roll back routing, set
+workflow. They are scalar labels, not JSON arrays. To use explicit GitHub-hosted
+platform labels, set
 `CI_LINUX_RUNNER=ubuntu-24.04`, `CI_LINUX_2204_RUNNER=ubuntu-22.04`,
 and `CI_MACOS_ARM_RUNNER=macos-15`.
 Runner routing does not change release publication approval or signing requirements.

@@ -1,5 +1,8 @@
 import { buildProviderPrepareAttemptRuntimeSignature } from './providerPrepareAttemptIdentity';
-import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
+import {
+  appendProviderPrepareInvalidationEpoch,
+  buildProviderPrepareModelCacheKey,
+} from './providerPrepareCacheKey';
 import {
   getProviderPrepareCachedSnapshot,
   type ProviderPrepareDiagnosticsCachedSnapshot,
@@ -43,6 +46,7 @@ export function buildProviderPreparePlans({
   runtimeProviderStatusById,
   cachedModelResultsByCacheKey,
   context,
+  invalidationEpochByProviderId,
 }: {
   cwd: string;
   providerIds: readonly TeamProviderId[];
@@ -58,6 +62,7 @@ export function buildProviderPreparePlans({
     string,
     Record<string, ProviderPrepareDiagnosticsModelResult>
   >;
+  invalidationEpochByProviderId?: Readonly<Partial<Record<TeamProviderId, number>>>;
 }): ProviderPreparePlan[] {
   return providerIds.map((providerId) => {
     const selectedModelChecks = [...(selectedModelChecksByProvider.get(providerId) ?? [])];
@@ -70,29 +75,35 @@ export function buildProviderPreparePlans({
     const modelChecksSignature = buildProviderPrepareModelChecksSignature(
       new Map([[providerId, selectedModelChecks]])
     );
-    const baseRequestSignature = buildProviderPrepareRequestSignature({
-      cwd,
-      selectedProviderId: providerId,
-      selectedModel: '',
-      selectedMemberProviders: [providerId],
-      limitContext,
-      runtimeStatusSignature: buildProviderPrepareAttemptRuntimeSignature(
-        runtimeProviderStatusById.get(providerId)
-      ),
-      modelChecksSignature,
-    });
-    const baseCacheKey = buildProviderPrepareModelCacheKey({
+    // Explicit settings changes invalidate evidence without losing its captured context.
+    const epoch = invalidationEpochByProviderId?.[providerId] ?? 0;
+    const baseRequestSignature = appendProviderPrepareInvalidationEpoch(
+      buildProviderPrepareRequestSignature({
+        cwd,
+        selectedProviderId: providerId,
+        selectedModel: '',
+        selectedMemberProviders: [providerId],
+        limitContext,
+        runtimeStatusSignature: buildProviderPrepareAttemptRuntimeSignature(
+          runtimeProviderStatusById.get(providerId)
+        ),
+        modelChecksSignature,
+      }),
+      epoch
+    );
+    const cacheKey = buildProviderPrepareModelCacheKey({
       cwd,
       providerId,
       backendSummary,
       limitContext,
       runtimeStatusSignature,
       modelChecksSignature,
+      context,
+      invalidationEpoch: epoch,
     });
     const requestSignature = context
       ? JSON.stringify([context, baseRequestSignature])
       : baseRequestSignature;
-    const cacheKey = context ? JSON.stringify([context, baseCacheKey]) : baseCacheKey;
     const cachedModelResultsById = {
       ...getShortLivedProviderPrepareModelResults({
         providerId,

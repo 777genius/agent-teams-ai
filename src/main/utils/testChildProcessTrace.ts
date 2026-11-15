@@ -10,6 +10,7 @@ type TraceOptions = {
   mainPid: number;
   write(line: string): void;
   readBirth?(pid: number): Birth | null;
+  linuxChildExecPath?: string;
   limit?: number;
 };
 const PREFIX = '[TEST_MAIN_CHILD_PROCESS] ';
@@ -17,7 +18,7 @@ const MAX_EVENTS = 256;
 const MAX_CHILDREN = 64;
 const commands = new Set([
   'node', 'electron', 'ps', 'git', 'sh', 'bash', 'shell-env', 'opencode', 'claude',
-  'codex', 'xdg-open', 'linux-node-exec', 'node-exec',
+  'codex', 'xdg-open', 'linux-node-exec', 'node-exec', 'linux-child-exec',
 ]);
 const signals = new Set(['SIGTERM', 'SIGKILL', 'SIGINT', 'SIGABRT', 'SIGSEGV', 'SIGHUP', 'SIGPIPE', 'SIGQUIT']);
 const errors = new Set(['ENOENT', 'EACCES', 'EINVAL', 'EMFILE', 'ENFILE', 'EAGAIN', 'ENOSYS']);
@@ -28,9 +29,19 @@ function pid(value: unknown): number | null {
 function status(value: unknown): number | null {
   return typeof value === 'number' && Number.isInteger(value) && Math.abs(value) <= 0x7fffffff ? value : null;
 }
-function command(child: ObservedChild): string {
-  const name = typeof child.spawnfile === 'string' ? basename(child.spawnfile) : '';
+function commandName(executable: unknown): string {
+  const name = typeof executable === 'string' ? basename(executable) : '';
   return commands.has(name) ? name : 'other';
+}
+
+/** Requested TEST-path/argv correlation only; never executable or handoff attestation. */
+function linuxChildExecTarget(child: ObservedChild, capturedPath: string | undefined): string | null {
+  const args = child.spawnargs;
+  if (!capturedPath || child.spawnfile !== capturedPath || !args || args.length < 4 ||
+      args[0] !== capturedPath || args[1] !== '--linux-child-exec-v1' ||
+      typeof args[2] !== 'string' || args[2].length === 0 || args[2].includes('\0') ||
+      typeof args[3] !== 'string' || args[3].includes('\0')) return null;
+  return commandName(args[2]);
 }
 
 /** A bounded observation of proc metadata, never process ownership or signal authority. */
@@ -104,7 +115,8 @@ export function createTestChildProcessTrace(options: TraceOptions) {
       originalPid = pid(child.pid);
       let observedBirth: Birth | null = null;
       try { observedBirth = birth(originalPid); } catch { failures++; }
-      emit({ event: 'async-spawn', pid: originalPid, requestedCommand: command(child),
+      emit({ event: 'async-spawn', pid: originalPid, requestedCommand: commandName(child.spawnfile),
+        linuxChildExecTarget: linuxChildExecTarget(child, options.linuxChildExecPath),
         versionOnly: child.spawnargs?.length === 2 && child.spawnargs[1] === '--version',
         observedBirth, atomic: false });
     }));
@@ -114,7 +126,7 @@ export function createTestChildProcessTrace(options: TraceOptions) {
     }));
     child.once(errorMonitor, (error: unknown) => safe(() => {
       const code = error && typeof error === 'object' && 'code' in error ? error.code : null;
-      emit({ event: 'async-error', pid: originalPid, requestedCommand: command(child),
+      emit({ event: 'async-error', pid: originalPid, requestedCommand: commandName(child.spawnfile),
         code: typeof code === 'string' && errors.has(code) ? code : 'other' });
     }));
   });
@@ -149,7 +161,11 @@ export function installTestChildProcessTrace(): boolean {
     const root = dirname(descriptor);
     if (!/^TEST-desktop-backend-[A-Za-z0-9]+$/u.test(basename(root)) ||
         process.env.HOME !== join(root, 'home')) return false;
-    const trace = createTestChildProcessTrace({ mainPid: process.pid, write(line) {
+    const manifest = process.env.AGENT_TEAMS_LINUX_CHILD_EXEC_MANIFEST;
+    const manifestHash = process.env.AGENT_TEAMS_LINUX_CHILD_EXEC_SHA256;
+    const linuxChildExecPath = manifest && isAbsolute(manifest) &&
+      /^[a-f0-9]{64}$/u.test(manifestHash ?? '') ? join(dirname(manifest), 'linux-child-exec') : undefined;
+    const trace = createTestChildProcessTrace({ mainPid: process.pid, linuxChildExecPath, write(line) {
       const bytes = Buffer.from(line);
       if (writeSync(2, bytes) !== bytes.length) throw new Error('Incomplete TEST trace write');
     } });

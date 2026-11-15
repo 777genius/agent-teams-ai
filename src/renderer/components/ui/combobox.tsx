@@ -75,7 +75,7 @@ export const Combobox = ({
           aria-controls={listboxId}
           disabled={disabled}
           className={cn(
-            'flex h-8 w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-transparent px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50',
+            'flex h-8 w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50',
             className
           )}
         >
@@ -105,7 +105,7 @@ export const Combobox = ({
                 value={search}
                 onValueChange={setSearch}
                 placeholder={searchPlaceholder}
-                className="flex h-8 w-full border-0 bg-transparent px-2 py-1 text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)]"
+                className="flex h-8 w-full border-0 bg-[var(--color-form-control-bg)] px-2 py-1 text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)]"
               />
             </div>
             <CommandPrimitive.List

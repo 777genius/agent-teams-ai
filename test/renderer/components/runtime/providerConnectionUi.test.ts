@@ -507,6 +507,26 @@ describe('providerConnectionUi', () => {
     );
   });
 
+  it('shows the runtime check failure when a saved Codex account is ready', () => {
+    const provider: CliProviderStatus = {
+      ...createCodexProvider({
+        codex: {
+          ...createCodexProvider().connection!.codex!,
+          effectiveAuthMode: 'chatgpt',
+          launchAllowed: true,
+        },
+      }),
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      statusMessage: 'Provider status unavailable',
+    };
+
+    expect(formatProviderStatusText(provider)).toBe('Provider status unavailable');
+  });
+
   it('surfaces native backend status instead of flattening Codex to connected-via-api-key text', () => {
     const provider = createCodexProvider({
       availableBackends: [

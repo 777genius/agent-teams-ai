@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import { agentAvatarUrl, buildMemberAvatarMap } from '@renderer/utils/memberHelpers';
 
 import { collectScrollMarginObserverTargets } from './wideChatTimelinePresentation';
@@ -95,7 +96,7 @@ export const StickyChatAvatar = ({
         while (continuesPreviousAvatarAuthor[endIndex + 1]) endIndex += 1;
         const endRow = root.querySelector<HTMLElement>(`[data-timeline-row-index="${endIndex}"]`);
         const finalAvatar = endRow?.querySelector<HTMLElement>(
-          '.wide-chat-message[data-wide-agent="true"] [data-chat-sender="true"] img'
+          '.wide-chat-message[data-wide-agent="true"] [data-chat-sender="true"] [data-participant-avatar]'
         );
         const avatarRect = finalAvatar?.getBoundingClientRect();
         const nativeAvatarVisible =
@@ -166,7 +167,7 @@ export const StickyChatAvatar = ({
       while (continuesPreviousAvatarAuthor[endIndex + 1]) endIndex += 1;
       const endRow = root.querySelector<HTMLElement>(`[data-timeline-row-index="${endIndex}"]`);
       const finalAvatar = endRow?.querySelector<HTMLElement>(
-        '.wide-chat-message[data-wide-agent="true"] [data-chat-sender="true"] img'
+        '.wide-chat-message[data-wide-agent="true"] [data-chat-sender="true"] [data-participant-avatar]'
       );
       if (finalAvatar) {
         const avatarRect = finalAvatar.getBoundingClientRect();
@@ -215,7 +216,7 @@ export const StickyChatAvatar = ({
 
   if (!placement) return null;
   return createPortal(
-    <img
+    <ParticipantAvatar
       data-sticky-chat-avatar={placement.author}
       src={placement.src}
       alt=""

@@ -115,6 +115,30 @@ test('failed reads, writes and unknown child fields cannot change the original o
   assert.equal(lines.join('').includes('PRIVATE'), false);
 });
 
+test('the original TEST helper path exposes only its closed requested target class', () => {
+  const lines: string[] = [], helper = '/TEST/PRIVATE_SOURCE/linux-child-exec';
+  const trace = createTestChildProcessTrace({ mainPid: process.pid, linuxChildExecPath: helper,
+    write: line => { lines.push(line); }, readBirth: () => null });
+  const cases = [
+    { file: helper, args: [helper, '--linux-child-exec-v1', '/TEST/PRIVATE_NODE/node', 'PRIVATE_ARGV0', 'PRIVATE_PROMPT'], target: 'node' },
+    { file: helper, args: [helper, '--linux-child-exec-v1', '/TEST/PRIVATE_TARGET', 'PRIVATE_ARGV0'], target: 'other' },
+    { file: '/TEST/PRIVATE_OTHER/linux-child-exec', args: [helper, '--linux-child-exec-v1', 'node', 'node'], target: null },
+    { file: helper, args: [helper, '--PRIVATE_OTHER_PROTOCOL', 'node', 'node'], target: null },
+    { file: helper, args: [helper, '--linux-child-exec-v1', 'node'], target: null },
+    { file: helper, args: ['PRIVATE_ARGV0', '--linux-child-exec-v1', 'node', 'node'], target: null },
+  ];
+  for (const [index, row] of cases.entries()) {
+    const child = Object.assign(new EventEmitter(), { pid: 100 + index, spawnfile: row.file, spawnargs: row.args });
+    trace.observe({ process: child }); child.emit('spawn'); child.emit('exit', 0, null);
+  }
+  trace.finish();
+  const spawned = parse(lines).filter(row => row.event === 'async-spawn');
+  assert.deepEqual(spawned.map(row => row.requestedCommand), cases.map(() => 'linux-child-exec'));
+  assert.deepEqual(spawned.map(row => row.linuxChildExecTarget), cases.map(row => row.target));
+  assert.equal(lines.join('').includes('PRIVATE'), false);
+  assert.equal(parse(lines).at(-1)?.observationFailures, 0);
+});
+
 test('event and pending-child bounds explicitly preserve incomplete coverage', () => {
   const lines: string[] = [];
   const trace = createTestChildProcessTrace({ mainPid: process.pid, limit: 3,

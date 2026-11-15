@@ -133,7 +133,7 @@ export const ColorPaletteSelector = ({
             placeholder="#ff6600"
             maxLength={9}
             disabled={disabled}
-            className={`w-24 rounded border bg-transparent px-2 py-1 font-mono text-xs text-text placeholder:text-text-muted focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
+            className={`w-24 rounded border bg-[var(--color-form-control-bg)] px-2 py-1 font-mono text-xs text-text placeholder:text-text-muted focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
               hexInput && !HEX_RE.test(hexInput) ? 'border-red-500' : 'border-border'
             }`}
           />

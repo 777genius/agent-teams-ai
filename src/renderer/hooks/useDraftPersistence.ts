@@ -36,6 +36,7 @@ export function useDraftPersistence({
   const editRevisionRef = useRef(0);
 
   useEffect(() => {
+    if (keyRef.current !== key) editRevisionRef.current++;
     keyRef.current = key;
   }, [key]);
 
@@ -129,8 +130,11 @@ export function useDraftPersistence({
         if (pending.value.length === 0) {
           void draftStorage.deleteDraft(pending.key, generationRef.current);
         } else {
+          const saveRevision = editRevisionRef.current;
           void draftStorage.saveDraft(pending.key, pending.value, generationRef.current).then(() => {
-            if (mountedRef.current) setIsSaved(true);
+            if (mountedRef.current && editRevisionRef.current === saveRevision && keyRef.current === pending.key) {
+              setIsSaved(true);
+            }
           });
         }
       }, debounceMs);

@@ -181,7 +181,9 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     const cost = await readNativeHostCostProof({ teamRoot, commandId: String(costs[0]!.commandId), memberName: 'alice', principalId: 'TEST-human', binding: record((await session()).binding), stats });
     assert.deepEqual((await session()).inputs, inputsBeforeCost);
     assert.equal((await effects()).filter(row => row.event === 'input').length, turnsBeforeCost);
-    await revealDesktopReply(cdp, String(cost.reply.text), { assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
+    assert.ok(typeof cost.reply.messageId === 'string' && cost.reply.messageId.length > 0);
+    await revealDesktopReply(cdp, String(cost.reply.text), { messageId: cost.reply.messageId,
+      assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
     proof.costScreenshot = await screenshot('cost'); proof.cost = cost;
   } else if (provider === 'claude') {
     const expectedCatalog = ['/compact', '/cost', '/review', '/test-desktop-skill'], commandProofs: Row[] = [];
@@ -304,6 +306,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     assert.deepEqual(await rows(taskDirectory), beforeStandaloneTasks, 'standalone creates no hidden Team task');
     await ui.scrollTo(`${scheduleRow(EDITED_SCHEDULE_LABEL)} button[aria-label=${literal(EDITED_SCHEDULE_LABEL)}]`, 'original standalone history');
     await ui.click(`${scheduleRow(EDITED_SCHEDULE_LABEL)} button[aria-label=${literal(EDITED_SCHEDULE_LABEL)}]`, 'expand original standalone history');
+    await ui.scrollTo(`${scheduleRow(EDITED_SCHEDULE_LABEL)} div[role="button"]`, 'reveal original completed standalone log');
     await ui.click(`${scheduleRow(EDITED_SCHEDULE_LABEL)} div[role="button"]`, 'open original completed standalone log');
     await ui.waitRead(`document.querySelector('[role="dialog"]')?.textContent.includes('TEST standalone complete')`, 'original completed standalone stdout');
     proof.standaloneCompletedScreenshot = await screenshot('standalone-completed');

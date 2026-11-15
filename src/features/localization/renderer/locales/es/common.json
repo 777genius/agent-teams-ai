@@ -91,7 +91,8 @@
       "uk": "Ucraniano",
       "ur": "Urdu",
       "vi": "Vietnamita",
-      "zh": "Chino"
+      "zh": "Chino",
+      "zh-TW": "Chino tradicional"
     },
     "searchPlaceholder": "Buscar idioma...",
     "selectPlaceholder": "Seleccionar idioma de la app...",

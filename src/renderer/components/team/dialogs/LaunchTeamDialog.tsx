@@ -1484,8 +1484,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     else setAllowExperimentalLocalModels(false);
   }, [effectiveCwd, selectedModelChecksByProviderSignature, localOverrideHydration]);
   const shortLivedModelIssueReasons = useMemo(
-    () =>
-      readLaunchPrepareModelIssues({
+    () => {
+      void prepareChecks;
+      void selectedModelChecksByProviderSignature;
+      return readLaunchPrepareModelIssues({
+        context: { kind: 'team', teamName: effectiveTeamName },
         isLaunchMode,
         selectedMemberProviders,
         runtimeBackendSummaryByProvider,
@@ -1493,12 +1496,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         selectedModelChecksByProvider,
         cwd: effectiveCwd,
         limitContext: effectiveAnthropicRuntimeLimitContext,
-      }),
+        invalidationEpochByProviderId: prepareProviderInvalidationEpochById,
+      });
+    },
     [
       effectiveAnthropicRuntimeLimitContext,
       effectiveCwd,
+      effectiveTeamName,
       isLaunchMode,
       prepareChecks,
+      prepareProviderInvalidationEpochById,
       runtimeBackendSummaryByProvider,
       runtimeProviderStatusById,
       selectedModelChecksByProvider,
@@ -1609,6 +1616,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       limitContext: effectiveAnthropicRuntimeLimitContext,
       runtimeProviderStatusById,
       cachedModelResultsByCacheKey: prepareModelResultsCacheRef.current,
+      invalidationEpochByProviderId: prepareProviderInvalidationEpochById,
     }).map(qualifyPlan);
     const changedPlans = providerPlans.filter(
       (plan) =>

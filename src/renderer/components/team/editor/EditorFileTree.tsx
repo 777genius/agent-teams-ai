@@ -870,7 +870,7 @@ const InlineRenameInput = ({
       }}
       onBlur={() => requestAnimationFrame(() => inputRef.current?.focus())}
       onClick={(e) => e.stopPropagation()}
-      className="min-w-0 flex-1 rounded border border-blue-400/50 bg-surface px-1 py-0 text-xs text-text outline-none focus:ring-1 focus:ring-blue-400/50"
+      className="min-w-0 flex-1 rounded border border-blue-400/50 bg-[var(--color-form-control-bg)] px-1 py-0 text-xs text-text outline-none focus:ring-1 focus:ring-blue-400/50"
     />
   );
 };
