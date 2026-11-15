@@ -1114,3 +1114,35 @@ test('typed thinking survives the original bounded journal cold read and project
   assert.equal(cold.fenced(target, () => cold.readConversation(target)), undefined);
   assert.equal(f.sessions.length, 0, 'read-side fixture does not create a provider or conversation cache');
 });
+
+test('distinct Thinking retains original attribution without becoming text, conversation or state', async t => {
+  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+  const before = owner.readSession(binding()).record!;
+  const cursor = owner.readActivitySnapshot(binding()).cursor;
+  session.emit({ ...attribution, kind: 'text', messageRef: 'TEST-message', block: 0,
+    text: 'TEST visible answer', phase: 'complete' });
+  const thought: Extract<Event, { kind: 'thinking' }> = { ...attribution,
+    sessionRef: session.sessionRef, kind: 'thinking', messageRef: 'TEST-message', block: 0,
+    text: 'TEST distinct thought', phase: 'snapshot' };
+  session.raw(thought);
+  session.raw({ ...thought, text: 'TEST completed thought', phase: 'complete' });
+  await tick();
+  const feed = owner.readActivityFeed(binding(), cursor);
+  const thinking = feed.events.filter(event => event.data.kind === 'thinking');
+  assert.equal(thinking.length, 2);
+  assert.ok(thinking.every(event => event.inputId === attribution.inputId &&
+    event.operationRef === attribution.operationRef && event.data.block === 0 &&
+    event.data.messageRef === 'TEST-message'));
+  assert.deepEqual(thinking.map(event => event.data.phase), ['snapshot', 'complete']);
+  const latest = owner.readActivitySnapshot(binding()).latest.text;
+  assert.deepEqual(latest.map(event => event.data.text), ['TEST visible answer']);
+  const conversation = owner.readConversation(binding(), 'messages');
+  assert.ok(JSON.stringify(conversation).includes('TEST visible answer'));
+  assert.equal(JSON.stringify(conversation).includes('thought'), false);
+  const after = owner.readSession(binding()).record!;
+  assert.deepEqual(after.inputs, before.inputs);
+  assert.equal(after.phase, before.phase); assert.equal(after.nativeReady, before.nativeReady);
+  const cold = f.make('cold-host'), restored = cold.readActivitySnapshot(binding());
+  const retained = cold.readActivityFeed(binding(), { ...restored.cursor, sequence: cursor.sequence });
+  assert.deepEqual(retained.events.filter(event => event.data.kind === 'thinking'), thinking);
+});

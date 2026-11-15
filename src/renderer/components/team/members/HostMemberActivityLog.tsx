@@ -27,11 +27,21 @@ export interface HostLogViewOptions {
 }
 
 /** Reuses the existing Logs viewport address across reads and fullscreen remounts. */
-export function useHostLogViewport(view: HostLogViewOptions | undefined, logs: readonly unknown[]) {
+export function useHostLogViewport(
+  view: HostLogViewOptions | undefined,
+  logs: readonly unknown[],
+  sourceKey: string
+) {
   const ref = useRef<HTMLDivElement>(null);
+  const selectedSource = useRef(sourceKey);
   useLayoutEffect(() => {
+    const changed = selectedSource.current !== sourceKey;
+    selectedSource.current = sourceKey;
     const element = ref.current,
-      viewport = view?.viewerState.viewport;
+      viewport = changed
+        ? { mode: 'edge' as const, edge: 'newest' as const }
+        : view?.viewerState.viewport;
+    if (changed && view && viewport) view.onViewerStateChange({ ...view.viewerState, viewport });
     if (!element || !viewport) return;
     if (viewport.mode === 'edge') {
       element.scrollTop = viewport.edge === 'newest' ? 0 : element.scrollHeight;
@@ -45,7 +55,7 @@ export function useHostLogViewport(view: HostLogViewOptions | undefined, logs: r
         anchor.getBoundingClientRect().top -
         element.getBoundingClientRect().top -
         viewport.offsetTop;
-  }, [logs, view?.viewerState]);
+  }, [logs, sourceKey, view]);
   const onScroll = (event: UIEvent<HTMLDivElement>) => {
     if (!view) return;
     const element = event.currentTarget;

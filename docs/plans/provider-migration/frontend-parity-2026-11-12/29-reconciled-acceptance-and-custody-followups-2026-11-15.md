@@ -4429,3 +4429,60 @@ Recheck all265 archive members, four external dependency links, private SPI edge
 Closure manifest SHA256 `0a5fb1a10b3925a7b5615560a4b37b4f9ff4ae39b62c89da243fdbbe9f6417c8`; finite command manifest SHA256 `9255f23b0c5a4dd76779ec65b9559c8e61422de186e61202b886176c76fcbf13`. Host config stays `8a39579780a5ea80d7ea3a4986cf92b868fd08be` / SHA256 `7f018cbc6bf605b6df6327c1611f6633f71ce492adce21c45dc2480cffd5a3a1`. Pinned Node24.21.0/TypeScript7.0.2/app pnpm11.25.0, original unset environment names, generic TEST Node and180-second subprocess ceiling are unchanged. Original product/native deadlines remain unchanged.
 
 This amendment does not qualify native/graphical/packaged/full-workspace/genuine-upgrade acceptance, adopt held C++ policy, close P08/P09/M16, or implement the separately prepared scheduled-log cut. Keep Draft, original base, no main merge/release/default activation/Stage2. No private package copy, canonical-link replacement, compiler retry or source amendment was applied/executed while preparing this R1.
+
+
+## Verification record: checked Thinking, original stderr and coordination consumers
+
+The exact32-path source cut follows prospective R1 `67a73ad75fb4c5b386aee37344db03b796a795d3` (published23:35:35UTC) and the closure-only amendment `cc7787e3eebd35f805802a0d803c04ca68142468` (published23:48:48UTC). Both complete Plan blobs, sole parents, exact trees, branch refs and documentation-only diffs were read back before their respective source/link/command actions. The former untouched30-path proposal was never used as application authority.
+
+### Counterexamples and exact source boundaries
+
+Controlled RED tree `415c4e7b062c32f0ae01c0d6ca49663c4e9db7f3` used the complete reviewed tests/pins/pair while retaining only the three original production bodies. Canonical build passed. Three complete Node files ran64 cases:52PASS/12FAIL, zero skips/cancel/todo. Actual failures were the first valid-Thinking coordination mode, ten stderr sanitation/framing canaries and the typed Thinking producer (zero retained Thinking where two were required). Later modes inside the failed coordination registration are not claimed executed in RED.
+
+GREEN tree `bb714cb98f091aea33736526f74ce01b41066a1c` differs from RED only in `OpenCodeCoordinationProbe.ts`, `observeMemberProcessStderr.ts` and `normalizeActivity.ts`. Build passed; the same three complete files passed64/64. The complete ten-file Host run then passed191/191, including all seven new coordination modes and preserved13 old modes. Seven focused renderer/read-side files passed71/71; four actual diagnostic consumers passed133/133. Every suite completed with zero failures/skips/cancel/todo. The two existing KaTeX quirks-mode diagnostics in renderer tests remain visible in the raw log. Both complete Host runs also retain the SDK CLAUDE_SDK_CAN_USE_TOOL_SHADOWED warning for existing bare allowedTools entries; no policy/callback/source change was made to suppress it.
+
+An initial temporary-index preflight refused the two reviewed new tgz files because they are ignored by Git. Root rechecked all source and265 package-member bytes, then added only those exact two archives with -f to the temporary index. This was completed before the first build/test; it changed neither package contents nor the normal index.
+
+### Actual strict compiler refusal and closure correction
+
+The first unchanged17-root Host compiler run returned twelve TS2883 JSONType naming errors. That original exit1/raw log is retained as NON-PASS; it is not relabelled a success. Other gates passed: selected21-root app types, original legacy-host-scripts compiler, scoped21-path lint, original source-size and provisioning guards. Lint had zero errors/five warnings: the inherited native Codex control-regex warning, two FastRefresh export warnings and two existing tooltip-span accessibility warnings. Source-size checked5019 production files with the unchanged141 frozen exceptions/800-line cap. Provisioning counters remained22/50/31/62/154.
+
+The reviewed closure amendment copied only the original253+12 checked archive members to private ordinary package directories and selected four existing canonical dependency roots plus the exact private SPI edge. No archive, receipt, runtime dependency version, compiler option, source/test body or shared store was changed. Static evidence compared all840 regular Zod files across the original two stores: same relative paths and6,148,944 bytes, common inventorySHA256 `200d6cde568e65b5cbe3c5c93907071d9d73314bdff23fbb8f7b77c8967a5f3b`. This established identical payload at two physical module roots.
+
+After publication/readback and local closure selection, the exact same17-root strict Host command/config passed in2.486seconds with an empty log. Thus the observed gate was resolved by the closure-only change; no uniquely isolated internal compiler algorithm is asserted. Working tree `2a5873b47814e1c842a6c8d193c8d3749390e68c` differs from the first GREEN only in this prospective documentation. Canonical Host rebuilt successfully; the same ten Host files passed191/191 in25.205seconds and the actual Main Runtime facade passed12/12 in8.763seconds against the coherent closure.
+
+The395 distinct source cases are191 Host +71 focused +133 diagnostics. The64 confirmation, repeated191 and repeated12 facade cases overlap those same suites and are not added again. Original pure renderer/diagnostic/type/lint/guard results retain their exact source/config qualification; unchanged gates were not repeated without a concrete risk. This is scoped validation, not full-workspace, graphical or native acceptance.
+
+### Source roster and byte preservation
+
+Pinned Node imported only copied versions of the four pure roster modules. Actual ordinary exports changed1749→1754 and Windows union1790→1795; all five incoming source leaves are genuinely new to both unions. All previous52 corrected ordinary inputs and the original relative order remain; Process/WindowsRetry arrays and the other three source module blobs are unchanged. Root roster stays800lines. The implementation/SPI archives retain their original CI provenance, pair pins and receipts; inactive inherited prompt-suggestion payload is not enabled.
+
+Postflight rechecked every253 implementation and12 SPI member byte, exact inventory digests, zero extra package files, four external dependency edges, the private SPI edge and both canonical Host links. Original shared stores/hoists were not written. Full tracked working tree remained `2a5873b47814e1c842a6c8d193c8d3749390e68c`; diff whitespace check passed and normal index SHA256 stayed `161fc5143f7e03fc593d16afa0d4bb588e230fb3667602302bc7019f225fe92a`. Runtime test576b, ordinary rostersd822, all private Task/facade/team-read cases and the strict two-line Task stderr refusal remain preserved.
+
+### Complete raw command evidence
+
+Every command used pinned Node24.21.0, TypeScript7.0.2 and applicable app pnpm11.25.0 with the published environment boundaries. The raw files and metadata capture full argv, source tree, UTC start/end, byte length and SHA256. None timed out or was killed.
+
+| Command label | Exit | Seconds | Complete raw log SHA256 |
+| --- | ---: | ---: | --- |
+| red-host-build | 0 | 15.329 | `d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789` |
+| red-node | 1 | 6.312 | `194c2601293607abd3b97205099623b589c8c9875a80fa960c1fe2d613ffb3c7` |
+| green-host-build | 0 | 8.281 | `d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789` |
+| green-node | 0 | 5.847 | `8af114da6dcfec4c52f6bac2c4cff57eefae62860d46951b8f7ab94ee821d370` |
+| green-host-tests | 0 | 27.752 | `033a2f199799b32fc7ef306205e043219f8e003227d170756c8a4f4ffff884c3` |
+| green-focused | 0 | 23.054 | `5c6628ce2662ef5d42f98f0069e163a29c74dbb85c6223827974e29eeb96a0e1` |
+| green-app-types | 0 | 4.667 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| green-host-types | 1 | 3.252 | `5156de2fcb72ab99ef4f95b8914395bb406673c4806ab615481d18622f438059` |
+| green-script-types | 0 | 7.197 | `497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015` |
+| green-diagnostics | 0 | 4.091 | `543f0247b2f6d331b6e887603dd9c8fbe289e1cb5f3b593d2f577f1660d24587` |
+| green-lint | 0 | 10.457 | `7a009a7d7e1e019a77ba26a1c2aef20be5670b25b2b1291a1b79cbba68f6a526` |
+| green-source-size | 0 | 4.481 | `242bb192077481ababdc21e7a9ea9d7b01411efa6a91f2b541d3ae13ce3c2181` |
+| green-provisioning | 0 | 5.038 | `7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c` |
+| coherent-host-types | 0 | 2.486 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| coherent-host-build | 0 | 9.266 | `d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789` |
+| coherent-host-tests | 0 | 25.205 | `7d036a27ef9201397fb4c5944bfdf63d8ac22d7b6469550e8c9360479faa19bc` |
+| coherent-main-facade | 0 | 8.763 | `e2fc4ca214f3ac25ef40568a504df0a87e7aeaeef0523ff005eed5b50e29dc74` |
+
+### Remaining acceptance
+
+The separately reviewed scheduled14-path Thinking/stderr source cut is still unapplied and unexecuted. No new native/GUI/Electron/packaged/vendor execution, original15-second readiness, P08 same-Main recovery, P09 selected-source/writer contract, full C++/I386 policy, genuine donor upgrade or M16 qualification is asserted. Existing failures/HOLD/skipped/cancelled evidence remains as recorded. Keep the original Draft/base, no main merge/release/default activation/Stage2. Final exact source/document R2 and immediate guarded publication/readback close only this32-path cut.

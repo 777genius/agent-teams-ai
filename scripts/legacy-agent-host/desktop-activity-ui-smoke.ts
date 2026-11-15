@@ -161,7 +161,7 @@ export async function runDesktopActivityUiSmoke(
     assert.ok(log.events.some((event) => event.data.kind === 'tool'));
     assert.ok(
       log.events.some((event) => event.data.kind === 'tool-result' && event.data.isError),
-      'actual failed Bash outcome remains visible'
+      'actual failed native tool outcome remains visible'
     );
     assert.ok(log.events.some((event) => event.data.kind === 'text'));
     assert.ok(stats.observedMessages > 0);
@@ -279,20 +279,37 @@ export async function runDesktopActivityUiSmoke(
       event.data.kind === 'tool' && event.data.toolRef === failed.toolRef);
     assert.ok(toolEvent && toolEvent.data.kind === 'tool');
     const fact = (event: typeof failedEvent) => panel + ' [data-host-log-event-id=' + desktopJsLiteral(event.eventId) + ']';
+    const toolAnchor = (event: typeof failedEvent) => JSON.stringify([expected.log.sessionId,
+      JSON.stringify([event.inputId ?? null, null, event.data.kind, failed.toolRef])]);
     await ui.scrollTo(fact(toolEvent) + ' [role="button"]', 'original correlated tool');
     await ui.waitRead(`(()=>{const e=document.querySelector(${desktopJsLiteral(fact(toolEvent))});return e&&
       e.dataset.hostLogSequence===${desktopJsLiteral(String(toolEvent.sequence))}&&e.dataset.hostLogKind==='tool'&&
+      e.dataset.hostLogAnchor===${desktopJsLiteral(toolAnchor(toolEvent))}&&
       e.innerText.includes(${desktopJsLiteral(toolEvent.data.name)})&&e.innerText.includes(${desktopJsLiteral(failed.toolRef)})})()`,
       'exact original tool reference and name');
     await ui.scrollTo(fact(failedEvent) + ' [role="button"]', 'original failed tool result');
     await ui.waitRead(`(()=>{const e=document.querySelector(${desktopJsLiteral(fact(failedEvent))});
       const dot=e?.querySelector('.base-item-status-dot');return e&&e.dataset.hostLogIsError==='true'&&
       e.dataset.hostLogSequence===${desktopJsLiteral(String(failedEvent.sequence))}&&e.dataset.hostLogKind==='tool-result'&&
+      e.dataset.hostLogAnchor===${desktopJsLiteral(toolAnchor(failedEvent))}&&
       e.innerText.includes(${desktopJsLiteral(toolEvent.data.name + ' result')})&&dot?.getClientRects().length&&
       getComputedStyle(dot).backgroundColor==='rgb(239, 68, 68)'})()`, 'actual failed result identity and visible error state');
     await ui.click(fact(failedEvent) + ' [role="button"]', 'expand actual failed result');
+    let content = failed.content;
+    if (typeof content === 'string') {
+      try {
+        const parsed: unknown = JSON.parse(content);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0] !== null && typeof parsed[0] === 'object' &&
+          !Array.isArray(parsed[0]) && typeof parsed[0].type === 'string') content = parsed;
+      } catch { /* native non-JSON tool output */ }
+    }
+    let expectedContent = typeof content === 'string' ? content : Array.isArray(content)
+      ? content.map(value => value && typeof value === 'object' && !Array.isArray(value) && typeof value.text === 'string'
+        ? value.text : JSON.stringify(value, null, 2)).join('\n') : JSON.stringify(content, null, 2);
+    try { expectedContent = JSON.stringify(JSON.parse(expectedContent), null, 2); } catch { /* native non-JSON tool output */ }
     await ui.waitRead(`(()=>{const body=document.querySelector(${desktopJsLiteral(fact(failedEvent) + ' [data-host-log-content]')});
-      return body?.getClientRects().length&&body.textContent.trim().length>0})()`, 'actual retained error content renders');
+      return body?.getClientRects().length&&body.querySelector('pre')?.textContent===${desktopJsLiteral(expectedContent)}})()`,
+      'full actual retained error content renders');
     const childEvent = expected.log.events.find(
       (event) =>
         event.data.kind === 'subagent' &&
@@ -320,6 +337,7 @@ export async function runDesktopActivityUiSmoke(
     await ui.waitRead(
       `(()=>{const e=document.querySelector(${desktopJsLiteral(childRow)});return e&&
         e.dataset.hostLogSequence===${desktopJsLiteral(String(childEvent.sequence))}&&e.dataset.hostLogKind==='subagent'&&
+        e.dataset.hostLogAnchor===${desktopJsLiteral(JSON.stringify([expected.log.sessionId, childEvent.eventId]))}&&
         e.querySelector('[data-host-log-content] pre')?.textContent===${desktopJsLiteral(childText)}})()`,
       'exact original child identity, phase and counters are rendered'
     );

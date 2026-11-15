@@ -234,3 +234,202 @@ Ordinary process facts do not alter messages, usage, previews, conversation,
 readiness or custody. An explicit oversized/storage gap retains the existing
 uncertainty policy, including unknown cost when evidence is incomplete.
 Preserve that policy rather than inventing a diagnostic-specific exemption.
+
+## Bounded capture follow-up on27b1
+
+The published adapter hook, source-grant callback and full config/incarnation
+fence are preserved. The follow-up reuses the existing escaped-assignment
+redactor by moving it byte-for-byte to the browser-safe Host diagnostics
+export; its old app module is a re-export. Three original consumer suites
+pass107/107 with zero skips. No second parser or credential lookup is added.
+
+Independent source review found and closed short-secret masking that could
+destroy credential syntax, transformed held-secret fragments, overlapping
+exact values, and an ANSI dump opener crossing the existing24KiB discard
+boundary. Syntax is classified before exact masking; original and sanitized
+held-value forms are masked in one union of spans. Unclassified ANSI loss
+fails closed until the existing dump boundary. The24KiB capture/output and
+32KiB serialized journal budgets remain unchanged, as do custody and stdout.
+All seven published framing cases remain; the extended helper suite passes
+19/19. The final seven-suite Host run passes106/106, zero skips.
+
+The original Runtime-team composition tests additionally cover diagnostics
+before SessionRef, failed open, permitted closing and rejected stale/revoked/
+sealed grants. An actual Claude SDK launches only the finite TEST Node child
+through the original CapturedProcess and retains startup plus final stderr
+on failed startup; cleanup is checked. The six focused composition/outer-hook
+cases pass with zero skips. No real Claude/Codex executable was invoked.
+Resulting-source graphical/native gates remain required and unqualified here.
+
+## R1: original standalone scheduled-process stderr
+
+Review base: application `35cbd6e99b620e9b41802af936143d900f5e2aca`, with
+checked provider source `9423f600dfb04d04448326dbced89919924b0b5f`. This is
+a bounded continuation of P04 schedule parity and Plan33 process diagnostics.
+Source implementation remains held until this plan and independent R2 are
+published by the existing migration owner.
+
+### Confirmed baseline and current gap
+
+Frozen application `4a0e06277fe216d9f82dbbede362668fe46622ee` captures the
+original scheduled child's stderr in `ScheduledTaskExecutor.waitForExit`,
+with `STDERR_MAX_BYTES = 16 * 1024`. `SchedulerService` saves that stderr;
+`ScheduleRunLogDialog` renders nonempty stderr in its existing separate `pre`.
+This is independent of the rich stdout parser and of the task-first Team path.
+
+Current `HostScheduledRuns` creates a standalone `ScheduledRunProvider`,
+whose Claude custody launch and Codex app-server launch do not attach the
+Plan33 helper. It has no Team endpoint and does not pass through the member
+factory. Its final projection currently supplies only a generic retention
+warning as stderr. Member-log parity therefore does not cover this baseline.
+
+The original host-owned lifecycle, one captured occurrence, input admission,
+custody, interruption, result, usage, summary and cold no-replay remain the
+owners of execution. No OpenCode scheduled provider is introduced.
+
+### Exact production changes
+
+1. `packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts`:
+   add the optional existing `RuntimeProcessOutput` observation callback to
+   `ScheduledRunProviderContext`. Attach `observeMemberProcessStderr` to the
+   actual Claude child immediately after the original custody launch and to
+   the actual Codex child immediately after its original app-server launch,
+   before returning it to the existing SDK/byte transport. Pass the actual
+   launch arguments. Preserve every original launch, currentness predicate,
+   catalog preflight, stream owner and cleanup operation. The Codex catalog
+   helper and unrelated processes are not scheduled targets.
+2. `packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts`:
+   make only its selected endpoint input optional. When absent, its private
+   values consist of the already-held selected environment, argv and captured
+   MCP values. Existing member endpoint/token/URL masking stays identical.
+   Standalone schedules create no endpoint and no placeholder token. Reuse
+   the complete35c framing/redaction implementation, including24KiB raw and
+   sanitized UTF-8 bounds, ANSI/NUL handling, overlapping/escaped values,
+   dump suppression, final-tail once and contained observer exceptions.
+3. `packages/legacy-agent-host/src/composition/HostScheduledRuns.ts`:
+   bind the callback to a cloned original binding and full normalized open
+   request. Retain the original selected entry/team, capture/config/profile
+   identities and principal before sharing the callback. Its separate source
+   assertion checks the existing writer lease, the exact active entry and
+   original Team control revision, immutable selection identities, the same
+   retained recipe/source/workspace through `scheduledRunProfile`, and
+   `capturedMcpSourceCurrent(profile)`. Never follow a new current-source pointer.
+   Run that assertion inside the existing Runtime append fence, and contain
+   its errors at the callback boundary. It performs no Runtime lookup or action.
+
+The source assertion allows ordinary cancellation and Runtime record sealing
+to proceed through original unreleased closing: `entry.cancelled` and a
+Runtime sealed flag are not themselves source revocation. It explicitly
+rejects `HostScheduledRuns.sealed`, writer loss, Team revision/revocation,
+changed source/recipe/workspace/profile/config/entry and a replaced selection.
+Host shutdown seals the composition first, so later diagnostics are refused.
+This is the existing Plan33 policy; no post-Host-seal grant is added.
+
+`RuntimeOwner.observeProcessOutput` remains unchanged. Its existing fence
+checks exact profile/incarnation, full config and open fingerprint, permits
+only opening/allocated/held/closing with unreleased custody, and applies the
+original32KiB serialized-event budget and gap policy. Facts remain top-level
+`{ kind: 'process-output', stream: 'stderr', text }` or the existing oversized
+gap. No input, operation, task, child or synthetic SessionRef is attributed.
+
+### Shared internal projection with scheduled Thinking
+
+The sibling scheduled-Thinking R1 and this plan share exactly one optional,
+computed internal field:
+
+```ts
+logProjection?: {
+  thinking: RuntimeActivityEvent[];
+  stderr: RuntimeActivityEvent[];
+  truncated: boolean;
+};
+```
+
+`runtime/activityContracts.ts` declares it and
+`runtime/RuntimeActivityCoordinator.ts` computes it from the same retained
+journal read. Original latest groups, ordering, byte accounting and global
+`snapshot.gap` remain unchanged. Thinking, then stderr consume the remaining
+space under the original aggregate256KiB snapshot limit. Only actual
+top-level stderr observations are included, in journal order and with their
+original IDs/sequence; nested child facts or input-attributed rows are not
+reclassified. Auxiliary omission sets only `logProjection.truncated`.
+
+There is no persisted cache, second journal/read cursor, polling owner, new
+RPC or outward DTO. The existing outward snapshot mapper omits this field.
+An actual original journal/storage/oversized gap retains its existing global
+uncertainty semantics, including unknown cost. Auxiliary display truncation
+alone cannot change the old Stats/cost/usage completeness decision.
+
+`composition/scheduledRunProjection.ts` joins the retained sanitized stderr
+lines by actual sequence. It keeps the first16KiB of UTF-8 display bytes,
+ending on a complete code point. When the original gap, unknown observation
+time, stdout truncation, auxiliary truncation or stderr cap requires the
+existing warning, append that fixed warning once, reserving its bytes within
+the same16KiB bound. With no retained stderr, preserve the existing warning
+or empty-string behavior. The existing result schema stays unchanged.
+
+Plan33 sanitation intentionally normalizes line whitespace and hides secrets
+and dumps before persistence. Bounded journal retention may remove an old
+prefix; the warning must acknowledge that loss. Do not reread raw process
+files, recover unsanitized bytes, invent missing lines or replay a provider.
+Keep stdout512KiB compatibility, final outcome and usage decisions, text-only
+summary and the existing observed-time duration formula. Real diagnostics
+reach the existing saved `.err`/dialog path without renderer changes.
+
+### Finite verification
+
+Extend existing tests only, retaining their original cases and deadlines:
+
+- `tests/member-process-stderr.test.ts`: no-endpoint context still masks
+  selected environment/argv/MCP canaries, retains ordinary text and final
+  tail once; existing endpoint cases and all framing guards still pass.
+- `tests/captured-claude-process.test.ts`: use its existing pinned finite
+  Node-child setup with the real standalone provider adapter, once for
+  Claude and once for Codex. Emit benign startup stderr and a final tail,
+  then exit before native readiness. The original factory still rejects,
+  the observer retains only sanitized actual stderr, no Session/input/result
+  is invented, no Team endpoint exists and original cleanup is confirmed.
+  This uses no Claude/Codex executable or model service.
+- `tests/scheduled-run-host.test.ts`: use the existing controlled Session/
+  Host fixture to prove opening facts before SessionRef, failed-open retained
+  diagnostics without an input, permitted ordinary closing, Host-seal and
+  writer/Team/source/immutable-selection refusals, neighbor isolation and
+  no append after release. A cold read retains the actual original facts
+  plus the existing cold-gap indication and never starts another occurrence.
+- `tests/runtime-activity.test.ts`: verify the shared auxiliary view uses
+  the same read and total byte bound, old latest/global-gap/usage behavior
+  is unchanged, and top-level stderr is not promoted into child or input
+  activity. Existing process-writer full-config/incarnation and serialized
+  overflow tests remain the authority checks.
+- The existing finite Claude standalone peer in
+  `tools/owned-process-broker/fixtures/claudeProviderPeer.mjs` may emit one
+  benign stderr marker during the already-existing `TEST_UI_STANDALONE_DONE`
+  input. Extend its existing scheduled-host/renderer assertions to join that
+  actual journal fact to saved stderr and the unchanged dialog `pre`, and
+  verify cold read plus16KiB non-ASCII/retention behavior without new turns.
+  `scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts` is shared with
+  the Thinking appendix and remains one root-owned integration. Its current
+  Codex schedule flow is task-first; do not label it standalone Codex proof.
+
+Run the affected existing controlled suites, Host build/test types, scoped
+lint, source-size and architecture guards on the final exact source. The
+existing Host Emulated lane already invokes `scheduled-run-host.test.ts`.
+Add missing existing scheduled projection/capture/contracts leaves to the
+current proof roster in the sibling plan; do not create another roster or
+change selectors, deadlines, required gates or file caps. Original native
+schedule/Desktop gates remain separate and require actual successful runs;
+none is authorized to invoke real Claude/Codex in this session.
+
+Estimated standalone increment:80–140 production lines across six existing
+files, with the three snapshot/projection files shared with Thinking;
+160–260 focused test lines plus fewer than15 existing peer/UI lines.
+No new production file or framework is needed. Root owns the combined
+snapshot/projection/fixture merge and publication; this R1 changes no source.
+
+### Published review boundary
+
+This is the reviewed R1 record as prepared above, with heading depth adjusted for
+this existing plan. Root R2 accepts the exact scratch proposal SHA-256
+`6849c5999c2bc4eb441697bc4764907b8d6aab3e9ad4cefd7d6a9aed1865915f` before implementation. R1 `/root/p09_review` and independent R2 `/root` confirmed the exact source-grant and shared-projection boundary.
+This publication admits only its finite changes together with the sibling
+scheduled-log amendment; existing migration and actual qualification gates remain.

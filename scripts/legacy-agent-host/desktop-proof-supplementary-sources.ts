@@ -262,6 +262,11 @@ export const desktopProofSupplementarySources = [
   'test/features/agent-backend/tsconfig.json',
   'src/renderer/vite-env.d.ts',
   'test/types/better-sqlite3-node.d.ts',
+  'packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts',
+  'src/shared/utils/redactDiagnosticAssignments.ts',
+  'packages/legacy-agent-host/tests/runtime-team-host.test.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts',
+  'src/renderer/components/team/sidebar/teamSidebarUiState.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */
