@@ -7,15 +7,27 @@ import { ConfigManager } from '../../../src/main/services/infrastructure/ConfigM
 import { validateConfigUpdatePayload } from '../../../src/main/ipc/configValidation';
 
 let root: string | undefined;
-afterEach(() => {
-  if (root) fs.rmSync(root, { recursive: true, force: true });
-  root = undefined;
+// Loading a normalized config can itself schedule an async rewrite.
+const managers: ConfigManager[] = [];
+function track(file: string): ConfigManager {
+  const manager = new ConfigManager(file);
+  managers.push(manager);
+  return manager;
+}
+afterEach(async () => {
+  try {
+    await Promise.all(managers.map(manager => manager.waitForPersistence()));
+  } finally {
+    managers.length = 0;
+    if (root) fs.rmSync(root, { recursive: true, force: true });
+    root = undefined;
+  }
 });
 function fixture(raw?: unknown) {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-next-prompt-settings-'));
   const file = path.join(root, 'settings.json');
   if (raw !== undefined) fs.writeFileSync(file, JSON.stringify(raw));
-  return { file, manager: new ConfigManager(file) };
+  return { file, manager: track(file) };
 }
 
 describe('native suggestion opt-in, disabled by default', () => {
@@ -30,10 +42,10 @@ describe('native suggestion opt-in, disabled by default', () => {
     const enabled = manager.updateConfig('general', { nativeNextPromptSuggestionsEnabled: true });
     expect(enabled.general.nativeNextPromptSuggestionsEnabled).toBe(true);
     await manager.waitForPersistence();
-    expect(new ConfigManager(file).getConfig().general.nativeNextPromptSuggestionsEnabled).toBe(true);
+    expect(track(file).getConfig().general.nativeNextPromptSuggestionsEnabled).toBe(true);
     manager.updateConfig('general', { nativeNextPromptSuggestionsEnabled: false });
     await manager.waitForPersistence();
-    expect(new ConfigManager(file).getConfig().general.nativeNextPromptSuggestionsEnabled).toBe(false);
+    expect(track(file).getConfig().general.nativeNextPromptSuggestionsEnabled).toBe(false);
   });
 
   it('refuses forged renderer settings with type coercion', () => {
