@@ -410,3 +410,119 @@ SHA-256 `6d69f621abc2cda324c209efbafb8387f9247fce65cdb425ec33599b9aa3002f`.
 The residual publication consists of seven reviewed source/test files plus
 this evidence document. Existing matrices execute their validation; no extra
 dispatch, native opt-in, scope reduction or budget expansion is introduced.
+
+
+## Executed 59fe8dc results and the next narrow Windows follow-up
+
+The following original jobs executed source
+`59fe8dc8210d01a2b5e9c67438442c6b1c3428ae`.
+This continuation independently retrieved their decoded job logs and artifact
+metadata. The ZIP digests below agree with uploader output where the log was
+read; they are not independent local ZIP-byte or screenshot inspection by this
+continuation, whose executor remains offline.
+
+| Original job | Executed result and scope |
+| --- | --- |
+| [Teams macOS 132668412601](https://github.com/777genius/agent-teams-ai/actions/runs/43666974947/job/132668412601), [Windows 132668412787](https://github.com/777genius/agent-teams-ai/actions/runs/43666974947/job/132668412787), [Ubuntu 132668412808](https://github.com/777genius/agent-teams-ai/actions/runs/43666974947/job/132668412808) | All three PASS. Each original summary has 25 true top-level UI flags, actual schedule create/delete and zh-TW MCP/task-detail observations. macOS/Ubuntu confirm original process-group absence and temporary-profile removal. Windows confirms all three separate teardown records, each exact owned-process absence, CDP absence and taskkill exit zero, and the corrected aggregate is true. |
+| [Saved-import Desktop 132668415108](https://github.com/777genius/agent-teams-ai/actions/runs/43666975097/job/132668415108) | PASS. Original prerequisite group 71/71 and installer helpers 7/7, with zero skips; actualSummary nested Settings regression and both actual ordinary Codex Default/Low model-probe cases passed. Actual Electron import and final source/receipt/screenshot/physical-cleanup checks passed: reload preserves the same archive import, attachment preview/download and task references, with no Launch submission or runtime/input allocation. This uses the finite legacy-format archive, not a genuine historical native donor. |
+| [OpenCode V2 Windows x64 132668413581](https://github.com/777genius/agent-teams-ai/actions/runs/43666975031/job/132668413581) | PASS. Original Windows custody and native tools/MCP, once approval, Stop and cold Host Resume passed; manual business 147197.7384ms and automatic-approval business 132905.5652ms. No vendor-auth or release qualification follows. |
+| [OpenCode V2 Darwin x64 132668413556](https://github.com/777genius/agent-teams-ai/actions/runs/43666975031/job/132668413556) | Native custody, Desktop capture, business and product receipt steps PASS; entire job FAIL at unchanged POSIX image oracle line 470, actual errno13 versus zero. That number alone does not identify the failing kernel-image subcall. |
+| [OpenCode V2 Darwin ARM64 132668413554](https://github.com/777genius/agent-teams-ai/actions/runs/43666975031/job/132668413554) | Native custody, Desktop capture, business (51081.236958ms) and product receipt steps PASS; entire job FAIL at unchanged POSIX mutation oracle line 490, with LIB/BIN:A/MAIN:A markers after the successful write. P09 section 75 is still open. |
+| [Darwin x64 process 132668480841](https://github.com/777genius/agent-teams-ai/actions/runs/43666975041/job/132668480841) | PASS: Host 152 tests = 150 PASS / 2 SKIP, protocol 53 PASS, retained Main 69 PASS / 8 files including all four lifecycle regressions, and POSIX 23 PASS. |
+| [Windows ARM64 process 132668480892](https://github.com/777genius/agent-teams-ai/actions/runs/43666975041/job/132668480892) | Host 149 PASS / 3 SKIP, protocol 53 PASS, retained Main 69 PASS / 8 files. Original source A readiness FAIL after 99 reads / 15433.2968ms; nativeReady stayed false. Slots 0–5 completed original preparation; allocated slot 6 still had no root, witness or resume, despite retained stopped/drained/released booleans. The unchanged strict original cleanup assertion refused it. |
+
+The Windows ARM64 controller now retained the actual final removal failure:
+rootExitCode=1, emergency=false, errorCode=145, category=system, followed by
+the original controller exit 103. Original root exit, fresh outer Job absence
+and successful outer Job CloseHandle precede this observation. Error145 means
+directory-not-empty; it does not by itself identify the surviving entry or
+convert the failed readiness/cleanup result into success.
+
+Plan30 was separately published as docs-only child
+`573e4edc3bfb2a92b3c93f62658ab2eca3ade74f`
+of exact59. Its single added plan preserves the currently absent P08 same-Main
+Retry merge provenance and proposes the separate bounded integration; this
+follow-up does not implement or qualify it. That publication cancelled the
+remaining 59fe runs. Windows x64 process never obtained a source-controller
+result; Linux and Darwin ARM process did not complete. Safe shard 4 began
+execution but has no completed footer; all four safe shards and the other 17
+Desktop lanes remain unqualified for 59fe. Windows ARM native V2, Linux native V2,
+Ubuntu static, SPI and durable-HTTP jobs were also cancelled. The completed
+Windows static V01 result remains only its own scope. No cancellation or
+historical result is promoted to a new-head PASS.
+
+### Same original sandbox, extended Windows path spelling
+
+The source chain is concrete: prepareEmulatedSourceProfile passes its original
+storageRoot through TeamHost/RuntimeTeamCoordinator into FileRuntimeStore.
+The original runtime receipt is below storage/runtime-sessions, then a
+64-character member digest and a 64-character binding digest plus .json.
+Constructing that path from the observed 48-character short sandbox spelling
+already yields 267 characters. The source profile also calls realpathSync.native,
+which can expand the short user-directory alias; 267 describes that constructed spelling,
+not inspection of the actual surviving file.
+
+The controller is built without a longPathAware manifest. Its original
+remove_all received the plain sandbox path. Microsoft's
+[long-path documentation](https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation)
+requires extended drive/UNC spelling or the corresponding per-process opt-in.
+[GetTempPathW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppathw)
+supplies the properly formatted fully qualified original temp path and retains
+its symlinks. Current Microsoft/STL filesystem source corroborates that raw
+paths reach Win32 and a child not-found result can be followed by a surviving
+directory-not-empty error; that source is not an identification of the exact
+runner STL binary.
+
+Only the original final cleanup argument changes. Already explicit \\?\ and
+\\.\ namespaces remain byte-for-byte unchanged; an ordinary UNC or drive
+spelling of the same selected sandbox gains its extended namespace. The
+original selected runtime path/argv, source hashes, root handle, fresh Job
+accounting, successful CloseHandle, single remove_all and all error/103/root-code
+decisions remain. There is no extra lookup, canonicalization, retry, chmod,
+timeout or permission repair. The existing original source gate's long
+persistent receipts provide the native regression. Another removal failure
+still fails; the new spelling alone is not a demonstrated fix for every error 145.
+
+### Observe the original six custody awaits without changing them
+
+ARM readiness failed again within its unchanged 15-second observation. Existing
+preparation timings only accounted for roughly 0.45–0.77seconds per completed
+slot, leaving the original gaps between preparations unexplained. Each of the
+existing bounded 64 Job records now retains exactly six timing records:
+allocate, prepare, resume, stop, drain and release. Each fixed record contains
+calls, settled, returned, totalMs and firstStartMs/lastEndMs relative to the
+same epoch clock. A zero call count, pending original await, rejection and
+fulfilled original await remain distinguishable.
+
+Returned means only that original.handle fulfilled, including unknown or
+incomplete native results. Existing physical result booleans, original
+witness capture/wait, strict cleanup assertions and every original deadline
+remain the authority. Only the original handle await is timed; the separate
+existing preparation/witness diagnostic remains intact. The records are
+projected in the existing cleanup line, without command bytes, input,
+credentials, new RPCs, native queries, polls, timers, retries or extra
+allocation. These observations cannot qualify an unprepared slot or choose
+a speculative performance correction.
+
+The subsequent docs-only child `a91aa745ccbf31625041b03a6e68c0980534f449`
+adds the finite metadata fence to Plan30. Its exact updated plan is preserved
+as the publication parent; all three follow-up preimages were re-read and
+remained unchanged. The rejected earlier lease created no commit.
+
+Both narrow changes received independent source review. No local C++/TS
+execution is claimed by this offline continuation; the existing original
+Windows matrices must execute the new source. The three-file follow-up is
+limited to gateController.cpp, nativeEmulatedSourceScenario.ts and this
+evidence appendix, preserving Plan30 and all prior source.
+
+| Exact59 artifact | Upload/server SHA-256 |
+| --- | --- |
+| Teams macOS 14142442386 | 5eae15da864896212922986124f381743e022f88bff94bf24b1a93daf9ec1f59 |
+| Teams Windows 14142997838 | b584229278d427d32ce62172c5919bdca0d3e9c22330c83517701e308f0cc258 |
+| Teams Ubuntu 14142916956 | 0d722d335e475628ad9f40ea12823b33d8171de497866c44de950c9a5ebebdf1 |
+| Import 14142829451 | 90ed2182055c89500b5b7f0f0d5410f8173bd407cfc7b691abffac1ae1272328 |
+| Native V2 Windows x64 14143058557 | 63434865aaf2447f790074e437a1dffdd05338fb1a2486f5115d4be85333c530 |
+| Native V2 Darwin x64 14142587723 | 5e62f9944f773c13abe42555788c27935053dabed76e28b92b612263c1731d46 |
+| Native V2 Darwin ARM 14143337488 | 965e7a367bb343751fe2940c154fd9c8e7718a80c26a7a4e23732c2e38439352 |
+| Process Darwin x64 14143745101 | 6d6ea6bb82eec2f9f06d8bae01a5cf401ac6d4b68018543ad56143b150cf6f52 |
+| Process Windows ARM 14142909379 | 14e9e4e353fbc1a63e97044fbfaebe887705e77109111302961688bca5170e73 |

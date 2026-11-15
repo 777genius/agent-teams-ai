@@ -54,8 +54,25 @@ async function poll(check: () => Promise<boolean>, message: string, budget = 150
   }
 }
 type Witness = Awaited<ReturnType<typeof capturedQueryableWitness>>;
+type CustodyPhase = 'allocate' | 'prepare' | 'resume' | 'stop' | 'drain' | 'release';
+interface CustodyTiming {
+  calls: number;
+  settled: number;
+  returned: number;
+  totalMs: number;
+  firstStartMs: number | null;
+  lastEndMs: number | null;
+}
+const custodyTiming = (): CustodyTiming => ({
+  calls: 0, settled: 0, returned: 0, totalMs: 0, firstStartMs: null, lastEndMs: null,
+});
+const custodyTimings = (): Record<CustodyPhase, CustodyTiming> => ({
+  allocate: custodyTiming(), prepare: custodyTiming(), resume: custodyTiming(),
+  stop: custodyTiming(), drain: custodyTiming(), release: custodyTiming(),
+});
 interface Job {
   capability: string;
+  timings: Record<CustodyPhase, CustodyTiming>;
   origin?: RuntimeSourceProcessOrigin;
   root?: { pid: number; birth: string };
   witness?: Witness;
@@ -90,6 +107,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
   const open = () => {
     const physical = captureMainWindowsCustody(fixture.host, [grant]); assert.ok(physical);
     const jobs: Job[] = [], pending = { admitted: 0, revoked: 0 }, counts = { service: 0 };
+    const phaseClock = performance.now();
     let available = true, foreground = true, closed = false;
     const observed: HostCustodyOwner = { mainEpoch: physical.mainEpoch,
       attach(context) {
@@ -97,11 +115,31 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         return { ...original, async handle(call) {
           const preparation = call.operation === 'prepare'
             ? { phase: 'owner' as 'owner' | 'witness' | 'complete', started: performance.now() } : undefined;
+          const phase = call.operation === 'allocate' || call.operation === 'prepare' ||
+            call.operation === 'resume' || call.operation === 'stop' || call.operation === 'drain' ||
+            call.operation === 'release' ? call.operation : undefined;
+          const timings = phase === 'allocate' ? custodyTimings()
+            : phase ? jobs.find(job => job.capability === call.capability)?.timings : undefined;
+          const timing = phase ? timings?.[phase] : undefined;
+          const phaseStarted = timing ? performance.now() : undefined;
+          if (timing && phaseStarted !== undefined) {
+            timing.calls++; timing.firstStartMs ??= phaseStarted - phaseClock;
+          }
           try {
-            const result = await original.handle(call);
+            let result: Awaited<ReturnType<typeof original.handle>>;
+            try {
+              result = await original.handle(call);
+              if (timing) timing.returned++;
+            } finally {
+              if (timing && phaseStarted !== undefined) {
+                const ended = performance.now();
+                timing.settled++; timing.totalMs += ended - phaseStarted;
+                timing.lastEndMs = ended - phaseClock;
+              }
+            }
             if (call.operation === 'allocate') {
               assert.ok(jobs.length < 64 && !jobs.some(value => value.capability === call.capability));
-              jobs.push({ capability: call.capability,
+              jobs.push({ capability: call.capability, timings: timings!,
                 ...(call.runtimeSourceOrigin ? { origin: structuredClone(call.runtimeSourceOrigin) } : {}),
                 resumed: false, stopped: false, drained: false, released: false, handleAbsent: false, threadEphemeral: [], wire: '' });
             }
@@ -180,7 +218,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
               jobSlot, source: job.origin ? sourceRef(job.origin) : null,
               rootCaptured: job.root !== undefined, witnessCaptured: job.witness !== undefined,
               resumed: job.resumed, stopped: job.stopped, drained: job.drained, released: job.released,
-              originalHandleAbsent: job.handleAbsent }));
+              originalHandleAbsent: job.handleAbsent, custodyTimings: job.timings }));
             assert.ok(job.root && job.witness && job.resumed && job.stopped && job.drained && job.released,
               'Every original physical Job retains confirmed Stop/drain/release');
             assert.equal(await job.witness.wait(), 0);
