@@ -1,0 +1,47 @@
+{
+  "sourceHead": "ec9be8a460f9c4c4ec8328f58da41407a95ae776",
+  "sourceTree": "9f6198b344c8b60a63cc96c19e7cd7521fac75f2",
+  "status": "",
+  "gateBlob": "0a76eee51a87ba5cf77b38bf83f408faf174bc84",
+  "testBlob": "22fa29977caa1a63c7585e3da4cbcba766bad4d0",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "logs": [
+    {
+      "name": "p08-passive-observation-green.log",
+      "bytes": 940,
+      "sha256": "8e743e1a2a3c64689fc79d117d6f96cd031be05fb4e9b54891f68c0c96bdb1a6"
+    },
+    {
+      "name": "p08-passive-original-platform-packaged.log",
+      "bytes": 7865,
+      "sha256": "cb506f81ea63f99dc9f116f460236ad0c730f633307b6cbca91ba6ea324e158d"
+    },
+    {
+      "name": "p08-passive-scoped-checks.log",
+      "bytes": 717,
+      "sha256": "1bc07efdf1842966800fd1b52228033c4cb34f6cd68b55c3980ca421a27f8738"
+    }
+  ],
+  "testCommand": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node --test scripts/legacy-agent-host/desktop-native-process-ui.test.ts > /workspace/scratch/c714f5bce554/reconciled-local-evidence/p08-passive-observation-green.log 2>&1\nparity_passive_green_exit=$?\ntail -25 /workspace/scratch/c714f5bce554/reconciled-local-evidence/p08-passive-observation-green.log\nif test \"$parity_passive_green_exit\" -ne 0; then exit \"$parity_passive_green_exit\"; fi\n/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs > /workspace/scratch/c714f5bce554/reconciled-local-evidence/p08-passive-original-platform-packaged.log 2>&1\nparity_pair_exit=$?\ntail -20 /workspace/scratch/c714f5bce554/reconciled-local-evidence/p08-passive-original-platform-packaged.log\nexit \"$parity_pair_exit\"",
+  "checksCommand": "export PATH=/workspace/scratch/c714f5bce554/reconciled-local-evidence/pinned-toolbin:/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin:$PATH\nexport AGENT_TEAMS_INSTALL_PROFILE=node-ci\n(\nset -e\npnpm lint:fast:files -- tools/owned-process-broker/nativeWindowsAppGate.mjs scripts/legacy-agent-host/desktop-native-process-ui.test.ts\npnpm guard:source-file-size\npnpm guard:team-provisioning-architecture\nnode --check tools/owned-process-broker/nativeWindowsAppGate.mjs\ngit diff --check 9309a815e0a1405ada777b3e3d49804eb7488224 HEAD -- tools/owned-process-broker/nativeWindowsAppGate.mjs scripts/legacy-agent-host/desktop-native-process-ui.test.ts\n) > /workspace/scratch/c714f5bce554/reconciled-local-evidence/p08-passive-scoped-checks.log 2>&1\nparity_passive_checks_exit=$?\ntail -25 /workspace/scratch/c714f5bce554/reconciled-local-evidence/p08-passive-scoped-checks.log\nexit \"$parity_passive_checks_exit\"",
+  "exitCodes": {
+    "fullUiFile": 0,
+    "originalPlatformPackagedPair": 0,
+    "scopedChecks": 0
+  },
+  "results": {
+    "ui": {
+      "pass": 6,
+      "fail": 0,
+      "skipped": 1
+    },
+    "platformPackaged": {
+      "pass": 77,
+      "fail": 0,
+      "skipped": 1
+    }
+  },
+  "compiler": "Node syntax check only. Ordinary full workspace remains unqualified137, no retry; dedicated backend project remains CI-only.",
+  "qualification": "Finite original local regressions and scoped prerequisite checks; no resulting-head Windows/native/UI/P09 qualification."
+}

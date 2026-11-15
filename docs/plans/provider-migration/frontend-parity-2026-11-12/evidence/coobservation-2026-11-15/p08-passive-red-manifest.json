@@ -1,0 +1,19 @@
+{
+  "sourceHead": "c9d9f5cbd8a0a015fc906949839c644a5b6be38e",
+  "sourceTree": "326c2c9ebd2e0b9349ee720125430a97234ee960",
+  "status": "",
+  "gateBlob": "236537755e052909b641fc3baae14d06d39a7885",
+  "testBlob": "22fa29977caa1a63c7585e3da4cbcba766bad4d0",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "bytes": 3128,
+  "sha256": "5d2c8bc6f47c91796915937a9997124328fac60cbc1c000d8213925b6d1d31a1",
+  "command": "git diff --quiet\nparity_source_clean=$?\nif test \"$parity_source_clean\" -ne 0; then exit \"$parity_source_clean\"; fi\ngit checkout --detach c9d9f5cbd8a0a015fc906949839c644a5b6be38e\nparity_checkout_exit=$?\nif test \"$parity_checkout_exit\" -ne 0; then exit \"$parity_checkout_exit\"; fi\n/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node --test scripts/legacy-agent-host/desktop-native-process-ui.test.ts > /workspace/scratch/c714f5bce554/reconciled-local-evidence/p08-passive-observation-red.log 2>&1\nparity_test_exit=$?\ntail -45 /workspace/scratch/c714f5bce554/reconciled-local-evidence/p08-passive-observation-red.log\nexit \"$parity_test_exit\"",
+  "exitCode": 1,
+  "result": {
+    "pass": 4,
+    "fail": 2,
+    "skipped": 1
+  },
+  "qualification": "Specific missing-observation and missing-primary-failure-write REDs; unchanged existing capture-dependent skip is not PASS."
+}

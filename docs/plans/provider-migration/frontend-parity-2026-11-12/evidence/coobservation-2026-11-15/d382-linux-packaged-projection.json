@@ -1,0 +1,47 @@
+{
+  "kind": "TEST_D382_PACKAGED_LINUX_ARTIFACT_PROJECTION",
+  "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+  "run": 43736377103,
+  "job": 132896822005,
+  "artifact": 14175672501,
+  "zipBytes": 346203,
+  "zipSha256": "f0153246e97645ae924451ecd246fcaed4e5d58c63d89ae86703f21c6f60ac4d",
+  "candidateManifest": {
+    "bytes": 1151370,
+    "sha256": "84ccd133b35faf26890176d61f2e744fe48c6c47610863671c76f9a3ab074112",
+    "keys": [
+      "schemaVersion",
+      "kind",
+      "sourceHead",
+      "platform",
+      "hostSourceDigest",
+      "harnessSha256",
+      "node",
+      "nodeExecutable",
+      "hostPackage",
+      "hostEntry",
+      "hostEntrySha256",
+      "packages",
+      "artifacts",
+      "bun",
+      "engine"
+    ]
+  },
+  "members": {
+    "opencode-v2-packaged-inputs.json": {
+      "bytes": 783,
+      "sha256": "27beaf84fc5f29b6f566825a5c4a45aa41fcd0d6c5700c562479d61378ae6ed5",
+      "content": "{\n  \"kind\": \"TEST_NATIVE_V2_EMBEDDED_INPUTS\",\n  \"status\": \"READY\",\n  \"sourceHead\": \"d382c393898d35c9340cd903d1c02fb868c18a8e\",\n  \"platform\": \"linux-x64\",\n  \"nodeVersion\": \"v24.21.0\",\n  \"productQualified\": false,\n  \"stage\": \"prepared\",\n  \"baseArchiveSha256\": \"09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10\",\n  \"runtimeSource\": \"e13edcd3d4ffbecc0272ae30195cc6b15b710ee7\",\n  \"bun\": {\n    \"path\": \"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\n    \"sha256\": \"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\",\n    \"version\": \"1.3.11\"\n  },\n  \"supportArchiveSha256\": \"c49a71cd1b4f253ed2d1392b44db419eaa28d91764f278c78b8c0fabe35a06ee\",\n  \"manifestSha256\": \"30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce\"\n}\n"
+    },
+    "opencode-v2-packaged-native.json": {
+      "bytes": 5286,
+      "sha256": "774d521a92b064ad8570f38b418d6d44daa55ec2b6175ed06edf0b1c7800e078",
+      "content": "{\n  \"kind\": \"TEST_PACKAGED_NATIVE_V2_HOST\",\n  \"status\": \"PASS\",\n  \"packaged\": {\n    \"executionOrigin\": \"packaged-extraResources\",\n    \"appAsarSha256\": \"d850c043347f5ad7864d4583837a4450679e0ed8c65a1bbe7e136510c81c16c8\",\n    \"candidateManifestSha256\": \"84ccd133b35faf26890176d61f2e744fe48c6c47610863671c76f9a3ab074112\",\n    \"harnessSha256\": \"81ac537e615d431aeafa5e5bcdca3bff1d80d7bd1ae99c7c551e7e026a3af890\",\n    \"sourceCheckoutUnavailable\": true,\n    \"legacyRuntimeUnavailable\": true,\n    \"hostEntrySha256\": \"7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add\",\n    \"nodeArchiveSha256\": \"6e1db87ef58b8819e5d5402eff1536491b18edd8eb7bee5ef7897876e88dc5ff\",\n    \"providerArtifacts\": [\n      {\n        \"name\": \"@agent-teams/provider-implementations\",\n        \"sha256\": \"91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94\"\n      },\n      {\n        \"name\": \"@agent-teams/provider-session-contracts\",\n        \"sha256\": \"aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db\"\n      }\n    ],\n    \"packages\": 120,\n    \"files\": 8111\n  },\n  \"sourceHead\": \"d382c393898d35c9340cd903d1c02fb868c18a8e\",\n  \"platform\": \"linux-x64\",\n  \"version\": \"2.1.4\",\n  \"approvalMode\": \"manual\",\n  \"nodeVersion\": \"v24.21.0\",\n  \"modelSelection\": {\n    \"providerId\": \"TEST-local\",\n    \"modelId\": \"TEST-model-B\",\n    \"variant\": \"high\"\n  },\n  \"configurationSelection\": {\n    \"scope\": \"project\",\n    \"original\": \"project-A\",\n    \"later\": \"project-B\"\n  },\n  \"preferencesSelection\": {\n    \"nativeDefault\": \"TEST-local/TEST-model\",\n    \"appDefault\": \"TEST-local/TEST-model-B\"\n  },\n  \"digests\": {\n    \"bun\": \"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\",\n    \"manifest\": \"30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce\",\n    \"node\": \"7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c\",\n    \"hostSource\": \"0e5ed9a8773aa652ef8a7c2b917a5480488635e815be43d1a6215be145dbffa4\",\n    \"hostDist\": \"6c8c4b0cc19b33f7c6db5e456e51708a29f70c97eda769cfc24f441d8b68b1ce\",\n    \"provider\": \"91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94\"\n  },\n  \"steps\": [\n    \"original_host_embedded_native_and_mcp_ready\",\n    \"native_model_tool_effect_permission_mcp_task_and_reply_completed_once\",\n    \"changed_project_config_did_not_retarget_running_native_session\",\n    \"original_uploaded_PNG_native_image_inference_and_public_readback\",\n    \"checkpoint_and_original_host_native_cleanup_confirmed\",\n    \"cold_host_restored_native_history_without_model_or_tool_replay\"\n  ],\n  \"cleanup\": true,\n  \"phaseElapsedMs\": {\n    \"original_host_embedded_native_and_mcp_ready\": 16311,\n    \"native_model_tool_effect_permission_mcp_task_and_reply_completed_once\": 24047,\n    \"changed_project_config_did_not_retarget_running_native_session\": 24047,\n    \"original_uploaded_PNG_native_image_inference_and_public_readback\": 24047,\n    \"checkpoint_and_original_host_native_cleanup_confirmed\": 24211,\n    \"cold_host_restored_native_history_without_model_or_tool_replay\": 35778\n  },\n  \"elapsedMs\": 40407,\n  \"cancelled\": false,\n  \"inputObservation\": {\n    \"reads\": 143,\n    \"last\": {\n      \"phase\": \"allocated\",\n      \"custody\": \"owned\",\n      \"nativeReady\": true,\n      \"attached\": true,\n      \"sealed\": false,\n      \"diagnostic\": null,\n      \"inputs\": [\n        {\n          \"phase\": \"terminal\",\n          \"terminal\": \"succeeded\"\n        },\n        {\n          \"phase\": \"terminal\",\n          \"terminal\": \"succeeded\"\n        }\n      ],\n      \"interactions\": [\n        {\n          \"kind\": \"permission\",\n          \"phase\": \"resolved\"\n        },\n        {\n          \"kind\": \"permission\",\n          \"phase\": \"resolved\"\n        }\n      ]\n    }\n  },\n  \"launchObservation\": {\n    \"openElapsedMs\": 10991,\n    \"afterOpen\": {\n      \"available\": true,\n      \"status\": \"ready\",\n      \"reason\": \"context-applied\",\n      \"elapsedSinceAttemptMs\": 10867,\n      \"capturedTimeoutMs\": 120000,\n      \"claimed\": true,\n      \"nativeReady\": true,\n      \"contextApplied\": true,\n      \"everReady\": true,\n      \"usable\": true,\n      \"controlAvailable\": true,\n      \"noAllocation\": false\n    }\n  },\n  \"failureCode\": null,\n  \"hosts\": [\n    {\n      \"exitCode\": 0,\n      \"signalCode\": null,\n      \"stdoutValid\": true\n    },\n    {\n      \"exitCode\": 0,\n      \"signalCode\": null,\n      \"stdoutValid\": true\n    }\n  ],\n  \"modelOrigin\": \"localhost-scripted\",\n  \"modelRequests\": 11,\n  \"modelProgress\": [\n    {\n      \"elapsedMs\": 16351,\n      \"requests\": 0\n    },\n    {\n      \"elapsedMs\": 18570,\n      \"requests\": 1\n    },\n    {\n      \"elapsedMs\": 18684,\n      \"requests\": 2\n    },\n    {\n      \"elapsedMs\": 18788,\n      \"requests\": 3\n    },\n    {\n      \"elapsedMs\": 18877,\n      \"requests\": 4\n    },\n    {\n      \"elapsedMs\": 19482,\n      \"requests\": 5\n    },\n    {\n      \"elapsedMs\": 19531,\n      \"requests\": 6\n    },\n    {\n      \"elapsedMs\": 19625,\n      \"requests\": 7\n    },\n    {\n      \"elapsedMs\": 19704,\n      \"requests\": 8\n    },\n    {\n      \"elapsedMs\": 23036,\n      \"requests\": 9\n    },\n    {\n      \"elapsedMs\": 23389,\n      \"requests\": 10\n    },\n    {\n      \"elapsedMs\": 23484,\n      \"requests\": 11\n    }\n  ],\n  \"coordination\": {\n    \"status\": \"unqualified\",\n    \"cleanup\": null\n  },\n  \"modelFailures\": [],\n  \"vendorAuthQualified\": false,\n  \"desktopQualified\": false,\n  \"releaseQualified\": false\n}\n"
+    },
+    "opencode-v2-packaged.json": {
+      "bytes": 1186,
+      "sha256": "929e11afc0c3b73d5bbcd2951111d5d22e7e696e32f98bfa446bf7be6cde4822",
+      "content": "{\n  \"kind\": \"TEST_PACKAGED_V2_QUALIFICATION\",\n  \"status\": \"PASS\",\n  \"sourceHead\": \"d382c393898d35c9340cd903d1c02fb868c18a8e\",\n  \"platform\": \"linux-x64\",\n  \"cleanup\": true,\n  \"phase\": \"finished\",\n  \"desktopJourneyQualified\": false,\n  \"vendorAuthQualified\": false,\n  \"releaseQualified\": false,\n  \"cleanupObservation\": {\n    \"originalExitObserved\": true,\n    \"nativeReceiptParsed\": true,\n    \"nativeReceiptBound\": true,\n    \"nativeCleanupConfirmed\": true,\n    \"firstFailure\": null,\n    \"firstRestorationFailure\": null\n  },\n  \"appAsarSha256\": \"d850c043347f5ad7864d4583837a4450679e0ed8c65a1bbe7e136510c81c16c8\",\n  \"candidateManifestSha256\": \"84ccd133b35faf26890176d61f2e744fe48c6c47610863671c76f9a3ab074112\",\n  \"hostEntrySha256\": \"7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add\",\n  \"nodeSha256\": \"7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c\",\n  \"nativeExit\": {\n    \"code\": 0,\n    \"signal\": null\n  },\n  \"nativeReceiptSha256\": \"774d521a92b064ad8570f38b418d6d44daa55ec2b6175ed06edf0b1c7800e078\",\n  \"sourceCheckoutUnavailable\": true,\n  \"legacyRuntimeUnavailable\": true,\n  \"sourceRestored\": true,\n  \"bundleRestored\": true,\n  \"legacyRuntimeRestored\": true\n}\n"
+    }
+  }
+}

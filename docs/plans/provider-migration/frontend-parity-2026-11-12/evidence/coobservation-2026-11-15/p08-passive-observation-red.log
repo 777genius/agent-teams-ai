@@ -1,0 +1,67 @@
+✔ post-Stop observer continues past stale original and pending alternate to fresh stopped props (2.24283ms)
+✔ initial original-ref observation remains exact and cannot select a replacement ref (5.201644ms)
+✔ background acceptance waits for atomic service publication without masking corrupt readiness (152.828235ms)
+﹣ captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime (0.288229ms) # requires the isolated Processes lane original native artifact capture
+✔ Windows outage membership requires both original process owners in one renderer sample (4.598959ms)
+✖ Windows Retry retains same-evaluation operands without changing the original wait (2.465301ms)
+✖ Windows primary failure is emitted once before cleanup without replacing the original error (1.742484ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 4
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 1812.827649
+
+✖ failing tests:
+
+test at scripts/legacy-agent-host/desktop-native-process-ui.test.ts:259:1
+✖ Windows Retry retains same-evaluation operands without changing the original wait (2.465301ms)
+  AssertionError [ERR_ASSERTION]: the original successful evaluation must retain its closed recovery observation
+  + actual - expected
+  
+  + undefined
+  - {
+  -   atomicWithFailure: false,
+  -   last: {
+  -     alertPresent: false,
+  -     firstRefreshBusy: false,
+  -     ready: true,
+  -     refresh: 'enabled',
+  -     retryPresent: false,
+  -     surfacePresent: true
+  -   },
+  -   sampleCount: 1,
+  -   sampleCountCapped: false,
+  -   schemaVersion: 1,
+  -   source: 'original-recovery-wait'
+  - }
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-native-process-ui.test.ts:335:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { schemaVersion: 1, source: 'original-recovery-wait', atomicWithFailure: false, sampleCount: 1, sampleCountCapped: false, last: { surfacePresent: true, refresh: 'enabled', firstRefreshBusy: false, retryPresent: false, alertPresent: false, ready: true } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-native-process-ui.test.ts:414:1
+✖ Windows primary failure is emitted once before cleanup without replacing the original error (1.742484ms)
+  AssertionError [ERR_ASSERTION]: the original primary catch must emit its retained failure before cleanup
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-native-process-ui.test.ts:443:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
