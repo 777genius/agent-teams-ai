@@ -18,6 +18,8 @@ type GateScenario =
   | 'debug-service-cancel'
   | 'debug-service'
   | 'debug-service-root-first'
+  | 'debug-service-admission-race'
+  | 'debug-service-wow64-root'
   | 'tree'
   | 'root-first'
   | 'flood'

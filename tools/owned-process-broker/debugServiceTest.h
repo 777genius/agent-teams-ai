@@ -4,10 +4,94 @@
 #include "serviceDebugLoop.h"
 #include "protocol.h"
 #include <io.h>
+#include <cstdio>
+#include <cstring>
+#include <string>
 
 namespace debug_service_test {
 using owned_service::Stage;
 inline owned_service::Scopes scopes{64};
+inline std::wstring admissionPath;
+inline char admissionNonce[37]{};
+inline bool admissionUsed=false, admissionCompleted=false;
+inline ULONGLONG admissionDeadline=0;
+inline void checkAdmissionDeadline() {
+  if(GetTickCount64()>=admissionDeadline) throw DWORD{WAIT_TIMEOUT};
+}
+inline void configureAdmissionBarrier() {
+  wchar_t path[1024]{}, nonce[37]{};
+  const DWORD pathLength=GetEnvironmentVariableW(L"OWNED_PROCESS_TEST_ADMISSION_BARRIER",path,1024);
+  if(!pathLength) return;
+  if(pathLength>=1024||GetEnvironmentVariableW(L"OWNED_PROCESS_TEST_ADMISSION_NONCE",nonce,37)!=36)
+    throw DWORD{ERROR_INVALID_PARAMETER};
+  admissionPath=path;
+  for(size_t index=0;index<36;++index) {
+    if(nonce[index]>127) throw DWORD{ERROR_INVALID_PARAMETER};
+    admissionNonce[index]=static_cast<char>(nonce[index]);
+  }
+}
+inline void writeAdmissionBarrier(const wchar_t* suffix,const char* bytes,DWORD length) {
+  checkAdmissionDeadline();
+  const auto target=admissionPath+suffix;
+  HANDLE file=CreateFileW(target.c_str(),GENERIC_WRITE,FILE_SHARE_READ,nullptr,CREATE_NEW,
+    FILE_ATTRIBUTE_NORMAL,nullptr);
+  if(file==INVALID_HANDLE_VALUE) throw GetLastError();
+  DWORD count=0;
+  const bool written=WriteFile(file,bytes,length,&count,nullptr)!=FALSE;
+  DWORD error=written?(count==length?0:ERROR_INVALID_DATA):GetLastError();
+  if(!CloseHandle(file)&&!error) error=GetLastError();
+  if(error) throw error;
+  checkAdmissionDeadline();
+}
+inline void waitAdmissionBarrier(const wchar_t* suffix) {
+  const auto release=admissionPath+suffix;
+  for(;;) {
+    checkAdmissionDeadline();
+    HANDLE file=CreateFileW(release.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,
+      FILE_ATTRIBUTE_NORMAL,nullptr);
+    if(file!=INVALID_HANDLE_VALUE) {
+      char actual[37]{}; DWORD count=0;
+      const bool read=ReadFile(file,actual,sizeof(actual),&count,nullptr)!=FALSE;
+      DWORD error=read?(count==36&&std::memcmp(actual,admissionNonce,36)==0?0:ERROR_INVALID_DATA):GetLastError();
+      if(!CloseHandle(file)&&!error) error=GetLastError();
+      if(error) throw error;
+      checkAdmissionDeadline();
+      break;
+    }
+    const auto error=GetLastError();
+    if(error!=ERROR_FILE_NOT_FOUND) throw error;
+    Sleep(1);
+  }
+}
+inline void admissionBarrier(HANDLE child) {
+  if(admissionPath.empty()||admissionUsed) return;
+  const auto key=scopes.testRegisteredAncestor(child);
+  if(!key) return;
+  admissionUsed=true;
+  admissionDeadline=GetTickCount64()+5000;
+  writeAdmissionBarrier(L".captured",admissionNonce,36);
+  while(!scopes.testOriginalDispatch(key,child)) {
+    checkAdmissionDeadline();
+    Sleep(1);
+  }
+  writeAdmissionBarrier(L".dispatched",admissionNonce,36);
+  waitAdmissionBarrier(L".dispatch-continue");
+  const auto pending=scopes.query(key);
+  if(pending.queryError||!pending.active||!scopes.testOriginalDispatch(key,child))
+    throw DWORD{ERROR_INVALID_DATA}; // Pending CREATE cannot be retired as an empty original Job.
+  checkAdmissionDeadline();
+}
+inline void admittedBarrier(const owned_service::Scope& child) {
+  if(!admissionUsed||admissionCompleted) return;
+  if(!child.inheritedTermination||!child.terminationDispatched) throw DWORD{ERROR_INVALID_DATA};
+  char value[160]{};
+  const int length=std::snprintf(value,sizeof(value),"{\"nonce\":\"%s\",\"pid\":%lu,\"birth\":\"%016llx\"}",
+    admissionNonce,child.pid,static_cast<unsigned long long>(child.birth));
+  if(length<=0||static_cast<size_t>(length)>=sizeof(value)) throw DWORD{ERROR_INVALID_DATA};
+  writeAdmissionBarrier(L".admitted",value,static_cast<DWORD>(length));
+  waitAdmissionBarrier(L".admission-continue");
+  admissionCompleted=true;
+}
 // One bounded TEST diagnostic record, never a command or production wire receipt.
 inline void failure(Stage stage,DWORD error,const DEBUG_EVENT& event={}) noexcept {
   const DWORD record[4]={static_cast<DWORD>(stage),error,event.dwDebugEventCode,event.dwProcessId};
@@ -19,7 +103,25 @@ inline void failure(Stage stage,DWORD error,const DEBUG_EVENT& event={}) noexcep
 
 /** Called on the same existing admission thread; TEST alone supplies FD4 diagnostics. */
 inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::timed_mutex>& stateLock) {
-  return owned_service::runDebugLoop(rootPid,root,outer,stateLock,scopes,failure);
+  configureAdmissionBarrier();
+  wchar_t expected[2]{};
+  const auto length=GetEnvironmentVariableW(L"OWNED_PROCESS_TEST_I386_ROOT",expected,2);
+  if(length) {
+    const auto module=GetModuleHandleW(L"Kernel32.dll");
+    if(!module) throw GetLastError();
+    const auto query=reinterpret_cast<BOOL (WINAPI*)(HANDLE,USHORT*,USHORT*)>(
+      GetProcAddress(module,"IsWow64Process2"));
+    if(!query) throw GetLastError();
+    USHORT machine=IMAGE_FILE_MACHINE_UNKNOWN;
+    if(!query(root,&machine,nullptr)) throw GetLastError();
+    if(length!=1||expected[0]!=L'1'||machine!=IMAGE_FILE_MACHINE_I386) throw DWORD{ERROR_INVALID_DATA};
+  }
+  scopes.setTestAdmissionBarriers(admissionBarrier,admittedBarrier);
+  const bool result=owned_service::runDebugLoop(rootPid,root,outer,stateLock,scopes,failure);
+  if(result&&!admissionPath.empty()&&!admissionCompleted) {
+    failure(Stage::Registry,ERROR_INVALID_DATA); return false;
+  }
+  return result;
 }
 
 /** Private TEST mode 2: register the exact retained original, then use only its scope. */

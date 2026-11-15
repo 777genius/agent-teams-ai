@@ -1,4 +1,5 @@
 #define WIN32_LEAN_AND_MEAN
+#define _WIN32_WINNT 0x0A00
 #include <windows.h>
 #include <cstdint>
 #include <cstring>
@@ -21,6 +22,48 @@ static PROCESS_INFORMATION child(const std::wstring& executable,const std::wstri
     nullptr,nullptr,&startup,&process)) ExitProcess(21);
   CloseHandle(process.hThread); return process;
 }
+static bool applicationBreakpoint(DWORD code) {
+  bool delivered=false;
+  __try { RaiseException(code,0,0,nullptr); }
+  __except(GetExceptionCode()==code?EXCEPTION_EXECUTE_HANDLER:EXCEPTION_CONTINUE_SEARCH) {
+    delivered=true;
+  }
+  return delivered;
+}
+static std::wstring wow64Command() {
+  wchar_t path[MAX_PATH]{};
+  const auto length=GetSystemWow64Directory2W(path,MAX_PATH,IMAGE_FILE_MACHINE_I386);
+  if(!length||length>=MAX_PATH) return {};
+  return std::wstring(path)+L"\\cmd.exe";
+}
+static bool wow64Startup() {
+  const auto module=GetModuleHandleW(L"Kernel32.dll");
+  if(!module) return false;
+  const auto machine=reinterpret_cast<BOOL (WINAPI*)(HANDLE,USHORT*,USHORT*)>(
+    GetProcAddress(module,"IsWow64Process2"));
+  const auto executable=wow64Command();
+  if(!machine||executable.empty()) return false;
+  // This finite Windows component is explicitly verified as x86 on both hosts.
+  // Its ordinary loader must survive the real native + WOW64 startup events.
+  const auto process=child(executable,L"/d /c exit 0");
+  USHORT architecture=IMAGE_FILE_MACHINE_UNKNOWN;
+  DWORD code=MAXDWORD;
+  const bool passed=machine(process.hProcess,&architecture,nullptr)&&
+    architecture==IMAGE_FILE_MACHINE_I386&&
+    WaitForSingleObject(process.hProcess,5000)==WAIT_OBJECT_0&&
+    GetExitCodeProcess(process.hProcess,&code)&&code==0;
+  if(!CloseHandle(process.hProcess)||!passed) return false;
+  // The next original-root scenario consumes this exact verified path in the
+  // same controller-created cwd. CREATE_NEW refuses stale or repeated publication.
+  HANDLE file=CreateFileW(L"TEST-wow64-command.utf16",GENERIC_WRITE,0,nullptr,CREATE_NEW,
+    FILE_ATTRIBUTE_NORMAL,nullptr);
+  if(file==INVALID_HANDLE_VALUE) return false;
+  const auto length=static_cast<DWORD>(executable.size()*sizeof(wchar_t));
+  DWORD count=0;
+  const bool written=WriteFile(file,executable.data(),length,&count,nullptr)&&count==length;
+  const bool closed=CloseHandle(file)!=FALSE;
+  return written&&closed;
+}
 int wmain(int argc,wchar_t** argv) {
   if(argc<2) return 22;
   std::wstring mode=argv[1];
@@ -34,7 +77,7 @@ int wmain(int argc,wchar_t** argv) {
     mode=mode.substr(7);
     if(mode!=L"tree"&&mode!=L"branch"&&mode!=L"leaf"&&mode!=L"sentinel"&&mode!=L"wait-gated"&&mode!=L"query-wait-gated") return 52;
   }
-  if(mode==L"tree"||mode==L"root-first"||mode==L"root-first-gated"||mode==L"service-pair"||mode==L"service-first"||mode==L"flood"||mode==L"breakaway"||mode==L"stdio"||mode==L"selection") {
+  if(mode==L"tree"||mode==L"root-first"||mode==L"root-first-gated"||mode==L"service-pair"||mode==L"service-first"||mode==L"service-race"||mode==L"race-child"||mode==L"flood"||mode==L"breakaway"||mode==L"stdio"||mode==L"selection") {
     // The target-only first observable effect precedes child creation/output/scenario work.
     if((mode==L"selection"?argc!=7:argc!=4)||wcslen(argv[3])!=36) return 31;
     HANDLE marker=CreateFileW(argv[2],GENERIC_WRITE,0,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
@@ -44,6 +87,7 @@ int wmain(int argc,wchar_t** argv) {
     DWORD count=0; auto written=WriteFile(marker,nonce,sizeof(nonce),&count,nullptr);
     CloseHandle(marker); if(!written||count!=sizeof(nonce)) return 34;
   }
+  if(mode==L"race-child") return 0;
   if(mode==L"wait"||mode==L"wait-gated"||mode==L"query-wait-gated") {
     if(mode==L"query-wait-gated"&&!vendorHeld) {
       // The finite source gate uses its original outer Job, without vendor admission.
@@ -79,6 +123,8 @@ int wmain(int argc,wchar_t** argv) {
     return result==WAIT_OBJECT_0?0:25;
   }
   if(mode==L"exit-fast") return 0;
+  if(mode==L"application-breakpoints")
+    return applicationBreakpoint(EXCEPTION_BREAKPOINT)&&applicationBreakpoint(0x4000001f)?0:61;
   if(mode==L"source-sentinel") {
     // Only the source gate holds this original pipe inside its existing 120s outer Job.
     // Ordinary sentinel and vendor actors keep their original lifetime contracts.
@@ -154,12 +200,22 @@ int wmain(int argc,wchar_t** argv) {
     TerminateProcess(process.hProcess,27); WaitForSingleObject(process.hProcess,5000);
     CloseHandle(process.hProcess); CloseHandle(process.hThread); return 27;
   }
-  if(mode!=L"tree"&&mode!=L"root-first"&&mode!=L"root-first-gated"&&mode!=L"branch"&&mode!=L"branch-first"&&mode!=L"service-pair"&&mode!=L"service-first") return 28;
+  if(mode!=L"tree"&&mode!=L"root-first"&&mode!=L"root-first-gated"&&mode!=L"branch"&&mode!=L"branch-first"&&mode!=L"branch-race"&&mode!=L"service-pair"&&mode!=L"service-first"&&mode!=L"service-race") return 28;
   BOOL inJob=FALSE;
   if(!IsProcessInJob(GetCurrentProcess(),nullptr,&inJob)||!inJob) return 29;
-  const bool branch=mode==L"branch"||mode==L"branch-first";
+  const bool branch=mode==L"branch"||mode==L"branch-first"||mode==L"branch-race";
   if(!branch) std::printf("{\"root\":{\"pid\":%lu,\"birth\":\"%016llx\"}}\n",
     GetCurrentProcessId(),static_cast<unsigned long long>(birth(GetCurrentProcess())));
+  if(mode==L"service-race") {
+    if(!applicationBreakpoint(EXCEPTION_BREAKPOINT)||!applicationBreakpoint(0x4000001f)||
+      !wow64Startup()) return 62;
+    const auto application=child(executable,L"application-breakpoints");
+    DWORD applicationCode=MAXDWORD;
+    const bool applicationPassed=WaitForSingleObject(application.hProcess,5000)==WAIT_OBJECT_0&&
+      GetExitCodeProcess(application.hProcess,&applicationCode)&&applicationCode==0;
+    if(!CloseHandle(application.hProcess)||!applicationPassed) return 63;
+    std::puts("{\"wow64StartupAndApplicationBreakpoints\":true}"); std::fflush(stdout);
+  }
   if(mode==L"service-pair") {
     // Sequential original HANDLE exits exceed the debug registry's64 live cap.
     // This is cumulative churn, never80 simultaneously owned live children.
@@ -173,7 +229,9 @@ int wmain(int argc,wchar_t** argv) {
     std::puts("{\"retiredChildren\":80}"); std::fflush(stdout);
   }
   const std::wstring branchMode=mode==L"service-first"
-    ? L"branch-first \""+std::wstring(argv[2])+L".branch-release\"" : (vendorHeld?L"vendor-branch":L"branch");
+    ? L"branch-first \""+std::wstring(argv[2])+L".branch-release\""
+    : mode==L"service-race"?L"branch-race \""+std::wstring(argv[2])+L"\" "+argv[3]
+      : (vendorHeld?L"vendor-branch":L"branch");
   const std::wstring leafMode=vendorHeld?L"vendor-leaf":L"leaf";
   auto a=child(executable,branch?leafMode:branchMode), b=child(executable,leafMode);
   std::printf("{\"children\":[{\"pid\":%lu,\"birth\":\"%016llx\"},{\"pid\":%lu,\"birth\":\"%016llx\"}],\"parent\":%lu}\n",
@@ -195,8 +253,20 @@ int wmain(int argc,wchar_t** argv) {
     }
     return 0;
   }
+  if(mode==L"branch-race") {
+    if(argc!=4||wcslen(argv[3])!=36) return 64;
+    const auto release=std::wstring(argv[2])+L".race-release";
+    const auto deadline=GetTickCount64()+10000;
+    while(GetFileAttributesW(release.c_str())==INVALID_FILE_ATTRIBUTES) {
+      if(GetLastError()!=ERROR_FILE_NOT_FOUND||GetTickCount64()>=deadline) return 65;
+      Sleep(5);
+    }
+    // The TEST debugger parks this CREATE before it admits the child's own Job.
+    const auto pending=child(executable,L"race-child \""+std::wstring(argv[2])+L".race-effect\" "+argv[3]);
+    CloseHandle(pending.hProcess);
+  }
   if(mode==L"root-first") return 0;
-  if(mode==L"service-pair"||mode==L"service-first") {
+  if(mode==L"service-pair"||mode==L"service-first"||mode==L"service-race") {
     char input[64]; DWORD count=0;
     while(ReadFile(GetStdHandle(STD_INPUT_HANDLE),input,sizeof(input),&count,nullptr)&&count) {
       std::puts("{\"providerAlive\":true}"); std::fflush(stdout);
