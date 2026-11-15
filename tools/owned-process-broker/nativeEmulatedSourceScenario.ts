@@ -388,11 +388,28 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const store = new TeamOwnerStore(fixture.profile.owner.storageRoot, fixture.profile.teams[team]!.binding.teamName);
       const capturePath = join(store.directory, `launches/${runtimeDigest(launchId)}.json`);
       const record = object(JSON.parse(readFileSync(capturePath, 'utf8')));
-      const canonical = runtimeCaptureSourceSchema.parse(object(record.definition).capture);
+      const capturedDefinition = object(record.definition);
+      const canonical = runtimeCaptureSourceSchema.parse(capturedDefinition.capture);
       assert.deepEqual(canonical.recipeSources, [{ memberId: 'alice-id', ...sourceRef(source) }]);
       const before = first.jobs.length, inputsBefore = inputs().length;
       const commandId = `TEST-start-${image}`, payload = { launchId, rosterRevision: text(selectedLaunch.rosterRevision) };
-      diagnosticLaunches.push({ actionDigest: runtimeDigest(commandId), bindingDigests: rows(object(record.definition).members).map(member => managementDigest(object(member.binding))), launchId, source: sourceRef(source) });
+      diagnosticLaunches.push({ actionDigest: runtimeDigest(commandId), bindingDigests: rows(capturedDefinition.members).map(member => managementDigest(object(member.binding))), launchId, source: sourceRef(source) });
+      if (provider === 'codex') {
+        assert.equal(capturedDefinition.launchId, payload.launchId);
+        assert.equal(capturedDefinition.rosterRevision, payload.rosterRevision);
+        assert.equal(record.startCommandId, undefined);
+        const members = rows(capturedDefinition.members).filter(member => member.memberId === 'alice-id');
+        const selected = rows(selectedLaunch.members).filter(member => member.memberId === 'alice-id');
+        assert.equal(members.length, 1); assert.equal(selected.length, 1);
+        const member = members[0]!, binding = object(member.binding);
+        assert.deepEqual(binding, selected[0]!.binding);
+        assert.equal(binding.backendId, fixture.profile.owner.ownerId);
+        assert.equal(binding.teamId, fixture.profile.teams[team]!.binding.teamId);
+        assert.equal(binding.runId, launchId); assert.equal(binding.memberId, 'alice-id');
+        assert.equal(object(selected[0]!.attempt).claimed, false);
+        const timeoutMs = member.timeoutMs;
+        assert.ok(typeof timeoutMs === 'number' && Number.isSafeInteger(timeoutMs) && timeoutMs > 0);
+      }
       if (provider === 'opencode') {
         // Reuse the original Main aggregate phases with this fixture's private native inputs.
         const budget = captureRequestReadinessBudget(fixture.host.requestTimeoutMs);

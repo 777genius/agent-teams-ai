@@ -3651,3 +3651,23 @@ After root and independent exact review, publish/read back this documentation-on
 Build the actual merged Host with pinned Node 24.21.0 before executing the complete existing transport and Main client files. Verify their package/dist resolution belongs to this candidate; an older shared Host package is not candidate evidence. Run the whole Host test compiler, original legacy-host-scripts compiler, scoped lint and unchanged source-size/provisioning/diff guards serially. Preserve raw outcomes and exact source/dist binding. This clock restoration has no invented test-only RED, new test seam, numeric-string mirror test, native experiment or expanded matrix. Existing actual resulting-source Windows A/B/cold journeys and every unaffected original gate remain required.
 
 Stage-only OpenCode failure observation may follow as a separately reviewed and published cut after this integration base is fixed. No cumulative-current measurement, new diagnostic clock, provider action or additional public API is authorized here. Keep Draft, original base, finite TEST-only Claude/Codex, all P08/P09 limits and the no-Ready/main/release/default-activation/Stage2 boundaries. No new user permission is needed to retain the existing qualifying contract and preserve both histories; this R1 does not authorize an acceptance waiver.
+
+### Actual bounded validation of the original-clock reconciliation
+
+Documentation-only R1 `5849b258b780b536654f904c76516c720d2f9125` was pushed and fully read back before source application. The independently reviewed candidate then materialized as tree `3ae33963830d3ad70743eeab07e26f7c45567976`; a second complete temporary-index scan after validation produced the same tree, and the ordinary index stayed unchanged. This records new execution on that composed source, not a transfer of the incoming completion appendix's results.
+
+Pinned Node 24.21.0 and TypeScript 7.0.2 were verified. The initial prebuild stopped before compilation with `ERR_PNPM_UNSAFE_TASK_RUN_STATE_PATH`: an isolated workspace dependency projection had also linked pnpm's mutable task-state directory. The rejected output is retained (SHA-256 `fffe85d4437a8275c9e2cc8a220b612852060a01bd170bfc5d41071ac98d9ef1`). Replacing only that local link with a private real directory enabled the original command; no dependency installation, compiler/config change or source workaround was used. Host, contracts and CLI resolution were then checked against this candidate's actual built `packages/legacy-agent-host/dist`, including the new native-capacity guard.
+
+| Executed check | Result | Raw stdout/stderr SHA-256 |
+| --- | --- | --- |
+| Canonical Host build (including ledger prebuild) | PASS (exit 0) | d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789 |
+| Complete existing transport file: 13 PASS, 0 FAIL/SKIP | PASS (exit 0) | 1f70eb1d80a407fd07c2ca25ba812e35e33818027d1334066d51b7b1dcf3c9cb |
+| Complete existing Main client file: 33 PASS, 0 FAIL/SKIP | PASS (exit 0) | fdaa06a7a3bdf4f6aa80bd38250f6c3afd77d3eb68deac9bf3938aa193015e5d |
+| Complete Host test compiler | PASS (exit 0) | f453e976d298e4c9c8a5ee0134f19a02d2d39c2c100e3aed187705880615d150 |
+| Complete legacy-host-scripts compiler | PASS (exit 0) | 497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015 |
+| Fast lint of the six integration source/test paths | PASS (exit 0) | a13804f2c3f093bbf8d5ae12b40db39636d9578354eecb132ecdeda16bae2f80 |
+| Unchanged source-size guard | PASS (exit 0) | 961492c3971768c144057514917b4179f695089b172a31e2d3d3d62b9efdc8f3 |
+| Unchanged provisioning architecture guard | PASS (exit 0) | 7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c |
+| Exact composed diff check | PASS, empty output | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 |
+
+No new clock-restoration test or native experiment was introduced. These finite local checks qualify the reviewed transport/Main composition and test/tooling compilation only. Full workspace types/typed lint remain CI obligations, and original resulting-source Windows A/B/cold, P08, P09 and all remaining Desktop/vendor gates remain open. The f08 UI/helper execution remains recorded at its earlier source; its four retained blobs were not changed or retrospectively requalified here. Stage-only diagnostics are still unapplied at this record.
