@@ -261,10 +261,10 @@ export class CapturedHostClient {
         if (typeof candidate[key] !== 'number' || candidate[key] > maximum)
           throw new Error('limit');
       }
-      this.limits = resolveHostProfileLimits(
-        this.profile.reviewTransport,
-        candidate as unknown as HostLimits
-      );
+      const limits = resolveHostProfileLimits(this.profile.reviewTransport,
+        candidate as unknown as HostLimits);
+      if (limits.maxPriorityMessages <= limits.reservedControlRequests) throw new Error('limit');
+      this.limits = limits;
     } catch {
       throw new HostClientError('protocol-error', 'unknown');
     }

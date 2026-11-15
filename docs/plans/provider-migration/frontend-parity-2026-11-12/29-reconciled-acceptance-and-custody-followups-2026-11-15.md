@@ -4186,3 +4186,7 @@ Keep this head/base and root-authored Draft PR metadata fixed while the useful c
 ```
 
 **Publication and reporting boundary.** Perform exact independent R2/readback and immediate normal push for each root commit. After creating the one ref/PR, retain/read back actual metadata and refs before treating the venue as open. Root must leave frozen refs and root-authored metadata unchanged while the useful cohort runs; any external bot-generated appendix is retained as an observed mutation, not attributed to root or described as universally immutable metadata. This amendment is not a claim that GREEN already exists. P08/P09/full M16, resulting-source original platform/native/UI gates, default activation and release remain separate. Keep every prior refusal and unknown result.
+
+### Compiler scheduling clarification before opening the GREEN venue
+
+The Host/Main GREEN condition schedules only root's one further local canonical scripts-compiler attempt. Unchanged automatic resulting-source CI compiler gates, including `typecheck:workspace` and its `typecheck:legacy-host-scripts` command, run under their existing workflow DAG and may execute earlier; this amendment adds no CI dependency, delay, command change or retry. The original Host Emulated and CI workflow invocations remain unchanged. The two historical local dedicated-backend failures, one local whole-workspace SIGKILL and one interrupted local Main runtime attempt still authorize no local retry. This clarification is recorded before creation of the separately reviewed GREEN ref/PR.
