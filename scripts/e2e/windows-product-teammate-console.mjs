@@ -33,6 +33,9 @@ await mkdir(receiptDir, { recursive: true });
 const receiptPath = path.join(receiptDir, 'windows-product-console.json');
 const modelPath = path.join(receiptDir, 'model-requests.ndjson');
 const screenshot = path.join(receiptDir, 'windows-product-console.png');
+const hwndReady = path.join(receiptDir, 'hwnd-ready.txt');
+const hwndStop = path.join(receiptDir, 'hwnd-stop.txt');
+const hwndProof = path.join(receiptDir, 'window-observation.json');
 const proofs = new Map();
 const expected = new Map();
 let app;
@@ -44,6 +47,10 @@ let model;
 let launched = false;
 let stopped = false;
 let originalMember;
+let forceExitMember;
+let hwndObserver;
+let hwndObserverLog = '';
+let hwndEvidence;
 let log = '';
 let phase = 'setup';
 let protocolFailure = null;
@@ -257,6 +264,21 @@ async function run() {
     return snap;
   }, 180_000);
   await client.screenshot(screenshot);
+  phase = 'native-window-observer';
+  hwndObserver = spawn('powershell.exe', [
+    '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+    '-File', path.join(repoRoot, 'scripts/e2e/windows-product-console-hwnd.ps1'),
+    '-ReadyPath', hwndReady, '-StopPath', hwndStop,
+    '-EvidencePath', hwndProof, '-MainPid', String(mainBirth.pid),
+  ], { windowsHide: true, cwd: repoRoot, stdio: ['ignore', 'pipe', 'pipe'] });
+  for (const stream of [hwndObserver.stdout, hwndObserver.stderr]) stream.on('data', chunk => {
+    hwndObserverLog = (hwndObserverLog + chunk.toString()).slice(-4000);
+  });
+  await wait('owned native HWND observer ready', async () => {
+    if (hwndObserver.exitCode !== null)
+      throw new Error('Native HWND observer failed: ' + hwndObserverLog);
+    return (await readFile(hwndReady, 'utf8').catch(() => '')) === 'ready';
+  }, 45_000);
   phase = 'native-tool-invocations';
   for (const kind of ['cmd', 'git', 'powershell']) {
     const token = randomUUID(), key = kind + ':' + token;
@@ -268,6 +290,19 @@ async function run() {
   }
   assert.equal(proofs.size, 3);
   assert.equal(model.errors.length, 0, 'Synthetic model protocol produced errors');
+  await writeFile(hwndStop, 'stop');
+  hwndEvidence = await wait('owned native HWND observer evidence', async () => {
+    try { return JSON.parse(await readFile(hwndProof, 'utf8')); }
+    catch (error) { if (error?.code === 'ENOENT') return false; throw error; }
+  }, 30_000);
+  assert(hwndEvidence.completedByOwnedStop && hwndEvidence.actualNativeHwndEnumerated,
+    'Native observer did not complete real HWND enumeration');
+  assert(hwndEvidence.sampleCount >= 5, 'Native HWND observer did not sample the tool interval');
+  assert(hwndEvidence.foregroundInitiallyMain, 'Actual Electron Main was not foreground');
+  assert.equal(hwndEvidence.foregroundOtherPidSamples, 0,
+    'Another process took the foreground during real tool calls');
+  assert.deepEqual(hwndEvidence.unexpectedNewConsoleWindows, [],
+    'Visible native Windows console window was observed during real product tool calls');
   phase = 'product-stop';
   await api(`window.electronAPI.teams.stop(${literal(teamName)})`);
   stopped = true;
@@ -275,6 +310,48 @@ async function run() {
     !(await ownedStillAlive(originalMember)), 30_000);
   const focus = await mainInspector.evaluate('globalThis.__winProductFocus');
   assert(focus.pid > 0 && Number.isSafeInteger(focus.blur));
+  assert.equal(focus.before, true, 'Electron window did not own focus before tools');
+  assert.equal(focus.blur, 0, 'Electron window blurred during real tool calls');
+  phase = 'forced-actual-electron-main-exit';
+  const forcedTeamName = teamName + '-force';
+  const forcedRequest = { ...request, teamName: forcedTeamName };
+  await api(`(() => {
+    window.__forceExitLaunch = {done:false};
+    window.electronAPI.teams.createTeam(${literal(forcedRequest)}).then(
+      value => window.__forceExitLaunch={done:true,value},
+      error => window.__forceExitLaunch={done:true,error:String(error)}
+    ); return true;
+  })()`);
+  const forceLaunch = await wait('actual second product team launch',
+    () => client.evaluate('window.__forceExitLaunch?.done ? window.__forceExitLaunch : null'));
+  if (forceLaunch.error) throw new Error('Forced-exit team launch failed: ' + forceLaunch.error);
+  forceExitMember = await wait('actual second team member process', async () => {
+    const snap = await api(`window.electronAPI.teams.getTeamAgentRuntime(${literal(forcedTeamName)})`);
+    const member = snap?.members?.alice, pid = member?.runtimePid ?? member?.pid;
+    if (!member?.alive || !Number.isSafeInteger(pid) || pid <= 0) return false;
+    const observed = await getProcess(pid);
+    return observed?.command?.includes(forcedTeamName) ? observed : false;
+  }, 150_000);
+  assert(forceExitMember.pid !== originalMember.pid,
+    'Forced-exit product member must be a new process, not a recycled stopped member');
+  const liveMain = await getProcess(mainBirth.pid);
+  assert(liveMain?.creation === mainBirth.creation &&
+    liveMain.command.toLowerCase().includes('electron.exe'),
+    'Original Electron Main identity changed; refusing to force-exit a different process');
+  const killedMain = spawnSync('taskkill.exe', ['/PID', String(mainBirth.pid), '/F'], {
+    windowsHide: true, timeout: 15_000, encoding: 'utf8',
+  });
+  assert.equal(killedMain.status, 0, 'Actual Electron Main force-exit failed');
+  let forceExitMemberRetired = false;
+  for (let attempt = 0; attempt < 100; attempt++) {
+    if (!(await ownedStillAlive(forceExitMember))) {
+      forceExitMemberRetired = true;
+      break;
+    }
+    await delay(300);
+  }
+  assert(forceExitMemberRetired,
+    'Original product teammate survived forced Electron Main exit without tree-kill');
   const evidence = {
     schemaVersion: 1, success: true, platform: process.platform,
     modelBoundary: 'loopback synthetic HTTP; no paid model inference',
@@ -282,7 +359,13 @@ async function run() {
     realProductStopConfirmed: true, nativeOsPidBound: true,
     originalTeammatePid: originalMember.pid, originalTeammateBirth: originalMember.creation,
     toolResults: [...proofs.values()], electronFocus: focus,
-    actualConsoleWindowsEnumerated: false, forceAppExitDescendantsVerified: false,
+    actualConsoleWindowsEnumerated: true,
+    visibleConsoleWindowsObserved: hwndEvidence.unexpectedNewConsoleWindows.length,
+    foregroundOtherPidSamples: hwndEvidence.foregroundOtherPidSamples,
+    nativeHwndSamples: hwndEvidence.sampleCount,
+    forceAppExitDescendantsVerified: true,
+    forcedElectronMainPid: mainBirth.pid,
+    forceExitTeammatePid: forceExitMember.pid,
     screenshot: path.basename(screenshot), runtimeVersion: lock.version,
   };
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2) + '\n');
@@ -303,6 +386,11 @@ try {
   if (launched && !stopped && client) {
     await api(`window.electronAPI.teams.stop(${literal(teamName)})`).catch(() => undefined);
   }
+  if (hwndObserver && hwndObserver.exitCode === null) {
+    await writeFile(hwndStop, 'stop').catch(() => undefined);
+    await delay(450);
+    if (hwndObserver.exitCode === null) hwndObserver.kill();
+  }
   await mainInspector?.close().catch(() => undefined);
   await client?.close().catch(() => undefined);
   let cleanupOk = true;
@@ -313,6 +401,7 @@ try {
     { identity: appBirth, marker: 'dev-with-runtime.mjs' },
     { identity: mainBirth, marker: 'electron.exe' },
     { identity: originalMember, marker: teamName },
+    { identity: forceExitMember, marker: teamName + '-force' },
   ]) {
     if (!identity) continue;
     try {
