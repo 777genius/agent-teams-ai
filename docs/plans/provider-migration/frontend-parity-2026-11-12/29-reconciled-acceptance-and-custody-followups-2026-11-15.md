@@ -1429,3 +1429,64 @@ The five-path R1 scope and exact proposed source semantics were independently ac
 The earlier held diagnostic Git object names in the published plan return404 from the remote repository; they are not recovered source bytes. The fresh five-path implementation is reconstructed from the exact current published preimages and the reviewed plan, with independent exact-source review. It must not claim identity with the unavailable candidates or reuse their local compiler/synthetic results. The original five-path insertion bounds and all currentness, short-circuit, clock, error-identity, cleanup and pin requirements remain unchanged.
 
 The closed consumer groupDigest identifies the original command/context pair through their two string digests, enabling a reference to join both identities without a new store read or extra emitted field. The original binding uses the existing canonical managementDigest for matching the captured member binding; this is display-only diagnostic matching and creates no dispatch authority. Native records join only their original capability/Job/source. Consumer/reference joins stay separate from native process identity; no command-to-PID association is invented. Missing, invalid, overflowed, duplicate or unmatched evidence remains unknown. Source/dist enforcement is computed from the actual resulting Host build by the original fixture; a source-only reconstruction cannot qualify those built bytes.
+
+## Reviewed coherent repair cut from e650 (2026-11-15)
+
+This source cut follows the published bounded plans and the clean original Task Detail RED. The exact current parent is e6500023c46f6a4e6a7c6992457832dfa0b88016, base def734338f13bcc3209e78079a0cedbc48f05a5b. It preserves every incoming a449 commit, the frozen frontend, provider421fee/archive91350f, Draft state and the existing workflow/oracles. Fifteen existing source/test paths plus this evidence appendix change; no workflow, native primitive, provider pin, deadline or release/default setting changes.
+
+### Final Task Detail refinement and exact additional test scope
+
+Final independent source review supersedes the preceding instruction to defer a genuinely pending successor. Deferring it can lose the handoff when a newer, silent metadata D starts between render and the original passive coordinator effect. The final selector blocks only the current failed metadata token. A pending successor remains eligible: the original ensure synchronously takes loading ownership and joins that already pending original metadata handle through existing withDedup/waitForQueuedFull logic, before any physical callback. No replacement C, new state owner, physical-start getter, revision tuple, timer, clock or transport request is added. Previously considered work-tag/getter candidates are withdrawn and are not part of this cut.
+
+The coordinator still rechecks the current selector immediately before its original dispatch. Failure before that effect suppresses dispatch; failure of the pending handle after dispatch preserves the original failure and does not rearm a retry. Explicit original source invalidation retains its existing semantics. Full Task, draft, accepted cache identity, deleted/provisioning refusals and all authority/currentness guards remain intact.
+
+The five published paths retain their reviewed bounds. One additional existing integration-test path is approved and independently reviewed: test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx, preimage49c2dea61a0a8c2e256fcfb5d45c6445a1293386, +126/-2,1184 physical lines (test exemption), FNV4c0a9985. Its two actual React Coordinator cases start a silent D in useLayoutEffect before passive dispatch, assert loading ownership, exactly3 original metadata calls and no replacement C, then cover original D acceptance (one full read) and rejection (zero full reads, exact original error, retained full/draft/cache and no C after unrelated publication). The original store negative separately covers B rejecting before coordinator entry; its pending-stage demand is true and failed-stage demand is false. Original a449 positive regression bytes and all existing tests are preserved.
+
+| Changed existing path | Reviewed FNV | Physical lines |
+| --- | --- | --- |
+| src/renderer/store/team/taskDetailReadAuthority.ts |7f09836a|424|
+| src/renderer/store/team/taskDetailReadInterest.ts |d4e1ec21|113|
+| src/features/team-task-detail/renderer/adapters/TaskDetailReadCoordinator.tsx |67a7dfaa|85|
+| test/renderer/store/taskDetailOriginAndLoading.test.ts |49cb0d79|772|
+| test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx |4c0a9985|1184|
+| scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts |2c3bbd31|232|
+
+### Original finite schedule peer command identity
+
+The a449 Codex Desktop job132739046833 passed manual Task completion and original real-cron dispatch, then failed at automatic Task completion (runtime-ui425). Its second Back action was not reached. Artifact14153026314 has upload/API SHA2565b27e35c019b65da3bc2cb88ab107d622447f66c0e2449412c917e71adaacd99. The retained raw peer error body has not been downloaded; no exact error string is asserted.
+
+Independent source review found both completion and reply command IDs used only the original peer PID, while manual and automatic Tasks reuse that original PID/thread. The original Host rejects reuse of an ID for a different command payload, and MCP preserves that ID and refusal. Exactly two existing strings in tools/owned-process-broker/fixtures/providerDesktopPeer.mjs now append the already held Task id: TEST-complete-PID-id and TEST-reply-PID-id. Preimage9899045f007c98e7e22d932474cbc7824b700604, +2/-2,554 physical lines, FNV64810a67. No new action, loop, request, retry, restart or clock is introduced; whole-peer source pinning already covers it. The original manual-plus-cron Desktop journey must validate the resulting source.
+
+### Bounded installer failure projection
+
+The a449 installer job132739046887 returned INCOMPLETE after preparation with only failureSource kind:error/frames:[] in its visible summary. Artifact14152183965,737349 bytes, has upload/API SHA256841c3501f6dcaa2ec6d4cfee17a7233eff3a1e4931c9b1a81e011128468b75f3. No actual inner cause was recovered. Missing completed installer receipt does not establish that Update never started: the original assignment occurs only after the entire helper returns.
+
+This cut adds a pure failure-only projection of already retained proof/steps/observations/renderer-failure text in three existing paths. It reads own data descriptors without invoking getters; returns only closed stage/action/phase values, booleans, bounded counts and null for missing facts; limits input arrays and text, retains at most8 steps and caps output at4KiB. It labels the non-atomic retained snapshot explicitly. Raw messages, paths, selectors, tokens, Task/member IDs and other private values are not emitted. It performs no new CDP/IPC/filesystem/clock/action or observation. The summary includes it only for a failed emulated-installer-ui proof.
+
+| Changed existing path | Exact preimage | Delta | Physical lines | Reviewed FNV |
+| --- | --- | --- | --- | --- |
+| scripts/legacy-agent-host/desktop-backend-failures.ts |c9ce0bf683f7557c6420c9120f11c5e0f323a266|+82/0|332|77bead85|
+| scripts/legacy-agent-host/desktop-proof-evidence.ts |71f718c559925c5480e8b2a2f4968b69afc890b4|+3/-1|392|06d9e701|
+| scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts |ffdb293cd2137ae3576657984f8b3e12dd5c6672|+90/0|973 (test)|8cfcedfe|
+
+The two added existing-suite cases cover privacy, fixed wait-site labels, summary mode gating, missing-versus-completed receipt semantics, immutable input, getter suppression and oversized unknown. Independent exact-source R2 accepted these three files. Thirteen finite pure-function V8 fixture checks passed for the projector; these are not execution of the Node test suite, TypeScript compilation, actual installer or Desktop qualification. The original resulting-head prerequisite suite and installer journey remain required.
+
+### Final first-refusal diagnostics
+
+The fresh five-path reconstruction was independently reviewed against all exact current preimages. Final review tree9168d8afd6a828ce77806f27670f2256873b6d43 contains HostWindowsLaunch3bbf1bf0/581 physical lines, ModelProbeOwner7e4e306f/600, prepareTeamModelReadinessd7c7589b/693, nativeEmulatedSourceProfileb2ad4c11/238 and nativeEmulatedSourceScenario921f3f38/706. Superseded intermediate Profile/Scenario blobs are not used.
+
+The original Host predicates, call counts, short-circuit order, reached clock reads, error identities and cleanup remain unchanged. A private failure-only subscriber records the first original refusal, with64 records plus one reserved overflow marker and a64KiB cap; malformed input, subscription/write/read failure or ambiguous/unjoined evidence remains unknown. Reference records join both original command and context; native records join only the original capability/retained Job/source. The raw capability is removed after that private join. No command-to-PID identity is invented. The exact source/dist pins for the three original senders are checked before the fixture's unchanged original Host CLI import.
+
+Only after an original failure and original cleanup does the Main scenario read this retained ledger once and expose the closed TEST_SOURCE_FIRST_REFUSAL summary, bounded to64KiB with unknown fallback. It does not write diagnostic text to the Host NDJSON stdout. Success makes no ledger read/stat/log call. Diagnostic output failure cannot replace the original failure.
+
+Root's finite V8 checks used the exact generated JS validator/subscriber and the actual reader after mechanical TypeScript annotation erasure, with bounded in-memory fs/assert/channel/console/digest fixtures. They covered first identity across epochs,64+marker and byte caps, malformed/accessor/extra fields, append failure, exact joins/raw-capability suppression,11 unknown cases, zero success I/O and failure-preserving output. The harness's initial missing provider fixture argument was corrected without a source change. These checks do not run Node/Host, compiler, built dist-pin enforcement, native custody, actual providers or CI.
+
+### Original e650 evidence and resulting-head gates
+
+Before this source cut, the original e650 process run43692373030 completed all five jobs: Linux132745545444 and Darwin x64132745545353/ARM64132745545192 succeeded; Windows x64132745545378 and ARM64132745545459 failed. Linux's original Node24 and Electron Node qualification each reported completed:true, cleaned:true, automaticAndWarm:true, with Host163/163, protocol53, Main69, POSIX23, six FD-stage tests under each runtime and afterPack63 passing. Artifact14153369687,1521575 bytes, upload/API SHA2561c27ae14ec02de00df312f86dd345f167ee581ec3fb1c38b9be69e6fbb846430. This is Linux process/pidfs/pidfd evidence, not SDK/Desktop or Windows qualification.
+
+Windows x64 now reached a prepared OpenCode-A slot2 with root/witness but no resume; its original64 reads exhausted14999.5416ms and cleanup returned false. Windows ARM Codex-A slot6 resumed across the original first-close boundary and cleanup returned false. Their artifacts are14153586726/SHA81a4e0de2dd0a34e81020b43e52d284189c5a7e8530aa5b4364ba412ae1617f4 and14153836437/SHA392483e68a5124d323b0346db77460b34800d791d26a2db5962a7bb51fbd43c8. Earlier same-source attempts reached different phases; no single root cause is inferred before the new original first-refusal evidence.
+
+Original e650 safe4 job132745605217 repeated the sole clean Task Detail RED (6562 pass/7 skip/1 fail; artifact14154062312, SHAd0e97e3abae2479280e0613813d924ab5ab7a04fe28dda1bb5a2f92a7494a05b). The independently retained original safe2 footer has539 passed/2 skipped files and6701 passed/18 skipped tests, artifact14153882305/SHA dc91242e9c345d7a392e3de26a3afdd28cf5f84b6964779636a011b0cfb2a842. Import132745605080 completed its72+7 prerequisite tests, original GUI, strict final verifier and cleanup; artifact14153636356/SHA009669c0f3e5480d471f96d68e4b9b91d939f949f62dce0ece2ce9784d227f66. No artifact ZIP/image bytes were inspected by this continuation.
+
+These are parent-head observations, not post-repair PASS. The resulting source still requires original safe shards, actual Coordinator tests, compiler/lint/source guards, complete provider/UI cohorts, Linux/Windows/Darwin process and NativeV2 gates, Teams and packaged evidence. The new first-refusal and installer projections diagnose existing failures; they are not claimed fixes. Plan31 partial-owner availability, P08 Retry and P09 selected-image/script consumption remain open under their original constraints. No cancelled/queued/skipped/unknown item is converted to PASS, and no real Codex/Claude binary is invoked.

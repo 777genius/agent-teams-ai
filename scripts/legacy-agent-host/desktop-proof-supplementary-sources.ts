@@ -57,6 +57,8 @@ export const desktopProofSupplementarySources = [
   'packages/legacy-agent-host/tests/fixtures/native-input-capture.ts',
   'packages/legacy-agent-host/tests/codex-responses-ui.test.ts',
   'src/renderer/store/team/taskDetailReadAuthority.ts',
+  'src/renderer/store/team/taskDetailReadInterest.ts',
+  'src/features/team-task-detail/renderer/adapters/TaskDetailReadCoordinator.tsx',
   'src/renderer/components/ui/MemberSelect.tsx',
   'scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts',
   'packages/legacy-agent-host/tests/fixtures/native-mixed-task-notifications.ts',

@@ -1,4 +1,4 @@
-import React, { act, useEffect } from 'react';
+import React, { act, useEffect, useLayoutEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { createTaskDetailReadEntry, taskDetailKey } from '@features/team-task-detail/core';
@@ -24,12 +24,13 @@ import type { TaskComment, TeamSummary, TeamTaskWithKanban, TeamViewSnapshot } f
 const apiMock = vi.hoisted(() => ({
   teams: {
     addTaskComment: vi.fn(),
+    getData: vi.fn(),
     getTask: vi.fn(),
     restoreTeam: vi.fn(),
     softDeleteTask: vi.fn(),
   },
 }));
-vi.mock('@renderer/api', () => ({ api: apiMock }));
+vi.mock('@renderer/api', () => ({ api: apiMock, isElectronMode: () => true }));
 vi.mock('@renderer/services/draftStorage', () => ({
   draftStorage: {
     loadDraft: vi.fn(async () => null),
@@ -317,6 +318,129 @@ describe('task session surface and origin integration', () => {
     expect(useStore.getState().taskDetailSurfaceInterests).not.toHaveProperty('duplicate-dialog');
     expect(apiMock.teams.getTask).toHaveBeenCalledTimes(4);
   });
+
+  it.each(['accepted', 'failed'] as const)(
+    'joins a successor started before coordinator dispatch and preserves its %s outcome',
+    async (outcome) => {
+      const pending = () => {
+        let resolve!: (value: TeamViewSnapshot) => void;
+        let reject!: (error: Error) => void;
+        const promise = new Promise<TeamViewSnapshot>((done, fail) => {
+          resolve = done;
+          reject = fail;
+        });
+        return { promise, resolve, reject };
+      };
+      const first = pending();
+      const accepted = pending();
+      const latest = pending();
+      const full = { ...task, description: 'TEST original full read after successor' };
+      const failure = 'TEST original joined metadata failed';
+      apiMock.teams.getData
+        .mockReset()
+        .mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(accepted.promise)
+        .mockReturnValueOnce(latest.promise);
+      apiMock.teams.getTask.mockReset().mockResolvedValueOnce(full);
+      useStore.setState({
+        selectedTeamName: identity.teamName,
+        selectedTeamData: teamSnapshot,
+        refreshTeamData: initial.refreshTeamData,
+      });
+      useStore.getState().setTaskDetailSurfaceInterest('TEST-read-work', identity);
+      useStore.getState().setTaskDetailVisibleResourceDemand(
+        'TEST-read-work', identity, 'detail', true
+      );
+      useStore.getState().updateTaskDetailSessionPart(
+        identity, 'commentText', 'TEST retained draft'
+      );
+      const detail = useStore.getState().ensureTaskDetail(identity);
+      const refresh = useStore.getState().refreshTeamData(identity.teamName, { withDedup: false });
+      let successor: Promise<void> | undefined;
+      try {
+        first.resolve(teamSnapshot);
+        await detail;
+        expect(useStore.getState().taskDetailById[key]).toMatchObject({
+          full: task,
+          loading: false,
+          refreshPending: true,
+        });
+        accepted.resolve(teamSnapshot);
+        await refresh;
+        const originalCache = useStore.getState().teamDataCacheByName[identity.teamName];
+        expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
+        expect(apiMock.teams.getTask).not.toHaveBeenCalled();
+
+        const View = () => {
+          useLayoutEffect(() => {
+            const before = useStore.getState();
+            successor = before.refreshTeamData(identity.teamName, { withDedup: false });
+            expect(useStore.getState()).toBe(before);
+          }, []);
+          return React.createElement(TaskDetailReadCoordinator);
+        };
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const root = createRoot(host);
+        roots.push(root);
+        await act(async () => {
+          root.render(React.createElement(View));
+        });
+        expect(successor).toBeDefined();
+        expect(apiMock.teams.getData).toHaveBeenCalledTimes(3);
+        expect(apiMock.teams.getTask).not.toHaveBeenCalled();
+        expect(useStore.getState().taskDetailById[key]).toMatchObject({
+          full: task,
+          loading: true,
+          refreshPending: false,
+        });
+
+        await act(async () => {
+          if (outcome === 'failed') latest.reject(new Error(failure));
+          else latest.resolve(teamSnapshot);
+          await successor;
+        });
+        expect(useStore.getState().teamDataCacheByName[identity.teamName]).toBe(originalCache);
+        if (outcome === 'accepted') {
+          expect(useStore.getState().taskDetailById[key]).toMatchObject({
+            phase: 'ready',
+            full,
+            loading: false,
+            refreshPending: false,
+          });
+          expect(apiMock.teams.getTask).toHaveBeenCalledTimes(1);
+        } else {
+          expect(console.error).toHaveBeenCalledTimes(1);
+          expect(console.error).toHaveBeenCalledWith(
+            '[Renderer:unwrapIpc]', '[team:getData] ' + failure
+          );
+          vi.mocked(console.error).mockClear();
+          vi.mocked(console.warn).mockClear();
+          expect(useStore.getState().taskDetailById[key]).toMatchObject({
+            phase: 'unavailable',
+            full: task,
+            loading: false,
+            refreshPending: false,
+            error: failure,
+          });
+          await act(async () => {
+            useStore.setState({ selectedProjectId: 'TEST-refused-read-observation' });
+          });
+          expect(apiMock.teams.getTask).not.toHaveBeenCalled();
+        }
+        expect(useStore.getState().taskDetailSessionById[key].commentText)
+          .toBe('TEST retained draft');
+        expect(apiMock.teams.getData).toHaveBeenCalledTimes(3);
+      } finally {
+        first.resolve(teamSnapshot);
+        accepted.resolve(teamSnapshot);
+        latest.resolve(teamSnapshot);
+        await act(async () => {
+          await Promise.allSettled([detail, refresh, ...(successor ? [successor] : [])]);
+        });
+      }
+    }
+  );
 
   it('keeps refused reviews and ignores a late confirmation for an older nonce', async () => {
     let first!: (accepted: boolean) => void;

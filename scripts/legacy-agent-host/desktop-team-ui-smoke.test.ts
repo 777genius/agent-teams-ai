@@ -14,6 +14,7 @@ import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-commen
 import { runDesktopTaskBoardAttachmentsUi } from './desktop-task-board-attachments-ui.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
+import { projectDesktopCodexInstallerFailure } from './desktop-backend-failures.ts';
 import { projectDesktopEmulatedReadinessFailure, projectDesktopProofReceiptSummary, projectDesktopTaskBoardFailure } from './desktop-proof-evidence.ts';
 
 function deferred<T>() {
@@ -880,4 +881,93 @@ test('Taskboard failure summaries compare retained identities without exposing p
   assert.equal(overflow.dialogs.items.length, 3);
   assert.equal(JSON.stringify(overflow).includes(secret), false);
   assert.ok(JSON.stringify(overflow).length <= 4096);
+});
+
+test('installer failure summaries preserve original wait sites and attempts without inferring installation effects', () => {
+  const secret = 'TEST-private-code-token https://TEST-private.example /TEST-private/path';
+  const evidence = { status: 'INCOMPLETE', failureSource: { kind: 'error', frames: [] },
+    failure: 'UI read timed out: original installation and Host publication ready; no mutation retry',
+    emulatedSelectionUiProof: { status: 'INCOMPLETE', a: { thread: secret },
+      steps: [...Array.from({ length: 8 }, () => ({ action: secret, label: secret })),
+        { action: 'mouseClick', label: 'install original Codex package exactly once', state: 'attempted',
+          selector: secret, target: { text: secret } }],
+      observations: [{ phase: 'before-original-installer-update', nativeReady: true,
+        originalInputsUnchanged: true, binding: secret, sessionRef: secret, thread: secret }] },
+    rendererFailureSnapshot: { dialogs: [{ text: 'Codex is ready for new launches. ' + secret,
+      buttons: [{ text: secret }] }] },
+  };
+  const before = JSON.stringify(evidence), result = projectDesktopCodexInstallerFailure(evidence);
+  assert.ok('failureSite' in result && result.failureSite && 'steps' in result && result.steps);
+  assert.deepEqual(result.failureSite, { operation: 'read-timeout', stage: 'update-ready' });
+  assert.equal(result.atomicWithFailure, false, 'the later retained renderer snapshot does not establish the timeout cause');
+  assert.equal(result.steps.count, 9); assert.equal(result.steps.overflow, false); assert.equal(result.steps.last.length, 8);
+  assert.deepEqual(result.steps.last.at(-1), { action: 'mouseClick', stage: 'update-submit', attempted: true });
+  assert.deepEqual(result.lastLiveObservation, {
+    phase: 'before-original-installer-update', nativeReady: true, originalInputsUnchanged: true,
+  });
+  assert.deepEqual(result.milestones, { firstRuntimeRecorded: true, savedSelectionRecorded: null,
+    nextRuntimeRecorded: null, completedInstallerReceiptRecorded: null });
+  assert.equal(result.completedInstallerStatus, null, 'missing completed receipt cannot mean Update never started');
+  assert.equal(result.snapshot.readyText, true);
+  assert.equal('installerStarted' in result, false);
+  assert.doesNotMatch(JSON.stringify(result), /TEST-private|https:|\/TEST-private|binding|sessionRef|selector|thread/);
+  assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 4096);
+  assert.equal(JSON.stringify(evidence), before, 'original observations and failure remain unchanged');
+  const summary = projectDesktopProofReceiptSummary(evidence,
+    { mode: 'emulated-installer-ui', receiptPath: 'TEST-receipt', mixedMode: false });
+  assert.deepEqual(summary.installerFailure, result); assert.deepEqual(summary.failureSource, evidence.failureSource);
+  assert.equal(summary.status, 'INCOMPLETE'); assert.equal(summary.receipt, 'TEST-receipt');
+  for (const [mode, status] of [['emulated-installer-ui', 'PASS'], ['emulated-codex-runtime-ui', 'INCOMPLETE'],
+    ['codex-login-ui', 'INCOMPLETE']] as const)
+    assert.equal('installerFailure' in projectDesktopProofReceiptSummary({ ...evidence, status },
+      { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  const completed = projectDesktopCodexInstallerFailure({ ...evidence, emulatedSelectionUiProof: {
+    ...evidence.emulatedSelectionUiProof, installer: { status: 'PASS', initialStatus: secret, installed: secret } } });
+  assert.ok('milestones' in completed && completed.milestones);
+  assert.equal(completed.milestones.completedInstallerReceiptRecorded, true);
+  assert.equal(completed.completedInstallerStatus, 'PASS');
+  for (const [failure, operation, stage] of [
+    ['UI scroll timed out: original Codex Update submit; no effect retry', 'scroll-timeout', 'update-submit'],
+    ['UI target read failed: open original Codex Update dialog after pointer enter; facts=' + secret, 'target-read', 'update-notice'],
+    ['UI read timed out: original installation and Host publication ready ' + secret + '; no mutation retry', null, null],
+    [secret, null, null],
+  ] as const) {
+    const observed = projectDesktopCodexInstallerFailure({ failure });
+    assert.ok('failureSite' in observed && observed.failureSite);
+    assert.deepEqual(observed.failureSite, { operation, stage });
+    assert.equal(JSON.stringify(observed).includes(secret), false);
+  }
+});
+
+test('installer failure projection does not invoke input getters and leaves oversized observations unknown', () => {
+  const secret = 'TEST-private-getter-token'; let reads = 0;
+  const unreadable = () => { reads++; throw new Error(secret); };
+  const row = Object.defineProperty({ action: 'mouseClick', state: 'attempted' }, 'label', { get: unreadable });
+  const observed = Object.defineProperty({}, 'phase', { get: unreadable });
+  const snapshot = { dialogs: [Object.defineProperty({}, 'text', { get: unreadable })] };
+  const input = Object.defineProperty({ emulatedSelectionUiProof: { steps: [row], observations: [observed] },
+    rendererFailureSnapshot: snapshot }, 'failure', { get: unreadable });
+  const result = projectDesktopCodexInstallerFailure(input);
+  assert.ok('steps' in result && result.steps);
+  assert.deepEqual(result.failureSite, { operation: null, stage: null });
+  assert.equal(result.steps.last[0]?.stage, null); assert.equal(result.lastLiveObservation.phase, null);
+  assert.equal(result.snapshot.readyText, null);
+  const missing = projectDesktopCodexInstallerFailure(Object.defineProperty({}, 'emulatedSelectionUiProof', { get: unreadable }));
+  assert.ok('proofRecorded' in missing); assert.equal(missing.proofRecorded, null);
+  assert.equal(reads, 0, 'getter values are not observations');
+  const oversized = projectDesktopCodexInstallerFailure({
+    failure: 'UI read timed out: original installation and Host publication ready; no mutation retry'.padEnd(4001, 'x'),
+    emulatedSelectionUiProof: { steps: Array.from({ length: 1025 }, () => row),
+      observations: Array.from({ length: 129 }, () => ({ phase: 'before-create' })) },
+    rendererFailureSnapshot: { dialogs: Array.from({ length: 4 }, () => ({ text: 'Codex is ready for new launches.' })) },
+  });
+  assert.ok('steps' in oversized && oversized.steps);
+  assert.deepEqual(oversized.steps, { count: null, overflow: true, last: [] });
+  assert.deepEqual(oversized.failureSite, { operation: null, stage: null });
+  assert.equal(oversized.lastLiveObservation.phase, null); assert.equal(oversized.snapshot.readyText, null);
+  const longText = projectDesktopCodexInstallerFailure({ rendererFailureSnapshot: {
+    dialogs: [{ text: ('Codex is ready for new launches. ' + secret).padEnd(8001, 'x') }] } });
+  assert.ok('snapshot' in longText && longText.snapshot); assert.equal(longText.snapshot.readyText, null);
+  assert.equal(reads, 0); assert.equal(JSON.stringify(oversized).includes(secret), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(oversized)) <= 4096);
 });

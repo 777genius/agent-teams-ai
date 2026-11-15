@@ -248,3 +248,85 @@ export function projectDesktopTaskBoardFailure(value: unknown) {
     return JSON.stringify(result).length <= 4096 ? result : { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
   } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' }; }
 }
+
+/** Project retained installer observations without treating attempts or missing receipts as effects. */
+export function projectDesktopCodexInstallerFailure(value: unknown) {
+  try {
+    const own = (row: unknown, key: string): unknown => {
+      if (row === null || typeof row !== 'object') return undefined;
+      const field = Object.getOwnPropertyDescriptor(row, key);
+      return field && 'value' in field ? field.value : undefined;
+    };
+    const recorded = (row: unknown) => row === undefined ? null : row !== null && typeof row === 'object' && !Array.isArray(row);
+    const text = (field: unknown, maximum: number) => typeof field === 'string' && field.length <= maximum ? field : null;
+    const boolean = (field: unknown) => typeof field === 'boolean' ? field : null;
+    const choice = (field: unknown, allowed: readonly string[]) =>
+      typeof field === 'string' && allowed.includes(field) ? field : null;
+    const length = (rows: unknown, maximum: number) => {
+      const size = Array.isArray(rows) ? own(rows, 'length') : undefined;
+      return typeof size === 'number' && Number.isSafeInteger(size) && size >= 0 && size <= maximum ? size : null;
+    };
+    const labels: readonly (readonly [string, readonly string[]])[] = [
+      ['launch', ['open original saved Team Launch', 'saved model hydrates original Launch',
+        'original selected model preflight', 'launch original selection once', 'original Launch closes']],
+      ['create', ['original Create launch settings', 'expand original Create launch settings',
+        'original expanded Create settings settle', 'original saved Team approval choice', 'select original save-only Create']],
+      ['catalog', ['original lead model selector', 'open original lead model selector', 'original Codex catalog', 'select original Codex provider']],
+      ['update-notice', ['original measured A to B Update notice', 'original Codex Update notice', 'open original Codex Update dialog']],
+      ['update-submit', ['original measured Update action', 'original Codex Update submit', 'install original Codex package exactly once']],
+      ['update-ready', ['original installation and Host publication ready', 'close original completed Update dialog', 'original Update completed dialog closes']],
+      ['selection', ['one selectable second TEST model', 'original second model', 'select original second model', 'select original High effort', 'High remains selected']],
+      ['save', ['original save-only Create action', 'save original second selection once', 'original Create closes']],
+      ['reload', ['fresh renderer after reload', 'reloaded original menu']],
+      ['settings', ['open original Settings menu after Update', 'open original Settings after Update',
+        'open original Providers settings after Update', 'original Settings Codex provider is ready after Update',
+        'open original Codex Manage after Update', 'original Settings Codex account and runtime healthy', 'close original Settings Codex Manage']],
+      ['stop', ['original Team Stop', 'stop original selected Team once']],
+    ];
+    const stage = (field: unknown) => labels.find(([, names]) =>
+      names.some(name => field === name || field === 'hover ' + name))?.[0] ?? null;
+    const message = text(own(value, 'failure'), 4000);
+    let failureSite: { operation: string | null; stage: string | null } = { operation: null, stage: null };
+    for (const [selected, names] of labels) for (const name of names) {
+      if (message === 'UI read timed out: ' + name + '; no mutation retry')
+        failureSite = { operation: 'read-timeout', stage: selected };
+      else if (message === 'UI scroll timed out: ' + name + '; no effect retry')
+        failureSite = { operation: 'scroll-timeout', stage: selected };
+      else if (message !== null && ['', ' after pointer enter', ' stable target'].some(suffix =>
+        message.startsWith('UI target read failed: ' + name + suffix + '; facts=')))
+        failureSite = { operation: 'target-read', stage: selected };
+    }
+    const proof = own(value, 'emulatedSelectionUiProof'), steps = own(proof, 'steps'), count = length(steps, 1024);
+    const last = [];
+    if (count !== null) for (let index = Math.max(0, count - 8); index < count; index++) {
+      const row = own(steps, String(index));
+      last.push({ action: choice(own(row, 'action'), ['mouseClick', 'mouseWheel', 'mouseMoved']),
+        stage: stage(own(row, 'label')), attempted: own(row, 'state') === 'attempted' ? true : null });
+    }
+    const observations = own(proof, 'observations'), observedCount = length(observations, 128);
+    const observed = observedCount ? own(observations, String(observedCount - 1)) : undefined;
+    const snapshot = own(value, 'rendererFailureSnapshot'), dialogs = own(snapshot, 'dialogs'), dialogCount = length(dialogs, 3);
+    let readyText: boolean | null = dialogCount === null ? null : false;
+    if (dialogCount !== null) for (let index = 0; index < dialogCount; index++) {
+      const body = text(own(own(dialogs, String(index)), 'text'), 8000);
+      if (body === null) { readyText = null; break; }
+      readyText ||= body.includes('Codex is ready for new launches.');
+    }
+    const installer = own(proof, 'installer');
+    const result = { schemaVersion: 1, status: 'available', source: 'retained-installer-observations', atomicWithFailure: false,
+      failureSite, proofRecorded: recorded(proof),
+      steps: { count, overflow: Array.isArray(steps) ? count === null : null, last },
+      lastLiveObservation: {
+        phase: choice(own(observed, 'phase'), ['before-create', 'before-original-installer-update',
+          'after-original-installer-ready', 'after-save-only', 'after-reload-before-next-launch', 'after-next-launch',
+          'before-original-installer-settings', 'after-original-installer-settings', 'after-b-stop-during-a-input']),
+        nativeReady: boolean(own(observed, 'nativeReady')), originalInputsUnchanged: boolean(own(observed, 'originalInputsUnchanged')),
+      },
+      milestones: { firstRuntimeRecorded: recorded(own(proof, 'a')), savedSelectionRecorded: recorded(own(proof, 'savedSelection')),
+        nextRuntimeRecorded: recorded(own(proof, 'b')), completedInstallerReceiptRecorded: recorded(installer) },
+      completedInstallerStatus: choice(own(installer, 'status'), ['PASS', 'INCOMPLETE']),
+      snapshot: { recorded: recorded(snapshot), unavailable: boolean(own(snapshot, 'unavailable')), readyText } };
+    return Buffer.byteLength(JSON.stringify(result), 'utf8') <= 4096
+      ? result : { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
+  } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' }; }
+}

@@ -1,4 +1,4 @@
-import { projectDesktopMixedSettingsFailure, projectDesktopTaskBoardFailure } from './desktop-backend-failures.ts';
+import { projectDesktopCodexInstallerFailure, projectDesktopMixedSettingsFailure, projectDesktopTaskBoardFailure } from './desktop-backend-failures.ts';
 import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
 import { readDesktopNativeProviderArtifact } from './desktop-native-stop-fixture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -380,6 +380,8 @@ export function projectDesktopProofReceiptSummary(evidence: Record<string, unkno
       ? { failureSource: evidence.failureSource } : {}),
     ...(['codex-login-ui', 'emulated-codex-login-ui'].includes(mode) && evidence.status !== 'PASS'
       ? { loginFailure: projectDesktopCodexLoginFailure(evidence) } : {}),
+    ...(mode === 'emulated-installer-ui' && evidence.status !== 'PASS'
+      ? { installerFailure: projectDesktopCodexInstallerFailure(evidence) } : {}),
     ...(mixedMode && evidence.status !== 'PASS'
       ? { mixedSettingsFailure: projectDesktopMixedSettingsFailure(evidence) } : {}),
     ...(['emulated-import-ui', 'emulated-opencode-runtime-ui'].includes(mode) && evidence.status !== 'PASS'

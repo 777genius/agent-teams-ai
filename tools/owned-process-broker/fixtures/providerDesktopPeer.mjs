@@ -238,8 +238,8 @@ async function scheduledCompletion() {
   const task = record(tasks[0]);
   assert.equal(task.owner, 'alice'); assert.equal(task.status, 'in_progress'); assert.ok(String(task.subject).includes('TEST'));
   const id = task.id; assert.equal(typeof id, 'string');
-  const completed = await call('task_lifecycle', { commandId: `TEST-complete-${process.pid}`, taskId: id, action: 'complete' });
-  const reply = await call('message_send', { commandId: `TEST-reply-${process.pid}`, to: 'user', text: 'TEST scheduled reply' });
+  const completed = await call('task_lifecycle', { commandId: `TEST-complete-${process.pid}-${id}`, taskId: id, action: 'complete' });
+  const reply = await call('message_send', { commandId: `TEST-reply-${process.pid}-${id}`, to: 'user', text: 'TEST scheduled reply' });
   assert.equal(completed.phase, 'completed'); assert.equal(reply.phase, 'completed');
   effect({ event: 'scheduled-effect', taskId: id, taskCommandId: completed.commandId, messageCommandId: reply.commandId });
 }

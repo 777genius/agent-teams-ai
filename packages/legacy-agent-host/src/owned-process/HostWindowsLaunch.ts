@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { channel } from 'node:diagnostics_channel';
 import { performance } from 'node:perf_hooks';
 import { Readable, Writable } from 'node:stream';
 import { isDeepStrictEqual } from 'node:util';
@@ -54,6 +55,11 @@ function unavailable(): never {
   throw new Error('Original Main custody unavailable');
 }
 const DRAIN_REPLY_RESERVE_MS = 100;
+const refusalChannel = channel('agent-teams.legacy-host.first-refusal');
+type LaunchPhase = 'capture' | 'staging' | 'allocate' | 'launch-chunk' | 'launch-commit' |
+  'post-commit' | 'prepare' | 'post-prepare' | 'resume';
+type LaunchRefusal = 'sealed' | 'current-false' | 'current-threw' | 'launch-deadline' |
+  'refused' | 'unknown' | 'result-mismatch' | 'preparation-failed';
 
 export interface RetainedWindowsLaunchPort extends OwnedLaunchPort {
   readonly registeredProcesses: WindowsRegisteredProcessPort;
@@ -90,10 +96,14 @@ export class HostWindowsLaunch {
   }
 
   async request(
-    operation: HostCustodyCall['operation'], build: (deadlineMs: number) => HostCustodyCall, deadline?: number
+    operation: HostCustodyCall['operation'], build: (deadlineMs: number) => HostCustodyCall, deadline?: number,
+    onRefusal?: (reason: 'refused' | 'unknown' | 'result-mismatch') => void
   ): Promise<HostCustodyResult> {
     const reply = await this.connected().requestWhenReady(operation, build, deadline);
-    if (reply.status !== 'completed' || reply.value.operation !== operation) unavailable();
+    if (reply.status !== 'completed' || reply.value.operation !== operation) {
+      try { onRefusal?.(reply.status === 'completed' ? 'result-mismatch' : reply.status); } catch { /* Passive only. */ }
+      unavailable();
+    }
     return reply.value;
   }
 
@@ -206,6 +216,8 @@ class RemotePending implements PreparedOwnedProcess {
   private dispatched = false;
   private stageQueued = false;
   private staged = false;
+  private phase: LaunchPhase = 'capture';
+  private refusalObserved = false;
   private sealed = false;
   private resumed = false;
   private exit: RootExit | undefined;
@@ -274,23 +286,37 @@ class RemotePending implements PreparedOwnedProcess {
     throw new Error('Original Main retains physical cleanup');
   }
 
+  private readonly refuse = (reason: LaunchRefusal, deadlineExpired: true | null = null): void => {
+    if (this.refusalObserved) return;
+    this.refusalObserved = true;
+    if (refusalChannel.hasSubscribers) try {
+      refusalChannel.publish({ kind: 'native', capability: this.key, phase: this.phase, reason,
+        dispatched: this.dispatched, staged: this.staged, rootCaptured: this.rootIdentity !== undefined, deadlineExpired });
+    } catch { /* The original refusal remains authoritative. */ }
+  };
   private assertInput(preparing = false): void {
-    if (this.sealed || !this.current() || (preparing && performance.now() >= this.deadline))
-      unavailable();
+    if (this.sealed) { if (preparing) this.refuse('sealed'); unavailable(); }
+    let current: boolean;
+    try { current = this.current(); } catch (error) { if (preparing) this.refuse('current-threw'); throw error; }
+    if (!current) { if (preparing) this.refuse('current-false'); unavailable(); }
+    if (preparing && performance.now() >= this.deadline) { this.refuse('launch-deadline', true); unavailable(); }
   }
 
   captureSpec(spec: ResolvedLaunchSpec): ResolvedLaunchSpec {
-    this.assertInput(true);
-    if (this.stageQueued || !matchesCapturedWindowsLauncher(this.launcher, spec)) unavailable();
+    this.phase = 'capture'; this.assertInput(true);
+    if (this.stageQueued || !matchesCapturedWindowsLauncher(this.launcher, spec)) {
+      this.refuse('preparation-failed'); unavailable();
+    }
     this.stageQueued = true;
     return Object.freeze({ ...spec, environment: Object.freeze([...spec.environment]) });
   }
 
   async stage(spec: ResolvedLaunchSpec): Promise<void> {
-    this.assertInput(true);
-    if (this.dispatched) unavailable();
+    this.phase = 'staging'; this.assertInput(true);
+    if (this.dispatched) { this.refuse('preparation-failed'); unavailable(); }
     const bytes = encodeLaunch(spec);
     const launchSha256 = createHash('sha256').update(bytes).digest('hex');
+    this.phase = 'allocate';
     await this.source.request(
       'allocate',
       () => {
@@ -305,10 +331,10 @@ class RemotePending implements PreparedOwnedProcess {
           budgetMs: Math.max(0, Math.floor(this.deadline - performance.now())),
         };
       },
-      this.deadline
+      this.deadline, this.refuse
     );
     for (let offset = 0; offset < bytes.length; offset += HOST_CUSTODY_CHUNK_BYTES) {
-      this.assertInput(true);
+      this.phase = 'launch-chunk'; this.assertInput(true);
       const chunk = bytes.subarray(offset, offset + HOST_CUSTODY_CHUNK_BYTES);
       const result = await this.source.request(
         'launch-chunk',
@@ -316,21 +342,23 @@ class RemotePending implements PreparedOwnedProcess {
           this.assertInput(true);
           return { operation: 'launch-chunk', capability: this.key, offset, bytes: chunk.toString('base64') };
         },
-        this.deadline
+        this.deadline, this.refuse
       );
-      if (result.operation !== 'launch-chunk' || result.offset !== offset + chunk.length)
-        unavailable();
+      if (result.operation !== 'launch-chunk' || result.offset !== offset + chunk.length) {
+        this.refuse('result-mismatch'); unavailable();
+      }
     }
-    this.assertInput(true);
+    this.phase = 'launch-commit'; this.assertInput(true);
     await this.source.request('launch-commit', () => {
       this.assertInput(true);
       return { operation: 'launch-commit', capability: this.key };
-    }, this.deadline);
-    this.assertInput(true);
+    }, this.deadline, this.refuse);
+    this.phase = 'post-commit'; this.assertInput(true);
     this.staged = true;
   }
 
   failed(): Preparation {
+    this.refuse('preparation-failed');
     return {
       kind: 'failed',
       creation: this.dispatched ? 'uncertain' : 'known-not-created',
@@ -340,6 +368,7 @@ class RemotePending implements PreparedOwnedProcess {
   }
 
   async prepare(): Promise<Preparation> {
+    this.phase = 'prepare';
     try {
       this.assertInput(true);
       if (!this.staged || this.rootIdentity) unavailable();
@@ -347,12 +376,12 @@ class RemotePending implements PreparedOwnedProcess {
         'prepare', () => {
           this.assertInput(true);
           return { operation: 'prepare', capability: this.key };
-        }, this.deadline
+        }, this.deadline, this.refuse
       );
-      if (prepared.operation !== 'prepare') unavailable();
+      if (prepared.operation !== 'prepare') { this.refuse('result-mismatch'); unavailable(); }
       this.rootIdentity = Object.freeze({ ...prepared.root });
       if (this.stateHint) void this.observeState();
-      this.assertInput(true);
+      this.phase = 'post-prepare'; this.assertInput(true);
       return { kind: 'prepared', process: this };
     } catch {
       return this.failed();
@@ -360,17 +389,20 @@ class RemotePending implements PreparedOwnedProcess {
   }
 
   async resume(expectedOwner: ProcessOwner, installOwner: () => Promise<void>): Promise<void> {
-    if (!sameOwner(expectedOwner, this.owner) || !this.rootIdentity || this.resumed) unavailable();
+    this.phase = 'resume';
+    if (!sameOwner(expectedOwner, this.owner) || !this.rootIdentity || this.resumed) {
+      this.refuse('preparation-failed'); unavailable();
+    }
     this.assertInput(true);
-    await installOwner();
+    try { await installOwner(); } catch (error) { this.refuse('preparation-failed'); throw error; }
     this.assertInput(true);
     const result = await this.source.request(
       'resume', () => {
         this.assertInput(true);
         return { operation: 'resume', capability: this.key };
-      }, this.deadline
+      }, this.deadline, this.refuse
     );
-    if (result.operation !== 'resume') unavailable();
+    if (result.operation !== 'resume') { this.refuse('result-mismatch'); unavailable(); }
     this.assertInput(true);
     this.resumed = true;
     this.readable('state');

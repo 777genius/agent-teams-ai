@@ -1,3 +1,4 @@
+import { channel } from 'node:diagnostics_channel';
 import { z } from 'zod';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { teamModelProbeSelectionSchema } from './teamLaunchModelProbe.js';
@@ -33,6 +34,7 @@ import type { LaunchReadinessCaptureAdmission } from '../team-launch/launchReadi
 import type { CreateTeamLaunchPreparationInput } from '../team-registry/createLaunchContracts.js';
 import type { RuntimeBinding } from '../runtime/contracts.js';
 
+const readinessRefusal = channel('agent-teams.legacy-host.first-refusal');
 const id = z.string().min(1).max(256).refine(value => !/[\0\r\n]/u.test(value));
 
 /** Main resolves these exact retained intents; Host validates every receipt and publication join. */
@@ -332,25 +334,48 @@ export function inspectMemberModelReadiness(options: {
   if (original.consumer.initialProfile) return inspectInitialRuntimeModelAdmission({ ...options,
     phase: options.phase ?? 'preclaim' });
   const observedAccount: { value?: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>> } = {};
+  let refusalObserved = false;
   const current = () => {
-    options.assertCurrent();
-    const current = launch.readModelReadiness(selected), consumer = current.consumer;
-    if (consumer.consumerId !== original.consumer.consumerId ||
-        consumer.baseConfigurationDigest !== runtimeDigest(entry.baseProfile)) held();
-    if (consumer.continuation) {
-      const restore = entry.selection?.restore;
-      if (!restore || restore.reference !== consumer.continuation.reference ||
-          runtimeDigest(restore.sourceBinding) !== runtimeDigest(consumer.continuation.sourceBinding)) held();
-      return;
+    let phase = 'initial-authority', reason: 'held' | 'threw' = 'threw';
+    let cutoff: number | null = null, observedAt: number | null = null;
+    try {
+      options.assertCurrent(); phase = 'read-consumer';
+      const current = launch.readModelReadiness(selected), consumer = current.consumer;
+      phase = 'identity';
+      if (consumer.consumerId !== original.consumer.consumerId ||
+          consumer.baseConfigurationDigest !== runtimeDigest(entry.baseProfile)) { reason = 'held'; held(); }
+      phase = 'continuation';
+      if (consumer.continuation) {
+        const restore = entry.selection?.restore;
+        if (!restore || restore.reference !== consumer.continuation.reference ||
+            runtimeDigest(restore.sourceBinding) !== runtimeDigest(consumer.continuation.sourceBinding)) { reason = 'held'; held(); }
+        return;
+      }
+      phase = 'requirements';
+      if (!options.management || !current.reference || consumer.cutoff === undefined) { reason = 'held'; held(); }
+      phase = 'cutoff';
+      if ((observedAt = Date.now()) >= (cutoff = consumer.cutoff)) { reason = 'held'; held(); }
+      phase = 'reference';
+      const observed = readPreparedModelReference({ management: options.management, profile: entry.profile,
+        commandId: current.reference.commandId, context: current.reference.context,
+        ...(current.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}),
+        observeAccount: value => { if (value) observedAccount.value = value; else delete observedAccount.value; },
+        isCurrent: () => { try { options.assertCurrent(); return true; } catch { return false; } } }, true);
+      phase = 'equality';
+      if (runtimeDigest(observed) !== runtimeDigest(current.reference)) { reason = 'held'; held(); }
+      phase = 'final-authority'; options.assertCurrent();
+    } catch (error) {
+      if (!refusalObserved) {
+        refusalObserved = true;
+        try { if (readinessRefusal.hasSubscribers) readinessRefusal.publish({
+          kind: 'consumer', actionDigest: runtimeDigest(original.consumer.actionId),
+          groupDigest: runtimeDigest({ commandDigest: runtimeDigest(original.consumer.groupCommandId ?? null),
+            contextDigest: runtimeDigest(original.reference?.context ?? null) }), bindingDigest: managementDigest(selected.binding),
+          consumerId: original.consumer.consumerId, phase, reason, cutoff, observedAt,
+        }); } catch { /* Passive TEST observation cannot replace the original refusal. */ }
+      }
+      throw error;
     }
-    if (!options.management || !current.reference || consumer.cutoff === undefined || Date.now() >= consumer.cutoff) held();
-    const observed = readPreparedModelReference({ management: options.management, profile: entry.profile,
-      commandId: current.reference.commandId, context: current.reference.context,
-      ...(current.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}),
-      observeAccount: value => { if (value) observedAccount.value = value; else delete observedAccount.value; },
-      isCurrent: () => { try { options.assertCurrent(); return true; } catch { return false; } } }, true);
-    if (runtimeDigest(observed) !== runtimeDigest(current.reference)) held();
-    options.assertCurrent();
   };
   current();
   return { assertCurrent: current, consumerId: original.consumer.consumerId,

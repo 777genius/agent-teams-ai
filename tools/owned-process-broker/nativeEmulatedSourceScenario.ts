@@ -11,6 +11,7 @@ import { TeamOwnerStore } from '../../packages/legacy-agent-host/dist/adapters/t
 import { readScheduledRunCapture } from '../../packages/legacy-agent-host/dist/composition/scheduledRunCapture.js';
 import { runtimeCaptureSourceSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeCaptureSource.js';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import { managementDigest } from '../../packages/legacy-agent-host/dist/management/identity.js';
 import { BackendOwnerRouter } from '../../src/features/agent-backend/main/application/BackendOwnerRouter';
 import { CapturedHostClient } from '../../src/features/agent-backend/main/infrastructure/CapturedHostClient';
 import { captureLocalModelReadinessOrigin, captureRequestReadinessBudget, createReadinessPreparation,
@@ -64,6 +65,33 @@ async function poll(check: () => Promise<boolean>, message: string, budget = 150
     await delay(25);
   }
 }
+function validateSourceRefusal(value: Record<string, unknown>, persisted: boolean) {
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value)));
+  assert.ok(Object.getOwnPropertySymbols(value).length === 0 && Object.values(Object.getOwnPropertyDescriptors(value)).every(row => 'value' in row));
+  const hash = (raw: unknown) => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = (raw: unknown) => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
+  const fields: Record<string, string> = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired',
+    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt',
+    reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
+  assert.ok(typeof value.kind === 'string' && Object.hasOwn(fields, value.kind));
+  const keys = fields[value.kind]; assert.ok(typeof keys === 'string'); assert.deepEqual(Object.keys(value).sort(), ['kind', ...keys.split(' ').filter(Boolean), ...(persisted ? ['ordinal'] : [])].sort());
+  if (persisted) assert.ok(typeof value.ordinal === 'number' && Number.isInteger(value.ordinal) && value.ordinal >= 1 && value.ordinal <= 65); if (value.kind === 'limit') { assert.equal(persisted, true); return; }
+  assert.ok(typeof value.phase === 'string' && typeof value.reason === 'string');
+  if (value.kind === 'native') {
+    assert.ok(typeof value.capability === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value.capability));
+    assert.ok('capture staging allocate launch-chunk launch-commit post-commit prepare post-prepare resume'.split(' ').includes(value.phase));
+    assert.ok('sealed current-false current-threw launch-deadline refused unknown result-mismatch preparation-failed'.split(' ').includes(value.reason));
+    assert.ok(['dispatched', 'staged', 'rootCaptured'].every(key => typeof value[key] === 'boolean'));
+    assert.equal(value.deadlineExpired, value.reason === 'launch-deadline' ? true : null);
+  } else {
+    assert.ok(value.reason === 'held' || value.reason === 'threw'); const consumer = value.kind === 'consumer';
+    assert.ok((consumer ? ['actionDigest', 'groupDigest', 'bindingDigest', 'consumerId'] : ['commandDigest', 'contextDigest']).every(key => hash(value[key])));
+    assert.ok((consumer ? 'initial-authority read-consumer identity continuation requirements cutoff reference equality final-authority' :
+      'read inspect admission target scope retired completion probe-expiry scope-cutoff preparation-expiry origin purpose readiness account projection').split(' ').includes(value.phase));
+    for (const [cutoff, now] of (consumer ? [['cutoff', 'observedAt']] : [['probeCutoff', 'probeNow'], ['scopeCutoff', 'scopeNow'], ['preparationCutoff', 'preparationNow']]) as [string, string][])
+      assert.ok(value[cutoff] === null ? value[now] === null : clock(value[cutoff]) && clock(value[now]));
+  }
+}
+
 type Witness = Awaited<ReturnType<typeof capturedQueryableWitness>>;
 type CustodyPhase = 'allocate' | 'prepare' | 'resume' | 'stop' | 'drain' | 'release';
 type StagingPhase = 'launch-chunk' | 'launch-commit';
@@ -128,6 +156,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
   const sourceRef = (value: Pick<RuntimeSourceSummary, 'sourceId' | 'revision'>) => ({ sourceId: value.sourceId, revision: value.revision });
   const stage = (value: string) => { evidence.stage = value; console.log(JSON.stringify({ kind: 'TEST_SOURCE_STAGE', provider, stage: value })); };
   evidence.pins = fixture.pins; evidence.versions = fixture.versions;
+  const diagnosticLaunches: { actionDigest: string; bindingDigests: string[]; launchId: string; source: ReturnType<typeof sourceRef> }[] = [];
   const open = () => {
     const physical = captureMainWindowsCustody(fixture.host, [grant]); assert.ok(physical);
     const jobs: Job[] = [], pending = { admitted: 0, revoked: 0 }, counts = { service: 0 };
@@ -361,6 +390,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       assert.deepEqual(canonical.recipeSources, [{ memberId: 'alice-id', ...sourceRef(source) }]);
       const before = first.jobs.length, inputsBefore = inputs().length;
       const commandId = `TEST-start-${image}`, payload = { launchId, rosterRevision: text(selectedLaunch.rosterRevision) };
+      diagnosticLaunches.push({ actionDigest: runtimeDigest(commandId), bindingDigests: rows(object(record.definition).members).map(member => managementDigest(object(member.binding))), launchId, source: sourceRef(source) });
       if (provider === 'opencode') {
         // Reuse the original Main aggregate phases with this fixture's private native inputs.
         const budget = captureRequestReadinessBudget(fixture.host.requestTimeoutMs);
@@ -641,6 +671,35 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     // Original Job/HANDLE cleanup above is mandatory; these are only gate-owned observer children.
     for (const child of observedChildren) if (child.exitCode === null && child.signalCode === null) child.kill();
     if (errors.length) failure = new AggregateError([...(failure ? [failure] : []), ...errors], 'TEST source scenario cleanup incomplete');
+    if (failure) try {
+      const stat = lstatSync(fixture.refusals); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 65536);
+      const raw = readFileSync(fixture.refusals, 'utf8'); assert.ok(raw === '' || raw.endsWith('\n'));
+      assert.ok(Buffer.byteLength(raw) + Buffer.byteLength(JSON.stringify({ kind: 'limit', ordinal: 65 }) + '\n') <= 65536);
+      const records = raw === '' ? [] : raw.slice(0, -1).split('\n').map(line => object(JSON.parse(line)));
+      assert.ok(records.length <= 65); const references = new Set<string>();
+      for (const [index, row] of records.entries()) {
+        validateSourceRefusal(row, true); assert.equal(row.ordinal, index + 1); assert.ok(index < 64); assert.notEqual(row.kind, 'limit');
+        if (row.kind === 'reference') { const pair = text(row.commandDigest) + ':' + text(row.contextDigest); assert.equal(references.has(pair), false); references.add(pair); }
+      }
+      const consumers = records.filter(row => row.kind === 'consumer').map(row => {
+        const matches = diagnosticLaunches.filter(value => value.actionDigest === row.actionDigest && value.bindingDigests.includes(text(row.bindingDigest)));
+        assert.equal(matches.length, 1); return { row, launch: matches[0]! };
+      });
+      const observations = records.map(row => {
+        if (row.kind === 'native') { const matches = epochs.flatMap(epoch => epoch.jobs).filter(job => job.capability === row.capability);
+          assert.equal(matches.length, 1); assert.ok(matches[0]!.origin); const { capability: _capability, ...observed } = row;
+          return { ...observed, source: sourceRef(matches[0]!.origin) }; }
+        const matches = row.kind === 'consumer' ? consumers.filter(value => value.row === row) :
+          consumers.filter(value => value.row.groupDigest === runtimeDigest({ commandDigest: row.commandDigest, contextDigest: row.contextDigest }));
+        assert.ok(matches.length > 0); assert.equal(new Set(matches.map(value => JSON.stringify(value.launch))).size, 1);
+        return { ...row, launchId: matches[0]!.launch.launchId, source: matches[0]!.launch.source };
+      });
+      evidence.firstRefusal = records.length ? { status: 'observed', observations } : { status: 'unknown', reason: 'empty' };
+    } catch { evidence.firstRefusal = { status: 'unknown', reason: 'unreadable-invalid-overflow-or-unjoined' }; }
+    if (failure) try {
+      const diagnostic = JSON.stringify({ kind: 'TEST_SOURCE_FIRST_REFUSAL', provider, diagnostic: evidence.firstRefusal });
+      console.log(Buffer.byteLength(diagnostic) <= 65536 ? diagnostic : JSON.stringify({ kind: 'TEST_SOURCE_FIRST_REFUSAL', provider, diagnostic: { status: 'unknown', reason: 'projection-limit' } }));
+    } catch { /* Preserve the original failure even if its bounded diagnostic cannot be written. */ }
   }
   if (failure) throw failure;
   assert.ok(complete && evidence.cleanup === true); evidence.status = 'PASS'; evidence.stage = 'complete';

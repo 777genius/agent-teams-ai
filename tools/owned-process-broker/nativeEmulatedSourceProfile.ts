@@ -142,7 +142,68 @@ if(argv.length===1&&argv[0]==='--version'){
   });
   const cli = realpathSync(fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url)));
   const hostEntry = join(root, 'TEST-source-host.mjs');
-  writeFileSync(hostEntry, `await import(${JSON.stringify(pathToFileURL(cli).href)});\n`, { flag: 'wx' });
+  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner']
+    .flatMap(name => (['src', 'dist'] as const).map(directory => {
+      const path = fileURLToPath(new URL(`../../packages/legacy-agent-host/${directory}/${name}${directory === 'src' ? '.ts' : '.js'}`, import.meta.url));
+      assert.equal(realpathSync(path), path); return { path, sha256: fileHash(path) };
+    }));
+  const refusals = join(root, 'TEST-first-refusals.ndjson'); writeFileSync(refusals, '', { mode: 0o600, flag: 'wx' });
+  writeFileSync(hostEntry, `import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto'; import { appendFileSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { channel } from 'node:diagnostics_channel';
+for (const pin of ${JSON.stringify(diagnosticPins.filter(pin => pin.path.endsWith('.js')))}) { assert.equal(realpathSync(pin.path), pin.path); assert.equal(createHash('sha256').update(readFileSync(pin.path)).digest('hex'), pin.sha256); }
+function validateSourceRefusal(value, persisted) {
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value)));
+  assert.ok(Object.getOwnPropertySymbols(value).length === 0 && Object.values(Object.getOwnPropertyDescriptors(value)).every(row => 'value' in row));
+  const hash = raw => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = raw => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
+  const fields = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired',
+    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt',
+    reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
+  assert.ok(typeof value.kind === 'string' && Object.hasOwn(fields, value.kind));
+  const keys = fields[value.kind]; assert.ok(typeof keys === 'string'); assert.deepEqual(Object.keys(value).sort(), ['kind', ...keys.split(' ').filter(Boolean), ...(persisted ? ['ordinal'] : [])].sort());
+  if (persisted) assert.ok(typeof value.ordinal === 'number' && Number.isInteger(value.ordinal) && value.ordinal >= 1 && value.ordinal <= 65); if (value.kind === 'limit') { assert.equal(persisted, true); return; }
+  assert.ok(typeof value.phase === 'string' && typeof value.reason === 'string');
+  if (value.kind === 'native') {
+    assert.ok(typeof value.capability === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value.capability));
+    assert.ok('capture staging allocate launch-chunk launch-commit post-commit prepare post-prepare resume'.split(' ').includes(value.phase));
+    assert.ok('sealed current-false current-threw launch-deadline refused unknown result-mismatch preparation-failed'.split(' ').includes(value.reason));
+    assert.ok(['dispatched', 'staged', 'rootCaptured'].every(key => typeof value[key] === 'boolean'));
+    assert.equal(value.deadlineExpired, value.reason === 'launch-deadline' ? true : null);
+  } else {
+    assert.ok(value.reason === 'held' || value.reason === 'threw'); const consumer = value.kind === 'consumer';
+    assert.ok((consumer ? ['actionDigest', 'groupDigest', 'bindingDigest', 'consumerId'] : ['commandDigest', 'contextDigest']).every(key => hash(value[key])));
+    assert.ok((consumer ? 'initial-authority read-consumer identity continuation requirements cutoff reference equality final-authority' :
+      'read inspect admission target scope retired completion probe-expiry scope-cutoff preparation-expiry origin purpose readiness account projection').split(' ').includes(value.phase));
+    for (const [cutoff, now] of consumer ? [['cutoff', 'observedAt']] : [['probeCutoff', 'probeNow'], ['scopeCutoff', 'scopeNow'], ['preparationCutoff', 'preparationNow']])
+      assert.ok(value[cutoff] === null ? value[now] === null : clock(value[cutoff]) && clock(value[now]));
+  }
+}
+const ledger = ${JSON.stringify(refusals)}, references = new Set(); let count = 0, bytes = 0, disabled = false;
+const reserve = Buffer.byteLength(JSON.stringify({ kind: 'limit', ordinal: 65 }) + '\\n');
+try {
+  const stat = lstatSync(ledger); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 65536);
+  const existing = readFileSync(ledger, 'utf8'); bytes = Buffer.byteLength(existing); assert.ok(bytes + reserve <= 65536); assert.ok(existing === '' || existing.endsWith('\\n'));
+  const retained = existing === '' ? [] : existing.slice(0, -1).split('\\n').map(line => JSON.parse(line)); assert.ok(retained.length <= 65);
+  for (const [index, value] of retained.entries()) {
+    validateSourceRefusal(value, true); assert.equal(value.ordinal, index + 1);
+    if (value.kind === 'limit') { assert.equal(index, retained.length - 1); disabled = true; continue; }
+    assert.ok(index < 64); count++;
+    if (value.kind === 'reference') { const key = value.commandDigest + ':' + value.contextDigest; assert.equal(references.has(key), false); references.add(key); }
+  }
+} catch { disabled = true; }
+channel('agent-teams.legacy-host.first-refusal').subscribe(value => { try {
+  if (disabled) return; validateSourceRefusal(value, false);
+  const pair = value.kind === 'reference' ? value.commandDigest + ':' + value.contextDigest : null;
+  if (pair !== null && references.has(pair)) return;
+  const line = JSON.stringify({ ...value, ordinal: count + 1 }) + '\\n';
+  if (count >= 64 || bytes + Buffer.byteLength(line) + reserve > 65536) {
+    appendFileSync(ledger, JSON.stringify({ kind: 'limit', ordinal: count + 1 }) + '\\n'); disabled = true; return;
+  }
+  appendFileSync(ledger, line); bytes += Buffer.byteLength(line); count++;
+  if (pair !== null) references.add(pair);
+} catch { disabled = true; } });
+await import(${JSON.stringify(pathToFileURL(cli).href)});
+`, { flag: 'wx' });
   const profile: TeamHostProfile = { schemaVersion: 1, principalId: 'human', processCustody: { kind: 'main-windows-v1' },
     owner: { ownerId, revision: 'TEST-1', storageRoot: join(root, 'storage'), profileId: `TEST-source-profile-${nonce}`,
       protocolVersion: 1, buildId: 'TEST-source-emulated', nodeSha256: fileHash(node), hostEntrySha256: fileHash(hostEntry) },
@@ -170,8 +231,8 @@ if(argv.length===1&&argv[0]==='--version'){
   const ownSources = ['nativeEmulatedSourceProfile.ts', 'nativeEmulatedSourceScenario.ts', 'nativeEmulatedProviderGate.ts',
     'nativeEmulatedProfile.ts', 'nativeGateContext.ts', 'nativeGateEvents.ts', 'nativeEmulatedSourceReadiness.ts'].map(name => fileURLToPath(new URL(name, import.meta.url)));
   const pins = [...new Set([node, broker, cli, hostEntry, profilePath, descriptorPath, ...ownSources,
-    ...helpers.map(value => value.path), ...Object.values(images).flatMap(value => [value.path, value.entry.path])])]
+    ...helpers.map(value => value.path), ...diagnosticPins.map(value => value.path), ...Object.values(images).flatMap(value => [value.path, value.entry.path])])]
     .map(path => ({ path, sha256: fileHash(path) }));
-  return { root, workspace, provider, providerId, model, profile, host, entries, effects, images, versions, pins,
+  return { root, workspace, provider, providerId, model, profile, host, entries, effects, images, versions, pins, refusals,
     descriptorSelection: { path: descriptorPath, sha256: fileHash(descriptorPath) } };
 }
