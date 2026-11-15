@@ -291,6 +291,11 @@ export async function runDesktopComposerUiSmoke(
           const diagnostic = { turn, expectedHumanInputs: incomingIds.length,
             nativeSampleRequests: options.model?.suggestionRequests?.length ?? -1, renderer };
           step({ assertion: 'native next prompt missing row diagnostic', ...diagnostic });
+          // The outer Desktop harness retains only stack frames on failure.
+          // These diagnostic fields are bounded booleans/counts, never DM text,
+          // operation tokens, model payloads or user credentials.
+          process.stderr.write('TEST_NATIVE_SUGGESTION_DIAGNOSTIC ' +
+            JSON.stringify(diagnostic) + '\n');
           throw new Error('TEST native suggestion UI incomplete: ' + JSON.stringify(diagnostic), { cause: error });
         }
       }
