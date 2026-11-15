@@ -270,6 +270,19 @@ async function run() {
     return snap;
   }, 180_000);
   await client.screenshot(screenshot);
+  // Establish and pin a focused Electron foreground baseline immediately
+  // before the tool probes; earlier startup/teammate activity is a separate gate.
+  const focusReady = await mainInspector.evaluate(`(() => {
+    const req = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);
+    const win = req('electron').BrowserWindow.getAllWindows()
+      .find(w => w.webContents.getURL().startsWith('http://localhost:'));
+    if (!win) return false;
+    if (!win.isFocused()) win.focus();
+    globalThis.__winProductFocus.before = win.isFocused();
+    globalThis.__winProductFocus.blur = 0;
+    return win.isFocused();
+  })()`);
+  assert(focusReady, 'Could not establish focused owned Electron window before tool E2E');
   phase = 'native-window-observer';
   hwndObserver = spawn('powershell.exe', [
     '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
