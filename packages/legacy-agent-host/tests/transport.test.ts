@@ -203,6 +203,36 @@ class GateOutput extends Writable {
   }
 }
 
+test('private custody requires priority capacity beyond its control reserve', async () => {
+  const reserve = DEFAULT_HOST_LIMITS.reservedControlRequests;
+  for (const maxPriorityMessages of [reserve, reserve - 1]) {
+    let invalid: ReturnType<typeof fixture> | undefined;
+    try {
+      assert.throws(() => {
+        invalid = fixture({ nativeCustody: { timeoutMs: 1000 }, limits: { maxPriorityMessages } });
+      }, /Control reserve must be below priority message limit/);
+    } finally { await invalid?.server.dispose(); }
+  }
+  const f = fixture({ nativeCustody: { timeoutMs: 1000 },
+    limits: { maxPriorityMessages: reserve + 1 } });
+  try {
+    await handshake(f.input);
+    const binding = { mainEpoch: 'TEST-main', hostIncarnation: f.server.handshake.hostIncarnation,
+      profileDigest: 'a'.repeat(64) };
+    f.input.write(request(2, HOST_CUSTODY_BIND_METHOD, binding));
+    await tick();
+    const work = f.server.nativeCustody!.request({
+      operation: 'write', capability: 'TEST-work-capacity', bytes: 'VEVTVA==',
+    });
+    await tick();
+    const sent = f.frames.find(frame => typeof frame.id === 'string' && frame.id.startsWith('custody:'));
+    assert.ok(sent, 'The remaining work slot dispatches the original private request');
+    const reply = { status: 'completed', value: { operation: 'write', state: 'completed' } };
+    f.input.write(JSON.stringify({ jsonrpc: '2.0', id: sent.id, result: { binding, reply } }) + '\n');
+    assert.deepEqual(await work, reply);
+  } finally { await f.server.dispose(); }
+});
+
 test('private custody hints are reliable/sticky and an old epoch reply cannot finish a current read', async () => {
   const f = fixture({ nativeCustody: { timeoutMs: 1000 } });
   await handshake(f.input);

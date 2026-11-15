@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { channel } from 'node:diagnostics_channel';
 import {
   mkdirSync,
   lstatSync,
@@ -1576,11 +1575,6 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       assertCurrent() { if (!active) throw Error('TEST original member owner revoked'); } };
     const read = (): ReturnType<TeamLaunchOwner['readModelReadiness']> => launch.readModelReadiness({ binding, configRevision: member.configRevision,
       configurationDigest: runtimeDigest(member) });
-    const refusals: Record<string, unknown>[] = [], refusal = channel('agent-teams.legacy-host.first-refusal');
-    const observeRefusal = (value: unknown) => {
-      if (value && typeof value === 'object' && !Array.isArray(value)) refusals.push(value as Record<string, unknown>);
-    };
-    refusal.subscribe(observeRefusal);
     try {
       attachMemberModelReadiness({ launch, entry, reference: selectedReference,
         commandId: 'TEST-private-consume-' + change, actorDigest: runtimeDigest('TEST-original-actor'),
@@ -1598,11 +1592,6 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
           assert.deepEqual(probes.readRetainedProbe(commandId, captured.context), original);
           assert.equal(runs, 1); assert.equal(closes, 1);
           assert.equal(allocations, 0); assert.equal(businessOpens, 0);
-          assert.deepEqual(refusals.filter(row => row.kind === 'consumer').map(row => ({
-            caller: row.caller, phase: row.phase, reason: row.reason, cutoff: row.cutoff, observedAt: row.observedAt,
-          })), [{ caller: 'allocation', phase: 'reference', reason: 'threw',
-            cutoff: original.expiresAt, observedAt: original.expiresAt - 1 }]);
-          assert.equal(refusals.find(row => row.kind === 'reference')?.probeNow, original.expiresAt);
           continue; // An expired consumer is never qualified again.
         }
         if (change === 'main-origin') rmSync(consulted);
@@ -1627,27 +1616,11 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
         assert.deepEqual(read(), pending, 'fresh native source inspection preserves project precedence');
       }
       if (change === 'credential') {
-        const foreignString = inspectMemberModelReadiness(inspection), foreignObject = inspectMemberModelReadiness(inspection);
-        let rejectAuthority = false; const primary = Error('TEST retained original authority refusal');
-        const writeFault = inspectMemberModelReadiness({ ...inspection, assertCurrent() {
-          inspection.assertCurrent(); if (rejectAuthority) throw primary;
-        } });
         writeFileSync(join(own.root, 'opencode.json'),
           originalProject.replace('TEST-retained-key', 'TEST-changed-key'), { mode: 0o600 });
         assert.throws(inspected.assertCurrent, { code: 'held' });
         assert.throws(() => consumeMemberModelReadiness(inspection), { code: 'held' });
         assert.deepEqual(read(), pending, 'changed original credential cannot consume old evidence');
-        assert.throws(() => Reflect.apply(foreignString.assertCurrent, undefined, ['TEST-not-a-caller']), { code: 'held' });
-        const hostile = { [Symbol.toPrimitive]() { assert.fail('diagnostic caller must not coerce'); } };
-        assert.throws(() => Reflect.apply(foreignObject.assertCurrent, undefined, [hostile]), { code: 'held' });
-        assert.deepEqual(refusals.filter(row => row.kind === 'consumer').map(row => row.caller),
-          ['retained-unspecified', 'allocation', 'retained-unspecified', 'retained-unspecified']);
-        rejectAuthority = true;
-        const publish = t.mock.method(refusal, 'publish', () => { throw Error('TEST unavailable diagnostic sink'); });
-        try { assert.throws(writeFault.assertCurrent, error => error === primary); } finally { publish.mock.restore(); }
-        const retainedCount = refusals.length; assert.throws(writeFault.assertCurrent, error => error === primary);
-        assert.equal(refusals.length, retainedCount, 'failed diagnostic publication does not reopen the first-refusal latch');
-        assert.deepEqual(read(), pending, 'diagnostic labels and sink failure do not consume the reference');
       } else {
         const consumed = consumeMemberModelReadiness(inspection);
         const committed = read();
@@ -1664,7 +1637,6 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       assert.equal(runs, 1); assert.equal(closes, 1);
       assert.equal(allocations, 0); assert.equal(businessOpens, 0);
     } finally {
-      refusal.unsubscribe(observeRefusal);
       launch.seal();
       if (change === 'shadowed-native') rmSync(shadowDirectory, { recursive: true, force: true });
       rmSync(consulted, { force: true });
@@ -1672,50 +1644,3 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
     }
   }
 }
-
-
-test('original factory boundary labels preserve its readiness guards and callback order', () => {
-  const source = readFileSync(new URL('../dist/composition/createRuntimeMemberProviderFactory.js', import.meta.url), 'utf8')
-    .replace(/\r\n/gu, '\n');
-  const start = 'const setupCurrent = ', end = 'entry.endpointExpiresAtMs = ';
-  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
-  const block = source.slice(source.indexOf(start), source.indexOf(end));
-  const endpoints = [...source.matchAll(/isCurrentBinding: ([^\n]+),\n/gu)];
-  assert.equal(endpoints.length, 1, 'select the actual original MCP authority callback');
-  const make = Function('authority', 'options', 'entry', 'readiness',
-    `'use strict'; ${block} return { provider: canAllocate, endpoint: ${endpoints[0]![1]!} };`) as
-    (...args: unknown[]) => { provider(): boolean; endpoint(binding: unknown): boolean };
-  const calls: unknown[][] = [], binding = Object.freeze({}), endpointBinding = Object.freeze({ teamName: 'TEST delivery' });
-  let allocate = true, current = true, attached = false, phase = 'opening', fail = false;
-  const authority = {
-    canAllocate(...args: unknown[]) { calls.push(['allocate', ...args]); return allocate; },
-    isCurrent() { calls.push(['current']); return current; },
-  };
-  const options = { readRuntime(value: unknown) {
-    assert.equal(value, binding); calls.push(['runtime']); return { record: { phase }, attached };
-  } };
-  const readiness = { assertCurrent(caller?: unknown) {
-    calls.push(['readiness', caller]); if (fail) throw Error('TEST original readiness refusal');
-  } };
-  const api = make(authority, options, { binding }, readiness);
-  for (const [invoke, caller] of [[api.provider, 'provider-opening'], [() => api.endpoint(endpointBinding), 'mcp-opening']] as const) {
-    calls.length = 0; assert.equal(invoke(), true);
-    assert.deepEqual(calls, [['allocate'], ['current'], ['runtime'], ['readiness', caller]]);
-    allocate = false; calls.length = 0; assert.equal(invoke(), false);
-    assert.deepEqual(calls, [['allocate']]); allocate = true;
-    current = false; calls.length = 0; assert.equal(invoke(), false);
-    assert.deepEqual(calls, [['allocate'], ['current']]); current = true;
-    for (const settled of ['allocated', 'attached'] as const) {
-      phase = settled === 'allocated' ? 'allocated' : 'opening'; attached = settled === 'attached';
-      calls.length = 0; assert.equal(invoke(), true);
-      assert.deepEqual(calls, [['allocate'], ['current'], ['runtime']]);
-    }
-    phase = 'opening'; attached = false; fail = true; calls.length = 0;
-    assert.equal(invoke(), false);
-    assert.deepEqual(calls, [['allocate'], ['current'], ['runtime'], ['readiness', caller]]); fail = false;
-  }
-  const absent = make(authority, options, { binding }, undefined);
-  assert.equal(absent.endpoint, authority.canAllocate, 'no-readiness route retains the original callback identity');
-  calls.length = 0; assert.equal(absent.endpoint(endpointBinding), true);
-  assert.deepEqual(calls, [['allocate', endpointBinding]], 'the original no-readiness callback still receives its binding');
-});

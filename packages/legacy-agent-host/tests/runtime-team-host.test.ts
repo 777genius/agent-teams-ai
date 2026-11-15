@@ -3594,3 +3594,89 @@ test('the original passive Runtime projection receiver writes only bounded exit 
     assert.ok(Buffer.byteLength(JSON.stringify(evidence)) <= 512);
   }
 });
+
+async function sourceReadinessDeadlineFixture(input: {
+  now: number; handoffPause?: number; deadline?: number; readCosts?: number[]; ready?: boolean[]; throwRead?: Error;
+}) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceScenario.ts', import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
+  const begin = 'async function poll(', end = 'function validateSourceRefusal(';
+  const callBegin = "        await poll(async () => { view = await first.rpc(team, 'runtime.read',";
+  const callEnd = "\n      } finally {\n        console.log(JSON.stringify({ kind: 'TEST_SOURCE_READINESS'";
+  for (const marker of [begin, end, callBegin, callEnd]) assert.equal(source.split(marker).length, 2);
+  const pollSource = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const callerSource = stripTypeScriptTypes(source.slice(source.indexOf(callBegin), source.indexOf(callEnd)));
+  type Poll = (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number) => Promise<void>;
+  let now = input.now, reads = 0;
+  const delays: number[] = [], argumentsSeen: [number | undefined, number | undefined][] = [];
+  const performance = { now: () => now };
+  const actualPoll = runInNewContext(`(()=>{${pollSource}\nreturn poll;})()`, {
+    assert, performance, delay: async (milliseconds: number) => { assert.equal(milliseconds, 25); delays.push(milliseconds); now += milliseconds; },
+  }) as Poll;
+  const readiness: Record<string, unknown> = { readCount: 0, elapsedMs: 0, lastRuntimeRead: null };
+  const run = Function('environment', `'use strict';
+    const {poll,first,team,image,runtimeDigest,readiness,readinessStarted,performance,codexReadinessDeadline}=environment;
+    let view={},lastRuntimeViewDigest;
+    return (async()=>{${callerSource}})();`) as (environment: Record<string, unknown>) => Promise<void>;
+  return {
+    run: () => run({ team: 0, image: 'A', runtimeDigest, readiness, readinessStarted: input.now,
+      performance, codexReadinessDeadline: input.deadline,
+      poll: (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number) => {
+        assert.equal(message, 'Original source Team readiness'); argumentsSeen.push([budget, deadline]);
+        now += input.handoffPause ?? 0;
+        return actualPoll(check, message, budget, deadline);
+      }, first: { rpc: async (team: number, method: string, command: string, payload: unknown) => {
+        assert.equal(team, 0); assert.equal(method, 'runtime.read'); assert.equal(command, 'TEST-ready-A');
+        assert.equal(JSON.stringify(payload), '{"memberId":"alice-id"}');
+        const index = reads++; now += input.readCosts?.[index] ?? 0;
+        if (input.throwRead) throw input.throwRead;
+        return { memberId: 'alice-id', generation: 'TEST-original', phase: 'allocated', sealed: false,
+          custody: 'owned', nativeReady: input.ready?.[index] ?? true, attached: true };
+      } },
+    }),
+    actualPoll, readiness, argumentsSeen, delays,
+    advance: (milliseconds: number) => { now += milliseconds; }, counts: () => ({ now, reads }),
+  };
+}
+
+test('source Codex readiness refuses an expired absolute deadline before its first read after the poll handoff', async () => {
+  const f = await sourceReadinessDeadlineFixture({ now: 89_990, handoffPause: 20, deadline: 90_000 });
+  await assert.rejects(f.run(), /Original source Team readiness/);
+  assert.deepEqual(f.counts(), { now: 90_010, reads: 0 });
+  assert.deepEqual(f.delays, []); assert.deepEqual(f.readiness, { readCount: 0, elapsedMs: 0, lastRuntimeRead: null });
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000]], 'the caller passes the original absolute deadline, not a resampled duration');
+});
+
+test('source Codex readiness refuses a ready result delivered after its original deadline despite a handoff pause', async () => {
+  const f = await sourceReadinessDeadlineFixture({ now: 89_900, handoffPause: 50, deadline: 90_000, readCosts: [60] });
+  await assert.rejects(f.run(), /Original source Team readiness/);
+  assert.deepEqual(f.counts(), { now: 90_010, reads: 1 }); assert.deepEqual(f.delays, []);
+  assert.equal(f.readiness.readCount, 1); assert.equal(f.readiness.elapsedMs, 110);
+  assert.equal((f.readiness.lastRuntimeRead as Record<string, unknown>).nativeReady, true);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000]]);
+});
+
+test('source readiness keeps its timely success, other original budgets, 25ms cadence and exact read errors', async () => {
+  const timely = await sourceReadinessDeadlineFixture({ now: 89_900, handoffPause: 25, deadline: 90_000, readCosts: [50] });
+  await timely.run(); assert.deepEqual(timely.counts(), { now: 89_975, reads: 1 });
+  assert.deepEqual(timely.delays, []); assert.equal(timely.readiness.readCount, 1);
+  const original = await sourceReadinessDeadlineFixture({ now: 0, handoffPause: 20_000, readCosts: [14_999] });
+  await original.run(); assert.deepEqual(original.counts(), { now: 34_999, reads: 1 });
+  assert.deepEqual(original.argumentsSeen, [[undefined, undefined]], 'non-Codex still starts its original default 15s poll on entry');
+  const boundary = await sourceReadinessDeadlineFixture({ now: 0, handoffPause: 20_000, readCosts: [15_000] });
+  await assert.rejects(boundary.run(), /Original source Team readiness/);
+  assert.deepEqual(boundary.counts(), { now: 35_000, reads: 1 }); assert.deepEqual(boundary.delays, []);
+  const cadence = await sourceReadinessDeadlineFixture({ now: 0, ready: [false, true] });
+  await cadence.run(); assert.deepEqual(cadence.delays, [25]); assert.deepEqual(cadence.counts(), { now: 25, reads: 2 });
+  assert.equal(cadence.readiness.readCount, 2);
+  const explicit = await sourceReadinessDeadlineFixture({ now: 0 });
+  await explicit.actualPoll(async () => { explicit.advance(29_999); return true; }, 'TEST original explicit budget', 30_000);
+  assert.deepEqual(explicit.counts(), { now: 29_999, reads: 0 }); assert.deepEqual(explicit.delays, []);
+  const explicitLate = await sourceReadinessDeadlineFixture({ now: 0 });
+  await assert.rejects(explicitLate.actualPoll(async () => { explicitLate.advance(30_000); return true; },
+    'TEST original explicit budget', 30_000), /TEST original explicit budget/);
+  const failure = new Error('TEST original Runtime read failed'), refused = await sourceReadinessDeadlineFixture({ now: 0, throwRead: failure });
+  await assert.rejects(refused.run(), error => error === failure);
+  assert.deepEqual(refused.counts(), { now: 0, reads: 1 }); assert.deepEqual(refused.delays, []);
+  assert.equal(refused.readiness.readCount, 0);
+});
