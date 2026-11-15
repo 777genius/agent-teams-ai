@@ -1,0 +1,32 @@
+{
+  "kind": "root-full-EH-publication-byte-and-record-review",
+  "verdict": "APPROVE",
+  "checkedAtUTC": "2026-11-15T21:40:19.440375+00:00",
+  "inventory": {
+    "bytes": 64609,
+    "blob": "2cde504e4bfb10166b299383fec1394d56b88629",
+    "sha256": "7ae2e80fff64fe272c88ab07b56acf40919e673954f492293123ae24c06006ec"
+  },
+  "audit": {
+    "bytes": 27110,
+    "blob": "29983339d6bde80d9089f9f1bb787c1fb5472f26",
+    "sha256": "5663f726d77b3347d1fe0a24b0b961c4467563aa2e5c00ad6d99275a76073df4"
+  },
+  "appendix": {
+    "bytes": 12316,
+    "blob": "31e51f3d36bf5a22256d02897b36a49a147a2e6d",
+    "sha256": "cfbcf65aaa06e2b0d9a9ad3955e43a3db3ef2b33cfcecdd58f149616d1c6f2c0"
+  },
+  "publicationFiles": 66,
+  "publicationBytes": 1159297,
+  "originalInputs": 67,
+  "retainedVerbatimFiles": 64,
+  "allOriginalToRetainedBytesExact": true,
+  "allTenActualMetadataLogPreflightJoinsExact": true,
+  "independentActualReviewsAlreadyRead": true,
+  "limits": [
+    "Only four identical original D output inventories deduplicated; every percommand log remains separately named.",
+    "Exact isolated E-H scopes only; no new build, native or incoming a02 qualification.",
+    "Historical E assertions after rejected checks remain unexecuted there; actual F/G later assertions separately passed."
+  ]
+}

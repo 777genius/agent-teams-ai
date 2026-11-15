@@ -1,0 +1,90 @@
+{
+  "kind": "independent exact prospective I canonical/manifest/recorder R2",
+  "verdict": "APPROVE",
+  "canonicalR1": {
+    "bytes": 22527,
+    "blob": "d62f158878d992d43b71bb0071f7a4561d149c9c",
+    "sha256": "5baad28fabf56507fce52de64757e8ad278ec02b6657d072d803b408e296837e"
+  },
+  "manifest": {
+    "bytes": 114714,
+    "blob": "c12e7f2c56649cdd8d2d21b08884bb876fd3a6d9",
+    "sha256": "bbc34c4aea78ce3cec706a8be9ffeb47d39e5fa76e9b5eaea834f9a69e0277e6"
+  },
+  "recorder": {
+    "bytes": 26293,
+    "blob": "c3c983293c1ad0f2496b07b9d2262af71adb60c9",
+    "sha256": "acdea416258ae569c7d0891115697ffae201d799537d229fb775dc71c463aeb1"
+  },
+  "executionSupplement": {
+    "bytes": 11350,
+    "blob": "9b0f070ce3b45adb5305b3e6f128613fec5f9464",
+    "sha256": "72b0f371581a472b4f613ece997606028740c217c47abefd5b7ad9d8915308fa"
+  },
+  "bindingTemplate": {
+    "bytes": 6337,
+    "blob": "ae58ab25dc1a1a6cda7fb85cf50ec451e3192ed3",
+    "sha256": "1740dd2c6822bd4ae0df8117e52fa8ca7868819a0f6549467b9f14fb2cf5bdd0"
+  },
+  "referenceH": {
+    "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+    "tree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+    "parents": [
+      "387fa7ab81ddd57bdd274f763b8be90cfaaae484"
+    ]
+  },
+  "selectedIncoming": {
+    "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+    "tree": "13d33c2d2462278df5c7503c4fa55a6b175793f7",
+    "parents": [
+      "3957f2b28417647578d71a465cd61d4e09b5deb9"
+    ]
+  },
+  "sourceComposition": {
+    "paths": 20,
+    "insertions": 862,
+    "deletions": 64,
+    "selectedSources": 76,
+    "newFiles": 1,
+    "onlyRetargetedThreeNativeCandidates": [
+      "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "tools/owned-process-broker/nativeFixture.cpp",
+      "tools/owned-process-broker/nativeGate.ts"
+    ],
+    "preservedIncomingSuffix": {
+      "bytes": 4307,
+      "blob": "0c2bde4490b4256daa7312a5dd4b4f34274a86ad",
+      "sha256": "e26f544363f7eb48614c136faae99cf0e0a3666675da8dd04e168fdc45c369e1"
+    },
+    "hostSources": 615
+  },
+  "executionInputs": {
+    "oldSelectedDependencies": 17,
+    "additionalYamlDependencies": 77,
+    "additionalYamlBytes": 303943,
+    "selectedDependencyTotal": 94,
+    "unchangedDOutputFiles": 1446,
+    "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "newBuildExecuted": false
+  },
+  "checks": {
+    "allFrozenReferencesExact": true,
+    "all76SourceCandidateAndHPreimagesExact": true,
+    "all20MetadataRowsExact": true,
+    "all10CommandObjectsEqualPreviousUnexecutedDraft": true,
+    "serialPrerequisitesExact": true,
+    "full615HostSourceExact": true,
+    "allDependencyBytesAndRealpathsExact": true,
+    "allDOutputBytesExact": true,
+    "FandGAndSixHRawTriplesRejoined": true,
+    "recorderReadInFull": true,
+    "prospectiveTemplateUnboundAndRefusesExecution": true
+  },
+  "limits": [
+    "No recorder, Node, project/compiler/native/provider/CI execution or source/ref action in this review.",
+    "Canonical must be published/read back with reviewed appendices before I source; ordered parents [docs sole child of H, complete4dc].",
+    "Full docs/source tree and published tuple R2 still required before invocation.",
+    "Local expected results remain predictions; unknown a02 first operand and author-reported4dc checks are not converted to qualification.",
+    "Original resulting-source native, Desktop, P08/P09/full frontend/backend/general gates remain separate."
+  ]
+}

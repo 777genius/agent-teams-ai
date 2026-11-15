@@ -1,0 +1,168 @@
+✔ offline Desktop admission refuses inherited native selections before preparing a fixture (10.533945ms)
+✔ TEST management admission retains only the exact direct detached Host peer without signaling (7.302212ms)
+✔ Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder (25.578865ms)
+✔ Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error (2.228838ms)
+✔ the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads (2.947529ms)
+✔ read-only discovery survives navigation during the actual IPC read, then reads the new context (0.688635ms)
+✔ unregistered initial discovery waits, but owner failures are never hidden as navigation (0.591361ms)
+✔ initial discovery passes only its remaining captured budget to the IPC await (0.332315ms)
+✔ exhausted initial observation never dispatches the backend IPC (0.423851ms)
+✔ other discovery callers retain the default CDP budget (0.225486ms)
+✔ an explicit IPC observation budget lets the same read settle after30s within60s (0.850526ms)
+✔ default CDP evaluations still reject at30s without a resend (0.404322ms)
+✔ macOS original Node zombie is the same unreaped harness child, never a changed live command (0.617049ms)
+✔ live stat can become original defunct before the guard; only original child reap and whole-group absence settle it (1.69242ms)
+✔ changed command/start, wrong child/group and initial descendants never authorize a recovery observation (0.276772ms)
+✔ an already observed original natural exit still requires fresh group and captured Host absence (0.223192ms)
+✔ original crash/signal and process-table failures remain debt (0.249411ms)
+✔ the original deadline is not renewed after initial settlement consumed it (0.137055ms)
+✔ numeric group absence without this original child exit observation expires within the remaining original budget (0.356951ms)
+✔ a process-table read that crosses the original deadline cannot qualify natural exit (0.254399ms)
+✔ an already reaped original child waits for actual descendant and original Host absence (0.499393ms)
+✔ an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget (0.493445ms)
+✔ absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities (0.333156ms)
+✔ a reused leader PID and unavailable full process census retain debt without signaling (0.232747ms)
+✔ absent leader observation never renews the original deadline or accepts a late census (0.171395ms)
+✔ original peer observation accepts later-row only with its retained launch row (84.822456ms)
+✔ original peer observation accepts exit only with its retained launch row (4.760239ms)
+✔ original peer observation refuses reuse without admitting the census PID (5.385538ms)
+✔ original peer observation refuses reparent without admitting the census PID (6.680777ms)
+✔ original peer observation refuses argv without admitting the census PID (2.39087ms)
+✔ original peer observation refuses duplicate without admitting the census PID (1.974931ms)
+✔ original peer observation refuses missing without admitting the census PID (31.099799ms)
+✔ original peer observation refuses late without admitting the census PID (3.905886ms)
+✔ original peer observation accepts a valid empty journal with no current children (2.818126ms)
+✖ original peer observation validates no-child-failure before returning without children (5.209172ms)
+✖ original peer observation validates no-child-malformed before returning without children (3.79415ms)
+✖ original peer observation validates no-child-late before returning without children (2.783745ms)
+✔ requested Quit lets the original child report its natural exit before the cleanup census (655.796103ms)
+✔ finite Codex exact native MCP catalog exits with empty inventory without allocating a Runtime (251.826401ms)
+✔ finite Codex catalog refuses changed argv, Runtime authority and nonempty selected configuration (298.850775ms)
+✔ finite Codex answers the original D managed config before connecting its selected Team on thread start (268.479173ms)
+✔ finite managed Codex policy refuses alternate syntax, extra servers and enabled apps before connection (152.033791ms)
+✔ runtime-derived Codex ordinary model probe (default) completes through original Host/D once (90.954642ms)
+✔ runtime-derived Codex ordinary model probe (low) completes through original Host/D once (79.19423ms)
+✔ finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread (104.379851ms)
+✔ finite Codex standalone refuses Team authority, persistent threads and unselected thread work (494.014019ms)
+✔ extensions Settings peer exposes only isolated auth status through original custody (389.822034ms)
+✔ saved-import Settings peer exposes only isolated auth status through original custody (258.163295ms)
+✔ finite extension status uses the original Host auth command and retains its exact private namespace (68.514299ms)
+✔ finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay (325.872497ms)
+✔ finite extension CLI refuses changed names/scopes and does not overwrite selected config (283.560672ms)
+✔ saved-import finite metadata and actual original probe receipt preserve model/effort with no extra input on lookup (3276.781153ms)
+✔ saved-import peer refuses a business input without producing a probe or touching Host receipts (401.989171ms)
+✔ receipt summaries retain only the original nested mixed Settings owner (1.393745ms)
+✔ retained c226 original rejected-key receipt joins its published seed and exact observed native probe (65.847322ms)
+✔ V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable (22.336458ms)
+✔ V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable (5.635641ms)
+✔ V2 source history accounts for every publication and the exact retained current chain (22.081118ms)
+✔ original Host rejects old other-project cwd and accepts only its separate exact private-account seed (4.898974ms)
+✔ archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal (2.972556ms)
+✔ original V2 default intent joins its selected saving row within the same receipt deadline (17.774907ms)
+✔ published receipt reads survive the real controller writer before its atomic rename (228.36085ms)
+✔ receipt reads reject foreign staging names, directories and symbolic links (17.136565ms)
+✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (205.504349ms)
+✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (500.43723ms)
+✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (5.721159ms)
+✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (2.30378ms)
+✔ isolated shell fixture emits the actual framed environment and refuses shell effects (152.025878ms)
+✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (13.169063ms)
+✔ Task attachment comment waits for its original focused owner after one click before inserting text (212.047157ms)
+✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (5.948932ms)
+✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (4.315156ms)
+✔ original desktop click waits for stable target geometry, without repeating input (301.120097ms)
+✔ original Task hover waits through layout and unavailability before its one physical move (625.655368ms)
+✔ original desktop click refuses a constantly moving target before dispatch (1533.78565ms)
+✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (302.5839ms)
+✔ login failure facts retain only bounded original attempts and confirmed milestones (1.556758ms)
+✔ finite readiness failure summaries keep only bounded states and never private snapshot data (1.889073ms)
+✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (1.98822ms)
+✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (1.889283ms)
+✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (0.585192ms)
+✔ installer CDP and cleanup projection retains only exact finite observations (0.482388ms)
+✔ Selection target summaries retain the exact original phase and six closed facts (0.633063ms)
+✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (0.448428ms)
+✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (1.00099ms)
+✔ original desktop click refuses a target unavailable during the final ownership check (202.017303ms)
+✔ original desktop click refuses a target moved during the final ownership check (229.00795ms)
+✔ original default scroll preserves a disabled control before its readiness wait (5.750532ms)
+✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (103.436728ms)
+✔ original desktop click rechecks owner after its pending final target read (200.646162ms)
+✔ original desktop click rechecks cutoff after its pending final target read (202.10297ms)
+✔ original clarification lookup admits its retained read without completing the assignment prerequisite (2.379623ms)
+✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (13.286272ms)
+✔ original owner availability admits three captured A Teams through its actual first DOM read (1.996822ms)
+✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (1.994519ms)
+✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (20.347875ms)
+✔ original owner availability refuses invalid captured discovery before navigation (0.514496ms)
+✔ owner availability admits every captured A Team through the actual first observation (0.466765ms)
+✔ owner availability refuses healthy B in unavailable A rows (0.293187ms)
+✔ owner availability refuses captured foreign owner in unavailable A rows (0.252336ms)
+✔ owner availability refuses unknown Team in unavailable A rows (0.320938ms)
+✔ owner availability refuses malformed Team in unavailable A rows (0.572102ms)
+✔ owner availability refuses missing selected A before original navigation (0.272906ms)
+✔ owner availability refuses non-string A handle before original navigation (0.142903ms)
+✔ owner availability refuses empty A handle before original navigation (0.223212ms)
+✔ owner availability refuses duplicate A handle before original navigation (0.102753ms)
+✔ owner availability refuses over-bound capture before original navigation (0.217934ms)
+(node:75) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget (7.970326ms)
+✔ Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget (21.316106ms)
+✔ ordinary Node imports and synchronous observations remain inert (2.10852ms)
+✔ constructor subscription observes the original async child after pid assignment (124.142684ms)
+✔ the observer preserves an actual unhandled child-process error (342.124052ms)
+✔ failed reads, writes and unknown child fields cannot change the original operation (1.335208ms)
+✔ the original TEST helper path exposes only its closed requested target class (0.908562ms)
+✔ event and pending-child bounds explicitly preserve incomplete coverage (1.62573ms)
+ℹ tests 115
+ℹ suites 0
+ℹ pass 112
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6626.347952
+
+✖ failing tests:
+
+test at scripts/legacy-agent-host/desktop-backend-observations.test.ts:991:1
+✖ original peer observation validates no-child-failure before returning without children (5.209172ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/scripts/legacy-agent-host/desktop-backend-observations.test.ts:993:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /TEST protocol refusal cannot become a passing UI proof/u,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-backend-observations.test.ts:991:1
+✖ original peer observation validates no-child-malformed before returning without children (3.79415ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection (SyntaxError).
+      at async TestContext.<anonymous> (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/scripts/legacy-agent-host/desktop-backend-observations.test.ts:993:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-backend-observations.test.ts:991:1
+✖ original peer observation validates no-child-late before returning without children (2.783745ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/scripts/legacy-agent-host/desktop-backend-observations.test.ts:993:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /Original peer journal validation exceeded its deadline/u,
+    operator: 'rejects',
+    diff: 'simple'
+  }

@@ -1,0 +1,181 @@
+{
+  "kind": "official-github-artifact-byte-integrity",
+  "sourceHead": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+  "runId": 43759098052,
+  "jobId": 132949618051,
+  "artifact": {
+    "id": 14179847488,
+    "name": "host-process-fixtures-win32-x64-c28f1aa890c909c7b981254c5e30b874cbc84287",
+    "size_in_bytes": 70615,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14179847488",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14179847488/zip",
+    "expired": false,
+    "created_at": "2026-11-15T20:46:32Z",
+    "expires_at": "2026-11-29T20:46:31Z",
+    "updated_at": "2026-11-15T20:46:32Z",
+    "digest": "sha256:b948518d266e7639ffb4f7f9aed3c2574b9f58902b65f40eaf90df6a266dd736",
+    "workflow_run": {
+      "id": 43759098052,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "c28f1aa890c909c7b981254c5e30b874cbc84287"
+    }
+  },
+  "archiveFile": "c28-process-win32-x64.zip",
+  "archive": {
+    "bytes": 70615,
+    "sha256": "b948518d266e7639ffb4f7f9aed3c2574b9f58902b65f40eaf90df6a266dd736",
+    "gitBlob": "a9db0217554ac27d569086047693d05039f5a90e"
+  },
+  "jobLog": {
+    "path": "job-132949618051.log",
+    "bytes": 392398,
+    "sha256": "c24268c1881ddf5f2b394f28d12654eeac6ddee5ddbc44262c3d04739e8384c4",
+    "gitBlob": "8a0815102fb86e8bae68101426eef0e610fb8619"
+  },
+  "checks": {
+    "apiSizeMatches": true,
+    "apiSha256Matches": true,
+    "allMemberCrcValid": true,
+    "uniqueMemberPaths": true,
+    "safeRelativePaths": true,
+    "noSymlinks": true
+  },
+  "extractedDirectory": "process_x64",
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+      "crc32": "bbb2d543",
+      "bytes": 1723,
+      "sha256": "f30969981e84abaeba694c1309d342ef212798c19b84580d344e2cf962ba93cd",
+      "gitBlob": "08c9bfe9230bc06af309fcd8fea8d6150a057639"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "crc32": "9950116e",
+      "bytes": 20045,
+      "sha256": "dc59d245b7911304ceb6d2b47d23d062c45a53dfd97b7834d75544ee38ff4721",
+      "gitBlob": "8c9775dfbb82e50aace5f1b2796dce5a516a4ae4"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "crc32": "2136fd23",
+      "bytes": 757,
+      "sha256": "0fe7ee739efc828efe27f0d76fcf21e35776489e766cf3cd59697df52c421664",
+      "gitBlob": "46085e00ee2a0c349b522f78ed258f9d2ef1a980"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "crc32": "4772e0ae",
+      "bytes": 9371,
+      "sha256": "63dac8379c541256e5fe02fa288f2b4359a77accc4bae68a557f56a2547d1cf6",
+      "gitBlob": "71751174a42a30a6e0e5dca6b8caba1dac88fc32"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+      "crc32": "896108de",
+      "bytes": 137737,
+      "sha256": "f1594caf19b46963e99521c121de7506e540fc1a551be9fad93ac13cf68bdbda",
+      "gitBlob": "d643eda39be2672a7a5f14c9aaafd3241e14bc9f"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "crc32": "98e23903",
+      "bytes": 41,
+      "sha256": "ed412a9bf653b9f6fbac43dc54faef76d46abce104dce58f7df4abc7e53e9e72",
+      "gitBlob": "1e2b4a4ba3fdc943cf9b4914e7a267edc1ece36a"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+      "crc32": "bbb2d543",
+      "bytes": 1723,
+      "sha256": "f30969981e84abaeba694c1309d342ef212798c19b84580d344e2cf962ba93cd",
+      "gitBlob": "08c9bfe9230bc06af309fcd8fea8d6150a057639"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+      "crc32": "4b1f7887",
+      "bytes": 78115,
+      "sha256": "1488beb471b20b3f5c9071a77fd1a9fe310f56dea207846d3261b64d60cf71e9",
+      "gitBlob": "9427a3c792e07193c50c5e87ede03f0aa41504dc"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+      "crc32": "17d1d6f9",
+      "bytes": 2900,
+      "sha256": "64058584b15ff9b44e9c710179d294a7554192814872098b654b97ba30c7232e",
+      "gitBlob": "f79a30e01a4b3dbc6a036d22b1bd2a1e460353e1"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+      "crc32": "b759e044",
+      "bytes": 1278,
+      "sha256": "727fd78f4aa2e53c572e6e2ef1a9c002e3b997690a47009b96fa2f3ee5a6ae12",
+      "gitBlob": "ccef69db249512ee6958dce1312b20318dbfc204"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+      "crc32": "f2b7431e",
+      "bytes": 193,
+      "sha256": "1aa8d78ba82cc1085cccf55ebbbd94c4141472a8fccbb9c2c70f8f76ff0b21e9",
+      "gitBlob": "5d0561f1ebc738ed32a564e27e925b2f27fc524d"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+      "crc32": "61734b79",
+      "bytes": 78063,
+      "sha256": "0a35f0cf34be2d47f5acaaacf31e682189bbd61090ebe1c64abc36293921ba56",
+      "gitBlob": "76171fcec81876f2580a8f0e2eb805aff444eb57"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+      "crc32": "d7cb210b",
+      "bytes": 230,
+      "sha256": "c9982b5bf3163dd4eca82e08c019c5bf2737d6df4c0d785a79a29ca0b256d04c",
+      "gitBlob": "bee0f17427113fb57605855f42aa6af9f6181760"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude-receipt.json",
+      "crc32": "638963e6",
+      "bytes": 27742,
+      "sha256": "9f68b1f1264698ffd3fc6dacb95361a24f9e83b917b4ddf2368dbde4336c0c18",
+      "gitBlob": "ca38ffd79e07688cf58a697f9d58336eb10d3076"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude.log",
+      "crc32": "14ea7ac9",
+      "bytes": 18944,
+      "sha256": "9c07120139465cb21545abe9450aedd8e7ab65cce73912c92bfb7dcf762bdb97",
+      "gitBlob": "994b32cc4d41340ac95d3e6da6dc87d50a702bfc"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+      "crc32": "5039c317",
+      "bytes": 60497,
+      "sha256": "185971300c07ff1d9fa731a7804be84081e4bb836b9876a986350d1ba0fe99ba",
+      "gitBlob": "6e0e336f1c73796cd6647d606bad900d6c622073"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+      "crc32": "665c2dfe",
+      "bytes": 49713,
+      "sha256": "1c8cc9195e6fb7a5af08f05318287d1f3ba9eec61afbf229b8b54ed50f2fdcfb",
+      "gitBlob": "4369ed41bffbc384136367d203d0290cd0c86848"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+      "crc32": "9b288d3e",
+      "bytes": 25969,
+      "sha256": "52d389c0f4253413290e6f828457cca7fc41f313d8c0449da1ee92784b2b87ac",
+      "gitBlob": "00cc209b0e3bbabaa07d813eb4ea93f10be68f52"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode.log",
+      "crc32": "10fe2711",
+      "bytes": 14673,
+      "sha256": "2faba3931885fdb80c48e10df4f53e9b09ed3560b78021b7ae37db1ccd9b54cc",
+      "gitBlob": "10217f0308970c97e75039dd328235758f095ffb"
+    }
+  ]
+}

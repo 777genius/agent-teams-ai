@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "artifact": {
+    "id": 14181024060,
+    "name": "opencode-v2-embedded-native-darwin-x64",
+    "size_in_bytes": 10515,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14181024060",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14181024060/zip",
+    "expired": false,
+    "created_at": "2026-11-15T21:24:48Z",
+    "expires_at": "2026-11-22T21:24:46Z",
+    "updated_at": "2026-11-15T21:24:48Z",
+    "digest": "sha256:afaa8fb9f404829d3abbaf8950ad517ad84816fde424e36b27d30c9c894ed839",
+    "workflow_run": {
+      "id": 43762390792,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "a02ab70edfdcb4169627e804f0337c9ad6b52af6"
+    }
+  },
+  "archive": "a02-v2-darwin-x64.zip",
+  "archiveIdentity": {
+    "bytes": 10515,
+    "sha256": "afaa8fb9f404829d3abbaf8950ad517ad84816fde424e36b27d30c9c894ed839",
+    "gitBlob": "6fe5eb3595b834e0f0f3b93148d905f8498f150d"
+  },
+  "validation": {
+    "apiSize": true,
+    "apiSha256": true,
+    "allCrc32": true,
+    "safeUniqueRelativeNames": true,
+    "noSymlinks": true
+  },
+  "extract": "v2_darwin_x64",
+  "fileCount": 4,
+  "members": [
+    {
+      "name": "opencode-v2-embedded-inputs.json",
+      "crc32": "a82e8741",
+      "compressedBytes": 1163,
+      "bytes": 2370,
+      "sha256": "20fbf8e4994a2803157e63488f179c1b3b5d1750ca54e19040500099b5de540c",
+      "gitBlob": "b39944931c7a3e572844e228d65d7cf92b738f63"
+    },
+    {
+      "name": "opencode-v2-embedded-host.json",
+      "crc32": "5c29613e",
+      "compressedBytes": 5754,
+      "bytes": 95021,
+      "sha256": "61830f65c95af2b691c852ae8ef61532d4115c860eb4159ee983f5e0403e1786",
+      "gitBlob": "3475786f5bcc37e4ff39191eb3e00eebe033fd30"
+    },
+    {
+      "name": "opencode-v2-posix-exec.json",
+      "crc32": "d28171c4",
+      "compressedBytes": 2240,
+      "bytes": 14538,
+      "sha256": "dc2b48327a9add4fdb1904bd30fcbcb4d383d6d654e2fc9cf63d30e88ef12443",
+      "gitBlob": "b55dedb62486037bc37cfb13910b3c9df87a285c"
+    },
+    {
+      "name": "opencode-v2-darwin-custody.json",
+      "crc32": "10ec93e8",
+      "compressedBytes": 728,
+      "bytes": 1444,
+      "sha256": "6faaf98b24ac5d1cfb54426f432ed2446b3ddf884b84472e69abec0d27748031",
+      "gitBlob": "54c9a429ef96dddb1fe9003ede8047dc05f5ee85"
+    }
+  ]
+}

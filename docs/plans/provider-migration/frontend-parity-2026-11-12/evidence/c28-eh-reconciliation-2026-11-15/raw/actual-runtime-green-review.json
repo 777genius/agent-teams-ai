@@ -1,0 +1,27 @@
+{
+  "record": "F-runtime-green",
+  "exitCode": 0,
+  "total": 44,
+  "pass": 44,
+  "fail": 0,
+  "skip": 0,
+  "cancelled": 0,
+  "rootApproved": true,
+  "independentApproved": true,
+  "sourceHead": "6376001fa9db4b67c4d3264352680d29832a43c9",
+  "sourceTree": "e27dc5d280d7970ac4179a040330663b59ceb54a",
+  "logSHA256": "d8364a1fec852e34c9d9f00d6d88ef8a1b497640333ce1f4ddec29554185ccac",
+  "metadataSHA256": "6f5e47487f087f2f3e40c8e17d2617bcb047083b3dfb43bb310004db3866630b",
+  "independentReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/F-independent-actual-green-review.json",
+    "bytes": 2796,
+    "blob": "e56243df43fd1bc5f5d9396db8963ac4f7f1e998",
+    "sha256": "852487edc25b1a54dd53aaca51414852f446b2ea33fb8c3874a86819e098c63e"
+  },
+  "limits": [
+    "Actual extracted closure and complete original Runtime file result only; no native or Windows execution qualification.",
+    "All assertions in the six formerly failing cases now reached and passed; E later assertions remain historically unexecuted.",
+    "Full immutable D output inventory reused; no F build claim or full dependency payload census.",
+    "Incoming76/a02 remain unadopted by this isolated source."
+  ]
+}

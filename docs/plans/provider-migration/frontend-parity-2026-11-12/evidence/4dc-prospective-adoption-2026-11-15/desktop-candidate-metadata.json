@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "scope": "future76-a02-desktop-three-path-correction",
+  "incomingHead": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "incomingParent": "76a227d283ee9ee4d55d894c2b5d11dde64453e3",
+  "hostWorkflowPreimageMeaning": "exact approved H candidate; H publication and resulting-source validation must be joined before future adoption",
+  "executed": false,
+  "allSevenDesktopLintPaths": [
+    "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+    "scripts/legacy-agent-host/desktop-captured-app.ts",
+    "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+    "scripts/legacy-agent-host/qualify-linux-process-sdk.ts"
+  ],
+  "newLintOperands": [
+    "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+    "scripts/legacy-agent-host/desktop-captured-app.ts",
+    "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+    "scripts/legacy-agent-host/qualify-linux-process-sdk.ts"
+  ],
+  "oldLintOperandCount": 32,
+  "newLintOperandCount": 38,
+  "files": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "preimage": {
+        "gitBlob": "41cd9e2ebd601765e47739fa58cc9933b2b93e18",
+        "sha256": "80b0e5d9684512936225d49dab59962c459bc4c6545d723f60bf801d39d5e4dc",
+        "bytes": 96718,
+        "lines": 1251
+      },
+      "candidate": {
+        "gitBlob": "19906e8f1b750a36494f94b671b16f284f834085",
+        "sha256": "cd3738968eb9a3ea38d78675c6d57c43f4efc6a5246f0f8d0785a3c0269e3198",
+        "bytes": 97137,
+        "lines": 1257
+      },
+      "insertions": 6,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "preimage": {
+        "gitBlob": "32e4d666c962619e9251843db6e9aa4e21fbaba9",
+        "sha256": "bd080554af46d3835b91edb98be7592c8bd4815762cbde9c918e24b073bd5cb7",
+        "bytes": 21929,
+        "lines": 279
+      },
+      "candidate": {
+        "gitBlob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd",
+        "bytes": 22082,
+        "lines": 281
+      },
+      "insertions": 2,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "preimage": {
+        "gitBlob": "404a3806398590b340fa89a5709f0ab32286ba80",
+        "sha256": "eccf17af13f514d71d7527fb31e8d53443b162f29376e8de911d1a04a1e555f6",
+        "bytes": 13171,
+        "lines": 179
+      },
+      "candidate": {
+        "gitBlob": "dd53c5b6c019dbe034dcde5375f03123b9b3e10a",
+        "sha256": "d9c331cfc2aed9a7aeaa7c815ce39de662a3b491cc31013df1e5f16ee029b514",
+        "bytes": 13285,
+        "lines": 180
+      },
+      "insertions": 2,
+      "deletions": 1
+    }
+  ],
+  "originalDesktopHead": "76a227d283ee9ee4d55d894c2b5d11dde64453e3",
+  "authorTmpdirCorrection": {
+    "head": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+    "path": ".github/workflows/electron-packaged-ci.yml",
+    "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+    "mode": "adopt incoming exact; not a newly applied correction by this agent",
+    "completeApiReadbackExact": true
+  }
+}
