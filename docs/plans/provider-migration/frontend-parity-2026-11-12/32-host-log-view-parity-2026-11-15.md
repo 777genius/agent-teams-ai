@@ -274,3 +274,51 @@ warning is added. Full workspace typecheck remains unqualified after its
 earlier environment OOM. Actual resulting-source Electron/native acceptance
 is still required; neither the provider receipts nor27b1 Desktop results
 qualify this follow-up.
+
+## Remaining shared-SPI coordination consumer after checked adoption
+
+At application `35cbd6e99b620e9b41802af936143d900f5e2aca`, both original
+checked archives from provider `9423f600dfb04d04448326dbced89919924b0b5f`
+are admitted. Independent primary-source review verified the exact CI ZIP,
+both package hashes, Node24.21/26.11 source and packed-consumer checks, and
+all53 original native OpenCode jobs. Mandatory CI/native workflows and their
+commands are unchanged. The provider receipt still says source/packed-consumer
+only, with nativeHostQualified and packagedElectronQualified false; it cannot
+qualify application Desktop, process custody or packaged acceptance.
+
+One existing consumer still rejects the new SPI variant:
+`OpenCodeCoordinationProbe.observeCoordination` accepts `usage` but refuses
+`thinking`. The actual V1 management/readiness path uses this loop, so native
+reasoning can reject an otherwise valid coordination proof. The Windows
+Event-kind counter and Host normalizer are already corrected in35cbd6e and
+are not part of this remaining companion.
+
+R1 `/root/p09_review` identified and prepared the finite consumer repair;
+R2 `/root` independently reviewed its original helper, actual MCP endpoint
+and all refusal predicates. Accept exactly one production expression:
+ignore `thinking` alongside `usage` only after existing session, input,
+operation, revocation, event/byte-budget and deadline checks. Thinking must
+never set hasText, substitute for either MCP effect, change native tool
+identity, or satisfy the required actual answer and successful result.
+
+Extend only `management-model-probe.test.ts` and its existing synthetic
+Session/MCP helper with seven cases: valid Thinking plus original effects,
+answer and result; Thinking with completed effects but no answer; foreign
+session/input/operation; serialized Thinking above32KiB; and129 events whose
+total bytes stay below32KiB. Only the first qualifies. The no-answer case
+must complete the real finite MCP sequence while the overall proof refuses
+it; the remaining negative cases must refuse before those effects complete.
+Retain every original case, authority predicate, deadline and cleanup.
+
+Publish this bounded amendment before source edits. With the exact checked
+SPI installed, first demonstrate the new regression on the unchanged
+production consumer, then run the complete existing management-model-probe
+suite after the one-expression correction. Run Host build/test TypeScript7
+and affected original activity suites. No new workflow, selector, package
+pin, facade, persistence, runtime owner or permission is introduced. Synthetic
+Session/MCP execution is not native qualification and authorizes no real
+Claude/Codex process. Scheduled-log presentation has a separate concrete
+baseline review; it is not silently covered by this consumer repair.
+
+The Draft chain, contributor history and outstanding P08/P09/Desktop/native
+gates remain unchanged. No queued, skipped or cancelled check is a PASS.
