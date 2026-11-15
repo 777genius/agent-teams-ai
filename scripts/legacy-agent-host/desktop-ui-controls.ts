@@ -337,7 +337,8 @@ export function createDesktopUiControls(
     await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
   };
   const scrollTo = async (
-    selector: string, label: string, text?: string, maxWheelEvents = 12
+    selector: string, label: string, text?: string, maxWheelEvents = 12,
+    scrollOptions: { requireCenterHit?: boolean } = {}
   ): Promise<void> => {
     assert.ok(Number.isSafeInteger(maxWheelEvents) && maxWheelEvents >= 1 && maxWheelEvents <= 32);
     // Allow one final visibility read after the last wheel; never dispatch
@@ -356,7 +357,8 @@ export function createDesktopUiControls(
         const top=Math.max(0,p.top),bottom=Math.min(innerHeight,p.bottom);
         if(bottom<=top||!r.width||!r.height)return null;
         const x=Math.max(1,Math.min(innerWidth-1,p.x+p.width/2)),y=(top+bottom)/2;
-        return {visible:r.top>=top&&r.bottom<=bottom,x,y,delta:Math.max(-600,Math.min(600,r.y+r.height/2-y))};
+        const hit=${scrollOptions.requireCenterHit === true ? 'document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)' : 'e'};
+        return {visible:r.top>=top&&r.bottom<=bottom&&Boolean(hit&&(hit===e||e.contains(hit))),x,y,delta:Math.max(-600,Math.min(600,r.y+r.height/2-y))};
       })()`,
           label
         )

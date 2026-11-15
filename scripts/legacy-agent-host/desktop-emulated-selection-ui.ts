@@ -193,7 +193,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
     await ui.click(permissions, 'retain tool confirmations for saved Team');
   }
   await ui.waitRead(`document.querySelector(${literal(permissions)})?.getAttribute('data-state')==='unchecked'`, 'original saved Team approval choice');
-  await ui.scrollTo(`${page} #launch-team`, 'original immediate-launch checkbox');
+  await ui.scrollTo(`${page} #launch-team`, 'original immediate-launch checkbox', undefined, 12, { requireCenterHit: true });
   assert.equal(await cdp.evaluate(`document.querySelector('${page} #launch-team')?.getAttribute('data-state')`), 'checked');
   await ui.click(`${page} #launch-team`, 'select original save-only Create');
   await ui.waitRead(`document.querySelector('${page} #launch-team')?.getAttribute('data-state')==='unchecked'`, 'save-only selected');

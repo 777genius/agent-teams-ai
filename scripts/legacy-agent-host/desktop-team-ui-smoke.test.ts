@@ -1213,3 +1213,55 @@ for (const [change, replacement] of [
       'no physical press or release after the original target changes');
   });
 }
+
+for (const requireCenterHit of [false, true]) {
+  test(requireCenterHit
+    ? 'original scroll opt-in reveals a covered checkbox with one bounded wheel'
+    : 'original default scroll preserves a disabled control before its readiness wait', { timeout: 5000 }, async () => {
+    const selector = '#TEST-original-checkbox', child = {}, cover = {};
+    const expressions: string[] = [], selectors: string[] = [];
+    const hits: { x: number; y: number }[] = [], dispatched: Record<string, unknown>[] = [];
+    let revealed = false;
+    const scroller = { parentElement: null, scrollHeight: 1200, clientHeight: 600,
+      getBoundingClientRect: () => ({ x: 0, top: 80, bottom: 680, width: 900 }) };
+    const control = { parentElement: scroller, disabled: !requireCenterHit,
+      contains: (node: unknown) => node === child,
+      getBoundingClientRect() {
+        const top = revealed ? 372 : 96;
+        return { x: 90, y: top, top, bottom: top + 16, width: 16, height: 16 };
+      } };
+    const ui = createDesktopUiControls({
+      async evaluate(expression: string) {
+        expressions.push(expression);
+        return runInNewContext(expression, {
+          innerWidth: 1000, innerHeight: 720,
+          getComputedStyle: (node: unknown) => ({ overflowY: node === scroller ? 'auto' : 'visible',
+            pointerEvents: node === control && control.disabled ? 'none' : 'auto' }),
+          document: { documentElement: scroller,
+            querySelectorAll(actual: string) { selectors.push(actual); return [control]; },
+            elementFromPoint(x: number, y: number) {
+              hits.push({ x, y }); return requireCenterHit && revealed ? child : cover;
+            } },
+        });
+      },
+      async send(method: string, params: Record<string, unknown> = {}) {
+        dispatched.push({ method, ...params });
+        if (method === 'Input.dispatchMouseEvent' && params.type === 'mouseWheel') revealed = true;
+        return {};
+      },
+    }, { assertOwnedRenderer() {}, step() {} });
+    if (requireCenterHit) {
+      // The old four-argument helper ignores this option; its premature return is the RED.
+      await Reflect.apply(ui.scrollTo, undefined, [selector, 'TEST original covered checkbox',
+        undefined, 12, { requireCenterHit: true }]);
+    } else await ui.scrollTo(selector, 'TEST original disabled control');
+    assert.deepEqual(selectors, Array.from({ length: requireCenterHit ? 2 : 1 }, () => selector));
+    assert.ok(expressions.every(expression => expression === expressions[0]),
+      'each original loop read executes the same actual helper expression');
+    assert.deepEqual(hits, requireCenterHit ? [{ x: 98, y: 104 }, { x: 98, y: 380 }] : [],
+      'only the opt-in tests the original target center, including its descendant');
+    assert.deepEqual(dispatched, requireCenterHit ? [{ method: 'Input.dispatchMouseEvent',
+      type: 'mouseWheel', x: 450, y: 380, deltaX: 0, deltaY: -276 }] : [],
+      'only the existing centering wheel is used; no checkbox click or default-control input');
+  });
+}
