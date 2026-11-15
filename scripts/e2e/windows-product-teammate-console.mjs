@@ -509,11 +509,32 @@ async function run() {
 try {
   await run();
 } catch (error) {
+  // Preserve read-only original PID facts when product Stop refuses confirmation.
+  // A live original is never silently reclassified as stopped; identity changes
+  // are recorded, and lookup errors are not treated as proof of disappearance.
+  const stopFailurePidEvidence = phase === 'product-stop'
+    ? await Promise.all([
+        ['alice', initialMember],
+        ['bob', originalMember],
+      ].filter(([, identity]) => Boolean(identity)).map(async ([member, identity]) => {
+        try {
+          const observed = await getProcess(identity.pid);
+          return {
+            member, pid: identity.pid, observedAlive: observed !== null,
+            originalBirthMatches: observed ? observed.creation === identity.creation : null,
+            originalTeamAttributed: observed ? observed.command.includes(teamName) : null,
+          };
+        } catch {
+          return { member, pid: identity.pid, processLookupFailed: true };
+        }
+      }))
+    : [];
   await writeFile(receiptPath, JSON.stringify({
     schemaVersion: 1, success: false, phase, error: String(error),
     realProductTeammateLaunch: Boolean(originalMember),
     appManagedRosterAttachConfirmed,
     toolResults: [...proofs.values()], usageImporterProcesses,
+    stopFailurePidEvidence,
     modelErrors: model?.errors ?? [],
     logTail: log.slice(-3500),
   }, null, 2) + '\n');
