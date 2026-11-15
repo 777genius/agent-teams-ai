@@ -118,6 +118,7 @@ jobs:
             scripts/e2e/opencode-diagnostics/platform.mjs \
             scripts/e2e/opencode-diagnostics/platform.test.mjs \
             scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts \
+            scripts/legacy-agent-host/desktop-emulated-selection-ui.ts \
             scripts/legacy-agent-host/desktop-native-process-ui.test.ts \
             scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts \
             scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts \

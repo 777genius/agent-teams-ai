@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
+import { hostTeamRunId } from '../../src/features/agent-backend/contracts/teamRunSelection.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { processTable } from './desktop-backend-observations.ts';
 import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
@@ -18,7 +19,7 @@ type Row = Record<string, unknown>;
 const array = (value: unknown): Row[] => { assert.ok(Array.isArray(value)); return value.map(record); };
 
 /** Original Create/Launch/Composer/Stop controls; two finite native threads retain their own selections. */
-export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
+export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(expression: string, timeoutMs?: number): Promise<unknown> }, options: {
   fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedRuntimeFixture>>;
   evidence: Row;
   assertOwnedRenderer(): void;
@@ -34,10 +35,10 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
   options.evidence.emulatedSelectionUiProof = proof;
   const ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
   const effects = () => readDesktopEmulatedRuntimeEffects(fixture);
-  const poll = async <T>(read: () => Promise<T>, accept: (value: T) => boolean, label: string) => {
+  const poll = async <T>(read: (deadline: number) => Promise<T>, accept: (value: T) => boolean, label: string) => {
     const deadline = Date.now() + 75_000;
     for (;;) {
-      await effects(); const value = await read(); if (accept(value)) return value;
+      await effects(); const value = await read(deadline); if (accept(value)) return value;
       assert.ok(Date.now() < deadline, label + '; original action is never repeated');
       await new Promise<void>(resolve => setTimeout(resolve, 100));
     }
@@ -146,11 +147,41 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
       thread: live.thread, nativeReady: true, originalInputsUnchanged: originalInputs });
     return current;
   };
-  const stop = async (live: Live) => {
+  const stop = async (live: Live, observeStoppedUi = false) => {
     await ui.scrollTo('button[aria-label="Stop"]', 'original Team Stop');
     await ui.click('button[aria-label="Stop"]', 'stop original selected Team once', 'Stop');
     const stopped = await poll(live.session, value => value.phase === 'closed' && value.custody === 'released', 'original selected custody released');
-    await poll(async () => processTable(), table => !table.some(row => row.pid === live.thread.pid), 'original selected peer absent');
+    await poll(async deadline => {
+      const table = processTable();
+      if (table.some(row => row.pid === live.thread.pid)) return false;
+      if (!observeStoppedUi) return true;
+      const key = hostTeamSelectionKey(live.handleId), runId = hostTeamRunId(live.handleId,
+        live.definition.launchId as string, live.definition.rosterRevision as string);
+      options.assertOwnedRenderer();
+      const remaining = deadline - Date.now();
+      assert.ok(remaining > 0, 'original stopped UI observation; original action is never repeated');
+      const ready = await cdp.evaluate(`(() => {
+        const key = ${literal(key)}, runId = ${literal(runId)}, state = window.__agentTeamsDevStore?.getState();
+        if (state?.selectedTeamName !== key || state.currentProvisioningRunIdByTeam?.[key] !== runId ||
+          state.currentRuntimeRunIdByTeam?.[key] !== runId) return false;
+        const progress = state.provisioningRuns?.[runId];
+        if (progress?.runId !== runId || progress.teamName !== key || progress.state !== 'disconnected') return false;
+        const visible = e => { const r = e.getBoundingClientRect();
+          return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility === 'visible'; };
+        const teams = [...document.querySelectorAll('[data-team-name]')].filter(e =>
+          e.getAttribute('data-team-name') === key && e.querySelector('[data-section-id="team"]') && visible(e));
+        if (teams.length !== 1) return false;
+        const banners = [...teams[0].querySelectorAll(':scope > [role="status"]')];
+        if (banners.length !== 1) return false;
+        const banner = banners[0], wrapper = banner.nextElementSibling;
+        const launches = [...banner.querySelectorAll('button')].filter(e => e.textContent.trim() === 'Launch');
+        return visible(banner) && [...banner.querySelectorAll(':scope > span')].some(e =>
+          e.textContent.trim() === 'Team is offline') && launches.length === 1 &&
+          !launches[0].disabled && visible(launches[0]) && wrapper?.tagName === 'DIV' && wrapper.childElementCount === 0;
+      })()`, Math.min(30_000, remaining));
+      assert.ok(Date.now() < deadline, 'original stopped UI observation; original action is never repeated');
+      return ready === true;
+    }, value => value === true, observeStoppedUi ? 'original selected peer absent and captured stopped Team UI converged' : 'original selected peer absent');
     assert.deepEqual(stopped.binding, live.initial.binding);
     return { binding: stopped.binding, phase: stopped.phase, custody: stopped.custody, originalPid: live.thread.pid, absent: true };
   };
@@ -273,7 +304,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
   const completed = await poll(liveA.session, value => array(value.inputs).some(row => record(row.intent).inputId === inputId && row.terminal === 'succeeded'), 'original A stream completes');
   assert.equal(array(completed.inputs).length, 2); await visible('TEST stream partial complete');
   proof.completedScreenshot = await screenshot('completed'); proof.stream = { commandId: sent[0]!.commandId, inputId, terminal: 'succeeded', survivedBStop: true };
-  proof.aStop = await stop(liveA); proof.stoppedScreenshot = await screenshot('stopped');
+  proof.aStop = await stop(liveA, true); proof.stoppedScreenshot = await screenshot('stopped');
   const journal = await effects();
   assert.equal(journal.filter(row => row.event === 'thread-selection' && row.runtimeMcp === true).length, 2);
   proof.effects = journal; proof.fixturePins = await verifyDesktopEmulatedRuntimeFixture(fixture);

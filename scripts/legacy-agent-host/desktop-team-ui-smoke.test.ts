@@ -1648,3 +1648,119 @@ for (const label of ['missing selected A', 'non-string A handle', 'empty A handl
     assert.deepEqual(f.steps, []);
   });
 }
+
+async function selectionStoppedConvergence(options: {
+  modes?: string[]; tables?: boolean[]; guardMs?: number[]; readMs?: number[]; bindingMismatch?: boolean;
+} = {}) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const { hostTeamRunId } = await import('../../src/features/agent-backend/contracts/teamRunSelection.ts');
+  const { desktopJsLiteral: literal } = await import('./desktop-ui-controls.ts');
+  const source = (await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const pollBegin = '  const poll = async <T>(', pollEnd = '  const visible = ';
+  const stopBegin = '  const stop = async (', stopEnd = '\n\n  await ui.observeInput();';
+  for (const marker of [pollBegin, pollEnd, stopBegin, stopEnd]) assert.equal(source.split(marker).length, 2);
+  assert.ok(source.includes('proof.bStop = await stop(liveB);'));
+  assert.ok(source.includes('proof.aStop = await stop(liveA, true); proof.stoppedScreenshot = await screenshot(\'stopped\');'));
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(pollBegin), source.indexOf(pollEnd)) +
+    source.slice(source.indexOf(stopBegin), source.indexOf(stopEnd)));
+  const makeStop = Function('environment', `'use strict';
+    const {assert,effects,ui,cdp,options,processTable,literal,hostTeamSelectionKey,hostTeamRunId,Date,setTimeout}=environment;
+    ${actual}
+    return stop;`) as (environment: Record<string, unknown>) => (live: unknown, observeStoppedUi?: boolean) => Promise<unknown>;
+  const key = hostTeamSelectionKey('TEST-selection-owner'), runId = hostTeamRunId('TEST-selection-owner', 'TEST-launch', 'TEST-roster');
+  const binding = { backendId: 'TEST-backend', teamId: 'TEST-team', runId: 'TEST-launch', memberId: 'TEST-lead', generation: 'TEST-generation' };
+  const trace: string[] = [], delays: number[] = [], budgets: number[] = [], values: boolean[] = [];
+  const failure = new Error('TEST original stopped observation refusal');
+  let now = 0, reads = 0, guards = 0, tables = 0, sessions = 0, storeReads = 0;
+  const box = (visible = true) => ({ visible, getBoundingClientRect: () => ({ width: 100, height: 30 }) });
+  const live = { handleId: 'TEST-selection-owner', definition: { launchId: 'TEST-launch', rosterRevision: 'TEST-roster' },
+    initial: { binding }, thread: { pid: 104 }, async session() {
+      sessions++; trace.push('session');
+      return { phase: 'closed', custody: 'released', binding: options.bindingMismatch ? { ...binding, generation: 'TEST-other' } : { ...binding } };
+    } };
+  const stop = makeStop({ assert, literal, hostTeamSelectionKey, hostTeamRunId,
+    Date: { now: () => now }, setTimeout(done: () => void, delay: number) {
+      assert.equal(delay, 100); delays.push(delay); now += delay; done();
+    },
+    effects: async () => { trace.push('effects'); return []; },
+    ui: { async scrollTo(selector: string, label: string) {
+      assert.equal(selector, 'button[aria-label="Stop"]'); assert.equal(label, 'original Team Stop'); trace.push('scroll');
+    }, async click(selector: string, label: string, text: string) {
+      assert.equal(selector, 'button[aria-label="Stop"]'); assert.equal(label, 'stop original selected Team once');
+      assert.equal(text, 'Stop'); trace.push('click');
+    } },
+    options: { assertOwnedRenderer() { trace.push('guard'); const index = guards++; now += options.guardMs?.[index] ?? 0; } },
+    processTable() { trace.push('process'); const index = tables++; return options.tables?.[index] ? [{ pid: 104 }] : []; },
+    cdp: { async evaluate(expression: string, timeoutMs: number) {
+      trace.push('evaluate'); budgets.push(timeoutMs); const index = reads++, mode = options.modes?.[index];
+      if (mode === undefined) throw failure;
+      const changed = hostTeamRunId('TEST-selection-owner', 'TEST-launch', 'TEST-other-roster');
+      const observedRun = mode === 'other-revision' ? changed : runId;
+      const state = { selectedTeamName: mode === 'other-owner' ? hostTeamSelectionKey('TEST-other-owner') : key,
+        currentProvisioningRunIdByTeam: { [key]: mode === 'provisioning-pin' ? changed : observedRun },
+        currentRuntimeRunIdByTeam: { [key]: mode === 'runtime-pin' ? changed : observedRun },
+        provisioningRuns: mode === 'missing-progress' ? {} : { [observedRun]: {
+          teamName: mode === 'progress-owner' ? hostTeamSelectionKey('TEST-other-owner') : key,
+          runId: mode === 'progress-run' ? changed : observedRun,
+          state: mode === 'ready' || mode === 'dismissed-ready' ? 'ready' : mode === 'cancelled' ? 'cancelled' : 'disconnected',
+        } } };
+      const launch = { ...box(mode !== 'hidden-launch'), textContent: 'Launch', disabled: mode === 'disabled-launch' };
+      const wrapper = { tagName: mode === 'wrong-wrapper' ? 'SECTION' : 'DIV',
+        childElementCount: mode === 'ready' || mode === 'render-pending' ? 1 : 0 };
+      const banner = { ...box(), nextElementSibling: wrapper, querySelectorAll(selector: string) {
+        if (selector === 'button') return mode === 'missing-launch' ? [] : [launch];
+        assert.equal(selector, ':scope > span'); return [{ textContent: mode === 'wrong-status' ? 'TEST unknown' : 'Team is offline' }];
+      } };
+      const team = { ...box(mode !== 'hidden-team'), getAttribute(name: string) {
+        assert.equal(name, 'data-team-name'); return mode === 'dom-owner' ? hostTeamSelectionKey('TEST-other-owner') : key;
+      }, querySelector(selector: string) { assert.equal(selector, '[data-section-id="team"]'); return {}; },
+      querySelectorAll(selector: string) { assert.equal(selector, ':scope > [role="status"]'); return mode === 'duplicate-status' ? [banner, banner] : [banner]; } };
+      const value = runInNewContext(expression, {
+        window: { __agentTeamsDevStore: { getState() { storeReads++; return state; } } },
+        document: { querySelectorAll(selector: string) {
+          assert.equal(selector, '[data-team-name]'); return mode === 'duplicate-team' ? [team, team] : [team];
+        } }, getComputedStyle: (element: { visible: boolean }) => ({ visibility: element.visible ? 'visible' : 'hidden' }),
+      });
+      assert.equal(typeof value, 'boolean'); values.push(value); now += options.readMs?.[index] ?? 0; return value;
+    } },
+  });
+  return { run: (observeStoppedUi = false) => stop(live, observeStoppedUi), binding, trace, delays, budgets, values, failure,
+    counts: () => ({ sessions, tables, guards, reads, storeReads, now }) };
+}
+
+test('original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget', async () => {
+  const f = await selectionStoppedConvergence({ tables: [true, false, false, false],
+    modes: ['ready', 'render-pending', 'stopped'], guardMs: [60_000] });
+  assert.deepEqual(await f.run(true), { binding: f.binding, phase: 'closed', custody: 'released', originalPid: 104, absent: true });
+  assert.deepEqual(f.values, [false, false, true], 'accepted stopped progress and its rendered completion are both required');
+  assert.deepEqual(f.budgets, [14_900, 14_800, 14_700], 'new CDP reads consume the original second poll deadline');
+  assert.deepEqual(f.delays, [100, 100, 100]);
+  assert.deepEqual(f.counts(), { sessions: 1, tables: 4, guards: 3, reads: 3, storeReads: 3, now: 60_300 });
+  assert.deepEqual(f.trace, ['scroll', 'click', 'effects', 'session', 'effects', 'process',
+    'effects', 'process', 'guard', 'evaluate', 'effects', 'process', 'guard', 'evaluate', 'effects', 'process', 'guard', 'evaluate']);
+  const b = await selectionStoppedConvergence({ tables: [true, false] });
+  assert.deepEqual(await b.run(), { binding: b.binding, phase: 'closed', custody: 'released', originalPid: 104, absent: true });
+  assert.deepEqual(b.budgets, []); assert.deepEqual(b.delays, [100]);
+  assert.deepEqual(b.trace, ['scroll', 'click', 'effects', 'session', 'effects', 'process', 'effects', 'process']);
+});
+
+test('Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget', async () => {
+  for (const mode of ['other-owner', 'other-revision', 'provisioning-pin', 'runtime-pin', 'missing-progress', 'progress-owner',
+    'progress-run', 'cancelled', 'ready', 'dismissed-ready', 'render-pending', 'dom-owner', 'hidden-team', 'duplicate-team',
+    'duplicate-status', 'wrong-status', 'missing-launch', 'disabled-launch', 'hidden-launch', 'wrong-wrapper']) {
+    const f = await selectionStoppedConvergence({ modes: [mode] });
+    await assert.rejects(f.run(true), error => error === f.failure);
+    assert.deepEqual(f.values, [false], mode); assert.deepEqual(f.delays, [100], mode);
+    assert.equal(f.trace.filter(value => value === 'click').length, 1, mode);
+    assert.deepEqual(f.budgets, [30_000, 30_000], mode);
+  }
+  const expired = await selectionStoppedConvergence({ modes: ['stopped'], guardMs: [75_000] });
+  await assert.rejects(expired.run(true), /original stopped UI observation.*original action is never repeated/);
+  assert.deepEqual(expired.budgets, []); assert.deepEqual(expired.delays, []);
+  const late = await selectionStoppedConvergence({ modes: ['stopped'], guardMs: [60_000], readMs: [15_000] });
+  await assert.rejects(late.run(true), /original stopped UI observation.*original action is never repeated/);
+  assert.deepEqual(late.values, [true]); assert.deepEqual(late.budgets, [15_000]); assert.deepEqual(late.delays, []);
+  const mismatch = await selectionStoppedConvergence({ modes: ['stopped'], bindingMismatch: true });
+  await assert.rejects(mismatch.run(true), { code: 'ERR_ASSERTION' });
+  assert.deepEqual(mismatch.values, [true], 'the original exact stopped binding assertion remains after the UI read');
+});
