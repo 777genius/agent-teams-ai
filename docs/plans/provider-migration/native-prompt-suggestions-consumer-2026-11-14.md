@@ -5,13 +5,29 @@ Date: 2026-11-14
 Provider owner: [old-provider-implementations PR #9](https://github.com/agent-teams-ai/old-provider-implementations/pull/9)  
 Frontend base: [#1186 frontend parity](https://github.com/777genius/agent-teams-ai/pull/1186) on top of Stage 1 Host [#982](https://github.com/777genius/agent-teams-ai/pull/982).
 
+## Current finalization checkpoint — 2026-11-15
+
+The working checkout starts from consumer `c3b80709d17ec313fffb305a51dd35a518eaa105` in existing PR #1197. The added acceptance fixtures below still require execution on the final pushed SHA; their presence is not an E2E pass.
+
+The adopted provider is PR #9 source `18a1c276474388a38e2bb00e5a11958c936566e0`, with pinned archive SHA-256 `26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c`. This supersedes the older provider source/archive choices recorded below. Default-off opt-in, original-human-DM eligibility, and acceptance-time read-only Host `nativePromptProof` are implemented and covered by focused checks; their earlier implementation HOLDs are historical. Codex 0.162 remains unsupported for sampling. The selected compatible native test target is explicitly staged Codex 0.169.0 on Darwin ARM64. Private suggestions remain excluded from unscoped HTTP SSE.
+
+| Current native acceptance scope | Required evidence | State |
+| --- | --- | --- |
+| Extended Claude Electron composer | Five authored inputs, four qualified post-warm-up samples; physical Insert/Tab/Escape, Shift+Tab and IME ownership; dark and light compact screenshots; no auto-send | Pending final-SHA macOS CI |
+| Codex captured Host | Real lead and peer sessions, exact original message/input/operation/native-turn proof, cross-member rejection, cancelled original turn, stopped late sample and retained source-history counts | Pending final-SHA macOS CI |
+| Mixed Electron composer | Two teams with reversed Claude/Codex lead/peer roles; ten authored inputs, actual Main/Composer acceptance, recipient/team switches and delayed native-notice isolation | Pending final-SHA macOS CI |
+
+Local evidence: **61/61 focused feature tests PASS**; the original Claude Host gate **7/7 PASS**, including its real native localhost-model journey; **focused native TypeScript 7 checks PASS**. Full-application TypeScript checking was terminated with **exit 137** in the constrained local environment and is **not PASS**. The focused checks do not replace full-application CI or the new macOS native/visual gates. Native inference uses disposable TEST roots and localhost endpoints, without vendor authentication or paid requests.
+
+After actual feature acceptance, independent review and required checks, the scoped merges are consumer **#1197 → existing #1186 branch** and provider **#9 → existing #8 branch**. No `main`/default-path/release cutover or automatic merge of the broader #1186/#982 migration is included. Pending, queued, skipped and previous-SHA results never qualify the final source.
+
 ## Purpose and exact scope
 
 Use the native Claude Agent SDK push message or Codex App Server \`thread/sample\` to offer **one editable next-message suggestion** to the human in the **existing** personal chat composer for **any** captured Claude or compatible Codex teammate, lead or peer, in same-provider and mixed teams.
 
 The provider library owns native event decoding, sampling and bounded text. The captured Host and existing Team/Runtime owners own user-origin message proof, team identity, session generation, permissions and provider opt-in. This frontend feature owns only browser-safe DTOs, candidate freshness/keyboard policy and passive presentation. **Do not** move Team, Task, message, process custody or durable input authority into this feature.
 
-Provider version baseline: PR #9 head \`74991c21a64f44a268bdb1d769b4a580b33a4853\`, [CI 43607379609](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43607379609): Node 24/26, 513 source tests each + both packed consumer checks, source-fixture qualification only. Selected Stage 1 host Codex pin is 0.162.0; \`thread/sample\` requires separately qualified compatible version >=0.165. **No all-Codex rollout claim until this changes.**
+Initial provider version baseline (historical; superseded above): PR #9 head \`74991c21a64f44a268bdb1d769b4a580b33a4853\`, [CI 43607379609](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43607379609): Node 24/26, 513 source tests each + both packed consumer checks, source-fixture qualification only. Selected Stage 1 host Codex pin is 0.162.0; \`thread/sample\` requires separately qualified compatible version >=0.165. **No all-Codex rollout claim until this changes.**
 
 ## Existing code seams (reviewed on Stage1 and parity branches)
 
@@ -51,7 +67,7 @@ Add only layers that own real behavior. Host proof belongs in its existing Team/
 
 ## One-run no-subscription E2E
 
-- **Provider fixture:** exact artifact from provider CI 43607379609 (provider tgz SHA256 \`c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a\`; contracts tgz \`aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db\`). Pin in frontend vendor only after byte verification. No floating source refs and no silent replacement of another PR's vendor artifact.
+- **Initial provider fixture (historical; current pin above):** exact artifact from provider CI 43607379609 (provider tgz SHA256 \`c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a\`; contracts tgz \`aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db\`). Pin in frontend vendor only after byte verification. No floating source refs and no silent replacement of another PR's vendor artifact.
 - **Host fixture:** real captured Host/Team/Runtime, two members with independent provider instances, original human DM sends, canonical inbox/outbox source proof, exact operation completions. Scripted Claude SDK frames and Codex native JSON-RPC child; no vendor auth.
 - **Negative Host cases:** internal task/group/agent peer, other team/same member name, stale generation/turn/session, cancelled queued run, unknown custody, Host restart and restored input, provider failure, 0.162 unsupported.
 - **Desktop fixture:** actual selected Electron app with existing composer. Human sends via current visible button, native fixture returns candidate, correct member sees small row. Verify Tab/Insert, Escape, draft preservation, attachment/mention/IME/revision/queue priority, switch recipient and team, light/dark, compact/narrow, and no auto-send.
@@ -63,7 +79,7 @@ Use existing Stage 1 candidate/native/Desktop harnesses, not a parallel test fra
 
 No release, branch cutover to \`main\`, auto-merge of PR #982/#1186 or provider publication without distinct reviewed source and actual requested E2E acceptance. The dedicated stacked PR remains Draft until evidence is complete.
 
-## Review ledger / current HOLDs (2026-11-14)
+## Review ledger / historical HOLDs (2026-11-14)
 
 **Critical review round 1, provenance + dependency (fixes pushed):**
 `44d36db`/`87f0339`/`457899e` require and test the **independent captured descriptor run** in both Main owner selection and Host notice projection; team-only rebinding was not sufficient. `60c1940` corrects the one-shot staging workflow's exact previous provider archive selector, without dropping its byte/hash and compare-before-write guards. A queued vendor-staging job is not an adopted or verified artifact.
@@ -82,7 +98,7 @@ No release, branch cutover to \`main\`, auto-merge of PR #982/#1186 or provider 
 
 **Review round 4, remaining boundaries:** exact native session freshness is still only independently proved by the selected Host *at publication*, not re-read at UI acceptance; the renderer-side candidate-to-itself comparison is not independent evidence of a current operation or generation. Browser HTTP SSE remains fail-closed; no HTTP private DM delivery without authorized per-owner scoping. Treat cancelled runs due to new commits as cancelled, not green. The new guarded editor commits still need targeted fixture/visual verification. Another contributor is improving the source-artifact staging workflow in this same feature branch; do not label a queued staging run as an adopted archive.
 
-This is a Draft feature branch only. No main/default/release mutation and no dependent PR merge.
+At this 2026-11-14 checkpoint the feature remained Draft, with no main/default/release mutation or dependent PR merge performed. The current scoped acceptance and merge conditions are recorded above.
 
 ## Host native-candidate provenance hardening (2026-11-14, later review)
 

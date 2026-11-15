@@ -8,12 +8,15 @@ import { fileDigest } from './desktop-backend-fixture.ts';
 import type { UiCdpPort, createDesktopUiControls } from './desktop-ui-controls.ts';
 
 type Ui = ReturnType<typeof createDesktopUiControls>;
+export type NativeNextPromptUiTurn =
+  'NATIVE_TEAM_TWO' | 'NATIVE_TEAM_THREE' | 'NATIVE_TEAM_FOUR' | 'NATIVE_TEAM_FIVE';
 
 // Real SDK generation may filter machine-like markers; use genuine user phrasing.
-const expectedPrompt = (turn: 'NATIVE_TEAM_TWO' | 'NATIVE_TEAM_THREE' | 'NATIVE_TEAM_FOUR') =>
+const expectedPrompt = (turn: NativeNextPromptUiTurn) =>
   turn === 'NATIVE_TEAM_TWO' ? 'Review the completed tests and open a PR' :
     turn === 'NATIVE_TEAM_THREE' ? 'Summarize the changes and check for regressions.' :
-      'Verify the final results and prepare a report.';
+      turn === 'NATIVE_TEAM_FOUR' ? 'Verify the final results and prepare a report.' :
+        'Check the final report and summarize the remaining work.';
 
 /** Actual CDP keyboard interaction; never assign a controlled draft through DOM evaluation. */
 async function key(cdp: UiCdpPort, name: string, code: string, virtual: number, modifiers = 0) {
@@ -39,6 +42,58 @@ async function clearInsertedDraft(cdp: UiCdpPort, ui: Ui) {
   );
 }
 
+/** Change the real isolated app through its existing Appearance and layout controls. */
+export async function prepareNativeNextPromptImeUi(cdp: UiCdpPort, ui: Ui): Promise<void> {
+  await ui.click('button[aria-label="More actions"]', 'open ordinary application menu');
+  await ui.click('button', 'open ordinary Settings', 'Settings');
+  await ui.click('[data-testid="settings-nav-appearance"]', 'open Appearance settings');
+  await ui.click('[data-testid="appearance-theme-light"]', 'select actual Light theme');
+  await ui.waitRead(`window.electronAPI.config.get().then(config =>
+    config.general.theme === 'light' && document.documentElement.classList.contains('light'))`,
+  'Light theme persisted through original config IPC');
+  await key(cdp, 'w', 'KeyW', 87, 4);
+  await ui.waitRead("Boolean(document.querySelector('.message-composer-flat-layout textarea'))",
+    'closing Settings restores the original conversation');
+  const inline = await cdp.evaluate(`Boolean([...document.querySelectorAll(
+    'button[aria-label="Move messages to bottom sheet"]')].find(button => button.getClientRects().length))`);
+  if (inline) {
+    await ui.click('button[aria-label="Move messages to bottom sheet"]', 'open actual bottom sheet');
+  } else {
+    await ui.click('button[aria-label="Message panel actions"]', 'open ordinary message layout menu');
+    await ui.click('[role="menuitem"]', 'select actual bottom sheet', 'Move to bottom sheet');
+  }
+  await ui.waitRead('Boolean(document.querySelector(\'[data-messages-thread-layout="wide"] textarea\'))',
+    'bottom sheet uses original compact composer');
+  // Its initial snap is composer-only. Physically expand the existing sheet so
+  // the same canonical native reply remains visible above the compact editor.
+  const gripExpression = `(() => {
+    const button=document.querySelector('button[aria-label="Message bottom sheet actions"]');
+    const header=button?.closest('.relative.h-10');
+    if(!header)return null;const rect=header.getBoundingClientRect();
+    const x=rect.x+rect.width/2,y=rect.y+8,hit=document.elementFromPoint(x,y);
+    return rect.width>0&&rect.top>=0&&rect.bottom<=innerHeight&&
+      !!hit&&(hit===header||header.contains(hit))?{x,y}:null;
+  })()`;
+  await ui.hoverExpression(gripExpression, 'stable original sheet drag handle');
+  const grip = await ui.waitRead(gripExpression, 'original sheet drag origin') as { x: number; y: number };
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mousePressed', ...grip, button: 'left', buttons: 1, clickCount: 1,
+  });
+  const endY = Math.min(grip.y, 96);
+  for (let index = 1; index <= 8; index++) {
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: grip.x,
+      y: grip.y + (endY - grip.y) * index / 8, button: 'left', buttons: 1 });
+    await new Promise<void>(resolve => setTimeout(resolve, 30));
+  }
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseReleased', x: grip.x, y: endY, button: 'left', buttons: 0, clickCount: 1,
+  });
+  await ui.waitRead(`(() => {
+    const thread=document.querySelector('[data-messages-thread-layout="wide"]');
+    return !!thread && thread.getBoundingClientRect().height > 400;
+  })()`, 'expanded sheet leaves room for the original reply and compact composer');
+}
+
 /**
  * Extends the existing original Electron + captured Host + actual Claude SDK
  * composer proof. The only synthetic dependency is localhost model inference.
@@ -49,7 +104,7 @@ export async function qualifyNativeNextPromptUiStep(
   ui: Ui,
   options: {
     root: string;
-    turn: 'NATIVE_TEAM_TWO' | 'NATIVE_TEAM_THREE' | 'NATIVE_TEAM_FOUR';
+    turn: NativeNextPromptUiTurn;
     expectedHumanInputs: number;
     originalHumanSendCount(): Promise<number>;
     modelSampleCount(): number;
@@ -73,17 +128,76 @@ export async function qualifyNativeNextPromptUiStep(
   assert.ok(options.modelSampleCount()<=options.expectedHumanInputs,
     'at most one native SDK follow-up per human turn, including an optional warm-up');
 
+  const appearance = await ui.waitRead(`(() => {
+    const row=document.querySelector('[data-testid="native-next-prompt-row"]');
+    const preview=row?.querySelector('[aria-live="polite"]');
+    if(!row||!preview)return null;const rect=row.getBoundingClientRect();
+    const buttons=[...row.querySelectorAll('button')];
+    if(buttons.length!==2||rect.width<=0||rect.top<0||rect.bottom>innerHeight+1||
+      rect.left<0||rect.right>innerWidth+1)return null;
+    const controls=buttons.map(button=>{const r=button.getBoundingClientRect();
+      const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+      return {label:button.getAttribute('aria-label'),height:r.height,width:r.width,
+        reachable:!button.disabled&&r.left>=rect.left&&r.right<=rect.right&&
+          !!hit&&(hit===button||button.contains(hit))};});
+    if(controls.some(control=>!control.reachable))return null;
+    return {theme:document.documentElement.classList.contains('light')?'light':'dark',
+      compact:preview.classList.contains('truncate'),plainText:preview.children.length===0,
+      controls,previewMatches:preview.textContent===${desktopJsLiteral(suggestion)}};
+  })()`, 'real suggestion and controls fit the visible original composer') as {
+    theme: string; compact: boolean; plainText: boolean; previewMatches: boolean;
+    controls: Array<{ label: string; width: number; height: number; reachable: boolean }>;
+  };
+  assert.ok(appearance.plainText && appearance.previewMatches);
+  assert.deepEqual(appearance.controls.map(control => control.label), ['Insert', 'Dismiss suggestion']);
+  assert.ok(appearance.controls.every(control => control.reachable && control.height >= 43 && control.width > 0));
+  assert.equal(appearance.theme, options.turn === 'NATIVE_TEAM_FIVE' ? 'light' : 'dark');
+  assert.equal(appearance.compact, options.turn === 'NATIVE_TEAM_FIVE');
+
   const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
   const data = screenshot && typeof screenshot === 'object'
     ? (screenshot as Record<string, unknown>).data : undefined;
   assert.ok(typeof data === 'string' && data.length > 100, 'actual Electron screenshot');
   const imagePath = join(options.root, 'native-next-prompt-' + options.turn + '.png');
   await writeFile(imagePath, Buffer.from(data, 'base64'), { mode: 0o600 });
-  const proof = options.evidence.nativeNextPromptUi as { screenshots: Array<{turn:string;path:string;sha256:string}> };
-  proof.screenshots.push({ turn: options.turn, path: imagePath, sha256: await fileDigest(imagePath) });
+  const proof = options.evidence.nativeNextPromptUi as {
+    screenshots: Array<{turn:string;path:string;sha256:string;theme:string;compact:boolean}>;
+    shiftTabPreserved?: boolean; imePreserved?: boolean;
+  };
+  proof.screenshots.push({ turn: options.turn, path: imagePath, sha256: await fileDigest(imagePath),
+    theme: appearance.theme, compact: appearance.compact });
   await ui.click('.message-composer-flat-layout textarea', 'focus ordinary native suggestion editor');
 
-  if (options.turn === 'NATIVE_TEAM_THREE') {
+  if (options.turn === 'NATIVE_TEAM_TWO') {
+    await key(cdp, 'Tab', 'Tab', 9, 8);
+    await ui.waitRead(`(() => {
+      const editor=document.querySelector('.message-composer-flat-layout textarea');
+      return editor?.value==='' && document.activeElement!==editor &&
+        !!document.querySelector('[data-testid="native-next-prompt-row"]');
+    })()`, 'Shift+Tab preserves the offer and ordinary focus navigation');
+    proof.shiftTabPreserved = true;
+    await ui.click('.message-composer-flat-layout textarea', 'return to original suggestion editor');
+  }
+
+  if (options.turn === 'NATIVE_TEAM_FIVE') {
+    await cdp.send('Input.imeSetComposition', { text: '検証', selectionStart: 2, selectionEnd: 2 });
+    await ui.waitRead(`document.querySelector('.message-composer-flat-layout textarea')?.value==='検証' &&
+      !document.querySelector('[data-testid="native-next-prompt-row"]')`,
+    'real Chromium IME preedit takes ownership and dismisses the native offer');
+    await key(cdp, 'Tab', 'Tab', 9);
+    assert.notEqual(await cdp.evaluate("document.querySelector('.message-composer-flat-layout textarea')?.value"),
+      suggestion, 'Tab cannot insert the suggestion during IME composition');
+    await ui.click('.message-composer-flat-layout textarea', 'focus original IME editor for cancellation');
+    await cdp.send('Input.imeSetComposition', { text: '', selectionStart: 0, selectionEnd: 0 });
+    await clearInsertedDraft(cdp, ui);
+    assert.equal(await cdp.evaluate('document.querySelector(\'[data-testid="native-next-prompt-row"]\') === null'),
+      true, 'clearing IME text cannot resurrect the old native offer');
+    proof.imePreserved = true;
+    await ui.click('button[aria-label="Message bottom sheet actions"]', 'restore original inline conversation');
+    await ui.click('[role="menuitem"]', 'return through ordinary layout menu', 'Move to inline');
+    await ui.waitRead('!document.querySelector(\'button[aria-label="Message bottom sheet actions"]\')',
+      'ordinary inline layout restored before native Stop');
+  } else if (options.turn === 'NATIVE_TEAM_THREE') {
     await key(cdp, 'Escape', 'Escape', 27);
     await ui.waitRead(
       "document.querySelector('[data-testid=\"native-next-prompt-row\"]') === null",
@@ -115,12 +229,16 @@ export async function qualifyNativeNextPromptUiStep(
   }
 
   assert.equal(await options.originalHumanSendCount(), options.expectedHumanInputs,
-    'Tab, Escape, and Insert never send a new human message');
+    'Tab, Escape, Insert, and IME never send a new human message');
+  assert.equal(options.modelSampleCountForTurn(), 1,
+    'composer interactions cannot start a second native sample');
   options.step({
     assertion: 'native suggestion physical composer interaction',
     turn: options.turn,
     action: options.turn === 'NATIVE_TEAM_TWO' ? 'Insert'
-      : options.turn === 'NATIVE_TEAM_THREE' ? 'Escape' : 'Tab',
+      : options.turn === 'NATIVE_TEAM_THREE' ? 'Escape'
+        : options.turn === 'NATIVE_TEAM_FOUR' ? 'Tab' : 'IME',
+    appearance,
     modelSampleCount: options.modelSampleCount(),
     sentHumanMessages: options.expectedHumanInputs,
     screenshotSha256: proof.screenshots.at(-1)?.sha256,

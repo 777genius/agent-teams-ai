@@ -173,6 +173,8 @@ export async function startNativeTeamModel(
     uiGeneratedMessageIds?: boolean;
     /** Only the original selected Electron native-followup fixture enables this. */
     nativeNextPromptUi?: boolean;
+    /** Suggestion-only mixed roles: real DM reply without assigning a task to a peer. */
+    nativeNextPromptDirectUi?: boolean;
     /** TEST-only original native tool-use IDs observed in actual model request history. */
     captureHistoryMarkers?: boolean;
     allowModelProbes?: boolean;
@@ -191,6 +193,8 @@ export async function startNativeTeamModel(
   if (options.nativeNextPromptUi) assert.ok(options.requireVisibleReply && options.uiGeneratedMessageIds &&
     !options.groupChats && !options.chatAttachments && !options.mixedGroups && !options.peerMessaging,
     'one isolated original native suggestion UI oracle');
+  if (options.nativeNextPromptDirectUi) assert.ok(options.nativeNextPromptUi,
+    'direct suggestion turns require the explicit native suggestion oracle');
   const nativeMember = options.nativeMemberCreation
     ? nativeMemberCreationScript(options.nativeMemberCreation, nativeToolReceipt)
     : undefined;
@@ -557,7 +561,7 @@ export async function startNativeTeamModel(
         });
       }
       assert.ok(
-        observations.length + notificationObservations.length < (options.peerMessaging ? 48 : 16),
+        observations.length + notificationObservations.length < (options.peerMessaging ? 48 : options.nativeNextPromptDirectUi ? 5 : options.nativeNextPromptUi ? 18 : 16),
         'finite native model request budget'
       );
       let turn = '';
@@ -575,7 +579,8 @@ export async function startNativeTeamModel(
                 .map((block) => block.text)
                 .join('\n');
         const group = options.mixedGroups ? readMixedGroupTurn(text, 'team-lead') : undefined;
-        const match = /NATIVE_TEAM_(ONE|TWO|THREE|FOUR)/.exec(text);
+        const match = (options.nativeNextPromptUi
+          ? /NATIVE_TEAM_(ONE|TWO|THREE|FOUR|FIVE)/ : /NATIVE_TEAM_(ONE|TWO|THREE|FOUR)/).exec(text);
         const peer = options.peerMessaging ? nativePeerTurn(text, 'alice') : undefined;
         if (options.mixedTaskNotifications) {
           const currentText = text;
@@ -598,20 +603,25 @@ export async function startNativeTeamModel(
         }
       }
       assert.ok(turn, 'request is tied to a deliberate TEST input');
+      if (options.nativeNextPromptDirectUi)
+        assert.ok(turn === 'NATIVE_TEAM_ONE' || turn === 'NATIVE_TEAM_TWO',
+          'two original direct human turns per mixed Claude member');
       const step = counters.get(turn) ?? 0;
       // Native SDK suggestions are separate localhost inference after the
       // original finished source turn, never another business tool or user
       // input. The counters are advanced only by real source actions.
       if (options.nativeNextPromptUi &&
-          ['NATIVE_TEAM_ONE', 'NATIVE_TEAM_TWO', 'NATIVE_TEAM_THREE', 'NATIVE_TEAM_FOUR'].includes(turn)) {
-        const complete = turn === 'NATIVE_TEAM_ONE' ? 8 : turn === 'NATIVE_TEAM_TWO' ? 3 : 2;
+          ['NATIVE_TEAM_ONE', 'NATIVE_TEAM_TWO', 'NATIVE_TEAM_THREE', 'NATIVE_TEAM_FOUR', 'NATIVE_TEAM_FIVE'].includes(turn)) {
+        const complete = options.nativeNextPromptDirectUi ? 2
+          : turn === 'NATIVE_TEAM_ONE' ? 8 : turn === 'NATIVE_TEAM_TWO' ? 3 : 2;
         if (step >= complete) {
           assert.equal(step, complete, 'native suggestion may not replay an original business turn');
           const source = JSON.stringify(messages);
           assert.ok(source.includes('NATIVE_TEAM_ONE'), 'native followup inherits original user context');
           assert.ok(source.includes(turn), 'native followup is attached to current source turn');
           suggestionRequests.push({ turn, step, inheritedHumanContext: true });
-          assert.ok(suggestionRequests.length <= 4, 'at most one auxiliary sample per original native turn');
+          assert.ok(suggestionRequests.length <= (options.nativeNextPromptDirectUi ? 2 : 5),
+            'at most one auxiliary sample per original native turn');
           emitResponse(response, ++sequence,
             { type: 'text', text: turn === 'NATIVE_TEAM_ONE'
               ? 'Review the latest changes and confirm the tests pass.'
@@ -619,7 +629,9 @@ export async function startNativeTeamModel(
                 ? 'Review the completed tests and open a PR'
                 : turn === 'NATIVE_TEAM_THREE'
                   ? 'Summarize the changes and check for regressions.'
-                  : 'Verify the final results and prepare a report.' },
+                  : turn === 'NATIVE_TEAM_FOUR'
+                    ? 'Verify the final results and prepare a report.'
+                    : 'Check the final report and summarize the remaining work.' },
             typeof body.model === 'string' ? body.model : undefined);
           return;
         }
@@ -666,11 +678,11 @@ export async function startNativeTeamModel(
         assert.notEqual(last?.is_error, true);
         assertMixedGroupReceipt(mixedGroup, step, last?.content, nativeToolReceipt);
       }
-      if (
+      if (options.nativeNextPromptDirectUi ? step === 1 : (
         (turn === 'NATIVE_TEAM_ONE' && [1, 2, 3, 5, 6, 7].includes(step)) ||
         (turn === 'NATIVE_TEAM_TWO' && step === 2) ||
         (peerActions && step > 0 && step <= peerActions.length)
-      ) {
+      )) {
         const completed = nativeToolReceipt(last?.content);
         assert.equal(
           completed.phase,
@@ -679,7 +691,7 @@ export async function startNativeTeamModel(
         );
         assert.equal(completed.principalId, options.principalId?.() ?? 'alice-session');
       }
-      if (turn === 'NATIVE_TEAM_ONE' && step === 1) {
+      if (!options.nativeNextPromptDirectUi && turn === 'NATIVE_TEAM_ONE' && step === 1) {
         const receipt = nativeToolReceipt(last?.content);
         assert.equal(receipt.phase, 'completed');
         assert.equal(receipt.principalId, options.principalId?.() ?? 'alice-session');
@@ -810,11 +822,17 @@ export async function startNativeTeamModel(
         name: 'message_send',
         input: { commandId: 'native-reply-four', to: 'user', text: 'REPLY_NATIVE_FOUR' },
       }];
+      const five: { name: string; input: RecordValue }[] = [{
+        name: 'message_send',
+        input: { commandId: 'native-reply-five', to: 'user', text: 'REPLY_NATIVE_FIVE' },
+      }];
       const action = notice
         ? undefined
-        : (groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one :
+        : (options.nativeNextPromptDirectUi ? (turn === 'NATIVE_TEAM_ONE' ? one : two).slice(-1)
+          : groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one :
           turn === 'NATIVE_TEAM_THREE' && options.nativeNextPromptUi ? three :
-          turn === 'NATIVE_TEAM_FOUR' && options.nativeNextPromptUi ? four : two))[step];
+          turn === 'NATIVE_TEAM_FOUR' && options.nativeNextPromptUi ? four :
+          turn === 'NATIVE_TEAM_FIVE' && options.nativeNextPromptUi ? five : two))[step];
       if (!action) {
         counters.set(turn, step + 1);
         emitResponse(

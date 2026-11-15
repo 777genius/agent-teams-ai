@@ -1,5 +1,5 @@
 import { runDesktopNativeGroupUiSmoke } from './desktop-native-group-ui-smoke.ts';
-import { qualifyNativeNextPromptUiStep } from './desktop-native-next-prompt-ui.ts';
+import { prepareNativeNextPromptImeUi, qualifyNativeNextPromptUiStep } from './desktop-native-next-prompt-ui.ts';
 import { prepareNativeChatAttachments } from './desktop-native-chat-attachments-ui.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import assert from 'node:assert/strict';
@@ -52,11 +52,15 @@ export async function runDesktopComposerUiSmoke(
   const openCode = options.openCodeModel !== undefined;
   const model = options.openCodeModel ?? options.model!;
   const nativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI === '1';
+  const extendedNativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EXTENDED === '1';
+  assert.ok(!extendedNativeNextPromptUi || nativeNextPromptUi,
+    'extended suggestion proof requires its original native conversation fixture');
   if (nativeNextPromptUi) {
     assert.ok(!openCode && options.model?.suggestionRequests,
       'original TEST Claude SDK must supply the actual follow-up model oracle');
     options.evidence.nativeNextPromptUi = {
       status: 'INCOMPLETE',
+      extended: extendedNativeNextPromptUi,
       scope: 'original captured Host -> actual Claude SDK -> Main IPC -> physical Electron Composer',
       screenshots: [],
       excluded: ['paid vendor authentication', 'Codex native 0.169', 'unscoped HTTP SSE'],
@@ -139,7 +143,8 @@ export async function runDesktopComposerUiSmoke(
           textIsTestSuggestion:typeof value?.text==='string'&&[
             'Review the completed tests and open a PR',
             'Summarize the changes and check for regressions.',
-            'Verify the final results and prepare a report.'
+            'Verify the final results and prepare a report.',
+            'Check the final report and summarize the remaining work.'
           ].includes(value.text)
         });
       });
@@ -159,9 +164,12 @@ export async function runDesktopComposerUiSmoke(
   ] as const;
   const selectedTurns = nativeNextPromptUi
     ? [...turns, ['NATIVE_TEAM_THREE', 'REPLY_NATIVE_THREE'] as const,
-        ['NATIVE_TEAM_FOUR', 'REPLY_NATIVE_FOUR'] as const]
+        ['NATIVE_TEAM_FOUR', 'REPLY_NATIVE_FOUR'] as const,
+        ...(extendedNativeNextPromptUi ? [['NATIVE_TEAM_FIVE', 'REPLY_NATIVE_FIVE'] as const] : [])]
     : turns;
   for (const [turn, reply] of selectedTurns) {
+    if (nativeNextPromptUi && turn === 'NATIVE_TEAM_FIVE')
+      await prepareNativeNextPromptImeUi(cdp, ui);
     await ui.click('.message-composer-flat-layout textarea', 'focus ordinary Composer');
     await cdp.send('Input.insertText', { text: turn });
     await ui.waitRead(
@@ -277,7 +285,7 @@ export async function runDesktopComposerUiSmoke(
     if (nativeNextPromptUi) {
       assert.ok(
         turn === 'NATIVE_TEAM_ONE' || turn === 'NATIVE_TEAM_TWO' ||
-          turn === 'NATIVE_TEAM_THREE' || turn === 'NATIVE_TEAM_FOUR',
+          turn === 'NATIVE_TEAM_THREE' || turn === 'NATIVE_TEAM_FOUR' || turn === 'NATIVE_TEAM_FIVE',
         'original Claude native conversation only',
       );
       // Claude SDK's first native turn may not emit a follow-up. Only
@@ -410,11 +418,19 @@ export async function runDesktopComposerUiSmoke(
     const sampled = options.model?.suggestionRequests ?? [];
     const qualified = sampled.filter(sample => sample.turn !== 'NATIVE_TEAM_ONE')
       .map(sample => sample.turn).sort();
-    assert.deepEqual(qualified, ['NATIVE_TEAM_FOUR', 'NATIVE_TEAM_THREE', 'NATIVE_TEAM_TWO'],
-      'three post-warm-up human turns each produce exactly one real native suggestion');
-    assert.ok(sampled.length<=4,'warm-up can optionally produce at most one native suggestion');
-    assert.equal(Array.isArray(proof.screenshots) ? proof.screenshots.length : 0, 3,
+    assert.deepEqual(qualified, [
+      ...(extendedNativeNextPromptUi ? ['NATIVE_TEAM_FIVE'] : []),
+      'NATIVE_TEAM_FOUR', 'NATIVE_TEAM_THREE', 'NATIVE_TEAM_TWO',
+    ], 'all post-warm-up human turns each produce exactly one real native suggestion');
+    assert.ok(sampled.length <= (extendedNativeNextPromptUi ? 5 : 4),
+      'warm-up can optionally produce at most one native suggestion');
+    assert.equal(Array.isArray(proof.screenshots) ? proof.screenshots.length : 0,
+      extendedNativeNextPromptUi ? 4 : 3,
       'each actual Electron row has a screenshot');
+    assert.equal(proof.shiftTabPreserved, true);
+    if (extendedNativeNextPromptUi) assert.equal(proof.imePreserved, true);
+    assert.deepEqual((proof.screenshots as Record<string, unknown>[]).map(shot => [shot.theme, shot.compact]),
+      [['dark', false], ['dark', false], ['dark', false], ...(extendedNativeNextPromptUi ? [['light', true]] : [])]);
     options.evidence.nativeNextPromptUi = {
       ...proof, status: 'PASS', originalHumanInputs: inputIds.length,
       nativeSdkSamples: sampled.length, qualifiedSamples: qualified.length,
