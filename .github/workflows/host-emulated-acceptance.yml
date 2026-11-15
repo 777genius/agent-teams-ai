@@ -1094,6 +1094,7 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-app.log
             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-app.log
             ${{ runner.temp }}/TEST-desktop-backend-*/owner-routing-*.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/owner-routing-*-failure.png
             ${{ runner.temp }}/TEST-desktop-backend-*/host-profile.json
             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-descriptor.json
             ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/management-commands/*.json
