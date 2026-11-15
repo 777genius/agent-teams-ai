@@ -1,0 +1,99 @@
+{
+  "sourceHead": "e322f2ae7427ca70d833846d2f924de5d4fa6ab9",
+  "sourceTree": "466fac0c35080dbb818b95b01a4bad68db94111a",
+  "status": "",
+  "node": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "tests": [
+    {
+      "name": "reconciliation-windows-native-green.log",
+      "bytes": 939,
+      "sha256": "83b7f90cbb165a3df6ef66cf9f0c2cedb78abdb11e442be011af43c08fd92d3c",
+      "counts": {
+        "tests": 7,
+        "pass": 6,
+        "fail": 0,
+        "skipped": 1
+      }
+    },
+    {
+      "name": "reconciliation-cross-44-green.log",
+      "bytes": 4716,
+      "sha256": "b8e3dcf7fcdd47e7656ecd7ba6133f5763b6f61b2b288448a83600d44b7a001e",
+      "counts": {
+        "tests": 44,
+        "pass": 44,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "name": "reconciliation-shared-eight-green.log",
+      "bytes": 10828,
+      "sha256": "d9c61a78c86eeba07a6be6ff6b692fd6659614f3fa6f66dcf2d8682b22e45dc3",
+      "counts": {
+        "tests": 101,
+        "pass": 101,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "name": "reconciliation-platform-packaged-green.log",
+      "bytes": 7965,
+      "sha256": "4b080aec71feeca07cfc71e446d97356c2676d2f5d08543ab1b20fe586ea29c1",
+      "counts": {
+        "tests": 79,
+        "pass": 78,
+        "fail": 0,
+        "skipped": 1
+      }
+    },
+    {
+      "name": "reconciliation-scoped-checks.log",
+      "bytes": 2891,
+      "sha256": "b834694f5b6910854b41a20d89a100d24ea43b75220e68f1b6fdde2ad03a53ac",
+      "counts": null
+    },
+    {
+      "name": "reconciliation-scripts-compiler.log",
+      "bytes": 97,
+      "sha256": "497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015",
+      "counts": null
+    }
+  ],
+  "compiler": {
+    "argv": [
+      "pnpm",
+      "typecheck:legacy-host-scripts"
+    ],
+    "cwd": "/workspace/scratch/c714f5bce554/agent-teams-reconciled-local",
+    "sourceHead": "e322f2ae7427ca70d833846d2f924de5d4fa6ab9",
+    "sourceTree": "466fac0c35080dbb818b95b01a4bad68db94111a",
+    "sourceStatusBefore": "",
+    "node": "v24.21.0",
+    "pnpm": "11.22.0",
+    "configBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+    "startedAt": "2026-11-15T20:14:33.879604+00:00",
+    "completedAt": "2026-11-15T20:14:35.973948+00:00",
+    "exitCode": 0,
+    "sourceStatusAfter": "",
+    "bytes": 97,
+    "sha256": "497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015",
+    "qualification": "Original whole scripts project only; no workspace or dedicated backend compiler retry.",
+    "command": "export PATH=/workspace/scratch/c714f5bce554/reconciled-local-evidence/pinned-toolbin:/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin:$PATH\nexport AGENT_TEAMS_INSTALL_PROFILE=node-ci\npython - <<'PY'\nimport pathlib,subprocess,datetime,json,hashlib,sys\nrepo=pathlib.Path('/workspace/scratch/c714f5bce554/agent-teams-reconciled-local')\nevidence=pathlib.Path('/workspace/scratch/c714f5bce554/reconciled-local-evidence')\ndef git(*args): return subprocess.check_output(['git',*args],cwd=repo,text=True).strip()\nassert git('rev-parse','HEAD')=='e322f2ae7427ca70d833846d2f924de5d4fa6ab9'\nassert git('status','--short')==''\nmeta={'argv':['pnpm','typecheck:legacy-host-scripts'],'cwd':str(repo),'sourceHead':git('rev-parse','HEAD'),'sourceTree':git('rev-parse','HEAD^{tree}'),'sourceStatusBefore':git('status','--short'),'node':subprocess.check_output(['node','--version'],text=True).strip(),'pnpm':subprocess.check_output(['pnpm','--version'],text=True).strip(),'configBlob':git('rev-parse','HEAD:tsconfig.legacy-agent-host-scripts.json'),'startedAt':datetime.datetime.now(datetime.timezone.utc).isoformat()}\nassert meta['node']=='v24.21.0' and meta['pnpm']=='11.22.0'\nlog=evidence/'reconciliation-scripts-compiler.log'\nwith log.open('wb') as stream:\n result=subprocess.run(meta['argv'],cwd=repo,stdout=stream,stderr=subprocess.STDOUT)\nmeta.update({'completedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),'exitCode':result.returncode,'sourceStatusAfter':git('status','--short'),'bytes':log.stat().st_size,'sha256':hashlib.sha256(log.read_bytes()).hexdigest(),'qualification':'Original whole scripts project only; no workspace or dedicated backend compiler retry.'})\n(evidence/'reconciliation-scripts-compiler-metadata.json').write_text(json.dumps(meta,indent=2)+'\\n')\nprint(json.dumps(meta))\nprint('\\n'.join(log.read_text().splitlines()[-30:]))\nsys.exit(result.returncode if result.returncode>=0 else 128-result.returncode)\nPY\n"
+  },
+  "scopedChecks": {
+    "exitCode": 2,
+    "fastLint29Exit": 0,
+    "sourceSizeGuardExit": 0,
+    "provisioningGuardExit": 0,
+    "gateParserExit": 0,
+    "sourceDiffExit": 0,
+    "planDiffExit": 2,
+    "failure": "One original trailing space in imported shared97 Doc29 line3866; full historical bytes intentionally preserved. Not PASS; no normalization/ignore used.",
+    "command": "export PATH=/workspace/scratch/c714f5bce554/reconciled-local-evidence/pinned-toolbin:/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin:$PATH\nexport AGENT_TEAMS_INSTALL_PROFILE=node-ci\n(\nset -e\npnpm lint:fast:files -- packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts packages/legacy-agent-host/tests/opencode-configuration-source.test.ts scripts/e2e/opencode-diagnostics/platform.mjs scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts scripts/legacy-agent-host/desktop-task-comment-input-target.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts scripts/legacy-agent-host/run-packaged-opencode-v2.ts src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts src/features/agent-backend/renderer/createHostTeamChanges.ts src/features/agent-backend/renderer/createHostTeamProvisioning.ts src/features/agent-backend/renderer/index.ts src/renderer/store/slices/teamSlice.ts src/renderer/store/team/teamRuntimeRunAdoption.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/hostMemberSpawnStatuses.test.ts test/features/agent-backend/runtimeActivityFacade.test.ts test/renderer/store/teamRuntimeRunAdoption.test.ts test/renderer/store/teamSlice.test.ts tools/owned-process-broker/nativeWindowsAppGate.mjs scripts/legacy-agent-host/desktop-native-process-ui.test.ts\npnpm guard:source-file-size\npnpm guard:team-provisioning-architecture\nnode --check tools/owned-process-broker/nativeWindowsAppGate.mjs\ngit diff --check 2eec1d95feb4718ca7454fb73d5c5912b998e951 HEAD -- .github packages scripts src test tools\ngit diff --check 2eec1d95feb4718ca7454fb73d5c5912b998e951 HEAD -- docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md\n) > /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-scoped-checks.log 2>&1\nrecon_checks_exit=$?\ntail -30 /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-scoped-checks.log\nexit \"$recon_checks_exit\"\n"
+  },
+  "qualification": "Finite Linux full-file GREEN with original skips; no Windows execution/native custody/release or original workspace/dedicated compiler qualification. Shared eight includes the Cross file, not an additional distinct44 tests.",
+  "runtimeCommand": "git diff --quiet\nrecon_green_clean_exit=$?\nif test \"$recon_green_clean_exit\" -ne 0; then exit \"$recon_green_clean_exit\"; fi\ngit fetch https://github.com/777genius/agent-teams-ai.git fix/frontend-parity-coobservation-c714-20261115\nrecon_green_fetch_exit=$?\nif test \"$recon_green_fetch_exit\" -ne 0; then exit \"$recon_green_fetch_exit\"; fi\ngit checkout --detach e322f2ae7427ca70d833846d2f924de5d4fa6ab9\nrecon_green_checkout_exit=$?\nif test \"$recon_green_checkout_exit\" -ne 0; then exit \"$recon_green_checkout_exit\"; fi\n/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node --test scripts/legacy-agent-host/desktop-native-process-ui.test.ts > /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-windows-native-green.log 2>&1\nrecon_native_exit=$?\ntail -22 /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-windows-native-green.log\nif test \"$recon_native_exit\" -ne 0; then exit \"$recon_native_exit\"; fi\n/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts > /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-cross-44-green.log 2>&1\nrecon_cross_exit=$?\ntail -22 /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-cross-44-green.log\nif test \"$recon_cross_exit\" -ne 0; then exit \"$recon_cross_exit\"; fi\n/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts > /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-shared-eight-green.log 2>&1\nrecon_shared_exit=$?\ntail -22 /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-shared-eight-green.log\nif test \"$recon_shared_exit\" -ne 0; then exit \"$recon_shared_exit\"; fi\n/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs > /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-platform-packaged-green.log 2>&1\nrecon_pair_exit=$?\ntail -22 /workspace/scratch/c714f5bce554/reconciled-local-evidence/reconciliation-platform-packaged-green.log\nif test \"$recon_pair_exit\" -ne 0; then exit \"$recon_pair_exit\"; fi\n"
+}
