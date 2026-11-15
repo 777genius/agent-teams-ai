@@ -31,9 +31,15 @@ static bool applicationBreakpoint(DWORD code) {
   return delivered;
 }
 static std::wstring wow64Command() {
+  // Resolve the documented API-set contract with one bounded module lifetime.
+  const auto module=LoadLibraryExW(L"api-ms-win-core-wow64-l1-1-1.dll",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);
+  if(!module) return {};
+  const auto directory=reinterpret_cast<decltype(&GetSystemWow64Directory2W)>(
+    GetProcAddress(module,"GetSystemWow64Directory2W"));
   wchar_t path[MAX_PATH]{};
-  const auto length=GetSystemWow64Directory2W(path,MAX_PATH,IMAGE_FILE_MACHINE_I386);
-  if(!length||length>=MAX_PATH) return {};
+  const auto length=directory?directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386):0;
+  const bool closed=FreeLibrary(module)!=FALSE;
+  if(!closed||!length||length>=MAX_PATH) return {};
   return std::wstring(path)+L"\\cmd.exe";
 }
 static bool wow64Startup() {
