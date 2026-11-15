@@ -56,7 +56,17 @@ static bool wow64Startup() {
     architecture==IMAGE_FILE_MACHINE_I386&&
     WaitForSingleObject(process.hProcess,5000)==WAIT_OBJECT_0&&
     GetExitCodeProcess(process.hProcess,&code)&&code==0;
-  return CloseHandle(process.hProcess)&&passed;
+  if(!CloseHandle(process.hProcess)||!passed) return false;
+  // The next original-root scenario consumes this exact verified path in the
+  // same controller-created cwd. CREATE_NEW refuses stale or repeated publication.
+  HANDLE file=CreateFileW(L"TEST-wow64-command.utf16",GENERIC_WRITE,0,nullptr,CREATE_NEW,
+    FILE_ATTRIBUTE_NORMAL,nullptr);
+  if(file==INVALID_HANDLE_VALUE) return false;
+  const auto length=static_cast<DWORD>(executable.size()*sizeof(wchar_t));
+  DWORD count=0;
+  const bool written=WriteFile(file,executable.data(),length,&count,nullptr)&&count==length;
+  const bool closed=CloseHandle(file)!=FALSE;
+  return written&&closed;
 }
 int wmain(int argc,wchar_t** argv) {
   if(argc<2) return 22;
@@ -117,14 +127,6 @@ int wmain(int argc,wchar_t** argv) {
     return result==WAIT_OBJECT_0?0:25;
   }
   if(mode==L"exit-fast") return 0;
-  if(mode==L"wow64-path") {
-    const auto path=wow64Command();
-    const auto length=static_cast<DWORD>(path.size()*sizeof(wchar_t));
-    DWORD count=0;
-    if(path.empty()||!WriteFile(GetStdHandle(STD_OUTPUT_HANDLE),path.data(),length,&count,nullptr)||
-      count!=length) return 66;
-    return 0;
-  }
   if(mode==L"application-breakpoints")
     return applicationBreakpoint(EXCEPTION_BREAKPOINT)&&applicationBreakpoint(0x4000001f)?0:61;
   if(mode==L"source-sentinel") {

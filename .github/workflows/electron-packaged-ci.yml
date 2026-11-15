@@ -251,6 +251,7 @@ jobs:
         if: matrix.os == 'darwin'
         shell: bash
         env:
+          TMPDIR: ${{ runner.temp }}
           LEGACY_DESKTOP_BACKEND_GO: '1'
           LEGACY_DESKTOP_EMULATED_ONLY: '1'
           LEGACY_DESKTOP_PROOF_MODE: emulated-claude-lifecycle-ui

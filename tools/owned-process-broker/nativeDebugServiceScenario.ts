@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { closeSync, existsSync, openSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { Duplex } from 'node:stream';
 
 import { decodeServiceFacts, decodeServiceIdentity, decodeServiceRefusal, encodeFrame, encodeLaunch,
@@ -18,6 +19,9 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
   const { events, owner, marker, spec, fixture, track, phase } = context;
   const identity = owner(), start = marker();
   const admissionBarrier = `${start.path}.admission`;
+  const wow64Path = join(dirname(start.path), 'TEST-wow64-command.utf16');
+  if (mode === 'service-pair') assert.equal(existsSync(wow64Path), false,
+    'The original child scenario publishes a fresh native path in this controller sandbox');
   const diagnosticPath = `${start.path}.debug-failure`;
   const diagnosticFd = openSync(diagnosticPath, 'wx');
   const raw = (() => {
@@ -91,21 +95,11 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
   stderr.resume();
   let launch = spec(mode === 'pre-resume-cancel' ? 'tree' : mode, start);
   if (mode === 'wow64-root') {
-    const probe = spawn(fixture, ['wow64-path'], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
-    track(probe);
-    const chunks: Buffer[] = [];
-    probe.stdout.on('data', events.guard((chunk: Buffer) => {
-      assert.ok(chunks.reduce((size, value) => size + value.length, chunk.length) <= 1024);
-      chunks.push(chunk);
-    }));
-    probe.stderr.resume();
-    assert.equal(await timeout(events.wait(new Promise<number | null>((resolve, reject) => {
-      probe.once('close', resolve); probe.once('error', reject);
-    }))), 0);
-    const bytes = Buffer.concat(chunks);
-    assert.ok(bytes.length > 0 && bytes.length % 2 === 0);
+    assert.ok(existsSync(wow64Path), 'The preceding completed child scenario must publish its verified I386 path');
+    const bytes = readFileSync(wow64Path);
+    assert.ok(bytes.length > 0 && bytes.length <= 1024 && bytes.length % 2 === 0);
     const executable = bytes.toString('utf16le');
-    assert.ok(!['"', '\r', '\n', '\0'].some(value => executable.includes(value)));
+    assert.ok(!executable.includes('"') && !/\p{Cc}/u.test(executable));
     launch = { ...launch, executable, commandLine: `"${executable}" /d /c exit 0` };
   }
   phase('prepare');
