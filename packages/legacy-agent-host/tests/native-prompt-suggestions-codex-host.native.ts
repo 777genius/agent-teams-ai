@@ -82,9 +82,18 @@ async function readOriginalNativeTurns(home: string) {
     nativeSession,
     started,
     completed,
-    sourceMessages: events
-      .filter((row) => row.type === 'user_message')
-      .map((row) => String(row.message)),
+    // Codex 0.169 persists authored user content as response_item/message rows.
+    // Count actual native records, never the separate auxiliary model calls.
+    sourceMessages: [
+      ...events.filter((row) => row.type === 'user_message').map((row) => String(row.message)),
+      ...history.filter((row) => row.type === 'response_item')
+        .map((row) => record(row.payload))
+        .filter((row) => row.type === 'message' && row.role === 'user')
+        .flatMap((row) => Array.isArray(row.content) ? row.content : [])
+        .map(record)
+        .filter((part) => part.type === 'input_text' && typeof part.text === 'string')
+        .map((part) => String(part.text)),
+    ],
   };
 }
 
