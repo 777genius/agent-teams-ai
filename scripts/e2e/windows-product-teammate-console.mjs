@@ -47,6 +47,8 @@ let model;
 let launched = false;
 let stopped = false;
 let originalMember;
+let initialMember;
+let appManagedRestartConfirmed = false;
 let forceExitMember;
 let hwndObserver;
 let hwndObserverLog = '';
@@ -273,6 +275,29 @@ async function run() {
     originalMember = observed;
     return snap;
   }, 180_000);
+  // Initial provisioning takes the deterministic spawn path. The contributor's
+  // Windows detached:false fix is in the distinct app-managed restart path:
+  // exercise that production IPC path and use its replacement process for tools.
+  phase = 'app-managed-teammate-restart';
+  initialMember = originalMember;
+  const restartResult = await api(
+    `window.electronAPI.teams.restartMember(${literal(teamName)}, 'alice')`);
+  assert.equal(restartResult?.status, 'restarted', 'Product IPC did not restart alice');
+  await wait('original provisioned teammate retired after app-managed restart',
+    async () => !(await ownedStillAlive(initialMember)), 60_000);
+  originalMember = await wait('new app-managed teammate process', async () => {
+    const snapshot = await api(
+      `window.electronAPI.teams.getTeamAgentRuntime(${literal(teamName)})`);
+    const member = snapshot?.members?.alice;
+    const pid = member?.runtimePid ?? member?.pid;
+    if (!member?.alive || !Number.isSafeInteger(pid) || pid <= 0 ||
+        pid === initialMember.pid) return false;
+    const replacement = await getProcess(pid);
+    return replacement?.command?.includes(teamName) ? replacement : false;
+  }, 180_000);
+  assert(originalMember.creation !== initialMember.creation ||
+    originalMember.pid !== initialMember.pid, 'Restart reused original process identity');
+  appManagedRestartConfirmed = true;
   await client.screenshot(screenshot);
   // Establish and pin a focused Electron foreground baseline immediately
   // before the tool probes; earlier startup/teammate activity is a separate gate.
@@ -382,6 +407,8 @@ async function run() {
     modelBoundary: 'loopback synthetic HTTP; no paid model inference',
     realElectronMainHosted: true, realProductTeammateLaunch: true,
     realProductStopConfirmed: true, nativeOsPidBound: true,
+    appManagedRestartConfirmed, provisionedTeammatePid: initialMember.pid,
+    restartedTeammatePid: originalMember.pid,
     originalTeammatePid: originalMember.pid, originalTeammateBirth: originalMember.creation,
     toolResults: [...proofs.values()], electronFocus: focus,
     actualConsoleWindowsEnumerated: true,
@@ -403,6 +430,7 @@ try {
   await writeFile(receiptPath, JSON.stringify({
     schemaVersion: 1, success: false, phase, error: String(error),
     realProductTeammateLaunch: Boolean(originalMember),
+    appManagedRestartConfirmed,
     toolResults: [...proofs.values()], modelErrors: model?.errors ?? [],
     logTail: log.slice(-3500),
   }, null, 2) + '\n');
@@ -425,6 +453,7 @@ try {
   for (const { identity, marker } of [
     { identity: appBirth, marker: 'dev-with-runtime.mjs' },
     { identity: mainBirth, marker: 'electron.exe' },
+    { identity: initialMember, marker: teamName },
     { identity: originalMember, marker: teamName },
     { identity: forceExitMember, marker: teamName + '-force' },
   ]) {
