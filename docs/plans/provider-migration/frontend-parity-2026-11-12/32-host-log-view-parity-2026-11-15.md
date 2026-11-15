@@ -192,3 +192,18 @@ This strengthens controlled acceptance without altering workflow selectors,
 matrices, required gates, timeouts or native-provider execution. R2 GO recorded
 before these source/workflow edits. Exact implementation and actual test outcomes
 remain required; no checked-provider or native acceptance is inferred.
+
+## Preserve the existing activity UI proof
+
+Source review found `desktop-activity-ui-smoke.ts` and the existing Task Log
+Stream assertion in `desktop-emulated-runtime-ui.ts` selecting the old plain
+`pre` representation. Update only those existing assertions to the real rich
+rows: exact retained eventId/sequence/kind, correlated tool identity, actual
+error indicator and result content, then original childId/parentToolRef/phase
+and counters. Expand the actual BaseItem controls and inspect visible content.
+Retain the original inputs, generation checks, timestamps-unavailable notice,
+no-replay/no-write invariants and all native gates. No hidden proof markup or
+weakened semantic oracle is allowed. R1 `/root` found these consumers; R2
+`/root/migration_scope_audit` reviewed the precise actual-DOM adaptation before
+its implementation. This is an existing-test compatibility correction for
+the already-planned rich rendering, not a new business workflow.

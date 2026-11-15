@@ -3683,3 +3683,50 @@ after plan publication. The reviewed code must retain actual I386 verification;
 the API mapping supports the correction but does not prove the unmeasured stage5
 subcause or resulting native PASS. No additional product change is authorized by
 this failure localization.
+
+## Windows SDK import-library correction — 15 November 2026
+
+Both original jobs for `332fbe3420c811c095dac4187d3f9664e8c47179`
+failed before native qualification: [x64 job132973378700](https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973378700)
+at22:10:20Z and [ARM64 job132973379104](https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973379104)
+at22:12:43Z. Both report LNK2019 for
+`__imp_GetSystemWow64Directory2W`, then LNK1120. This falsifies the previous
+assumption that the ordinary Kernel32 import library is sufficient; neither
+job reached the original runtime gate.
+
+R1 `/root/qualification_audit` inspected Microsoft's official
+[Windows SDK26100.1 x64 package](https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.cpp.x64/10.0.26100.1/microsoft.windows.sdk.cpp.x64.10.0.26100.1.nupkg)
+and [ARM64 package](https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.cpp.arm64/10.0.26100.1/microsoft.windows.sdk.cpp.arm64.10.0.26100.1.nupkg).
+Their Kernel32.Lib lacks this import. Both OneCore.Lib archives define the exact
+import symbol and route its COFF import member to
+`api-ms-win-core-wow64-l1-1-1.dll`; ZIP entries and CRCs were checked.
+The inspected OneCore.Lib SHA-256 values are
+`038b7c879acc32eb122597c9938af1025c8601ed1103558a52ef04c837439a44`
+for x64 (2374038 bytes) and
+`ede054272d34f637af76b9cb57e798afe2bbcf21a3875677fda5ae9132fbb46f`
+for ARM64 (6585362 bytes). These are source-investigation artifacts, not
+substitutes for the runner's selected SDK or native PASS.
+
+A fixture-only OneCore link was reviewed as a possible repair. Before its plan
+could be published, concurrent commit
+[`bb48cb81493fbadb8b1e451ba5c35d7bc8488952`](https://github.com/777genius/agent-teams-ai/commit/bb48cb81493fbadb8b1e451ba5c35d7bc8488952)
+instead repaired this helper through the documented API-set contract. The
+compare-and-swap correctly rejected the stale plan publication. Preserve that
+contributor's commit and do not add an unused import library on top of it.
+
+Exact blob `ca0ded66441b8818bdf5726ee7d8ffa95abb8518` loads only
+`api-ms-win-core-wow64-l1-1-1.dll` with
+`LOAD_LIBRARY_SEARCH_SYSTEM32`, obtains the SDK-typed function pointer, makes
+the same one I386 directory query and checks one FreeLibrary on every successful
+load path. A missing entry still closes the module and returns the same refusal.
+The decltype reference is unevaluated and introduces no static SDK import.
+There is no directory fallback, new process probe, product edit or changed
+action, timeout, child identity, release/cleanup check or control-channel rule.
+
+R2 `/root/qualification_audit` independently accepted that exact preserved
+source diff; `/root` inspected and imported it without overwriting concurrent
+history. Microsoft's API-set guidance supports loading the named contract.
+The SDK archive investigation above corroborates its contract name, but neither
+review establishes the original stage5 subcause or a native PASS. Await both
+original resulting-source Windows compile/runtime jobs. The earlier linker
+failures and P08/P09 INCOMPLETE status remain explicit.
