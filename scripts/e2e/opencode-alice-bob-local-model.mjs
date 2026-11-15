@@ -346,16 +346,29 @@ catch (error) {
   if (launched && !stopSubmitted && client)
     await api(`window.electronAPI.teams.stop(${literal(teamName)})`).catch(() => undefined);
   await client?.close().catch(() => undefined);
-  if (app?.pid && app.exitCode === null && app.signalCode === null) {
-    // Only the process group created by this test with detached:true is owned.
-    try { process.kill(-app.pid, 'SIGTERM'); } catch (error) {
-      if (error.code !== 'ESRCH') process.exitCode = 1;
-    }
-    await pause(700);
-    if (app.exitCode === null && app.signalCode === null) {
-      try { process.kill(-app.pid, 'SIGKILL'); } catch (error) {
-        if (error.code !== 'ESRCH') process.exitCode = 1;
+  if (app?.pid) {
+    // detached:true creates this test's own process group. The launcher may exit
+    // before Electron/Vite descendants, so inspect the GROUP, not app.signalCode.
+    const groupId = app.pid;
+    const groupAlive = () => {
+      try { process.kill(-groupId, 0); return true; }
+      catch (error) {
+        if (error?.code === 'ESRCH') return false;
+        throw error; // EPERM and other failures are not proof of retirement.
       }
+    };
+    const settleGroup = async (checks) => {
+      for (let attempt = 0; attempt < checks && groupAlive(); attempt++) await pause(200);
+    };
+    try {
+      if (groupAlive()) process.kill(-groupId, 'SIGTERM');
+      await settleGroup(10);
+      if (groupAlive()) process.kill(-groupId, 'SIGKILL');
+      await settleGroup(30);
+      if (groupAlive()) throw new Error('Test-owned Electron process group did not retire');
+    } catch (error) {
+      process.stderr.write('Owned E2E process cleanup failed: ' + String(error) + '\n');
+      process.exitCode = 1;
     }
   }
   await model?.close().catch(() => { process.exitCode = 1; });
