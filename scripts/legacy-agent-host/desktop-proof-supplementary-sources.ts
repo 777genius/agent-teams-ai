@@ -254,4 +254,5 @@ export const desktopProofWindowsRetrySources = [
   'scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts',
   'scripts/e2e/external-agent-connection-desktop.ts',
   'scripts/e2e/opencode-diagnostics/platform.test.mjs',
+  'scripts/e2e/opencode-diagnostics/packaged.test.mjs',
 ];
