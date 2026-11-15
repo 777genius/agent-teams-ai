@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { CdpClient } from './comment-notification/cdp.mjs';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment.ts';
 import { startGroupChatModelServer } from './group-chat-model-server.ts';
+import { getExpectedRuntimeCliVersion, matchesRuntimeCliVersion } from '../lib/runtime-cli-version.mjs';
 
 assert.equal(process.platform, 'win32', 'This proof requires a Windows GUI runner');
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -21,7 +22,8 @@ assert((await stat(runtimePath)).isFile(), 'Stage the pinned Windows runtime fir
 const lock = JSON.parse(await readFile(path.join(repoRoot, 'runtime.lock.json'), 'utf8'));
 const version = spawnSync(runtimePath, ['--version'], { encoding: 'utf8', windowsHide: true, timeout: 15_000 });
 assert.equal(version.status, 0, 'Pinned runtime did not execute');
-assert(version.stdout.includes(lock.version), 'Staged executable version differs from runtime.lock.json');
+assert(matchesRuntimeCliVersion(version.stdout, getExpectedRuntimeCliVersion(lock)),
+  'Staged executable CLI version differs from runtime.lock.json cliVersion');
 
 const fixture = await prepareNativeDesktopEnvironment();
 const { root, projectPath, teamName, env } = fixture;
