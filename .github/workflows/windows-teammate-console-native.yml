@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/windows-teammate-console-native.yml'
       - 'scripts/e2e/windows-teammate-console-native.mjs'
+      - 'scripts/e2e/windows-product-teammate-console.mjs'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
       - 'src/main/utils/cliProcessDefaults.ts'
       - 'src/main/utils/childProcess.ts'
@@ -16,6 +17,7 @@ on:
     paths:
       - '.github/workflows/windows-teammate-console-native.yml'
       - 'scripts/e2e/windows-teammate-console-native.mjs'
+      - 'scripts/e2e/windows-product-teammate-console.mjs'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
       - 'src/main/utils/cliProcessDefaults.ts'
       - 'src/main/utils/childProcess.ts'
@@ -79,6 +81,24 @@ jobs:
         env:
           TEAMS_CREATE_E2E_ARTIFACT_DIR: ${{ runner.temp }}/windows-console-electron
         run: node scripts/e2e/teams-create-page-desktop.mjs --windows-console-only
+      - name: Stage pinned runtime for real product-initiated teammate
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: node scripts/stage-runtime.mjs --platform win32-x64
+      - name: Verify actual Electron product teammate with synthetic localhost model
+        env:
+          WINDOWS_PRODUCT_CONSOLE_EVIDENCE: ${{ runner.temp }}/windows-product-console
+        run: |
+          node --check scripts/e2e/windows-product-teammate-console.mjs
+          node scripts/e2e/windows-product-teammate-console.mjs
+      - name: Preserve actual product teammate proof separately from fixture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-product-teammate-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/windows-product-console/
       - name: Preserve Electron GUI screenshot and console evidence
         if: always()
         uses: actions/upload-artifact@v4
