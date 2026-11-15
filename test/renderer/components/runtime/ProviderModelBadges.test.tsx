@@ -541,9 +541,11 @@ describe('ProviderModelBadges', () => {
 
   it('limits collapsed model badges by rendered rows when requested', () => {
     const originalOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
+    let offsetTopReads = 0;
     Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
       configurable: true,
       get() {
+        offsetTopReads += 1;
         const siblings = Array.from(this.parentElement?.children ?? []);
         const index = Math.max(0, siblings.indexOf(this));
         return Math.floor(index / 3) * 20;
@@ -567,7 +569,64 @@ describe('ProviderModelBadges', () => {
       expect(host.textContent).toContain('model-14');
       expect(host.textContent).not.toContain('model-13');
       expect(host.textContent).toContain('+13 more');
+      // A full row must be skipped in one commit, not one model per commit.
+      expect(offsetTopReads).toBeLessThan(30);
     } finally {
+      if (originalOffsetTop) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetTop', originalOffsetTop);
+      } else {
+        delete (HTMLElement.prototype as { offsetTop?: number }).offsetTop;
+      }
+    }
+  });
+
+  it('does not restart row measurements for equivalent refreshed model arrays', () => {
+    const originalOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
+    let offsetTopReads = 0;
+    Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
+      configurable: true,
+      get() {
+        offsetTopReads += 1;
+        const siblings = Array.from(this.parentElement?.children ?? []);
+        const index = Math.max(0, siblings.indexOf(this));
+        return Math.floor(index / 3) * 20;
+      },
+    });
+
+    const models = Array.from(
+      { length: 18 },
+      (_, index) => `model-${String(index + 1).padStart(2, '0')}`
+    );
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      const renderSnapshot = () => (
+        <ProviderModelBadges
+          providerId="opencode"
+          models={[...models]}
+          collapseAfter={15}
+          maxCollapsedRows={2}
+        />
+      );
+
+      act(() => {
+        root.render(renderSnapshot());
+      });
+      expect(host.textContent).toContain('+13 more');
+
+      offsetTopReads = 0;
+      act(() => {
+        root.render(renderSnapshot());
+      });
+
+      expect(offsetTopReads).toBe(0);
+      expect(host.textContent).toContain('+13 more');
+    } finally {
+      act(() => {
+        root.unmount();
+      });
       if (originalOffsetTop) {
         Object.defineProperty(HTMLElement.prototype, 'offsetTop', originalOffsetTop);
       } else {
