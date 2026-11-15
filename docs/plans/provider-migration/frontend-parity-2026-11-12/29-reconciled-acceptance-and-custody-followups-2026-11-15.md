@@ -3550,3 +3550,44 @@ The PR continuation `3cb6e9b2` and follow-up `e935176e` share `d382c393` but con
 The five conflict resolutions are limited to existing files. Preserve both insertion-only plan histories. Use the bounded, canonical captured-owner set from `3cb6e9b2` with the actual-DOM regression from `e935176e`, retaining the empty/duplicate/over-bound discovery refusals. Use the single bounded Retry result/stage recorder and first-catch failure record from `e935176e`; retain the nonoverlapping census timings and existing UI-step timestamps from `3cb6e9b2`. Consolidate their overlapping diagnostic tests instead of keeping two receipt schemas or two synthetic availability fixtures. Original actions, physical custody, deadlines, readiness predicates and cleanup assertions remain unchanged.
 
 This composition adds no production behavior beyond the two published cuts. Estimate for conflict resolution beyond those cuts: about 20 test lines; complexity 3/10, reliability 8/10, confidence 8/10 before resulting-source execution. Root review and independent migration CI review agree on these choices. Verify the complete affected Desktop helper files, platform/packaged helpers, retained scripts compiler and scoped lint; then publish the merged tree and await the existing resulting-source native/Desktop gates. Prior results remain attributed to their original source. Darwin P09 remains unresolved; no green aggregate is claimed by this reconciliation.
+
+
+## Post-merge ownership and retained-observation correction — R1, 15 November 2026
+
+Baseline is PR head `9a34bb28de0a0deee2eecc42099fd9500563eb1b`, tree `b6478df334d0f118c2541806cf375d62a8763aaf`; its original parents `3cb6e9b2` and `e935176e` preserve both published histories. The independent read-only audit found the additive workflow/source-roster changes within their earlier R1 scopes and no removed prior plan line. The final composition paragraph was first published by the merge itself: this appendix does not backdate a separate pre-merge approval. The original `3cb6e9b2` CI was cancelled after that concurrent head update and supplies no completed resulting-source qualification. Preserve the current `9a34bb28` original cohort while preparing this bounded followup in the existing private continuation.
+
+### Concrete gap and source correction
+
+The incoming V2 default-intent loop checks renderer ownership before its awaited `commands()` read and again after direct CDP evaluation. The earlier shared `ui.waitRead` checked ownership immediately before each evaluation. If the owner is revoked during that existing receipt await, the incoming direct evaluation still executes before the post-read check rejects. This is a source-level counterexample to the original pre-evaluation boundary, not an observed false PASS or an attribution to an earlier E2E failure.
+
+Add exactly one `options.assertOwnedRenderer()` immediately before the existing default-intent `cdp.evaluate`, after receipt retrieval and the current deadline check. Preserve the incoming single completion loop, both original default selections, one physical click/model intent, the exact selected-row/spinner predicate, direct evaluation error propagation, both post-read checks, the original 250,000-ms cutoff and 100-ms pause, receipt binding, native observations and cleanup. This adds no DOM/CDP/backend request, mutation replay, new timer or extended budget.
+
+The existing records test extracts and executes the actual `originalStep` source. Extend only its finite commands stub with a hook which revokes ownership on the second invocation, after the loop's pre-check. For both global and project defaults, require the identical owner error, exactly one click and two command reads, zero DOM evaluations, zero receipt bindings/model completions and no recorded effect. Keep all earlier cases, including revocation during evaluation and the ordinary non-default intent.
+
+### Preserve the original zero-observation diagnostic oracle
+
+The merged Windows Retry implementation correctly initializes `returnedReads:0` and `last:null`; no product defect is claimed here. While consolidating the two diagnostic test implementations, the explicit first-read-failure assertion was omitted. Restore it in the existing test that executes the actual Retry block through the real shared `waitRead`: call its existing `exercise([])`, require the same original Error object, the existing initial call sequence followed by exactly one guard/evaluation, zero returned samples and a null last sample. This is six inserted test lines, no native gate change, new test seam, diagnostic schema, predicate or action.
+
+### Preserve the original Cross-team refusal boundaries
+
+The incoming actual-DOM fixture improves the previous synthetic observation, while the production helper remains unchanged at `d0c2e893bcede89c56c516242469e6e88cf43a88`. Its reconciliation lost three explicit negative assertions. Extend only the existing matrix: the missing selected-A binding and non-string captured-handle variants must reject with no navigation or DOM read; a valid third captured owner C must not be accepted as unavailable owner A. For the latter, retain the existing three navigation labels, exactly one actual DOM read and refusal before screenshot. Add no helper, fixture API, source behavior, action, read or deadline to the exercised product scenario. These are preservation tests expected to pass the unchanged correct helper; no RED is claimed.
+
+### Exact source scope
+
+| Existing path | Baseline Git blob | Candidate Git blob | Physical lines |
+| --- | --- | --- | --- |
+| `scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts` | `74c3aaddba29d7309af436610f6a8b64c8c337e1` | `7f224d52e429bbdecb173d65b470a2ac154de475` | 277 → 278 |
+| `scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts` | `7628e511b2f219ad27e517d4a96ecb7aec604131` | `13229f20c93226ee5b3f4d07516d16f94b0d48d5` | 290 → 306 |
+| `scripts/legacy-agent-host/desktop-native-process-ui.test.ts` | `651e505c54c3875e1436e5ecacd725fd827c6027` | `d75137028222ac0d1847c9b9514717279a079c08` | 331 → 337 |
+| `scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts` | `cb704eee81c031f293488811fef2056974728552` | `71103fe6e951e19067523853db3f0ac2fa26ecab` | 1551 → 1564 |
+
+This existing Plan29 is the sole documentation amendment; preimage `a8f84647a4f79bf677744ce93a6604162f63bb96` remains a complete byte prefix. Estimated implementation is one source line and 35 net test lines, with no new production abstraction or public contract. All four paths are already in the resulting-source closure and existing checks. No dependency, compiler configuration, source-size baseline, provisioning rule, workflow, matrix, permission, source roster or original acceptance condition changes.
+
+### Review and actual validation sequence
+
+Publish this R1 on the existing private continuation with exact baseline parent and guarded fast-forward/readback before applying source or test candidates. Obtain independent exact review. Root then applies only the records-test candidate against the unchanged UI preimage and runs the complete existing records test file using captured Node24.21.0. The predicted functional RED is the new zero-evaluation assertion observing one evaluation after revocation; an import/setup/type failure is not that RED, and a first failing global case does not establish execution of the later project case. Preserve the actual result before applying the one-line UI correction.
+
+After the correction, rerun the same complete records file and the complete existing native-process UI and Team UI helper files with the retained zero-observation and Cross-team assertions. The latter two are expected preservation coverage, not a fabricated RED. Run the original whole legacy-host-scripts compiler using pinned TypeScript7.0.2, focused fast lint on these four files, unchanged source-size/provisioning guards and the scoped diff check. Retain raw execution outputs and exact source hashes; prior-source results are not transferred. The already observed local resource failure is not permission to retry a broad application compiler or change its configuration. Original resulting-source workspace/compiler, frontend, V2 Settings, Windows native/process/packaged, cleanup and all other declared E2E obligations remain required.
+
+At this R1 publication no candidate source or test has been applied or executed, and no RED/GREEN/compiler/E2E result is claimed. Draft, original base, finite TEST-only Claude/Codex restriction and Stage1 scope persist. Windows P08 and the separate Darwin P09 contract remain unqualified; this amendment grants no real-vendor execution, Ready/main/release/default activation, deadline change or weaker oracle.
+
