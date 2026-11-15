@@ -279,6 +279,11 @@ async function run() {
   const snapshot = await wait('two distinct original OpenCode runtime sessions', async () => {
     const value = await api(`window.electronAPI.teams.getTeamAgentRuntime(${literal(teamName)})`);
     latestRuntime = value;
+    // A failed native custody/readiness gate is terminal, not a 240s
+    // two-session timeout. Keep the original failure reason for diagnosis.
+    const status = await api(`window.electronAPI.teams.getProvisioningStatus(${literal(creationResponse.runId)})`);
+    if (status?.state === 'failed')
+      throw Error('Original OpenCode provisioning failed: ' + String(status.error ?? status.message ?? 'unknown'));
     const a = value?.members?.alice, b = value?.members?.bob;
     // A homogeneous all-OpenCode team uses ONE primary lane by design;
     // its two distinct model sessions must still be independently committed.
@@ -359,8 +364,24 @@ catch (error) {
     ? await api(`window.electronAPI.teams.getProvisioningStatus(${literal(creationResponse.runId)})`)
       .catch(readError => ({ unavailable: String(readError) }))
     : null;
+  // This product IPC already redacts launch logs, native bridge traces and
+  // the artifact manifest. Preserve bounded tails BEFORE disposable teardown.
+  const diagnosticBundle = creationResponse?.runId && client
+    ? await api(`window.electronAPI.teams.getLaunchFailureDiagnostics(${literal(teamName)}, ${literal(creationResponse.runId)})`)
+      .then(bundle => ({
+        classification: bundle?.classification ?? null,
+        bootstrapTransportBreadcrumb: bundle?.bootstrapTransportBreadcrumb ?? null,
+        fileCount: Array.isArray(bundle?.files) ? bundle.files.length : 0,
+        files: Array.isArray(bundle?.files) ? bundle.files.slice(0, 16).map(file => ({
+          label: file.label, issue: file.issue ?? null,
+          contentTail: typeof file.content === 'string' ? file.content.slice(-8000) : null,
+        })) : [],
+      }))
+      .catch(readError => ({ unavailable: String(readError) }))
+    : null;
   await writeFile(ledgerOutput, JSON.stringify({
     schemaVersion: 1, success: false, phase, error: String(error),
+    diagnosticBundle,
     creationResponse, latestRuntime, progress, persisted,
     modelErrors: model?.errors ?? [], actions: [...actions.values()],
     logTail: logs.slice(-4000),
