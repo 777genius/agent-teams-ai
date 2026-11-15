@@ -676,6 +676,7 @@ const MemberMessageComposer = ({
       !isCrossTeam && !!isTeamAlive && !sending && !isContextSwitching &&
       !isLaunchBlocking && draft.isLoaded && !draft.isRestoring,
     draftText: draft.text,
+    localEditCounter: draft.localEditCounter,
     hasAttachments: draft.attachments.length > 0,
     hasChips: draft.chips.length > 0,
     editingQueueOrRevision: activeRevision !== null || revisionPreparation != null ||

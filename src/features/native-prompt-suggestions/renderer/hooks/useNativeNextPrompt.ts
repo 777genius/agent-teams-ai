@@ -16,6 +16,8 @@ export function useNativeNextPrompt(input: {
   latestDirectMessageId: string | null;
   editable: boolean;
   draftText: string;
+  /** Original composer mutation counter; hydration does not increment it. */
+  localEditCounter: number;
   hasAttachments: boolean;
   hasChips: boolean;
   editingQueueOrRevision: boolean;
@@ -183,6 +185,31 @@ export function useNativeNextPrompt(input: {
     if (candidate) dismissedOperationRef.current = candidate.operationRef;
     setCandidate(null);
   }, [candidate, input.latestDirectMessageId]);
+
+  // The existing composer increments this counter on ANY local draft mutation,
+  // including attachment/chip edits. Merely hiding a row while files are
+  // attached would otherwise resurrect its stale offer when they are removed.
+  const lastEditRef = useRef({
+    teamName: input.teamName, recipient: input.recipient,
+    memberId: input.memberId, messageId: input.latestDirectMessageId,
+    counter: input.localEditCounter,
+  });
+  useEffect(() => {
+    const previous = lastEditRef.current;
+    lastEditRef.current = {
+      teamName: input.teamName, recipient: input.recipient,
+      memberId: input.memberId, messageId: input.latestDirectMessageId,
+      counter: input.localEditCounter,
+    };
+    // Switching recipient or getting a NEW human DM is not an edit to
+    // that new message. The identity-scoped subscription owns those resets.
+    if (previous.teamName === input.teamName &&
+        previous.recipient === input.recipient &&
+        previous.memberId === input.memberId &&
+        previous.messageId === input.latestDirectMessageId &&
+        previous.counter !== input.localEditCounter) invalidate();
+  }, [input.teamName, input.recipient, input.memberId,
+      input.latestDirectMessageId, input.localEditCounter, invalidate]);
 
   return { candidate: visible ? candidate : null, visible, insert, dismiss, onTab, invalidate };
 }

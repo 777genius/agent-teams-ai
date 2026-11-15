@@ -70,6 +70,7 @@ function fixture(initialEditable = true) {
     latestDirectMessageId: origin.messageId as string | null,
     editable: initialEditable,
     draftText: '',
+    localEditCounter: 0,
     hasAttachments: false,
     hasChips: false,
     editingQueueOrRevision: false,
@@ -223,6 +224,39 @@ describe('native next prompt UX in the actual feature hook + row', () => {
     expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
     expect(x.getHook()?.insert()).toBe(false);
     expect(x.onInsert).not.toHaveBeenCalled();
+  });
+
+  it('does not resurrect an offer after attachment/chip edits are cleared', () => {
+    const x = fixture();
+    x.emit(origin);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).not.toBeNull();
+    x.input.hasAttachments = true;
+    x.input.localEditCounter++;
+    x.render();
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+    x.input.hasAttachments = false;
+    x.input.localEditCounter++;
+    x.render();
+    x.emit(origin);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+
+    // A new canonical human message can still receive its OWN follow-up.
+    x.input.latestDirectMessageId = 'TEST-human-message-B';
+    x.input.localEditCounter++;
+    x.render();
+    const next = { ...origin, messageId: 'TEST-human-message-B',
+      inputId: 'TEST-input-B', suggestionId: 'TEST-suggestion-B',
+      operationRef: 'TEST-operation-B', completedTurnRef: 'TEST-native-turn-B' };
+    x.emit(next);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).not.toBeNull();
+    x.input.hasChips = true;
+    x.input.localEditCounter++;
+    x.render();
+    x.input.hasChips = false;
+    x.input.localEditCounter++;
+    x.render();
+    x.emit(next);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
   });
 
   it('rejects a late SDK offer when user already typed then cleared a draft', () => {
