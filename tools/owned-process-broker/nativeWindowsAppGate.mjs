@@ -452,10 +452,51 @@ try {
   assert.notEqual(hostB.pid, hostA.pid);
   proof.successorHost = { identity: hostB, writer: successorWriter };
   assertHostBirths();
-  await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) + ');if(!s)return false;' +
-    'const b=[...s.querySelectorAll("button")];return b.some(x=>x.textContent.trim()==="Refresh"&&!x.disabled)' +
-    '&&!b.some(x=>x.textContent.trim()==="Retry")&&!s.querySelector(\'[role="alert"]\');})()',
-  'original refreshed Team after positive product recovery', remaining());
+  let retryUiSampleCount = 0;
+  const retryUiBase = { schemaVersion: 1, source: 'original-recovery-wait', atomicWithFailure: false };
+  try { proof.retryUiObservation = { ...retryUiBase, sampleCount: 0, sampleCountCapped: false, last: null }; }
+  catch { /* Passive observation cannot change the original readiness result. */ }
+  await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) +
+    ');let firstRefresh=null,refresh="not-observed",retryPresent=null,alertPresent=null;' +
+    'if(!s)return {surfacePresent:false,refresh,firstRefreshBusy:null,retryPresent,alertPresent,ready:false};' +
+    'const b=[...s.querySelectorAll("button")];refresh="absent";' +
+    'const ready=b.some(x=>{if(x.textContent.trim()!=="Refresh")return false;if(!firstRefresh)firstRefresh=x;' +
+    'const enabled=!x.disabled;refresh=enabled?"enabled":"disabled";return enabled;})' +
+    '&&!(retryPresent=b.some(x=>x.textContent.trim()==="Retry"))&&!(alertPresent=!!s.querySelector(\'[role="alert"]\'));' +
+    'let firstRefreshBusy=null;try{if(firstRefresh){const busy=firstRefresh.getAttribute("aria-busy");' +
+    'firstRefreshBusy=busy==="true"?true:busy==="false"?false:null;}}catch{}' +
+    'return {surfacePresent:true,refresh,firstRefreshBusy,retryPresent,alertPresent,ready};})()',
+  'original refreshed Team after positive product recovery', remaining(), value => {
+    let last, ready;
+    try {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+      const prototype = Object.getPrototypeOf(value);
+      if (prototype !== Object.prototype && prototype !== null) return false;
+      const names = ['surfacePresent', 'refresh', 'firstRefreshBusy', 'retryPresent', 'alertPresent', 'ready'];
+      const keys = Reflect.ownKeys(value);
+      if (keys.length !== names.length || names.some(name => !keys.includes(name))) return false;
+      const fields = names.map(name => Object.getOwnPropertyDescriptor(value, name));
+      if (fields.some(field => !field || !Object.hasOwn(field, 'value'))) return false;
+      const [surfacePresent, refresh, firstRefreshBusy, retryPresent, alertPresent, observedReady] = fields.map(field => field.value);
+      if (typeof surfacePresent !== 'boolean' || typeof observedReady !== 'boolean' ||
+        !['not-observed', 'absent', 'disabled', 'enabled'].includes(refresh) ||
+        ![firstRefreshBusy, retryPresent, alertPresent].every(field => field === null || typeof field === 'boolean')) return false;
+      if (!surfacePresent && (refresh !== 'not-observed' || firstRefreshBusy !== null || retryPresent !== null || alertPresent !== null) ||
+        surfacePresent && refresh === 'not-observed' || refresh === 'absent' && firstRefreshBusy !== null) return false;
+      if (refresh !== 'enabled' ? retryPresent !== null || alertPresent !== null :
+        typeof retryPresent !== 'boolean' || (retryPresent ? alertPresent !== null : typeof alertPresent !== 'boolean')) return false;
+      ready = surfacePresent && refresh === 'enabled' && retryPresent === false && alertPresent === false;
+      if (observedReady !== ready) return false;
+      last = { surfacePresent, refresh, firstRefreshBusy, retryPresent, alertPresent, ready };
+    } catch { return false; }
+    if (retryUiSampleCount < 129) retryUiSampleCount++;
+    try {
+      const observation = { ...retryUiBase, sampleCount: Math.min(128, retryUiSampleCount),
+        sampleCountCapped: retryUiSampleCount > 128, last };
+      if (Buffer.byteLength(JSON.stringify(observation), 'utf8') <= 512) proof.retryUiObservation = observation;
+    } catch { /* Passive observation cannot change the original readiness result. */ }
+    return ready;
+  });
   await originalBinding();
   await within(() => fixture.afterRetry(activeDeadline));
   proof.afterRetryPublic = await readProcesses();
@@ -491,6 +532,16 @@ try {
 } catch (error) {
   primaryError = error;
   proof.error = errorText(error);
+  try {
+    const failureText = proof.error;
+    if (typeof failureText === 'string') {
+      const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase: activePhase,
+        error: failureText.slice(0, 1024), errorTruncated: failureText.length > 1024,
+        retryUiObservation: proof.retryUiObservation ?? null }) + '\n';
+      writeSync(1, Buffer.byteLength(line, 'utf8') <= 8192 ? line :
+        '{"kind":"TEST_WINDOWS_PACKAGED_UI_FAILURE","reason":"projection-limit"}\n');
+    }
+  } catch { /* The original failure and cleanup remain authoritative. */ }
 } finally {
   if (app && !quitStarted) {
     try {
