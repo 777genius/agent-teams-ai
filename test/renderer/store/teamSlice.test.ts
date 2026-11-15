@@ -3,6 +3,11 @@ import { isTeamReadUnavailable, normalizeTeamAggregateRead } from '@shared/utils
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 
+import { createHostMemberSpawnStatuses } from '../../../src/features/agent-backend/renderer/createHostMemberSpawnStatuses';
+import { createHostTeamChanges } from '../../../src/features/agent-backend/renderer/createHostTeamChanges';
+import { createHostTeamProvisioning } from '../../../src/features/agent-backend/renderer/createHostTeamProvisioning';
+import { projectHostProvisioningProgress } from '../../../src/features/agent-backend/renderer/projectHostProvisioningProgress';
+import { TeamProductReadOrder } from '../../../src/features/agent-backend/renderer/TeamProductReadOrder';
 import { createTeamTaskDetailStoreSlices } from '../../../src/renderer/store/slices/taskDetailStoreSlices';
 import {
   __getTeamScopedTransientStateForTests,
@@ -27,6 +32,11 @@ import {
 } from '../../../src/renderer/store/teamRefreshFanoutDiagnostics';
 import { getContextScopedTeamResetState } from '../../../src/renderer/store/utils/stateResetHelpers';
 
+import type { BackendLaunchConfigurationView } from '../../../src/features/agent-backend/contracts/launch';
+import type {
+  AgentBackendApi,
+  BackendOperationResult,
+} from '../../../src/features/agent-backend/contracts/operations';
 import type { TeamSlice } from '../../../src/renderer/store/slices/teamSlice';
 import type { TeamLaunchParams } from '../../../src/renderer/store/team/teamLaunchParams';
 import type { AppState } from '../../../src/renderer/store/types';
@@ -40,6 +50,7 @@ import type {
   TeamAgentRuntimeSnapshot,
   TeamConfig,
   TeamMemberSnapshot,
+  TeamProvisioningProgress,
   TeamReadUnavailable,
   TeamSummary,
   TeamTaskWithKanban,
@@ -9466,6 +9477,362 @@ describe('teamSlice actions', () => {
           'my-team'
         )
       ).toBeNull();
+    });
+  });
+
+  describe('captured Host progress and live-roster snapshots', () => {
+    const handleId = 'TEST-progress-owner';
+    const key = hostTeamSelectionKey(handleId);
+    const launchId = 'TEST-progress-launch';
+    const start = Date.parse('2026-11-15T14:00:00.000Z');
+    const disposers: Array<() => void> = [];
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      for (const dispose of disposers.splice(0)) dispose();
+      vi.clearAllTimers();
+    });
+
+    async function fixture(phase: 'ready' | 'assembling' = 'ready') {
+      const members: BackendLaunchConfigurationView['members'] = [
+        { memberId: 'lead', label: 'alice', role: 'lead', selected: null },
+        { memberId: 'bob', label: 'bob', role: 'member', selected: null },
+      ];
+      const view: BackendLaunchConfigurationView = {
+        members,
+        launch: {
+          launchId,
+          rosterRevision: 'TEST-R0',
+          startedAtMs: start,
+          observedAtMs: start + 1000,
+          status: phase === 'ready' ? 'ready' : 'partial',
+          expected: 2,
+          ready: phase === 'ready' ? 2 : 1,
+          retryCapability: 'same-binding-no-allocation-only',
+          members: members.map((member) => ({
+            memberId: member.memberId,
+            generation: `TEST-${member.memberId}-generation`,
+            attemptId: `TEST-${member.memberId}-attempt`,
+            status: phase === 'assembling' && member.role === 'lead' ? 'pending-bootstrap' : 'ready',
+            nativeReady: true,
+            usable: phase === 'ready' || member.role === 'member',
+            controlAvailable: true,
+            noAllocation: false,
+            reason: 'TEST-current-context',
+          })),
+        },
+      };
+      let epoch = 0;
+      const captureScope = () => {
+        const captured = epoch;
+        return () => captured === epoch;
+      };
+      const backend: AgentBackendApi = {
+        getConnections: vi.fn(async () => ({
+          state: 'ready' as const,
+          bindings: [{ handle: { handleId }, label: 'TEST Team', members: [] }],
+        })),
+        invoke: vi.fn<AgentBackendApi['invoke']>(async (request) => {
+          if (request.operation !== 'team.launch.configuration.read')
+            throw new Error('Unexpected Host operation');
+          return { ok: true, value: structuredClone(view) };
+        }),
+      };
+      const readOrder = new TeamProductReadOrder();
+      const readMembers = createHostMemberSpawnStatuses(backend, captureScope, readOrder);
+      const control = createHostTeamProvisioning(backend, captureScope, readOrder);
+      const changes = createHostTeamChanges({
+        backend,
+        captureScope,
+        readOrder,
+        selectionKey: hostTeamSelectionKey,
+      });
+      const initialSnapshot = await readMembers(key);
+      const initial = projectHostProvisioningProgress(handleId, view);
+      const store = createSliceStore();
+      store.setState({
+        currentRuntimeRunIdByTeam: { [key]: initial.runId },
+        currentProvisioningRunIdByTeam: { [key]: initial.runId },
+        provisioningRuns: { [initial.runId]: initial },
+        leadActivityByTeam: { [key]: 'idle' },
+        memberSpawnStatusesByTeam: { [key]: initialSnapshot.statuses },
+        memberSpawnSnapshotsByTeam: { [key]: initialSnapshot },
+      });
+      vi.mocked(backend.invoke).mockClear();
+      const delivered: TeamProvisioningProgress[] = [];
+      return {
+        view,
+        backend,
+        readOrder,
+        readMembers,
+        control,
+        changes,
+        store,
+        initial,
+        delivered,
+        runId: () => hostTeamRunId(handleId, launchId, view.launch.rosterRevision),
+        changeContext: () => {
+          epoch++;
+        },
+        subscribe(before?: (progress: TeamProvisioningProgress) => void) {
+          disposers.push(
+            changes.subscribeProgress((_event, progress) => {
+              delivered.push(progress);
+              before?.(progress);
+              store.getState().onProvisioningProgress(progress);
+            })
+          );
+        },
+        add() {
+          view.members.push({ memberId: 'carol', label: 'carol', role: 'member', selected: null });
+          view.launch.members.push({
+            ...view.launch.members[1]!,
+            memberId: 'carol',
+            generation: 'TEST-carol-added',
+            attemptId: 'TEST-carol-add',
+          });
+          Object.assign(view.launch.members[0]!, { status: 'ready', usable: true });
+          Object.assign(view.launch, {
+            rosterRevision: 'TEST-R1',
+            expected: 3,
+            ready: 3,
+            status: 'ready',
+          });
+        },
+        restorePending() {
+          view.launch.rosterRevision = 'TEST-R2';
+          Object.assign(view.launch.members[2]!, {
+            generation: 'TEST-carol-restored',
+            attemptId: 'TEST-carol-restore',
+            status: 'pending-bootstrap',
+            nativeReady: false,
+            usable: false,
+          });
+          Object.assign(view.launch, { ready: 2, status: 'partial' });
+        },
+        offline() {
+          store.setState((state) => ({
+            memberSpawnStatusesByTeam: {
+              [key]: Object.fromEntries(
+                Object.entries(state.memberSpawnStatusesByTeam[key]).map(([name, entry]) => [
+                  name,
+                  { ...entry, status: 'offline' as const, runtimeAlive: false },
+                ])
+              ),
+            },
+          }));
+        },
+      };
+    }
+
+    it.each(['ready', 'assembling'] as const)(
+      'converges the original global poll from a %s predecessor without a new member RPC',
+      async (phase) => {
+        const f = await fixture(phase);
+        const bob = f.store.getState().memberSpawnStatusesByTeam[key].bob;
+        f.subscribe();
+        await vi.advanceTimersByTimeAsync(0);
+        f.add();
+        await vi.advanceTimersByTimeAsync(2000);
+        const state = f.store.getState();
+        expect(state.currentRuntimeRunIdByTeam[key]).toBe(f.runId());
+        expect(state.currentProvisioningRunIdByTeam[key]).toBe(f.runId());
+        expect(state.provisioningRuns[f.runId()].state).toBe('ready');
+        expect(state.memberSpawnSnapshotsByTeam[key].expectedMembers).toEqual(['bob', 'carol']);
+        expect(state.memberSpawnStatusesByTeam[key].bob).toEqual(bob);
+        expect(state.memberSpawnStatusesByTeam[key].carol.bootstrapConfirmed).toBe(true);
+        expect(state.ignoredRuntimeRunIds).toEqual({ [f.initial.runId]: key });
+        f.view.launch.observedAtMs! += 2000;
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(f.delivered.map((progress) => progress.runId)).toEqual([f.initial.runId, f.runId()]);
+        expect(vi.mocked(f.backend.invoke).mock.calls.map(([request]) => request.operation)).toEqual([
+          'team.launch.configuration.read',
+          'team.launch.configuration.read',
+          'team.launch.configuration.read',
+        ]);
+        expect(hoisted.getMemberSpawnStatuses).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each(['before-store', 'after-snapshot'] as const)(
+      'redelivers unchanged R1 on the next original poll after %s invalidation',
+      async (when) => {
+        const f = await fixture();
+        let invalidated = false;
+        f.subscribe((progress) => {
+          if (when === 'before-store' && progress.runId !== f.initial.runId && !invalidated) {
+            invalidated = true;
+            f.readOrder.invalidateReads(handleId);
+          }
+        });
+        if (when === 'after-snapshot')
+          disposers.push(
+            f.store.subscribe((state) => {
+              if (!invalidated && state.currentRuntimeRunIdByTeam[key] !== f.initial.runId) {
+                invalidated = true;
+                f.readOrder.invalidateReads(handleId);
+              }
+            })
+          );
+        await vi.advanceTimersByTimeAsync(0);
+        f.add();
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(invalidated).toBe(true);
+        expect(f.store.getState().currentProvisioningRunIdByTeam[key]).toBe(f.initial.runId);
+        expect(f.store.getState().currentRuntimeRunIdByTeam[key]).toBe(
+          when === 'before-store' ? f.initial.runId : f.runId()
+        );
+        expect(f.delivered).toHaveLength(2);
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(f.store.getState().currentRuntimeRunIdByTeam[key]).toBe(f.runId());
+        expect(f.store.getState().currentProvisioningRunIdByTeam[key]).toBe(f.runId());
+        expect(f.store.getState().memberSpawnStatusesByTeam[key].carol.bootstrapConfirmed).toBe(true);
+        expect(f.delivered).toHaveLength(3);
+        f.view.launch.observedAtMs! += 2000;
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(f.delivered).toHaveLength(3);
+        expect(f.backend.invoke).toHaveBeenCalledTimes(4);
+        expect(
+          vi
+            .mocked(f.backend.invoke)
+            .mock.calls.every(([request]) => request.operation === 'team.launch.configuration.read')
+        ).toBe(true);
+      }
+    );
+
+    it('converges from the actual superseding progress read while a prior member read is held', async () => {
+      const f = await fixture();
+      f.subscribe();
+      await vi.advanceTimersByTimeAsync(0);
+      f.add();
+      const old = structuredClone(f.view);
+      const entered = createDeferredPromise<void>();
+      const held = createDeferredPromise<BackendOperationResult>();
+      vi.mocked(f.backend.invoke).mockImplementationOnce(() => {
+        entered.resolve();
+        return held.promise;
+      });
+      const pending = f.readMembers(key);
+      const rejected = expect(pending).rejects.toThrow('Stale Host launch read');
+      await entered.promise;
+      f.restorePending();
+      await vi.advanceTimersByTimeAsync(2000);
+      held.resolve({ ok: true, value: old });
+      await rejected;
+      const state = f.store.getState();
+      expect(state.currentRuntimeRunIdByTeam[key]).toBe(f.runId());
+      expect(state.currentProvisioningRunIdByTeam[key]).toBe(f.runId());
+      expect(state.provisioningRuns[f.runId()].state).toBe('assembling');
+      expect(state.memberSpawnStatusesByTeam[key].bob.bootstrapConfirmed).toBe(true);
+      expect(state.memberSpawnStatusesByTeam[key].carol).toMatchObject({
+        status: 'spawning',
+        bootstrapConfirmed: false,
+      });
+      expect(f.backend.invoke).toHaveBeenCalledTimes(3);
+      expect(f.delivered.map((progress) => progress.runId)).toEqual([f.initial.runId, f.runId()]);
+    });
+
+    it.each(['context', 'mutation', 'launch-read'] as const)(
+      'rejects actual direct progress invalidated by %s after await, even with offline members',
+      async (change) => {
+        const f = await fixture();
+        f.add();
+        const progress = await f.control.getProvisioningStatus(f.runId());
+        if (change === 'context') f.changeContext();
+        else if (change === 'mutation') f.readOrder.invalidateReads(handleId);
+        else await f.readMembers(key);
+        f.offline();
+        f.store.getState().onProvisioningProgress(progress);
+        expect(f.store.getState().currentRuntimeRunIdByTeam[key]).toBe(f.initial.runId);
+        expect(f.store.getState().currentProvisioningRunIdByTeam[key]).toBe(f.initial.runId);
+      }
+    );
+
+    it.each(['clone', 'plain', 'other-owner', 'changed-run'] as const)(
+      'does not grant same-launch handoff to %s progress through the offline fallback',
+      async (change) => {
+        const f = await fixture();
+        f.add();
+        let progress = await f.control.getProvisioningStatus(f.runId());
+        if (change === 'clone') progress = structuredClone(progress);
+        if (change === 'plain') progress = projectHostProvisioningProgress(handleId, f.view);
+        if (change === 'other-owner') progress.teamName = hostTeamSelectionKey('TEST-other-owner');
+        if (change === 'changed-run')
+          progress.runId = hostTeamRunId(handleId, launchId, 'TEST-forged');
+        f.offline();
+        f.store.getState().onProvisioningProgress(progress);
+        expect(f.store.getState().currentRuntimeRunIdByTeam).toEqual({ [key]: f.initial.runId });
+        expect(f.store.getState().currentProvisioningRunIdByTeam).toEqual({ [key]: f.initial.runId });
+        expect(Object.keys(f.store.getState().provisioningRuns)).toEqual([f.initial.runId]);
+      }
+    );
+
+    it('keeps skipped R1 and retired R0 progress from rolling R2 back after its members become offline', async () => {
+      const f = await fixture();
+      f.add();
+      const oldView = structuredClone(f.view);
+      const held = await f.control.getProvisioningStatus(f.runId());
+      const clone = structuredClone(held);
+      f.restorePending();
+      f.store.getState().onProvisioningProgress(await f.control.getProvisioningStatus(f.runId()));
+      expect(f.store.getState().currentProvisioningRunIdByTeam[key]).toBe(f.runId());
+      f.offline();
+      for (const progress of [
+        held,
+        clone,
+        projectHostProvisioningProgress(handleId, oldView),
+        f.initial,
+      ])
+        f.store.getState().onProvisioningProgress(progress);
+      const state = f.store.getState();
+      expect(state.currentRuntimeRunIdByTeam[key]).toBe(f.runId());
+      expect(state.currentProvisioningRunIdByTeam[key]).toBe(f.runId());
+      expect(state.provisioningRuns[f.runId()].state).toBe('assembling');
+      expect(state.ignoredRuntimeRunIds).toEqual({ [f.initial.runId]: key });
+      expect(state.ignoredRuntimeRunIds[held.runId]).toBeUndefined();
+      expect(state.provisioningRuns[held.runId]).toBeUndefined();
+    });
+
+    it('keeps each observer clone independent while applying its matching current companion', async () => {
+      const f = await fixture();
+      f.add();
+      disposers.push(
+        f.changes.subscribeProgress((_event, progress) => {
+          progress.teamName = hostTeamSelectionKey('TEST-changed-listener-owner');
+        })
+      );
+      f.subscribe();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(f.store.getState().currentRuntimeRunIdByTeam).toEqual({ [key]: f.runId() });
+      expect(f.store.getState().currentProvisioningRunIdByTeam).toEqual({ [key]: f.runId() });
+      expect(f.delivered[0].teamName).toBe(key);
+      expect(f.backend.invoke).toHaveBeenCalledTimes(1);
+    });
+
+    it('preserves the existing confirmed Stop projection after a current live-roster handoff', async () => {
+      const f = await fixture();
+      f.add();
+      f.subscribe();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(f.store.getState().provisioningRuns[f.runId()].state).toBe('ready');
+      for (const member of f.view.launch.members)
+        Object.assign(member, {
+          status: 'failed',
+          reason: 'stopped',
+          nativeReady: false,
+          usable: false,
+          controlAvailable: false,
+        });
+      Object.assign(f.view.launch, { status: 'failed', ready: 0 });
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(f.store.getState().currentProvisioningRunIdByTeam[key]).toBe(f.runId());
+      expect(f.store.getState().provisioningRuns[f.runId()]).toMatchObject({
+        state: 'disconnected',
+        message: 'Team launch stopped.',
+      });
+      expect(f.backend.invoke).toHaveBeenCalledTimes(2);
     });
   });
 });

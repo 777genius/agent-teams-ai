@@ -205,6 +205,8 @@ export const desktopProofSupplementarySources = [
   'src/features/runtime-provider-management/main/infrastructure/runtimeProviderOAuthPresentation.ts',
   'src/features/runtime-provider-management/main/infrastructure/runtimeProviderModelTestBoundary.ts',
   'test/features/agent-backend/hostProvisioningProgress.test.ts',
+  'src/renderer/store/team/teamRuntimeRunAdoption.ts',
+  'test/renderer/store/teamSlice.test.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */

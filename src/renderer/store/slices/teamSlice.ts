@@ -1,4 +1,7 @@
-import { isHostReadUnavailable } from '@features/agent-backend/renderer';
+import {
+  hostProvisioningMemberSnapshot,
+  isHostReadUnavailable,
+} from '@features/agent-backend/renderer';
 import {
   captureManualQueueNamespace,
   discardManualMessageQueueNamespace,
@@ -4674,6 +4677,20 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     if (floor && progress.startedAt < floor) {
       // Ignore late progress from a previous run (common after stop→launch).
       return;
+    }
+
+    const members = hostProvisioningMemberSnapshot(progress);
+    if (members === null) return;
+    if (members) {
+      set((prev) =>
+        projectIncomingMemberSpawnSnapshot({
+          teamName: progress.teamName,
+          snapshot: members,
+          prev,
+          onEqualSuppressed: maybeLogMemberSpawnUiEqualSuppressed,
+        })
+      );
+      if (hostProvisioningMemberSnapshot(progress) !== members) return;
     }
 
     const currentRunId = get().currentProvisioningRunIdByTeam[progress.teamName];

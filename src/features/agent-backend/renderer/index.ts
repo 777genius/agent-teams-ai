@@ -11,6 +11,10 @@ export { createBoundHostReviewApi } from './createBoundHostReviewApi';
 export { createHostBackendRenderer } from './createHostBackendRenderer';
 export { createHostCrossTeamApi } from './createHostCrossTeamApi';
 export { createHostGroupChatsApi } from './createHostGroupChatsApi';
+export {
+  hostMemberSpawnSnapshotCurrentness,
+  hostProvisioningMemberSnapshot,
+} from './createHostMemberSpawnStatuses';
 export { createHostReviewApi } from './createHostReviewApi';
 export { HostTeamOperationError } from './createHostTeamMutations';
 export {

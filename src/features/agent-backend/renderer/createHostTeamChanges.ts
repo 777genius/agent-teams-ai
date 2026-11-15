@@ -1,3 +1,7 @@
+import {
+  captureHostProvisioningMemberSnapshot,
+  projectHostMemberSpawnStatuses,
+} from './createHostMemberSpawnStatuses';
 import { projectHostProvisioningProgress } from './projectHostProvisioningProgress';
 import { readHostLaunchConfiguration } from './readHostLaunchConfiguration';
 
@@ -68,6 +72,11 @@ export function createHostTeamChanges(options: {
             readFence();
             if (configuration && configuration.launch.startedAtMs !== null) {
               const progress = projectHostProvisioningProgress(handleId, configuration);
+              const members = projectHostMemberSpawnStatuses(handleId, configuration);
+              const assertCurrent = () => {
+                if (!active()) throw new Error('Host progress subscription changed');
+                readFence();
+              };
               // Observation time alone is not a product change. New subscribers
               // clear this signature and receive their own current projection.
               const signature = JSON.stringify({
@@ -78,16 +87,24 @@ export function createHostTeamChanges(options: {
                 ),
               });
               if (progressSignatures.get(handleId) !== signature) {
-                progressSignatures.set(handleId, signature);
                 for (const [token, listener] of [...progressListeners]) {
                   if (!active()) return;
                   if (!progressListeners.has(token)) continue;
                   try {
-                    listener(undefined, structuredClone(progress));
+                    listener(
+                      undefined,
+                      captureHostProvisioningMemberSnapshot(
+                        structuredClone(progress),
+                        structuredClone(members),
+                        assertCurrent
+                      )
+                    );
                   } catch {
                     /* Isolate observers. */
                   }
                 }
+                assertCurrent();
+                progressSignatures.set(handleId, signature);
               }
             }
           } catch {
