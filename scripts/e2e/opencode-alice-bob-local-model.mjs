@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { getExpectedRuntimeCliVersion, matchesRuntimeCliVersion } from '../lib/runtime-cli-version.mjs';
 import { CdpClient } from './comment-notification/cdp.mjs';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment.ts';
 import { startGroupChatModelServer } from './group-chat-model-server.ts';
@@ -19,10 +20,11 @@ assert.equal(process.platform, 'linux', 'This synthetic OpenCode peer E2E requir
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const runtimeCli = path.join(repo, 'resources/runtime/claude-multimodel');
 assert((await stat(runtimeCli)).isFile(), 'Verified released orchestrator must be staged');
-const runtimeVersion = JSON.parse(await readFile(path.join(repo, 'runtime.lock.json'), 'utf8')).version;
+const runtimeLock = JSON.parse(await readFile(path.join(repo, 'runtime.lock.json'), 'utf8'));
 const version = spawnSync(runtimeCli, ['--version'], { encoding: 'utf8', timeout: 15_000 });
 assert.equal(version.status, 0);
-assert(version.stdout.includes(runtimeVersion), 'Staged orchestrator version mismatch');
+assert(matchesRuntimeCliVersion(version.stdout, getExpectedRuntimeCliVersion(runtimeLock)),
+  'Staged orchestrator CLI version mismatch');
 
 const { root, projectPath, teamName, env } = await prepareNativeDesktopEnvironment();
 const output = process.env.OPENCODE_PEER_E2E_EVIDENCE ||
