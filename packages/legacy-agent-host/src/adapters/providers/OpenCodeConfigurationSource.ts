@@ -221,7 +221,8 @@ export function captureOpenCodeConfigurationSource(
   raw: Input,
   expected?: OpenCodeConfigurationReference,
   ownerCurrent: () => boolean = () => true,
-  scope: 'global' | 'project' = expected?.scope ?? 'project'
+  scope: 'global' | 'project' = expected?.scope ?? 'project',
+  inspectCaptured?: (config: Config) => undefined
 ) {
   const input = structuredClone(raw),
     selected = sources(input, scope);
@@ -263,6 +264,8 @@ export function captureOpenCodeConfigurationSource(
     if (file?.bytes !== undefined)
       apply(parse(file.bytes), { kind: 'file', path: file.path, digest: file.digest });
   }
+  // The synchronous consumer receives its own clone inside the original closing freshness check.
+  inspectCaptured?.(structuredClone(config));
   if (!isCurrent()) changed();
   return Object.freeze({
     reference: structuredClone(original.reference),
