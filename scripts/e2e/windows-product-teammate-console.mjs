@@ -36,6 +36,14 @@ const screenshot = path.join(receiptDir, 'windows-product-console.png');
 const hwndReady = path.join(receiptDir, 'hwnd-ready.txt');
 const hwndStop = path.join(receiptDir, 'hwnd-stop.txt');
 const hwndProof = path.join(receiptDir, 'window-observation.json');
+const usageCcusageMarker = path.join(receiptDir, 'usage-ccusage-process.json');
+const usageTokscaleMarker = path.join(receiptDir, 'usage-tokscale-process.json');
+const usageProcessScript = [
+  "const fs = require('node:fs')",
+  "fs.writeFileSync(process.argv[1], JSON.stringify({pid:process.pid,source:process.argv[2]}))",
+  "process.stdout.write('[]')",
+  "setTimeout(() => process.exit(0), 700)",
+].join(';');
 const proofs = new Map();
 const expected = new Map();
 let app;
@@ -53,6 +61,7 @@ let forceExitMember;
 let hwndObserver;
 let hwndObserverLog = '';
 let hwndEvidence;
+let usageImporterProcesses = [];
 let log = '';
 let phase = 'setup';
 let protocolFailure = null;
@@ -185,6 +194,17 @@ async function run() {
     pnpm_config_verify_deps_before_run: 'false',
     CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS: '180000',
     CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS: '180000',
+    // Exercise actual Electron token-usage importers with owned native
+    // Windows console-subsystem processes (no installed vendor CLI, no billing).
+    AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND: process.execPath,
+    AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS: JSON.stringify([
+      '-e', usageProcessScript, usageCcusageMarker, 'ccusage',
+    ]),
+    AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_COMMAND: process.execPath,
+    AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS: JSON.stringify([
+      '-e', usageProcessScript, usageTokscaleMarker, 'tokscale',
+    ]),
+    AGENT_TEAMS_TOKEN_USAGE_COMMAND_REFRESH_MS: '1',
   });
   // Only OS/display plumbing comes from the runner. Never inherit provider credentials.
   for (const key of ['CI', 'GITHUB_ACTIONS', 'RUNNER_TEMP', 'SystemRoot', 'WINDIR',
@@ -338,6 +358,28 @@ async function run() {
   }
   assert.equal(proofs.size, 3);
   assert.equal(model.errors.length, 0, 'Synthetic model protocol produced errors');
+  // Keep the same real Win32 HWND/focus observer running while the actual
+  // production token-usage IPC executes both CLI importers in Electron Main.
+  // Marker files are written by the child processes, not by test fixtures.
+  phase = 'product-token-usage-importers';
+  for (const marker of [usageCcusageMarker, usageTokscaleMarker]) {
+    await rm(marker, { force: true });
+  }
+  const usageRefresh = await api('window.electronAPI.tokenUsage.refreshSnapshot()');
+  assert(usageRefresh?.success !== false && !usageRefresh?.error,
+    'Product token-usage importer refresh IPC failed');
+  usageImporterProcesses = [];
+  for (const [source, marker] of [
+    ['ccusage', usageCcusageMarker],
+    ['tokscale', usageTokscaleMarker],
+  ]) {
+    const entry = JSON.parse(await readFile(marker, 'utf8'));
+    assert.equal(entry?.source, source, 'Real CLI importer marker source mismatch');
+    assert(Number.isSafeInteger(entry.pid) && entry.pid > 0,
+      'CLI importer did not report its real native child PID');
+    usageImporterProcesses.push({ source, pid: entry.pid });
+  }
+  assert.equal(usageImporterProcesses.length, 2);
   await writeFile(hwndStop, 'stop');
   hwndEvidence = await wait('owned native HWND observer evidence', async () => {
     try { return JSON.parse(await readFile(hwndProof, 'utf8')); }
@@ -410,7 +452,7 @@ async function run() {
     appManagedRestartConfirmed, provisionedTeammatePid: initialMember.pid,
     restartedTeammatePid: originalMember.pid,
     originalTeammatePid: originalMember.pid, originalTeammateBirth: originalMember.creation,
-    toolResults: [...proofs.values()], electronFocus: focus,
+    toolResults: [...proofs.values()], usageImporterProcesses, electronFocus: focus,
     actualConsoleWindowsEnumerated: true,
     visibleConsoleWindowsObserved: hwndEvidence.unexpectedNewConsoleWindows.length,
     foregroundOtherPidSamples: hwndEvidence.foregroundOtherPidSamples,
@@ -431,7 +473,8 @@ try {
     schemaVersion: 1, success: false, phase, error: String(error),
     realProductTeammateLaunch: Boolean(originalMember),
     appManagedRestartConfirmed,
-    toolResults: [...proofs.values()], modelErrors: model?.errors ?? [],
+    toolResults: [...proofs.values()], usageImporterProcesses,
+    modelErrors: model?.errors ?? [],
     logTail: log.slice(-3500),
   }, null, 2) + '\n');
   process.exitCode = 1;
