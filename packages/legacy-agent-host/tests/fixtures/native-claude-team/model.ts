@@ -613,7 +613,13 @@ export async function startNativeTeamModel(
           suggestionRequests.push({ turn, step, inheritedHumanContext: true });
           assert.ok(suggestionRequests.length <= 4, 'at most one auxiliary sample per original native turn');
           emitResponse(response, ++sequence,
-            { type: 'text', text: 'TEST_NEXT_PROMPT_' + turn },
+            { type: 'text', text: turn === 'NATIVE_TEAM_ONE'
+              ? 'Review the latest changes and confirm the tests pass.'
+              : turn === 'NATIVE_TEAM_TWO'
+                ? 'Review the completed tests and open a PR'
+                : turn === 'NATIVE_TEAM_THREE'
+                  ? 'Summarize the changes and check for regressions.'
+                  : 'Verify the final results and prepare a report.' },
             typeof body.model === 'string' ? body.model : undefined);
           return;
         }
@@ -759,8 +765,12 @@ export async function startNativeTeamModel(
         {
           name: 'Bash',
           input: {
-            command: "printf 'ONE\\n' >> native-effect.txt; exit 7",
-            description: 'Write one TEST-owned task effect and report a failed command',
+            command: options.nativeNextPromptUi
+              ? "printf 'ONE\\n' >> native-effect.txt"
+              : "printf 'ONE\\n' >> native-effect.txt; exit 7",
+            description: options.nativeNextPromptUi
+              ? 'Write one TEST-owned task effect on a clean SDK suggestion turn'
+              : 'Write one TEST-owned task effect and report a failed command',
           },
         },
         {
@@ -768,7 +778,9 @@ export async function startNativeTeamModel(
           input: {
             commandId: 'native-task-comment',
             taskId,
-            text: 'Native Bash produced the TEST file; command exit was seven.',
+            text: options.nativeNextPromptUi
+              ? 'Native Bash produced the TEST file successfully.'
+              : 'Native Bash produced the TEST file; command exit was seven.',
           },
         },
         { name: 'task_complete', input: { commandId: 'native-task-complete', taskId } },

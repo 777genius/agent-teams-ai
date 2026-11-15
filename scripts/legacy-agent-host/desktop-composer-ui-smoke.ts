@@ -108,7 +108,11 @@ export async function runDesktopComposerUiSmoke(
           memberIsAlice:value?.memberId==='alice-id',
           providerIsClaude:value?.provider==='claude',
           messageIdPresent:typeof value?.messageId==='string'&&value.messageId.length>0,
-          textIsTestSuggestion:typeof value?.text==='string'&&value.text.startsWith('TEST_NEXT_PROMPT_')
+          textIsTestSuggestion:typeof value?.text==='string'&&[
+            'Review the completed tests and open a PR',
+            'Summarize the changes and check for regressions.',
+            'Verify the final results and prepare a report.'
+          ].includes(value.text)
         });
       });
       return true;
@@ -195,6 +199,8 @@ export async function runDesktopComposerUiSmoke(
           (!('toolResultError' in row) || !row.toolResultError || (row.turn === 'NATIVE_TEAM_ONE' && row.step === 4))
       )
     );
+    if (nativeNextPromptUi) assert.ok(observations.every(row => !row.toolResultError),
+      'native suggestion proof uses a clean SDK turn; original failure-path proof stays separate');
     if (turn.endsWith('_TEAM_TWO')) assert.ok(observations.every((row) => row.priorTurn));
     if (verifyAttachments) {
       const refs = record(record(receipt.command).payload).attachments;

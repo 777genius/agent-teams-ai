@@ -9,7 +9,11 @@ import type { UiCdpPort, createDesktopUiControls } from './desktop-ui-controls.t
 
 type Ui = ReturnType<typeof createDesktopUiControls>;
 
-const expectedPrompt = (turn: string) => 'TEST_NEXT_PROMPT_' + turn;
+// Real SDK generation may filter machine-like markers; use genuine user phrasing.
+const expectedPrompt = (turn: 'NATIVE_TEAM_TWO' | 'NATIVE_TEAM_THREE' | 'NATIVE_TEAM_FOUR') =>
+  turn === 'NATIVE_TEAM_TWO' ? 'Review the completed tests and open a PR' :
+    turn === 'NATIVE_TEAM_THREE' ? 'Summarize the changes and check for regressions.' :
+      'Verify the final results and prepare a report.';
 
 /** Actual CDP keyboard interaction; never assign a controlled draft through DOM evaluation. */
 async function key(cdp: UiCdpPort, name: string, code: string, virtual: number, modifiers = 0) {
