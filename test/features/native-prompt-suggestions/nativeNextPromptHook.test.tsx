@@ -141,7 +141,7 @@ describe('native next prompt UX in the actual feature hook + row', () => {
     expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
   });
 
-  it('rejects user edits while the Runtime read is in flight', async () => {
+  it('rejects a user edit even when the draft is cleared before Runtime accepts', async () => {
     const x = fixture();
     x.emit(origin);
     let release: (() => void) | undefined;
@@ -149,10 +149,15 @@ describe('native next prompt UX in the actual feature hook + row', () => {
       new Promise<boolean>(resolve => { release = () => resolve(true); })
     );
     act(() => x.host.querySelector<HTMLButtonElement>('[aria-label="Insert"]')!.click());
-    x.input.draftText = 'Actual user draft';
+    x.input.draftText = 'Temporary user text';
+    x.input.localEditCounter++;
+    x.render();
+    x.input.draftText = '';
+    x.input.localEditCounter++;
     x.render();
     await act(async () => { release?.(); });
     expect(x.onInsert).not.toHaveBeenCalled();
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
   });
 
   it('does not insert a verified candidate after the editor unmounts', async () => {
