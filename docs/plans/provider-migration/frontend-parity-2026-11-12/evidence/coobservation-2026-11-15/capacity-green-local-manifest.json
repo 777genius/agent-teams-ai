@@ -1,0 +1,126 @@
+{
+  "sourceHead": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+  "sourceTree": "efc034470cca611cf4ebd4fa5ecb75328c4c94ae",
+  "statusBefore": "",
+  "sourceBlobs": {
+    "packages/legacy-agent-host/src/index.ts": "755158699496506a62132c540f19b225c5a6222d",
+    "packages/legacy-agent-host/tests/transport.test.ts": "24c83547be0ee43bb6f2481618a4356a3855d832",
+    "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+    "test/features/agent-backend/capturedHostClient.test.ts": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+    "tools/owned-process-broker/nativeEmulatedSourceProfile.ts": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts": "1d1133876a20ca7541d04b4c9d8d86e4e4c599bc",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts": "e77ec01ab472cacba5f73008c2a36abb70220cb1",
+    ".github/workflows/host-process-acceptance.yml": "123e52f461e42790ddf5fb8b1ea653b9e32c30db"
+  },
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "AGENT_BACKEND_TEST_NODE": null,
+  "steps": [
+    {
+      "name": "capacity-new-host-build.log",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@agent-teams/legacy-agent-host",
+        "build"
+      ],
+      "startedAt": "2026-11-15T21:25:06.509199+00:00",
+      "completedAt": "2026-11-15T21:25:10.477946+00:00",
+      "exitCode": 0,
+      "bytes": 182,
+      "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789"
+    },
+    {
+      "name": "capacity-transport-green.log",
+      "argv": [
+        "node",
+        "--test",
+        "packages/legacy-agent-host/tests/transport.test.ts"
+      ],
+      "startedAt": "2026-11-15T21:25:10.479189+00:00",
+      "completedAt": "2026-11-15T21:25:11.516493+00:00",
+      "exitCode": 0,
+      "bytes": 1442,
+      "sha256": "5b5714586ce5bf902620aff2530ea6c8bd6b9254074efd7c58d2a0151fb68cc7"
+    },
+    {
+      "name": "capacity-host-test-types.log",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@agent-teams/legacy-agent-host",
+        "typecheck:test"
+      ],
+      "startedAt": "2026-11-15T21:25:11.517257+00:00",
+      "completedAt": "2026-11-15T21:25:14.982947+00:00",
+      "exitCode": 0,
+      "bytes": 69,
+      "sha256": "f453e976d298e4c9c8a5ee0134f19a02d2d39c2c100e3aed187705880615d150"
+    },
+    {
+      "name": "capacity-scoped-lint.log",
+      "argv": [
+        "pnpm",
+        "lint:fast:files",
+        "packages/legacy-agent-host/src/index.ts",
+        "packages/legacy-agent-host/tests/transport.test.ts",
+        "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "test/features/agent-backend/capturedHostClient.test.ts"
+      ],
+      "startedAt": "2026-11-15T21:25:14.984764+00:00",
+      "completedAt": "2026-11-15T21:25:17.662620+00:00",
+      "exitCode": 0,
+      "bytes": 323,
+      "sha256": "a36430e98363761dcba618dcc7b8d9674cac505e1c5b7cd4b8aeccf1fb404547"
+    },
+    {
+      "name": "capacity-source-size.log",
+      "argv": [
+        "pnpm",
+        "guard:source-file-size"
+      ],
+      "startedAt": "2026-11-15T21:25:17.663168+00:00",
+      "completedAt": "2026-11-15T21:25:18.507000+00:00",
+      "exitCode": 0,
+      "bytes": 249,
+      "sha256": "961492c3971768c144057514917b4179f695089b172a31e2d3d3d62b9efdc8f3"
+    },
+    {
+      "name": "capacity-provisioning.log",
+      "argv": [
+        "pnpm",
+        "guard:team-provisioning-architecture"
+      ],
+      "startedAt": "2026-11-15T21:25:18.507607+00:00",
+      "completedAt": "2026-11-15T21:25:18.882449+00:00",
+      "exitCode": 0,
+      "bytes": 245,
+      "sha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c"
+    },
+    {
+      "name": "capacity-source-diff.log",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "99868cda8096674e6281172e80b96e21bcd4cff3",
+        "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e"
+      ],
+      "startedAt": "2026-11-15T21:25:18.883057+00:00",
+      "completedAt": "2026-11-15T21:25:18.894418+00:00",
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "qualification": "Capacity resulting-source local Host transport and scoped gates only. No local Main, scripts, whole-workspace or dedicated-backend compiler attempt.",
+  "builtHost": {
+    "path": "packages/legacy-agent-host/dist/index.js",
+    "bytes": 9875,
+    "sha256": "774a7f392d4abe1f9dc430fa953e9ce64d423767287b9c484c76599282bda289",
+    "capacityGuardPresent": true
+  },
+  "statusAfter": ""
+}

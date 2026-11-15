@@ -1,0 +1,1 @@
+$ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content packages/legacy-agent-host/src/index.ts packages/legacy-agent-host/tests/transport.test.ts src/features/agent-backend/main/infrastructure/CapturedHostClient.ts test/features/agent-backend/capturedHostClient.test.ts

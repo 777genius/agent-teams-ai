@@ -1,0 +1,55 @@
+{
+  "sourceHead": "d0e659fbc23674c1c32d0e42e312134c72218d0e",
+  "sourceTree": "558237a5713ae1f91e767bb608fe36427a3aed2d",
+  "statusBefore": "",
+  "sourceBlobs": {
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts": "9f5fb6750f46d7c67d7d5f9c59dbbfe49519f3db",
+    "tools/owned-process-broker/nativeEmulatedSourceProfile.ts": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts": "1d1133876a20ca7541d04b4c9d8d86e4e4c599bc",
+    ".github/workflows/host-process-acceptance.yml": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+    "packages/legacy-agent-host/src/index.ts": "755158699496506a62132c540f19b225c5a6222d",
+    "packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts": "10e1a457bb65a136128eb1db5176a4701d2fe4e2",
+    "packages/legacy-agent-host/src/owned-process/windowsBroker.ts": "32b3315f04d91ae6da375bcca710e16948e09ad3"
+  },
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "AGENT_BACKEND_TEST_NODE": null,
+  "steps": [
+    {
+      "name": "reservation-old-producer-host-build.log",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@agent-teams/legacy-agent-host",
+        "build"
+      ],
+      "startedAt": "2026-11-15T21:27:28.164916+00:00",
+      "completedAt": "2026-11-15T21:27:31.525846+00:00",
+      "exitCode": 0,
+      "bytes": 182,
+      "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789"
+    },
+    {
+      "name": "reservation-cleanup-red.log",
+      "argv": [
+        "node",
+        "--test",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+      ],
+      "startedAt": "2026-11-15T21:27:31.526910+00:00",
+      "completedAt": "2026-11-15T21:27:40.490490+00:00",
+      "exitCode": 1,
+      "bytes": 8257,
+      "sha256": "bc47594b64be34c2d1525f6b7f7ad7d3d43dc2eb6b63ea6ada2ee85fdac19b05"
+    }
+  ],
+  "qualification": "Original complete runtime-team-host file on the unchanged original Scenario/workflow producers. Independent review must establish both specific REDs; setup or unrelated failure is not sufficient.",
+  "builtCustody": {
+    "path": "packages/legacy-agent-host/dist/owned-process/RetainedWindowsCustody.js",
+    "bytes": 19660,
+    "sha256": "b7cfa18b34e4fe8c09e0eedf955dc7bf1d90434934a8b61de248b73140be77ce"
+  },
+  "statusAfter": ""
+}

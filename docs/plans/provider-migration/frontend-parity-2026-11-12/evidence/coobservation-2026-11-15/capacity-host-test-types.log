@@ -1,0 +1,1 @@
+$ node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json

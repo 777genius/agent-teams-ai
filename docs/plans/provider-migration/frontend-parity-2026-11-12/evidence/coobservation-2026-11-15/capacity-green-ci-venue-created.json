@@ -1,0 +1,768 @@
+{
+  "schema": "capacity-green-ci-venue-created-v1",
+  "r1Commit": "99868cda8096674e6281172e80b96e21bcd4cff3",
+  "compilerClarificationCommit": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+  "sourceHead": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+  "sourceTree": "efc034470cca611cf4ebd4fa5ecb75328c4c94ae",
+  "baseHead": "22078dc88a1118b2134388743ec41dd72fd73563",
+  "newHeadRef": {
+    "ref": "refs/heads/ci/frontend-parity-capacity-green-c714-20261115",
+    "node_id": "REF_kwDORVTEtNoAOnJlZnMvaGVhZHMvY2kvZnJvbnRlbmQtcGFyaXR5LWNhcGFjaXR5LWdyZWVuLWM3MTQtMjAyNjExMTU",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/ci/frontend-parity-capacity-green-c714-20261115",
+    "object": {
+      "sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+      "type": "commit",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e"
+    }
+  },
+  "creationSnapshot": {
+    "url": "https://github.com/777genius/agent-teams-ai/pull/1207",
+    "number": 1207,
+    "state": "open",
+    "merged": false,
+    "mergeable": false,
+    "draft": true,
+    "body": "## Purpose\nQualify the reviewed capacity guards through the unchanged original Host Process workflow after the accepted test-only RED on PR #1206.\n\n## Frozen scope\nOnly the two approved capacity guards and their unchanged regression tests differ in executable source from the fixed 22078 CI base. Original provider fixtures, 15-second budgets, custody/currentness and workflows remain unchanged.\n\n## Evidence and limits\nPR #1206 original Windows ARM and Darwin x64 each reached the full eight-file Main run: 79 PASS, two specific FAIL, zero SKIP at 7/8-slot handshake admission. This new Draft PR obtains resulting-source GREEN; it does not replace #1192 or qualify later native, UI or release gates. Eight existing workflow triggers are disclosed in the published R1. Real Claude/Codex remain forbidden; permitted OpenCode uses finite localhost fixtures.\n\n## Lifecycle\nKeep this head/base and root-authored Draft PR metadata fixed while the useful cohort runs. No rerun, dispatch, Ready, merge, review requests, auto-merge, default/base change or compiler retry is authorized by opening this venue.",
+    "title": "test: qualify capacity guards through original process CI",
+    "base": "ci/frontend-parity-capacity-base-c714-20261115",
+    "base_sha": "22078dc88a1118b2134388743ec41dd72fd73563",
+    "head": "ci/frontend-parity-capacity-green-c714-20261115",
+    "head_sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+    "head_repo_id": 1163183284,
+    "head_repo_full_name": "777genius/agent-teams-ai",
+    "merge_commit_sha": null,
+    "user": {
+      "login": "777genius",
+      "name": "777genius",
+      "email": null,
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "id": 13103045
+    },
+    "requested_reviewers": null,
+    "requested_team_reviewers": null,
+    "diff": null,
+    "comments": null,
+    "created_at": "2026-11-15T21:22:16Z",
+    "updated_at": "2026-11-15T21:22:16Z",
+    "closed_at": null,
+    "merged_at": null,
+    "commits": 5,
+    "changed_files": 19,
+    "additions": 5081,
+    "deletions": 4,
+    "display_url": "https://github.com/777genius/agent-teams-ai/pull/1207",
+    "display_title": "test: qualify capacity guards through original process CI"
+  },
+  "initialPrApi": {
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207",
+    "id": 5327329952,
+    "node_id": "PR_kwDORVTEtM8AAAABPYiaoA",
+    "html_url": "https://github.com/777genius/agent-teams-ai/pull/1207",
+    "diff_url": "https://github.com/777genius/agent-teams-ai/pull/1207.diff",
+    "patch_url": "https://github.com/777genius/agent-teams-ai/pull/1207.patch",
+    "issue_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/1207",
+    "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207/commits",
+    "review_comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207/comments",
+    "review_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/comments{/number}",
+    "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/1207/comments",
+    "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+    "number": 1207,
+    "state": "open",
+    "locked": false,
+    "title": "test: qualify capacity guards through original process CI",
+    "user": {
+      "login": "777genius",
+      "id": 13103045,
+      "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/777genius",
+      "html_url": "https://github.com/777genius",
+      "followers_url": "https://api.github.com/users/777genius/followers",
+      "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+      "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+      "organizations_url": "https://api.github.com/users/777genius/orgs",
+      "repos_url": "https://api.github.com/users/777genius/repos",
+      "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/777genius/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "## Purpose\nQualify the reviewed capacity guards through the unchanged original Host Process workflow after the accepted test-only RED on PR #1206.\n\n## Frozen scope\nOnly the two approved capacity guards and their unchanged regression tests differ in executable source from the fixed 22078 CI base. Original provider fixtures, 15-second budgets, custody/currentness and workflows remain unchanged.\n\n## Evidence and limits\nPR #1206 original Windows ARM and Darwin x64 each reached the full eight-file Main run: 79 PASS, two specific FAIL, zero SKIP at 7/8-slot handshake admission. This new Draft PR obtains resulting-source GREEN; it does not replace #1192 or qualify later native, UI or release gates. Eight existing workflow triggers are disclosed in the published R1. Real Claude/Codex remain forbidden; permitted OpenCode uses finite localhost fixtures.\n\n## Lifecycle\nKeep this head/base and root-authored Draft PR metadata fixed while the useful cohort runs. No rerun, dispatch, Ready, merge, review requests, auto-merge, default/base change or compiler retry is authorized by opening this venue.",
+    "labels": [],
+    "milestone": null,
+    "active_lock_reason": null,
+    "created_at": "2026-11-15T21:22:16Z",
+    "updated_at": "2026-11-15T21:22:16Z",
+    "closed_at": null,
+    "merged_at": null,
+    "merge_commit_sha": "aa1ceb7362f8982e98e9fa029b9c4854b61efe48",
+    "assignee": null,
+    "assignees": [],
+    "requested_reviewers": [],
+    "requested_teams": [],
+    "head": {
+      "label": "777genius:ci/frontend-parity-capacity-green-c714-20261115",
+      "ref": "ci/frontend-parity-capacity-green-c714-20261115",
+      "repo": {
+        "id": 1163183284,
+        "node_id": "R_kgDORVTEtA",
+        "name": "agent-teams-ai",
+        "full_name": "777genius/agent-teams-ai",
+        "owner": {
+          "login": "777genius",
+          "id": 13103045,
+          "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/777genius",
+          "html_url": "https://github.com/777genius",
+          "followers_url": "https://api.github.com/users/777genius/followers",
+          "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+          "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+          "organizations_url": "https://api.github.com/users/777genius/orgs",
+          "repos_url": "https://api.github.com/users/777genius/repos",
+          "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/777genius/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "private": false,
+        "fork": false,
+        "archived": false,
+        "disabled": false,
+        "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+        "homepage": "https://agentteams.live",
+        "language": "TypeScript",
+        "visibility": "public",
+        "is_template": false,
+        "topics": [
+          "agent-orchestration",
+          "agent-teams",
+          "agent-to-agent",
+          "ai-agents",
+          "claude",
+          "claude-code",
+          "codex",
+          "coding-agent",
+          "cursor",
+          "developer-tools",
+          "electron",
+          "github-copilot",
+          "kiro",
+          "llm",
+          "mcp-server",
+          "multi-agent",
+          "multi-agent-systems",
+          "openai",
+          "opencode",
+          "typescript"
+        ],
+        "forks_count": 406,
+        "forks": 406,
+        "stargazers_count": 2494,
+        "watchers_count": 2494,
+        "watchers": 2494,
+        "open_issues_count": 60,
+        "open_issues": 60,
+        "size": 414863,
+        "default_branch": "main",
+        "has_issues": true,
+        "has_projects": true,
+        "has_wiki": true,
+        "has_pages": true,
+        "has_downloads": false,
+        "has_discussions": true,
+        "has_pull_requests": true,
+        "pushed_at": "2026-11-15T21:22:15Z",
+        "created_at": "2026-02-21T08:14:44Z",
+        "updated_at": "2026-11-15T16:18:58Z",
+        "allow_forking": true,
+        "web_commit_signoff_required": false,
+        "pull_request_creation_policy": "all",
+        "license": {
+          "key": "agpl-3.0",
+          "name": "GNU Affero General Public License v3.0",
+          "url": "https://api.github.com/licenses/agpl-3.0",
+          "spdx_id": "AGPL-3.0",
+          "node_id": "MDc6TGljZW5zZTE="
+        },
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+        "html_url": "https://github.com/777genius/agent-teams-ai",
+        "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+        "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+        "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+        "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+        "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+        "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+        "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+        "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+        "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+        "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+        "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments",
+        "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+        "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+        "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+        "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+        "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+        "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+        "git_url": "git://github.com/777genius/agent-teams-ai.git",
+        "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+        "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+        "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+        "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+        "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+        "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+        "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+        "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+        "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+        "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+        "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+        "ssh_url": "git@github.com:777genius/agent-teams-ai.git",
+        "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+        "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+        "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+        "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+        "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+        "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+        "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+        "clone_url": "https://github.com/777genius/agent-teams-ai.git",
+        "mirror_url": null,
+        "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+        "svn_url": "https://github.com/777genius/agent-teams-ai"
+      },
+      "sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+      "user": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      }
+    },
+    "base": {
+      "label": "777genius:ci/frontend-parity-capacity-base-c714-20261115",
+      "ref": "ci/frontend-parity-capacity-base-c714-20261115",
+      "repo": {
+        "id": 1163183284,
+        "node_id": "R_kgDORVTEtA",
+        "name": "agent-teams-ai",
+        "full_name": "777genius/agent-teams-ai",
+        "owner": {
+          "login": "777genius",
+          "id": 13103045,
+          "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/777genius",
+          "html_url": "https://github.com/777genius",
+          "followers_url": "https://api.github.com/users/777genius/followers",
+          "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+          "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+          "organizations_url": "https://api.github.com/users/777genius/orgs",
+          "repos_url": "https://api.github.com/users/777genius/repos",
+          "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/777genius/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "private": false,
+        "fork": false,
+        "archived": false,
+        "disabled": false,
+        "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+        "homepage": "https://agentteams.live",
+        "language": "TypeScript",
+        "visibility": "public",
+        "is_template": false,
+        "topics": [
+          "agent-orchestration",
+          "agent-teams",
+          "agent-to-agent",
+          "ai-agents",
+          "claude",
+          "claude-code",
+          "codex",
+          "coding-agent",
+          "cursor",
+          "developer-tools",
+          "electron",
+          "github-copilot",
+          "kiro",
+          "llm",
+          "mcp-server",
+          "multi-agent",
+          "multi-agent-systems",
+          "openai",
+          "opencode",
+          "typescript"
+        ],
+        "forks_count": 406,
+        "forks": 406,
+        "stargazers_count": 2494,
+        "watchers_count": 2494,
+        "watchers": 2494,
+        "open_issues_count": 60,
+        "open_issues": 60,
+        "size": 414863,
+        "default_branch": "main",
+        "has_issues": true,
+        "has_projects": true,
+        "has_wiki": true,
+        "has_pages": true,
+        "has_downloads": false,
+        "has_discussions": true,
+        "has_pull_requests": true,
+        "pushed_at": "2026-11-15T21:22:15Z",
+        "created_at": "2026-02-21T08:14:44Z",
+        "updated_at": "2026-11-15T16:18:58Z",
+        "allow_forking": true,
+        "web_commit_signoff_required": false,
+        "pull_request_creation_policy": "all",
+        "license": {
+          "key": "agpl-3.0",
+          "name": "GNU Affero General Public License v3.0",
+          "url": "https://api.github.com/licenses/agpl-3.0",
+          "spdx_id": "AGPL-3.0",
+          "node_id": "MDc6TGljZW5zZTE="
+        },
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+        "html_url": "https://github.com/777genius/agent-teams-ai",
+        "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+        "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+        "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+        "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+        "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+        "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+        "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+        "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+        "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+        "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+        "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments",
+        "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+        "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+        "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+        "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+        "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+        "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+        "git_url": "git://github.com/777genius/agent-teams-ai.git",
+        "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+        "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+        "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+        "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+        "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+        "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+        "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+        "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+        "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+        "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+        "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+        "ssh_url": "git@github.com:777genius/agent-teams-ai.git",
+        "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+        "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+        "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+        "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+        "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+        "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+        "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+        "clone_url": "https://github.com/777genius/agent-teams-ai.git",
+        "mirror_url": null,
+        "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+        "svn_url": "https://github.com/777genius/agent-teams-ai"
+      },
+      "sha": "22078dc88a1118b2134388743ec41dd72fd73563",
+      "user": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      }
+    },
+    "_links": {
+      "comments": {
+        "href": "https://api.github.com/repos/777genius/agent-teams-ai/issues/1207/comments"
+      },
+      "commits": {
+        "href": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207/commits"
+      },
+      "statuses": {
+        "href": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e"
+      },
+      "html": {
+        "href": "https://github.com/777genius/agent-teams-ai/pull/1207"
+      },
+      "issue": {
+        "href": "https://api.github.com/repos/777genius/agent-teams-ai/issues/1207"
+      },
+      "review_comments": {
+        "href": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207/comments"
+      },
+      "review_comment": {
+        "href": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/comments{/number}"
+      },
+      "self": {
+        "href": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207"
+      }
+    },
+    "author_association": "OWNER",
+    "auto_merge": null,
+    "draft": true,
+    "merged": false,
+    "mergeable": true,
+    "rebaseable": true,
+    "mergeable_state": "unstable",
+    "merged_by": null,
+    "comments": 0,
+    "review_comments": 0,
+    "maintainer_can_modify": false,
+    "commits": 5,
+    "additions": 5081,
+    "deletions": 4,
+    "changed_files": 19
+  },
+  "initialRunProjection": [
+    {
+      "id": 43763317911,
+      "name": "CI proof: PR=1207 | head=9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e | base=22078dc88a1118b2134388743ec41dd72fd73563 | merge=aa1ceb7362f8982e98e9fa029b9c4854b61efe48 | action=opened | draft=true",
+      "head_sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+      "head_branch": "ci/frontend-parity-capacity-green-c714-20261115",
+      "path": ".github/workflows/ci.yml",
+      "event": "pull_request",
+      "status": "queued",
+      "conclusion": null,
+      "run_attempt": 1,
+      "created_at": "2026-11-15T21:22:21Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43763317911",
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207",
+          "id": 5327329952,
+          "number": 1207,
+          "head": {
+            "ref": "ci/frontend-parity-capacity-green-c714-20261115",
+            "sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-capacity-base-c714-20261115",
+            "sha": "22078dc88a1118b2134388743ec41dd72fd73563",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 43763317870,
+      "name": "Sentry owned process native gates",
+      "head_sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+      "head_branch": "ci/frontend-parity-capacity-green-c714-20261115",
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_attempt": 1,
+      "created_at": "2026-11-15T21:22:21Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43763317870",
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207",
+          "id": 5327329952,
+          "number": 1207,
+          "head": {
+            "ref": "ci/frontend-parity-capacity-green-c714-20261115",
+            "sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-capacity-base-c714-20261115",
+            "sha": "22078dc88a1118b2134388743ec41dd72fd73563",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 43763317896,
+      "name": "CodeQL",
+      "head_sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+      "head_branch": "ci/frontend-parity-capacity-green-c714-20261115",
+      "path": ".github/workflows/codeql.yml",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_attempt": 1,
+      "created_at": "2026-11-15T21:22:21Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43763317896",
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207",
+          "id": 5327329952,
+          "number": 1207,
+          "head": {
+            "ref": "ci/frontend-parity-capacity-green-c714-20261115",
+            "sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-capacity-base-c714-20261115",
+            "sha": "22078dc88a1118b2134388743ec41dd72fd73563",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 43763317967,
+      "name": "Electron packaged CI",
+      "head_sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+      "head_branch": "ci/frontend-parity-capacity-green-c714-20261115",
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "event": "pull_request",
+      "status": "queued",
+      "conclusion": null,
+      "run_attempt": 1,
+      "created_at": "2026-11-15T21:22:21Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43763317967",
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207",
+          "id": 5327329952,
+          "number": 1207,
+          "head": {
+            "ref": "ci/frontend-parity-capacity-green-c714-20261115",
+            "sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-capacity-base-c714-20261115",
+            "sha": "22078dc88a1118b2134388743ec41dd72fd73563",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 43763318136,
+      "name": "OpenCode V2 Stage1 static preflight (TEST only)",
+      "head_sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+      "head_branch": "ci/frontend-parity-capacity-green-c714-20261115",
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "event": "pull_request",
+      "status": "queued",
+      "conclusion": null,
+      "run_attempt": 1,
+      "created_at": "2026-11-15T21:22:21Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43763318136",
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207",
+          "id": 5327329952,
+          "number": 1207,
+          "head": {
+            "ref": "ci/frontend-parity-capacity-green-c714-20261115",
+            "sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-capacity-base-c714-20261115",
+            "sha": "22078dc88a1118b2134388743ec41dd72fd73563",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 43763317905,
+      "name": "Announcements Content",
+      "head_sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+      "head_branch": "ci/frontend-parity-capacity-green-c714-20261115",
+      "path": ".github/workflows/announcements-content.yml",
+      "event": "pull_request",
+      "status": "queued",
+      "conclusion": null,
+      "run_attempt": 1,
+      "created_at": "2026-11-15T21:22:21Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43763317905",
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207",
+          "id": 5327329952,
+          "number": 1207,
+          "head": {
+            "ref": "ci/frontend-parity-capacity-green-c714-20261115",
+            "sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-capacity-base-c714-20261115",
+            "sha": "22078dc88a1118b2134388743ec41dd72fd73563",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 43763317915,
+      "name": "Host process fixture acceptance",
+      "head_sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+      "head_branch": "ci/frontend-parity-capacity-green-c714-20261115",
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "event": "pull_request",
+      "status": "queued",
+      "conclusion": null,
+      "run_attempt": 1,
+      "created_at": "2026-11-15T21:22:21Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43763317915",
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207",
+          "id": 5327329952,
+          "number": 1207,
+          "head": {
+            "ref": "ci/frontend-parity-capacity-green-c714-20261115",
+            "sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-capacity-base-c714-20261115",
+            "sha": "22078dc88a1118b2134388743ec41dd72fd73563",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 43763317994,
+      "name": "Host Emulated Acceptance",
+      "head_sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+      "head_branch": "ci/frontend-parity-capacity-green-c714-20261115",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "event": "pull_request",
+      "status": "queued",
+      "conclusion": null,
+      "run_attempt": 1,
+      "created_at": "2026-11-15T21:22:21Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43763317994",
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1207",
+          "id": 5327329952,
+          "number": 1207,
+          "head": {
+            "ref": "ci/frontend-parity-capacity-green-c714-20261115",
+            "sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-capacity-base-c714-20261115",
+            "sha": "22078dc88a1118b2134388743ec41dd72fd73563",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "qualification": "Only creation and observed initial snapshots; not GREEN. Root has not changed frozen refs or root-authored PR1207 metadata after opening. Future external bot mutations must be recorded separately. Root working branch may advance without moving the frozen9b56 CI head. Sentry and CodeQL initial skipped results do not qualify runtime work."
+}

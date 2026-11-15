@@ -1,0 +1,35 @@
+{
+  "schema": "reservation-cleanup-original-producer-red-v1",
+  "sourceHead": "d0e659fbc23674c1c32d0e42e312134c72218d0e",
+  "sourceTree": "558237a5713ae1f91e767bb608fe36427a3aed2d",
+  "testBlob": "9f5fb6750f46d7c67d7d5f9c59dbbfe49519f3db",
+  "originalScenario": "1d1133876a20ca7541d04b4c9d8d86e4e4c599bc",
+  "originalProcessWorkflow": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+  "buildExit": 0,
+  "runtimeExit": 1,
+  "tests": {
+    "total": 38,
+    "passed": 36,
+    "failed": 2,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "specificFailures": [
+    {
+      "test": "source Scenario distinguishes a genuinely released never-prepared reservation from physical HANDLE proof",
+      "location": "runtime-team-host.test.ts:3694",
+      "expected": "Original close retains AggregateError with Every original physical Job retains confirmed Stop/drain/release after genuine no-connection allocate/Stop/drain/release and receipt authority checks."
+    },
+    {
+      "test": "full original Process verifier accepts only authority-bound no-dispatch evidence without losing any jobs",
+      "location": "runtime-team-host.test.ts:3822",
+      "expected": "After the complete all-physical verifier fixture passes, the genuine reservation row fails original resumed assertion false !== true at extracted verifier line91."
+    }
+  ],
+  "qualification": "Both original producer failures are semantic and source-bound, not extraction/import/setup failures. The two new test bodies stop at their first expected failure; downstream new negative assertions have not executed yet. Original36 cases pass without skipped/cancelled cases. This finite local test proves no native Windows admission, HANDLE absence, provider/Desktop/release qualification, or success of the historical standalone failure.",
+  "cleanBefore": true,
+  "cleanAfter": true,
+  "localMainRetried": false,
+  "scriptsCompilerAttempted": false
+}
