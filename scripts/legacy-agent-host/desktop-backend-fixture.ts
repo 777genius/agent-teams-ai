@@ -296,9 +296,13 @@ export async function prepareDesktopBackendFixture(
     }
     const team = profile.teams[0]!;
     if (nativeNextPromptUi && process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EDIT_GUARDS === '1') {
-      team.savedSettings = { cwd: join(root, 'workspace') };
-      // Persist the same selected provider/model used by the original TEST Runtime below.
-      team.members[0]!.settings = { providerId: 'anthropic', model: 'claude-sonnet-4-6' };
+      // Match the original configured Launch selection in prepareDesktopNativeStop.
+      team.savedSettings = {
+        cwd: join(root, 'workspace'),
+        providerId: 'anthropic',
+        model: 'claude-opus-4-6',
+        effort: 'medium',
+      };
     }
     if (options.nativeChatAttachments) {
       // Ordinary Launch saves this intent; this TEST uses explicit prelaunch setup instead.
