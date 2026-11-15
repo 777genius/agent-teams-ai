@@ -194,7 +194,7 @@ test('original same-Main Retry retains a bounded first UI refusal without changi
         const refresh = { get textContent() { trace.push('refresh:text'); return 'Refresh'; },
           get disabled() { trace.push('refresh:disabled'); return mode === 'refresh-not-enabled'; } };
         const retry = { get textContent() { trace.push('retry:text'); return 'Retry'; },
-          get disabled() { assert.fail('Retry disabled is not read by the original predicate'); } };
+          get disabled() { return assert.fail('Retry disabled is not read by the original predicate'); } };
         const surface = {
           querySelectorAll: (selector: string) => { assert.equal(selector, 'button'); trace.push('buttons');
             return mode === 'retry-present' ? [refresh, retry] : [refresh]; },
