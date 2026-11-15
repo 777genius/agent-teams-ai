@@ -11,3 +11,4 @@ export type {
 } from '../contracts';
 
 export { useNativeNextPrompt } from './hooks/useNativeNextPrompt';
+export { useComposerNativeNextPrompt } from './hooks/useComposerNativeNextPrompt';

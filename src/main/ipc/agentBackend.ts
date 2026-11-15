@@ -77,7 +77,6 @@ interface BackendShellOptions {
   userDataPath: string;
   /** Captured main-process environment, never renderer arguments. */
   env: Readonly<Record<string, string | undefined>>;
-  /** Existing trusted-local HTTP/SSE publisher, no second transport. */
   publishHttpNativePromptSuggestion?: (candidate: NativeNextPromptCandidate) => void;
   /** Global opt-in captured from trusted Main config before first Host spawn. */
   nativeNextPromptEnabled?: boolean;
@@ -615,7 +614,6 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
     commandRunner: () => desktopCommandRunner,
     nativeNextPromptEnabled: options.nativeNextPromptEnabled === true,
     onNativePromptSuggestion(candidate) {
-      // UI selection is resolved from the captured descriptor, not renderer data.
       const current = options.captureActiveSelection();
       if (!current.isCurrent() || active?.feature !== feature || !active.selected) return;
       let handleId: string;

@@ -173,24 +173,18 @@ export class DesktopBackendFeature {
           revision: owner.revision,
           storageRoot: owner.storageRoot,
           client: new CapturedHostClient(owner.profile, (raw) => {
-            // The private Host is still untrusted transport input. Rebind to
-            // the one owner + team handle captured by this Desktop descriptor.
             if (this.sealed || this.state !== 'ready') return;
-            const value = raw && typeof raw === 'object' && !Array.isArray(raw)
-              ? raw as Record<string, unknown> : null;
+            const value = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
             if (typeof value?.teamId !== 'string') return;
             const matches = this.handleDefinitions().filter((entry) =>
               ownerKey(entry.owner) === ownerKey(owner) &&
               entry.scope.teamId === value.teamId && entry.scope.runId === value.runId
             );
-            // A discovered registry handle can also be present in the original
-            // descriptor. That is one logical owner, not an ambiguous recipient.
-            // Distinct handles for the same native source remain fail-closed.
+            // Deduplicate only equivalent descriptor handles; otherwise reject.
             const unique = new Map(matches.map((entry) => [entry.handleId, entry]));
             if (unique.size !== 1) return;
             const selected = unique.values().next().value!;
-            // A Host notice cannot introduce a member absent from the
-            // original pinned roster, even when the team/run IDs match.
+            // Original roster remains authoritative.
             if (!selected.members.some(member => member.memberId === value.memberId)) return;
             const projected = projectHostPromptSuggestion(
               raw, hostTeamSelectionKey(selected.handleId), selected.scope.teamId, selected.scope.runId

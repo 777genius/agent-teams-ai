@@ -504,14 +504,11 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
         result.defaultTab = value;
         break;
       case 'nativeNextPromptSuggestionsEnabled':
-        if (typeof value !== 'boolean') return { valid: false, error: 'general.nativeNextPromptSuggestionsEnabled must be a boolean' };
-        result.nativeNextPromptSuggestionsEnabled = value;
-        break;
       case 'multimodelEnabled':
         if (typeof value !== 'boolean') {
-          return { valid: false, error: 'general.multimodelEnabled must be a boolean' };
+          return { valid: false, error: `general.${key} must be a boolean` };
         }
-        result.multimodelEnabled = value;
+        result[key] = value;
         break;
       case 'claudeRootPath':
         if (value === null) {

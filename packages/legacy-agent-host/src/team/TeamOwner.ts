@@ -411,11 +411,7 @@ export class TeamOwner {
     return this.deliveryAuthority.authorizeIntent(raw, action);
   }
 
-  /** Host-only. Original Team message, sender, grants and native delivery must all match. */
-  isOriginalHumanDirectDelivery(raw: ImmutableDelivery): boolean {
-    return this.deliveryAuthority.isOriginalHumanDirect(raw);
-  }
-
+  isOriginalHumanDirectDelivery(raw: ImmutableDelivery): boolean { return this.deliveryAuthority.isOriginalHumanDirect(raw); }
   private finishBootstrap(state: OwnerState): void {
     const expected = {
       name: this.binding.teamName,

@@ -112,9 +112,7 @@ export class RuntimeTeamCoordinator {
       ): TeamMcpCrossTeamPort;
       /** Explicit composition seam for controlled Session tests; CLI always selects real D. */
       createProvider?(context: MemberProviderContext): MemberProvider;
-      /** One global Host opt-in, without selecting a lead/member role. */
-      promptSuggestionsEnabled?: boolean;
-      onPromptSuggestion?: (notice: CapturedPromptSuggestionNotice) => void;
+      promptSuggestionsEnabled?: boolean; onPromptSuggestion?: (notice: CapturedPromptSuggestionNotice) => void;
     }
   ) {
     const store = new FileRuntimeStore(options.profile.owner.storageRoot);
@@ -177,9 +175,7 @@ export class RuntimeTeamCoordinator {
           teamId: entry.binding.teamId, launchId: entry.binding.runId }))?.launch,
         ...(options.processCustody ? { processCustody: options.processCustody } : {}),
         ...(options.createProvider ? { createProvider: options.createProvider } : {}),
-        ...(options.promptSuggestionsEnabled && options.onPromptSuggestion
-          ? { promptSuggestionsEnabled: true, onPromptSuggestion: options.onPromptSuggestion }
-          : {}),
+        ...(options.promptSuggestionsEnabled && options.onPromptSuggestion ? { promptSuggestionsEnabled: true, onPromptSuggestion: options.onPromptSuggestion } : {}),
         groups: (entry, capture, current) => options.groups?.(entry, capture, current),
         crossTeam: (entry, isCurrent) =>
           options.crossTeam?.(entry.team, entry.profile.principalId, entry.delivery, isCurrent),

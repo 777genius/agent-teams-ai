@@ -647,7 +647,6 @@ export class ConfigManager {
     const loadedNotifications = loaded.notifications ?? ({} as Partial<NotificationConfig>);
     const loadedRecovery: Partial<TeamRuntimeRecoveryConfig> = loaded.teamRuntimeRecovery ?? {};
     const loadedTriggers = loadedNotifications.triggers ?? [];
-
     const mergedGeneral: GeneralConfig = {
       ...DEFAULT_CONFIG.general,
       ...(loaded.general ?? {}),
@@ -657,7 +656,6 @@ export class ConfigManager {
     mergedGeneral.nativeNextPromptSuggestionsEnabled = loaded.general?.nativeNextPromptSuggestionsEnabled === true;
     mergedGeneral.claudeRootPath = normalizeConfiguredClaudeRootPath(mergedGeneral.claudeRootPath);
     mergedGeneral.appLocale = normalizeAppLocalePreference(mergedGeneral.appLocale);
-
     // Merge triggers: preserve existing triggers, add missing builtin ones
     const mergedTriggers = TriggerManager.mergeTriggers(loadedTriggers, DEFAULT_TRIGGERS);
 

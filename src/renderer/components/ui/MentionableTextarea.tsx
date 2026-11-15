@@ -15,10 +15,7 @@ import {
 } from '@renderer/utils/chipUtils';
 import { handleComposerEnterKey } from '@renderer/utils/composerEnterKey';
 import { isImeComposing } from '@renderer/utils/imeComposition';
-import {
-  doesSuggestionMatchQuery,
-  getSuggestionInsertionText,
-} from '@renderer/utils/mentionSuggestions';
+import { doesSuggestionMatchQuery } from '@renderer/utils/mentionSuggestions';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { findTaskReferenceMatches } from '@renderer/utils/taskReferenceUtils';
 import {
@@ -33,6 +30,7 @@ import { ChipInteractionLayer } from './ChipInteractionLayer';
 import { CodeChipBadge } from './CodeChipBadge';
 import { MentionInteractionLayer } from './MentionInteractionLayer';
 import { MentionSuggestionsPopup } from './MentionSuggestionsPopup';
+import { parseMentionSegments } from './mentionableSegments';
 import { SlashCommandInteractionLayer } from './SlashCommandInteractionLayer';
 import { TaskReferenceInteractionLayer } from './TaskReferenceInteractionLayer';
 import { UrlInteractionLayer } from './UrlInteractionLayer';
@@ -85,80 +83,6 @@ type Segment =
   | UrlSegment
   | ChipSegment
   | SlashCommandSegment;
-
-// Mention segment parsing (splits text into plain text + @mention segments)
-
-/**
- * Splits text into alternating text / @mention segments.
- *
- * Rules:
- * - `@` must be at start of text or preceded by whitespace
- * - The name after `@` must exactly match a suggestion name (case-insensitive)
- * - The character after the name must be whitespace, punctuation, or end-of-text
- * - Longer names are tried first (greedy matching)
- */
-function parseMentionSegments(text: string, suggestions: MentionSuggestion[]): Segment[] {
-  if (!text || suggestions.length === 0) return [{ type: 'text', value: text }];
-
-  // Sort by name length descending for greedy matching
-  const sorted = [...suggestions]
-    .filter((suggestion) => suggestion.type !== 'task')
-    .sort((a, b) => b.name.length - a.name.length);
-
-  const segments: Segment[] = [];
-  let i = 0;
-  let textStart = 0;
-
-  while (i < text.length) {
-    if (text[i] !== '@') {
-      i++;
-      continue;
-    }
-
-    // @ must be at start or after whitespace
-    if (i > 0) {
-      const ch = text[i - 1];
-      if (ch !== ' ' && ch !== '\t' && ch !== '\n' && ch !== '\r') {
-        i++;
-        continue;
-      }
-    }
-
-    let matched = false;
-    for (const suggestion of sorted) {
-      const insertionText = getSuggestionInsertionText(suggestion);
-      const end = i + 1 + insertionText.length;
-      if (end > text.length) continue;
-      if (text.slice(i + 1, end).toLowerCase() !== insertionText.toLowerCase()) continue;
-
-      // Character after name must be boundary
-      if (end < text.length) {
-        const after = text[end];
-        // eslint-disable-next-line no-useless-escape -- escaped chars needed for regex character class
-        if (!/[\s,.:;!?\)\]\}\-]/.test(after)) continue;
-      }
-
-      // Flush preceding text
-      if (i > textStart) {
-        segments.push({ type: 'text', value: text.slice(textStart, i) });
-      }
-
-      segments.push({ type: 'mention', value: text.slice(i, end), suggestion });
-      i = end;
-      textStart = i;
-      matched = true;
-      break;
-    }
-
-    if (!matched) i++;
-  }
-
-  if (textStart < text.length) {
-    segments.push({ type: 'text', value: text.slice(textStart) });
-  }
-
-  return segments;
-}
 
 function parseSuggestionSegments(
   text: string,
