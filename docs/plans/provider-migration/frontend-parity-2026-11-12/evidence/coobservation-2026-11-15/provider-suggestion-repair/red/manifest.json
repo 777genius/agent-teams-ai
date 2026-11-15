@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "scope": "Original PR10 test-only semantic RED; no producer or native qualification",
+  "repository": "agent-teams-ai/old-provider-implementations",
+  "head": "8a2c75bdbfafdbfd0e3014f3a62b261357c9b6c5",
+  "parent": "3ac086d1c157645faa358f0578f8dc764c950d66",
+  "tree": "3801d01ecc0ad66b3072a76574f39a81205ece6a",
+  "publishedR1": "3ac086d1c157645faa358f0578f8dc764c950d66",
+  "workflow": "7e2bb17761d783b7d0ed298c62c56680a6636279",
+  "originalCommand": "pnpm check",
+  "pnpm": "11.18.0",
+  "run": 43773676272,
+  "attempt": 1,
+  "event": "pull_request",
+  "source": {
+    "claudeProducer": "51b1e49aea3db62fbc991edba4c8e207edb65cab",
+    "codexProducer": "924e2dc8b09fb90c081e47fc0b803079b50f85ae",
+    "claudeTest": "1004cc3a2a42cc265518d251bfb62f8c96db0c12",
+    "codexTest": "49df246079139e435506e8a09466dbe47c0b1ec0"
+  },
+  "cases": {
+    "total": 561,
+    "pass": 553,
+    "fail": 8,
+    "skip": 0,
+    "cancelled": 0,
+    "original540AllPass": true,
+    "added": 21,
+    "addedPass": 13,
+    "addedFail": 8
+  },
+  "results": [
+    {
+      "node": "24.21.0",
+      "job": 132994976764,
+      "file": "node24-original-ci-red.log",
+      "sha256": "3680b6109ecfb6971bdf4ee950d5c9ed03ed8cba4bce8213bab3a4f8d799c2e6",
+      "bytes": 110529,
+      "builds": "Both original packages completed",
+      "types": "Both original tsconfig.test.json checks completed",
+      "sourceTests": "553 PASS / 8 specific new regression failures / 0 skipped / 0 cancelled",
+      "packedConsumers": "Not reached after original source-test failure",
+      "archiveSteps": "Skipped",
+      "artifacts": 0
+    },
+    {
+      "node": "26.11.1",
+      "job": 132994977181,
+      "file": "node26-original-ci-red.log",
+      "sha256": "abd23299f2e0ad42c02a67f27d8d9e17aba628d0ddd763a0829a348dcdeab43e",
+      "bytes": 111141,
+      "builds": "Both original packages completed",
+      "types": "Both original tsconfig.test.json checks completed",
+      "sourceTests": "553 PASS / 8 specific new regression failures / 0 skipped / 0 cancelled",
+      "packedConsumers": "Not reached after original source-test failure",
+      "archiveSteps": "Skipped",
+      "artifacts": 0
+    }
+  ],
+  "failures": [
+    "Claude queued successor cannot be overtaken while its original readiness is held",
+    "Claude delayed prior frame cannot borrow completed B: human-1",
+    "Claude delayed prior frame cannot borrow completed B: internal-1",
+    "Claude eligibility reentry cannot publish a slot after it admits a successor",
+    "Claude interrupt does not make uncertain auxiliary work available to the next input",
+    "Codex actual sent sample timeout retains one exact cancel target even after late abort",
+    "Codex timeout and cancel ACK cannot admit a second uncertain auxiliary sample",
+    "Codex explicit sent abort and uncertain settlement share one cancel and retain ordinary turns"
+  ],
+  "interpretation": [
+    "Claude held-B readiness, late prior human/internal after completed B, eligibility reentry and interrupt all emit one candidate where zero is required.",
+    "Codex actual sent request-timeout with unknown acceptance passed, then an ordinary next turn completed before cancellation [] failed against exact original requestId client:4.",
+    "Codex timeout and explicit-abort cases each allow a later valid-source sample, failing Missing expected rejection; no stale-turn/handshake/import/type failure substitutes for these assertions.",
+    "Every one of the original 540 source-test case names remains passing in both full logs; 13 of 21 added controls passed.",
+    "Assertions following the first failure inside each failing test were not executed. Full future GREEN must execute them.",
+    "No packed-consumer or resulting-archive qualification exists for this test-only RED. Original run artifacts API reports zero.",
+    "No child local execution, real provider command, rerun, cancel, workflow dispatch, source mutation, commit or ref action."
+  ]
+}

@@ -534,6 +534,8 @@ export async function runNativeGate(
       })
     );
   } catch (error) {
+    // Retain the scenario failure before an exit callback triggered by owned cleanup.
+    events.guard(() => { throw error; })();
     events.guard(diagnostics.failure)();
     throw error;
   } finally {

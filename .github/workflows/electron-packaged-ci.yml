@@ -247,6 +247,23 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Exact original controller accounting refused' }
           node --input-type=module -e "import assert from 'node:assert/strict';import fs from 'node:fs';const r=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));assert.equal(r.kind,'TEST_WINDOWS_PACKAGED_SAME_MAIN_PROCESS_UI');assert.equal(r.status,'PASS');assert.equal(r.cleanup,true);assert.equal(r.sourceHead,process.env.EXPECTED_SOURCE_SHA);assert.equal(r.platform,'win32-'+process.arch);assert.deepEqual(r.counts,{mainStarts:1,initialRuntimeOpen:1,businessInput:1,refreshClicks:1,retryClicks:1,uiStops:2,quit:1});assert.equal(r.actualHostSuccessors,1);assert.equal(r.originalRuntimeGenerations,1);assert.equal(r.modelRequests,0);assert.equal(r.modelProbes,0);assert.equal(r.realVendorExecutions,0);assert.equal(r.peer.provider,'codex');assert.equal(r.peer.connected,1);assert.equal(r.peer.registrations,1);assert.equal(r.peer.serviceExitObservations,2);assert.equal(r.peer.failures,0);assert.deepEqual(r.nativeCleanup,{phase:'completed',cleanup:true,originalQueryWitnesses:3,runtimeGenerations:1,runtimeInputs:1,modelRequests:0,probes:0,realVendorExecutions:0,originalUiStops:2,serviceExitObservations:2});assert.equal(r.packagedAndNativeInputsUnchanged,true);assert.equal(r.sourceFreezeFailure,undefined);assert.equal(r.peerEvidenceFailure,undefined);assert.equal(r.originalMain.pid,r.sameMainAfterRetry.pid);assert.equal(r.originalMain.birth,r.sameMainAfterRetry.birth);" $receipt
           if ($LASTEXITCODE -ne 0) { throw 'Exact finite same-Main UI receipt refused' }
+      - name: Qualify original packaged macOS app relaunch with finite SDK peer
+        if: matrix.os == 'darwin'
+        shell: bash
+        env:
+          TMPDIR: ${{ runner.temp }}
+          LEGACY_DESKTOP_BACKEND_GO: '1'
+          LEGACY_DESKTOP_EMULATED_ONLY: '1'
+          LEGACY_DESKTOP_PROOF_MODE: emulated-claude-lifecycle-ui
+        run: |
+          set -euo pipefail
+          inputs="$(mktemp -d "$RUNNER_TEMP/TEST-packaged-relaunch-inputs-XXXXXX")"
+          mkdir "$inputs/corepack"
+          printf '{"private":true}\n' > "$inputs/corepack/package.json"
+          pnpm --dir "$inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
+          node --import tsx scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts \
+            "${{ matrix.bundle }}" "$inputs/corepack/node_modules/corepack/dist/pnpm.js" \
+            "$RUNNER_TEMP/packaged-app-relaunch.json"
       - name: Preserve exact packaged Host evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -263,6 +280,12 @@ jobs:
             ${{ runner.temp }}/windows-same-main-process-ui.app.log
             ${{ runner.temp }}/windows-same-main-process-ui.controller.log
             ${{ runner.temp }}/windows-same-main-process-ui.*.png
+            ${{ runner.temp }}/packaged-app-relaunch.json
+            ${{ runner.temp }}/packaged-app-relaunch.app.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/ui-emulated-lifecycle-launch.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/ui-emulated-lifecycle-stopped.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/ui-automatic-app-relaunch-successor.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/ui-packaged-relaunch-failure.png
 
   packaged-full-gate:
     needs: [packaged-scope, packaged-smoke]

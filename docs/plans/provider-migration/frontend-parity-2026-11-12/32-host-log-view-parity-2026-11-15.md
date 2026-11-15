@@ -246,3 +246,262 @@ This reviewed candidate still uses the installed checked Session SPI:
 remain unchanged. Current-source producer-to-renderer Thinking qualification
 and the actual Desktop/native gates remain on HOLD until their real results.
 No queued, cancelled, skipped or source-reviewed job is counted as PASS.
+
+## Checked producer follow-up on the published Logs implementation
+
+The follow-up preserves `27b1acf48278dcd0fb348c626696eac2dc64de73` and its
+original Logs/read-side implementation. Both provider archives now come from
+the checked `9423f600dfb04d04448326dbced89919924b0b5f` source: Node24 and26
+source/packed-consumer checks pass, and all53 original OpenCode jobs finish
+(51 positive receipts, two expected HOLD controls). The adjacent original
+artifact/source receipts bind their exact bytes and scope. Dependencies are
+unchanged; the previously merged opt-in prompt-suggestions binding stays off.
+
+Host now accepts the original typed `thinking` event. The original finite
+Claude/V1 stream turns expose partial and completed Thinking through the same
+input/message/block; the Desktop assertions inspect these actual Logs rows,
+completed-over-partial replacement, filters and reload without new effects.
+Codex makes no unsupported Thinking claim. Same-source fullscreen preserves
+viewport state; selecting another source resets it. The existing failed-tool
+and child proofs retain their original event identity and full visible content.
+
+Controlled follow-up evidence: the final seven Host suites pass106/106 with
+zero skips; the five focused renderer suites pass57/57, and the existing team
+read suite passes5/5. Host build/test types, scoped renderer/script/feature
+TypeScript7, source-size and diff gates pass. Four renderer lint warnings and
+one native Codex fixture warning already exist at27b1; no suppression or new
+warning is added. Full workspace typecheck remains unqualified after its
+earlier environment OOM. Actual resulting-source Electron/native acceptance
+is still required; neither the provider receipts nor27b1 Desktop results
+qualify this follow-up.
+
+## Remaining shared-SPI coordination consumer after checked adoption
+
+At application `35cbd6e99b620e9b41802af936143d900f5e2aca`, both original
+checked archives from provider `9423f600dfb04d04448326dbced89919924b0b5f`
+are admitted. Independent primary-source review verified the exact CI ZIP,
+both package hashes, Node24.21/26.11 source and packed-consumer checks, and
+all53 original native OpenCode jobs. Mandatory CI/native workflows and their
+commands are unchanged. The provider receipt still says source/packed-consumer
+only, with nativeHostQualified and packagedElectronQualified false; it cannot
+qualify application Desktop, process custody or packaged acceptance.
+
+One existing consumer still rejects the new SPI variant:
+`OpenCodeCoordinationProbe.observeCoordination` accepts `usage` but refuses
+`thinking`. The actual V1 management/readiness path uses this loop, so native
+reasoning can reject an otherwise valid coordination proof. The Windows
+Event-kind counter and Host normalizer are already corrected in35cbd6e and
+are not part of this remaining companion.
+
+R1 `/root/p09_review` identified and prepared the finite consumer repair;
+R2 `/root` independently reviewed its original helper, actual MCP endpoint
+and all refusal predicates. Accept exactly one production expression:
+ignore `thinking` alongside `usage` only after existing session, input,
+operation, revocation, event/byte-budget and deadline checks. Thinking must
+never set hasText, substitute for either MCP effect, change native tool
+identity, or satisfy the required actual answer and successful result.
+
+Extend only `management-model-probe.test.ts` and its existing synthetic
+Session/MCP helper with seven cases: valid Thinking plus original effects,
+answer and result; Thinking with completed effects but no answer; foreign
+session/input/operation; serialized Thinking above32KiB; and129 events whose
+total bytes stay below32KiB. Only the first qualifies. The no-answer case
+must complete the real finite MCP sequence while the overall proof refuses
+it; the remaining negative cases must refuse before those effects complete.
+Retain every original case, authority predicate, deadline and cleanup.
+
+Publish this bounded amendment before source edits. With the exact checked
+SPI installed, first demonstrate the new regression on the unchanged
+production consumer, then run the complete existing management-model-probe
+suite after the one-expression correction. Run Host build/test TypeScript7
+and affected original activity suites. No new workflow, selector, package
+pin, facade, persistence, runtime owner or permission is introduced. Synthetic
+Session/MCP execution is not native qualification and authorizes no real
+Claude/Codex process. Scheduled-log presentation has a separate concrete
+baseline review; it is not silently covered by this consumer repair.
+
+The Draft chain, contributor history and outstanding P08/P09/Desktop/native
+gates remain unchanged. No queued, skipped or cancelled check is a PASS.
+
+## Scheduled standalone Thinking parity — R1 proposal
+
+Status: scratch only; no application source or repository plan changed.
+Basis: application source `35cbd6e99b620e9b41802af936143d900f5e2aca`, child of
+`27b1acf48278dcd0fb348c626696eac2dc64de73`. Root has completed the exact 35 import/tree verification and the Node24.21.0 /
+pnpm11.22.0 frozen ignore-scripts install. Provider9423 provenance has R2 GO.
+Source edits still require reviewed and published plans; root owns builds.
+Frozen frontend: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
+
+### 1. Proven baseline loss and actual route
+
+`ScheduleSection.tsx` opens `ScheduleRunLogDialog` from a history row.
+The dialog fetches `schedules.getRunLogs` only for completed/failed/interrupted
+runs and passes full stdout to `CliLogsRichView`; running/dispatched summaries
+are a separate branch. The frozen executor explicitly uses stream-json for
+Thinking/tool cards, captures stdout up to 512 KiB, and separately derives its
+500-character summary from assistant text. SchedulerService persists the full
+stdout/stderr through JsonScheduleRepository. Thinking is therefore a detailed
+completed-run Logs capability, not a requirement to put reasoning in summaries.
+
+The frozen/current dialog, CliLogsRichView and streamJsonParser are identical
+Git blobs: `4d2ec4b166dd8f87aa2416b3748d436b121e0068`,
+`1466b8f34b2911ffa7a6f5b576fce39e9b0b92d9`, and
+`3004f6fa40a761d41742ee95e9e66f5d9190138f`. Parser lines 458–462 create Thinking
+items; unchanged DisplayItemList lines 148–174 and ThinkingItem render expandable,
+copyable Markdown. Frozen ScheduledTaskExecutor blob is
+`294ecb66daa812eef73c8b8590bc564d9e44c7b4`; JsonScheduleRepository is
+`0de15c337bebaa8d67f48ff082d32abaac2e8217`.
+
+Current delivery is HostScheduledRuns.snapshot → projectScheduledRun →
+CapturedScheduledRuns → runCapturedScheduledTask → SchedulerService.saveRunLogs
+→ JsonScheduleRepository → the same getRunLogs/dialog. Two source omissions:
+RuntimeActivityCoordinator.snapshot includes only kind=text in latest.text and
+explicitly returns events=[]; scheduledRunProjection additionally excludes
+Thinking from child facts. Top-level and child Thinking therefore disappear
+from detailed logs even when their original canonical observations are retained.
+
+Generic member Logs do not bypass this: HostScheduledRuns owns a separate Runtime,
+its binding uses scheduled-standalone and a scheduled member slot, while ordinary
+Team reads use RuntimeTeamCoordinator's member registry/roster. Standalone creates
+no hidden Team task; an Open task link on a dispatched schedule is another flow.
+
+### 2. Reconcile the published architecture before editing
+
+Stage1 §6.4 forbids fabricated Claude transcripts/results/usage and immediately
+allows adapters to translate real observations into compatibility projections.
+P04 R4 expressly authorizes confirmed Runtime observations in the original schedule
+log UI. P04 R13 expressly accepts existing text/tool/result compatibility blocks,
+original IDs/sequence, 256 KiB snapshot and 512 KiB final stdout limits, without
+new feed reads, cursor store, RPC, snapshot owner or allocation.
+
+The existing schedule serializer is that approved compatibility adapter. Extend it
+only with actual retained Thinking; do not replace DTOs/repository/UI or manufacture
+model text, signatures, message IDs, usage, outcome or cleanup. Keep its existing
+stdout contract and old saved logs. Actual observedAt may supply a reader timestamp;
+no synthetic time is introduced. The legacy viewer's undated fallback is existing
+behavior and is not evidence of a native timestamp.
+
+Plan32's assertion that no latest.thinking cache is needed was sufficient for its
+member/task feed consumer. Amend that assessment for this newly verified schedule
+consumer: a local computed auxiliary log projection is needed. It is not persisted,
+cannot be independently updated, and does not become a new public snapshot/RPC field.
+Root must publish this finite P04/Plan32 clarification after exact R2 review.
+
+### 3. Exact production changes
+
+| Path under packages/legacy-agent-host/src | Bounded change |
+| --- | --- |
+| runtime/activityContracts.ts | Add one optional internal logProjection shape: { thinking: RuntimeActivityEvent[]; stderr: RuntimeActivityEvent[]; truncated: boolean }. RuntimeActivityRecord/storage schema stays as it is. |
+| runtime/RuntimeActivityCoordinator.ts | Derive Thinking from the same already-read, authorized retained events inside snapshot(); use a collision-free [inputId, operationRef, messageRef, block] key and complete-over-later-snapshot precedence. |
+| composition/scheduledRunProjection.ts | Include retained Thinking and real child Thinking in sequence order, preserve original eventId/child identity, emit the existing reader's Thinking compatibility block from actual text, and surface any schedule-only truncation warning. |
+
+Process the original usage/interactions/tools/text/subagents budget loop exactly
+as before. Compute both auxiliary groups from that same authorized read, with one
+remaining 256 KiB counter after the original groups: Thinking, then stderr. Preserve
+actual event objects/IDs and sequence ordering. Neither auxiliary group displaces
+an original group. Only logProjection.truncated records auxiliary omissions.
+Do not reuse the original global partial/gap flag: readTeamActivity copies that
+gap and summarizeTeamActivity makes costUsd unknown for any gap. Only the scheduled
+result consumes the auxiliary truncation status; genuine existing journal/state
+gaps retain their old semantics. P09 has independently accepted this exact common
+shape, one-read/one-budget ownership and Stats isolation. Root owns final combined
+integration with the separately reviewed stderr R1; no second read cache exists.
+
+latest.text, ordinary conversation materialization, message summaries, usage,
+result/outcome, cleanup and duration retain their existing sources and rules.
+For child Thinking, retain the wrapper eventId/sequence and actual childId and
+parentToolRef; scope dedup by input/operation/child/parent/kind/message/block or
+toolRef. Complete Thinking wins over a later snapshot, while equal text from
+other identities remains distinct. Do not merge child text into root summaries.
+The existing renderer mapper runtimeActivityProjection.ts explicitly whitelists
+old latest groups, so optional internal logProjection needs no wire DTO or app codec.
+
+### 4. Existing owners and compatibility boundaries
+
+HostScheduledRuns, scheduledRunSnapshotSchema, CapturedScheduledRuns and
+runCapturedScheduledTask remain the result delivery owners. SchedulerService,
+ScheduleRepository/JsonScheduleRepository and the current .log/.err files remain
+the persistence path. ScheduleRunLogDialog, CliLogsRichView and ThinkingItem remain
+the renderer path. No new endpoint, log sidecar, polling owner, feed reader or
+viewer is needed. Standalone qualification is Claude here: the current input
+schema admits Anthropic/Codex, ScheduledRunProvider expressly rejects OpenCode,
+and Codex makes no unsupported Thinking claim. V1 member Thinking is a separate
+already implemented route, not authorization to add standalone OpenCode support.
+
+### 5. Finite verification and source roster
+
+Extend existing runtime-activity.test.ts for exact retained Thinking IDs, separate
+identities, complete precedence, cold derived reads and budget behavior. Assert
+original global gaps and Stats cost semantics remain unchanged when only the new
+computed log group truncates. Use existing canonical retained-record fixtures for
+read-side checks; no widened Session Event union, cast or fabricated provider proof.
+Extend scheduled-run-host.test.ts's original finite case for root/child Thinking
+and hot/cold output, preserving every existing result/usage/duration/tool/cleanup,
+no-replay and no-hidden-task assertion. The optional internal field needs no
+empty-array edits to unrelated synthesized snapshots or app test fixtures.
+
+Reuse existing TEST_UI_STANDALONE_DONE in claudeProviderPeer.mjs and the already
+present completed standalone dialog action in desktop-emulated-runtime-ui.ts.
+Emit actual native final Thinking in that same one input; assert its real expanded
+Markdown/copy in the same original dialog before the original screenshot/close.
+No extra business turn, model call, deadline, workflow row or weakened oracle.
+Preserve incoming35's stream Thinking, tool identity and source viewport changes.
+Root adds the missing existing scheduledRunProjection.ts, scheduledRunCapture.ts
+and scheduledRunContracts.ts leaves to the existing management/supplementary
+source roster and updates original gate evidence; no new roster or root-list expansion.
+
+Estimate: 3 production files, roughly 40–70 changed lines; 2 existing focused
+suites; 2 existing finite Desktop files, including the residual checks below.
+No source has been applied or new test/E2E pass claimed by this proposal.
+The complete import and exact provider pins are now verified. Source execution
+follows plan publication and root build coordination. Original Desktop/native and
+full workspace gates remain required, with their current holds preserved.
+
+### 6. Review status and separate stderr ownership
+
+R1 route/omission and Stage1/P04 reconciliation are source-proven. P09 accepted the
+computed-group direction and the schedule-only truncation distinction; this exact
+written plan still requires root/P09 R2. Incoming35 source review is not a new UI PASS.
+
+Frozen standalone stderr was separately captured up to 16 KiB and shown in its own
+pre block. Current ScheduledRunProvider bypasses the member stderr hook. P09 owns
+that separate bounded R1, including its original capture/fence/helper path. Root
+owns any shared snapshot/projection integration. This Thinking proposal does not
+silently authorize stderr implementation or alter another agent's source paths.
+
+### 7. Only the genuine remaining incoming35 stream proof deltas
+
+Incoming35 renderer source-selection reset and its regression test pass source R2.
+Retain its stronger digest/operation/anchor, tool/result and child-content oracles.
+The old reviewed 83128f5c scratch patch is superseded; never apply it wholesale.
+Add only these checks to the current desktop-emulated-runtime-ui.ts:
+
+- Compare partialThought.block with the fixture's actual block1, and its messageRef
+  with the same turn's text message; keep incoming35's complete identity checks.
+- Assert Thinking participates in the existing negative query/clear and remains
+  visible for both stream-only selections, since its SDK/HTTP fact is unmarked.
+- After existing stderr/text fullscreen clipboard/collapse assertions, use the
+  same dialog for the actual completeThought query, visible Markdown, clipboard
+  equality and collapse/restore. Restore the original query/fact before the
+  existing screenshot/close. Preserve all original business-effect comparisons.
+- After the existing reload, assert the original partialThought row is absent
+  while the retained completeThought row remains visible.
+
+In claudeProviderPeer.mjs add content_block_stop(0) before Thinking block1 starts
+and content_block_stop(1) before the final assistant wrapper, only for the existing
+uninterrupted TEST_UI_STREAM. Preserve contributor text, the signature-negative
+marker, message/index identity, release action and result. P09 verified source9423
+ignores stop frames as observations and accepted these two native framing additions.
+No new provider call, turn, timeout, gate, business mutation, component or test suite.
+
+This appendix and the standalone Thinking change share those two existing finite
+files. Keep desktop-emulated-runtime-ui.ts below800 lines; incoming35 is739 lines.
+Exact final source edits still require root R2 and publication of the finite plan.
+
+### Published review boundary
+
+This is the reviewed R1 record as prepared above, with heading depth adjusted for
+this existing plan. Root R2 accepts the exact scratch proposal SHA-256
+`c47fe4548ac3f2975d45e80e0566885381968054b97ce1c690266421c9de5e69` before implementation. Independent R2 `/root/p09_review` also accepted this exact document.
+This publication admits only its finite changes together with the sibling
+scheduled-log amendment; existing migration and actual qualification gates remain.

@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "scope": "Original PR10 corrected-source GREEN; source and packed-consumer qualification only",
+  "repository": "agent-teams-ai/old-provider-implementations",
+  "head": "c79b81bf002eaac95436da71c7049d7f309906a9",
+  "parent": "8a2c75bdbfafdbfd0e3014f3a62b261357c9b6c5",
+  "tree": "5595f99535a7cabcb0cfeda053f988fd7e17a590",
+  "publishedR1": "3ac086d1c157645faa358f0578f8dc764c950d66",
+  "originalRedEvidenceTree": "df0b4257b6937a3bec73432577c5c68fc4444595",
+  "workflow": "7e2bb17761d783b7d0ed298c62c56680a6636279",
+  "originalCommand": "pnpm check",
+  "pnpm": "11.18.0",
+  "run": 43774891918,
+  "attempt": 1,
+  "event": "pull_request",
+  "source": {
+    "claudeProducer": "ad0a5e03d493bea0d2f9025afdea3717cea102a2",
+    "codexProducer": "afa07b021da75b9e0707681d45cfacb7d99212c6",
+    "claudeTest": "1004cc3a2a42cc265518d251bfb62f8c96db0c12",
+    "codexTest": "49df246079139e435506e8a09466dbe47c0b1ec0"
+  },
+  "cases": {
+    "total": 561,
+    "pass": 561,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "original540AllPass": true,
+    "added": 21,
+    "addedPass": 21,
+    "formerRedFailures": 8,
+    "formerRedFailuresNowPass": 8
+  },
+  "results": [
+    {
+      "node": "24.21.0",
+      "job": 132998860997,
+      "file": "node24-original-ci-green.log",
+      "sha256": "98643ce6593124b44e563316e35a076f47159fe3af2feacaf672b4a0979c99a3",
+      "bytes": 108448,
+      "startedAt": "2026-11-15T23:27:23Z",
+      "completedAt": "2026-11-15T23:28:41Z",
+      "builds": "Both original packages completed",
+      "types": "Both original tsconfig.test.json checks completed",
+      "sourceTests": "561 PASS / 0 failures / 0 skipped / 0 cancelled",
+      "packedConsumers": {
+        "sessionContracts": {
+          "pass": 1,
+          "fail": 0,
+          "skip": 0
+        },
+        "implementations": {
+          "pass": 1,
+          "fail": 0,
+          "skip": 0
+        }
+      },
+      "archiveSteps": "Both completed",
+      "packedArchives": {
+        "checkedProvider": {
+          "archiveSha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+          "archiveIntegrity": "sha512-1QxsR0b5zRvHBjE0oQFVTEadYmpUmO1ElixO0Y0L3EuVDUXxkvhlE8KXUR0sTRplYVNV37n8jZ7+pSDYCGS2jA==",
+          "retainedArchive": "/home/runner/work/_temp/checked-v2-spi/agent-teams-provider-implementations-0.0.0.tgz"
+        },
+        "checkedSessionSPI": {
+          "archiveSha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+          "archiveIntegrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==",
+          "retainedArchive": "/home/runner/work/_temp/checked-v2-spi/agent-teams-provider-session-contracts-0.0.0.tgz"
+        }
+      }
+    },
+    {
+      "node": "26.11.1",
+      "job": 132998860688,
+      "file": "node26-original-ci-green.log",
+      "sha256": "843253fe86f1f35719a5f74ab1c0c9e690e2aa780351e4e6450343d3af43754c",
+      "bytes": 102965,
+      "startedAt": "2026-11-15T23:27:23Z",
+      "completedAt": "2026-11-15T23:28:47Z",
+      "builds": "Both original packages completed",
+      "types": "Both original tsconfig.test.json checks completed",
+      "sourceTests": "561 PASS / 0 failures / 0 skipped / 0 cancelled",
+      "packedConsumers": {
+        "sessionContracts": {
+          "pass": 1,
+          "fail": 0,
+          "skip": 0
+        },
+        "implementations": {
+          "pass": 1,
+          "fail": 0,
+          "skip": 0
+        }
+      },
+      "archiveSteps": "Intentionally skipped by unchanged Node24-only archive condition",
+      "packedArchives": {
+        "checkedProvider": {
+          "archiveSha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+          "archiveIntegrity": "sha512-1QxsR0b5zRvHBjE0oQFVTEadYmpUmO1ElixO0Y0L3EuVDUXxkvhlE8KXUR0sTRplYVNV37n8jZ7+pSDYCGS2jA==",
+          "retainedArchive": "/home/runner/work/_temp/checked-v2-spi/agent-teams-provider-implementations-0.0.0.tgz"
+        },
+        "checkedSessionSPI": {
+          "archiveSha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+          "archiveIntegrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==",
+          "retainedArchive": "/home/runner/work/_temp/checked-v2-spi/agent-teams-provider-session-contracts-0.0.0.tgz"
+        }
+      }
+    }
+  ],
+  "priorFailuresNowPass": [
+    "Claude queued successor cannot be overtaken while its original readiness is held",
+    "Claude delayed prior frame cannot borrow completed B: human-1",
+    "Claude delayed prior frame cannot borrow completed B: internal-1",
+    "Claude eligibility reentry cannot publish a slot after it admits a successor",
+    "Claude interrupt does not make uncertain auxiliary work available to the next input",
+    "Codex actual sent sample timeout retains one exact cancel target even after late abort",
+    "Codex timeout and cancel ACK cannot admit a second uncertain auxiliary sample",
+    "Codex explicit sent abort and uncertain settlement share one cancel and retain ordinary turns"
+  ],
+  "archiveReceiptFromOriginalNode24Log": {
+    "schemaVersion": 1,
+    "sourceCommit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+    "packages": [
+      {
+        "file": "agent-teams-provider-implementations-0.0.0.tgz",
+        "bytes": 186398,
+        "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+      },
+      {
+        "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+        "bytes": 6230,
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+      }
+    ],
+    "qualification": "source-and-packed-consumer-only",
+    "nativeHostQualified": false,
+    "packagedElectronQualified": false
+  },
+  "artifactApi": {
+    "id": 14184699852,
+    "node_id": "MDg6QXJ0aWZhY3QxNDE4NDY5OTg1Mg==",
+    "name": "opencode-v2-spi-consumer-checked-c79b81bf002eaac95436da71c7049d7f309906a9",
+    "size_in_bytes": 193546,
+    "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/artifacts/14184699852",
+    "archive_download_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/artifacts/14184699852/zip",
+    "expired": false,
+    "digest": "sha256:df8a1e825c2d2e7cd1578b3e7307f78977b2a6cff8771836cf90df644229a80c",
+    "created_at": "2026-11-15T23:28:40Z",
+    "updated_at": "2026-11-15T23:28:40Z",
+    "expires_at": "2026-11-22T23:28:39Z",
+    "workflow_run": {
+      "id": 43774891918,
+      "repository_id": 1431959988,
+      "head_repository_id": 1431959988,
+      "head_branch": "fix/native-suggestion-fences-20261115",
+      "head_sha": "c79b81bf002eaac95436da71c7049d7f309906a9"
+    }
+  },
+  "nativeSafety": {
+    "codexRun": 43774891913,
+    "codexJob": 132998892132,
+    "head": "c79b81bf002eaac95436da71c7049d7f309906a9",
+    "conclusion": "skipped",
+    "steps": 0,
+    "claude": "No matching repair path in the unchanged workflow; no native job run retained",
+    "opencodeV2": "No matching repair path in the unchanged workflow; this workflow has no blanket Draft guard"
+  },
+  "interpretation": [
+    "Both exact-head original CI jobs executed the unchanged pnpm check through builds, strict test types, all 561 source cases, and both packed consumers.",
+    "The complete source-case names were mechanically compared with the retained original 540 and test-only RED 561; all are present and passing in both GREEN logs.",
+    "The same frozen 21 added tests execute all formerly failing assertions and their later controls; no skipped or cancelled source case replaces qualification.",
+    "Both actual packed-consumer logs report identical implementation and Session SPI archive hashes; the Node24 original receipt binds those archives to this head and explicitly does not qualify native Host or packaged Electron.",
+    "The artifact ID, size and ZIP digest are retained from API and original upload log. This child has not downloaded or independently CRC/path-verified the ZIP or rehashed its archive members.",
+    "The actual Codex native workflow job is skipped with zero steps. No real vendor command, rerun, cancel, workflow dispatch, local runtime attempt, source mutation, commit or ref action was performed by this child.",
+    "PR8 and application archive adoption remain separate review/publication scopes; this GREEN does not itself merge the repair or adopt archives."
+  ]
+}

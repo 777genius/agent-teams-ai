@@ -1,0 +1,976 @@
+{
+  "kind": "REVIEW_ONLY_SOURCE_PROPOSAL",
+  "repository": "777genius/agent-teams-ai",
+  "authorization": {
+    "commit": "1c68ff856d5b89850e5e7d9f14e1cfc134d96ab2",
+    "tree": "a74d74ead87db37553a5f644a76ffd13b087a4ca",
+    "appendix": "b3216d672e7fa625a568c5a01c047b94cbdc4e03",
+    "fullPublishedReadback": true
+  },
+  "candidate": {
+    "minimalTree": "6f0584ca96a8056954eb0a36efed0fad0162932f",
+    "fullTree": "60ba7a315386d86c268d38e95789a9839947c26f",
+    "oldLeaves": 9663,
+    "newLeaves": 9664,
+    "changedPaths": 12,
+    "addedPaths": 1,
+    "removedPaths": 0,
+    "modeChanges": 0,
+    "totalAdd": 246,
+    "totalRemove": 21
+  },
+  "fullTreeDelta": [
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "old": "f520674551d54754e900686f3b051a55faf4cf6f",
+      "new": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "old": "0d515263f17c965f2073e69d5e181eb50ac4fc69",
+      "new": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "old": "e43e68508d17900948210de2c523e0289301c6b1",
+      "new": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "old": "933347bf047f0150e15a8a0845d12087704881ce",
+      "new": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "old": "3d22185325dc1f0d9d25d4b64461e521e00b9388",
+      "new": "7b5edfbd4967debe454387c7a8b6246e67216dc8",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+      "old": "865401e9e925d34d97c792a62fa345a9d85f0f80",
+      "new": "f6fdf6a32240c20d5e1cf6e4ea0ceaab9d38d242",
+      "mode": "100644"
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "old": "9edcec8fffca780706cbde634c35d7929552f9f6",
+      "new": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+      "mode": "100644"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "old": "25158d10870b78d5b8f6a77b4678fb5d7333600e",
+      "new": "cf20ceb57c06b71af1d25eac794fb92b15597930",
+      "mode": "100644"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "old": "0640b35744192a0dbe1b6755a069fb544d2cf347",
+      "new": "0d3c432774a928cd26ee0d27b2b5870cfe81f057",
+      "mode": "100644"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "old": "d94742582f0cc937118db5ed82c7ffef27bc9d50",
+      "new": "d7a56276a6baa63ee65a357a98fc52c7cfe03bdd",
+      "mode": "100644"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeVendorGate.ts",
+      "old": "bf4ee1f1c73b6ba9885f48dad9c5379fddd422e1",
+      "new": "f704852f8f01b03907502dbaba99fc16bcceeed4",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "old": null,
+      "new": "3cc13374bce3c0337e113b5ff201f556a9211b42",
+      "mode": "100644"
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "preimage": "f520674551d54754e900686f3b051a55faf4cf6f",
+      "selected": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+      "mode": "100644",
+      "selection": "exact-incoming",
+      "bytes": 19532,
+      "physicalLines": 313,
+      "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+      "add": 23,
+      "remove": 0,
+      "fullReadbackExact": true,
+      "diff": "\n@@ 246,246 @@\n 246:246           node --input-type=module -e \"import assert from 'node:assert/strict';import fs from 'node:fs';const b=fs.readFileSync(process.argv[1]);assert.ok(b.length>0&&b.length<=65536);const lines=b.toString('utf8').trim().split(/\\r?\\n/u);const rows=lines.filter(line=>line.startsWith('{')).map(line=>JSON.parse(line)).filter(row=>row.gateController!==undefined);assert.deepEqual(rows,[{gateController:'drained',rootExitCode:0,activeProcesses:0}]);\" $controllerLog\n 247:247           if ($LASTEXITCODE -ne 0) { throw 'Exact original controller accounting refused' }\n 248:248           node --input-type=module -e \"import assert from 'node:assert/strict';import fs from 'node:fs';const r=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));assert.equal(r.kind,'TEST_WINDOWS_PACKAGED_SAME_MAIN_PROCESS_UI');assert.equal(r.status,'PASS');assert.equal(r.cleanup,true);assert.equal(r.sourceHead,process.env.EXPECTED_SOURCE_SHA);assert.equal(r.platform,'win32-'+process.arch);assert.deepEqual(r.counts,{mainStarts:1,initialRuntimeOpen:1,businessInput:1,refreshClicks:1,retryClicks:1,uiStops:2,quit:1});assert.equal(r.actualHostSuccessors,1);assert.equal(r.originalRuntimeGenerations,1);assert.equal(r.modelRequests,0);assert.equal(r.modelProbes,0);assert.equal(r.realVendorExecutions,0);assert.equal(r.peer.provider,'codex');assert.equal(r.peer.connected,1);assert.equal(r.peer.registrations,1);assert.equal(r.peer.serviceExitObservations,2);assert.equal(r.peer.failures,0);assert.deepEqual(r.nativeCleanup,{phase:'completed',cleanup:true,originalQueryWitnesses:3,runtimeGenerations:1,runtimeInputs:1,modelRequests:0,probes:0,realVendorExecutions:0,originalUiStops:2,serviceExitObservations:2});assert.equal(r.packagedAndNativeInputsUnchanged,true);assert.equal(r.sourceFreezeFailure,undefined);assert.equal(r.peerEvidenceFailure,undefined);assert.equal(r.originalMain.pid,r.sameMainAfterRetry.pid);assert.equal(r.originalMain.birth,r.sameMainAfterRetry.birth);\" $receipt\n 249:249           if ($LASTEXITCODE -ne 0) { throw 'Exact finite same-Main UI receipt refused' }\n+250:250       - name: Qualify original packaged macOS app relaunch with finite SDK peer\n+250:251         if: matrix.os == 'darwin'\n+250:252         shell: bash\n+250:253         env:\n+250:254           TMPDIR: ${{ runner.temp }}\n+250:255           LEGACY_DESKTOP_BACKEND_GO: '1'\n+250:256           LEGACY_DESKTOP_EMULATED_ONLY: '1'\n+250:257           LEGACY_DESKTOP_PROOF_MODE: emulated-claude-lifecycle-ui\n+250:258         run: |\n+250:259           set -euo pipefail\n+250:260           inputs=\"$(mktemp -d \"$RUNNER_TEMP/TEST-packaged-relaunch-inputs-XXXXXX\")\"\n+250:261           mkdir \"$inputs/corepack\"\n+250:262           printf '{\"private\":true}\\n' > \"$inputs/corepack/package.json\"\n+250:263           pnpm --dir \"$inputs/corepack\" add --ignore-scripts --save-exact corepack@0.36.0\n+250:264           node --import tsx scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts \\\n+250:265             \"${{ matrix.bundle }}\" \"$inputs/corepack/node_modules/corepack/dist/pnpm.js\" \\\n+250:266             \"$RUNNER_TEMP/packaged-app-relaunch.json\"\n 250:267       - name: Preserve exact packaged Host evidence\n 251:268         if: always()\n 252:269         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2\n 253:270         with:\n\n@@ 262,279 @@\n 262:279             ${{ runner.temp }}/windows-same-main-process-ui.json\n 263:280             ${{ runner.temp }}/windows-same-main-process-ui.app.log\n 264:281             ${{ runner.temp }}/windows-same-main-process-ui.controller.log\n 265:282             ${{ runner.temp }}/windows-same-main-process-ui.*.png\n+266:283             ${{ runner.temp }}/packaged-app-relaunch.json\n+266:284             ${{ runner.temp }}/packaged-app-relaunch.app.log\n+266:285             ${{ runner.temp }}/TEST-desktop-backend-*/ui-emulated-lifecycle-launch.png\n+266:286             ${{ runner.temp }}/TEST-desktop-backend-*/ui-emulated-lifecycle-stopped.png\n+266:287             ${{ runner.temp }}/TEST-desktop-backend-*/ui-automatic-app-relaunch-successor.png\n+266:288             ${{ runner.temp }}/TEST-desktop-backend-*/ui-packaged-relaunch-failure.png\n 266:289 \n 267:290   packaged-full-gate:\n 268:291     needs: [packaged-scope, packaged-smoke]\n 269:292     if: always() && !cancelled()\n",
+      "journal": [
+        {
+          "oldStart": 249,
+          "newStart": 249,
+          "removed": [],
+          "added": [
+            "      - name: Qualify original packaged macOS app relaunch with finite SDK peer",
+            "        if: matrix.os == 'darwin'",
+            "        shell: bash",
+            "        env:",
+            "          TMPDIR: ${{ runner.temp }}",
+            "          LEGACY_DESKTOP_BACKEND_GO: '1'",
+            "          LEGACY_DESKTOP_EMULATED_ONLY: '1'",
+            "          LEGACY_DESKTOP_PROOF_MODE: emulated-claude-lifecycle-ui",
+            "        run: |",
+            "          set -euo pipefail",
+            "          inputs=\"$(mktemp -d \"$RUNNER_TEMP/TEST-packaged-relaunch-inputs-XXXXXX\")\"",
+            "          mkdir \"$inputs/corepack\"",
+            "          printf '{\"private\":true}\\n' > \"$inputs/corepack/package.json\"",
+            "          pnpm --dir \"$inputs/corepack\" add --ignore-scripts --save-exact corepack@0.36.0",
+            "          node --import tsx scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts \\",
+            "            \"${{ matrix.bundle }}\" \"$inputs/corepack/node_modules/corepack/dist/pnpm.js\" \\",
+            "            \"$RUNNER_TEMP/packaged-app-relaunch.json\""
+          ]
+        },
+        {
+          "oldStart": 265,
+          "newStart": 282,
+          "removed": [],
+          "added": [
+            "            ${{ runner.temp }}/packaged-app-relaunch.json",
+            "            ${{ runner.temp }}/packaged-app-relaunch.app.log",
+            "            ${{ runner.temp }}/TEST-desktop-backend-*/ui-emulated-lifecycle-launch.png",
+            "            ${{ runner.temp }}/TEST-desktop-backend-*/ui-emulated-lifecycle-stopped.png",
+            "            ${{ runner.temp }}/TEST-desktop-backend-*/ui-automatic-app-relaunch-successor.png",
+            "            ${{ runner.temp }}/TEST-desktop-backend-*/ui-packaged-relaunch-failure.png"
+          ]
+        }
+      ],
+      "oldFinalLF": true,
+      "newFinalLF": true,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "preimage": "0d515263f17c965f2073e69d5e181eb50ac4fc69",
+      "selected": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587",
+      "mode": "100644",
+      "selection": "exact-incoming",
+      "bytes": 33737,
+      "physicalLines": 770,
+      "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "add": 1,
+      "remove": 1,
+      "fullReadbackExact": true,
+      "diff": "\n@@ 69,69 @@\n 69:69 /** Creates only private TEST files. It neither launches the Host nor opens a provider. */\n 70:70 export async function prepareDesktopBackendFixture(\n 71:71   repo: string,\n 72:72   options: {\n+73:73     candidateRuntime?: Pick<CandidateRuntimePaths, 'nodeExecutable' | 'nodeVersion' | 'hostEntry' | 'processCustody'>;\n-73:74     candidateRuntime?: CandidateRuntimePaths;\n 74:74     diagnosticHostEntry?: { path: string; sha256: string };\n 75:75     claudeCheckpointDonor?: { repo: string; hostEntrySha256: string };\n 76:76     approvalUi?: boolean;\n 77:77     nativeChatAttachments?: boolean;\n",
+      "journal": [
+        {
+          "oldStart": 72,
+          "newStart": 72,
+          "removed": [
+            "    candidateRuntime?: CandidateRuntimePaths;"
+          ],
+          "added": [
+            "    candidateRuntime?: Pick<CandidateRuntimePaths, 'nodeExecutable' | 'nodeVersion' | 'hostEntry' | 'processCustody'>;"
+          ]
+        }
+      ],
+      "oldFinalLF": true,
+      "newFinalLF": true,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "preimage": "e43e68508d17900948210de2c523e0289301c6b1",
+      "selected": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "mode": "100644",
+      "selection": "exact-incoming",
+      "bytes": 49613,
+      "physicalLines": 787,
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "add": 2,
+      "remove": 1,
+      "fullReadbackExact": true,
+      "diff": "\n@@ 27,27 @@\n 27:27 }\n 28:28 export interface DesktopCdpLibrary { CdpClient: { connect(url: string): Promise<DesktopCdpPort> } }\n 29:29 type Evidence = Record<string, unknown>;\n 30:30 type Fixture = Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;\n+31:31 type Packed = Pick<Awaited<ReturnType<typeof readCapturedCandidateElectron>>,\n+31:32   'executable' | 'executableSha256' | 'appAsar' | 'appAsarSha256' | 'rendererUrl'> | undefined;\n-31:33 type Packed = Awaited<ReturnType<typeof readCapturedCandidateElectron>> | undefined;\n 32:33 const object = (value: unknown): Evidence => {\n 33:34   assert.ok(value && typeof value === 'object' && !Array.isArray(value));\n 34:35   return value as Evidence;\n 35:36 };\n",
+      "journal": [
+        {
+          "oldStart": 30,
+          "newStart": 30,
+          "removed": [
+            "type Packed = Awaited<ReturnType<typeof readCapturedCandidateElectron>> | undefined;"
+          ],
+          "added": [
+            "type Packed = Pick<Awaited<ReturnType<typeof readCapturedCandidateElectron>>,",
+            "  'executable' | 'executableSha256' | 'appAsar' | 'appAsarSha256' | 'rendererUrl'> | undefined;"
+          ]
+        }
+      ],
+      "oldFinalLF": true,
+      "newFinalLF": true,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "preimage": "933347bf047f0150e15a8a0845d12087704881ce",
+      "selected": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+      "mode": "100644",
+      "selection": "exact-incoming",
+      "bytes": 22845,
+      "physicalLines": 253,
+      "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+      "add": 7,
+      "remove": 1,
+      "fullReadbackExact": true,
+      "diff": "\n@@ 13,13 @@\n 13:13 /** Every launch, restoration and input is submitted by the existing renderer controls. */\n 14:14 export async function runDesktopEmulatedLifecycleUi(initialCdp: UiCdpPort, options: {\n 15:15   fixture: EmulatedLifecycleFixture; evidence: Row; assertOwnedRenderer(): void;\n 16:16   restartSameProfile(): Promise<UiCdpPort>;\n+17:17   originalStopOnly?: true;\n 17:18 }) {\n 18:19   const { fixture, evidence } = options;\n 19:20   assert.equal(fixture.emulatedRuntime.provider, 'claude'); assert.equal(fixture.emulatedRuntime.variant, 'lifecycle');\n 20:21   let cdp = initialCdp;\n 21:22   const steps: Row[] = [], commands: Row[] = [];\n 22:23   const proof: Row = { status: 'INCOMPLETE', provider: 'claude', steps, commands, nativeQualification: false,\n 23:24     scope: 'Original Launch/Stop, full same-profile cold startup, explicit checkpoint Resume, Composer continuation and active/queued Quit with finite SDK peer',\n 24:25     excluded: ['vendor inference/authentication', 'native provider qualification', 'automatic app.relaunch'] };\n+25:26   if (options.originalStopOnly) {\n+25:27     proof.scope = 'Original Launch, one successful SDK peer input and original Stop before automatic packaged app relaunch';\n+25:28     proof.excluded = ['vendor inference/authentication', 'native provider qualification', 'cold checkpoint Resume', 'active/queued Quit'];\n+25:29     evidence.emulatedLaunchStopUiProof = proof;\n+25:30   } else evidence.emulatedLifecycleUiProof = proof;\n-25:31   evidence.emulatedLifecycleUiProof = proof;\n 26:31   const controls = () => createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });\n 27:32   let ui = controls();\n 28:33   const effects = () => readDesktopEmulatedRuntimeEffects(fixture);\n 29:34   const owner = join(fixture.root, 'hoststore/teams/test-desktop-backend/.host-owner');\n\n@@ 107,112 @@\n 107:112   proof.capture = capture; proof.source = { session: source, reference: checkpoint.payload.reference,\n 108:113     payloadFileSha256: checkpoint.payloadFileSha256, historyPath: checkpoint.historyPath,\n 109:114     historySha256: checkpoint.historySha256, nativeSession: checkpoint.nativeSession, originalPids };\n 110:115   proof.stoppedScreenshot = await screenshot('stopped');\n+111:116   if (options.originalStopOnly) { proof.status = 'PASS'; return; }\n 111:117   cdp = await options.restartSameProfile(); ui = controls();\n 112:118   assert.equal(record(evidence.emulatedColdResumeBoundary).status, 'PASS');\n 113:119   await ui.observeInput(); await ui.clickSidebar(fixture.uiSeed.subject);\n 114:120   assert.deepEqual(await sessions(), [source]);\n",
+      "journal": [
+        {
+          "oldStart": 16,
+          "newStart": 16,
+          "removed": [],
+          "added": [
+            "  originalStopOnly?: true;"
+          ]
+        },
+        {
+          "oldStart": 24,
+          "newStart": 25,
+          "removed": [
+            "  evidence.emulatedLifecycleUiProof = proof;"
+          ],
+          "added": [
+            "  if (options.originalStopOnly) {",
+            "    proof.scope = 'Original Launch, one successful SDK peer input and original Stop before automatic packaged app relaunch';",
+            "    proof.excluded = ['vendor inference/authentication', 'native provider qualification', 'cold checkpoint Resume', 'active/queued Quit'];",
+            "    evidence.emulatedLaunchStopUiProof = proof;",
+            "  } else evidence.emulatedLifecycleUiProof = proof;"
+          ]
+        },
+        {
+          "oldStart": 110,
+          "newStart": 115,
+          "removed": [],
+          "added": [
+            "  if (options.originalStopOnly) { proof.status = 'PASS'; return; }"
+          ]
+        }
+      ],
+      "oldFinalLF": true,
+      "newFinalLF": true,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "preimage": "3d22185325dc1f0d9d25d4b64461e521e00b9388",
+      "selected": "7b5edfbd4967debe454387c7a8b6246e67216dc8",
+      "mode": "100644",
+      "selection": "bounded-own-composition",
+      "bytes": 21981,
+      "physicalLines": 280,
+      "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+      "add": 3,
+      "remove": 2,
+      "fullReadbackExact": true,
+      "diff": "\n@@ 32,32 @@\n 32:32   'tools/owned-process-broker/fixtures/providerDesktopPeer.mjs',\n 33:33 ] as const;\n 34:34 \n 35:35 /** TEST executables implement a finite native protocol; the original Host and D remain unchanged. */\n+36:36 export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection' | 'installer' | 'lifecycle' | 'collaboration', candidateRuntime?: Parameters<typeof prepareDesktopBackendFixture>[1]['candidateRuntime']) {\n+36:37   if (candidateRuntime) assert.ok(provider === 'claude' && variant === 'lifecycle', 'One captured packaged Launch/Stop lifecycle');\n-36:38 export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection' | 'installer' | 'lifecycle' | 'collaboration') {\n 37:38   if (variant === 'collaboration') {\n 38:39     assert.equal(provider, 'claude'); return prepareDesktopEmulatedCollaborationFixture(repo, pnpmEntry);\n 39:40   }\n 40:41   assert.ok(variant === undefined || (variant === 'selection' || variant === 'installer') && provider === 'codex' || variant === 'lifecycle' && provider === 'claude');\n 41:42   if (variant === 'installer') {\n 42:43     assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');\n 43:44   }\n+44:45   const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true, ...(candidateRuntime ? { candidateRuntime } : {}) });\n-44:46   const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true });\n 45:46   const selectedSources = provider === 'claude' ? ['tools/owned-process-broker/fixtures/claudeProviderPeer.mjs'] :\n 46:47     [...desktopRuntimePeerSources, ...(provider === 'opencode'\n 47:48       ? ['packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js'] : [])];\n 48:49   const sources = await Promise.all(selectedSources.map(async source => {\n",
+      "journal": [
+        {
+          "oldStart": 35,
+          "newStart": 35,
+          "removed": [
+            "export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection' | 'installer' | 'lifecycle' | 'collaboration') {"
+          ],
+          "added": [
+            "export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection' | 'installer' | 'lifecycle' | 'collaboration', candidateRuntime?: Parameters<typeof prepareDesktopBackendFixture>[1]['candidateRuntime']) {",
+            "  if (candidateRuntime) assert.ok(provider === 'claude' && variant === 'lifecycle', 'One captured packaged Launch/Stop lifecycle');"
+          ]
+        },
+        {
+          "oldStart": 43,
+          "newStart": 44,
+          "removed": [
+            "  const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true });"
+          ],
+          "added": [
+            "  const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true, ...(candidateRuntime ? { candidateRuntime } : {}) });"
+          ]
+        }
+      ],
+      "oldFinalLF": true,
+      "newFinalLF": true,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "preimage": null,
+      "selected": "3cc13374bce3c0337e113b5ff201f556a9211b42",
+      "mode": "100644",
+      "selection": "incoming-template-plus-local-pin",
+      "bytes": 13245,
+      "physicalLines": 181,
+      "sha256": "19a903cdef50db106a49a08d5d38756c34e7b49127b87ee7cddfc4f814ac0407",
+      "add": 181,
+      "remove": 0,
+      "fullReadbackExact": true,
+      "diff": "\n@@ 1,1 @@\n+1:1 /** Current macOS candidate: one finite SDK Launch/Stop, original app.relaunch and successor Quit. */\n+1:2 import assert from 'node:assert/strict';\n+1:3 import { execFileSync, spawn } from 'node:child_process';\n+1:4 import { createWriteStream } from 'node:fs';\n+1:5 import { lstat, readFile, readdir, realpath, writeFile } from 'node:fs/promises';\n+1:6 import { createRequire } from 'node:module';\n+1:7 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';\n+1:8 import { pathToFileURL } from 'node:url';\n+1:9 import { assertNativeV1Source } from '../../packages/legacy-agent-host/tests/opencode-v1-version-source.ts';\n+1:10 import { fileDigest } from './desktop-backend-fixture.ts';\n+1:11 import { assertDesktopProofEnvironment, assertOwnedCdpListener, command, groupMembers,\n+1:12   portOccupied, selectedCdpPort } from './desktop-backend-observations.ts';\n+1:13 import { captureDesktopRendererFailure, cleanupCapturedDesktopApp, connectCapturedDesktopApp,\n+1:14   observePackedAppRelaunch, verifyCapturedDesktopBinding } from './desktop-captured-app.ts';\n+1:15 import type { DesktopCdpLibrary, DesktopCdpPort } from './desktop-captured-app.ts';\n+1:16 import { runDesktopEmulatedLifecycleUi } from './desktop-emulated-lifecycle-ui.ts';\n+1:17 import { observeDesktopEmulatedRuntimeChildren, observeDesktopEmulatedRuntimeCleanup, prepareDesktopEmulatedRuntimeFixture,\n+1:18   readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';\n+1:19 import { desktopProofEvidence } from './desktop-proof-evidence.ts';\n+1:20 import { bounded } from './desktop-proof-bounds.ts';\n+1:21 import { desktopProofSources } from './desktop-proof-sources.ts';\n+1:22 import { captureDesktopSourceHashes, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';\n+1:23 import { readPackagedOpenCodeV2 } from './packaged-opencode-v2-inputs.ts';\n+1:24 import { requestObservedDesktopClose } from './startup-passive-observer.ts';\n+1:25 \n+1:26 type Row = Record<string, unknown>;\n+1:27 const record = (value: unknown): Row => {\n+1:28   assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Row;\n+1:29 };\n+1:30 \n+1:31 async function main() {\n+1:32   assert.equal(process.env.GITHUB_ACTIONS, 'true', 'One disposable packaged CI checkout');\n+1:33   assert.equal(process.platform, 'darwin'); assert.ok(process.arch === 'arm64' || process.arch === 'x64');\n+1:34   assert.equal(process.version, 'v24.21.0');\n+1:35   assert.equal(process.env.LEGACY_DESKTOP_EMULATED_ONLY, '1');\n+1:36   assert.equal(process.env.LEGACY_DESKTOP_PROOF_MODE, 'emulated-claude-lifecycle-ui');\n+1:37   assertDesktopProofEnvironment(false);\n+1:38   assert.equal(await portOccupied(), false, 'Original TEST renderer port must be vacant');\n+1:39   const [bundleArgument, pnpmArgument, receiptPath, ...extra] = process.argv.slice(2);\n+1:40   assert.ok(bundleArgument && pnpmArgument && receiptPath && extra.length === 0);\n+1:41   const repo = await realpath(resolve(import.meta.dirname, '../..'));\n+1:42   assert.equal(await realpath(process.env.GITHUB_WORKSPACE!), repo);\n+1:43   const sourceHead = process.env.OPENCODE_V2_TEST_SOURCE_HEAD!;\n+1:44   assertNativeV1Source(repo, sourceHead);\n+1:45   const runnerTemp = await realpath(process.env.RUNNER_TEMP!);\n+1:46   assert.ok(isAbsolute(receiptPath) && dirname(receiptPath) === runnerTemp);\n+1:47   await assert.rejects(lstat(receiptPath), { code: 'ENOENT' });\n+1:48   const bundle = await realpath(resolve(repo, bundleArgument));\n+1:49   const within = relative(repo, bundle);\n+1:50   assert.ok(within.startsWith(`release${sep}`) && !within.split(sep).includes('..') && bundle.endsWith('.app'));\n+1:51   const executableDirectory = join(bundle, 'Contents/MacOS');\n+1:52   const executables = await readdir(executableDirectory);\n+1:53   assert.equal(executables.length, 1, 'One original candidate application executable');\n+1:54   const executable = await realpath(join(executableDirectory, executables[0]!));\n+1:55   assert.equal(executable, join(executableDirectory, executables[0]!));\n+1:56   const executableInfo = await lstat(executable);\n+1:57   assert.ok(executableInfo.isFile() && !executableInfo.isSymbolicLink() && (executableInfo.mode & 0o111));\n+1:58   const resources = join(bundle, 'Contents/Resources'), appAsar = join(resources, 'app.asar');\n+1:59   const capture = { resourcesRoot: join(resources, 'legacy-agent-host'), appAsar,\n+1:60     appAsarSha256: await fileDigest(appAsar), manifestSha256: process.env.OPENCODE_V2_PACKAGED_MANIFEST_SHA256! };\n+1:61   const candidate = await readPackagedOpenCodeV2(capture);\n+1:62   assert.equal(candidate.manifest.sourceHead, sourceHead);\n+1:63   assert.equal(candidate.manifest.platform, `${process.platform}-${process.arch}`);\n+1:64   assert.ok(candidate.processCustody);\n+1:65   const packed = { executable, executableSha256: await fileDigest(executable),\n+1:66     appAsar, appAsarSha256: capture.appAsarSha256,\n+1:67     rendererUrl: pathToFileURL(join(appAsar, 'out/renderer/index.html')).href };\n+1:68   const pnpm = await realpath(pnpmArgument);\n+1:69   assert.ok(pnpm.startsWith(runnerTemp + sep), 'Existing isolated pinned Corepack fixture');\n+1:70   assert.equal(record(JSON.parse(await readFile(join(dirname(pnpm), '../package.json'), 'utf8'))).version, '0.36.0');\n+1:71   const fixture = await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, 'claude', 'lifecycle', {\n+1:72     nodeExecutable: candidate.node, nodeVersion: 'v' + candidate.manifest.node.version,\n+1:73     hostEntry: candidate.entry, processCustody: candidate.processCustody,\n+1:74   });\n+1:75   assert.equal(fixture.pins.nodeSha256, candidate.manifest.node.binarySha256);\n+1:76   assert.equal(fixture.pins.hostEntrySha256, candidate.manifest.hostEntrySha256);\n+1:77   const pins = await verifyDesktopEmulatedRuntimeFixture(fixture);\n+1:78   const mode = 'emulated-claude-lifecycle-ui';\n+1:79   const evidence = await desktopProofEvidence({ mode, fixture, pnpm, pnpmSha256: await fileDigest(pnpm),\n+1:80     electron: executable, smokePath: import.meta.filename, conversationMode: false, nativeStopMode: false, uiMode: true });\n+1:81   Object.assign(evidence, { kind: 'TEST_PACKAGED_APP_RELAUNCH', sourceHead, platform: `${process.platform}-${process.arch}`,\n+1:82     scope: 'Actual packaged macOS Electron and bundled Host, one finite SDK Launch/Stop, automatic app.relaunch and one successor public Quit',\n+1:83     excluded: ['Claude/Codex executable execution', 'vendor inference/authentication', 'full cold Resume/active Quit', 'release qualification'],\n+1:84     packedCandidate: { ...packed, capture, node: candidate.node, hostEntry: candidate.entry },\n+1:85     fixturePins: pins, realVendorExecutions: 0, nativeProviderQualified: false, releaseQualified: false });\n+1:86   const sources = [...new Set([...desktopProofSources,\n+1:87     'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',\n+1:88     'packages/legacy-agent-host/tests/opencode-v1-version-source.ts'])];\n+1:89   const sourceHashes = await captureDesktopSourceHashes(repo, sources);\n+1:90   evidence.selectedSourceHashesBeforeApp = sourceHashes;\n+1:91   await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });\n+1:92   console.log(JSON.stringify({ phase: 'prepared', receipt: receiptPath, root: fixture.root }));\n+1:93   const require = createRequire(import.meta.url);\n+1:94   const cdpLibrary = require('../e2e/comment-notification/cdp.mjs') as DesktopCdpLibrary;\n+1:95   const logPath = receiptPath.replace(/\\.json$/u, '') + '.app.log';\n+1:96   const log = createWriteStream(logPath, { flags: 'wx', mode: 0o600 });\n+1:97   const invocation = [executable, `--remote-debugging-port=${selectedCdpPort}`];\n+1:98   const app = spawn(executable, invocation.slice(1), { cwd: fixture.root,\n+1:99     env: { ...fixture.appEnvironment, NODE_ENV: 'production', PATH: join(fixture.root, 'bin') + ':/usr/bin:/bin' },\n+1:100     detached: true, stdio: ['ignore', 'pipe', 'pipe'] });\n+1:101   app.stdout.pipe(log, { end: false }); app.stderr.pipe(log, { end: false });\n+1:102   let spawnError = false, appIdentity = '', hostPid: number | undefined, cdp: DesktopCdpPort | undefined;\n+1:103   let originalFailure: unknown, quitRequested = false;\n+1:104   app.once('error', () => { spawnError = true; });\n+1:105   const group = app.pid ?? 0;\n+1:106   const assertOwnedRenderer = () => assertOwnedCdpListener(group);\n+1:107   const relaunchAttempted = () => evidence.packedAppRelaunch !== undefined &&\n+1:108     record(evidence.packedAppRelaunch).relaunchAttempted === true;\n+1:109   try {\n+1:110     assert.ok(group > 0);\n+1:111     appIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='],\n+1:112       { encoding: 'utf8', timeout: 3000 }).trim();\n+1:113     evidence.app = { pid: group, processGroup: group, identity: appIdentity, invocation };\n+1:114     const connected = await connectCapturedDesktopApp({ app, group, spawnError: () => spawnError, packed, cdpLibrary, evidence });\n+1:115     cdp = connected.cdp;\n+1:116     await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence, repo, packed });\n+1:117     await observeDesktopEmulatedRuntimeChildren(group, fixture, 'after-team-read');\n+1:118     await runDesktopEmulatedLifecycleUi(cdp, { fixture, evidence, assertOwnedRenderer, originalStopOnly: true,\n+1:119       restartSameProfile: async () => { throw new Error('Automatic app.relaunch cannot become a harness restart'); } });\n+1:120     assert.equal(record(evidence.emulatedLaunchStopUiProof).status, 'PASS');\n+1:121     assert.equal(evidence.emulatedLifecycleUiProof, undefined, 'This scope does not qualify the full cold Resume journey');\n+1:122     const originalEffects = await readDesktopEmulatedRuntimeEffects(fixture);\n+1:123     const inputEffects = originalEffects.filter(row => row.event === 'input');\n+1:124     assert.equal(inputEffects.filter(row => row.marker !== 'TEST_MODEL_PROBE').length, 1,\n+1:125       'One original SDK business input before relaunch');\n+1:126     await observeDesktopEmulatedRuntimeChildren(group, fixture, 'after-team-read');\n+1:127     const hosts = groupMembers(group).filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);\n+1:128     assert.equal(hosts.length, 1); hostPid = hosts[0]!.pid;\n+1:129     evidence.hostChild = { ...hosts[0], observedBeforeShutdown: true };\n+1:130     await observePackedAppRelaunch({ app, cdp, group, hostPid, packed, fixture, evidence, repo, cdpLibrary });\n+1:131     assert.equal(record(evidence.packedAppRelaunch).status, 'PASS');\n+1:132     assert.deepEqual((await readDesktopEmulatedRuntimeEffects(fixture)).filter(row => row.event === 'input'), inputEffects,\n+1:133       'Automatic relaunch cannot replay or add business input');\n+1:134     evidence.originalInputEffects = inputEffects;\n+1:135     evidence.status = 'PASS';\n+1:136   } catch (error) {\n+1:137     originalFailure = error; evidence.status = 'INCOMPLETE';\n+1:138     evidence.failure = error instanceof Error ? error.message.slice(0, 4000) : 'original packaged relaunch failed';\n+1:139     if (cdp && !relaunchAttempted()) {\n+1:140       await captureDesktopRendererFailure(cdp, { group, root: fixture.root,\n+1:141         screenshotName: 'ui-packaged-relaunch-failure.png', evidence });\n+1:142       await requestObservedDesktopClose(cdp, { assertOwnedRenderer, onAttempt: () => { quitRequested = true; },\n+1:143         listenerPresent: () => groupMembers(group).some(row => row.pid === evidence.cdpListener), evidence,\n+1:144         key: 'failureQuit' }).catch(() => { evidence.failureQuitUnconfirmed = true; });\n+1:145     }\n+1:146   } finally {\n+1:147     if (cdp) await bounded(cdp.close(), 3000, 'disconnect original packaged renderer').catch(() => undefined);\n+1:148     evidence.quitRequested = quitRequested;\n+1:149     const cleanup = await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity,\n+1:150       hostPid, packedRelaunchMode: relaunchAttempted() });\n+1:151     evidence.cleanup = cleanup;\n+1:152     if (cleanup.cleanupFailure || cleanup.remaining === null || cleanup.remaining.length || !cleanup.capturedHostAbsent ||\n+1:153       app.exitCode !== 0 || app.signalCode !== null) evidence.status = 'INCOMPLETE';\n+1:154     try {\n+1:155       const peers = await observeDesktopEmulatedRuntimeCleanup(fixture);\n+1:156       evidence.emulatedRuntimeCleanup = peers; assert.equal(peers.absent, true);\n+1:157       const census = (await readFile(fixture.sentinelLog, 'utf8').catch(error => {\n+1:158         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return ''; throw error;\n+1:159       })).trim().split('\\n').filter(Boolean).map(line => record(JSON.parse(line)));\n+1:160       evidence.finalSentinelCensus = census;\n+1:161       assert.ok(census.every(row => row.executable === 'shell-env' ? row.allowed === true :\n+1:162         row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version'));\n+1:163       assert.deepEqual(await verifyDesktopEmulatedRuntimeFixture(fixture), pins);\n+1:164       assert.deepEqual(await readPackagedOpenCodeV2(capture), candidate);\n+1:165       assert.equal(await fileDigest(executable), packed.executableSha256);\n+1:166       evidence.packagedInputsUnchanged = true;\n+1:167     } catch (error) {\n+1:168       evidence.status = 'INCOMPLETE'; evidence.finalObservationFailure = error instanceof Error ? error.message.slice(0, 2000) : 'unknown';\n+1:169     }\n+1:170     await verifyDesktopSourceFreeze(repo, sources, sourceHashes, evidence);\n+1:171     app.stdout.unpipe(log); app.stderr.unpipe(log); app.stdout.resume(); app.stderr.resume();\n+1:172     await bounded(new Promise<void>(done => log.end(done)), 3000, 'close packaged relaunch log')\n+1:173       .catch(() => { evidence.status = 'INCOMPLETE'; evidence.logCleanupFailed = true; });\n+1:174     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });\n+1:175     console.log(JSON.stringify({ kind: evidence.kind, status: evidence.status, receipt: receiptPath, root: fixture.root }));\n+1:176   }\n+1:177   if (originalFailure) throw originalFailure;\n+1:178   assert.equal(evidence.status, 'PASS', 'Original packaged relaunch and all cleanup must pass');\n+1:179 }\n+1:180 \n+1:181 await main();\n",
+      "journal": [
+        {
+          "oldStart": 0,
+          "newStart": 0,
+          "removed": [],
+          "added": [
+            "/** Current macOS candidate: one finite SDK Launch/Stop, original app.relaunch and successor Quit. */",
+            "import assert from 'node:assert/strict';",
+            "import { execFileSync, spawn } from 'node:child_process';",
+            "import { createWriteStream } from 'node:fs';",
+            "import { lstat, readFile, readdir, realpath, writeFile } from 'node:fs/promises';",
+            "import { createRequire } from 'node:module';",
+            "import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';",
+            "import { pathToFileURL } from 'node:url';",
+            "import { assertNativeV1Source } from '../../packages/legacy-agent-host/tests/opencode-v1-version-source.ts';",
+            "import { fileDigest } from './desktop-backend-fixture.ts';",
+            "import { assertDesktopProofEnvironment, assertOwnedCdpListener, command, groupMembers,",
+            "  portOccupied, selectedCdpPort } from './desktop-backend-observations.ts';",
+            "import { captureDesktopRendererFailure, cleanupCapturedDesktopApp, connectCapturedDesktopApp,",
+            "  observePackedAppRelaunch, verifyCapturedDesktopBinding } from './desktop-captured-app.ts';",
+            "import type { DesktopCdpLibrary, DesktopCdpPort } from './desktop-captured-app.ts';",
+            "import { runDesktopEmulatedLifecycleUi } from './desktop-emulated-lifecycle-ui.ts';",
+            "import { observeDesktopEmulatedRuntimeChildren, observeDesktopEmulatedRuntimeCleanup, prepareDesktopEmulatedRuntimeFixture,",
+            "  readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';",
+            "import { desktopProofEvidence } from './desktop-proof-evidence.ts';",
+            "import { bounded } from './desktop-proof-bounds.ts';",
+            "import { desktopProofSources } from './desktop-proof-sources.ts';",
+            "import { captureDesktopSourceHashes, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';",
+            "import { readPackagedOpenCodeV2 } from './packaged-opencode-v2-inputs.ts';",
+            "import { requestObservedDesktopClose } from './startup-passive-observer.ts';",
+            "",
+            "type Row = Record<string, unknown>;",
+            "const record = (value: unknown): Row => {",
+            "  assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Row;",
+            "};",
+            "",
+            "async function main() {",
+            "  assert.equal(process.env.GITHUB_ACTIONS, 'true', 'One disposable packaged CI checkout');",
+            "  assert.equal(process.platform, 'darwin'); assert.ok(process.arch === 'arm64' || process.arch === 'x64');",
+            "  assert.equal(process.version, 'v24.21.0');",
+            "  assert.equal(process.env.LEGACY_DESKTOP_EMULATED_ONLY, '1');",
+            "  assert.equal(process.env.LEGACY_DESKTOP_PROOF_MODE, 'emulated-claude-lifecycle-ui');",
+            "  assertDesktopProofEnvironment(false);",
+            "  assert.equal(await portOccupied(), false, 'Original TEST renderer port must be vacant');",
+            "  const [bundleArgument, pnpmArgument, receiptPath, ...extra] = process.argv.slice(2);",
+            "  assert.ok(bundleArgument && pnpmArgument && receiptPath && extra.length === 0);",
+            "  const repo = await realpath(resolve(import.meta.dirname, '../..'));",
+            "  assert.equal(await realpath(process.env.GITHUB_WORKSPACE!), repo);",
+            "  const sourceHead = process.env.OPENCODE_V2_TEST_SOURCE_HEAD!;",
+            "  assertNativeV1Source(repo, sourceHead);",
+            "  const runnerTemp = await realpath(process.env.RUNNER_TEMP!);",
+            "  assert.ok(isAbsolute(receiptPath) && dirname(receiptPath) === runnerTemp);",
+            "  await assert.rejects(lstat(receiptPath), { code: 'ENOENT' });",
+            "  const bundle = await realpath(resolve(repo, bundleArgument));",
+            "  const within = relative(repo, bundle);",
+            "  assert.ok(within.startsWith(`release${sep}`) && !within.split(sep).includes('..') && bundle.endsWith('.app'));",
+            "  const executableDirectory = join(bundle, 'Contents/MacOS');",
+            "  const executables = await readdir(executableDirectory);",
+            "  assert.equal(executables.length, 1, 'One original candidate application executable');",
+            "  const executable = await realpath(join(executableDirectory, executables[0]!));",
+            "  assert.equal(executable, join(executableDirectory, executables[0]!));",
+            "  const executableInfo = await lstat(executable);",
+            "  assert.ok(executableInfo.isFile() && !executableInfo.isSymbolicLink() && (executableInfo.mode & 0o111));",
+            "  const resources = join(bundle, 'Contents/Resources'), appAsar = join(resources, 'app.asar');",
+            "  const capture = { resourcesRoot: join(resources, 'legacy-agent-host'), appAsar,",
+            "    appAsarSha256: await fileDigest(appAsar), manifestSha256: process.env.OPENCODE_V2_PACKAGED_MANIFEST_SHA256! };",
+            "  const candidate = await readPackagedOpenCodeV2(capture);",
+            "  assert.equal(candidate.manifest.sourceHead, sourceHead);",
+            "  assert.equal(candidate.manifest.platform, `${process.platform}-${process.arch}`);",
+            "  assert.ok(candidate.processCustody);",
+            "  const packed = { executable, executableSha256: await fileDigest(executable),",
+            "    appAsar, appAsarSha256: capture.appAsarSha256,",
+            "    rendererUrl: pathToFileURL(join(appAsar, 'out/renderer/index.html')).href };",
+            "  const pnpm = await realpath(pnpmArgument);",
+            "  assert.ok(pnpm.startsWith(runnerTemp + sep), 'Existing isolated pinned Corepack fixture');",
+            "  assert.equal(record(JSON.parse(await readFile(join(dirname(pnpm), '../package.json'), 'utf8'))).version, '0.36.0');",
+            "  const fixture = await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, 'claude', 'lifecycle', {",
+            "    nodeExecutable: candidate.node, nodeVersion: 'v' + candidate.manifest.node.version,",
+            "    hostEntry: candidate.entry, processCustody: candidate.processCustody,",
+            "  });",
+            "  assert.equal(fixture.pins.nodeSha256, candidate.manifest.node.binarySha256);",
+            "  assert.equal(fixture.pins.hostEntrySha256, candidate.manifest.hostEntrySha256);",
+            "  const pins = await verifyDesktopEmulatedRuntimeFixture(fixture);",
+            "  const mode = 'emulated-claude-lifecycle-ui';",
+            "  const evidence = await desktopProofEvidence({ mode, fixture, pnpm, pnpmSha256: await fileDigest(pnpm),",
+            "    electron: executable, smokePath: import.meta.filename, conversationMode: false, nativeStopMode: false, uiMode: true });",
+            "  Object.assign(evidence, { kind: 'TEST_PACKAGED_APP_RELAUNCH', sourceHead, platform: `${process.platform}-${process.arch}`,",
+            "    scope: 'Actual packaged macOS Electron and bundled Host, one finite SDK Launch/Stop, automatic app.relaunch and one successor public Quit',",
+            "    excluded: ['Claude/Codex executable execution', 'vendor inference/authentication', 'full cold Resume/active Quit', 'release qualification'],",
+            "    packedCandidate: { ...packed, capture, node: candidate.node, hostEntry: candidate.entry },",
+            "    fixturePins: pins, realVendorExecutions: 0, nativeProviderQualified: false, releaseQualified: false });",
+            "  const sources = [...new Set([...desktopProofSources,",
+            "    'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',",
+            "    'packages/legacy-agent-host/tests/opencode-v1-version-source.ts'])];",
+            "  const sourceHashes = await captureDesktopSourceHashes(repo, sources);",
+            "  evidence.selectedSourceHashesBeforeApp = sourceHashes;",
+            "  await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });",
+            "  console.log(JSON.stringify({ phase: 'prepared', receipt: receiptPath, root: fixture.root }));",
+            "  const require = createRequire(import.meta.url);",
+            "  const cdpLibrary = require('../e2e/comment-notification/cdp.mjs') as DesktopCdpLibrary;",
+            "  const logPath = receiptPath.replace(/\\.json$/u, '') + '.app.log';",
+            "  const log = createWriteStream(logPath, { flags: 'wx', mode: 0o600 });",
+            "  const invocation = [executable, `--remote-debugging-port=${selectedCdpPort}`];",
+            "  const app = spawn(executable, invocation.slice(1), { cwd: fixture.root,",
+            "    env: { ...fixture.appEnvironment, NODE_ENV: 'production', PATH: join(fixture.root, 'bin') + ':/usr/bin:/bin' },",
+            "    detached: true, stdio: ['ignore', 'pipe', 'pipe'] });",
+            "  app.stdout.pipe(log, { end: false }); app.stderr.pipe(log, { end: false });",
+            "  let spawnError = false, appIdentity = '', hostPid: number | undefined, cdp: DesktopCdpPort | undefined;",
+            "  let originalFailure: unknown, quitRequested = false;",
+            "  app.once('error', () => { spawnError = true; });",
+            "  const group = app.pid ?? 0;",
+            "  const assertOwnedRenderer = () => assertOwnedCdpListener(group);",
+            "  const relaunchAttempted = () => evidence.packedAppRelaunch !== undefined &&",
+            "    record(evidence.packedAppRelaunch).relaunchAttempted === true;",
+            "  try {",
+            "    assert.ok(group > 0);",
+            "    appIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='],",
+            "      { encoding: 'utf8', timeout: 3000 }).trim();",
+            "    evidence.app = { pid: group, processGroup: group, identity: appIdentity, invocation };",
+            "    const connected = await connectCapturedDesktopApp({ app, group, spawnError: () => spawnError, packed, cdpLibrary, evidence });",
+            "    cdp = connected.cdp;",
+            "    await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence, repo, packed });",
+            "    await observeDesktopEmulatedRuntimeChildren(group, fixture, 'after-team-read');",
+            "    await runDesktopEmulatedLifecycleUi(cdp, { fixture, evidence, assertOwnedRenderer, originalStopOnly: true,",
+            "      restartSameProfile: async () => { throw new Error('Automatic app.relaunch cannot become a harness restart'); } });",
+            "    assert.equal(record(evidence.emulatedLaunchStopUiProof).status, 'PASS');",
+            "    assert.equal(evidence.emulatedLifecycleUiProof, undefined, 'This scope does not qualify the full cold Resume journey');",
+            "    const originalEffects = await readDesktopEmulatedRuntimeEffects(fixture);",
+            "    const inputEffects = originalEffects.filter(row => row.event === 'input');",
+            "    assert.equal(inputEffects.filter(row => row.marker !== 'TEST_MODEL_PROBE').length, 1,",
+            "      'One original SDK business input before relaunch');",
+            "    await observeDesktopEmulatedRuntimeChildren(group, fixture, 'after-team-read');",
+            "    const hosts = groupMembers(group).filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);",
+            "    assert.equal(hosts.length, 1); hostPid = hosts[0]!.pid;",
+            "    evidence.hostChild = { ...hosts[0], observedBeforeShutdown: true };",
+            "    await observePackedAppRelaunch({ app, cdp, group, hostPid, packed, fixture, evidence, repo, cdpLibrary });",
+            "    assert.equal(record(evidence.packedAppRelaunch).status, 'PASS');",
+            "    assert.deepEqual((await readDesktopEmulatedRuntimeEffects(fixture)).filter(row => row.event === 'input'), inputEffects,",
+            "      'Automatic relaunch cannot replay or add business input');",
+            "    evidence.originalInputEffects = inputEffects;",
+            "    evidence.status = 'PASS';",
+            "  } catch (error) {",
+            "    originalFailure = error; evidence.status = 'INCOMPLETE';",
+            "    evidence.failure = error instanceof Error ? error.message.slice(0, 4000) : 'original packaged relaunch failed';",
+            "    if (cdp && !relaunchAttempted()) {",
+            "      await captureDesktopRendererFailure(cdp, { group, root: fixture.root,",
+            "        screenshotName: 'ui-packaged-relaunch-failure.png', evidence });",
+            "      await requestObservedDesktopClose(cdp, { assertOwnedRenderer, onAttempt: () => { quitRequested = true; },",
+            "        listenerPresent: () => groupMembers(group).some(row => row.pid === evidence.cdpListener), evidence,",
+            "        key: 'failureQuit' }).catch(() => { evidence.failureQuitUnconfirmed = true; });",
+            "    }",
+            "  } finally {",
+            "    if (cdp) await bounded(cdp.close(), 3000, 'disconnect original packaged renderer').catch(() => undefined);",
+            "    evidence.quitRequested = quitRequested;",
+            "    const cleanup = await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity,",
+            "      hostPid, packedRelaunchMode: relaunchAttempted() });",
+            "    evidence.cleanup = cleanup;",
+            "    if (cleanup.cleanupFailure || cleanup.remaining === null || cleanup.remaining.length || !cleanup.capturedHostAbsent ||",
+            "      app.exitCode !== 0 || app.signalCode !== null) evidence.status = 'INCOMPLETE';",
+            "    try {",
+            "      const peers = await observeDesktopEmulatedRuntimeCleanup(fixture);",
+            "      evidence.emulatedRuntimeCleanup = peers; assert.equal(peers.absent, true);",
+            "      const census = (await readFile(fixture.sentinelLog, 'utf8').catch(error => {",
+            "        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return ''; throw error;",
+            "      })).trim().split('\\n').filter(Boolean).map(line => record(JSON.parse(line)));",
+            "      evidence.finalSentinelCensus = census;",
+            "      assert.ok(census.every(row => row.executable === 'shell-env' ? row.allowed === true :",
+            "        row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version'));",
+            "      assert.deepEqual(await verifyDesktopEmulatedRuntimeFixture(fixture), pins);",
+            "      assert.deepEqual(await readPackagedOpenCodeV2(capture), candidate);",
+            "      assert.equal(await fileDigest(executable), packed.executableSha256);",
+            "      evidence.packagedInputsUnchanged = true;",
+            "    } catch (error) {",
+            "      evidence.status = 'INCOMPLETE'; evidence.finalObservationFailure = error instanceof Error ? error.message.slice(0, 2000) : 'unknown';",
+            "    }",
+            "    await verifyDesktopSourceFreeze(repo, sources, sourceHashes, evidence);",
+            "    app.stdout.unpipe(log); app.stderr.unpipe(log); app.stdout.resume(); app.stderr.resume();",
+            "    await bounded(new Promise<void>(done => log.end(done)), 3000, 'close packaged relaunch log')",
+            "      .catch(() => { evidence.status = 'INCOMPLETE'; evidence.logCleanupFailed = true; });",
+            "    await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });",
+            "    console.log(JSON.stringify({ kind: evidence.kind, status: evidence.status, receipt: receiptPath, root: fixture.root }));",
+            "  }",
+            "  if (originalFailure) throw originalFailure;",
+            "  assert.equal(evidence.status, 'PASS', 'Original packaged relaunch and all cleanup must pass');",
+            "}",
+            "",
+            "await main();"
+          ]
+        }
+      ],
+      "oldFinalLF": false,
+      "newFinalLF": true,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+      "preimage": "865401e9e925d34d97c792a62fa345a9d85f0f80",
+      "selected": "f6fdf6a32240c20d5e1cf6e4ea0ceaab9d38d242",
+      "mode": "100644",
+      "selection": "exact-incoming",
+      "bytes": 9710,
+      "physicalLines": 147,
+      "sha256": "364704dbeef77c87178a18c0c1751c0d9202a43a30d8954a5d506d33ce97581a",
+      "add": 1,
+      "remove": 0,
+      "fullReadbackExact": true,
+      "diff": "\n@@ 128,128 @@\n 128:128         await cp(fixture.root, join(output, 'fixture'), { recursive: true, errorOnExist: true, force: false });\n 129:129         proof.retainedFixture = join(output, 'fixture');\n 130:130       } catch (error) { failure ??= error; }\n 131:131     }\n+132:132     if (model?.failures.length) failure ??= new Error('Original process model reported failures');\n 132:133     proof.status = failure ? 'INCOMPLETE' : 'PASS';\n 133:134     if (failure) proof.failure = failure instanceof Error ? failure.message : String(failure);\n 134:135     await writeFile(receipt, JSON.stringify(proof, null, 2), { mode: 0o600 });\n 135:136   }\n",
+      "journal": [
+        {
+          "oldStart": 131,
+          "newStart": 131,
+          "removed": [],
+          "added": [
+            "    if (model?.failures.length) failure ??= new Error('Original process model reported failures');"
+          ]
+        }
+      ],
+      "oldFinalLF": true,
+      "newFinalLF": true,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "preimage": "d94742582f0cc937118db5ed82c7ffef27bc9d50",
+      "selected": "d7a56276a6baa63ee65a357a98fc52c7cfe03bdd",
+      "mode": "100644",
+      "selection": "exact-incoming",
+      "bytes": 25732,
+      "physicalLines": 614,
+      "sha256": "72eb24e9aca12f4bf283625a311cd60ce58c9c5b5c2e7beeaecc3a1b2185f8cc",
+      "add": 6,
+      "remove": 3,
+      "fullReadbackExact": true,
+      "diff": "\n@@ 350,350 @@\n 350:350       owner: captured.profile.owner, scope: captured.profile.teams[0]!.scope },\n 351:351     payload,\n 352:352   });\n 353:353   let failedRpc: { method: string; code: string; outcome: string; read: Record<string, JsonValue> } | null = null;\n+354:354   const rpc = async (method: string, commandId: string, payload: JsonValue, cutoff = Infinity) => {\n+354:355     const deadline = Math.min(cutoff, performance.now() + captured.host.requestTimeoutMs);\n+354:356     assert.ok(performance.now() < deadline, 'Original Host RPC deadline');\n-354:357   const rpc = async (method: string, commandId: string, payload: JsonValue) => {\n-355:357     const deadline = performance.now() + captured.host.requestTimeoutMs;\n 356:357     const result = row(\n 357:358       await client.request(method, envelope(commandId, payload), {\n 358:359         control: method === 'runtime.read',\n+359:360         remainingMs: () => deadline - performance.now(),\n 359:361       })\n 360:362     );\n+361:363     assert.ok(performance.now() < deadline, 'Original Host RPC deadline');\n 361:364     try { assert.equal(result.ok, true, 'Actual original Host route succeeded'); }\n 362:365     catch (error) {\n 363:366       if (!failedRpc) {\n 364:367         failedRpc = { method: closed(method, ['runtime.open', 'runtime.read', 'team.execute']),\n\n@@ 455,458 @@\n 455:458       while (!nativeTurn) {\n 456:459         assert.deepEqual(model.failures, []);\n 457:460         const state = await rpc('runtime.read', 'TEST-original-terminal-read', {\n 458:461           memberId: 'alice-id',\n+459:462         }, deadline);\n-459:463         });\n 460:463         assert.ok(Array.isArray(state.inputs));\n 461:464         const original = state.inputs.map(row).find((item) => item.inputId === inputId);\n 462:465         if (original?.phase === 'terminal') {\n 463:466           assert.equal(original.terminal, 'succeeded');\n",
+      "journal": [
+        {
+          "oldStart": 353,
+          "newStart": 353,
+          "removed": [
+            "  const rpc = async (method: string, commandId: string, payload: JsonValue) => {",
+            "    const deadline = performance.now() + captured.host.requestTimeoutMs;"
+          ],
+          "added": [
+            "  const rpc = async (method: string, commandId: string, payload: JsonValue, cutoff = Infinity) => {",
+            "    const deadline = Math.min(cutoff, performance.now() + captured.host.requestTimeoutMs);",
+            "    assert.ok(performance.now() < deadline, 'Original Host RPC deadline');"
+          ]
+        },
+        {
+          "oldStart": 358,
+          "newStart": 359,
+          "removed": [],
+          "added": [
+            "        remainingMs: () => deadline - performance.now(),"
+          ]
+        },
+        {
+          "oldStart": 360,
+          "newStart": 362,
+          "removed": [],
+          "added": [
+            "    assert.ok(performance.now() < deadline, 'Original Host RPC deadline');"
+          ]
+        },
+        {
+          "oldStart": 458,
+          "newStart": 461,
+          "removed": [
+            "        });"
+          ],
+          "added": [
+            "        }, deadline);"
+          ]
+        }
+      ],
+      "oldFinalLF": true,
+      "newFinalLF": true,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeVendorGate.ts",
+      "preimage": "bf4ee1f1c73b6ba9885f48dad9c5379fddd422e1",
+      "selected": "f704852f8f01b03907502dbaba99fc16bcceeed4",
+      "mode": "100644",
+      "selection": "exact-incoming",
+      "bytes": 13138,
+      "physicalLines": 204,
+      "sha256": "dd37859e4953e3121c80c9a39e4bde5019ba6a6120fbfa138cece23cb3e47dba",
+      "add": 7,
+      "remove": 8,
+      "fullReadbackExact": true,
+      "diff": "\n@@ 10,10 @@\n 10:10 import type { PendingOwnedProcess, PreparedOwnedProcess, ProcessOwner } from '@agent-teams/legacy-agent-host/owned-process';\n 11:11 import { windowsLaunchSpec } from '../../packages/legacy-agent-host/dist/adapters/providers/WindowsCapturedProcess.js';\n 12:12 import { runNativeWindowsClaude, type NativeWindowsClaudeObservation } from '../../packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts';\n 13:13 import { verifyBrokerArchitecture } from '../../scripts/build/buildOwnedProcessBroker';\n+14:14 import { brokerReleased, capturedQueryableWitness, timeout, waitFor } from './nativeGateContext';\n-14:15 import { brokerReleased, capturedWitness, timeout, waitFor } from './nativeGateContext';\n 15:15 import { createNativeGateEvents } from './nativeGateEvents';\n 16:16 import { createFixtureOutputCollector } from './nativeGateOutput';\n 17:17 import { nativeVendorBroker } from './nativeVendorBroker';\n 18:18 \n\n@@ 80,80 @@\n 80:80     cleanupProof = true;\n 81:81     return true;\n 82:82   })();\n 83:83   const marker = join(sandbox, 'native-service.started'), outputPath = join(sandbox, 'native-service.jsonl');\n+84:84   const witnesses: Awaited<ReturnType<typeof capturedQueryableWitness>>[] = [];\n-84:85   const witnesses: Awaited<ReturnType<typeof capturedWitness>>[] = [];\n 85:85   let nativeProof: Awaited<ReturnType<typeof runNativeWindowsClaude>> | undefined;\n 86:86   let nativeObservation: NativeWindowsClaudeObservation | undefined;\n 87:87   let scopedProof: Awaited<ReturnType<typeof tap.stopService>> | undefined;\n 88:88   let originalFailure: unknown, passed = false, cleanup = false;\n\n@@ 145,145 @@\n 145:145         assert.equal(descendants.length, 2);\n 146:146         phase('capture-original-witnesses');\n 147:147         const observed = [prepared.root, output.root!, service, ...descendants, neighbor];\n 148:148         witnesses.push(...await events.wait(Promise.all(observed.map(original =>\n+149:149           capturedQueryableWitness(fixture, original.pid, original.birth, track, events)))));\n-149:150           capturedWitness(fixture, original.pid, original.birth, track, events, 'vendor-wait-gated')))));\n 150:150         const [providerWitness, backgroundWitness, serviceWitness, firstLeaf, secondLeaf, adjacent] = witnesses;\n 151:151         assert.ok(providerWitness && backgroundWitness && serviceWitness && firstLeaf && secondLeaf && adjacent);\n 152:152         phase('scoped-original-job-stop');\n 153:153         scopedProof = await tap.stopService(service);\n 154:154         assert.deepEqual(await timeout(events.wait(Promise.all(\n+155:155           [serviceWitness, firstLeaf, secondLeaf].map(witness => witness.wait())))), [0, 0, 0]);\n+155:156         assert.deepEqual(await timeout(events.wait(Promise.all(\n+155:157           [providerWitness, backgroundWitness, adjacent].map(witness => witness.observe())))), ['alive', 'alive', 'alive']);\n-155:158           [serviceWitness, firstLeaf, secondLeaf].map(witness => witness.exit)))), [0, 0, 0]);\n-156:158         assert.equal(providerWitness.process.exitCode, null);\n-157:158         assert.equal(backgroundWitness.process.exitCode, null);\n-158:158         assert.equal(adjacent.process.exitCode, null);\n 159:158         assert.equal(sentinel.exitCode, null);\n 160:159         assert.equal(facade.exitCode, null);\n 161:160         assert.equal(cleanupProof, false, 'Service Stop cannot mint a provider cleanup receipt');\n 162:161         phase('same-native-session-continuation');\n\n@@ 164,163 @@\n 164:163     });\n 165:164     assert.equal(launched, 1); assert.equal(nativeProof.cleanup, true);\n 166:165     assert.deepEqual(nativeProof.failures, []);\n 167:166     assert.equal(cleanupProof, true);\n+168:167     assert.deepEqual(await timeout(events.wait(Promise.all(witnesses.map(witness => witness.wait())))), [0, 0, 0, 0, 0, 0]);\n-168:168     assert.deepEqual(await timeout(events.wait(Promise.all(witnesses.map(witness => witness.exit)))), [0, 0, 0, 0, 0, 0]);\n 169:168     assert.equal(sentinel.exitCode, null, 'Unrelated original process survived both scoped and provider Stop');\n 170:169     verify(); assert.equal(hash(process.execPath), digests.node);\n 171:170     passed = true;\n 172:171   } catch (error) { originalFailure = error; }\n",
+      "journal": [
+        {
+          "oldStart": 13,
+          "newStart": 13,
+          "removed": [
+            "import { brokerReleased, capturedWitness, timeout, waitFor } from './nativeGateContext';"
+          ],
+          "added": [
+            "import { brokerReleased, capturedQueryableWitness, timeout, waitFor } from './nativeGateContext';"
+          ]
+        },
+        {
+          "oldStart": 83,
+          "newStart": 83,
+          "removed": [
+            "  const witnesses: Awaited<ReturnType<typeof capturedWitness>>[] = [];"
+          ],
+          "added": [
+            "  const witnesses: Awaited<ReturnType<typeof capturedQueryableWitness>>[] = [];"
+          ]
+        },
+        {
+          "oldStart": 148,
+          "newStart": 148,
+          "removed": [
+            "          capturedWitness(fixture, original.pid, original.birth, track, events, 'vendor-wait-gated')))));"
+          ],
+          "added": [
+            "          capturedQueryableWitness(fixture, original.pid, original.birth, track, events)))));"
+          ]
+        },
+        {
+          "oldStart": 154,
+          "newStart": 154,
+          "removed": [
+            "          [serviceWitness, firstLeaf, secondLeaf].map(witness => witness.exit)))), [0, 0, 0]);",
+            "        assert.equal(providerWitness.process.exitCode, null);",
+            "        assert.equal(backgroundWitness.process.exitCode, null);",
+            "        assert.equal(adjacent.process.exitCode, null);"
+          ],
+          "added": [
+            "          [serviceWitness, firstLeaf, secondLeaf].map(witness => witness.wait())))), [0, 0, 0]);",
+            "        assert.deepEqual(await timeout(events.wait(Promise.all(",
+            "          [providerWitness, backgroundWitness, adjacent].map(witness => witness.observe())))), ['alive', 'alive', 'alive']);"
+          ]
+        },
+        {
+          "oldStart": 167,
+          "newStart": 166,
+          "removed": [
+            "    assert.deepEqual(await timeout(events.wait(Promise.all(witnesses.map(witness => witness.exit)))), [0, 0, 0, 0, 0, 0]);"
+          ],
+          "added": [
+            "    assert.deepEqual(await timeout(events.wait(Promise.all(witnesses.map(witness => witness.wait())))), [0, 0, 0, 0, 0, 0]);"
+          ]
+        }
+      ],
+      "oldFinalLF": true,
+      "newFinalLF": true,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "preimage": "0640b35744192a0dbe1b6755a069fb544d2cf347",
+      "selected": "0d3c432774a928cd26ee0d27b2b5870cfe81f057",
+      "mode": "100644",
+      "selection": "bounded-own-composition",
+      "bytes": 22388,
+      "physicalLines": 586,
+      "sha256": "2db79fdc9010fd7a978791dbf7ae78727e016301d9cff249b83690023c98bfa0",
+      "add": 2,
+      "remove": 0,
+      "fullReadbackExact": true,
+      "diff": "\n@@ 533,533 @@\n 533:533         ],\n 534:534       })\n 535:535     );\n 536:536   } catch (error) {\n+537:537     // Retain the scenario failure before an exit callback triggered by owned cleanup.\n+537:538     events.guard(() => { throw error; })();\n 537:539     events.guard(diagnostics.failure)();\n 538:540     throw error;\n 539:541   } finally {\n 540:542     // Only children created by this disposable gate. No scans, taskkill, shared or product runtimes.\n",
+      "journal": [
+        {
+          "oldStart": 536,
+          "newStart": 536,
+          "removed": [],
+          "added": [
+            "    // Retain the scenario failure before an exit callback triggered by owned cleanup.",
+            "    events.guard(() => { throw error; })();"
+          ]
+        }
+      ],
+      "oldFinalLF": true,
+      "newFinalLF": true,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "preimage": "9edcec8fffca780706cbde634c35d7929552f9f6",
+      "selected": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+      "mode": "100644",
+      "selection": "exact-incoming",
+      "bytes": 7271,
+      "physicalLines": 153,
+      "sha256": "ec0665d1f6289492ea103bce13821c2a06847a2599396c8b47de21dde4e4f2a4",
+      "add": 2,
+      "remove": 2,
+      "fullReadbackExact": true,
+      "diff": "\n@@ 76,76 @@\n 76:76   }\n 77:77   writeAdmissionBarrier(L\".dispatched\",admissionNonce,36);\n 78:78   waitAdmissionBarrier(L\".dispatch-continue\");\n 79:79   const auto pending=scopes.query(key);\n+80:80   if(pending.queryError||owned_service::absent(pending)||!scopes.testOriginalDispatch(key,child))\n+80:81     throw DWORD{ERROR_INVALID_DATA}; // Pending CREATE cannot complete the original scope.\n-80:82   if(pending.queryError||!pending.active||!scopes.testOriginalDispatch(key,child))\n-81:82     throw DWORD{ERROR_INVALID_DATA}; // Pending CREATE cannot be retired as an empty original Job.\n 82:82   checkAdmissionDeadline();\n 83:83 }\n 84:84 inline void admittedBarrier(const owned_service::Scope& child) {\n 85:85   if(!admissionUsed||admissionCompleted) return;\n",
+      "journal": [
+        {
+          "oldStart": 79,
+          "newStart": 79,
+          "removed": [
+            "  if(pending.queryError||!pending.active||!scopes.testOriginalDispatch(key,child))",
+            "    throw DWORD{ERROR_INVALID_DATA}; // Pending CREATE cannot be retired as an empty original Job."
+          ],
+          "added": [
+            "  if(pending.queryError||owned_service::absent(pending)||!scopes.testOriginalDispatch(key,child))",
+            "    throw DWORD{ERROR_INVALID_DATA}; // Pending CREATE cannot complete the original scope."
+          ]
+        }
+      ],
+      "oldFinalLF": true,
+      "newFinalLF": true,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "preimage": "25158d10870b78d5b8f6a77b4678fb5d7333600e",
+      "selected": "cf20ceb57c06b71af1d25eac794fb92b15597930",
+      "mode": "100644",
+      "selection": "bounded-own-new-entry-composition",
+      "bytes": 29164,
+      "physicalLines": 477,
+      "sha256": "a2aa839bbf84889491743ab09d56084310497a3d44488edb91564e669594b441",
+      "add": 11,
+      "remove": 3,
+      "fullReadbackExact": true,
+      "diff": "\n@@ 362,362 @@\n 362:362     assert.equal(selected.birth, service.birth);\n 363:363     assert.ok(BigInt('0x' + selected.key) > 0n,\n 364:364       'scope keys never restart or alias after cumulative native retirement');\n 365:365     const key = encodeServiceScope(selected.key);\n+366:366     const observe = async (requireActive = true) => {\n-366:367     const observe = async () => {\n 367:367       const facts = decodeServiceFacts(await request(Op.serviceQuery, Op.serviceObserved, key));\n 368:368       assert.equal(facts.key, selected.key); assert.equal(facts.birth, service.birth);\n 369:369       assert.equal(facts.queryError, 0); assert.equal(facts.dispatchError, 0);\n+370:370       if (requireActive)\n+370:371         assert.ok(facts.activeProcesses > 0, 'Read-only query leaves the original subtree running');\n-370:372       assert.ok(facts.activeProcesses > 0, 'Read-only query leaves the original subtree running');\n 371:372       return facts;\n 372:373     };\n 373:374     assert.equal((await observe()).rootExited, false);\n 374:375     phase('expired-service-stop');\n\n@@ 389,390 @@\n 389:390     const pendingStop = request(Op.serviceStop, Op.serviceStopped, stop);\n 390:391     let stopReplied = false;\n 391:392     void pendingStop.then(() => { stopReplied = true; }, () => undefined);\n 392:393     await waitBarrier(`${admissionBarrier}.dispatched`);\n+393:394     // Termination may empty Job accounting before the original root HANDLE signals.\n+393:395     const pending = await observe(false);\n+393:396     console.error(JSON.stringify({ nativeServicePendingCreate: {\n+393:397       rootExited: pending.rootExited, activeProcesses: pending.activeProcesses,\n+393:398       queryError: pending.queryError, dispatchError: pending.dispatchError, stopReplied,\n+393:399     } }));\n+393:400     assert.ok(!pending.rootExited || pending.activeProcesses > 0,\n+393:401       'Pending CREATE cannot complete the original scope');\n-393:402     await observe(); // Original Job accounting retains the pending CREATE during termination.\n 394:402     assert.equal(stopReplied, false, 'The one original Stop still waits for pending CREATE cleanup');\n 395:403     assert.equal(decodeServiceRefusal(await request(Op.serviceSettle, Op.serviceRefused, key)).reason,\n 396:404       ServiceRefusal.invalid, 'Pending CREATE cannot settle or retire the original terminating scope');\n 397:405     publishBarrier(`${admissionBarrier}.dispatch-continue`);\n",
+      "journal": [
+        {
+          "oldStart": 365,
+          "newStart": 365,
+          "removed": [
+            "    const observe = async () => {"
+          ],
+          "added": [
+            "    const observe = async (requireActive = true) => {"
+          ]
+        },
+        {
+          "oldStart": 369,
+          "newStart": 369,
+          "removed": [
+            "      assert.ok(facts.activeProcesses > 0, 'Read-only query leaves the original subtree running');"
+          ],
+          "added": [
+            "      if (requireActive)",
+            "        assert.ok(facts.activeProcesses > 0, 'Read-only query leaves the original subtree running');"
+          ]
+        },
+        {
+          "oldStart": 392,
+          "newStart": 393,
+          "removed": [
+            "    await observe(); // Original Job accounting retains the pending CREATE during termination."
+          ],
+          "added": [
+            "    // Termination may empty Job accounting before the original root HANDLE signals.",
+            "    const pending = await observe(false);",
+            "    console.error(JSON.stringify({ nativeServicePendingCreate: {",
+            "      rootExited: pending.rootExited, activeProcesses: pending.activeProcesses,",
+            "      queryError: pending.queryError, dispatchError: pending.dispatchError, stopReplied,",
+            "    } }));",
+            "    assert.ok(!pending.rootExited || pending.activeProcesses > 0,",
+            "      'Pending CREATE cannot complete the original scope');"
+          ]
+        }
+      ],
+      "oldFinalLF": true,
+      "newFinalLF": true,
+      "forwardExact": true,
+      "inverseExact": true
+    }
+  ],
+  "newScriptTemplateReview": {
+    "template": "404a3806398590b340fa89a5709f0ab32286ba80",
+    "selected": "3cc13374bce3c0337e113b5ff201f556a9211b42",
+    "diff": "\n@@ 81,81 @@\n 81:81   Object.assign(evidence, { kind: 'TEST_PACKAGED_APP_RELAUNCH', sourceHead, platform: `${process.platform}-${process.arch}`,\n 82:82     scope: 'Actual packaged macOS Electron and bundled Host, one finite SDK Launch/Stop, automatic app.relaunch and one successor public Quit',\n 83:83     excluded: ['Claude/Codex executable execution', 'vendor inference/authentication', 'full cold Resume/active Quit', 'release qualification'],\n 84:84     packedCandidate: { ...packed, capture, node: candidate.node, hostEntry: candidate.entry },\n 85:85     fixturePins: pins, realVendorExecutions: 0, nativeProviderQualified: false, releaseQualified: false });\n+86:86   const sources = [...new Set([...desktopProofSources,\n+86:87     'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',\n+86:88     'packages/legacy-agent-host/tests/opencode-v1-version-source.ts'])];\n-86:89   const sources = [...new Set([...desktopProofSources, 'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts'])];\n 87:89   const sourceHashes = await captureDesktopSourceHashes(repo, sources);\n 88:90   evidence.selectedSourceHashesBeforeApp = sourceHashes;\n 89:91   await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });\n 90:92   console.log(JSON.stringify({ phase: 'prepared', receipt: receiptPath, root: fixture.root }));\n 91:93   const require = createRequire(import.meta.url);\n",
+    "add": 3,
+    "remove": 1,
+    "journal": [
+      {
+        "oldStart": 85,
+        "newStart": 85,
+        "removed": [
+          "  const sources = [...new Set([...desktopProofSources, 'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts'])];"
+        ],
+        "added": [
+          "  const sources = [...new Set([...desktopProofSources,",
+          "    'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',",
+          "    'packages/legacy-agent-host/tests/opencode-v1-version-source.ts'])];"
+        ]
+      }
+    ],
+    "oldFinalLF": true,
+    "newFinalLF": true,
+    "forwardExact": true,
+    "inverseExact": true
+  },
+  "retain": [
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "sha": "70202d22a5840401a00025cd60b797c514f3e455",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "sha": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "sha": "60548e4b0477924fd2c068283b9372f21946b198",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "sha": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "sha": "aed70893add6ddf460ce7d13231511be4113b86e",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "sha": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "sha": "cc200151738da867232a6bcd9d0525642ab73ecb",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "test/renderer/store/teamSlice.test.ts",
+      "sha": "8b5bde2a0ac8a79b4563a810f1a66e21bc0df861",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "sha": "b47e3a6e0227e2c3521a4e0124074ce6ec94bae8",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "sha": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "sha": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "tools/owned-process-broker/serviceDebugLoop.h",
+      "sha": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "sha": "22cf67a484f0a2a5a2b89639e38515cc0242a21a",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "sha": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "mode": "100644",
+      "unchanged": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.test.ts",
+      "sha": "48d1c9752dddb3e5fa91c6c564912b0474312168",
+      "mode": "100644",
+      "unchanged": true
+    }
+  ],
+  "preservation": {
+    "originalNativeScenarioPrefix": {
+      "bytes": 13549,
+      "sha256": "c1fc87c61020d1d8ea5f7b083e8cae436afe6d250071092ebc99d82d31266631",
+      "unchanged": true
+    },
+    "originalThreeCallsAndNewRaceBeforeWow64": {
+      "text": "    await runScenario('debug-service-cancel', () => nativeDebugServiceScenario(context, debugServiceBroker, 'pre-resume-cancel', sentinel));\n    await runScenario('debug-service', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-pair', sentinel));\n    await runScenario('debug-service-root-first', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-first', sentinel));\n    await runScenario('debug-service-admission-race', () => nativeAdditionalDebugServiceScenario(context, debugServiceBroker, 'service-race', sentinel));\n    await runScenario('debug-service-wow64-root', () => nativeAdditionalDebugServiceScenario(context, debugServiceBroker, 'wow64-root', sentinel));",
+      "sha256": "f6e4646b5d2c8a8bc6430dee5cc5c69b142d354f18bef7f85138220a694d1a03",
+      "unchanged": true
+    },
+    "unconditionalEffectsJournal": {
+      "text": "  if (phase === 'before-first-team-read') assert.ok(hosts.length <= 1); else assert.equal(hosts.length, 1);\n  await readDesktopEmulatedRuntimeEffects(fixture);",
+      "sha256": "c96952dc958f1e10dc946cb9e02914da7635f245ee85b97789b31f9d78d92033",
+      "unchanged": true
+    },
+    "defaultLifecycleResumeAndQuitTail": {
+      "bytes": 13052,
+      "sha256": "7878d06c2ec2930317297725c8afd06cfc2ea1ebde4651adf594b98f58587ad3",
+      "unchanged": true
+    },
+    "nativeCallCounts": {
+      "oldAwait": 78,
+      "newAwait": 78,
+      "oldClocks": 0,
+      "newClocks": 0,
+      "newConsoleWrites": 1
+    },
+    "pinClosure": {
+      "baseCommonCount": 1697,
+      "localCountForThisExactTree": 1699,
+      "additionalLocalPaths": [
+        "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "packages/legacy-agent-host/tests/opencode-v1-version-source.ts"
+      ],
+      "existingVersionHelper": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+      "transitiveNativeHostAlreadyCommon": true,
+      "captureUsesSameSourcesOnce": true,
+      "finalFreezeUsesSameSourcesOnce": true,
+      "futureComposedLogsCountMustBeRecomputed": true
+    },
+    "fullNativeFixtureUnchanged": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+    "nativeHelperCap64Retained": true,
+    "sourcesOutside12Unchanged": true,
+    "all9663OldPathsRetained": true,
+    "oneAddedPath": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts"
+  },
+  "qualification": {
+    "sourceOnly": true,
+    "sourceApplied": false,
+    "commitsCreated": false,
+    "refsMoved": false,
+    "testsOrBuildsExecuted": false,
+    "CIAction": false,
+    "limits": [
+      "Original deadlines/currentness/physical cleanup remain. No acceptance is transferred from incoming expanded-budget heads.",
+      "New macOS packaged relaunch is a separate finite Launch/Stop/relaunch/Quit journey; prior full lifecycle default tail remains.",
+      "Additional vendor zero-time HANDLE queries, retained RPC clock checks, new pending-CREATE diagnostic write and added packaged journey are not timing/call-count equivalent.",
+      "Real Claude/Codex execution, including version, is not authorized. Actual vendor qualification remains unavailable.",
+      "Resulting-source original Windows x64/ARM Node+Electron native, macOS packaged and full Desktop/typing gates remain required.",
+      "This immutable proposal creates no CI venue, rerun, cancellation, local compiler retry, or Ready/main/release/default/Stage2 authority."
+    ]
+  }
+}

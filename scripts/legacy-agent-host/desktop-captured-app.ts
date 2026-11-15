@@ -28,7 +28,8 @@ export interface DesktopCdpPort {
 export interface DesktopCdpLibrary { CdpClient: { connect(url: string): Promise<DesktopCdpPort> } }
 type Evidence = Record<string, unknown>;
 type Fixture = Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
-type Packed = Awaited<ReturnType<typeof readCapturedCandidateElectron>> | undefined;
+type Packed = Pick<Awaited<ReturnType<typeof readCapturedCandidateElectron>>,
+  'executable' | 'executableSha256' | 'appAsar' | 'appAsarSha256' | 'rendererUrl'> | undefined;
 const object = (value: unknown): Evidence => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Evidence;

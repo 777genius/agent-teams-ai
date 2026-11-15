@@ -1,0 +1,3353 @@
+{
+  "schemaVersion": 1,
+  "repository": "agent-teams-ai/old-provider-implementations",
+  "pullRequest": {
+    "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/10",
+    "id": 5328151344,
+    "node_id": "PR_kwDOVVn5tM8AAAABPZUjMA",
+    "html_url": "https://github.com/agent-teams-ai/old-provider-implementations/pull/10",
+    "diff_url": "https://github.com/agent-teams-ai/old-provider-implementations/pull/10.diff",
+    "patch_url": "https://github.com/agent-teams-ai/old-provider-implementations/pull/10.patch",
+    "issue_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/10",
+    "commits_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/10/commits",
+    "review_comments_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/10/comments",
+    "review_comment_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/comments{/number}",
+    "comments_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/10/comments",
+    "statuses_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/statuses/c79b81bf002eaac95436da71c7049d7f309906a9",
+    "number": 10,
+    "state": "open",
+    "locked": false,
+    "title": "fix: fence stale Claude suggestions and uncertain Codex samples",
+    "user": {
+      "login": "777genius",
+      "id": 13103045,
+      "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/777genius",
+      "html_url": "https://github.com/777genius",
+      "followers_url": "https://api.github.com/users/777genius/followers",
+      "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+      "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+      "organizations_url": "https://api.github.com/users/777genius/orgs",
+      "repos_url": "https://api.github.com/users/777genius/repos",
+      "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/777genius/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "## Problem\n\nTwo opt-in prompt-suggestion paths can lose the identity or cancellation ownership of their original native work. Claude can restore A's suggestion slot after B was already accepted, and its wire event cannot identify a late A frame after B completes. Codex drops the sent sample's cancellation handle when its local RPC timeout expires, allowing later auxiliary work while the original sample remains unknown.\n\n## Scope and current stage\n\nThis isolated repair branch preserves all 43 commits and both Thinking changes through `9423f600dfb04d04448326dbced89919924b0b5f`. It does not move PR #8's shared head. The published R1 is §14 of `docs/plans/2026-11-14-native-next-prompt-suggestions.md`, commit `3ac086d1c157645faa358f0578f8dc764c950d66`.\n\nThe current stage contains documentation only. Two additive finite-fixture test files come next. Both actual semantic REDs and independent source review are required before the bounded Claude Session and Codex app-server producer changes. The intended behavior is auxiliary-only lifetime quarantine for ambiguous Claude attribution and an unknown-sample latch plus at-most-once cancellation of Codex's original sent request. Ordinary inputs, readiness, queueing, deadlines, interactions and physical cleanup remain under their existing contracts. Suggestions remain default-off.\n\n## Validation and boundaries\n\nUse the unchanged original `pnpm check` CI on Node 24.21.0 and 26.11.1 with pnpm 11.18.0, including both packed consumers. Earlier 9423 results—540 controlled passes and its checked archive pair—remain historical evidence and do not qualify the repair. Retain exact-head RED/GREEN logs and the newly checked archive pair before any separate atomic consumer adoption.\n\nKeep this PR Draft. The four original workflows were reviewed: safe CI is reachable; the Codex native job is Draft-skipped; Claude native and native OpenCode V2 paths do not match this bounded repair. No real Claude/Codex executable, SDK process, model request or version command; no manual dispatch, rerun, cancellation, native qualification or deadline extension. Product composer work and application archive/SPI adoption are outside this PR.\n\n<!-- This is an auto-generated description by cubic. -->\n---\n## Summary by cubic\nFences stale Claude suggestions and uncertain Codex samples in the optional prompt-suggestion paths.\n\nClaude accepted-queue ordering can let a delayed earlier suggestion restore its slot after a successor was admitted, and the wire event has no input ID to disambiguate it. Codex local RPC expiry discards the only cancellation handle for a potentially sent sample, leaving unknown auxiliary work.\n\n- Claude: tracks the original suggestion owner; successor admission, interrupt, or uncertainty latches auxiliary offers off for the Query's lifetime, with no invented recovery criterion.\n- Codex: retains the sent sample's ID, latches auxiliary sampling on uncertain settlement, and attempts at most one targeted `thread/sample/cancel` while the transport is open.\n- Adds regression fixtures to `claude-sdk.test.ts` and `codex-subprocess.test.ts` plus the R1 plan documenting the defects and edit boundary.\n\nSuggestions remain default-off; no real Claude/Codex process is invoked.\n\n<sup>Written for commit c79b81bf002eaac95436da71c7049d7f309906a9. Summary will update on new commits.</sup>\n\n<a href=\"https://cubic.dev/pr/agent-teams-ai/old-provider-implementations/pull/10?utm_source=github\" target=\"_blank\" rel=\"noopener noreferrer\" data-no-image-dialog=\"true\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://www.cubic.dev/buttons/review-in-cubic-dark.svg\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://www.cubic.dev/buttons/review-in-cubic-light.svg\"><img alt=\"View guided diff\" src=\"https://www.cubic.dev/buttons/review-in-cubic-light.svg\"></picture></a> <a href=\"https://www.cubic.dev/action/auto-fix/pr/agent-teams-ai/old-provider-implementations/10?returnTo=https%3A%2F%2Fgithub.com%2Fagent-teams-ai%2Fold-provider-implementations%2Fpull%2F10&source=description\" target=\"_blank\" rel=\"noopener noreferrer\" data-no-image-dialog=\"true\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://www.cubic.dev/buttons/turn-on-auto-fix-dark.svg\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://www.cubic.dev/buttons/turn-on-auto-fix-light.svg\"><img alt=\"Turn on auto-fix\" src=\"https://www.cubic.dev/buttons/turn-on-auto-fix-light.svg\"></picture></a>\n\n<!-- End of auto-generated description by cubic. -->\n\n",
+    "labels": [],
+    "milestone": null,
+    "active_lock_reason": null,
+    "created_at": "2026-11-15T23:00:47Z",
+    "updated_at": "2026-11-15T23:27:30Z",
+    "closed_at": null,
+    "merged_at": null,
+    "merge_commit_sha": "bbc9f4a1c620f86d34ba571e5e470a377b59dea5",
+    "assignee": null,
+    "assignees": [],
+    "requested_reviewers": [],
+    "requested_teams": [],
+    "head": {
+      "label": "agent-teams-ai:fix/native-suggestion-fences-20261115",
+      "ref": "fix/native-suggestion-fences-20261115",
+      "repo": {
+        "id": 1431959988,
+        "node_id": "R_kgDOVVn5tA",
+        "name": "old-provider-implementations",
+        "full_name": "agent-teams-ai/old-provider-implementations",
+        "owner": {
+          "login": "agent-teams-ai",
+          "id": 280712041,
+          "node_id": "O_kgDOELtTaQ",
+          "avatar_url": "https://avatars.githubusercontent.com/u/280712041?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/agent-teams-ai",
+          "html_url": "https://github.com/agent-teams-ai",
+          "followers_url": "https://api.github.com/users/agent-teams-ai/followers",
+          "following_url": "https://api.github.com/users/agent-teams-ai/following{/other_user}",
+          "gists_url": "https://api.github.com/users/agent-teams-ai/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/agent-teams-ai/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/agent-teams-ai/subscriptions",
+          "organizations_url": "https://api.github.com/users/agent-teams-ai/orgs",
+          "repos_url": "https://api.github.com/users/agent-teams-ai/repos",
+          "events_url": "https://api.github.com/users/agent-teams-ai/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/agent-teams-ai/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "private": false,
+        "fork": false,
+        "archived": false,
+        "disabled": false,
+        "description": "Standalone legacy Claude, Codex and OpenCode provider implementations with an engine-independent Session SPI",
+        "homepage": null,
+        "language": "TypeScript",
+        "visibility": "public",
+        "is_template": false,
+        "topics": [],
+        "forks_count": 0,
+        "forks": 0,
+        "stargazers_count": 0,
+        "watchers_count": 0,
+        "watchers": 0,
+        "open_issues_count": 4,
+        "open_issues": 4,
+        "size": 1069,
+        "default_branch": "bootstrap",
+        "has_issues": true,
+        "has_projects": true,
+        "has_wiki": true,
+        "has_pages": false,
+        "has_downloads": false,
+        "has_discussions": false,
+        "has_pull_requests": true,
+        "pushed_at": "2026-11-15T23:27:15Z",
+        "created_at": "2026-10-24T08:08:26Z",
+        "updated_at": "2026-11-12T04:23:43Z",
+        "allow_forking": true,
+        "web_commit_signoff_required": false,
+        "pull_request_creation_policy": "all",
+        "license": {
+          "key": "apache-2.0",
+          "name": "Apache License 2.0",
+          "url": "https://api.github.com/licenses/apache-2.0",
+          "spdx_id": "Apache-2.0",
+          "node_id": "MDc6TGljZW5zZTI="
+        },
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations",
+        "html_url": "https://github.com/agent-teams-ai/old-provider-implementations",
+        "archive_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/{archive_format}{/ref}",
+        "assignees_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/assignees{/user}",
+        "blobs_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs{/sha}",
+        "branches_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/branches{/branch}",
+        "collaborators_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/collaborators{/collaborator}",
+        "comments_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/comments{/number}",
+        "commits_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/commits{/sha}",
+        "compare_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/compare/{base}...{head}",
+        "contents_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/contents/{+path}",
+        "contributors_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/contributors",
+        "deployments_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/deployments",
+        "downloads_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/downloads",
+        "events_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/events",
+        "forks_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/forks",
+        "git_commits_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/commits{/sha}",
+        "git_refs_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/refs{/sha}",
+        "git_tags_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/tags{/sha}",
+        "git_url": "git://github.com/agent-teams-ai/old-provider-implementations.git",
+        "issue_comment_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/comments{/number}",
+        "issue_events_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/events{/number}",
+        "issues_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues{/number}",
+        "keys_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/keys{/key_id}",
+        "labels_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/labels{/name}",
+        "languages_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/languages",
+        "merges_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/merges",
+        "milestones_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/milestones{/number}",
+        "notifications_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/notifications{?since,all,participating}",
+        "pulls_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls{/number}",
+        "releases_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/releases{/id}",
+        "ssh_url": "git@github.com:agent-teams-ai/old-provider-implementations.git",
+        "stargazers_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/stargazers",
+        "statuses_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/statuses/{sha}",
+        "subscribers_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/subscribers",
+        "subscription_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/subscription",
+        "tags_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/tags",
+        "teams_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/teams",
+        "trees_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees{/sha}",
+        "clone_url": "https://github.com/agent-teams-ai/old-provider-implementations.git",
+        "mirror_url": null,
+        "hooks_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/hooks",
+        "svn_url": "https://github.com/agent-teams-ai/old-provider-implementations"
+      },
+      "sha": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "user": {
+        "login": "agent-teams-ai",
+        "id": 280712041,
+        "node_id": "O_kgDOELtTaQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/280712041?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/agent-teams-ai",
+        "html_url": "https://github.com/agent-teams-ai",
+        "followers_url": "https://api.github.com/users/agent-teams-ai/followers",
+        "following_url": "https://api.github.com/users/agent-teams-ai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/agent-teams-ai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/agent-teams-ai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/agent-teams-ai/subscriptions",
+        "organizations_url": "https://api.github.com/users/agent-teams-ai/orgs",
+        "repos_url": "https://api.github.com/users/agent-teams-ai/repos",
+        "events_url": "https://api.github.com/users/agent-teams-ai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/agent-teams-ai/received_events",
+        "type": "Organization",
+        "user_view_type": "public",
+        "site_admin": false
+      }
+    },
+    "base": {
+      "label": "agent-teams-ai:feat/frontend-parity-20261112",
+      "ref": "feat/frontend-parity-20261112",
+      "repo": {
+        "id": 1431959988,
+        "node_id": "R_kgDOVVn5tA",
+        "name": "old-provider-implementations",
+        "full_name": "agent-teams-ai/old-provider-implementations",
+        "owner": {
+          "login": "agent-teams-ai",
+          "id": 280712041,
+          "node_id": "O_kgDOELtTaQ",
+          "avatar_url": "https://avatars.githubusercontent.com/u/280712041?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/agent-teams-ai",
+          "html_url": "https://github.com/agent-teams-ai",
+          "followers_url": "https://api.github.com/users/agent-teams-ai/followers",
+          "following_url": "https://api.github.com/users/agent-teams-ai/following{/other_user}",
+          "gists_url": "https://api.github.com/users/agent-teams-ai/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/agent-teams-ai/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/agent-teams-ai/subscriptions",
+          "organizations_url": "https://api.github.com/users/agent-teams-ai/orgs",
+          "repos_url": "https://api.github.com/users/agent-teams-ai/repos",
+          "events_url": "https://api.github.com/users/agent-teams-ai/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/agent-teams-ai/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "private": false,
+        "fork": false,
+        "archived": false,
+        "disabled": false,
+        "description": "Standalone legacy Claude, Codex and OpenCode provider implementations with an engine-independent Session SPI",
+        "homepage": null,
+        "language": "TypeScript",
+        "visibility": "public",
+        "is_template": false,
+        "topics": [],
+        "forks_count": 0,
+        "forks": 0,
+        "stargazers_count": 0,
+        "watchers_count": 0,
+        "watchers": 0,
+        "open_issues_count": 4,
+        "open_issues": 4,
+        "size": 1069,
+        "default_branch": "bootstrap",
+        "has_issues": true,
+        "has_projects": true,
+        "has_wiki": true,
+        "has_pages": false,
+        "has_downloads": false,
+        "has_discussions": false,
+        "has_pull_requests": true,
+        "pushed_at": "2026-11-15T23:27:15Z",
+        "created_at": "2026-10-24T08:08:26Z",
+        "updated_at": "2026-11-12T04:23:43Z",
+        "allow_forking": true,
+        "web_commit_signoff_required": false,
+        "pull_request_creation_policy": "all",
+        "license": {
+          "key": "apache-2.0",
+          "name": "Apache License 2.0",
+          "url": "https://api.github.com/licenses/apache-2.0",
+          "spdx_id": "Apache-2.0",
+          "node_id": "MDc6TGljZW5zZTI="
+        },
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations",
+        "html_url": "https://github.com/agent-teams-ai/old-provider-implementations",
+        "archive_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/{archive_format}{/ref}",
+        "assignees_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/assignees{/user}",
+        "blobs_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs{/sha}",
+        "branches_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/branches{/branch}",
+        "collaborators_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/collaborators{/collaborator}",
+        "comments_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/comments{/number}",
+        "commits_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/commits{/sha}",
+        "compare_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/compare/{base}...{head}",
+        "contents_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/contents/{+path}",
+        "contributors_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/contributors",
+        "deployments_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/deployments",
+        "downloads_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/downloads",
+        "events_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/events",
+        "forks_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/forks",
+        "git_commits_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/commits{/sha}",
+        "git_refs_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/refs{/sha}",
+        "git_tags_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/tags{/sha}",
+        "git_url": "git://github.com/agent-teams-ai/old-provider-implementations.git",
+        "issue_comment_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/comments{/number}",
+        "issue_events_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/events{/number}",
+        "issues_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues{/number}",
+        "keys_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/keys{/key_id}",
+        "labels_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/labels{/name}",
+        "languages_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/languages",
+        "merges_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/merges",
+        "milestones_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/milestones{/number}",
+        "notifications_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/notifications{?since,all,participating}",
+        "pulls_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls{/number}",
+        "releases_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/releases{/id}",
+        "ssh_url": "git@github.com:agent-teams-ai/old-provider-implementations.git",
+        "stargazers_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/stargazers",
+        "statuses_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/statuses/{sha}",
+        "subscribers_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/subscribers",
+        "subscription_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/subscription",
+        "tags_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/tags",
+        "teams_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/teams",
+        "trees_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees{/sha}",
+        "clone_url": "https://github.com/agent-teams-ai/old-provider-implementations.git",
+        "mirror_url": null,
+        "hooks_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/hooks",
+        "svn_url": "https://github.com/agent-teams-ai/old-provider-implementations"
+      },
+      "sha": "9423f600dfb04d04448326dbced89919924b0b5f",
+      "user": {
+        "login": "agent-teams-ai",
+        "id": 280712041,
+        "node_id": "O_kgDOELtTaQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/280712041?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/agent-teams-ai",
+        "html_url": "https://github.com/agent-teams-ai",
+        "followers_url": "https://api.github.com/users/agent-teams-ai/followers",
+        "following_url": "https://api.github.com/users/agent-teams-ai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/agent-teams-ai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/agent-teams-ai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/agent-teams-ai/subscriptions",
+        "organizations_url": "https://api.github.com/users/agent-teams-ai/orgs",
+        "repos_url": "https://api.github.com/users/agent-teams-ai/repos",
+        "events_url": "https://api.github.com/users/agent-teams-ai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/agent-teams-ai/received_events",
+        "type": "Organization",
+        "user_view_type": "public",
+        "site_admin": false
+      }
+    },
+    "_links": {
+      "comments": {
+        "href": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/10/comments"
+      },
+      "commits": {
+        "href": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/10/commits"
+      },
+      "statuses": {
+        "href": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/statuses/c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "html": {
+        "href": "https://github.com/agent-teams-ai/old-provider-implementations/pull/10"
+      },
+      "issue": {
+        "href": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/10"
+      },
+      "review_comments": {
+        "href": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/10/comments"
+      },
+      "review_comment": {
+        "href": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/comments{/number}"
+      },
+      "self": {
+        "href": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/10"
+      }
+    },
+    "author_association": "MEMBER",
+    "auto_merge": null,
+    "draft": true,
+    "merged": false,
+    "mergeable": true,
+    "rebaseable": true,
+    "mergeable_state": "unstable",
+    "merged_by": null,
+    "comments": 0,
+    "review_comments": 0,
+    "maintainer_can_modify": false,
+    "commits": 3,
+    "additions": 490,
+    "deletions": 7,
+    "changed_files": 5
+  },
+  "branchRef": {
+    "ref": "refs/heads/fix/native-suggestion-fences-20261115",
+    "node_id": "REF_kwDOVVn5tNoAMHJlZnMvaGVhZHMvZml4L25hdGl2ZS1zdWdnZXN0aW9uLWZlbmNlcy0yMDI2MTExNQ",
+    "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/refs/heads/fix/native-suggestion-fences-20261115",
+    "object": {
+      "sha": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "type": "commit",
+      "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/commits/c79b81bf002eaac95436da71c7049d7f309906a9"
+    }
+  },
+  "commit": {
+    "sha": "c79b81bf002eaac95436da71c7049d7f309906a9",
+    "node_id": "C_kwDOVVn5tNoAKGM3OWI4MWJmMDAyZWFhYzk1NDM2ZGE3MWM3MDQ5ZDdmMzA5OTA2YTk",
+    "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/commits/c79b81bf002eaac95436da71c7049d7f309906a9",
+    "html_url": "https://github.com/agent-teams-ai/old-provider-implementations/commit/c79b81bf002eaac95436da71c7049d7f309906a9",
+    "author": {
+      "name": "Илия",
+      "email": "iliyazelenkog@gmail.com",
+      "date": "2026-11-15T23:27:14Z"
+    },
+    "committer": {
+      "name": "Илия",
+      "email": "iliyazelenkog@gmail.com",
+      "date": "2026-11-15T23:27:14Z"
+    },
+    "tree": {
+      "sha": "5595f99535a7cabcb0cfeda053f988fd7e17a590",
+      "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/5595f99535a7cabcb0cfeda053f988fd7e17a590"
+    },
+    "message": "fix: retain uncertain native suggestion ownership and targeted cancellation",
+    "parents": [
+      {
+        "sha": "8a2c75bdbfafdbfd0e3014f3a62b261357c9b6c5",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/commits/8a2c75bdbfafdbfd0e3014f3a62b261357c9b6c5",
+        "html_url": "https://github.com/agent-teams-ai/old-provider-implementations/commit/8a2c75bdbfafdbfd0e3014f3a62b261357c9b6c5"
+      }
+    ],
+    "verification": {
+      "verified": false,
+      "reason": "unsigned",
+      "signature": null,
+      "payload": null,
+      "verified_at": null
+    }
+  },
+  "tree": {
+    "sha": "5595f99535a7cabcb0cfeda053f988fd7e17a590",
+    "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/5595f99535a7cabcb0cfeda053f988fd7e17a590",
+    "tree": [
+      {
+        "path": ".github",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "66bc0c428a8bdc4eef105a4d5f7e9522977d551f",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/66bc0c428a8bdc4eef105a4d5f7e9522977d551f"
+      },
+      {
+        "path": ".github/workflows",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "2b64bc76a5424a5d30b916e1626eb92c0b3f72ea",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/2b64bc76a5424a5d30b916e1626eb92c0b3f72ea"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7e2bb17761d783b7d0ed298c62c56680a6636279",
+        "size": 4457,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/7e2bb17761d783b7d0ed298c62c56680a6636279"
+      },
+      {
+        "path": ".github/workflows/native-prompt-suggestions-claude.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ebf288d5b6e6143de244fcf813cfb00d30fd4e21",
+        "size": 2062,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/ebf288d5b6e6143de244fcf813cfb00d30fd4e21"
+      },
+      {
+        "path": ".github/workflows/native-prompt-suggestions.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4276d8995ee6118283af3c83f33f79d51d67edb2",
+        "size": 2898,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4276d8995ee6118283af3c83f33f79d51d67edb2"
+      },
+      {
+        "path": ".github/workflows/native-v2-readonly.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b4b88ce1c41c89559a584cce830de59fb5ec0fc0",
+        "size": 17330,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/b4b88ce1c41c89559a584cce830de59fb5ec0fc0"
+      },
+      {
+        "path": ".gitignore",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b1588f902fb4b20dffd9886779b7b2540829bf32",
+        "size": 54,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/b1588f902fb4b20dffd9886779b7b2540829bf32"
+      },
+      {
+        "path": ".node-version",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d8750199bbef3481a89eaf452088c384f4025508",
+        "size": 8,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/d8750199bbef3481a89eaf452088c384f4025508"
+      },
+      {
+        "path": ".npmrc",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ee990bafb5e2fcf40344ef9eeacae7eab26b77eb",
+        "size": 65,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/ee990bafb5e2fcf40344ef9eeacae7eab26b77eb"
+      },
+      {
+        "path": "AGENTS.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e57b42d71de52315f36fe071f6f1b82fbe041123",
+        "size": 571,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/e57b42d71de52315f36fe071f6f1b82fbe041123"
+      },
+      {
+        "path": "LICENSE",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+        "size": 11357,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
+      },
+      {
+        "path": "README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "54898364fd60b4ef3e138e858961c2762da4c3d6",
+        "size": 1853,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/54898364fd60b4ef3e138e858961c2762da4c3d6"
+      },
+      {
+        "path": "docs",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "b4b8e2b1290cec1ec293fd6d4ae767e4f9229be8",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/b4b8e2b1290cec1ec293fd6d4ae767e4f9229be8"
+      },
+      {
+        "path": "docs/plans",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "aa2ddefbf257a2a0eb203b26aad52799771bf61c",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/aa2ddefbf257a2a0eb203b26aad52799771bf61c"
+      },
+      {
+        "path": "docs/plans/2026-11-14-native-next-prompt-suggestions.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5676e42200fbd50e6d7d9188cad3fadaaab7f85c",
+        "size": 84181,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/5676e42200fbd50e6d7d9188cad3fadaaab7f85c"
+      },
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "615ee7b9ca8a8c70ee3d129772aa89cc1cd2ae60",
+        "size": 559,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/615ee7b9ca8a8c70ee3d129772aa89cc1cd2ae60"
+      },
+      {
+        "path": "packages",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "6d9bc6c84b1d3ee1c725f665a1629f12ac438dff",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/6d9bc6c84b1d3ee1c725f665a1629f12ac438dff"
+      },
+      {
+        "path": "packages/provider-implementations",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "9a87fe5b4f0f4192e803728f17ecaaf1a5108669",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/9a87fe5b4f0f4192e803728f17ecaaf1a5108669"
+      },
+      {
+        "path": "packages/provider-implementations/LICENSE",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+        "size": 11357,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
+      },
+      {
+        "path": "packages/provider-implementations/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4de6a021c75af1643ef43254bded14207cc60dc5",
+        "size": 1168,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4de6a021c75af1643ef43254bded14207cc60dc5"
+      },
+      {
+        "path": "packages/provider-implementations/package.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4628124ce991ab036fbb2923297b179bdb107d25",
+        "size": 2457,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4628124ce991ab036fbb2923297b179bdb107d25"
+      },
+      {
+        "path": "packages/provider-implementations/provenance",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "dfef96fc8a80bdb48978835a7808b56b9f51a924",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/dfef96fc8a80bdb48978835a7808b56b9f51a924"
+      },
+      {
+        "path": "packages/provider-implementations/provenance/claude-sdk-extraction.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "69da8a57f9c44ad0185eb21645f1c77965606bf4",
+        "size": 4507,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/69da8a57f9c44ad0185eb21645f1c77965606bf4"
+      },
+      {
+        "path": "packages/provider-implementations/provenance/materialization.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "93cd9bd33903d7f7d7c2fb273eff61c6920245c1",
+        "size": 91573,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/93cd9bd33903d7f7d7c2fb273eff61c6920245c1"
+      },
+      {
+        "path": "packages/provider-implementations/provenance/opencode-protocol-extraction.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d5fd7342056651ce1d5eddf2b090f199f9577b3a",
+        "size": 15003,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/d5fd7342056651ce1d5eddf2b090f199f9577b3a"
+      },
+      {
+        "path": "packages/provider-implementations/provenance/provider-session-io-extraction.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "be3faa03f1a907a4ac48c7da37b790b0e35d06ad",
+        "size": 651,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/be3faa03f1a907a4ac48c7da37b790b0e35d06ad"
+      },
+      {
+        "path": "packages/provider-implementations/scripts",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "1c3433fde73c293a0ec0f6b09776f3e77857c556",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/1c3433fde73c293a0ec0f6b09776f3e77857c556"
+      },
+      {
+        "path": "packages/provider-implementations/scripts/qualify-claude-migration.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "32c4d636063472f35afd84b65ead63aab81b98dd",
+        "size": 6420,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/32c4d636063472f35afd84b65ead63aab81b98dd"
+      },
+      {
+        "path": "packages/provider-implementations/src",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "454b80f14252704fe9ec4d9e61e043257074df3c",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/454b80f14252704fe9ec4d9e61e043257074df3c"
+      },
+      {
+        "path": "packages/provider-implementations/src/claude.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4f4074de9b5546eefc9318d61a83e35b8bd142cb",
+        "size": 1393,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4f4074de9b5546eefc9318d61a83e35b8bd142cb"
+      },
+      {
+        "path": "packages/provider-implementations/src/codex.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c83aabee50ed75973eeae36a3ddbd0d37c7aa7ce",
+        "size": 3512,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/c83aabee50ed75973eeae36a3ddbd0d37c7aa7ce"
+      },
+      {
+        "path": "packages/provider-implementations/src/composition.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "741499156ce240dd9129eca9fa90893931d46f15",
+        "size": 345,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/741499156ce240dd9129eca9fa90893931d46f15"
+      },
+      {
+        "path": "packages/provider-implementations/src/features",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "c85ae32ca3f3aa2ef0acd872a9969ffc0caf2835",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/c85ae32ca3f3aa2ef0acd872a9969ffc0caf2835"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/native-prompt-suggestions",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "7f5795d7c7297d27b8823774dbb008b549278317",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/7f5795d7c7297d27b8823774dbb008b549278317"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/native-prompt-suggestions/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c67ff63e5ed677785c414a05f9488597cec713ff",
+        "size": 1142,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/c67ff63e5ed677785c414a05f9488597cec713ff"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/native-prompt-suggestions/adapters",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "2236483dd5bfc2f095ca800150f7a5094ae35d11",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/2236483dd5bfc2f095ca800150f7a5094ae35d11"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/native-prompt-suggestions/adapters/claude-sdk.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6d64f6c730c0a1f2b6cd3d448cddbcfb0149b4ae",
+        "size": 810,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/6d64f6c730c0a1f2b6cd3d448cddbcfb0149b4ae"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/native-prompt-suggestions/adapters/codex-sample.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "74dc7ec7cb42625294d15e5ff307a08815e8f87d",
+        "size": 1507,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/74dc7ec7cb42625294d15e5ff307a08815e8f87d"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/native-prompt-suggestions/contracts.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5cb6281efbab2befbb8ce1eb53741e3e98687452",
+        "size": 897,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/5cb6281efbab2befbb8ce1eb53741e3e98687452"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/native-prompt-suggestions/core",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "cd6ccd0196003dea260b2f743f3afbd1d93ac98e",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/cd6ccd0196003dea260b2f743f3afbd1d93ac98e"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/native-prompt-suggestions/core/policy.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1640bb77c348b1534cc629b8296d7398474ab5ce",
+        "size": 2183,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/1640bb77c348b1534cc629b8296d7398474ab5ce"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/native-prompt-suggestions/index.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e94d921fb74462831b2a43d6299bf79903fc34fd",
+        "size": 536,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/e94d921fb74462831b2a43d6299bf79903fc34fd"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "139dbb071091dff1497f07ed466a25fc4279ec6e",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/139dbb071091dff1497f07ed466a25fc4279ec6e"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2ebb9555b630d59a8fca10e64d30146cfe5031f1",
+        "size": 3291,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/2ebb9555b630d59a8fca10e64d30146cfe5031f1"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "cb3120416ff9c36786c17d4c2942e1a198d11706",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/cb3120416ff9c36786c17d4c2942e1a198d11706"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "8fa72bfd1a761b1e833a0879779751c102fed952",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/8fa72bfd1a761b1e833a0879779751c102fed952"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9814fe35f4cba42b5eabb4b8f163fdeecc6e83b2",
+        "size": 6242,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/9814fe35f4cba42b5eabb4b8f163fdeecc6e83b2"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/capture.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b0a9e3aeed27e0560583a008c2bb92fef7cc9343",
+        "size": 29907,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/b0a9e3aeed27e0560583a008c2bb92fef7cc9343"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/commands.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dd30cdf65d1b91528d7d7e9fc499d1c55c1cc79b",
+        "size": 6405,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/dd30cdf65d1b91528d7d7e9fc499d1c55c1cc79b"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6f87d41344f92e2bd2b4786584132ec469cdd6d0",
+        "size": 14070,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/6f87d41344f92e2bd2b4786584132ec469cdd6d0"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/factory.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a8beab8fed0c30a64315930845bf9f38070ffc6a",
+        "size": 3219,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a8beab8fed0c30a64315930845bf9f38070ffc6a"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/interactions.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "80a5b5cb5ed745d8369c6566dbb19e591ea69903",
+        "size": 4651,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/80a5b5cb5ed745d8369c6566dbb19e591ea69903"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/metadata.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9676e5551c00ed66b9f1d8867bb0533e0d1220b2",
+        "size": 5512,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/9676e5551c00ed66b9f1d8867bb0533e0d1220b2"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/model-probe.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "57fdf89754d1592511a9acf264859282e9745d4f",
+        "size": 9891,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/57fdf89754d1592511a9acf264859282e9745d4f"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/native-management-config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "44970a080d96dafbe3b88d5e7a29412e99034875",
+        "size": 2019,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/44970a080d96dafbe3b88d5e7a29412e99034875"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/normalize.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0a3da44e99c6a5f8cdaf201066a431811c29aa83",
+        "size": 6182,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/0a3da44e99c6a5f8cdaf201066a431811c29aa83"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/open-session.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "59b7906dee52239c8f6ee3d7e8dea0d03d2f1b2c",
+        "size": 4113,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/59b7906dee52239c8f6ee3d7e8dea0d03d2f1b2c"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/primitives.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3936ac573848b568b2254165bb33a4c8b70b608e",
+        "size": 160,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/3936ac573848b568b2254165bb33a4c8b70b608e"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/session.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ad0a5e03d493bea0d2f9025afdea3717cea102a2",
+        "size": 36539,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/ad0a5e03d493bea0d2f9025afdea3717cea102a2"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/subagents.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a74bedabd788aaa07e0fe3f20df60208224c1e85",
+        "size": 18473,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a74bedabd788aaa07e0fe3f20df60208224c1e85"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/tool-binding.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6ddc3bb965d262b312fc4bd965a40fdf35cac7a0",
+        "size": 3680,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/6ddc3bb965d262b312fc4bd965a40fdf35cac7a0"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "8e7d24883eb85807dc3264f88d7309d460254657",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/8e7d24883eb85807dc3264f88d7309d460254657"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8d507413c20e785c92b57beaa8101f143a5195d1",
+        "size": 10243,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/8d507413c20e785c92b57beaa8101f143a5195d1"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/account-login.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2bbca06538686c1d7134279d318411e538f17f78",
+        "size": 3148,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/2bbca06538686c1d7134279d318411e538f17f78"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/app-server.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "afa07b021da75b9e0707681d45cfacb7d99212c6",
+        "size": 18920,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/afa07b021da75b9e0707681d45cfacb7d99212c6"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/approval-request.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a6c8bee2b7e6efca8e5bca6a5e9f8db1c3e94dfd",
+        "size": 7234,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a6c8bee2b7e6efca8e5bca6a5e9f8db1c3e94dfd"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/approval-response.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9d6dfad0965877cadb83227118ec714360213b90",
+        "size": 2841,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/9d6dfad0965877cadb83227118ec714360213b90"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/connection-notifications.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d1dab70ff7e83d0c52836d962cc5e3563445c9cf",
+        "size": 3322,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/d1dab70ff7e83d0c52836d962cc5e3563445c9cf"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "05c9433802596c434644c02e6c2df20360696ae4",
+        "size": 12692,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/05c9433802596c434644c02e6c2df20360696ae4"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-factory.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "daeeb1f64df310c895aa2df1c84f66d04a3d33b8",
+        "size": 2933,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/daeeb1f64df310c895aa2df1c84f66d04a3d33b8"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-interactions.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7b3c366ae6251fec60346e77febde5a07297136e",
+        "size": 4879,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/7b3c366ae6251fec60346e77febde5a07297136e"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-output.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1b156f0c33e1057659427d89490846db4fa9aab1",
+        "size": 1479,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/1b156f0c33e1057659427d89490846db4fa9aab1"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-session.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c77809d097940bed17cebc13b849f57f13a0db0b",
+        "size": 19978,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/c77809d097940bed17cebc13b849f57f13a0db0b"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/exec-jsonl.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5cdcdca7547c66668b6b943a43d4bb73d90069cf",
+        "size": 15923,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/5cdcdca7547c66668b6b943a43d4bb73d90069cf"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/input-window-capture.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1eb74f8b70dc62fd9f491cecb5f3fd64e37c3a1a",
+        "size": 9003,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/1eb74f8b70dc62fd9f491cecb5f3fd64e37c3a1a"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e84d4ae0f62c84132be9eb784232f9f913ff259f",
+        "size": 4836,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/e84d4ae0f62c84132be9eb784232f9f913ff259f"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c260cedfe4fc1bfe3ea9eb2d9da70dfd64752ac2",
+        "size": 5017,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/c260cedfe4fc1bfe3ea9eb2d9da70dfd64752ac2"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/mcp-policy.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "482bac3a0b14f1f5dc5c7aca5f80016fb38e09cf",
+        "size": 5079,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/482bac3a0b14f1f5dc5c7aca5f80016fb38e09cf"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/mcp-status.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "967ad7ea14474cc830dd6fb2c52a05637ac8508c",
+        "size": 9164,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/967ad7ea14474cc830dd6fb2c52a05637ac8508c"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/metadata.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "253dbf8d920defcb1bfa602dc1d19df7788bb4bd",
+        "size": 6433,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/253dbf8d920defcb1bfa602dc1d19df7788bb4bd"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/model-options.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8b9db876118b97ce0fc4dbf68c554a26058e1354",
+        "size": 1168,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/8b9db876118b97ce0fc4dbf68c554a26058e1354"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/model-probe-config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "04fda973c42375f664b7846955d364e87ad98e3a",
+        "size": 2563,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/04fda973c42375f664b7846955d364e87ad98e3a"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/model-probe.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4f88fc479a18929c3781098fd3feab84af2c3ce5",
+        "size": 12864,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4f88fc479a18929c3781098fd3feab84af2c3ce5"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/notification-items.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0d5f557b41c37147cf7b75662fbae15437bf6711",
+        "size": 4522,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/0d5f557b41c37147cf7b75662fbae15437bf6711"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/notification-mapper.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0b41d88aadd21bdd7e1d256879f7e18bbd0f0ede",
+        "size": 6869,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/0b41d88aadd21bdd7e1d256879f7e18bbd0f0ede"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/rate-limits.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6f2afd97332980d3fe43de3e10ce51e7623d81ff",
+        "size": 2480,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/6f2afd97332980d3fe43de3e10ce51e7623d81ff"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/rpc-client.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "40fce90046397607a009f9b70e5b66421933cfeb",
+        "size": 8705,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/40fce90046397607a009f9b70e5b66421933cfeb"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/rpc-types.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5235a5e3103d11f23e2949c8ce9f2de08f1090c8",
+        "size": 2278,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/5235a5e3103d11f23e2949c8ce9f2de08f1090c8"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/session-types.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "58062e883ef8dca93687608b2cb661cf6961b0fd",
+        "size": 2617,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/58062e883ef8dca93687608b2cb661cf6961b0fd"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/thread-session.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8e5d8b78700ffdb7e488a2a44a48461dcf5000ec",
+        "size": 11151,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/8e5d8b78700ffdb7e488a2a44a48461dcf5000ec"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/user-questions.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4e4b0f2acb77bae35b0eab2fa208b7ee8a99d150",
+        "size": 8151,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4e4b0f2acb77bae35b0eab2fa208b7ee8a99d150"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/wire-frames.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dc7516d3402fe9b80d954b4904eec703d400d38b",
+        "size": 3351,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/dc7516d3402fe9b80d954b4904eec703d400d38b"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "1b2d441010b0559ab7b5d0196c808bca2b7a03af",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/1b2d441010b0559ab7b5d0196c808bca2b7a03af"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeBoundedHttpResponse.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f5c4c4493d2fa3c63202e4742c40f60ec62438d4",
+        "size": 3958,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f5c4c4493d2fa3c63202e4742c40f60ec62438d4"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeClientFactory.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "031f91f88613819c502823460638513d2ab29f78",
+        "size": 1505,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/031f91f88613819c502823460638513d2ab29f78"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeClientRequestContext.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7e1b9376914f937c739da620bf7bd0c47763dabc",
+        "size": 222,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/7e1b9376914f937c739da620bf7bd0c47763dabc"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeMessageIds.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "265aac3d9d584c3394fcecedd4db1d6603ea6e9e",
+        "size": 3708,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/265aac3d9d584c3394fcecedd4db1d6603ea6e9e"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeSseEventStream.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c82e884929141f7c22c103b2ab350d544ca9e2e2",
+        "size": 7801,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/c82e884929141f7c22c103b2ab350d544ca9e2e2"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "904ad2522bf05ada7edc04c74f627a78f292e005",
+        "size": 15512,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/904ad2522bf05ada7edc04c74f627a78f292e005"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/bound-session.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cabc64b3f70fe59b3b6dda468e54eb0f10078b7d",
+        "size": 2654,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/cabc64b3f70fe59b3b6dda468e54eb0f10078b7d"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/canonical-message-types.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bc4300dedb8a946c9b4a4dfe139a44609cd6b46a",
+        "size": 2194,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/bc4300dedb8a946c9b4a4dfe139a44609cd6b46a"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/catalog-operations.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "74b44361957a549494dce61b87640eacda69b802",
+        "size": 3142,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/74b44361957a549494dce61b87640eacda69b802"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/client-types.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e7c5c61f91e0c2fd1e921488056172ebcb3e6447",
+        "size": 3304,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/e7c5c61f91e0c2fd1e921488056172ebcb3e6447"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/driver-protocol.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b083415cd3fb1fdfdf1c74eb52e30b6468c2e0b2",
+        "size": 1584,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/b083415cd3fb1fdfdf1c74eb52e30b6468c2e0b2"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/driver-session.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6cea8b4842161ceef56750dde740799f506a1037",
+        "size": 15849,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/6cea8b4842161ceef56750dde740799f506a1037"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/http-request.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6d2bdbb753a491ad42eb6df89383b691977d6d3f",
+        "size": 4332,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/6d2bdbb753a491ad42eb6df89383b691977d6d3f"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/input-window-capture.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b9b1d03871191d55676fb85a11a52c1e0fba1b3c",
+        "size": 8270,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/b9b1d03871191d55676fb85a11a52c1e0fba1b3c"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/parity.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1ec9931a6c974119289b8e568eef77d99853dee3",
+        "size": 4111,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/1ec9931a6c974119289b8e568eef77d99853dee3"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/query-path.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5798eb821dfcfbf19848fcc2fe31e1c08ed43e3d",
+        "size": 409,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/5798eb821dfcfbf19848fcc2fe31e1c08ed43e3d"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/request-limits.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ca688972a1e43ddc16f76233231c1d257ef31660",
+        "size": 749,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/ca688972a1e43ddc16f76233231c1d257ef31660"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/session-binding-codec.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8a6f8d1ad972eb73ad49dae7fb50cad247eef3a7",
+        "size": 3516,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/8a6f8d1ad972eb73ad49dae7fb50cad247eef3a7"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/session-binding-types.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fd427845c58858fb66c16d6de8343ff0439b4416",
+        "size": 1004,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/fd427845c58858fb66c16d6de8343ff0439b4416"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/session-bindings.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "966da031a31c48cad0b27b00bf7372400b044549",
+        "size": 3349,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/966da031a31c48cad0b27b00bf7372400b044549"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/session-operations.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b283f302d848217f3748870bf27e4c8f3ada7029",
+        "size": 5473,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/b283f302d848217f3748870bf27e4c8f3ada7029"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/terminal-proof.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a4344e8d4346f570f2abd436570a1035a7c0154c",
+        "size": 8317,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a4344e8d4346f570f2abd436570a1035a7c0154c"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/types.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "61cc3aa28b382e94c78a53fa90f6ee4867b30aec",
+        "size": 3788,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/61cc3aa28b382e94c78a53fa90f6ee4867b30aec"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-backend.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7cd58181b0306e456249617665ac29a6a89be3b8",
+        "size": 5074,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/7cd58181b0306e456249617665ac29a6a89be3b8"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a499189de0cbd75dc841c9442ad2abb902829576",
+        "size": 3724,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a499189de0cbd75dc841c9442ad2abb902829576"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-cut.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3c915ce68c8e48684f091064387ef1ee7b6d6311",
+        "size": 8710,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/3c915ce68c8e48684f091064387ef1ee7b6d6311"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-factory.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "27db1a74cf2844e1a8853188dd413d6c2a31d034",
+        "size": 3517,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/27db1a74cf2844e1a8853188dd413d6c2a31d034"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-output.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d0df18a1b4a11d82545277e6ae890b461b154930",
+        "size": 1810,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/d0df18a1b4a11d82545277e6ae890b461b154930"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-wire.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "20605034959eeb839959720877042bca554c64e3",
+        "size": 5864,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/20605034959eeb839959720877042bca554c64e3"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-native-read.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "52bcf4c8b8cdaf28dd5475a442af7be99f188ca3",
+        "size": 2975,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/52bcf4c8b8cdaf28dd5475a442af7be99f188ca3"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-permission-normalizer.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "62ad80aaadcb1a2d294c7bd25f6f520ebd92540e",
+        "size": 2459,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/62ad80aaadcb1a2d294c7bd25f6f520ebd92540e"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-transcript-projector.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e27dc4fd63baa8295b3af68c9d2dda690c22d651",
+        "size": 8992,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/e27dc4fd63baa8295b3af68c9d2dda690c22d651"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-assistant-projection.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c5a04dcfeff2ee6c3ddf076394b7fc85ce1580ca",
+        "size": 8255,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/c5a04dcfeff2ee6c3ddf076394b7fc85ce1580ca"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-attachments.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9b7e5f9c4ab4a799de67286a48198fca52402869",
+        "size": 3228,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/9b7e5f9c4ab4a799de67286a48198fca52402869"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-bounded-await.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "86c04808f56a21ecf67d7ae9582e360233f49bde",
+        "size": 732,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/86c04808f56a21ecf67d7ae9582e360233f49bde"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-canonical-json.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3a03478100b5fb3f17c5389474c0321a54de8163",
+        "size": 3391,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/3a03478100b5fb3f17c5389474c0321a54de8163"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-control-transport.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5455d60b4ac641334698f99ed085215a759e7771",
+        "size": 14144,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/5455d60b4ac641334698f99ed085215a759e7771"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-binding.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d57ebbd176132baf871cc721edbcdb8c3f7f69e3",
+        "size": 863,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/d57ebbd176132baf871cc721edbcdb8c3f7f69e3"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-client.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5deb4f95145873686833a35bf486edc5e0fbe6e3",
+        "size": 8200,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/5deb4f95145873686833a35bf486edc5e0fbe6e3"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-wire.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3b8ece89595856954e612d5f38a801d059f15be8",
+        "size": 10264,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/3b8ece89595856954e612d5f38a801d059f15be8"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-cut-codecs.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5c611b3b025b15d9425b521f637f27d2c8b6b93a",
+        "size": 6234,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/5c611b3b025b15d9425b521f637f27d2c8b6b93a"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-backend.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "34da697bbc7648d58e5bf2f445e95185804c6213",
+        "size": 4200,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/34da697bbc7648d58e5bf2f445e95185804c6213"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b2032bc56ef0e133cfd87c376861a4ecf87598ce",
+        "size": 8621,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/b2032bc56ef0e133cfd87c376861a4ecf87598ce"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-factory.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c90ead6e34fa6734b2a83f2de3ab678a5efa79c3",
+        "size": 3308,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/c90ead6e34fa6734b2a83f2de3ab678a5efa79c3"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "36de104cb4f6a1e7610dfd8f864d0bc82a5a7123",
+        "size": 10417,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/36de104cb4f6a1e7610dfd8f864d0bc82a5a7123"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-output.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b3e002d18c692f6410c85cfe4436f07ada2be68a",
+        "size": 2311,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/b3e002d18c692f6410c85cfe4436f07ada2be68a"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dc35fa285291300c9b4b47fc11706e806766775b",
+        "size": 1086,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/dc35fa285291300c9b4b47fc11706e806766775b"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c13af9200fa8acdc8801d252a8be125695813241",
+        "size": 18739,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/c13af9200fa8acdc8801d252a8be125695813241"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-failures.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f95e855aca22bb72838698030fb84c62a0fe8aa7",
+        "size": 2042,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f95e855aca22bb72838698030fb84c62a0fe8aa7"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-input-validation.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "00dadcf1a9bf75fa5fd744655d185b7f00bef5bd",
+        "size": 6646,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/00dadcf1a9bf75fa5fd744655d185b7f00bef5bd"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-json-budget.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "820c31ed98ed995316d3eae67f3423a419f82d5c",
+        "size": 1905,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/820c31ed98ed995316d3eae67f3423a419f82d5c"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-loopback-endpoint.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5f094f3c93969aaeb2bd72c3468b1f88d3f355ac",
+        "size": 509,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/5f094f3c93969aaeb2bd72c3468b1f88d3f355ac"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-native-byte-view.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9b44a015bf62f5b63ade6e938d8e8109a6aa2d69",
+        "size": 1298,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/9b44a015bf62f5b63ade6e938d8e8109a6aa2d69"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "177f850298c86902a33198d22e2c2020b56827a1",
+        "size": 16526,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/177f850298c86902a33198d22e2c2020b56827a1"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-native-identifiers.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9a5f4748070f96f1a0b14a49b3b6dea804524867",
+        "size": 822,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/9a5f4748070f96f1a0b14a49b3b6dea804524867"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-catalog.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "900929ed38ea49605f07a8ca3dca7c75bc5a4c09",
+        "size": 5214,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/900929ed38ea49605f07a8ca3dca7c75bc5a4c09"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-directory.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ec430bf1bfbdba10e6dddd3e2560a9c2de5e6b02",
+        "size": 2500,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/ec430bf1bfbdba10e6dddd3e2560a9c2de5e6b02"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-session-client.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f3000965f929113040dd39a5ecf8cf0c26c89083",
+        "size": 9041,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f3000965f929113040dd39a5ecf8cf0c26c89083"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-projection-helpers.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "131d132a58d51776c617f59486921bee4a1c809f",
+        "size": 3384,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/131d132a58d51776c617f59486921bee4a1c809f"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-projection-types.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6bc0157a218987de07310a81e0e270b6d36370c3",
+        "size": 1693,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/6bc0157a218987de07310a81e0e270b6d36370c3"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-protocol-version.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0b68321dd236c54d0c36ae5277fa3b53513a73a4",
+        "size": 419,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/0b68321dd236c54d0c36ae5277fa3b53513a73a4"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9d44e76485c4ff66472f38b33446eb80856e445f",
+        "size": 1967,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/9d44e76485c4ff66472f38b33446eb80856e445f"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-session-control.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d1afd3c30bf2f36bbbce3cfcce323de55e9487a0",
+        "size": 6623,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/d1afd3c30bf2f36bbbce3cfcce323de55e9487a0"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-turn-projection.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ca854a465fc8a7ede6c8922ad7b49d0de3cd289e",
+        "size": 7920,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/ca854a465fc8a7ede6c8922ad7b49d0de3cd289e"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/provider-session-io",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "7ab6c123de6e5e3aa80ab718e66a25ef5346c9ae",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/7ab6c123de6e5e3aa80ab718e66a25ef5346c9ae"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/provider-session-io/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d3cd31ceeaa8fd8a6837a2f7f44082c6a9fc439e",
+        "size": 977,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/d3cd31ceeaa8fd8a6837a2f7f44082c6a9fc439e"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/provider-session-io/attachments.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ea09faf885275f60156d08cf166c27afcbfc3637",
+        "size": 8694,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/ea09faf885275f60156d08cf166c27afcbfc3637"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/provider-session-io/extra-argv.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4c2644c15cf0c3755c07c8148df885ce2daa159c",
+        "size": 5841,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4c2644c15cf0c3755c07c8148df885ce2daa159c"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/provider-session-io/io.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b202fbc52421bf20f21fca744b9349be0afe8fb5",
+        "size": 2100,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/b202fbc52421bf20f21fca744b9349be0afe8fb5"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/provider-session-io/native-path.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e6aede1b07b721efdaedc74bba21ba375bbcddeb",
+        "size": 861,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/e6aede1b07b721efdaedc74bba21ba375bbcddeb"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/contracts",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "28eeaeea4cf3a14f9887cc58956f9aa21f0e3270",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/28eeaeea4cf3a14f9887cc58956f9aa21f0e3270"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/contracts/codex-approval.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8b9cf363dcad5082c5e4b4094b7141d6e6404412",
+        "size": 941,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/8b9cf363dcad5082c5e4b4094b7141d6e6404412"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/contracts/codex-events.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "52c7dca32ecb7a86927e728811b3c608cf0e547d",
+        "size": 1459,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/52c7dca32ecb7a86927e728811b3c608cf0e547d"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/index.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "987e89e5a0b22bd7e8df588403f3a93a7a40a023",
+        "size": 300,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/987e89e5a0b22bd7e8df588403f3a93a7a40a023"
+      },
+      {
+        "path": "packages/provider-implementations/src/features/provider-session-implementation/internal.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ebe2086008ca32692438da4d79c5172fd443da9d",
+        "size": 8772,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/ebe2086008ca32692438da4d79c5172fd443da9d"
+      },
+      {
+        "path": "packages/provider-implementations/src/index.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6f93f7adae6ba23e85bb591f9481e03d4eba699d",
+        "size": 271,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/6f93f7adae6ba23e85bb591f9481e03d4eba699d"
+      },
+      {
+        "path": "packages/provider-implementations/src/opencode.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1acbd0e50f3d8acc719544169ef028143234e374",
+        "size": 4326,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/1acbd0e50f3d8acc719544169ef028143234e374"
+      },
+      {
+        "path": "packages/provider-implementations/src/prompt-suggestions.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "589d7083982bd69e2424f3e9de7f0a311ac727f3",
+        "size": 593,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/589d7083982bd69e2424f3e9de7f0a311ac727f3"
+      },
+      {
+        "path": "packages/provider-implementations/src/session-io.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f29bb42176f624669d414f66731839e829127b82",
+        "size": 103,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f29bb42176f624669d414f66731839e829127b82"
+      },
+      {
+        "path": "packages/provider-implementations/tests",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "9f04a9df19bd5ef492334b13b83eae0ba5264076",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/9f04a9df19bd5ef492334b13b83eae0ba5264076"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "b95296e9f7897cf2106518b3f587b956860f7e6e",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/b95296e9f7897cf2106518b3f587b956860f7e6e"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/native-prompt-suggestions",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "443b11344f0dce375d18e366dea90990b304cef0",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/443b11344f0dce375d18e366dea90990b304cef0"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/native-prompt-suggestions/claude-sdk.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1004cc3a2a42cc265518d251bfb62f8c96db0c12",
+        "size": 15367,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/1004cc3a2a42cc265518d251bfb62f8c96db0c12"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/native-prompt-suggestions/codex-subprocess.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "49df246079139e435506e8a09466dbe47c0b1ec0",
+        "size": 15161,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/49df246079139e435506e8a09466dbe47c0b1ec0"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/native-prompt-suggestions/policy.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "341a55c6adc64312676812e9761742f3872e472c",
+        "size": 3310,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/341a55c6adc64312676812e9761742f3872e472c"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "ff57bff0c13d93015f83a261599307a310fca5d8",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/ff57bff0c13d93015f83a261599307a310fca5d8"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "e33e9a6a336436af84069034960b02fc00f7c670",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/e33e9a6a336436af84069034960b02fc00f7c670"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/attachments.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "37e7762e75a905572435be7a1926b582602dc07e",
+        "size": 4867,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/37e7762e75a905572435be7a1926b582602dc07e"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/capture-background.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "66f2e38b797db60b2e303d6b71986b81a3854182",
+        "size": 14459,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/66f2e38b797db60b2e303d6b71986b81a3854182"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/capture-batch.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "41885df4b38d5ba9bde591d9537fa8dc16827eb9",
+        "size": 15860,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/41885df4b38d5ba9bde591d9537fa8dc16827eb9"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/capture.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f0f7e28b0f4aaba995233c906ccab0defc8c3226",
+        "size": 16381,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f0f7e28b0f4aaba995233c906ccab0defc8c3226"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/commands.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7c44fe308f3ccbb0c39cee588518c76f257e2aee",
+        "size": 13760,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/7c44fe308f3ccbb0c39cee588518c76f257e2aee"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/extra-argv.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "feee2bb445ee031515505a1425a4cdfa9901eb05",
+        "size": 8994,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/feee2bb445ee031515505a1425a4cdfa9901eb05"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/factory.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0c4d5532256b6f57fe8419b8baec37adf376501c",
+        "size": 28751,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/0c4d5532256b6f57fe8419b8baec37adf376501c"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/fixtures",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "76e941d10e486a006ea84914f4f08832ca935e31",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/76e941d10e486a006ea84914f4f08832ca935e31"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/fixtures/commands-0.3.305.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "94ab1c9799c2cc7054c2b5384879d808f0a48174",
+        "size": 15384,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/94ab1c9799c2cc7054c2b5384879d808f0a48174"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/interactions.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0a49974d5f6a6b4d7c7898a2732089db20dc55ef",
+        "size": 3363,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/0a49974d5f6a6b4d7c7898a2732089db20dc55ef"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/metadata.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a9d5ec8e1bc32e832c780211916347c9acd771cc",
+        "size": 8126,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a9d5ec8e1bc32e832c780211916347c9acd771cc"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/model-probe.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a6b47329f25cbac3e3033706e72309d2de4bc4db",
+        "size": 11684,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a6b47329f25cbac3e3033706e72309d2de4bc4db"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/normalize.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4daceed134f36949af6283b1043c6ea5d1d7eed5",
+        "size": 6730,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4daceed134f36949af6283b1043c6ea5d1d7eed5"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/session-lifecycle.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "64eb94696819617ed3ed11da5d92bf9167dea66c",
+        "size": 15995,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/64eb94696819617ed3ed11da5d92bf9167dea66c"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/subagent-scheduling.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8c1bb936bee18220a5d9a90dbc7e74c1e6422e2e",
+        "size": 6973,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/8c1bb936bee18220a5d9a90dbc7e74c1e6422e2e"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/subagents.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0ee68d58ce4b4bc3abbd6fe06f7ed247bc5f768c",
+        "size": 16683,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/0ee68d58ce4b4bc3abbd6fe06f7ed247bc5f768c"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/support.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9913ef382e0c26f068f76d1ade13d29a0d467365",
+        "size": 2339,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/9913ef382e0c26f068f76d1ade13d29a0d467365"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/tool-binding.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f2f86aba1b87db4f61850436256ccbca5db43f66",
+        "size": 12999,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f2f86aba1b87db4f61850436256ccbca5db43f66"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "1988fd225000bac58730cb98c217cb16ad880c39",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/1988fd225000bac58730cb98c217cb16ad880c39"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/account-login.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "07950eb3adda83682c79024b748c66c4e5efc62c",
+        "size": 8709,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/07950eb3adda83682c79024b748c66c4e5efc62c"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/app-server.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d5608590c246b19087f501887c3a4ab1126e5c85",
+        "size": 26540,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/d5608590c246b19087f501887c3a4ab1126e5c85"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/attachments.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "87e2bb578410825adb0e186b2060e7e8f90e3a18",
+        "size": 3030,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/87e2bb578410825adb0e186b2060e7e8f90e3a18"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-checkpoint.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b8b4ee3a06ba151d9964fe83d32468af1ef2aa18",
+        "size": 5239,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/b8b4ee3a06ba151d9964fe83d32468af1ef2aa18"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-factory.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7bad3ffd0f4c9c66eceff5df87469902c6fe0bd0",
+        "size": 5041,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/7bad3ffd0f4c9c66eceff5df87469902c6fe0bd0"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-limits.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2674c28187fdcd2032e2157535316886941dc148",
+        "size": 7617,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/2674c28187fdcd2032e2157535316886941dc148"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-permissions.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ec893a485d77984240356bc7f2e76e9cde34b464",
+        "size": 6571,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/ec893a485d77984240356bc7f2e76e9cde34b464"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-questions.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4beb792beff11ff8d3b376f53557d72057318c70",
+        "size": 11993,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4beb792beff11ff8d3b376f53557d72057318c70"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-session.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c0c9b2f25bbf45c5169628c03af1934364eee52c",
+        "size": 7439,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/c0c9b2f25bbf45c5169628c03af1934364eee52c"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-support.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "831552537c73056b3f2c558b8253ab2f39a207a8",
+        "size": 3051,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/831552537c73056b3f2c558b8253ab2f39a207a8"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/framing.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e9141c6a582c692e43793b30fc2381103c66e9aa",
+        "size": 1998,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/e9141c6a582c692e43793b30fc2381103c66e9aa"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/input-window-capture.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8280fdf5a3240df296a0e908d3f7856cd1d8ee9a",
+        "size": 13990,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/8280fdf5a3240df296a0e908d3f7856cd1d8ee9a"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/mcp-list-0.162.metadata.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a7a8264e69910fb5865e767ed9c21f3b5a0f132f",
+        "size": 1694,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a7a8264e69910fb5865e767ed9c21f3b5a0f132f"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/mcp-policy.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b618a0169d83f201f7a38ef0084170cf0b894c3c",
+        "size": 14485,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/b618a0169d83f201f7a38ef0084170cf0b894c3c"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/mcp-readiness.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "05df90f4e84d0d4b53200b007c934f89b8114437",
+        "size": 7302,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/05df90f4e84d0d4b53200b007c934f89b8114437"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/metadata.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c1ce44246d1887bece31dbaae5f448cef758bea3",
+        "size": 13754,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/c1ce44246d1887bece31dbaae5f448cef758bea3"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/model-probe.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8e5f8cd371209482f0ed67aa51d5a96300d101cd",
+        "size": 20255,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/8e5f8cd371209482f0ed67aa51d5a96300d101cd"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/protocol.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "04e6adaaf5b99363e9dabb55d6863d73b3fde474",
+        "size": 9976,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/04e6adaaf5b99363e9dabb55d6863d73b3fde474"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/runtime-mcp-checkpoint.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0a3209cdde7bef517fb66204979275c3cdffe9ca",
+        "size": 10563,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/0a3209cdde7bef517fb66204979275c3cdffe9ca"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/subprocess-fixture.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a2ce325350a0b5fa8716a2bdbfe956f362771df8",
+        "size": 3543,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a2ce325350a0b5fa8716a2bdbfe956f362771df8"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "c158b8a7834a4ff3337426ad4930d082322314f9",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/c158b8a7834a4ff3337426ad4930d082322314f9"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/client-read-recovery.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f1633923bd4bac88a0e4106702dc9e6dacb8f83d",
+        "size": 3687,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f1633923bd4bac88a0e4106702dc9e6dacb8f83d"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/input-window-capture.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2329545311a78ab657269c62de0f3e22ff7c5956",
+        "size": 12098,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/2329545311a78ab657269c62de0f3e22ff7c5956"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/protocol.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "84783ff4f750faf9bbc925283b0ab21bff8aa696",
+        "size": 8769,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/84783ff4f750faf9bbc925283b0ab21bff8aa696"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/session-bindings.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "62ee22b7efff045f4132f44d89574b44f0bd67ac",
+        "size": 10319,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/62ee22b7efff045f4132f44d89574b44f0bd67ac"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/terminal-proof.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "525e122c9d7f64103cfa37c748fac0b84770b3c1",
+        "size": 4931,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/525e122c9d7f64103cfa37c748fac0b84770b3c1"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v1-driver-peer.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "11add3ebafd1b6db51b764bc25375872c8442f88",
+        "size": 6985,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/11add3ebafd1b6db51b764bc25375872c8442f88"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v1-driver.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1433ac589d1f2f505a2ed8fdbe21347a76f49380",
+        "size": 24803,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/1433ac589d1f2f505a2ed8fdbe21347a76f49380"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v1-permission-reply.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "668971920ac384b72540a9f73312fb039f808420",
+        "size": 8270,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/668971920ac384b72540a9f73312fb039f808420"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v1-wire-recovery.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0f81cb8259ac6abbed1de6b8671c0fa8d54a3de6",
+        "size": 10198,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/0f81cb8259ac6abbed1de6b8671c0fa8d54a3de6"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-attachments.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "29c562c6df33959b9086448bb4778835fd2537ae",
+        "size": 9078,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/29c562c6df33959b9086448bb4778835fd2537ae"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-control.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5016e73a6dfad6bbaf56cf26ef257bc59c04fc62",
+        "size": 43760,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/5016e73a6dfad6bbaf56cf26ef257bc59c04fc62"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-credential-client.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "44b53c346dcd6c4cb11aa49fbaa494e9359f4276",
+        "size": 25085,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/44b53c346dcd6c4cb11aa49fbaa494e9359f4276"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-cut-fixture.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ce3c7ffbacd57629b51c1079191568512e5e340c",
+        "size": 4578,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/ce3c7ffbacd57629b51c1079191568512e5e340c"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-driver-factory.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f415a329962b2b3fd2baa24177350d923b81967b",
+        "size": 16087,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f415a329962b2b3fd2baa24177350d923b81967b"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-driver-native.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bd2485cbb42f6061ee5908772de187b2ffbc0059",
+        "size": 23490,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/bd2485cbb42f6061ee5908772de187b2ffbc0059"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-driver-output.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5ec7522b1a21fe17cbc06109bf75e9c4d55bbb7a",
+        "size": 5481,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/5ec7522b1a21fe17cbc06109bf75e9c4d55bbb7a"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-driver-peer.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ea31e735bfdf7b1e4ef068b3576fd9d2ba3e0452",
+        "size": 10248,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/ea31e735bfdf7b1e4ef068b3576fd9d2ba3e0452"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-driver-session.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a25c90eedfb5e2a5da110ced3109fa4cb52f8ea8",
+        "size": 20213,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a25c90eedfb5e2a5da110ced3109fa4cb52f8ea8"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-driver-support.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c41d26b64a5b5b51fa3ae0e147172f669c69933f",
+        "size": 867,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/c41d26b64a5b5b51fa3ae0e147172f669c69933f"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-input-window-capture.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "06c6d846eb314ab1618bb65afe8b7e9ec6af56fa",
+        "size": 9268,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/06c6d846eb314ab1618bb65afe8b7e9ec6af56fa"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-loopback-endpoint.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "79ae1c25983b4705d43fe073b63a054252ff4d0e",
+        "size": 1044,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/79ae1c25983b4705d43fe073b63a054252ff4d0e"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-native-byte-view.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0086de54e5c03fae5345df864aabfb709b773032",
+        "size": 1404,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/0086de54e5c03fae5345df864aabfb709b773032"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-native-cut.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "be55411efcb329191c3db8abf8a564dca54332fa",
+        "size": 36411,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/be55411efcb329191c3db8abf8a564dca54332fa"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-native-identifiers.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b5f34e5575f2faf3af0c0545ed8415c4cbcf807f",
+        "size": 1226,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/b5f34e5575f2faf3af0c0545ed8415c4cbcf807f"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-native-log-codec.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f64543ef315e8e04d751ccf9e59bb35a86329dde",
+        "size": 4649,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f64543ef315e8e04d751ccf9e59bb35a86329dde"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-owned-session-client.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "aae7d23b9e969b6abc811420d1d04b936a5347ac",
+        "size": 20114,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/aae7d23b9e969b6abc811420d1d04b936a5347ac"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-projection.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6b4585c668543b7c1016136700f1bb1ffa3a8bb9",
+        "size": 13975,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/6b4585c668543b7c1016136700f1bb1ffa3a8bb9"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-request-admission.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "75724ab867f45471e58ee66a6fad2f3f73ca65f2",
+        "size": 5640,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/75724ab867f45471e58ee66a6fad2f3f73ca65f2"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-transport.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a665202e606f9aad01d33cedc82885b2ca63a124",
+        "size": 36260,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a665202e606f9aad01d33cedc82885b2ca63a124"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/provider-session-io",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "19e004b261d4f67fc9a7396a28ad411007ae7cf7",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/19e004b261d4f67fc9a7396a28ad411007ae7cf7"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/provider-session-io/attachment-support.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "90b4f58aa6479cb5342ad0704c316b04784ccdb0",
+        "size": 1243,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/90b4f58aa6479cb5342ad0704c316b04784ccdb0"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/provider-session-io/attachments.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a672d64e08fff8fedb584fd096b4c856689120bf",
+        "size": 4690,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a672d64e08fff8fedb584fd096b4c856689120bf"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/provider-session-io/io.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d7a2971211bfe485a436f133f50d8e88ec48cfdc",
+        "size": 2208,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/d7a2971211bfe485a436f133f50d8e88ec48cfdc"
+      },
+      {
+        "path": "packages/provider-implementations/tests/features/provider-session-implementation/provider-session-io/native-path.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "118731e7f6ce2335898354279abdfb393e4e0aab",
+        "size": 1222,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/118731e7f6ce2335898354279abdfb393e4e0aab"
+      },
+      {
+        "path": "packages/provider-implementations/tests/fixtures",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "18dcc782355abcd7193a94b924bf4f21d1f60b29",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/18dcc782355abcd7193a94b924bf4f21d1f60b29"
+      },
+      {
+        "path": "packages/provider-implementations/tests/fixtures/codex-app-server.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8ac9c649390148b9930b7c7061f6f77fea6c5f8b",
+        "size": 9185,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/8ac9c649390148b9930b7c7061f6f77fea6c5f8b"
+      },
+      {
+        "path": "packages/provider-implementations/tests/package",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "ad454673f980f3b44628dee51b064d4f13c97974",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/ad454673f980f3b44628dee51b064d4f13c97974"
+      },
+      {
+        "path": "packages/provider-implementations/tests/package/install-consumer.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "699739f34e979be1244fec6f7bc244d5055651dd",
+        "size": 4059,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/699739f34e979be1244fec6f7bc244d5055651dd"
+      },
+      {
+        "path": "packages/provider-implementations/tests/package/packed-consumer.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "17f3f9bf22208d87b2c97a803b5b8aa3353ff383",
+        "size": 15919,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/17f3f9bf22208d87b2c97a803b5b8aa3353ff383"
+      },
+      {
+        "path": "packages/provider-implementations/tsconfig.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f1ef494180a09d707ba63129d9b9a6ba2b5d8990",
+        "size": 423,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f1ef494180a09d707ba63129d9b9a6ba2b5d8990"
+      },
+      {
+        "path": "packages/provider-implementations/tsconfig.test.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fac806a8f5194b7ec235b1fa013ef4485d896657",
+        "size": 248,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/fac806a8f5194b7ec235b1fa013ef4485d896657"
+      },
+      {
+        "path": "packages/provider-session-contracts",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "c62741c972018319e131410dffebaca81fe97edc",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/c62741c972018319e131410dffebaca81fe97edc"
+      },
+      {
+        "path": "packages/provider-session-contracts/LICENSE",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+        "size": 11357,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
+      },
+      {
+        "path": "packages/provider-session-contracts/package.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "12d320d3bc7972a40ef2bce9dd1db90087d379f3",
+        "size": 1021,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/12d320d3bc7972a40ef2bce9dd1db90087d379f3"
+      },
+      {
+        "path": "packages/provider-session-contracts/src",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "79d93b6160e67c85ea5f7f9432eec260b24bd4b7",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/79d93b6160e67c85ea5f7f9432eec260b24bd4b7"
+      },
+      {
+        "path": "packages/provider-session-contracts/src/composition.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "996f88e3d94c37aa9ff394611d054296aeb1bc0a",
+        "size": 228,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/996f88e3d94c37aa9ff394611d054296aeb1bc0a"
+      },
+      {
+        "path": "packages/provider-session-contracts/src/features",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "fbe2d813db468a228f2f59efc580c02793e56ec3",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/fbe2d813db468a228f2f59efc580c02793e56ec3"
+      },
+      {
+        "path": "packages/provider-session-contracts/src/features/provider-session-contracts",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "f238643255d74c8baee820cc4e25ff3a85098988",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/f238643255d74c8baee820cc4e25ff3a85098988"
+      },
+      {
+        "path": "packages/provider-session-contracts/src/features/provider-session-contracts/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a7d317371163ea9747f558a44daabd6eec5d338f",
+        "size": 857,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/a7d317371163ea9747f558a44daabd6eec5d338f"
+      },
+      {
+        "path": "packages/provider-session-contracts/src/features/provider-session-contracts/contracts",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "a78b8fac1e7b3c48f9e1dc24b1366faad8ddd8e0",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/a78b8fac1e7b3c48f9e1dc24b1366faad8ddd8e0"
+      },
+      {
+        "path": "packages/provider-session-contracts/src/features/provider-session-contracts/contracts/session.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1614599ce10109bdd82d20918cee8e87145e0e4e",
+        "size": 4383,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/1614599ce10109bdd82d20918cee8e87145e0e4e"
+      },
+      {
+        "path": "packages/provider-session-contracts/src/features/provider-session-contracts/index.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f65e88eb44f6f611eba1b6775b9747ed4b921969",
+        "size": 201,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f65e88eb44f6f611eba1b6775b9747ed4b921969"
+      },
+      {
+        "path": "packages/provider-session-contracts/src/features/provider-session-contracts/internal.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f65e88eb44f6f611eba1b6775b9747ed4b921969",
+        "size": 201,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f65e88eb44f6f611eba1b6775b9747ed4b921969"
+      },
+      {
+        "path": "packages/provider-session-contracts/src/index.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e3376a3edd0185f828fed0083afb1d761078f9f5",
+        "size": 225,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/e3376a3edd0185f828fed0083afb1d761078f9f5"
+      },
+      {
+        "path": "packages/provider-session-contracts/tests",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "bdcf951f727cf16c7e168fb2bac03c2d86b202b9",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/bdcf951f727cf16c7e168fb2bac03c2d86b202b9"
+      },
+      {
+        "path": "packages/provider-session-contracts/tests/package",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "e8c7b2eff83d997aa465be5bc9ba70b9734e175f",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/e8c7b2eff83d997aa465be5bc9ba70b9734e175f"
+      },
+      {
+        "path": "packages/provider-session-contracts/tests/package/packed-consumer.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7e6f60cea847d9fc8cf2b865bec6220c5a997c43",
+        "size": 3619,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/7e6f60cea847d9fc8cf2b865bec6220c5a997c43"
+      },
+      {
+        "path": "packages/provider-session-contracts/tsconfig.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f1ef494180a09d707ba63129d9b9a6ba2b5d8990",
+        "size": 423,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/f1ef494180a09d707ba63129d9b9a6ba2b5d8990"
+      },
+      {
+        "path": "packages/provider-session-contracts/tsconfig.test.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fac806a8f5194b7ec235b1fa013ef4485d896657",
+        "size": 248,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/fac806a8f5194b7ec235b1fa013ef4485d896657"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e500f1285551847788566fdf62630e475e125ea6",
+        "size": 45951,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/e500f1285551847788566fdf62630e475e125ea6"
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9c266920737055006a13d5aa767cc61c73ed3f05",
+        "size": 341,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/9c266920737055006a13d5aa767cc61c73ed3f05"
+      },
+      {
+        "path": "provenance",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "f3d0a6b11b3ce23d6833281e532b18e6b58c557b",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/f3d0a6b11b3ce23d6833281e532b18e6b58c557b"
+      },
+      {
+        "path": "provenance/local-validation.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1c241cdcd4f3940ac37c489374fa0cad5fc985e4",
+        "size": 3832,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/1c241cdcd4f3940ac37c489374fa0cad5fc985e4"
+      },
+      {
+        "path": "provenance/mcp-sdk-1.32-validation.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4531340a8086afe49d9d2845877b18f85ecccd33",
+        "size": 4000,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4531340a8086afe49d9d2845877b18f85ecccd33"
+      },
+      {
+        "path": "provenance/source-extraction.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3bc5ab8566050186a4f01a576bdc97a18439fb08",
+        "size": 105409,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/3bc5ab8566050186a4f01a576bdc97a18439fb08"
+      },
+      {
+        "path": "scripts",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "95de46db3eeda0b4adfa8f4d0a7b949f58c2d495",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees/95de46db3eeda0b4adfa8f4d0a7b949f58c2d495"
+      },
+      {
+        "path": "scripts/native-prompt-suggestions-claude.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "98e1eb5b3a58fd2bc30886ddeb827a0a1b1cf01e",
+        "size": 7368,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/98e1eb5b3a58fd2bc30886ddeb827a0a1b1cf01e"
+      },
+      {
+        "path": "scripts/native-prompt-suggestions-codex.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "37a4e08a2f9513baa4ef565135a80caebffcc7e1",
+        "size": 12265,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/37a4e08a2f9513baa4ef565135a80caebffcc7e1"
+      },
+      {
+        "path": "scripts/native-v2-embedded-proof.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4ba629ccb7e5dfc87c3ee4a007ae9c5dcac45dbe",
+        "size": 53910,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4ba629ccb7e5dfc87c3ee4a007ae9c5dcac45dbe"
+      },
+      {
+        "path": "scripts/native-v2-mcp-proof.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "354ec0aef8037c46ca644250e60f7669c8c47032",
+        "size": 16973,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/354ec0aef8037c46ca644250e60f7669c8c47032"
+      },
+      {
+        "path": "scripts/native-v2-mcp-proof.test.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "79a9e22607e56164faa6b14a883324c5c088adb3",
+        "size": 2739,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/79a9e22607e56164faa6b14a883324c5c088adb3"
+      },
+      {
+        "path": "scripts/native-v2-model-candidate.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "90dad0c65f6faf39f898871b42a22316fbd8d9d1",
+        "size": 23636,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/90dad0c65f6faf39f898871b42a22316fbd8d9d1"
+      },
+      {
+        "path": "scripts/native-v2-readonly-proof.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "056b80baf6d53f4649d2cdcd1df320a25e76fa14",
+        "size": 50697,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/056b80baf6d53f4649d2cdcd1df320a25e76fa14"
+      },
+      {
+        "path": "scripts/native-v2-spi-proof.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4fa9ed66ab77113c746b0eaa2fe443f1f962959b",
+        "size": 29676,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4fa9ed66ab77113c746b0eaa2fe443f1f962959b"
+      },
+      {
+        "path": "scripts/verify-native-v2-cli-hold.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5e3f7d0d3e9f1e0e7e82da39215acb3fe7df2de0",
+        "size": 2713,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/5e3f7d0d3e9f1e0e7e82da39215acb3fe7df2de0"
+      },
+      {
+        "path": "scripts/verify-native-v2-embedded-floor-hold.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7f9d7a77df42514a52748a3c1c07d5f4e681f4b2",
+        "size": 867,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/7f9d7a77df42514a52748a3c1c07d5f4e681f4b2"
+      },
+      {
+        "path": "scripts/verify-native-v2-interrupt-proof.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fb79a81a833de90a7a771e6c513d46f8aa8d5311",
+        "size": 2499,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/fb79a81a833de90a7a771e6c513d46f8aa8d5311"
+      },
+      {
+        "path": "scripts/verify-native-v2-receipt-safety.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4e8ae0e05ab4a23a72ee367cef8057d152878481",
+        "size": 3233,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/4e8ae0e05ab4a23a72ee367cef8057d152878481"
+      },
+      {
+        "path": "scripts/verify-native-v2-receipt-safety.test.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c9b97415a32dbd65731858a1c23bd500cb2e85d6",
+        "size": 4831,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/c9b97415a32dbd65731858a1c23bd500cb2e85d6"
+      },
+      {
+        "path": "tsconfig.base.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2b8cbb503c6f7c7d9fa2d59aa57f45b73aa622e4",
+        "size": 648,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs/2b8cbb503c6f7c7d9fa2d59aa57f45b73aa622e4"
+      }
+    ],
+    "truncated": false
+  },
+  "run": {
+    "id": 43774891918,
+    "name": "CI",
+    "node_id": "WFR_kwLOVVn5tM8AAAAKMS_Xjg",
+    "head_branch": "fix/native-suggestion-fences-20261115",
+    "head_sha": "c79b81bf002eaac95436da71c7049d7f309906a9",
+    "path": ".github/workflows/ci.yml",
+    "display_title": "fix: fence stale Claude suggestions and uncertain Codex samples",
+    "run_number": 396,
+    "event": "pull_request",
+    "status": "completed",
+    "conclusion": "success",
+    "workflow_id": 394943756,
+    "check_suite_id": 118510743853,
+    "check_suite_node_id": "CS_kwDOVVn5tM8AAAAbl8pxLQ",
+    "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/runs/43774891918",
+    "html_url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43774891918",
+    "pull_requests": [
+      {
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/10",
+        "id": 5328151344,
+        "number": 10,
+        "head": {
+          "ref": "fix/native-suggestion-fences-20261115",
+          "sha": "c79b81bf002eaac95436da71c7049d7f309906a9",
+          "repo": {
+            "id": 1431959988,
+            "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations",
+            "name": "old-provider-implementations"
+          }
+        },
+        "base": {
+          "ref": "feat/frontend-parity-20261112",
+          "sha": "9423f600dfb04d04448326dbced89919924b0b5f",
+          "repo": {
+            "id": 1431959988,
+            "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations",
+            "name": "old-provider-implementations"
+          }
+        }
+      }
+    ],
+    "created_at": "2026-11-15T23:27:20Z",
+    "updated_at": "2026-11-15T23:28:47Z",
+    "actor": {
+      "login": "777genius",
+      "id": 13103045,
+      "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/777genius",
+      "html_url": "https://github.com/777genius",
+      "followers_url": "https://api.github.com/users/777genius/followers",
+      "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+      "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+      "organizations_url": "https://api.github.com/users/777genius/orgs",
+      "repos_url": "https://api.github.com/users/777genius/repos",
+      "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/777genius/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "run_attempt": 1,
+    "referenced_workflows": [],
+    "run_started_at": "2026-11-15T23:27:20Z",
+    "triggering_actor": {
+      "login": "777genius",
+      "id": 13103045,
+      "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/777genius",
+      "html_url": "https://github.com/777genius",
+      "followers_url": "https://api.github.com/users/777genius/followers",
+      "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+      "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+      "organizations_url": "https://api.github.com/users/777genius/orgs",
+      "repos_url": "https://api.github.com/users/777genius/repos",
+      "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/777genius/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "jobs_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/runs/43774891918/jobs",
+    "logs_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/runs/43774891918/logs",
+    "check_suite_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/check-suites/118510743853",
+    "artifacts_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/runs/43774891918/artifacts",
+    "cancel_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/runs/43774891918/cancel",
+    "rerun_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/runs/43774891918/rerun",
+    "previous_attempt_url": null,
+    "workflow_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/workflows/394943756",
+    "head_commit": {
+      "id": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "tree_id": "5595f99535a7cabcb0cfeda053f988fd7e17a590",
+      "message": "fix: retain uncertain native suggestion ownership and targeted cancellation",
+      "timestamp": "2026-11-15T23:27:14Z",
+      "author": {
+        "name": "Илия",
+        "email": "iliyazelenkog@gmail.com"
+      },
+      "committer": {
+        "name": "Илия",
+        "email": "iliyazelenkog@gmail.com"
+      }
+    },
+    "repository": {
+      "id": 1431959988,
+      "node_id": "R_kgDOVVn5tA",
+      "name": "old-provider-implementations",
+      "full_name": "agent-teams-ai/old-provider-implementations",
+      "private": false,
+      "owner": {
+        "login": "agent-teams-ai",
+        "id": 280712041,
+        "node_id": "O_kgDOELtTaQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/280712041?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/agent-teams-ai",
+        "html_url": "https://github.com/agent-teams-ai",
+        "followers_url": "https://api.github.com/users/agent-teams-ai/followers",
+        "following_url": "https://api.github.com/users/agent-teams-ai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/agent-teams-ai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/agent-teams-ai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/agent-teams-ai/subscriptions",
+        "organizations_url": "https://api.github.com/users/agent-teams-ai/orgs",
+        "repos_url": "https://api.github.com/users/agent-teams-ai/repos",
+        "events_url": "https://api.github.com/users/agent-teams-ai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/agent-teams-ai/received_events",
+        "type": "Organization",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/agent-teams-ai/old-provider-implementations",
+      "description": "Standalone legacy Claude, Codex and OpenCode provider implementations with an engine-independent Session SPI",
+      "fork": false,
+      "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations",
+      "forks_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/forks",
+      "keys_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/teams",
+      "hooks_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/hooks",
+      "issue_events_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/events",
+      "assignees_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/tags",
+      "blobs_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/languages",
+      "stargazers_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/stargazers",
+      "contributors_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/contributors",
+      "subscribers_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/subscribers",
+      "subscription_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/subscription",
+      "commits_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/merges",
+      "archive_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/downloads",
+      "issues_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/labels{/name}",
+      "releases_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/deployments"
+    },
+    "head_repository": {
+      "id": 1431959988,
+      "node_id": "R_kgDOVVn5tA",
+      "name": "old-provider-implementations",
+      "full_name": "agent-teams-ai/old-provider-implementations",
+      "private": false,
+      "owner": {
+        "login": "agent-teams-ai",
+        "id": 280712041,
+        "node_id": "O_kgDOELtTaQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/280712041?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/agent-teams-ai",
+        "html_url": "https://github.com/agent-teams-ai",
+        "followers_url": "https://api.github.com/users/agent-teams-ai/followers",
+        "following_url": "https://api.github.com/users/agent-teams-ai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/agent-teams-ai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/agent-teams-ai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/agent-teams-ai/subscriptions",
+        "organizations_url": "https://api.github.com/users/agent-teams-ai/orgs",
+        "repos_url": "https://api.github.com/users/agent-teams-ai/repos",
+        "events_url": "https://api.github.com/users/agent-teams-ai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/agent-teams-ai/received_events",
+        "type": "Organization",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/agent-teams-ai/old-provider-implementations",
+      "description": "Standalone legacy Claude, Codex and OpenCode provider implementations with an engine-independent Session SPI",
+      "fork": false,
+      "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations",
+      "forks_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/forks",
+      "keys_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/teams",
+      "hooks_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/hooks",
+      "issue_events_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/events",
+      "assignees_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/tags",
+      "blobs_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/languages",
+      "stargazers_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/stargazers",
+      "contributors_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/contributors",
+      "subscribers_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/subscribers",
+      "subscription_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/subscription",
+      "commits_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/merges",
+      "archive_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/downloads",
+      "issues_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/labels{/name}",
+      "releases_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/deployments"
+    }
+  },
+  "jobs": {
+    "total_count": 2,
+    "jobs": [
+      {
+        "id": 132998860688,
+        "run_id": 43774891918,
+        "workflow_name": "CI",
+        "head_branch": "fix/native-suggestion-fences-20261115",
+        "run_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/runs/43774891918",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOVVn5tM8AAAAe91mPkA",
+        "head_sha": "c79b81bf002eaac95436da71c7049d7f309906a9",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/jobs/132998860688",
+        "html_url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43774891918/job/132998860688",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-11-15T23:27:20Z",
+        "started_at": "2026-11-15T23:27:23Z",
+        "completed_at": "2026-11-15T23:28:47Z",
+        "name": "check (26.11.1)",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-11-15T23:27:24Z",
+            "completed_at": "2026-11-15T23:27:27Z"
+          },
+          {
+            "name": "Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-11-15T23:27:27Z",
+            "completed_at": "2026-11-15T23:27:32Z"
+          },
+          {
+            "name": "Setup Node24 Corepack source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-11-15T23:27:32Z",
+            "completed_at": "2026-11-15T23:27:36Z"
+          },
+          {
+            "name": "Setup selected Node",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-11-15T23:27:36Z",
+            "completed_at": "2026-11-15T23:27:40Z"
+          },
+          {
+            "name": "Select pinned pnpm through selected Node",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-11-15T23:27:40Z",
+            "completed_at": "2026-11-15T23:27:41Z"
+          },
+          {
+            "name": "Install exact dependency graph",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-11-15T23:27:41Z",
+            "completed_at": "2026-11-15T23:27:44Z"
+          },
+          {
+            "name": "Types, controlled tests and packed consumers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-11-15T23:27:44Z",
+            "completed_at": "2026-11-15T23:28:43Z"
+          },
+          {
+            "name": "Record exact-head checked archives (not a Host qualification)",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 8,
+            "started_at": "2026-11-15T23:28:43Z",
+            "completed_at": "2026-11-15T23:28:43Z"
+          },
+          {
+            "name": "Upload TEST-only exact-HEAD checked provider and Session SPI archives",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 9,
+            "started_at": "2026-11-15T23:28:43Z",
+            "completed_at": "2026-11-15T23:28:43Z"
+          },
+          {
+            "name": "Post Setup selected Node",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-11-15T23:28:43Z",
+            "completed_at": "2026-11-15T23:28:43Z"
+          },
+          {
+            "name": "Post Setup Node24 Corepack source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-11-15T23:28:43Z",
+            "completed_at": "2026-11-15T23:28:43Z"
+          },
+          {
+            "name": "Post Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18,
+            "started_at": "2026-11-15T23:28:43Z",
+            "completed_at": "2026-11-15T23:28:43Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19,
+            "started_at": "2026-11-15T23:28:43Z",
+            "completed_at": "2026-11-15T23:28:43Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/check-runs/132998860688",
+        "labels": [
+          "ubuntu-24.04"
+        ],
+        "runner_id": 1000158540,
+        "runner_name": "GitHub Actions 1000158540",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      },
+      {
+        "id": 132998860997,
+        "run_id": 43774891918,
+        "workflow_name": "CI",
+        "head_branch": "fix/native-suggestion-fences-20261115",
+        "run_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/runs/43774891918",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOVVn5tM8AAAAe91mQxQ",
+        "head_sha": "c79b81bf002eaac95436da71c7049d7f309906a9",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/jobs/132998860997",
+        "html_url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43774891918/job/132998860997",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-11-15T23:27:20Z",
+        "started_at": "2026-11-15T23:27:23Z",
+        "completed_at": "2026-11-15T23:28:41Z",
+        "name": "check (24.21.0)",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-11-15T23:27:24Z",
+            "completed_at": "2026-11-15T23:27:26Z"
+          },
+          {
+            "name": "Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-11-15T23:27:26Z",
+            "completed_at": "2026-11-15T23:27:31Z"
+          },
+          {
+            "name": "Setup Node24 Corepack source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-11-15T23:27:31Z",
+            "completed_at": "2026-11-15T23:27:34Z"
+          },
+          {
+            "name": "Setup selected Node",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-11-15T23:27:34Z",
+            "completed_at": "2026-11-15T23:27:34Z"
+          },
+          {
+            "name": "Select pinned pnpm through selected Node",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-11-15T23:27:34Z",
+            "completed_at": "2026-11-15T23:27:36Z"
+          },
+          {
+            "name": "Install exact dependency graph",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-11-15T23:27:36Z",
+            "completed_at": "2026-11-15T23:27:39Z"
+          },
+          {
+            "name": "Types, controlled tests and packed consumers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-11-15T23:27:39Z",
+            "completed_at": "2026-11-15T23:28:39Z"
+          },
+          {
+            "name": "Record exact-head checked archives (not a Host qualification)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-11-15T23:28:39Z",
+            "completed_at": "2026-11-15T23:28:39Z"
+          },
+          {
+            "name": "Upload TEST-only exact-HEAD checked provider and Session SPI archives",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-11-15T23:28:39Z",
+            "completed_at": "2026-11-15T23:28:40Z"
+          },
+          {
+            "name": "Post Setup selected Node",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-11-15T23:28:40Z",
+            "completed_at": "2026-11-15T23:28:40Z"
+          },
+          {
+            "name": "Post Setup Node24 Corepack source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-11-15T23:28:40Z",
+            "completed_at": "2026-11-15T23:28:40Z"
+          },
+          {
+            "name": "Post Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18,
+            "started_at": "2026-11-15T23:28:40Z",
+            "completed_at": "2026-11-15T23:28:40Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19,
+            "started_at": "2026-11-15T23:28:40Z",
+            "completed_at": "2026-11-15T23:28:40Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/check-runs/132998860997",
+        "labels": [
+          "ubuntu-24.04"
+        ],
+        "runner_id": 1000158541,
+        "runner_name": "GitHub Actions 1000158541",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      }
+    ]
+  },
+  "artifacts": {
+    "total_count": 1,
+    "artifacts": [
+      {
+        "id": 14184699852,
+        "node_id": "MDg6QXJ0aWZhY3QxNDE4NDY5OTg1Mg==",
+        "name": "opencode-v2-spi-consumer-checked-c79b81bf002eaac95436da71c7049d7f309906a9",
+        "size_in_bytes": 193546,
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/artifacts/14184699852",
+        "archive_download_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/artifacts/14184699852/zip",
+        "expired": false,
+        "digest": "sha256:df8a1e825c2d2e7cd1578b3e7307f78977b2a6cff8771836cf90df644229a80c",
+        "created_at": "2026-11-15T23:28:40Z",
+        "updated_at": "2026-11-15T23:28:40Z",
+        "expires_at": "2026-11-22T23:28:39Z",
+        "workflow_run": {
+          "id": 43774891918,
+          "repository_id": 1431959988,
+          "head_repository_id": 1431959988,
+          "head_branch": "fix/native-suggestion-fences-20261115",
+          "head_sha": "c79b81bf002eaac95436da71c7049d7f309906a9"
+        }
+      }
+    ]
+  },
+  "nativeCodexJobs": {
+    "total_count": 1,
+    "jobs": [
+      {
+        "id": 132998892132,
+        "run_id": 43774891913,
+        "workflow_name": "Native prompt suggestions - Codex TEST E2E",
+        "head_branch": "fix/native-suggestion-fences-20261115",
+        "run_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/runs/43774891913",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOVVn5tM8AAAAe91oKZA",
+        "head_sha": "c79b81bf002eaac95436da71c7049d7f309906a9",
+        "url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/jobs/132998892132",
+        "html_url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43774891913/job/132998892132",
+        "status": "completed",
+        "conclusion": "skipped",
+        "created_at": "2026-11-15T23:27:27Z",
+        "started_at": "2026-11-15T23:27:27Z",
+        "completed_at": "2026-11-15T23:27:20Z",
+        "name": "codex-native-sample",
+        "steps": [],
+        "check_run_url": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/check-runs/132998892132",
+        "labels": [
+          "ubuntu-24.04"
+        ],
+        "runner_id": null,
+        "runner_name": null,
+        "runner_group_id": null,
+        "runner_group_name": null
+      }
+    ]
+  }
+}

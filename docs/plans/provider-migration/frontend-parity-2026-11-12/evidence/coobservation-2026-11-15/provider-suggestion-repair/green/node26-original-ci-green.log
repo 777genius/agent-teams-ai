@@ -1,0 +1,869 @@
+﻿2026-11-15T23:27:24.9968767Z Current runner version: '2.338.2'
+2026-11-15T23:27:24.9987452Z ##[group]Runner Image Provisioner
+2026-11-15T23:27:24.9988126Z Hosted Compute Agent
+2026-11-15T23:27:24.9988821Z Version: 20261103.629
+2026-11-15T23:27:24.9989326Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-15T23:27:24.9989905Z Build Date: 2026-11-03T17:26:59Z
+2026-11-15T23:27:24.9990444Z Worker ID: {2b0abc33-e0ea-4228-af61-215c77359b19}
+2026-11-15T23:27:24.9990992Z Region: us-west-2
+2026-11-15T23:27:24.9991418Z Cloud: AWS
+2026-11-15T23:27:24.9991811Z ##[endgroup]
+2026-11-15T23:27:24.9992934Z ##[group]Operating System
+2026-11-15T23:27:24.9993446Z Ubuntu
+2026-11-15T23:27:24.9994156Z 24.04.5
+2026-11-15T23:27:24.9994609Z LTS
+2026-11-15T23:27:24.9995000Z ##[endgroup]
+2026-11-15T23:27:24.9995417Z ##[group]Runner Image
+2026-11-15T23:27:24.9995920Z Image: ubuntu-24.04
+2026-11-15T23:27:24.9996344Z Version: 20261111.127.1
+2026-11-15T23:27:24.9997312Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261111.127/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-15T23:27:24.9998439Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261111.127
+2026-11-15T23:27:24.9999179Z ##[endgroup]
+2026-11-15T23:27:24.9999991Z ##[group]GITHUB_TOKEN Permissions
+2026-11-15T23:27:25.0001651Z Contents: read
+2026-11-15T23:27:25.0002071Z Metadata: read
+2026-11-15T23:27:25.0002508Z ##[endgroup]
+2026-11-15T23:27:25.0004341Z Secret source: Actions
+2026-11-15T23:27:25.0005058Z Cache mode: write
+2026-11-15T23:27:25.0005575Z Prepare workflow directory
+2026-11-15T23:27:25.0238758Z Prepare all required actions
+2026-11-15T23:27:25.0275702Z Getting action download info
+2026-11-15T23:27:25.4089055Z Download action repository 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-15T23:27:27.2763504Z Download action repository 'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-15T23:27:27.4429119Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-15T23:27:27.8134700Z Complete job name: check (26.11.1)
+2026-11-15T23:27:27.8908763Z ##[group]Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+2026-11-15T23:27:27.8910512Z with:
+2026-11-15T23:27:27.8911381Z   ref: c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-15T23:27:27.8912448Z   persist-credentials: false
+2026-11-15T23:27:27.8913521Z   repository: agent-teams-ai/old-provider-implementations
+2026-11-15T23:27:27.8920363Z   token: ***
+2026-11-15T23:27:27.8921157Z   ssh-strict: true
+2026-11-15T23:27:27.8921939Z   ssh-user: git
+2026-11-15T23:27:27.8922749Z   clean: true
+2026-11-15T23:27:27.8923735Z   sparse-checkout-cone-mode: true
+2026-11-15T23:27:27.8924652Z   fetch-depth: 1
+2026-11-15T23:27:27.8925468Z   fetch-tags: false
+2026-11-15T23:27:27.8926263Z   show-progress: true
+2026-11-15T23:27:27.8927062Z   lfs: false
+2026-11-15T23:27:27.8927826Z   submodules: false
+2026-11-15T23:27:27.8928640Z   set-safe-directory: true
+2026-11-15T23:27:27.8929547Z   allow-unsafe-pr-checkout: false
+2026-11-15T23:27:27.8930645Z ##[endgroup]
+2026-11-15T23:27:31.0003039Z Syncing repository: agent-teams-ai/old-provider-implementations
+2026-11-15T23:27:31.0004643Z ##[group]Getting Git version info
+2026-11-15T23:27:31.0005240Z Working directory is '/home/runner/work/old-provider-implementations/old-provider-implementations'
+2026-11-15T23:27:31.0006140Z [command]/usr/bin/git version
+2026-11-15T23:27:31.1654361Z git version 2.56.1
+2026-11-15T23:27:31.1670848Z ##[endgroup]
+2026-11-15T23:27:31.1684417Z Temporarily overriding HOME='/home/runner/work/_temp/ac4a5b26-167f-4a4c-9ec7-4579353ab08f' before making global git config changes
+2026-11-15T23:27:31.1685619Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-15T23:27:31.1689006Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/old-provider-implementations/old-provider-implementations
+2026-11-15T23:27:31.2114231Z Deleting the contents of '/home/runner/work/old-provider-implementations/old-provider-implementations'
+2026-11-15T23:27:31.2117754Z ##[group]Determining repository object format
+2026-11-15T23:27:31.2119546Z ##[endgroup]
+2026-11-15T23:27:31.2120316Z ##[group]Initializing the repository
+2026-11-15T23:27:31.2124697Z [command]/usr/bin/git init /home/runner/work/old-provider-implementations/old-provider-implementations
+2026-11-15T23:27:31.2655133Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-15T23:27:31.2655753Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-15T23:27:31.2656327Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-15T23:27:31.2656750Z hint: call:
+2026-11-15T23:27:31.2657005Z hint:
+2026-11-15T23:27:31.2657350Z hint: 	git config --global init.defaultBranch <name>
+2026-11-15T23:27:31.2657676Z hint:
+2026-11-15T23:27:31.2658025Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-15T23:27:31.2658579Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-15T23:27:31.2658968Z hint:
+2026-11-15T23:27:31.2659235Z hint: 	git branch -m <name>
+2026-11-15T23:27:31.2659544Z hint:
+2026-11-15T23:27:31.2659929Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-15T23:27:31.2672269Z Initialized empty Git repository in /home/runner/work/old-provider-implementations/old-provider-implementations/.git/
+2026-11-15T23:27:31.2681908Z [command]/usr/bin/git remote add origin https://github.com/agent-teams-ai/old-provider-implementations
+2026-11-15T23:27:31.2732410Z ##[endgroup]
+2026-11-15T23:27:31.2733255Z ##[group]Disabling automatic garbage collection
+2026-11-15T23:27:31.2736113Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-15T23:27:31.2759342Z ##[endgroup]
+2026-11-15T23:27:31.2759851Z ##[group]Setting up auth
+2026-11-15T23:27:31.2760184Z Removing SSH command configuration
+2026-11-15T23:27:31.2764689Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-15T23:27:31.2794203Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-15T23:27:31.5295397Z Removing HTTP extra header
+2026-11-15T23:27:31.5300732Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-15T23:27:31.5327402Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-15T23:27:31.5491873Z Removing includeIf entries pointing to credentials config files
+2026-11-15T23:27:31.5492482Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-15T23:27:31.5512121Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-15T23:27:31.5667369Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-15T23:27:31.5694354Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git.path /home/runner/work/_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config
+2026-11-15T23:27:31.5717963Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config
+2026-11-15T23:27:31.5738958Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config
+2026-11-15T23:27:31.5760720Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config
+2026-11-15T23:27:31.5779776Z ##[endgroup]
+2026-11-15T23:27:31.5780164Z ##[group]Fetching the repository
+2026-11-15T23:27:31.5785490Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-15T23:27:32.2106437Z From https://github.com/agent-teams-ai/old-provider-implementations
+2026-11-15T23:27:32.2107087Z  * branch            c79b81bf002eaac95436da71c7049d7f309906a9 -> FETCH_HEAD
+2026-11-15T23:27:32.2114962Z [command]/usr/bin/git rev-parse --verify --quiet c79b81bf002eaac95436da71c7049d7f309906a9^{object}
+2026-11-15T23:27:32.2136544Z c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-15T23:27:32.2140156Z ##[endgroup]
+2026-11-15T23:27:32.2140573Z ##[group]Determining the checkout info
+2026-11-15T23:27:32.2141104Z ##[endgroup]
+2026-11-15T23:27:32.2144701Z [command]/usr/bin/git sparse-checkout disable
+2026-11-15T23:27:32.2212923Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-15T23:27:32.2235188Z ##[group]Checking out the ref
+2026-11-15T23:27:32.2238211Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-15T23:27:32.2395217Z Note: switching to 'c79b81bf002eaac95436da71c7049d7f309906a9'.
+2026-11-15T23:27:32.2395609Z 
+2026-11-15T23:27:32.2395786Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-15T23:27:32.2396233Z changes and commit them, and you can discard any commits you make in this
+2026-11-15T23:27:32.2396701Z state without impacting any branches by switching back to a branch.
+2026-11-15T23:27:32.2396909Z 
+2026-11-15T23:27:32.2397086Z If you want to create a new branch to retain commits you create, you may
+2026-11-15T23:27:32.2397448Z do so (now or later) by using -c with the switch command. Example:
+2026-11-15T23:27:32.2397709Z 
+2026-11-15T23:27:32.2397813Z   git switch -c <new-branch-name>
+2026-11-15T23:27:32.2398076Z 
+2026-11-15T23:27:32.2398174Z Or undo this operation with:
+2026-11-15T23:27:32.2398546Z 
+2026-11-15T23:27:32.2398646Z   git switch -
+2026-11-15T23:27:32.2398799Z 
+2026-11-15T23:27:32.2399007Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-15T23:27:32.2399241Z 
+2026-11-15T23:27:32.2399472Z HEAD is now at c79b81b fix: retain uncertain native suggestion ownership and targeted cancellation
+2026-11-15T23:27:32.2408556Z ##[endgroup]
+2026-11-15T23:27:32.2447326Z [command]/usr/bin/git log -1 --format=%H
+2026-11-15T23:27:32.2465866Z c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-15T23:27:32.2472045Z ##[group]Removing auth
+2026-11-15T23:27:32.2472350Z Removing SSH command configuration
+2026-11-15T23:27:32.2475424Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-15T23:27:32.2499313Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-15T23:27:32.2650677Z Removing HTTP extra header
+2026-11-15T23:27:32.2653833Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-15T23:27:32.2677549Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-15T23:27:32.2824591Z Removing includeIf entries pointing to credentials config files
+2026-11-15T23:27:32.2827681Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-15T23:27:32.2850352Z includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git.path
+2026-11-15T23:27:32.2851122Z includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path
+2026-11-15T23:27:32.2852112Z includeif.gitdir:/github/workspace/.git.path
+2026-11-15T23:27:32.2852509Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-15T23:27:32.2858141Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git.path
+2026-11-15T23:27:32.2875829Z /home/runner/work/_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config
+2026-11-15T23:27:32.2882433Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git.path /home/runner/work/_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config
+2026-11-15T23:27:32.2906947Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path
+2026-11-15T23:27:32.2924323Z /home/runner/work/_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config
+2026-11-15T23:27:32.2929596Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config
+2026-11-15T23:27:32.2960081Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-15T23:27:32.2977582Z /github/runner_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config
+2026-11-15T23:27:32.2982560Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config
+2026-11-15T23:27:32.3006793Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-15T23:27:32.3023092Z /github/runner_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config
+2026-11-15T23:27:32.3027147Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config
+2026-11-15T23:27:32.3050703Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-15T23:27:32.3198793Z Removing credentials config '/home/runner/work/_temp/git-credentials-3a4f2758-dd69-4e34-9ac4-05e98719f037.config'
+2026-11-15T23:27:32.3204957Z ##[endgroup]
+2026-11-15T23:27:32.3401579Z ##[group]Run actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+2026-11-15T23:27:32.3401940Z with:
+2026-11-15T23:27:32.3402166Z   node-version: 24.21.0
+2026-11-15T23:27:32.3402421Z   package-manager-cache: false
+2026-11-15T23:27:32.3402671Z   check-latest: false
+2026-11-15T23:27:32.3404940Z   token: ***
+2026-11-15T23:27:32.3405210Z ##[endgroup]
+2026-11-15T23:27:32.4852001Z Attempting to download 24.21.0...
+2026-11-15T23:27:33.1397995Z Acquiring 24.21.0 - x64 from https://github.com/actions/node-versions/releases/download/24.21.0-34304089047/node-24.21.0-linux-x64.tar.gz
+2026-11-15T23:27:33.8527762Z Extracting ...
+2026-11-15T23:27:33.8618623Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/a0fb3797-9292-4b47-8c34-4f7f97709490 -f /home/runner/work/_temp/4b2e201c-a1c6-4cac-bb88-25e32dd32a09
+2026-11-15T23:27:34.9250414Z Adding to the cache ...
+2026-11-15T23:27:35.8788656Z ##[group]Environment details
+2026-11-15T23:27:36.3417094Z node: v24.21.0
+2026-11-15T23:27:36.3417416Z npm: 11.19.0
+2026-11-15T23:27:36.3417756Z yarn: 1.22.22
+2026-11-15T23:27:36.3418317Z ##[endgroup]
+2026-11-15T23:27:36.3564468Z ##[group]Run actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+2026-11-15T23:27:36.3564866Z with:
+2026-11-15T23:27:36.3565122Z   node-version: 26.11.1
+2026-11-15T23:27:36.3565384Z   package-manager-cache: false
+2026-11-15T23:27:36.3565657Z   check-latest: false
+2026-11-15T23:27:36.3567399Z   token: ***
+2026-11-15T23:27:36.3567734Z ##[endgroup]
+2026-11-15T23:27:36.4638119Z Attempting to download 26.11.1...
+2026-11-15T23:27:37.0515460Z Acquiring 26.11.1 - x64 from https://github.com/actions/node-versions/releases/download/26.11.1-37718106145/node-26.11.1-linux-x64.tar.gz
+2026-11-15T23:27:37.7370135Z Extracting ...
+2026-11-15T23:27:37.7454355Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/4db6655a-673f-4dd5-a794-2dcfa50a6ec5 -f /home/runner/work/_temp/d6a99d88-f43b-4339-9b1e-8826da6522f5
+2026-11-15T23:27:38.8932060Z Adding to the cache ...
+2026-11-15T23:27:39.8821384Z ##[group]Environment details
+2026-11-15T23:27:40.0421487Z node: v26.11.1
+2026-11-15T23:27:40.0421837Z npm: 11.20.0
+2026-11-15T23:27:40.0422123Z yarn: 1.22.22
+2026-11-15T23:27:40.0423081Z ##[endgroup]
+2026-11-15T23:27:40.0543064Z ##[group]Run set -euo pipefail
+2026-11-15T23:27:40.0543435Z [36;1mset -euo pipefail[0m
+2026-11-15T23:27:40.0544052Z [36;1mselectedNode="$(node -p 'process.execPath')"[0m
+2026-11-15T23:27:40.0544561Z [36;1mcorepackJs="$RUNNER_TOOL_CACHE/node/24.21.0/$(node -p 'process.arch')/lib/node_modules/corepack/dist/corepack.js"[0m
+2026-11-15T23:27:40.0545023Z [36;1mtest -f "$corepackJs"[0m
+2026-11-15T23:27:40.0545378Z [36;1mmkdir -p "$RUNNER_TEMP/toolchain/bin" "$RUNNER_TEMP/toolchain/corepack"[0m
+2026-11-15T23:27:40.0545885Z [36;1mprintf '#!/bin/sh\nexec "%s" "%s" pnpm@11.18.0 "$@"\n' "$selectedNode" "$corepackJs" > "$RUNNER_TEMP/toolchain/bin/pnpm"[0m
+2026-11-15T23:27:40.0546342Z [36;1mchmod 755 "$RUNNER_TEMP/toolchain/bin/pnpm"[0m
+2026-11-15T23:27:40.0546690Z [36;1mprintf '%s\n' "$RUNNER_TEMP/toolchain/bin" >> "$GITHUB_PATH"[0m
+2026-11-15T23:27:40.0547190Z [36;1mprintf 'COREPACK_HOME=%s\n' "$RUNNER_TEMP/toolchain/corepack" >> "$GITHUB_ENV"[0m
+2026-11-15T23:27:40.0547806Z [36;1mCOREPACK_HOME="$RUNNER_TEMP/toolchain/corepack" "$selectedNode" "$corepackJs" pnpm@11.18.0 --version[0m
+2026-11-15T23:27:40.3543922Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-15T23:27:40.3544295Z ##[endgroup]
+2026-11-15T23:27:41.5581724Z 11.18.0
+2026-11-15T23:27:41.5786293Z ##[group]Run pnpm install --frozen-lockfile --ignore-scripts
+2026-11-15T23:27:41.5786728Z [36;1mpnpm install --frozen-lockfile --ignore-scripts[0m
+2026-11-15T23:27:41.5814652Z shell: /usr/bin/bash -e {0}
+2026-11-15T23:27:41.5814948Z env:
+2026-11-15T23:27:41.5815630Z   COREPACK_HOME: /home/runner/work/_temp/toolchain/corepack
+2026-11-15T23:27:41.5815935Z ##[endgroup]
+2026-11-15T23:27:41.9151609Z Scope: all 3 workspace projects
+2026-11-15T23:27:41.9535260Z ? Verifying lockfile against supply-chain policies (152 entries)...
+2026-11-15T23:27:41.9614451Z Lockfile is up to date, resolution step is skipped
+2026-11-15T23:27:42.0302734Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-15T23:27:42.0464812Z Packages: +108
+2026-11-15T23:27:42.0480022Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-15T23:27:42.3301173Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-11-15T23:27:42.3302509Z   Content-addressable store is at: /home/runner/.local/share/pnpm/store/v11
+2026-11-15T23:27:42.3303299Z   Virtual store is at:             node_modules/.pnpm
+2026-11-15T23:27:43.0303754Z Progress: resolved 108, reused 0, downloaded 107, added 107
+2026-11-15T23:27:43.4454304Z ✓ Lockfile passes supply-chain policies (152 entries in 1.4s)
+2026-11-15T23:27:44.7607339Z Progress: resolved 108, reused 0, downloaded 108, added 107
+2026-11-15T23:27:44.7626139Z Progress: resolved 108, reused 0, downloaded 108, added 108, done
+2026-11-15T23:27:44.8069462Z 
+2026-11-15T23:27:44.8257148Z Done in 3.1s using pnpm v11.18.0
+2026-11-15T23:27:44.8693508Z ##[group]Run pnpm check
+2026-11-15T23:27:44.8693993Z [36;1mpnpm check[0m
+2026-11-15T23:27:44.8719680Z shell: /usr/bin/bash -e {0}
+2026-11-15T23:27:44.8720061Z env:
+2026-11-15T23:27:44.8720336Z   COREPACK_HOME: /home/runner/work/_temp/toolchain/corepack
+2026-11-15T23:27:44.8720754Z   AGENT_TEAMS_PROVIDER_PACK_TEST_RETAIN_DIR: /home/runner/work/_temp/checked-v2-spi
+2026-11-15T23:27:44.8721248Z ##[endgroup]
+2026-11-15T23:27:45.1950887Z $ pnpm build && pnpm typecheck && pnpm test && pnpm test:package
+2026-11-15T23:27:45.5098087Z $ pnpm -r run build
+2026-11-15T23:27:45.8334420Z Scope: 2 of 3 workspace projects
+2026-11-15T23:27:45.8354303Z packages/provider-session-contracts build$ tsc --project tsconfig.json --pretty false
+2026-11-15T23:27:46.2500435Z packages/provider-session-contracts build: Done
+2026-11-15T23:27:46.2507555Z packages/provider-implementations build$ tsc --project tsconfig.json --pretty false
+2026-11-15T23:27:47.8322511Z packages/provider-implementations build: Done
+2026-11-15T23:27:48.1553467Z $ pnpm -r run typecheck
+2026-11-15T23:27:48.4852219Z Scope: 2 of 3 workspace projects
+2026-11-15T23:27:48.4872829Z packages/provider-session-contracts typecheck$ tsc --project tsconfig.test.json --noEmit --pretty false
+2026-11-15T23:27:48.8703312Z packages/provider-session-contracts typecheck: Done
+2026-11-15T23:27:48.8711081Z packages/provider-implementations typecheck$ tsc --project tsconfig.test.json --noEmit --pretty false
+2026-11-15T23:27:50.6661313Z packages/provider-implementations typecheck: Done
+2026-11-15T23:27:50.9894197Z $ pnpm --filter @agent-teams/provider-implementations test:source
+2026-11-15T23:27:51.3141433Z $ node --test --test-concurrency=1 --test-timeout=60000 tests/features/provider-session-implementation/*/*.test.ts tests/features/native-prompt-suggestions/*.test.ts
+2026-11-15T23:27:51.6487688Z ✔ same Claude SDK Query emits a single candidate AFTER terminal, without another model input (9.15161ms)
+2026-11-15T23:27:51.6508480Z ✔ mixed Claude teammate session stays eligible for human DM, suppresses internal and stale frames (1.828409ms)
+2026-11-15T23:27:51.6509424Z ✔ Claude disabled observer does not opt in to additional SDK inference (0.412407ms)
+2026-11-15T23:27:51.6526576Z ✔ Claude queued successor cannot be overtaken while its original readiness is held (2.43222ms)
+2026-11-15T23:27:51.6541056Z ✔ Claude delayed prior frame cannot borrow completed B: human-1 (1.270452ms)
+2026-11-15T23:27:51.6554341Z ✔ Claude delayed prior frame cannot borrow completed B: internal-1 (1.245656ms)
+2026-11-15T23:27:51.6566151Z ✔ Claude consumed unambiguous predecessor permits the next separately bound candidate (1.200216ms)
+2026-11-15T23:27:51.6578656Z ✔ Claude foreign and nested frames do not consume ownership; an invalid owned frame does (1.175736ms)
+2026-11-15T23:27:51.6590344Z ✔ Claude eligibility reentry cannot publish a slot after it admits a successor (1.010552ms)
+2026-11-15T23:27:51.6599812Z ✔ Claude eligible failure does not fail ordinary execution or reuse a consumed frame (1.03352ms)
+2026-11-15T23:27:51.6608539Z ✔ Claude offer failure does not fail ordinary execution or reuse a consumed frame (0.934108ms)
+2026-11-15T23:27:51.6616851Z ✔ Claude offer-async failure does not fail ordinary execution or reuse a consumed frame (0.796488ms)
+2026-11-15T23:27:51.6625734Z ✔ Claude interrupt does not make uncertain auxiliary work available to the next input (0.84242ms)
+2026-11-15T23:27:51.6636434Z ✔ Claude close reentry preserves the original close receipt and suppresses the auxiliary offer (0.77758ms)
+2026-11-15T23:27:51.6643337Z ✔ Claude offer reentry admits one successor only after consuming the original slot (1.101994ms)
+2026-11-15T23:27:52.0525908Z ✔ Codex original subprocess sends exactly one thread/sample on bound completed root, never turn/start for sampling (75.855438ms)
+2026-11-15T23:27:52.1168956Z ✔ pinned Codex 0.162 refuses sampling while preserving normal completed turn (65.443763ms)
+2026-11-15T23:27:52.1802886Z ✔ Codex wrong native turn and null text never become a suggestion (63.387256ms)
+2026-11-15T23:27:52.2458634Z ✔ new Codex input cancels held native sample without interrupting parent or replaying (65.313739ms)
+2026-11-15T23:27:53.3108880Z ✔ Codex actual sent sample timeout retains one exact cancel target even after late abort (1064.935426ms)
+2026-11-15T23:27:54.3845329Z ✔ Codex timeout and cancel ACK cannot admit a second uncertain auxiliary sample (1073.730453ms)
+2026-11-15T23:27:54.4490492Z ✔ Codex explicit sent abort and uncertain settlement share one cancel and retain ordinary turns (64.441184ms)
+2026-11-15T23:27:54.5159978Z ✔ Codex known-not-sent sample refusals neither cancel native work nor poison later sampling (66.797786ms)
+2026-11-15T23:27:54.5826274Z ✔ Codex a definite unsupported native reply does not create an unknown-work latch (66.386286ms)
+2026-11-15T23:27:54.6489841Z ✔ Codex received response stays terminal when post-reply eligibility throws (66.514794ms)
+2026-11-15T23:27:54.7146035Z ✔ Codex received response stays terminal when post-reply eligibility returns false (65.50891ms)
+2026-11-15T23:27:54.7785249Z ✔ Codex sample close keeps the original cached physical cleanup receipt unconfirmed (63.910186ms)
+2026-11-15T23:27:54.8410571Z ✔ Codex transport loss preserves the original unknown error without reopening for cancellation (62.613885ms)
+2026-11-15T23:27:54.9225060Z ✔ native suggestion is bounded, immutable and never accepts non-text controls or foreign identity (0.814984ms)
+2026-11-15T23:27:54.9226698Z ✔ Claude SDK and Codex app-server decoders accept only exact native source identities (0.928855ms)
+2026-11-15T23:27:54.9233208Z ✔ Codex sampling refuses old/experimental-disabled/ephemeral native sessions (0.24906ms)
+2026-11-15T23:27:54.9238747Z ✔ Host eligibility is fail-closed and observer failures cannot affect native session (0.220864ms)
+2026-11-15T23:27:55.2326256Z ✔ actual SDK user message preserves ordered native document/image parts and text default (6.23688ms)
+2026-11-15T23:27:55.2357666Z ✔ unsupported missing corrupt and foreign-binding attachments cannot enter SDK iterable; next text remains usable (3.836147ms)
+2026-11-15T23:27:55.2379083Z ✔ close while resolver is held seals handoff and discards late bytes (1.188884ms)
+2026-11-15T23:27:55.2380027Z ✔ attachment policy revision and selected model enter checkpoint compatibility (1.217105ms)
+2026-11-15T23:27:55.5436944Z ✔ background completion retains the exact original terminal input without borrowing the next turn (10.014021ms)
+2026-11-15T23:27:55.5458623Z ✔ a fast native completion waits for the original background post-tool registration (2.352132ms)
+2026-11-15T23:27:55.5483430Z ✔ conflicting run identity or native task reuse cannot retarget another original pair (2.609283ms)
+2026-11-15T23:27:55.5506972Z ✔ interrupt and close abort original background observation without changing tool permission or replaying input (2.246313ms)
+2026-11-15T23:27:55.5894311Z ✔ missing registration identity and expired background task retain gaps instead of guessed completion (37.930996ms)
+2026-11-15T23:27:55.5933404Z ✔ overlapping sibling native tools gap both intervals and still return the original empty hook decision (1.89223ms)
+2026-11-15T23:27:55.5959656Z ✔ stopped native task is observed as stopped and remains an explicit incomplete capture (5.234038ms)
+2026-11-15T23:27:55.5971745Z ✔ background observation failure stays one original gap and cannot deny the native Bash hook (1.08271ms)
+2026-11-15T23:27:55.5985655Z ✔ a nested native notification cannot complete a main-thread background pair (0.923447ms)
+2026-11-15T23:27:55.5994428Z ✔ duplicate post hooks and fast completion join the original pending registration exactly once (1.350226ms)
+2026-11-15T23:27:55.6007387Z ✔ background-only consumers retire an earlier foreground pair before retaining a later native task (1.177825ms)
+2026-11-15T23:27:55.6025769Z ✔ optional native run IDs allow consistent absence and preserve asymmetric bookends as gaps (1.864644ms)
+2026-11-15T23:27:55.6037631Z ✔ session-wide unknown failure revokes retained observations from an earlier normal terminal (1.075248ms)
+2026-11-15T23:27:55.6057756Z ✔ idle readiness failure revokes earlier observations while recovery still captures a fresh original input (1.53198ms)
+2026-11-15T23:27:55.9202289Z ✔ native batch hook awaits one original-owned observation and terminal cannot release the next input through it (11.929451ms)
+2026-11-15T23:27:55.9217814Z ✔ mapped post-tool callbacks remain provisional and batch observes their awaited effects (1.692854ms)
+2026-11-15T23:27:55.9233274Z ✔ wrong native session/child and conflicting batch fingerprints cannot borrow the active owner (1.592827ms)
+2026-11-15T23:27:55.9247094Z ✔ contradictory duplicate during an awaited batch aborts that original observation and leaves permanent gaps (1.347581ms)
+2026-11-15T23:27:55.9264328Z ✔ missing native batch callback gaps before terminal release and cannot be adopted by the next input (1.764073ms)
+2026-11-15T23:27:55.9637205Z ✔ missing batch deadline releases bounded retained bytes and never denies native tools (36.917029ms)
+2026-11-15T23:27:55.9654693Z ✔ explicit and automatic background Bash are gaps after provisional outcome and cannot complete a batch (1.868444ms)
+2026-11-15T23:27:55.9945779Z ✔ batch callback rejection, timeout, interrupt and close never publish a replacement owner or change tool outputs (28.921331ms)
+2026-11-15T23:27:55.9969811Z ✔ one batch carries only exact same-owner tool IDs; mixed unknown IDs or repeated IDs gap the retained group (2.082364ms)
+2026-11-15T23:27:55.9971083Z ✔ absence of optional observeBatch preserves legacy capture hooks and releases after pairs normally (0.4096ms)
+2026-11-15T23:27:55.9988103Z ✔ failed native outcome reaches the batch and caller mutation cannot replace the captured callback (0.946505ms)
+2026-11-15T23:27:55.9989850Z ✔ provisional pairs retain bounded input bytes until batch settlement and release them without evicting identity (0.790822ms)
+2026-11-15T23:27:55.9996269Z ✔ native Edit default-key ordering in PostToolBatch preserves semantic input identity and still rejects changed values (1.00708ms)
+2026-11-15T23:27:56.3164261Z ✔ SDK hook awaits copied preimage observation before its caller can execute; duplicate joins the same callback (10.651501ms)
+2026-11-15T23:27:56.3175825Z ✔ foreign session, child, unknown tool and mismatched callback ID cannot borrow a current input (1.616695ms)
+2026-11-15T23:27:56.3198132Z ✔ a retained late A completion reports an A gap after B starts; it never publishes B bytes as A success (2.161846ms)
+2026-11-15T23:27:56.3222626Z ✔ ownership is rechecked after awaiting before and after, retaining the original input in gaps (2.358824ms)
+2026-11-15T23:27:56.3434769Z ✔ capture errors and deadlines produce gaps without denying tools or changing permission configuration (21.1521ms)
+2026-11-15T23:27:56.3449372Z ✔ conflicting post input/outcome is a gap; completed records do not run capture twice (1.335642ms)
+2026-11-15T23:27:56.3677770Z ✔ close aborts outstanding capture and bounded gap cleanup never prevents physical custody confirmation (22.72583ms)
+2026-11-15T23:27:56.3696130Z ✔ interrupt aborts a waiting preimage without introducing capture authorization or restoring A callbacks (1.232393ms)
+2026-11-15T23:27:56.3697664Z ✔ retention never evicts completed native pairs; overflow reports one unbound gap and keeps tools usable (0.735891ms)
+2026-11-15T23:27:56.3706420Z ✔ oversized tool input creates only a gap, never retained partial input or later success (1.001698ms)
+2026-11-15T23:27:56.3719049Z ✔ conflicting duplicate pre tool identity or input invalidates the original pending capture before joining (1.192656ms)
+2026-11-15T23:27:56.3728930Z ✔ conflicting post input or outcome invalidates a pending after observation and cannot settle as success (1.277029ms)
+2026-11-15T23:27:56.6898911Z ✔ captured command metadata preserves exact name precedence without retaining mutable native objects (1.59015ms)
+2026-11-15T23:27:56.6900202Z ✔ actual SDK 0.3.305 private metadata does not hide the captured public commands (1.248562ms)
+2026-11-15T23:27:56.6941306Z ✔ qualified review alias uses one legacy inline input with original permissions, owner and bounded handoff (10.136624ms)
+2026-11-15T23:27:56.6956583Z ✔ same Query command changes and local result require native session and original echoed user UUID (2.222073ms)
+2026-11-15T23:27:57.3087068Z ✔ captured CLI values preserve order repeats empty strings equals form and literal shell text (1.372987ms)
+2026-11-15T23:27:57.3088357Z ✔ native aliases and equals forms cannot retarget captured identity tools transport root or account configuration (0.775987ms)
+2026-11-15T23:27:57.3089316Z ✔ Claude refuses managed extras before SDK allocation and appends only original captured argv at its existing spawn port (2.091976ms)
+2026-11-15T23:27:57.3100874Z ✔ only nonempty ordered native argv changes checkpoint compatibility (0.694151ms)
+2026-11-15T23:27:57.3101960Z ✔ captured executable is validated before SDK allocation and stays bound across caller mutation and checkpoint reuse (0.723345ms)
+2026-11-15T23:27:57.3103265Z ✔ real SDK chooses the captured executable instead of its bundled default before the owner permits any spawn (293.778011ms)
+2026-11-15T23:27:57.3104842Z ✔ finite native value arity refuses unbound bootstrap prompts and subcommands while retaining supported variadics and short debug values (3.381303ms)
+2026-11-15T23:27:57.6236725Z ✔ canonical DriverFactory uses a pinned Host projection and preserves runtime input/operation ownership (9.518833ms)
+2026-11-15T23:27:57.6237777Z ✔ unsupported capability and mismatched configuration reject before query construction (0.776179ms)
+2026-11-15T23:27:57.6238982Z ✔ restore reads only an explicit checkpoint reference and never falls back to a fresh native session (4.179704ms)
+2026-11-15T23:27:57.6240126Z ✔ native team message/registry tools cannot bypass the external product authority (0.295617ms)
+2026-11-15T23:27:57.6251652Z ✔ close during the awaited per-input readiness probe cannot release a late SDK handoff (1.160659ms)
+2026-11-15T23:27:57.6277117Z ✔ selected trusted native configuration is forwarded, snapshotted and checked at initialization (1.260146ms)
+2026-11-15T23:27:57.6278048Z ✔ native tool deny rules bind restore and reject invalid selections before SDK construction (0.801649ms)
+2026-11-15T23:27:57.6278836Z ✔ default native configuration remains isolated and unoverridden (0.435135ms)
+2026-11-15T23:27:57.6299226Z ✔ explicit ephemeral runs disable native persistence and cannot advertise, create or restore checkpoints (1.055451ms)
+2026-11-15T23:27:57.6300351Z ✔ invalid namespace, permission escalation and arbitrary native bags reject before constructing SDK (0.543407ms)
+2026-11-15T23:27:57.6301219Z ✔ effective selected config changes reject checkpoint restore without constructing SDK (0.791524ms)
+2026-11-15T23:27:57.6315839Z ✔ compaction remains session scoped without a native input echo, deduplicates across turns and ignores child boundaries (1.415035ms)
+2026-11-15T23:27:57.6327709Z ✔ explicit permission opt-in forwards only selected options and cannot replace the mandatory tool hook (0.764129ms)
+2026-11-15T23:27:57.6328682Z ✔ native-default checkpoints bind the captured HOME and explicit namespace (0.610104ms)
+2026-11-15T23:27:57.6337888Z ✔ actual Claude Session SPI emits owned thinking separately from output without a second input (1.283342ms)
+2026-11-15T23:27:57.7159617Z ✔ question denial completes actual canUseTool callback as deny once without answers or interrupt (2.304542ms)
+2026-11-15T23:27:57.7161293Z ✔ question answers retain original input and reject ambiguous/unknown/getter replies before callback settlement (0.459665ms)
+2026-11-15T23:27:57.7172299Z ✔ denying question A cannot deny permission B; abort makes late question denial stale (0.317691ms)
+2026-11-15T23:27:58.0285226Z ✔ metadata initializes without a model input/tool/session and strips private account fields (5.07164ms)
+2026-11-15T23:27:58.0397402Z ✔ cancellation and deadline close SDK without waiting for native metadata or returning late success (9.392312ms)
+2026-11-15T23:27:58.0399338Z ✔ invalid native metadata and SDK failures are bounded, closed and never disclose raw errors (2.414368ms)
+2026-11-15T23:27:58.0405978Z ✔ wrong namespace, inherited team configuration and pre-aborted reads allocate no SDK query (0.960319ms)
+2026-11-15T23:27:58.0406975Z ✔ a failed SDK close cannot publish otherwise successful metadata or leak the native error (0.39496ms)
+2026-11-15T23:27:58.0408131Z ✔ metadata keeps the original root until caller cleanup settles before SDK EOF or abort (0.460274ms)
+2026-11-15T23:27:58.0409175Z ✔ false or thrown caller cleanup still releases metadata input and closes SDK without success (0.669794ms)
+2026-11-15T23:27:58.3629632Z ✔ one explicit SDK input uses captured model/options and needs real matching terminal model usage (4.338579ms)
+2026-11-15T23:27:58.3630903Z ✔ catalog metadata alone, wrong model, tool use, child output, failed result and missing usage cannot verify access (4.446228ms)
+2026-11-15T23:27:58.3640880Z ✔ revoked authority and cancellation during metadata do not hand a model input to SDK (3.487129ms)
+2026-11-15T23:27:58.3719878Z ✔ deadline seals a late input and failed SDK cleanup cannot publish success (6.166304ms)
+2026-11-15T23:27:58.3720890Z ✔ explicit one-million suffix is preserved and requires matching native context evidence (0.633784ms)
+2026-11-15T23:27:58.3722423Z ✔ invalid namespace or model rejects before SDK construction (0.668828ms)
+2026-11-15T23:27:58.3728818Z ✔ explicit effort reaches SDK only with matching native model capability; unsupported effort sends no input (0.932132ms)
+2026-11-15T23:27:58.3736171Z ✔ terminal probe evidence cannot retire the root through input EOF or iterator return before its owner (0.769792ms)
+2026-11-15T23:27:58.3745036Z ✔ false or thrown caller cleanup releases the one probe input and closes SDK without success (0.834519ms)
+2026-11-15T23:27:58.3796900Z ▶ deadline seals input admission while original owner cleanup is still pending
+2026-11-15T23:27:58.3797387Z   ✔ late-models (4.931161ms)
+2026-11-15T23:27:58.3842949Z   ✔ late-prompt-pull (4.665807ms)
+2026-11-15T23:27:58.3843758Z ✔ deadline seals input admission while original owner cleanup is still pending (10.10179ms)
+2026-11-15T23:27:58.4705863Z ✔ malformed native message identity cannot invoke coercion or inherit the previous stream (1.237972ms)
+2026-11-15T23:27:58.4715629Z ✔ actual SDK compact_boundary becomes a neutral stable observation and survives turn reset (1.011699ms)
+2026-11-15T23:27:58.4717450Z ✔ compaction rejects malformed identity without coercion and bounds persistent tombstones (0.418293ms)
+2026-11-15T23:27:58.4719188Z ✔ thinking deltas and final blocks preserve native identities without exposing signatures or redaction (0.390176ms)
+2026-11-15T23:27:58.4720320Z ✔ thinking snapshots retain the existing UTF-8 byte limit and reset independently of text (0.209013ms)
+2026-11-15T23:27:58.7771976Z ✔ normal close holds SDK input and query teardown until the original group owner finishes (2.91532ms)
+2026-11-15T23:27:58.7861188Z ✔ late SDK output while owner close is pending cannot invoke Query.return and reap its root (5.457817ms)
+2026-11-15T23:27:58.7862183Z ✔ false or throwing owner cleanup always releases SDK resources but never confirms custody (1.822544ms)
+2026-11-15T23:27:58.7863143Z ✔ close denies pending native permission and preserves one unknown accepted input without another handoff (1.235669ms)
+2026-11-15T23:27:58.7864693Z ▶ private close stages distinguish physical custody from SDK/capture failures without changing receipts
+2026-11-15T23:27:58.7865422Z   ✔ confirmed (0.547649ms)
+2026-11-15T23:27:58.7865845Z   ✔ unconfirmed (0.441905ms)
+2026-11-15T23:27:58.7866287Z   ✔ custody-error (0.357651ms)
+2026-11-15T23:27:58.7866600Z   ✔ sdk-close-error (0.293091ms)
+2026-11-15T23:27:58.8081235Z   ✔ sdk-read-error (20.840562ms)
+2026-11-15T23:27:58.8081741Z   ✔ capture-close-error (0.992546ms)
+2026-11-15T23:27:58.8082499Z ✔ private close stages distinguish physical custody from SDK/capture failures without changing receipts (24.258207ms)
+2026-11-15T23:27:58.8101981Z ✔ throwing, rejecting or never-settling private observers cannot affect cleanup or its cached order (1.122857ms)
+2026-11-15T23:27:58.8102936Z ✔ private observer selection is validated and excluded from native checkpoint compatibility (0.872042ms)
+2026-11-15T23:27:58.8120908Z ✔ successful native idle notification acknowledgment preserves the next independent input without a fabricated foreground result (1.963903ms)
+2026-11-15T23:27:58.8145329Z ✔ missing or foreign session, malformed or failed idle result, and active unattributed result cannot grant another input (2.614781ms)
+2026-11-15T23:27:59.1201108Z ✔ SDK buffered native hook waits for exact foreground tool ownership instead of losing the DO admission race (7.488575ms)
+2026-11-15T23:27:59.1213134Z ✔ pending parent hook cannot borrow an unrelated native tool or survive original input revocation (1.919603ms)
+2026-11-15T23:27:59.7358677Z ✔ ordinary child gate uses native association, rejects model authority and leaves parent MCP available (312.257822ms)
+2026-11-15T23:27:59.7384055Z ✔ native child transcript and usage retain child provenance without entering parent normalizer (2.481244ms)
+2026-11-15T23:27:59.7406371Z ✔ parent close requests only its actual owned native child; cleanup remains Host custody result (1.774245ms)
+2026-11-15T23:27:59.7407341Z ✔ missing stop capability and invalid grants reject readiness before accepting input (0.679303ms)
+2026-11-15T23:27:59.7420527Z ✔ unassociated native children publish explicit gaps without borrowing the foreground input (1.470947ms)
+2026-11-15T23:27:59.7432699Z ✔ interrupt cancels a child approval awaiting private provenance; late observation cannot publish or grant (1.234563ms)
+2026-11-15T23:27:59.7450069Z ✔ empty native child wrappers exhaust the output budget instead of growing dedup maps without bound (1.710359ms)
+2026-11-15T23:27:59.7460202Z ✔ parent close aborts a pending child observer before waiting on the native iterator (0.989487ms)
+2026-11-15T23:27:59.7474424Z ✔ original-input authorization denies DO policy loss and cannot outlive parent interruption (1.108625ms)
+2026-11-15T23:28:01.0463406Z ✔ trusted tool binding captures native ownership and copied payload without granting a permission (1.77621ms)
+2026-11-15T23:28:01.0497050Z ✔ unknown and conflicting native tool attribution and background never borrow current input (0.324204ms)
+2026-11-15T23:28:01.0747258Z ✔ prepare rejection, deadline and late result fail closed with redacted reason (29.726211ms)
+2026-11-15T23:28:01.0775862Z ✔ synchronous SDK abort observes a rejecting Host promise and ownership change cannot admit its late result (1.081064ms)
+2026-11-15T23:28:01.0810257Z ✔ session interrupt, observed terminal and close revoke preparation and cannot attach A to B (5.238426ms)
+2026-11-15T23:28:01.0821030Z ✔ session binds only observed foreground native tools including partial starts; unknown and background stay closed (1.13533ms)
+2026-11-15T23:28:01.0835993Z ✔ cross-input native ID reuse cannot attribute a delayed first A hook to observed B (1.060839ms)
+2026-11-15T23:28:01.0850380Z ✔ physical-session native tool tombstones are bounded and cannot evict an old attribution (1.999868ms)
+2026-11-15T23:28:01.4624821Z ▶ login modes retain early exact/null/foreign identities privately and cancel without logout
+2026-11-15T23:28:01.4625365Z   ✔ chatgpt (73.040407ms)
+2026-11-15T23:28:01.5339426Z   ✔ chatgptDeviceCode (71.066384ms)
+2026-11-15T23:28:01.5340788Z ✔ login modes retain early exact/null/foreign identities privately and cancel without logout (145.330627ms)
+2026-11-15T23:28:01.6035711Z ✔ login requires an installed observer, initialized client and finite validated requests before effects (67.915726ms)
+2026-11-15T23:28:01.6691821Z ✔ login rejects malformed response modes/presentation and cancel acknowledgments without fallback (67.071191ms)
+2026-11-15T23:28:01.7398980Z ✔ lost login reply preserves unknown acceptance without replay or inferred completion (70.614602ms)
+2026-11-15T23:28:01.8047499Z ✔ malformed completion cannot masquerade as a successful typed native fact (64.674785ms)
+2026-11-15T23:28:02.1993359Z ✔ native subprocess supports ordered turns, immutable queued input and distinct terminal/usage observations (84.17495ms)
+2026-11-15T23:28:02.2690581Z ✔ early deltas and completion wait for the actual turn/start identity receipt (70.648497ms)
+2026-11-15T23:28:02.3348704Z ✔ terminal cancels pending approval; a late allow reply cannot escape into the next turn (65.834698ms)
+2026-11-15T23:28:02.4011402Z ✔ an interrupt captured for A cannot cancel B when its dispatch/reply is delayed (66.257541ms)
+2026-11-15T23:28:02.4673042Z ✔ explicit native resume plus active cancellation targets only the accepted turn (66.099241ms)
+2026-11-15T23:28:02.6692740Z ✔ transport loss retains partial text, seals the session and never replays queued input (201.940512ms)
+2026-11-15T23:28:02.7309995Z ✔ close seals synchronously, rejects pending requests and never invokes an already-queued write (61.533218ms)
+2026-11-15T23:28:02.8356870Z ✔ request timeout keeps acceptance unknown; a late reply cannot satisfy a subsequent request (103.93825ms)
+2026-11-15T23:28:02.9018536Z ✔ unknown attribution and native terminal status never become a successful turn (66.662577ms)
+2026-11-15T23:28:02.9662202Z ✔ native modern and legacy approval replies require independent current-turn attribution (64.492392ms)
+2026-11-15T23:28:03.0385652Z ✔ client close aborts the approval callback and suppresses its eventual result (71.437307ms)
+2026-11-15T23:28:03.1024347Z ✔ queued cancellation is known not sent and cannot consume a future turn (64.633674ms)
+2026-11-15T23:28:03.1645704Z ✔ a sink disposing the client on terminal projection cannot erase its known native outcome (61.976151ms)
+2026-11-15T23:28:03.2313973Z ✔ conflicting direct/nested native identities cannot finish a turn or establish approval proof (66.220497ms)
+2026-11-15T23:28:03.2990650Z ✔ a callback rejecting after synchronously closing its client leaves no orphan rejection (68.199506ms)
+2026-11-15T23:28:03.3673298Z ✔ an approval abort listener closing its client cannot erase an already observed native terminal (68.383906ms)
+2026-11-15T23:28:03.7366164Z ✔ actual app-server turn/start carries ordered native localImage parts without prompt-path substitutes (74.116773ms)
+2026-11-15T23:28:03.7998196Z ✔ Codex GIF/document and missing owned native path fail known not sent at actual protocol boundary (64.050818ms)
+2026-11-15T23:28:03.8637409Z ✔ Codex resolver response after close cannot perform native turn/start (64.008158ms)
+2026-11-15T23:28:04.3221017Z ✔ selected restore carries item ownership: delayed first pre-checkpoint legacy A cannot grant reused B (161.244882ms)
+2026-11-15T23:28:05.1825351Z ✔ malformed, old or oversized checkpoint history fails before IO and cannot create a fresh thread (860.250366ms)
+2026-11-15T23:28:05.3841842Z ✔ checkpoint count and pair bounds reject before traversing attacker-controlled array keys (201.735385ms)
+2026-11-15T23:28:05.7449339Z ✔ canonical capabilities and exact binding reject before any native protocol IO (66.164343ms)
+2026-11-15T23:28:05.8078642Z ✔ malformed JavaScript Host configuration fails before native IO instead of trusting declared types (61.849317ms)
+2026-11-15T23:28:06.0758772Z ✔ explicit selected restore resumes the checkpoint thread and never falls back when native resume fails (268.150445ms)
+2026-11-15T23:28:06.1368523Z ✔ configuration is captured before await and native custody cleanup is independently attested (62.07033ms)
+2026-11-15T23:28:06.5198107Z ✔ observed terminal remains succeeded when flushing final native text exceeds the canonical output budget (76.778605ms)
+2026-11-15T23:28:06.5926692Z ✔ wrong native identities and unknown terminal status never become a successful canonical result (72.589247ms)
+2026-11-15T23:28:06.6554102Z ✔ an active close during preflight is known not sent and aborts caller probe without a turn write (63.446443ms)
+2026-11-15T23:28:06.8215645Z ✔ turn timeout keeps uncertainty, seals the protocol and rejects the queued turn without replay (166.06195ms)
+2026-11-15T23:28:06.8919672Z ✔ legacy approvals use only proven current items and richer permissions never grant a guessed capability (67.934657ms)
+2026-11-15T23:28:06.9680755Z ✔ interrupt revokes an unanswered permission before native ACK and a late allow cannot grant (78.425299ms)
+2026-11-15T23:28:07.3692973Z ✔ delayed first legacy A approval after cross-turn item reuse cannot grant B; exact modern B remains usable (78.977838ms)
+2026-11-15T23:28:07.4424595Z ✔ physical-thread item history never evicts: exhausted legacy budget fails closed while exact modern approval still works (73.417683ms)
+2026-11-15T23:28:07.5104038Z ✔ close is already memoized when a caller probe abort callback reenters close (67.963681ms)
+2026-11-15T23:28:07.9025911Z ✔ exact native item/tool/requestUserInput projects existing question UI and one-request wire reply (80.156377ms)
+2026-11-15T23:28:07.9683966Z ✔ exact native mcpServer/elicitation/request projects existing question UI and one-request wire reply (67.158862ms)
+2026-11-15T23:28:08.0396212Z ✔ finite form answers retain field types and exact original JSON-RPC id without metadata grants (70.189401ms)
+2026-11-15T23:28:08.1071844Z ✔ unsupported native forms fail closed with explicit diagnostic and never create a question (68.347435ms)
+2026-11-15T23:28:08.1725703Z ✔ secret, free text, duplicate ids and automatic/nonblocking user-input requests never become grants (65.308636ms)
+2026-11-15T23:28:08.2412141Z ✔ uncorrelated elicitation or foreign thread/turn cannot borrow current input provenance (68.002633ms)
+2026-11-15T23:28:08.3075277Z ✔ denial settles only exact pending request; revoked and old-turn question refs stay stale (66.722592ms)
+2026-11-15T23:28:08.4425726Z ✔ native question cannot be answered by a neighbor or getter payload, and close removes its original ref (135.107914ms)
+2026-11-15T23:28:08.5055237Z ✔ same-turn revoke after a local answer but before native response suppresses the answer (62.916683ms)
+2026-11-15T23:28:08.9678445Z ✔ two actual native sessions map serial text/tools/usage without mixing runtime identities (147.495001ms)
+2026-11-15T23:28:09.0351231Z ✔ canonical permission replies remain independent of queue, one-turn scoped and stale after native terminal (66.753504ms)
+2026-11-15T23:28:09.1731924Z ✔ a delayed interrupt A cannot stop queued B or a neighboring session and ACK is not terminal (138.630393ms)
+2026-11-15T23:28:09.2405751Z ✔ transport loss leaves accepted input unknown, rejects queued input known not sent and never replays (67.383533ms)
+2026-11-15T23:28:09.3199007Z ✔ byte framing preserves split UTF-8 and multiple lines without accepting a truncated last frame (1.786708ms)
+2026-11-15T23:28:09.3201665Z ✔ line/chunk/depth limits are enforced before callbacks can observe invalid frames (1.323642ms)
+2026-11-15T23:28:09.6978381Z ✔ awaits original before and matching final observer before terminal or next input; snapshots callback and native file items (78.612792ms)
+2026-11-15T23:28:11.7631708Z ✔ timeout aborts missed before window; late completion cannot resurrect baseline and work continues (2065.17115ms)
+2026-11-15T23:28:11.8250307Z ✔ close while before is pending never starts turn even after late observer completion (61.823163ms)
+2026-11-15T23:28:11.8978169Z ✔ observer failures are explicit gaps rather than native denial; an unresolved gap callback does not block work or terminal (72.315942ms)
+2026-11-15T23:28:11.9668048Z ✔ after failure and rejecting gap remain best effort; interrupted outcome is observed before following input (66.282567ms)
+2026-11-15T23:28:11.9669444Z ✔ bounded file item inventory fails closed without denying ordinary completion or accepting a foreign terminal (1.226528ms)
+2026-11-15T23:28:11.9670412Z ✔ capture snapshots a structural observer method exactly once (0.515154ms)
+2026-11-15T23:28:12.0289908Z ✔ configuration never rereads an initially absent capture getter through object spread (62.138098ms)
+2026-11-15T23:28:12.0292090Z ✔ private capture retains recovered commandExecution exit7 independently of successful input (1.02277ms)
+2026-11-15T23:28:12.2149343Z ✔ pinned actual native metadata bytes include plugin name and veto, but no raw private values escape projection (9.837772ms)
+2026-11-15T23:28:12.2150617Z ✔ one captured metadata launch snapshots config, requires actual zero exit and confirms original cleanup without retries (4.248564ms)
+2026-11-15T23:28:12.2151695Z ✔ one top-level TOML overlay quotes dotted names and native merged stale fields fail exact pre-thread configuration gate (2.504254ms)
+2026-11-15T23:28:12.2152816Z ✔ native ConfigToml selected HTTP defaults require local environment and exact inherited configuration (1.181047ms)
+2026-11-15T23:28:12.2153933Z ✔ native ConfigToml stdio empty args and nullable timeout match only captured defaults or explicit values (0.735829ms)
+2026-11-15T23:28:12.2373487Z ✔ entire status gate rejects unselected connected server, extra Team tools, hidden later page and duplicate cursor (20.79886ms)
+2026-11-15T23:28:12.2413731Z ✔ actual driver orders catalog/config admission before thread/start and holds later drift before any turn (6.057051ms)
+2026-11-15T23:28:12.2419668Z ✔ stdout EOF cannot publish a catalog before original child terminal and cleanup (0.908006ms)
+2026-11-15T23:28:12.6041763Z ✔ native mandatory MCP readiness uses actual owned thread/server/raw tool names before handoff (74.813194ms)
+2026-11-15T23:28:12.7552052Z ✔ MCP catalog pagination and pending native startup are bounded read-only checks (151.213329ms)
+2026-11-15T23:28:12.8207554Z ✔ mandatory native MCP refuses wrong-tools before work even when Host probe reports healthy (65.198875ms)
+2026-11-15T23:28:12.8898013Z ✔ mandatory native MCP refuses wrong-tool-name before work even when Host probe reports healthy (69.432093ms)
+2026-11-15T23:28:12.9589122Z ✔ mandatory native MCP refuses wrong-server before work even when Host probe reports healthy (68.797926ms)
+2026-11-15T23:28:13.0230204Z ✔ mandatory native MCP refuses disconnected before work even when Host probe reports healthy (64.208752ms)
+2026-11-15T23:28:13.0986620Z ✔ mandatory native MCP refuses tools-error before work even when Host probe reports healthy (75.483931ms)
+2026-11-15T23:28:13.1657313Z ✔ mandatory native MCP refuses cached-only before work even when Host probe reports healthy (66.816575ms)
+2026-11-15T23:28:13.2307607Z ✔ mandatory native MCP refuses malformed before work even when Host probe reports healthy (65.153017ms)
+2026-11-15T23:28:13.3024569Z ✔ mandatory native MCP refuses duplicate-cursor before work even when Host probe reports healthy (71.497372ms)
+2026-11-15T23:28:13.3691579Z ✔ mandatory native MCP refuses excessive-pages before work even when Host probe reports healthy (65.507372ms)
+2026-11-15T23:28:13.5349571Z ✔ mandatory native MCP refuses timeout before work even when Host probe reports healthy (166.767466ms)
+2026-11-15T23:28:13.6006323Z ✔ native tool floor is rechecked before each input and cannot be replaced by a healthy injected probe (65.685456ms)
+2026-11-15T23:28:13.6629740Z ✔ omitted native tool floor preserves previous behavior and exact checkpoint compatibility bytes (62.278688ms)
+2026-11-15T23:28:14.2248073Z ✔ required native tool configuration snapshots, rejects malformed maps and binds checkpoint restore (561.645137ms)
+2026-11-15T23:28:14.2885427Z ✔ finite native client discovery rejects foreign/released thread and captures request before await (63.962977ms)
+2026-11-15T23:28:14.6653432Z ✔ finite metadata uses captured requests and allowlisted replies across the subprocess wire (73.927203ms)
+2026-11-15T23:28:14.7300330Z ✔ metadata rejects malformed bounds, private response shapes and aborted writes (65.85287ms)
+2026-11-15T23:28:14.7961771Z ✔ finite account quotas keep zero and safe summary fields without native bucket or credential leakage (66.147647ms)
+2026-11-15T23:28:14.8667959Z ✔ account mutation methods use only explicit native refresh/logout and refuse malformed acknowledgments (69.570534ms)
+2026-11-15T23:28:15.2458257Z ✔ finite probe uses selected child/model and no-tools output; own disposal seals custody without erasing success (77.371883ms)
+2026-11-15T23:28:15.5181864Z ✔ native model/provider/cwd mismatch refuses inference rather than guessing or retrying (271.179397ms)
+2026-11-15T23:28:15.5819370Z ✔ absent selected provider stays absent and is proven by native thread selection (64.563309ms)
+2026-11-15T23:28:15.7208322Z ✔ empty output and failed terminal are not inference success (138.901083ms)
+2026-11-15T23:28:15.8806621Z ✔ native tool items and unknown native control attempts disqualify otherwise successful text (158.810061ms)
+2026-11-15T23:28:16.1491530Z ✔ preallocation refusal, cancelled pending wire and finite timeout never replay and clean captured child (269.27867ms)
+2026-11-15T23:28:16.2804945Z ✔ unconfirmed captured-child cleanup overrides successful native result; caller exceptions are redacted (131.203906ms)
+2026-11-15T23:28:16.3446028Z ✔ wrong native namespace refuses thread allocation (64.037316ms)
+2026-11-15T23:28:16.4775870Z ✔ lost native terminal remains unknown and revoked original custody cannot report success (132.199996ms)
+2026-11-15T23:28:16.4778533Z ✔ native model option arguments preserve extensible catalog effort and true-only Fast settings (0.76514ms)
+2026-11-15T23:28:16.5470994Z ✔ finite inference proves captured effort and Fast tier before its only input and keeps native turn effort (69.154492ms)
+2026-11-15T23:28:16.8247083Z ✔ native effort/tier mismatch cannot run a default-model probe in place of selected options (277.717529ms)
+2026-11-15T23:28:16.9712428Z ✔ current-turn native input echoes and empty assistant starts preserve readonly probe success (144.106659ms)
+2026-11-15T23:28:17.5436458Z ✔ foreign, malformed or changed probe echoes and unknown lifecycle remain refused (574.639363ms)
+2026-11-15T23:28:17.6084894Z ✔ witnessed readonly metadata and nonempty assistant starts do not erase completed inference (64.835288ms)
+2026-11-15T23:28:17.6777099Z ✔ ordinary nonnull quota windows and known native status variants remain metadata only (69.142694ms)
+2026-11-15T23:28:17.8132057Z ✔ started text and diagnostics without completed nonempty text never prove inference (135.295355ms)
+2026-11-15T23:28:18.9140033Z ✔ malformed or foreign metadata, unknown notifications and metadata-looking requests remain refused (1100.923541ms)
+2026-11-15T23:28:19.2208778Z ✔ thread, assistant and terminal usage retain order without task lifecycle effects (1.554885ms)
+2026-11-15T23:28:19.2209905Z ✔ MCP arguments, results and provider errors retain their own correlation (0.367563ms)
+2026-11-15T23:28:19.2210702Z ✔ native mapping is per invocation; disabled native tools do not suppress MCP (0.386441ms)
+2026-11-15T23:28:19.2212678Z ✔ malformed output and unsupported events stay observable; ordinary text is not success (0.291899ms)
+2026-11-15T23:28:19.2213392Z ✔ modern and legacy approval identities preserve turn/item/provider distinctions (0.354835ms)
+2026-11-15T23:28:19.2214375Z ✔ response encoder uses only the explicit decision, never implicit session escalation (0.458977ms)
+2026-11-15T23:28:19.2215573Z ✔ permission reply contains only the explicit runtime grant, not all requested access (0.203885ms)
+2026-11-15T23:28:19.2220048Z ✔ malformed nested provider data cannot manufacture completion or crash later JSONL records (0.263725ms)
+2026-11-15T23:28:19.2220780Z ✔ native file changes and terminal failures remain provider observations (0.430668ms)
+2026-11-15T23:28:19.2221461Z ✔ native turn failure is terminal without an optional diagnostic message (0.266474ms)
+2026-11-15T23:28:19.2227959Z ✔ usage distinguishes missing counters from observed zero and rejects invalid token counts (0.311148ms)
+2026-11-15T23:28:19.5399311Z ✔ explicit runtime MCP endpoint rotates across generations while resuming the exact selected thread (18.559242ms)
+2026-11-15T23:28:19.5432686Z ✔ runtime endpoint declaration does not bypass current native URL verification (3.651495ms)
+2026-11-15T23:28:19.5487040Z ✔ unmarked consumers retain exact checkpoint bytes and cannot infer a runtime endpoint on restore (2.674656ms)
+2026-11-15T23:28:19.5529409Z ✔ runtime MCP declaration snapshots and refuses missing, malformed, inherited or non-HTTP targets (2.748436ms)
+2026-11-15T23:28:19.5530728Z ✔ only the declared runtime URL may rotate; authority, catalog, foreign transport and native policy remain bound (4.844766ms)
+2026-11-15T23:28:19.8780701Z ✔ public client recovers exactly one pre-response readiness GET reset with unchanged request/controller (17.49851ms)
+2026-11-15T23:28:19.8781778Z ✔ public client second GET reset is returned after two total attempts (0.458154ms)
+2026-11-15T23:28:19.8783137Z ✔ public client never repeats an uncertain permission POST (0.28282ms)
+2026-11-15T23:28:19.8784251Z ✔ public client caller cancellation prevents recovery after rejected GET (0.328365ms)
+2026-11-15T23:28:19.8785149Z ✔ public client expired original endpoint deadline prevents recovery (0.648126ms)
+2026-11-15T23:28:19.8786670Z ✔ public client expired original caller deadline prevents recovery (0.239548ms)
+2026-11-15T23:28:19.8791022Z ✔ public client never retries body-reset as a rejected pre-response GET reset (0.840759ms)
+2026-11-15T23:28:19.8791847Z ✔ public client never retries timeout as a rejected pre-response GET reset (0.25981ms)
+2026-11-15T23:28:19.8792452Z ✔ public client never retries invalid-json as a rejected pre-response GET reset (0.428117ms)
+2026-11-15T23:28:19.8793046Z ✔ public client never retries http-error as a rejected pre-response GET reset (0.588226ms)
+2026-11-15T23:28:20.2711217Z ✔ before blocks prompt_async; exact terminal carries edit metadata/part anchors before next input and snapshots identities (70.49724ms)
+2026-11-15T23:28:20.4890738Z ✔ timed-out before cannot resurrect baseline when late; capture failures never deny prompt (217.596366ms)
+2026-11-15T23:28:20.4966852Z ✔ close during before sends no prompt even after late completion (7.396604ms)
+2026-11-15T23:28:20.4997616Z ✔ native preflight failure invalidates original window without successful after or retarget (3.067561ms)
+2026-11-15T23:28:20.7269157Z ✔ foreign parent cannot supply final metadata or terminal capture (226.574271ms)
+2026-11-15T23:28:20.8558222Z ✔ before/after/gap failures never deny native work; interrupted terminal keeps original input identity (128.019115ms)
+2026-11-15T23:28:20.8563446Z ✔ bounded metadata refuses oversized or malformed observations without fabricating an image or blocking terminal observation (1.47457ms)
+2026-11-15T23:28:20.8567733Z ✔ optional capture getter is read once and an initially absent changing port never bypasses snapshot (1.102297ms)
+2026-11-15T23:28:21.2136170Z ✔ two sessions share a host while interrupt and permission effects stay scoped (39.035389ms)
+2026-11-15T23:28:21.2206079Z ✔ failed permission POST is attempted once and diagnostics do not echo provider secrets (7.281899ms)
+2026-11-15T23:28:21.2766596Z ✔ bounded JSON reads reject large metadata, incomplete body deadlines and expired preflight (55.450109ms)
+2026-11-15T23:28:21.2794486Z ✔ SSE consumes chunked envelopes and malformed records without attributing unknown events (3.489292ms)
+2026-11-15T23:28:21.2957137Z ✔ SSE rejects an unbounded event and caps diagnostic retention (15.733469ms)
+2026-11-15T23:28:21.2957897Z ✔ native ID codec preserves ordering while runtime owns allocation (0.482557ms)
+2026-11-15T23:28:21.2989586Z ✔ a scoped URL cannot legitimize another session message or identity (3.34384ms)
+2026-11-15T23:28:21.3009813Z ✔ mutation redirects are refused before the destination receives an effect (2.499353ms)
+2026-11-15T23:28:21.6113352Z ✔ lost cursor write receipt remains unknown; restart observes original binding without replay (8.342915ms)
+2026-11-15T23:28:21.6133915Z ✔ concurrent cursors cannot lose a sibling record update; conflict is explicit (2.108799ms)
+2026-11-15T23:28:21.6155558Z ✔ workspace, host, run, native generation and stored creation identity cannot be rebound (2.281145ms)
+2026-11-15T23:28:21.6179302Z ✔ unknown envelopes, archive keys and materialization fences are preserved without writes (2.259429ms)
+2026-11-15T23:28:21.6199345Z ✔ owner generation and terminal records fence stale cursor writers (2.006145ms)
+2026-11-15T23:28:21.6226885Z ✔ opaque numeric data that would round during JSON rewrite is preserved without CAS (2.689541ms)
+2026-11-15T23:28:21.8479011Z ✔ cursor growth cannot exceed input or rewritten store byte budgets (224.956195ms)
+2026-11-15T23:28:22.1571007Z ✔ terminal recovery requires exact original session, user anchor, workspace and complete settled evidence (1.098576ms)
+2026-11-15T23:28:22.1572272Z ✔ unsettled tool and unknown finish stay unknown; native aborted error remains a technical outcome (0.708671ms)
+2026-11-15T23:28:22.5099238Z ✔ selected V1 prompt_async serializes actual ordered native file parts for images and approved video (36.027675ms)
+2026-11-15T23:28:22.5116517Z ✔ V1 unsupported model projection and missing artifact cannot reach native prompt_async (1.512727ms)
+2026-11-15T23:28:22.5447582Z ✔ canonical V1 factory serializes actual HTTP turns with native ascending IDs and exact text/tool ownership (33.377198ms)
+2026-11-15T23:28:22.5732169Z ✔ V1 omitted idle status with a busy neighbor qualifies only exact settled turns and admits the next input (28.169704ms)
+2026-11-15T23:28:25.1514192Z ✔ V1 malformed, unknown or busy status cannot qualify a settled native transcript (2578.101865ms)
+2026-11-15T23:28:25.1938048Z ✔ V1 native ToolStateError preserves its error text without an output field (42.726113ms)
+2026-11-15T23:28:25.1989444Z ✔ V1 unknown prompt response is not replayed and queued neighbor remains known not sent (5.227537ms)
+2026-11-15T23:28:25.3232431Z ✔ V1 permission uses exact original assistant/tool lineage and scoped native decision (123.774365ms)
+2026-11-15T23:28:25.5805557Z ✔ V1 held permission list across interrupt ACK cannot regain authority; valid next turn still works (255.332869ms)
+2026-11-15T23:28:25.7104758Z ✔ V1 exact MessageAbortedError terminal follows observed native evidence, and control ACK fences B (131.814832ms)
+2026-11-15T23:28:25.8318092Z ✔ V1 terminal revokes a reply preflight before a late grant POST (121.658799ms)
+2026-11-15T23:28:26.0684036Z ✔ V1 conflicting assistant parent cannot emit or grant permission; repaired next turn works (236.272462ms)
+2026-11-15T23:28:26.0691316Z ✔ V1 factory refuses unsupported capability/config generation and restores only selected compatible checkpoint (1.281822ms)
+2026-11-15T23:28:26.0713391Z ✔ V1 foreign workspace is fenced before native prompt dispatch (2.106395ms)
+2026-11-15T23:28:26.5039424Z ✔ V1 tool completion and an unqualified native finish cannot become turn completion (432.012793ms)
+2026-11-15T23:28:26.5121392Z ✔ V1 output bound reserves qualified terminal and honest Host evidence controls cleanup (8.249967ms)
+2026-11-15T23:28:26.5271262Z ✔ V1 long retained history and legacy random IDs do not force a full-session scan before new input (14.535892ms)
+2026-11-15T23:28:26.5272284Z ✔ V1 private checkpoint identity selection rejects foreign/credential-bearing values before Host allocation (0.674079ms)
+2026-11-15T23:28:26.9600123Z ✔ V1 HTTP reasoning retains native part identity through snapshots and complete without another prompt (433.184425ms)
+2026-11-15T23:28:27.4149015Z ✔ public V1 allow uses one exact native permission reply route/body and original lineage (144.158103ms)
+2026-11-15T23:28:27.5254411Z ✔ public V1 deny uses one exact native permission reply route/body and original lineage (109.941365ms)
+2026-11-15T23:28:27.5334677Z ✔ public V1 lost permission POST stays unknown without retry or alternate-route probing (8.254127ms)
+2026-11-15T23:28:27.5407681Z ✔ public V1 exact permission reply honors its endpoint abort before the longer wire budget (11.630894ms)
+2026-11-15T23:28:27.8836288Z ✔ public V1 retries one preflight GET reset and completes the original input with one POST (38.176336ms)
+2026-11-15T23:28:27.8860940Z ✔ public V1 never replays a POST reset after the native mutation may already have happened (2.401297ms)
+2026-11-15T23:28:27.8914095Z ✔ public V1 second GET reset preserves unknown after one accepted native input (2.631845ms)
+2026-11-15T23:28:27.8915165Z ✔ public V1 lifetime cancellation prevents a GET reset retry (0.880668ms)
+2026-11-15T23:28:27.8916473Z ✔ public V1 exhausted original operation deadline prevents a GET reset retry (1.106233ms)
+2026-11-15T23:28:27.8968636Z ✔ public V1 forwards endpoint abort before the longer wire budget and never retries its reset (3.444911ms)
+2026-11-15T23:28:27.8969681Z ✔ public V1 does not retry timeout as a pre-response connection reset (0.766828ms)
+2026-11-15T23:28:27.8970511Z ✔ public V1 does not retry body-reset as a pre-response connection reset (0.784448ms)
+2026-11-15T23:28:27.8971608Z ✔ public V1 does not retry bad-media as a pre-response connection reset (0.803165ms)
+2026-11-15T23:28:27.8972352Z ✔ public V1 does not retry invalid-json as a pre-response connection reset (0.80027ms)
+2026-11-15T23:28:27.8973233Z ✔ public V1 common client cannot add recovery after the one shared wire-use GET retry is spent (1.007723ms)
+2026-11-15T23:28:28.2292369Z ✔ 2.1.4 admits only immutable bounded PNG data URIs with the verified original digest (2.278551ms)
+2026-11-15T23:28:28.2800651Z ✔ 2.1.4 Session SPI delivers an original PNG once and requires its exact native ACK and history (62.494891ms)
+2026-11-15T23:28:28.2848842Z ✔ PNG source bytes, owner binding and selected native model cannot be substituted before submit (4.81659ms)
+2026-11-15T23:28:28.3024223Z ✔ attachment Host getters cannot replace the captured model, policy or original receiver callback (17.551834ms)
+2026-11-15T23:28:28.3084993Z ✔ changed PNG ACK remains UNKNOWN and cannot replay the native input (5.915192ms)
+2026-11-15T23:28:28.3088629Z ✔ old dialect, non-PNG policy and changed attachment checkpoint policy refuse before native admission (1.564621ms)
+2026-11-15T23:28:28.6549054Z ✔ V2 raw control wire never forwards caller headers with native credentials (10.952024ms)
+2026-11-15T23:28:28.6549828Z ✔ V2 control readback refuses partial or asynchronous 2xx as confirmed permission state (4.367972ms)
+2026-11-15T23:28:28.6550843Z ✔ raw session-bound control refuses foreign ID namespaces before credentials or native effects (1.604572ms)
+2026-11-15T23:28:28.6551635Z ✔ raw V2 credential-bearing wires reject noncanonical workspace bindings before native access (0.613955ms)
+2026-11-15T23:28:28.6981612Z ✔ bound native control translates both dialects without touching neighboring session or host (50.450009ms)
+2026-11-15T23:28:28.7015436Z ✔ V2 control uses the same bounded session ID alphabet as its native driver (3.701732ms)
+2026-11-15T23:28:28.7025340Z ✔ raw V2 control rejects coerced or unqualified loopback endpoints before any native activity (0.874381ms)
+2026-11-15T23:28:28.7066171Z ✔ native permission effect with lost response remains unknown and is not replayed (4.169246ms)
+2026-11-15T23:28:28.7103082Z ✔ control credential callback revocation is checked before native invocation (0.72127ms)
+2026-11-15T23:28:28.7232921Z ✔ raw V2 mutation callbacks cannot revoke Host custody before credentials or native fetch (1.118768ms)
+2026-11-15T23:28:28.7282125Z ✔ raw V2 control rechecks the deadline after reading a mutation body before credentials (0.817055ms)
+2026-11-15T23:28:28.7283423Z ✔ V2 durable always-approval is refused even via raw control wire without native reads or writes (1.606625ms)
+2026-11-15T23:28:28.7289335Z ✔ raw V2 instruction PUT enforces the durable value byte budget before credentials or native effects (12.915571ms)
+2026-11-15T23:28:28.7290689Z ✔ V2 canonical instruction serializer refuses oversized, escaped and deeply nested Host data before materialization (2.569358ms)
+2026-11-15T23:28:28.7357882Z ✔ typed V2 instruction preflight is not-submitted for over-budget and non-JSON values (9.241004ms)
+2026-11-15T23:28:28.7367369Z ✔ invalid untyped permission decision is refused before any native read or mutation (0.615336ms)
+2026-11-15T23:28:28.7399872Z ✔ legacy flat V1-style permission responses cannot issue a native V2 grant (3.243763ms)
+2026-11-15T23:28:28.7419258Z ✔ V2 instructions list requires the pinned data envelope (1.835606ms)
+2026-11-15T23:28:28.7452616Z ✔ pinned V2 permission IDs reject old-format input and malformed native replies before grant (3.150043ms)
+2026-11-15T23:28:28.7462967Z ✔ malformed V2 control identifiers cannot reach a native route or mutate another session (1.151544ms)
+2026-11-15T23:28:28.8426622Z ✔ malformed native permission source message ID never permits a control grant (5.709973ms)
+2026-11-15T23:28:28.8533965Z ✔ raw V2 control refuses untyped native response chunks with confirmed cleanup (1.402291ms)
+2026-11-15T23:28:28.8534848Z ✔ V2 control wire bounds tiny native response chunks before memory fanout (88.424165ms)
+2026-11-15T23:28:28.8535971Z ✔ session-bound control denies global MCP mutation and discovery before credentials (1.944941ms)
+2026-11-15T23:28:28.9566061Z ✔ native V2 tool-origin permission keeps valid message lineage and allows only explicit once (17.592295ms)
+2026-11-15T23:28:28.9606467Z ✔ V2 typed permission preflight preserves unknown native reader cleanup without granting (1.033528ms)
+2026-11-15T23:28:28.9607759Z ✔ V2 raw control wire refuses to mask a rejected native reader cancellation (80.599097ms)
+2026-11-15T23:28:28.9609055Z ✔ V2 raw control does not relay native diagnostic headers (1.203194ms)
+2026-11-15T23:28:28.9610763Z ✔ V2 control cleans up a native response when metadata access throws (2.496705ms)
+2026-11-15T23:28:28.9611660Z ✔ V2 raw control cannot claim clean native reader custody on locked or malformed readbacks (2.747522ms)
+2026-11-15T23:28:28.9612747Z ✔ V2 typed permission preflight preserves unknown custody after locked native response (1.16939ms)
+2026-11-15T23:28:28.9613917Z ✔ V2 control raw response accounts for physical bytes despite spoofed getters (1.30514ms)
+2026-11-15T23:28:29.3359906Z ✔ 2.1.4 key connect uses original integration, exact readback and only owned rollback (33.435448ms)
+2026-11-15T23:28:29.3362793Z ✔ lost ACK, partial success and foreign/malformed readback never replay key mutation (27.547512ms)
+2026-11-15T23:28:29.3364487Z ✔ additional forms, environment and pre-existing credentials prevent a replacement POST (3.423585ms)
+2026-11-15T23:28:29.3706449Z ✔ Host revocation precedes credential projection and late acquisitions keep cleanup unknown (34.84763ms)
+2026-11-15T23:28:29.3707637Z ✔ unqualified management identity and original session global capability stay rejected (1.574946ms)
+2026-11-15T23:28:29.6983015Z ✔ V2 refuses malformed checkpoint references before invoking Host storage or native admission (5.190309ms)
+2026-11-15T23:28:29.7025111Z ✔ V2 refuses forged checkpoint getters, Proxy and hidden fields before native admission (2.077078ms)
+2026-11-15T23:28:29.7031419Z ✔ V2 Host getters cannot swap native authority between validation and config snapshot (1.485843ms)
+2026-11-15T23:28:29.7032370Z ✔ V2 attachment refs explicitly reject known not sent instead of silently using text queue (2.421649ms)
+2026-11-15T23:28:29.7033167Z ✔ V2 native path validation accepts canonical Windows drives but rejects unsafe forms (0.45693ms)
+2026-11-15T23:28:29.7034256Z ✔ selected native factory refuses unsupported capability before resolving Host or performing HTTP (0.791801ms)
+2026-11-15T23:28:29.7035245Z ✔ native factory validates full runtime generation binding and explicit checkpoint, never replacing missing native identity (1.525049ms)
+2026-11-15T23:28:29.7036070Z ✔ V2 rejects blank Host authority and invalid loopback ports before any native probe (0.983284ms)
+2026-11-15T23:28:29.7037028Z ✔ V2 rejects root, noncanonical directories and corrupted nested Host bindings before probe (0.841305ms)
+2026-11-15T23:28:29.7039458Z ✔ unqualified future Host version is refused before native credentials or probe (0.684177ms)
+2026-11-15T23:28:29.7040227Z ✔ private Host failures never project credential/configuration details into public open errors (0.258694ms)
+2026-11-15T23:28:29.7040988Z ✔ V2 Host probe and physical stop attestation require primitive true, not truthy values (3.260067ms)
+2026-11-15T23:28:29.7041801Z ✔ V2 rejects nonprimitive revision and runtime bindings before owner probe or credentials (0.816706ms)
+2026-11-15T23:28:30.0773862Z ✔ fresh finite native operations retain original queue anchor and qualify its actual HTTP cut (55.631972ms)
+2026-11-15T23:28:30.0842950Z ✔ invalid native queue input never reads Host credentials or performs preflight GET on either pinned SDK (2.575615ms)
+2026-11-15T23:28:30.1001571Z ✔ escaped native prompt body over 1 MiB is rejected before credentials and GET; subsequent valid input remains usable (20.993111ms)
+2026-11-15T23:28:30.1038234Z ✔ stock CLI sync-only log is not a durable execution preflight and cannot submit a model prompt (3.508536ms)
+2026-11-15T23:28:30.1123039Z ✔ native queue preflight rejects foreign workspace before POST while lost mutation receipt is unknown (7.564147ms)
+2026-11-15T23:28:30.1146515Z ✔ native queue preserves UNKNOWN when preflight response stream cancellation fails, without prompt POST (2.613883ms)
+2026-11-15T23:28:30.1283979Z ✔ unknown native stream cleanup stays unknown across driver disposal for queue, read and control (7.770236ms)
+2026-11-15T23:28:30.1359188Z ✔ legacy flat V1-like read never submits, and malformed post-ACK is unknown without replay (13.893457ms)
+2026-11-15T23:28:30.1486129Z ✔ unconfirmed native prompt fences all control mutations, including delayed callbacks, while read-only reconciliation works (12.824591ms)
+2026-11-15T23:28:30.1574619Z ✔ concurrent native queue cannot submit a second prompt while first ACK is unresolved (8.623822ms)
+2026-11-15T23:28:30.1782900Z ✔ permission detail already in flight cannot POST a grant after concurrent native prompt becomes unknown (20.394694ms)
+2026-11-15T23:28:30.1812314Z ✔ driver close during native GET preflight never certifies cleanup or admits a later prompt (3.792627ms)
+2026-11-15T23:28:30.1823071Z ✔ clean idle driver close rejects new native traffic as known-not-submitted (0.553678ms)
+2026-11-15T23:28:30.1833346Z ✔ driver close while a control callback is suspended cannot return a clean success (1.079908ms)
+2026-11-15T23:28:30.1836594Z ✔ native close between callback success and wire disposal cannot return an uncertified success (1.021825ms)
+2026-11-15T23:28:30.4931213Z ✔ canonical native output keeps native message/block/tool attribution and never promotes product-looking tool content (2.4806ms)
+2026-11-15T23:28:30.4935012Z ✔ unqualified lineage never emits canonical text/tool output (0.270111ms)
+2026-11-15T23:28:30.4937615Z ✔ 2.1.4 shell nonzero native exit is an error result while preserving completed native facts and content (0.621291ms)
+2026-11-15T23:28:30.4939010Z ✔ missing shell exit keeps the native completed result and never parses arbitrary text as an exit code (3.038737ms)
+2026-11-15T23:28:30.4940210Z ✔ malformed explicit native shell exit cannot produce a successful canonical tool result (0.825285ms)
+2026-11-15T23:28:30.4941353Z ✔ native shell exit semantics are not applied to MCP names, provider-executed tools or older dialects (0.356936ms)
+2026-11-15T23:28:30.7541295Z ✔ native session consumer serializes two actual HTTP inputs and preserves canonical attribution (114.072045ms)
+2026-11-15T23:28:30.7593255Z ✔ lost native handoff seals session, rejects unsent neighbor, and never replays mutation (5.477785ms)
+2026-11-15T23:28:30.7645739Z ✔ malformed post-ACK native V2 envelope seals original UNKNOWN and never replays or submits its neighbor (5.204189ms)
+2026-11-15T23:28:30.8140035Z ✔ actual native permission is independent of turn polling, bound to original input, and replied once (49.038667ms)
+2026-11-15T23:28:30.9274090Z ✔ a delayed scoped interrupt fences the next input even after the original turn reaches terminal (113.444251ms)
+2026-11-15T23:28:30.9395051Z ✔ output backpressure preserves an already qualified terminal in the reserved frame and prevents neighbor handoff (11.885939ms)
+2026-11-15T23:28:30.9450295Z ✔ logical close is immediate and reports unknown cleanup without Host stop evidence (5.634312ms)
+2026-11-15T23:28:30.9961774Z ✔ interrupt of an undelivered native input cancels only its exact inbox and preserves a shared-host neighbor (51.170684ms)
+2026-11-15T23:28:31.1270767Z ✔ permission list held across a completed interrupt ACK cannot resurrect interaction or authorize a reply (130.684351ms)
+2026-11-15T23:28:31.2715019Z ✔ unqualified native execution lineage cannot authorize permissions, while the next qualified turn works (144.417034ms)
+2026-11-15T23:28:31.3917160Z ✔ interrupt revokes an already pending permission reply preflight before its grant POST (120.212421ms)
+2026-11-15T23:28:31.4284735Z ✔ revocation after a native grant POST started retains uncertainty and prevents next handoff (36.838123ms)
+2026-11-15T23:28:31.5081559Z ✔ observed terminal revokes a held permission reply preflight before grant and admits valid next turn (80.115619ms)
+2026-11-15T23:28:31.9005287Z ✔ V2 captures one immutable original input window with real event anchors before permitting its neighbor (77.843623ms)
+2026-11-15T23:28:32.1887195Z ✔ V2 observer failure or deadline yields a gap while the original native work still completes once (289.092515ms)
+2026-11-15T23:28:32.1949845Z ✔ V2 close during baseline observation never posts a late original input (5.394597ms)
+2026-11-15T23:28:32.1954385Z ✔ V2 capture rejects synthetic part identities, reversed event anchors and a mixed dialect as a bounded gap (0.829921ms)
+2026-11-15T23:28:32.1955634Z ✔ V2 config captures the optional port getter once, including initially absent ports (1.007476ms)
+2026-11-15T23:28:32.2699495Z ✔ all V2 transports share exact string-only loopback authority admission (0.798635ms)
+2026-11-15T23:28:32.3465456Z ✔ native V2 byte view refuses shared backing that can race the owned copy (0.672935ms)
+2026-11-15T23:28:32.3466745Z ✔ native V2 byte view refuses a cross-realm shared backing with a local typed-array view (0.907475ms)
+2026-11-15T23:28:32.3506459Z ✔ native V2 byte view preserves physical offsets for regular Buffer slices (0.598119ms)
+2026-11-15T23:28:32.3508170Z ✔ native V2 byte view returns refusal for revoked proxy rather than throwing (0.121477ms)
+2026-11-15T23:28:32.7134863Z ✔ actual finite HTTP transport reads one stable native cut and projects provider facts (46.359441ms)
+2026-11-15T23:28:32.7301965Z ✔ 2.1.4 reads oldest-first exactly on the first message page and follows native cursors without an order override (17.065374ms)
+2026-11-15T23:28:32.7566962Z ✔ native cut read rejects changing history, pagination cycles and original workspace mismatch (26.741355ms)
+2026-11-15T23:28:32.7719559Z ✔ pinned native durable log accepts filtered bus gaps but rejects non-monotonic events and stale sync (15.106846ms)
+2026-11-15T23:28:32.7802816Z ✔ real pre-execution V2 log with owned sync only never qualifies a successful turn (8.396366ms)
+2026-11-15T23:28:32.9012164Z ✔ native finite cut accepts 4096 events plus synced frame and rejects a 4097th event (120.731544ms)
+2026-11-15T23:28:32.9655269Z ✔ malformed session and message JSON fail closed without leaking native body or skipping read budgets (5.359641ms)
+2026-11-15T23:28:32.9656557Z ✔ direct read-cut rejects malformed binding before any native fetch (0.767602ms)
+2026-11-15T23:28:32.9658025Z ✔ direct native read cut refuses empty or whitespace original input before transport access (0.202402ms)
+2026-11-15T23:28:32.9659070Z ✔ direct native read-cut redacts injected fetch and body stream diagnostics (0.97604ms)
+2026-11-15T23:28:32.9660060Z ✔ public read cut refuses a non-byte stream chunk before reading more data (0.396992ms)
+2026-11-15T23:28:32.9660994Z ✔ public native read cut bounds tiny byte chunks before exhausting memory (56.186035ms)
+2026-11-15T23:28:33.9686846Z ✔ direct native cut fails closed when an injected stream refuses cancellation (1002.538272ms)
+2026-11-15T23:28:33.9687644Z ✔ direct native cut reports unknown cleanup when an injected reader refuses lock release (0.60544ms)
+2026-11-15T23:28:33.9688535Z ✔ public native read cut refuses a never-settling injected fetch after admission revocation (0.335567ms)
+2026-11-15T23:28:33.9797893Z ✔ public native read cut cancels a late fetch response after revocation (6.092099ms)
+2026-11-15T23:28:33.9798877Z ✔ public native read cut cancels a never-settling injected body read on revocation (0.410419ms)
+2026-11-15T23:28:33.9799949Z ✔ public native read cut cancels the body of a rejected status or media type (0.581398ms)
+2026-11-15T23:28:33.9801282Z ✔ public native read cut cleans up streams when response metadata getters throw (1.376694ms)
+2026-11-15T23:28:33.9802259Z ✔ public injected native read cut rejects partial 2xx before reading any session bytes (0.763753ms)
+2026-11-15T23:28:33.9803137Z ✔ public injected native read cut never claims clean cleanup for a locked response body (0.6017ms)
+2026-11-15T23:28:33.9805471Z ✔ public injected native cut fails closed when a body returns no reader handle (0.596667ms)
+2026-11-15T23:28:33.9806204Z ✔ public native read cut refuses to claim cleanup for a rejected response with failed body cancellation (0.346097ms)
+2026-11-15T23:28:33.9806920Z ✔ V2 public read cut counts physical native bytes behind spoofed accessors (0.512915ms)
+2026-11-15T23:28:34.0533985Z ✔ native session and message identifiers preserve safe OpenCode V2 URL-segment separators (0.734376ms)
+2026-11-15T23:28:34.0540978Z ✔ native identifiers reject foreign URL delimiters, empty segments, controls and unbounded captures (0.197579ms)
+2026-11-15T23:28:34.3582481Z ✔ pinned native V2 pre-execution SSE is an empty owned cut with a valid sync watermark (1.446152ms)
+2026-11-15T23:28:34.3583288Z ✔ pre-execution empty log does not relax foreign/malformed/incomplete SSE refusal (0.663632ms)
+2026-11-15T23:28:34.3589742Z ✔ durable V2 log fails closed on unsupported SSE controls or empty data frames (0.366937ms)
+2026-11-15T23:28:34.3590568Z ✔ malformed native SSE JSON fails with a fixed sanitized diagnostic (0.242049ms)
+2026-11-15T23:28:34.3593326Z ✔ public native SSE decoder enforces bounded frame size and JSON nesting (0.933198ms)
+2026-11-15T23:28:34.3594413Z ✔ known nonempty session-created prefix remains valid and ordered (0.251077ms)
+2026-11-15T23:28:34.3595120Z ✔ empty synced native read cannot be projected as a completed model turn (0.410216ms)
+2026-11-15T23:28:34.7208406Z ✔ 2.1.4 owner client captures exact session/config identity and exposes finite sanitized readback (29.915134ms)
+2026-11-15T23:28:34.7209772Z ✔ owned creation never retries a lost ACK, wrong model/permissions, foreign session or partial success (4.881707ms)
+2026-11-15T23:28:34.7210834Z ✔ owned create captures native default variant before effects and requires its exact readback (1.524887ms)
+2026-11-15T23:28:34.7211904Z ✔ owned create captures only the typed credential witness in native session metadata and verifies readback (4.109813ms)
+2026-11-15T23:28:34.7212896Z ✔ owned client rejects unqualified version/identity and malformed MCP readback (1.404268ms)
+2026-11-15T23:28:34.7214138Z ✔ ordinary 2.1.4 session transport retains zero-credential rejection of owner/global operations (1.067206ms)
+2026-11-15T23:28:34.7216355Z ✔ owned native catalog preserves native selection and drops provider credentials and settings (1.748525ms)
+2026-11-15T23:28:34.7217366Z ✔ owned catalog rejects foreign locations, duplicates and malformed model metadata (6.957636ms)
+2026-11-15T23:28:34.7218418Z ✔ owned directory reads one native inventory for all providers and exports no credential or config fields (5.012786ms)
+2026-11-15T23:28:34.7219583Z ✔ owned plugin readback attests only active native builtins in the exact location (4.286744ms)
+2026-11-15T23:28:34.7220904Z ✔ owned saved grants attest only exact native empty list and expose no grant details (1.771314ms)
+2026-11-15T23:28:34.7221851Z ✔ 2.1.4 cold checkpoint survives endpoint change but fences native/config/account/graph identity (0.873776ms)
+2026-11-15T23:28:35.0312004Z ✔ both native dialects retain exact input, text and raw tool facts without inferring product completion (2.949525ms)
+2026-11-15T23:28:35.0316360Z ✔ 2.1.4 requires a native idle snapshot matching the durable execution terminal (1.721513ms)
+2026-11-15T23:28:35.0317254Z ✔ completed step/tool does not imply native execution terminal (0.225207ms)
+2026-11-15T23:28:35.0318228Z ✔ gaps, mixed sessions, duplicate delivery and mismatching snapshots remain unknown (0.7332ms)
+2026-11-15T23:28:35.0319715Z ✔ native log sync may safely include filtered bus sequence beyond final session event (0.211051ms)
+2026-11-15T23:28:35.0320630Z ✔ only adjacent clean retry lineage can reuse one native assistant identity (0.370435ms)
+2026-11-15T23:28:35.0332075Z ✔ native tool running and failure remain technical observations (0.358747ms)
+2026-11-15T23:28:35.0333123Z ✔ native edit metadata and original called/success anchors must agree with the immutable log (0.835295ms)
+2026-11-15T23:28:35.0334453Z ✔ native failed-tool progress metadata must also match its durable failure event (0.425728ms)
+2026-11-15T23:28:35.0335400Z ✔ tool execution evidence combines durable called and terminal flags without losing effects (0.815919ms)
+2026-11-15T23:28:35.0336160Z ✔ failed native tool cannot erase actual execution from durable events (0.486615ms)
+2026-11-15T23:28:35.0336970Z ✔ trimmed or absent native history cannot become input-not-delivered pending (0.14364ms)
+2026-11-15T23:28:35.3612572Z ✔ execution: native credentials wait for original Host admission callback (19.734222ms)
+2026-11-15T23:28:35.3613750Z ✔ execution: admission lease remains held through native response body (1.761325ms)
+2026-11-15T23:28:35.3614721Z ✔ execution: revoked pending admission never reads credentials and releases late lease (1.113085ms)
+2026-11-15T23:28:35.3615774Z ✔ execution: admission refusal is sanitized before native effects (0.607959ms)
+2026-11-15T23:28:35.3616574Z ✔ execution: Host UNKNOWN cannot become safe-to-retry admission refusal (0.707355ms)
+2026-11-15T23:28:35.3617467Z ✔ execution: failed admission release cannot certify clean native completion (0.862281ms)
+2026-11-15T23:28:35.3618605Z ✔ control: native credentials wait for original Host admission callback (1.581621ms)
+2026-11-15T23:28:35.3619388Z ✔ control: admission lease remains held through native response body (0.825408ms)
+2026-11-15T23:28:35.3620279Z ✔ control: revoked pending admission never reads credentials and releases late lease (0.498206ms)
+2026-11-15T23:28:35.3621040Z ✔ control: admission refusal is sanitized before native effects (0.482564ms)
+2026-11-15T23:28:35.3621823Z ✔ control: Host UNKNOWN cannot become safe-to-retry admission refusal (0.244429ms)
+2026-11-15T23:28:35.3622540Z ✔ control: failed admission release cannot certify clean native completion (0.698682ms)
+2026-11-15T23:28:35.7125959Z ✔ V2 execution transport never forwards caller headers with native credentials (11.687149ms)
+2026-11-15T23:28:35.7127391Z ✔ V2 raw native GET refuses partial or asynchronous 2xx as a complete readback (4.512171ms)
+2026-11-15T23:28:35.7128654Z ✔ V2 raw prompt refuses partial/asynchronous 2xx as a confirmed handoff (4.322927ms)
+2026-11-15T23:28:35.7129702Z ✔ V2 raw prompt rejects malformed resume types and unqualified attachments before credentials or native HTTP (3.129396ms)
+2026-11-15T23:28:35.7130921Z ✔ V2 raw log refuses unsupported SSE directives and empty data before relaying native bytes (3.733837ms)
+2026-11-15T23:28:35.7292315Z ✔ V2 effect then lost receipt is unknown and original input is recovered by readonly lookup without replay (25.186433ms)
+2026-11-15T23:28:35.7329004Z ✔ V2 missing session evidence requires exact native error and original endpoint/workspace/version/session (3.249678ms)
+2026-11-15T23:28:35.7389702Z ✔ V2 unsupported route, workspace and create binding reject before native fetch (1.508884ms)
+2026-11-15T23:28:35.7390863Z ✔ V2 raw execution wire refuses unqualified global discovery before projecting session credentials (2.302264ms)
+2026-11-15T23:28:35.7392128Z ✔ V2 read-only query budgets refuse unbounded pagination and log offsets before credentials (2.333736ms)
+2026-11-15T23:28:35.7393075Z ✔ V2 direct execution wire rejects overflow and noncanonical loopback ports before credentials or fetch (0.163638ms)
+2026-11-15T23:28:35.7453227Z ✔ V2 transport cleanup cancels only its requests on a shared host; neighboring transport remains usable (6.189742ms)
+2026-11-15T23:28:35.7509409Z ✔ V2 finite log enforces complete frames and media type; exact floor activation remains supported (6.002236ms)
+2026-11-15T23:28:35.7551043Z ✔ V2 mutation redirect never forwards credentials or effects to another endpoint (3.215563ms)
+2026-11-15T23:28:36.0417670Z ✔ V2 transport denies foreign session GET/POST/SSE before credentials or HTTP (3.471038ms)
+2026-11-15T23:28:36.0441206Z ✔ V2 execution wire bounds tiny native response chunks before memory fanout (96.575661ms)
+2026-11-15T23:28:36.0452998Z ✔ V2 outgoing prompt body bounds tiny and empty stream chunks before credentials or native fetch (186.151903ms)
+2026-11-15T23:28:36.0454386Z ✔ V2 interrupted request-body validation releases its reader before any native invocation (1.84167ms)
+2026-11-15T23:28:36.0455364Z ✔ V2 credential callback cannot reopen execution after synchronously aborting or closing transport (0.943253ms)
+2026-11-15T23:28:36.0456348Z ✔ V2 Session SPI refuses all direct native creates until Host proves effective permissions (1.549988ms)
+2026-11-15T23:28:36.2385413Z ✔ V2 execution response does not expose native private response headers (12.151371ms)
+2026-11-15T23:28:36.2386407Z ✔ V2 execution wire rejects unconfirmed outgoing reader cleanup before native HTTP (86.062701ms)
+2026-11-15T23:28:36.2387473Z ✔ V2 execution wire refuses a native response reader whose cancel rejects (90.612648ms)
+2026-11-15T23:28:36.2388223Z ✔ V2 execution cleans up a native response when metadata access throws (2.408443ms)
+2026-11-15T23:28:36.2389019Z ✔ V2 execution GET cannot certify cleanup when the native response reader is unacquirable (1.641572ms)
+2026-11-15T23:28:36.2390104Z ✔ V2 execution raw response accounts for physical bytes despite spoofed getters (0.648036ms)
+2026-11-15T23:28:36.3325267Z ✔ ordered attachment snapshot and fingerprint include identity MIME length digest and order (2.105431ms)
+2026-11-15T23:28:36.3326959Z ✔ finite native MIME and frozen budgets intersect Host capability without model-policy duplication (0.803779ms)
+2026-11-15T23:28:36.3371776Z ✔ resolver verifies exact private binding bytes digest length path and missing artifacts before handoff (6.368836ms)
+2026-11-15T23:28:36.4095781Z ✔ single-consumer feed preserves admitted facts and one reserved terminal when capacity is full (1.43053ms)
+2026-11-15T23:28:36.4097992Z ✔ feed byte budget counts UTF-8 encoded JSON and draining releases ordinary capacity (0.197497ms)
+2026-11-15T23:28:36.4141762Z ✔ deadline bounds observation without cancelling owned work and late completion cannot change its rejection (6.497858ms)
+2026-11-15T23:28:36.4818532Z ✔ native path admission keeps real Windows drive identity and refuses aliases (1.169456ms)
+2026-11-15T23:28:36.4883161Z ℹ tests 561
+2026-11-15T23:28:36.4883549Z ℹ suites 0
+2026-11-15T23:28:36.4884585Z ℹ pass 561
+2026-11-15T23:28:36.4884877Z ℹ fail 0
+2026-11-15T23:28:36.4885186Z ℹ cancelled 0
+2026-11-15T23:28:36.4885575Z ℹ skipped 0
+2026-11-15T23:28:36.4885847Z ℹ todo 0
+2026-11-15T23:28:36.4886206Z ℹ duration_ms 45147.613794
+2026-11-15T23:28:36.8220629Z $ pnpm -r run test:package
+2026-11-15T23:28:37.1438683Z Scope: 2 of 3 workspace projects
+2026-11-15T23:28:37.1459483Z packages/provider-session-contracts test:package$ node --test --test-concurrency=1 tests/package/*.test.ts
+2026-11-15T23:28:38.1825997Z packages/provider-session-contracts test:package: ✔ real packed contracts install and strict consumer build require no engine, SDK, custody or database (940.221701ms)
+2026-11-15T23:28:38.1897436Z packages/provider-session-contracts test:package: ℹ tests 1
+2026-11-15T23:28:38.1898509Z packages/provider-session-contracts test:package: ℹ suites 0
+2026-11-15T23:28:38.1900071Z packages/provider-session-contracts test:package: ℹ pass 1
+2026-11-15T23:28:38.1901114Z packages/provider-session-contracts test:package: ℹ fail 0
+2026-11-15T23:28:38.1905710Z packages/provider-session-contracts test:package: ℹ cancelled 0
+2026-11-15T23:28:38.1906278Z packages/provider-session-contracts test:package: ℹ skipped 0
+2026-11-15T23:28:38.1906808Z packages/provider-session-contracts test:package: ℹ todo 0
+2026-11-15T23:28:38.1907396Z packages/provider-session-contracts test:package: ℹ duration_ms 1014.186191
+2026-11-15T23:28:38.1941102Z packages/provider-session-contracts test:package: Done
+2026-11-15T23:28:38.1947776Z packages/provider-implementations test:package$ node --test --test-timeout=60000 tests/package/*.test.ts
+2026-11-15T23:28:43.1264060Z packages/provider-implementations test:package: {"checkedProvider":{"archiveSha256":"a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8","archiveIntegrity":"sha512-1QxsR0b5zRvHBjE0oQFVTEadYmpUmO1ElixO0Y0L3EuVDUXxkvhlE8KXUR0sTRplYVNV37n8jZ7+pSDYCGS2jA==","retainedArchive":"/home/runner/work/_temp/checked-v2-spi/agent-teams-provider-implementations-0.0.0.tgz"},"checkedSessionSPI":{"archiveSha256":"0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc","archiveIntegrity":"sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==","retainedArchive":"/home/runner/work/_temp/checked-v2-spi/agent-teams-provider-session-contracts-0.0.0.tgz"}}
+2026-11-15T23:28:43.2197719Z packages/provider-implementations test:package: ✔ packed consumer imports codecs and declarations without donor checkout or private paths (4924.843093ms)
+2026-11-15T23:28:43.2281977Z packages/provider-implementations test:package: ℹ tests 1
+2026-11-15T23:28:43.2283055Z packages/provider-implementations test:package: ℹ suites 0
+2026-11-15T23:28:43.2284499Z packages/provider-implementations test:package: ℹ pass 1
+2026-11-15T23:28:43.2285605Z packages/provider-implementations test:package: ℹ fail 0
+2026-11-15T23:28:43.2286411Z packages/provider-implementations test:package: ℹ cancelled 0
+2026-11-15T23:28:43.2286989Z packages/provider-implementations test:package: ℹ skipped 0
+2026-11-15T23:28:43.2287635Z packages/provider-implementations test:package: ℹ todo 0
+2026-11-15T23:28:43.2288172Z packages/provider-implementations test:package: ℹ duration_ms 5008.120878
+2026-11-15T23:28:43.2320803Z packages/provider-implementations test:package: Done
+2026-11-15T23:28:43.2693363Z Post job cleanup.
+2026-11-15T23:28:43.3734212Z Post job cleanup.
+2026-11-15T23:28:43.4775511Z Post job cleanup.
+2026-11-15T23:28:43.5476614Z [command]/usr/bin/git version
+2026-11-15T23:28:43.5507931Z git version 2.56.1
+2026-11-15T23:28:43.5535994Z Temporarily overriding HOME='/home/runner/work/_temp/bc582a76-5dd7-43b1-9dd4-3963702a930f' before making global git config changes
+2026-11-15T23:28:43.5536960Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-15T23:28:43.5539929Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/old-provider-implementations/old-provider-implementations
+2026-11-15T23:28:43.5574566Z Removing SSH command configuration
+2026-11-15T23:28:43.5575144Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-15T23:28:43.5596171Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-15T23:28:43.5755270Z Removing HTTP extra header
+2026-11-15T23:28:43.5757970Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-15T23:28:43.5781182Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-15T23:28:43.5950957Z Removing includeIf entries pointing to credentials config files
+2026-11-15T23:28:43.5954165Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-15T23:28:43.5977076Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-15T23:28:43.6280499Z Cleaning up orphan processes

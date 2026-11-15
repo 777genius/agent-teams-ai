@@ -129,6 +129,7 @@ export async function qualifyLinuxProcessSdk(input: {
         proof.retainedFixture = join(output, 'fixture');
       } catch (error) { failure ??= error; }
     }
+    if (model?.failures.length) failure ??= new Error('Original process model reported failures');
     proof.status = failure ? 'INCOMPLETE' : 'PASS';
     if (failure) proof.failure = failure instanceof Error ? failure.message : String(failure);
     await writeFile(receipt, JSON.stringify(proof, null, 2), { mode: 0o600 });

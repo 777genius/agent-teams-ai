@@ -363,11 +363,12 @@ export async function nativeAdditionalDebugServiceScenario(context: GateContext,
     assert.ok(BigInt('0x' + selected.key) > 0n,
       'scope keys never restart or alias after cumulative native retirement');
     const key = encodeServiceScope(selected.key);
-    const observe = async () => {
+    const observe = async (requireActive = true) => {
       const facts = decodeServiceFacts(await request(Op.serviceQuery, Op.serviceObserved, key));
       assert.equal(facts.key, selected.key); assert.equal(facts.birth, service.birth);
       assert.equal(facts.queryError, 0); assert.equal(facts.dispatchError, 0);
-      assert.ok(facts.activeProcesses > 0, 'Read-only query leaves the original subtree running');
+      if (requireActive)
+        assert.ok(facts.activeProcesses > 0, 'Read-only query leaves the original subtree running');
       return facts;
     };
     assert.equal((await observe()).rootExited, false);
@@ -390,7 +391,14 @@ export async function nativeAdditionalDebugServiceScenario(context: GateContext,
     let stopReplied = false;
     void pendingStop.then(() => { stopReplied = true; }, () => undefined);
     await waitBarrier(`${admissionBarrier}.dispatched`);
-    await observe(); // Original Job accounting retains the pending CREATE during termination.
+    // Termination may empty Job accounting before the original root HANDLE signals.
+    const pending = await observe(false);
+    console.error(JSON.stringify({ nativeServicePendingCreate: {
+      rootExited: pending.rootExited, activeProcesses: pending.activeProcesses,
+      queryError: pending.queryError, dispatchError: pending.dispatchError, stopReplied,
+    } }));
+    assert.ok(!pending.rootExited || pending.activeProcesses > 0,
+      'Pending CREATE cannot complete the original scope');
     assert.equal(stopReplied, false, 'The one original Stop still waits for pending CREATE cleanup');
     assert.equal(decodeServiceRefusal(await request(Op.serviceSettle, Op.serviceRefused, key)).reason,
       ServiceRefusal.invalid, 'Pending CREATE cannot settle or retire the original terminating scope');

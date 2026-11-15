@@ -351,13 +351,16 @@ export async function runNativeRetainedHostGate(
     payload,
   });
   let failedRpc: { method: string; code: string; outcome: string; read: Record<string, JsonValue> } | null = null;
-  const rpc = async (method: string, commandId: string, payload: JsonValue) => {
-    const deadline = performance.now() + captured.host.requestTimeoutMs;
+  const rpc = async (method: string, commandId: string, payload: JsonValue, cutoff = Infinity) => {
+    const deadline = Math.min(cutoff, performance.now() + captured.host.requestTimeoutMs);
+    assert.ok(performance.now() < deadline, 'Original Host RPC deadline');
     const result = row(
       await client.request(method, envelope(commandId, payload), {
         control: method === 'runtime.read',
+        remainingMs: () => deadline - performance.now(),
       })
     );
+    assert.ok(performance.now() < deadline, 'Original Host RPC deadline');
     try { assert.equal(result.ok, true, 'Actual original Host route succeeded'); }
     catch (error) {
       if (!failedRpc) {
@@ -456,7 +459,7 @@ export async function runNativeRetainedHostGate(
         assert.deepEqual(model.failures, []);
         const state = await rpc('runtime.read', 'TEST-original-terminal-read', {
           memberId: 'alice-id',
-        });
+        }, deadline);
         assert.ok(Array.isArray(state.inputs));
         const original = state.inputs.map(row).find((item) => item.inputId === inputId);
         if (original?.phase === 'terminal') {
