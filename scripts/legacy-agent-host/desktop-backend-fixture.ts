@@ -295,6 +295,8 @@ export async function prepareDesktopBackendFixture(
         throw new Error('Only a captured local TEST model server is permitted');
     }
     const team = profile.teams[0]!;
+    if (nativeNextPromptUi && process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EDIT_GUARDS === '1')
+      team.savedSettings = { cwd: join(root, 'workspace') };
     if (options.nativeChatAttachments) {
       // Ordinary Launch saves this intent; this TEST uses explicit prelaunch setup instead.
       // Match that setup's selected Claude model/effort before any SDK allocation.

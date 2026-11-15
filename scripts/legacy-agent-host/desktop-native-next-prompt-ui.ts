@@ -4,19 +4,23 @@ import { join } from 'node:path';
 
 import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
+import { qualifyNativeNextPromptAttachmentEdit, qualifyNativeNextPromptChipEdit } from './desktop-native-next-prompt-edit-guards-ui.ts';
 
 import type { UiCdpPort, createDesktopUiControls } from './desktop-ui-controls.ts';
 
 type Ui = ReturnType<typeof createDesktopUiControls>;
 export type NativeNextPromptUiTurn =
-  'NATIVE_TEAM_TWO' | 'NATIVE_TEAM_THREE' | 'NATIVE_TEAM_FOUR' | 'NATIVE_TEAM_FIVE';
+  'NATIVE_TEAM_TWO' | 'NATIVE_TEAM_THREE' | 'NATIVE_TEAM_FOUR' | 'NATIVE_TEAM_FIVE' |
+  'NATIVE_TEAM_SIX' | 'NATIVE_TEAM_SEVEN';
 
 // Real SDK generation may filter machine-like markers; use genuine user phrasing.
 const expectedPrompt = (turn: NativeNextPromptUiTurn) =>
   turn === 'NATIVE_TEAM_TWO' ? 'Review the completed tests and open a PR' :
     turn === 'NATIVE_TEAM_THREE' ? 'Summarize the changes and check for regressions.' :
       turn === 'NATIVE_TEAM_FOUR' ? 'Verify the final results and prepare a report.' :
-        'Check the final report and summarize the remaining work.';
+        turn === 'NATIVE_TEAM_FIVE' ? 'Check the final report and summarize the remaining work.' :
+          turn === 'NATIVE_TEAM_SIX' ? 'Review the attachment changes and verify the result.' :
+            'Review the referenced file and summarize the result.';
 
 /** Actual CDP keyboard interaction; never assign a controlled draft through DOM evaluation. */
 async function key(cdp: UiCdpPort, name: string, code: string, virtual: number, modifiers = 0) {
@@ -114,6 +118,11 @@ export async function qualifyNativeNextPromptUiStep(
   },
 ): Promise<void> {
   assert.equal(process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI, '1');
+  const editGuard = options.turn === 'NATIVE_TEAM_SIX' || options.turn === 'NATIVE_TEAM_SEVEN';
+  if (editGuard) {
+    assert.equal(process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EDIT_GUARDS, '1');
+    assert.equal(process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EXTENDED, '1');
+  }
   const suggestion = expectedPrompt(options.turn);
   await ui.waitRead(
     `(() => {
@@ -151,7 +160,7 @@ export async function qualifyNativeNextPromptUiStep(
   assert.ok(appearance.plainText && appearance.previewMatches);
   assert.deepEqual(appearance.controls.map(control => control.label), ['Insert', 'Dismiss suggestion']);
   assert.ok(appearance.controls.every(control => control.reachable && control.height >= 43 && control.width > 0));
-  assert.equal(appearance.theme, options.turn === 'NATIVE_TEAM_FIVE' ? 'light' : 'dark');
+  assert.equal(appearance.theme, options.turn === 'NATIVE_TEAM_FIVE' || editGuard ? 'light' : 'dark');
   assert.equal(appearance.compact, options.turn === 'NATIVE_TEAM_FIVE');
 
   const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
@@ -163,6 +172,8 @@ export async function qualifyNativeNextPromptUiStep(
   const proof = options.evidence.nativeNextPromptUi as {
     screenshots: Array<{turn:string;path:string;sha256:string;theme:string;compact:boolean}>;
     shiftTabPreserved?: boolean; imePreserved?: boolean;
+    attachmentInvalidation?: boolean; chipInvalidation?: boolean;
+    attachmentEdit?: Record<string, unknown>; chipEdit?: Record<string, unknown>;
   };
   proof.screenshots.push({ turn: options.turn, path: imagePath, sha256: await fileDigest(imagePath),
     theme: appearance.theme, compact: appearance.compact });
@@ -179,7 +190,13 @@ export async function qualifyNativeNextPromptUiStep(
     await ui.click('.message-composer-flat-layout textarea', 'return to original suggestion editor');
   }
 
-  if (options.turn === 'NATIVE_TEAM_FIVE') {
+  if (options.turn === 'NATIVE_TEAM_SIX') {
+    proof.attachmentEdit = await qualifyNativeNextPromptAttachmentEdit(cdp, ui, options);
+    proof.attachmentInvalidation = true;
+  } else if (options.turn === 'NATIVE_TEAM_SEVEN') {
+    proof.chipEdit = await qualifyNativeNextPromptChipEdit(cdp, ui, options);
+    proof.chipInvalidation = true;
+  } else if (options.turn === 'NATIVE_TEAM_FIVE') {
     await cdp.send('Input.imeSetComposition', { text: '検証', selectionStart: 2, selectionEnd: 2 });
     await ui.waitRead(`document.querySelector('.message-composer-flat-layout textarea')?.value==='検証' &&
       !document.querySelector('[data-testid="native-next-prompt-row"]')`,
@@ -229,7 +246,7 @@ export async function qualifyNativeNextPromptUiStep(
   }
 
   assert.equal(await options.originalHumanSendCount(), options.expectedHumanInputs,
-    'Tab, Escape, Insert, and IME never send a new human message');
+    'Tab, Escape, Insert, IME, attachment and chip edits never send a new human message');
   assert.equal(options.modelSampleCountForTurn(), 1,
     'composer interactions cannot start a second native sample');
   options.step({
@@ -237,7 +254,9 @@ export async function qualifyNativeNextPromptUiStep(
     turn: options.turn,
     action: options.turn === 'NATIVE_TEAM_TWO' ? 'Insert'
       : options.turn === 'NATIVE_TEAM_THREE' ? 'Escape'
-        : options.turn === 'NATIVE_TEAM_FOUR' ? 'Tab' : 'IME',
+        : options.turn === 'NATIVE_TEAM_FOUR' ? 'Tab'
+          : options.turn === 'NATIVE_TEAM_FIVE' ? 'IME'
+            : options.turn === 'NATIVE_TEAM_SIX' ? 'Attachment add/remove' : 'File chip add/remove',
     appearance,
     modelSampleCount: options.modelSampleCount(),
     sentHumanMessages: options.expectedHumanInputs,

@@ -2,6 +2,7 @@
 export const desktopNativeNextPromptSources = [
   'scripts/legacy-agent-host/desktop-native-next-prompt-sources.ts',
   'scripts/legacy-agent-host/desktop-native-next-prompt-ui.ts',
+  'scripts/legacy-agent-host/desktop-native-next-prompt-edit-guards-ui.ts',
   'scripts/legacy-agent-host/desktop-native-next-prompt-mixed-fixture.ts',
   'scripts/legacy-agent-host/desktop-native-next-prompt-mixed-ui.ts',
   'packages/legacy-agent-host/tests/fixtures/native-codex-team/suggestion-config.ts',

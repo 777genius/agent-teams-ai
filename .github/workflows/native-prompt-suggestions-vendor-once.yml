@@ -274,6 +274,7 @@ jobs:
       LEGACY_DESKTOP_BACKEND_GO: "1"
       LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI: "1"
       LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EXTENDED: "1"
+      LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EDIT_GUARDS: "1"
       LEGACY_DESKTOP_PROOF_MODE: native-conversation-ui
     steps:
       - name: Checkout only the published source-qualified consumer commit
@@ -382,19 +383,23 @@ jobs:
           const ui = r.nativeNextPromptUi;
           assert.equal(ui?.status, 'PASS');
           assert.equal(ui?.extended, true);
-          assert.equal(ui?.originalHumanInputs, 5,
-            'one ordinary first-turn warm-up and four independently qualified human turns');
-          assert.equal(ui?.qualifiedSamples, 4,
+          assert.equal(ui?.editGuards, true);
+          assert.equal(ui?.originalHumanInputs, 7,
+            'one ordinary first-turn warm-up and six independently qualified human turns');
+          assert.equal(ui?.qualifiedSamples, 6,
             'all post-warm-up native turns must have one actual suggestion sample');
-          assert.ok(ui?.nativeSdkSamples === 4 || ui?.nativeSdkSamples === 5,
+          assert.ok(ui?.nativeSdkSamples === 6 || ui?.nativeSdkSamples === 7,
             'first native session turn may or may not emit one optional sample');
           assert.equal(ui?.noAutoSend, true);
           assert.equal(ui?.originalNativeCustodyReleased, true);
           assert.equal(ui?.shiftTabPreserved, true);
           assert.equal(ui?.imePreserved, true);
-          assert.equal(ui?.screenshots?.length, 4);
+          assert.equal(ui?.attachmentInvalidation, true);
+          assert.equal(ui?.chipInvalidation, true);
+          assert.equal(ui?.screenshots?.length, 6);
           assert.deepEqual(ui.screenshots.map(shot => [shot.theme, shot.compact]),
-            [['dark', false], ['dark', false], ['dark', false], ['light', true]]);
+            [['dark', false], ['dark', false], ['dark', false], ['light', true],
+             ['light', false], ['light', false]]);
           for (const [index, shot] of ui.screenshots.entries()) {
             const png = realpathSync(shot.path);
             assert.ok(png.startsWith('/private/tmp/TEST-desktop-backend-'));

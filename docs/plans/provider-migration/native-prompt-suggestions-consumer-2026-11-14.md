@@ -13,7 +13,7 @@ The adopted provider is PR #9 source `18a1c276474388a38e2bb00e5a11958c936566e0`,
 
 | Current native acceptance scope | Required evidence | State |
 | --- | --- | --- |
-| Extended Claude Electron composer | Five authored inputs, four qualified post-warm-up samples; physical Insert/Tab/Escape, Shift+Tab and IME ownership; dark and light compact screenshots; no auto-send | Pending final-SHA macOS CI |
+| Extended Claude Electron composer | Seven authored inputs, six qualified post-warm-up samples; physical Insert/Tab/Escape, Shift+Tab and IME ownership; attachment and chip add/remove cycles never resurrect a suggestion; dark and light compact screenshots; no auto-send | Pending final-SHA macOS CI |
 | Codex captured Host | Real lead and peer sessions, exact original message/input/operation/native-turn proof, cross-member rejection, cancelled original turn, stopped late sample and retained source-history counts | Pending final-SHA macOS CI |
 | Mixed Electron composer | Two teams with reversed Claude/Codex lead/peer roles; ten authored inputs, actual Main/Composer acceptance, recipient/team switches and delayed native-notice isolation | Pending final-SHA macOS CI |
 
