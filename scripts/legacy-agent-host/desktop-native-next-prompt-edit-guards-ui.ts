@@ -70,7 +70,43 @@ export async function qualifyNativeNextPromptAttachmentEdit(
     return attach instanceof HTMLButtonElement&&!attach.disabled;
   })()`,
     'the captured Claude composer exposes its enabled original attachment input'
-  );
+  ).catch(async (error: unknown) => {
+    // Observe only closed TEST control/capability facts; preserve the original gate and error.
+    let diagnostic: unknown;
+    try {
+      diagnostic = await cdp.evaluate(`(() => {
+        const areas=[...document.querySelectorAll(${desktopJsLiteral(editor)})];
+        const area=areas[0],surface=area?.closest(${desktopJsLiteral(composer)});
+        const inputs=surface?.querySelectorAll('input[type="file"]');
+        const attach=inputs?.length===1?inputs[0].parentElement?.querySelector('button'):null;
+        const team=window.__agentTeamsDevStore?.getState?.().selectedTeamData;
+        const member=Array.isArray(team?.members)?team.members.find(value=>value.name==='alice'):null;
+        return {
+          editorCount:Math.min(areas.length,8), surfacePresent:!!surface,
+          firstEditorFocused:document.activeElement===area,
+          activeEditorIsTextarea:document.activeElement instanceof HTMLTextAreaElement,
+          fileInputCount:Math.min(inputs?.length??0,8),
+          buttonPresent:attach instanceof HTMLButtonElement,
+          buttonDisabled:attach instanceof HTMLButtonElement?attach.disabled:null,
+          editorDisabled:area instanceof HTMLTextAreaElement?area.disabled:null,
+          editorReadOnly:area instanceof HTMLTextAreaElement?area.readOnly:null,
+          teamAlive:typeof team?.isAlive==='boolean'?team.isAlive:null,
+          memberPresent:!!member, memberCaptured:member?.runtimeOwner==='captured-host',
+          recognizedProvider:['anthropic','codex','opencode','gemini'].includes(member?.providerId)
+            ?member.providerId:'unknown',
+          modelIsClaude:typeof member?.model==='string'&&/^(claude|opus|sonnet|haiku)/i.test(member.model),
+          nativeAttachments:typeof member?.nativeInboxAttachmentsSupported==='boolean'
+            ?member.nativeInboxAttachmentsSupported:null,
+          crossTeamSelected:surface?.querySelector('.message-composer-target-selectors')
+            ?.classList.contains('bg-[var(--cross-team-bg)]')===true,
+          localRemoveControls:Math.min(surface?.querySelectorAll('button[aria-label^="Remove "]').length??0,8),
+        };
+      })()`);
+    } catch { diagnostic = { readFailed: true }; }
+    options.step({ assertion: 'original attachment control unavailable', diagnostic });
+    process.stderr.write('TEST_NATIVE_ATTACHMENT_CONTROL ' + JSON.stringify(diagnostic) + '\n');
+    throw error;
+  });
   const document = row(await cdp.send('DOM.getDocument', { depth: 0 }));
   const selected = row(
     await cdp.send('DOM.querySelectorAll', {

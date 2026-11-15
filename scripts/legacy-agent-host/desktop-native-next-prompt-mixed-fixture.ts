@@ -100,7 +100,14 @@ export async function startDesktopNativeNextPromptMixedModels() {
       else
         actor.codex = await startCodexSuggestionModel({
           sources: [
-            ...turns.map((marker) => ({ marker, owner: key, suggestion })),
+            ...turns.map((marker, index) => ({
+              marker,
+              owner: key,
+              suggestion,
+              ...(index === 0
+                ? { sampleToolAttempt: true, hold: 'suggestion' as const }
+                : {}),
+            })),
             ...(role === 'member'
               ? ['RECIPIENT', 'TEAM'].map((boundary) => ({
                   marker: `TEST_SUGGEST_CODEX_PEER_ISOLATION_${boundary}`,

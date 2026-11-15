@@ -1,18 +1,45 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { performance } from 'node:perf_hooks';
 import { createServer } from 'node:http';
 import type { ServerResponse } from 'node:http';
+import { flattenTools } from './model.ts';
 
 export interface CodexSuggestionSource {
   readonly marker: string;
   readonly owner: string;
   readonly suggestion: string;
   readonly hold?: 'turn' | 'suggestion';
+  readonly sampleToolAttempt?: boolean;
 }
 
 const record = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+
+interface NativeToolAttempt {
+  marker: string;
+  commandId: string;
+  text: string;
+  name: string;
+  namespace?: string;
+  toolsSha256: string;
+  responseCompletedSent: boolean;
+  responseClosedByNative: boolean;
+  parentTurnToCloseMs?: number;
+}
+
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value !== null && typeof value === 'object')
+    return Object.fromEntries(
+      Object.entries(record(value))
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, canonical(item)])
+    );
+  return value;
+}
 
 /** Scripts only localhost model output; original Codex owns turns and sampling. */
 export async function startCodexSuggestionModel(options: {
@@ -31,8 +58,16 @@ export async function startCodexSuggestionModel(options: {
         source.suggestion.length > 0
     )
   );
-  const requests: { marker: string; kind: 'turn' | 'suggestion'; tools: number }[] = [];
+  const requests: {
+    marker: string;
+    kind: 'turn' | 'suggestion';
+    tools: number;
+    toolsSha256: string;
+    receivedAtMs: number;
+  }[] = [];
+  const toolAttempts: NativeToolAttempt[] = [];
   const failures: string[] = [];
+  let closing = false;
   const held = new Map<string, { response: ServerResponse; send(): void }>();
   const server = createServer((request, response) => {
     void (async () => {
@@ -68,16 +103,68 @@ export async function startCodexSuggestionModel(options: {
         'one original turn and at most one native sample per human source'
       );
       assert.ok(requests.length < options.sources.length * 2);
+      assert.ok(Array.isArray(body.tools), 'native request carries its original tool catalog');
+      const toolsSha256 = createHash('sha256')
+        .update(JSON.stringify(canonical(body.tools)))
+        .digest('hex');
+      const parent = requests.find((item) => item.marker === source.marker && item.kind === 'turn');
+      if (kind === 'suggestion') {
+        // Codex rust-v0.169.0 (d32063f9), app-server/src/thread_sample.rs:
+        // sampling retains the parent catalog; its interceptor rejects tool-bearing output.
+        assert.ok(parent, 'native sample follows its original human model request');
+        assert.equal(toolsSha256, parent.toolsSha256, 'native sample retains the exact parent catalog');
+      }
       requests.push({
         marker: source.marker,
         kind,
-        tools: Array.isArray(body.tools) ? body.tools.length : 0,
+        tools: body.tools.length,
+        toolsSha256,
+        receivedAtMs: performance.now(),
       });
+      let attempt: NativeToolAttempt | undefined;
+      if (kind === 'suggestion' && source.sampleToolAttempt) {
+        assert.equal(source.hold, 'suggestion', 'snapshot original effects before emitting the attempt');
+        const selected = flattenTools(body.tools).filter(
+          (tool) =>
+            (tool.name === 'message_send' && tool.namespace?.includes('team')) ||
+            tool.name.endsWith('__message_send')
+        );
+        assert.equal(selected.length, 1, 'attempt only the actual advertised Team message_send');
+        attempt = {
+          marker: source.marker,
+          commandId: `TEST-auxiliary-${source.marker}`,
+          text: `TEST_AUXILIARY_TOOL_EFFECT_${source.marker}`,
+          ...selected[0]!,
+          toolsSha256,
+          responseCompletedSent: false,
+          responseClosedByNative: false,
+        };
+        toolAttempts.push(attempt);
+      }
       const id = `TEST-native-codex-response-${requests.length}`;
       const send = () => {
         if (response.destroyed) return;
+        const attemptedCall = attempt
+          ? {
+              type: 'function_call',
+              call_id: id + '-attempt',
+              name: attempt.name,
+              ...(attempt.namespace ? { namespace: attempt.namespace } : {}),
+              arguments: JSON.stringify({
+                commandId: attempt.commandId,
+                to: 'user',
+                text: attempt.text,
+              }),
+            }
+          : undefined;
         const events = [
           { type: 'response.created', response: { id } },
+          ...(attemptedCall
+            ? [
+                { type: 'response.output_item.added', item: attemptedCall },
+                { type: 'response.output_item.done', item: attemptedCall },
+              ]
+            : []),
           {
             type: 'response.output_item.done',
             item: {
@@ -110,9 +197,25 @@ export async function startCodexSuggestionModel(options: {
           },
         ];
         response.writeHead(200, { 'content-type': 'text/event-stream' });
-        response.end(
-          events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join('')
-        );
+        const frames = events
+          .map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`)
+          .join('');
+        if (attempt) {
+          const observed = attempt;
+          assert.ok(parent);
+          // Keep the completed SSE open. Only the native client may close it before
+          // another human Send; HTTP finish alone cannot prove native consumption.
+          response.once('close', () => {
+            observed.parentTurnToCloseMs = performance.now() - parent.receivedAtMs;
+            observed.responseClosedByNative =
+              observed.responseCompletedSent &&
+              !closing &&
+              !response.writableFinished &&
+              observed.parentTurnToCloseMs < 10_000;
+          });
+          response.write(frames);
+          observed.responseCompletedSent = true;
+        } else response.end(frames);
       };
       if (source.hold === kind) held.set(source.marker, { response, send });
       else send();
@@ -129,6 +232,7 @@ export async function startCodexSuggestionModel(options: {
   return {
     url: `http://127.0.0.1:${address.port}`,
     requests,
+    toolAttempts,
     failures,
     held: (marker: string) => held.has(marker),
     release(marker: string) {
@@ -138,6 +242,7 @@ export async function startCodexSuggestionModel(options: {
       retained.send();
     },
     async close() {
+      closing = true;
       for (const retained of held.values()) retained.response.destroy();
       held.clear();
       server.closeAllConnections();

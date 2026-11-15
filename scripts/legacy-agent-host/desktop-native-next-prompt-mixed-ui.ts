@@ -55,12 +55,15 @@ export async function runDesktopNativeNextPromptMixedUi(
   const { fixture, models } = options;
   const steps: Row[] = [],
     accepted: Row[] = [],
-    isolated: Row[] = [];
+    isolated: Row[] = [],
+    toolSamples: Row[] = [];
   const proof = {
     status: 'INCOMPLETE',
     originalHumanInputs: 0,
     noAutoSend: false,
     nativeCustodyReleased: false,
+    noOriginalSampleEffects: false,
+    toolSamples,
     steps,
     accepted,
     isolated,
@@ -78,8 +81,12 @@ export async function runDesktopNativeNextPromptMixedUi(
     for (const actor of models.actors)
       assert.deepEqual((actor.claude ?? actor.codex)!.failures, []);
   };
-  const wait = async <T>(read: () => Promise<T | undefined>, label: string): Promise<T> => {
-    const deadline = Date.now() + 60_000;
+  const wait = async <T>(
+    read: () => Promise<T | undefined>,
+    label: string,
+    timeoutMs = 60_000
+  ): Promise<T> => {
+    const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       options.assertOwnedRenderer();
       assertModels();
@@ -206,15 +213,72 @@ export async function runDesktopNativeNextPromptMixedUi(
     fixture.suggestionTeams.find((team) => team.key === actor.team)!;
   const teamDirectory = (team: SuggestionTeam) =>
     join(fixture.root, 'hoststore/teams', team.teamName);
-  const humanCommands = async (team: SuggestionTeam) => {
+  const canonicalCommands = async (team: SuggestionTeam) => {
     const directory = join(teamDirectory(team), '.host-owner/commands');
-    const files = (await readdir(directory)).filter((name) => /^[A-Za-z0-9_-]+\.json$/u.test(name));
+    const files = (await readdir(directory))
+      .filter((name) => /^[A-Za-z0-9_-]+\.json$/u.test(name))
+      .sort();
     assert.ok(files.length <= 128);
-    return (await Promise.all(files.map((name) => json(join(directory, name))))).filter(
+    return await Promise.all(files.map((name) => json(join(directory, name))));
+  };
+  const humanCommands = async (team: SuggestionTeam) =>
+    (await canonicalCommands(team)).filter(
       (command) =>
         command.principalId === 'TEST-human' && row(command.command).operation === 'message.send'
     );
+  const userInbox = async (team: SuggestionTeam) => {
+    let text: string;
+    try {
+      text = await readFile(join(teamDirectory(team), 'inboxes/user.json'), 'utf8');
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
+        return [];
+      throw error;
+    }
+    assert.ok(Buffer.byteLength(text) < 1_000_000);
+    return rows(JSON.parse(text));
   };
+  const originalEffects = async () => ({
+    teams: await Promise.all(
+      fixture.suggestionTeams.map(async (team) => ({
+        team: team.key,
+        commands: await canonicalCommands(team),
+        inbox: await userInbox(team),
+      }))
+    ),
+    runtimeInputs: (await readDesktopNativeStopSessions(fixture.root))
+      .flatMap((session) =>
+        rows(session.inputs).map((input) => ({
+          inputId: String(row(input.intent).inputId),
+          operationRef: String(input.operationRef),
+          phase: input.phase,
+          terminal: input.terminal,
+        }))
+      )
+      .sort((left, right) => left.inputId.localeCompare(right.inputId)),
+  });
+  const noAttemptEffects = (
+    snapshot: Awaited<ReturnType<typeof originalEffects>>,
+    attempt: { commandId: string; text: string }
+  ) => {
+    for (const team of snapshot.teams) {
+      const entries = [...team.commands, ...team.inbox].map((entry) => JSON.stringify(entry));
+      assert.ok(
+        entries.every(
+          (entry) => !entry.includes(attempt.commandId) && !entry.includes(attempt.text)
+        ),
+        'sample probe has no original command receipt or inbox effect in either team'
+      );
+    }
+  };
+  const noAttemptNotice = async (messageId: string) =>
+    assert.equal(
+      await cdp.evaluate(`Array.isArray(window.__TEST_mixedSuggestionNotices)&&
+        !window.__TEST_mixedSuggestionNotices.some(notice=>
+          notice.messageId===${desktopJsLiteral(messageId)})`),
+      true,
+      'a tool-bearing native sample never publishes a notice for its original human message'
+    );
   const originals: {
     actor: SuggestionActor;
     team: SuggestionTeam;
@@ -417,7 +481,15 @@ export async function runDesktopNativeNextPromptMixedUi(
         (request) => request.marker === original.marker && request.kind === 'suggestion'
       );
       assert.equal(samples.length, 1);
-      assert.equal(samples[0]!.tools, 0, 'native follow-up has no model tools');
+      const parents = actor.codex.requests.filter(
+        (request) => request.marker === original.marker && request.kind === 'turn'
+      );
+      assert.equal(parents.length, 1);
+      assert.equal(
+        samples[0]!.toolsSha256,
+        parents[0]!.toolsSha256,
+        'native follow-up retains the exact original parent tool catalog'
+      );
     } else {
       assert.equal(
         value.completedTurnRef,
@@ -434,7 +506,52 @@ export async function runDesktopNativeNextPromptMixedUi(
   for (const actor of models.actors) {
     await select(actor);
     await noOffer('new actor starts with no foreign offer or draft');
-    await send(actor, actor.turns[0]!);
+    const warmup = await send(actor, actor.turns[0]!);
+    if (actor.codex) {
+      const model = actor.codex;
+      await wait(
+        async () => (model.held(warmup.marker) ? true : undefined),
+        'actual Codex warmup sample is held before its tool response',
+        5_000
+      );
+      const attempts = model.toolAttempts.filter((attempt) => attempt.marker === warmup.marker);
+      assert.equal(attempts.length, 1);
+      const attempt = attempts[0]!;
+      assert.equal(attempt.responseCompletedSent, false);
+      const before = await originalEffects();
+      noAttemptEffects(before, attempt);
+      assert.equal(model.requests.length, 2, 'one original warmup and one auxiliary native sample');
+      model.release(warmup.marker);
+      await wait(
+        async () => (attempt.responseClosedByNative ? true : undefined),
+        'native client consumes the completed tool-bearing response before another Send',
+        5_000
+      );
+      assert.equal(attempt.responseCompletedSent, true);
+      assert.ok(
+        typeof attempt.parentTurnToCloseMs === 'number' && attempt.parentTurnToCloseMs < 10_000,
+        'completed response closed before the native sample 30-second deadline can expire'
+      );
+      const after = await originalEffects();
+      assert.deepEqual(after, before, 'consumed native sample leaves original effects unchanged');
+      noAttemptEffects(after, attempt);
+      await noAttemptNotice(warmup.messageId);
+      await noOffer('native tool-bearing sample does not become an insertion candidate');
+      assert.equal(
+        model.requests.length,
+        2,
+        'sample tool response starts no continuation inference'
+      );
+      toolSamples.push({
+        actor: actor.key,
+        role: actor.role,
+        messageId: warmup.messageId,
+        inputId: warmup.inputId,
+        operationRef: warmup.operationRef,
+        ...attempt,
+        noOriginalEffects: true,
+      });
+    }
     const original = await send(actor, actor.turns[1]!);
     const emitted = await notice(original);
     assert.equal(emitted.text, actor.suggestion);
@@ -555,13 +672,36 @@ export async function runDesktopNativeNextPromptMixedUi(
         ]),
         'each actual Claude DM has one native message_send and its successful completion'
       );
-    else
+    else {
+      const model = actor.codex!;
+      const expected = actor.role === 'lead' ? 2 : 4;
       assert.equal(
-        actor.codex!.requests.filter((value) => value.kind === 'turn').length,
-        actor.role === 'lead' ? 2 : 4,
+        model.requests.filter((value) => value.kind === 'turn').length,
+        expected,
         'Codex sees only the original deliberate human turns'
       );
+      assert.equal(
+        model.requests.filter((value) => value.kind === 'suggestion').length,
+        expected,
+        'each original Codex source has exactly one auxiliary model request'
+      );
+      assert.equal(model.requests.length, expected * 2);
+      assert.ok(
+        model.requests.every((value) => value.toolsSha256 === model.requests[0]!.toolsSha256),
+        'one actor retains its exact original tool catalog through all source turns and samples'
+      );
+      assert.equal(model.toolAttempts.length, 1);
+      const attempt = model.toolAttempts[0]!;
+      assert.equal(attempt.responseClosedByNative, true);
+      noAttemptEffects(await originalEffects(), attempt);
+      const source = originals.find(
+        (original) => original.actor === actor && original.marker === attempt.marker
+      )!;
+      await noAttemptNotice(source.messageId);
+    }
   }
+  assert.equal(toolSamples.length, 2);
+  proof.noOriginalSampleEffects = true;
   await models.pins.verify();
   proof.status = 'PASS';
   step({

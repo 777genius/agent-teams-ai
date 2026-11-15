@@ -469,6 +469,8 @@ jobs:
             tee "$RUNNER_TEMP/native-next-prompt-electron-ui.log"
       - name: Independently check actual Electron proof and collect real screenshots
         if: ${{ always() && (steps.native_claude_composer.outcome == 'success' || steps.native_claude_composer.outcome == 'failure') }}
+        env:
+          NATIVE_PROMPT_SUGGESTIONS_TEST_PNG_LOG: "1"
         shell: bash
         run: |
           set -euo pipefail
@@ -492,13 +494,50 @@ jobs:
           assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/[^/]+\.json$/);
           assert.ok(statSync(path).isFile() && statSync(path).size < 8 * 1024 * 1024);
           const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          const publishedSource = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
           writeFileSync(join(process.env.RUNNER_TEMP, 'native-next-prompt-electron-evidence.json'),
-            JSON.stringify({publishedSource:execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+            JSON.stringify({publishedSource,
               triggerSha:process.env.GITHUB_SHA, receipt}, null, 2));
           const proof = receipt.nativeNextPromptUi;
           const screenshots = proof?.screenshots ?? [];
           assert.ok(Array.isArray(screenshots) && screenshots.length <= 7);
-          function retainPng(shot, name) {
+          const pngLogLimit = 3 * 1024 * 1024;
+          const pngLogReserve = 4096;
+          let pngLogBytes = 0;
+          function logVerifiedPng(bytes, shot, index) {
+            if (process.env.NATIVE_PROMPT_SUGGESTIONS_TEST_PNG_LOG !== '1' || index === undefined) return;
+            const metadata = {sourceSha:publishedSource, scope:"claude", index,
+              sha256:shot.sha256, byteCount:bytes.length};
+            const line = (type, fields = {}) =>
+              'TEST_NATIVE_PNG_V1 ' + JSON.stringify({type, ...metadata, ...fields}) + '\n';
+            // Include all framing and reserve 64 bytes for GitHub's timestamp per line.
+            const wireSize = lines => lines.reduce((size, value) =>
+              size + Buffer.byteLength(value) + 64, 0);
+            const skip = reason => {
+              const value = line('SKIP', {reason});
+              const size = wireSize([value]);
+              assert.ok(pngLogBytes + size <= pngLogLimit, 'bounded PNG diagnostic reserve');
+              process.stdout.write(value);
+              pngLogBytes += size;
+            };
+            if (bytes.length > 512 * 1024) { skip('file_byte_limit'); return; }
+            const base64 = bytes.toString('base64');
+            const chunkCount = Math.ceil(base64.length / 4096);
+            const manifest = {chunkCount, chunkChars:4096};
+            const lines = [line('BEGIN', manifest)];
+            for (let part = 0; part < chunkCount; part++) {
+              lines.push('TEST_NATIVE_PNG_V1 ' + JSON.stringify({
+                type:'CHUNK', scope:"claude", index, part,
+                base64:base64.slice(part * 4096, (part + 1) * 4096),
+              }) + '\n');
+            }
+            lines.push(line('END', manifest));
+            const size = wireSize(lines);
+            if (pngLogBytes + size > pngLogLimit - pngLogReserve) { skip('job_byte_limit'); return; }
+            for (const value of lines) process.stdout.write(value);
+            pngLogBytes += size;
+          }
+          function retainPng(shot, name, index) {
             const png = realpathSync(shot.path);
             assert.equal(dirname(png), dirname(path), 'PNG belongs to this exact TEST fixture');
             assert.ok(statSync(png).isFile() && statSync(png).size <= 8 * 1024 * 1024);
@@ -507,14 +546,21 @@ jobs:
             assert.ok(bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])));
             assert.equal(createHash('sha256').update(bytes).digest('hex'), shot.sha256);
             copyFileSync(png, join(process.env.RUNNER_TEMP, name));
+            logVerifiedPng(bytes, shot, index);
           }
           assert.equal(new Set(screenshots.map(shot => realpathSync(shot.path))).size, screenshots.length);
           for (const [index, shot] of screenshots.entries()) {
-            retainPng(shot, 'native-next-prompt-' + index + '.png');
+            retainPng(shot, 'native-next-prompt-' + index + '.png',
+              [0, 3, 6].includes(index) ? index : undefined);
           }
           if (receipt.failureScreenshot) {
             assert.equal(basename(receipt.failureScreenshot.path), 'ui-failure.png');
-            retainPng(receipt.failureScreenshot, 'native-next-prompt-failure.png');
+            retainPng(receipt.failureScreenshot, 'native-next-prompt-failure.png', 'failure');
+          }
+          // Flush the diagnostic before an unchanged INCOMPLETE assertion can exit Node.
+          if (process.env.NATIVE_PROMPT_SUGGESTIONS_TEST_PNG_LOG === '1') {
+            await new Promise((resolve, reject) => process.stdout.write('', error =>
+              error ? reject(error) : resolve()));
           }
           assert.equal(terminal[0].status, 'PASS');
           assert.equal(receipt.status, 'PASS');
@@ -831,6 +877,8 @@ jobs:
             tee "$RUNNER_TEMP/native-next-prompt-mixed-ui.log"
       - name: Independently verify mixed native role and privacy proof and screenshot bytes
         if: ${{ always() && (steps.native_mixed_composer.outcome == 'success' || steps.native_mixed_composer.outcome == 'failure') }}
+        env:
+          NATIVE_PROMPT_SUGGESTIONS_TEST_PNG_LOG: "1"
         shell: bash
         run: |
           set -euo pipefail
@@ -854,13 +902,50 @@ jobs:
           assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/[^/]+\.json$/);
           assert.ok(statSync(path).isFile() && statSync(path).size < 8 * 1024 * 1024);
           const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          const publishedSource = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
           writeFileSync(join(process.env.RUNNER_TEMP, 'native-next-prompt-mixed-evidence.json'),
-            JSON.stringify({publishedSource:execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+            JSON.stringify({publishedSource,
               triggerSha:process.env.GITHUB_SHA, receipt}, null, 2));
           const proof = receipt.nativeNextPromptMixedUi;
           const screenshots = proof?.screenshots ?? [];
           assert.ok(Array.isArray(screenshots) && screenshots.length <= 4);
-          function retainPng(shot, name) {
+          const pngLogLimit = 3 * 1024 * 1024;
+          const pngLogReserve = 4096;
+          let pngLogBytes = 0;
+          function logVerifiedPng(bytes, shot, index) {
+            if (process.env.NATIVE_PROMPT_SUGGESTIONS_TEST_PNG_LOG !== '1' || index === undefined) return;
+            const metadata = {sourceSha:publishedSource, scope:"mixed", index,
+              sha256:shot.sha256, byteCount:bytes.length};
+            const line = (type, fields = {}) =>
+              'TEST_NATIVE_PNG_V1 ' + JSON.stringify({type, ...metadata, ...fields}) + '\n';
+            // Include all framing and reserve 64 bytes for GitHub's timestamp per line.
+            const wireSize = lines => lines.reduce((size, value) =>
+              size + Buffer.byteLength(value) + 64, 0);
+            const skip = reason => {
+              const value = line('SKIP', {reason});
+              const size = wireSize([value]);
+              assert.ok(pngLogBytes + size <= pngLogLimit, 'bounded PNG diagnostic reserve');
+              process.stdout.write(value);
+              pngLogBytes += size;
+            };
+            if (bytes.length > 512 * 1024) { skip('file_byte_limit'); return; }
+            const base64 = bytes.toString('base64');
+            const chunkCount = Math.ceil(base64.length / 4096);
+            const manifest = {chunkCount, chunkChars:4096};
+            const lines = [line('BEGIN', manifest)];
+            for (let part = 0; part < chunkCount; part++) {
+              lines.push('TEST_NATIVE_PNG_V1 ' + JSON.stringify({
+                type:'CHUNK', scope:"mixed", index, part,
+                base64:base64.slice(part * 4096, (part + 1) * 4096),
+              }) + '\n');
+            }
+            lines.push(line('END', manifest));
+            const size = wireSize(lines);
+            if (pngLogBytes + size > pngLogLimit - pngLogReserve) { skip('job_byte_limit'); return; }
+            for (const value of lines) process.stdout.write(value);
+            pngLogBytes += size;
+          }
+          function retainPng(shot, name, index) {
             const png = realpathSync(shot.path);
             assert.equal(dirname(png), dirname(path), 'PNG belongs to this exact TEST fixture');
             assert.ok(statSync(png).isFile() && statSync(png).size <= 8 * 1024 * 1024);
@@ -869,14 +954,21 @@ jobs:
             assert.ok(bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])));
             assert.equal(createHash('sha256').update(bytes).digest('hex'), shot.sha256);
             copyFileSync(png, join(process.env.RUNNER_TEMP, name));
+            logVerifiedPng(bytes, shot, index);
           }
           assert.equal(new Set(screenshots.map(shot => realpathSync(shot.path))).size, screenshots.length);
           for (const [index, shot] of screenshots.entries()) {
-            retainPng(shot, 'native-next-prompt-mixed-' + index + '.png');
+            retainPng(shot, 'native-next-prompt-mixed-' + index + '.png',
+              index);
           }
           if (receipt.failureScreenshot) {
             assert.equal(basename(receipt.failureScreenshot.path), 'ui-failure.png');
-            retainPng(receipt.failureScreenshot, 'native-next-prompt-mixed-failure.png');
+            retainPng(receipt.failureScreenshot, 'native-next-prompt-mixed-failure.png', 'failure');
+          }
+          // Flush the diagnostic before an unchanged INCOMPLETE assertion can exit Node.
+          if (process.env.NATIVE_PROMPT_SUGGESTIONS_TEST_PNG_LOG === '1') {
+            await new Promise((resolve, reject) => process.stdout.write('', error =>
+              error ? reject(error) : resolve()));
           }
           assert.equal(terminal[0].status, 'PASS');
           assert.equal(receipt.status, 'PASS');
@@ -884,6 +976,44 @@ jobs:
           assert.equal(proof?.originalHumanInputs, 10);
           assert.equal(proof?.noAutoSend, true);
           assert.equal(proof?.nativeCustodyReleased, true);
+          assert.equal(proof?.noOriginalSampleEffects, true);
+          assert.ok(Array.isArray(proof.toolSamples) && proof.toolSamples.length === 2);
+          assert.deepEqual(proof.toolSamples.map(sample => [sample.actor, sample.role]), [
+            ['codex-peer', 'member'], ['codex-lead', 'lead'],
+          ]);
+          for (const sample of proof.toolSamples) {
+            const marker = sample.actor === 'codex-peer'
+              ? 'TEST_SUGGEST_CODEX_PEER_ONE' : 'TEST_SUGGEST_CODEX_LEAD_ONE';
+            assert.equal(sample.marker, marker);
+            assert.equal(sample.commandId, 'TEST-auxiliary-' + marker);
+            assert.equal(sample.text, 'TEST_AUXILIARY_TOOL_EFFECT_' + marker);
+            assert.match(sample.toolsSha256, /^[a-f0-9]{64}$/);
+            assert.equal(typeof sample.name, 'string');
+            assert.ok((sample.name === 'message_send' &&
+              typeof sample.namespace === 'string' && sample.namespace.includes('team')) ||
+              sample.name.endsWith('__message_send'));
+            assert.equal(sample.responseCompletedSent, true);
+            assert.equal(sample.responseClosedByNative, true);
+            assert.equal(sample.noOriginalEffects, true);
+            assert.ok(Number.isFinite(sample.parentTurnToCloseMs) &&
+              sample.parentTurnToCloseMs >= 0 && sample.parentTurnToCloseMs < 10_000);
+            const sources = proof.steps.filter(step =>
+              step.assertion === 'independent canonical command, delivery and successful Runtime source agree' &&
+              step.actor === sample.actor && step.marker === marker);
+            assert.equal(sources.length, 1);
+            for (const key of ['messageId', 'inputId', 'operationRef']) {
+              assert.ok(typeof sample[key] === 'string' && sample[key].length > 0 && sample[key].length <= 512);
+              assert.equal(sample[key], sources[0][key]);
+            }
+            const models = receipt.suggestionModels.filter(model => model.actor === sample.actor);
+            assert.equal(models.length, 1);
+            assert.equal(models[0].provider, 'codex');
+            assert.deepEqual(models[0].failures, []);
+            const requests = models[0].requests.filter(request => request.marker === marker);
+            assert.equal(requests.length, 2);
+            assert.deepEqual(requests.map(request => request.kind), ['turn', 'suggestion']);
+            for (const request of requests) assert.equal(request.toolsSha256, sample.toolsSha256);
+          }
           assert.deepEqual(proof.accepted.map(row => [row.provider, row.role, row.action]),
             [['claude', 'lead', 'Insert'], ['codex', 'member', 'Tab'],
              ['codex', 'lead', 'Insert'], ['claude', 'member', 'Tab']]);
