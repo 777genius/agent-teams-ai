@@ -290,6 +290,7 @@ export function createDesktopUiControls(
       [point.x, point.y, point.tag],
       'Original UI target moved after ownership check'
     );
+    options.assertOwnedRenderer();
     step({
       action: 'mouseClick',
       label,

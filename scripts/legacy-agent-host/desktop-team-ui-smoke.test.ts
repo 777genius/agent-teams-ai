@@ -1265,3 +1265,48 @@ for (const requireCenterHit of [false, true]) {
       'only the existing centering wheel is used; no checkbox click or default-control input');
   });
 }
+
+for (const change of ['owner', 'cutoff'] as const) {
+  test('original desktop click rechecks ' + change + ' after its pending final target read', { timeout: 5000 }, async t => {
+    if (change === 'cutoff') t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+    const originalCutoff = 1001, refusal = new Error('TEST original ' + change + ' no longer current');
+    const point = { x: 100, y: 100, tag: 'BUTTON' }, started = deferred<void>(), release = deferred<typeof point>();
+    const dispatched: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
+    const expression = 'TEST_originalOwnerAndHitTestedTarget()';
+    let active = true, reads = 0;
+    const ui = createDesktopUiControls({
+      async evaluate(actual: string) {
+        assert.equal(actual, expression);
+        reads++;
+        if (reads === 5) { started.resolve(); return release.promise; }
+        return point;
+      },
+      async send(method: string, params: Record<string, unknown> = {}) {
+        if (method === 'Input.dispatchMouseEvent') dispatched.push({ ...params });
+        return {};
+      },
+    }, { assertOwnedRenderer() {
+      if (!active || change === 'cutoff' && Date.now() >= originalCutoff) throw refusal;
+    }, step(value) { steps.push(value); } });
+    const pending = ui.clickExpression(expression, 'TEST original pending final target');
+    try {
+      await started.promise;
+      assert.deepEqual(dispatched, [{ type: 'mouseMoved', x: 100, y: 100 }]);
+      if (change === 'owner') active = false;
+      else t.mock.timers.setTime(originalCutoff);
+      release.resolve(point);
+      await assert.rejects(pending, error => {
+        assert.equal(error, refusal, 'the exact original authority refusal remains authoritative');
+        return true;
+      });
+      assert.equal(reads, 5, 'no extra target read, polling, or retargeting after the original refusal');
+      assert.deepEqual(dispatched, [{ type: 'mouseMoved', x: 100, y: 100 }],
+        'no press or release after the original scope or cutoff changes');
+      assert.equal(steps.some(step => step.action === 'mouseClick'), false);
+    } finally {
+      release.resolve(point);
+      await pending.catch(() => undefined);
+      if (change === 'cutoff') t.mock.timers.reset();
+    }
+  });
+}
