@@ -1064,6 +1064,133 @@ describe('teamSlice actions', () => {
     ).toBe(1);
   });
 
+  it.each(['original', 'unseen-roster'] as const)(
+    'keeps the latest Host roster when a deferred %s status read resolves after its notification',
+    async (lateRoster) => {
+      const store = createSliceStore();
+      const teamName = hostTeamSelectionKey('TEST-collaboration-owner');
+      const originalRun = hostTeamRunId('TEST-collaboration-owner', 'TEST-launch', 'initial');
+      const latestRun = hostTeamRunId('TEST-collaboration-owner', 'TEST-launch', 'restored');
+      const requestedRun = lateRoster === 'original'
+        ? originalRun
+        : hostTeamRunId('TEST-collaboration-owner', 'TEST-launch', 'added');
+      const ready = {
+        runId: originalRun,
+        teamName,
+        state: 'ready' as const,
+        message: 'Ready',
+        startedAt: '2026-03-12T10:00:00.000Z',
+        updatedAt: '2026-03-12T10:00:01.000Z',
+      };
+      store.setState({
+        currentProvisioningRunIdByTeam: { [teamName]: originalRun },
+        currentRuntimeRunIdByTeam: { [teamName]: originalRun },
+        provisioningRuns: { [originalRun]: ready },
+        memberSpawnStatusesByTeam: {
+          [teamName]: { bob: createMemberSpawnStatus({ status: 'online', runtimeAlive: true }) },
+        },
+        fetchTeams: vi.fn(async () => undefined),
+      });
+      const deferred = createDeferredPromise<typeof ready>();
+      hoisted.getProvisioningStatus.mockReturnValueOnce(deferred.promise);
+      const pending = store.getState().getProvisioningStatus(requestedRun);
+
+      // Same observation millisecond: ordering comes from the captured request and owner.
+      store.getState().onProvisioningProgress({ ...ready, runId: latestRun });
+      expect(store.getState().currentProvisioningRunIdByTeam[teamName]).toBe(latestRun);
+      expect(store.getState().currentRuntimeRunIdByTeam[teamName]).toBe(latestRun);
+
+      deferred.resolve({ ...ready, runId: requestedRun });
+      await pending;
+      expect(store.getState().currentProvisioningRunIdByTeam[teamName]).toBe(latestRun);
+      expect(store.getState().currentRuntimeRunIdByTeam[teamName]).toBe(latestRun);
+      expect(Object.keys(store.getState().provisioningRuns)).toEqual([latestRun]);
+
+      store.getState().onProvisioningProgress({
+        ...ready, runId: latestRun, state: 'disconnected', message: 'Team launch stopped.',
+      });
+      expect(getCurrentProvisioningProgressForTeam(store.getState(), teamName)?.state)
+        .toBe('disconnected');
+      expect(store.getState().memberSpawnStatusesByTeam[teamName]).toBeUndefined();
+    }
+  );
+
+  it('does not roll back a newer Runtime roster while its provisioning read is still pending', async () => {
+    const store = createSliceStore();
+    const teamName = hostTeamSelectionKey('TEST-runtime-owner');
+    const originalRun = hostTeamRunId('TEST-runtime-owner', 'TEST-launch', 'original');
+    const intermediateRun = hostTeamRunId('TEST-runtime-owner', 'TEST-launch', 'intermediate');
+    const latestRun = hostTeamRunId('TEST-runtime-owner', 'TEST-launch', 'latest');
+    const ready = {
+      runId: originalRun, teamName, state: 'ready' as const, message: 'Ready',
+      startedAt: '2026-03-12T10:00:00.000Z',
+      updatedAt: '2026-03-12T10:00:01.000Z',
+    };
+    store.setState({
+      currentProvisioningRunIdByTeam: { [teamName]: originalRun },
+      currentRuntimeRunIdByTeam: { [teamName]: originalRun },
+      provisioningRuns: { [originalRun]: ready },
+      memberSpawnStatusesByTeam: {
+        [teamName]: { bob: createMemberSpawnStatus({ status: 'offline', runtimeAlive: false }) },
+      },
+      fetchTeams: vi.fn(async () => undefined),
+    });
+    const intermediate = createDeferredPromise<typeof ready>();
+    const latest = createDeferredPromise<typeof ready>();
+    hoisted.getProvisioningStatus
+      .mockReturnValueOnce(intermediate.promise)
+      .mockReturnValueOnce(latest.promise);
+    const pending = store.getState().getProvisioningStatus(intermediateRun);
+    hoisted.getMemberSpawnStatuses.mockResolvedValue(createMemberSpawnSnapshot({
+      runId: latestRun,
+      statuses: { bob: createMemberSpawnStatus({ status: 'online', runtimeAlive: true }) },
+    }));
+    await store.getState().fetchMemberSpawnStatuses(teamName);
+    expect(store.getState().currentProvisioningRunIdByTeam[teamName]).toBe(originalRun);
+    expect(store.getState().currentRuntimeRunIdByTeam[teamName]).toBe(latestRun);
+
+    intermediate.resolve({ ...ready, runId: intermediateRun });
+    await pending;
+    expect(store.getState().currentProvisioningRunIdByTeam[teamName]).toBe(originalRun);
+    expect(store.getState().currentRuntimeRunIdByTeam[teamName]).toBe(latestRun);
+
+    latest.resolve({ ...ready, runId: latestRun });
+    await flushMicrotasks();
+    expect(store.getState().currentProvisioningRunIdByTeam[teamName]).toBe(latestRun);
+    expect(store.getState().currentRuntimeRunIdByTeam[teamName]).toBe(latestRun);
+  });
+
+  it.each(['initial', 'spawn successor', 'team reset'] as const)(
+    'keeps the Host status request scope for %s',
+    async (scenario) => {
+      const store = createSliceStore();
+      const teamName = hostTeamSelectionKey('TEST-status-owner');
+      const runId = hostTeamRunId('TEST-status-owner', 'TEST-launch', 'selected');
+      const progress = {
+        runId, teamName, state: 'ready' as const, message: 'Ready',
+        startedAt: '2026-03-12T10:00:00.000Z',
+        updatedAt: '2026-03-12T10:00:01.000Z',
+      };
+      store.setState({ fetchTeams: vi.fn(async () => undefined) });
+      if (scenario === 'spawn successor') {
+        const previous = hostTeamRunId('TEST-status-owner', 'TEST-launch', 'previous');
+        store.setState({
+          currentProvisioningRunIdByTeam: { [teamName]: previous },
+          currentRuntimeRunIdByTeam: { [teamName]: runId },
+          provisioningRuns: { [previous]: { ...progress, runId: previous } },
+        });
+      }
+      const deferred = createDeferredPromise<typeof progress>();
+      hoisted.getProvisioningStatus.mockReturnValueOnce(deferred.promise);
+      const pending = store.getState().getProvisioningStatus(runId);
+      if (scenario === 'team reset') invalidateTeamLocalStateEpoch(teamName);
+      deferred.resolve(progress);
+      await pending;
+      expect(store.getState().currentProvisioningRunIdByTeam[teamName])
+        .toBe(scenario === 'team reset' ? undefined : runId);
+    }
+  );
+
   it('keeps ready log updates without restarting terminal hydration, and hydrates the next terminal state', () => {
     const store = createSliceStore();
     const fetchTeams = vi.fn(async () => undefined);

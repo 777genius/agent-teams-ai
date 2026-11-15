@@ -38,7 +38,7 @@ export function desktopTaskCommentInputExpression(handleId: string, taskId: stri
             submitPending:controller.session.submitPending,submitError:controller.session.submitError,
             ownerRevision:controller.session.ownerRevision,partRevisions:{commentText:controller.session.partRevisions.commentText,pendingAttachments:controller.session.partRevisions.pendingAttachments},
             pendingPreparationCount:controller.session.pendingAttachmentPreparationIds.length,canSubmit:controller.canSubmit,attachmentError:controller.attachmentError,
-            pendingAttachmentCount:controller.session.pendingAttachments.length,canEditNow:controller.canEditNow?.()===true,selector:'[role="dialog"] textarea[id='+JSON.stringify(input.id)+']'});
+            pendingAttachmentCount:controller.session.pendingAttachments.length,canEditNow:controller.canEditNow?.()===true,canResolveClarification:controller.canResolveClarification===true,selector:'[role="dialog"] textarea[id='+JSON.stringify(input.id)+']'});
           break;
         }
       }
@@ -48,12 +48,12 @@ export function desktopTaskCommentInputExpression(handleId: string, taskId: stri
   })()`;
 }
 
-/** Observe the original board assignment, or its later in-progress comment stage. */
+/** Observe the original assignment, its clarification control, or later in-progress comment stage. */
 export function desktopTaskBoardAssignmentReadyExpression(
   handleId: string,
   taskId: string,
   captured: { contextId: string; surfaceId: string },
-  stage?: 'in-progress-comment'
+  stage?: 'in-progress-comment' | 'clarification'
 ): string {
   assert.ok(captured.contextId && captured.surfaceId);
   return `(async()=>{
@@ -65,9 +65,21 @@ export function desktopTaskBoardAssignmentReadyExpression(
     const detail=s.taskDetailById[JSON.stringify([i.contextId,i.teamName,i.taskId])];
     if(s.isContextSwitching||s.activeContextId!==i.contextId||s.selectedTeamName!==i.teamName||
       !detail||detail.identity.contextId!==i.contextId||detail.identity.teamName!==i.teamName||detail.identity.taskId!==i.taskId||
-      detail.phase!=='ready'||detail.loading||detail.refreshPending||detail.full?.id!==i.taskId||detail.full.owner!=='alice'||
+      detail.phase!=='ready'||(detail.loading&&${stage !== 'clarification'})||detail.refreshPending||detail.full?.id!==i.taskId||detail.full.owner!=='alice'||
       isTeamDataRefreshPending(i.teamName,window.__agentTeamsDevStore.getState)||
       isTaskDetailTeamUnavailable(s,i.teamName,captureTaskDetailReadScope(i.teamName,i.contextId)))return null;
+    ${stage === 'clarification' ? `
+      const key=JSON.stringify([i.contextId,i.teamName,i.taskId]),session=s.taskDetailSessionById?.[key];
+      if(owner.canResolveClarification!==true||!session||session.ownerSurfaceId!==owner.surfaceId||
+        session.ownerRevision!==owner.ownerRevision||detail.error!==null||detail.deletionIntent!==null||
+        detail.full.needsClarification!=='user'||detail.full.deletedAt||detail.full.status==='deleted')return null;
+      if(detail.loading){
+        const token=detail.fullToken,scope=captureTaskDetailReadScope(i.teamName,i.contextId);
+        if(!token||token.resource!=='full'||token.key!=='full:'+key||!token.scope||
+          token.scope.contextId!==scope.contextId||token.scope.teamName!==scope.teamName||
+          token.scope.contextEpoch!==scope.contextEpoch||token.scope.teamStateEpoch!==scope.teamStateEpoch)return null;
+      }
+    ` : ''}
     const input=document.getElementById(owner.inputId),dialog=input?.closest('[role="dialog"]');
     const triggers=dialog?.querySelectorAll('button[role="combobox"]');
     ${stage === 'in-progress-comment'

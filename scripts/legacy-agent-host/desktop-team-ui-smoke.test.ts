@@ -183,19 +183,22 @@ test('isolated shell fixture emits the actual framed environment and refuses she
   assert.deepEqual(calls.map(call => call.allowed), [true, true, true, false, false, false]);
 });
 
-function assignmentRuntime(stage?: 'in-progress-comment') {
+function assignmentRuntime(stage?: 'in-progress-comment' | 'clarification') {
   const identity = {
     contextId: 'TEST-context',
     teamName: 'host-team:TEST-owner',
     taskId: 'TEST-task',
   };
   const captured = { contextId: identity.contextId, surfaceId: 'TEST-original-surface' };
+  const key = JSON.stringify([identity.contextId, identity.teamName, identity.taskId]);
+  const scope = { contextId: identity.contextId, teamName: identity.teamName, contextEpoch: 1, teamStateEpoch: 1 };
   const controller = {
     identity,
     surfaceId: captured.surfaceId,
     isOwner: true,
     canSubmit: true,
     canEditNow: () => true,
+    canResolveClarification: true,
     attachmentError: null,
     session: {
       ownerSurfaceId: captured.surfaceId,
@@ -260,9 +263,15 @@ function assignmentRuntime(stage?: 'in-progress-comment') {
     phase: 'ready',
     loading: false,
     refreshPending: false,
-    full: { id: identity.taskId, owner: 'alice', status: 'pending' },
+    error: null,
+    deletionIntent: null,
+    full: { id: identity.taskId, owner: 'alice', status: 'pending', needsClarification: 'user' },
+    fullToken: { resource: 'full', key: 'full:' + key, serial: 1, sourceEpoch: 1,
+      physicalStartOrder: 1, scope: { ...scope } },
   };
+  const storedSession = { ...controller.session };
   const state = {
+    taskDetailSessionById: { [key]: storedSession },
     activeContextId: identity.contextId,
     selectedTeamName: identity.teamName,
     isContextSwitching: false,
@@ -306,22 +315,19 @@ function assignmentRuntime(stage?: 'in-progress-comment') {
                 { teamName, contextId },
                 { teamName: identity.teamName, contextId: captured.contextId }
               );
-              return { teamName, contextId };
+              return { ...scope };
             },
-            isTaskDetailTeamUnavailable(observed: unknown, team: string, scope: unknown) {
+            isTaskDetailTeamUnavailable(observed: unknown, team: string, observedScope: unknown) {
               assert.equal(observed, state);
               assert.equal(team, identity.teamName);
-              assert.deepEqual(scope, {
-                teamName: identity.teamName,
-                contextId: captured.contextId,
-              });
+              assert.deepEqual(observedScope, scope);
               return work.teamUnavailable;
             },
           };
         },
       }) as Promise<Record<string, unknown> | null>
     );
-  return { evaluate, imports, state, detail, controller, trigger, triggers, work };
+  return { evaluate, imports, state, detail, controller, storedSession, trigger, triggers, work };
 }
 
 test('original in-progress Task comment prerequisite requires its exact stage without an assignment control', async () => {
@@ -1310,3 +1316,60 @@ for (const change of ['owner', 'cutoff'] as const) {
     }
   });
 }
+
+test('original clarification lookup admits its retained read without completing the assignment prerequisite', async () => {
+  for (const stage of [undefined, 'in-progress-comment'] as const) {
+    const original = assignmentRuntime(stage);
+    if (stage === 'in-progress-comment') {
+      original.detail.full.status = 'in_progress';
+      original.triggers.length = 0;
+    }
+    original.detail.loading = true;
+    assert.equal(await original.evaluate(), null, 'original assignment/comment readiness still requires a settled read');
+  }
+  const current = assignmentRuntime('clarification');
+  current.detail.loading = true;
+  const retained = await current.evaluate();
+  assert.equal(retained?.surfaceId, 'TEST-original-surface');
+  assert.equal(retained?.ownerRevision, 1);
+  assert.equal(retained?.canResolveClarification, true);
+  assert.equal(current.detail.loading, true, 'the observer does not complete or replace the retained product read');
+  current.detail.loading = false;
+  assert.equal((await current.evaluate())?.surfaceId, 'TEST-original-surface');
+  assert.deepEqual([...new Set(current.imports)],
+    ['/store/slices/teamSlice.ts', '/store/team/taskDetailReadAuthority.ts']);
+});
+
+test('original clarification lookup refuses changed owner, revision, refresh and retained-read joins', async () => {
+  const changes: [string, (value: ReturnType<typeof assignmentRuntime>) => void][] = [
+    ['owner', f => { f.controller.isOwner = false; }],
+    ['fresh owner authority', f => { f.controller.canEditNow = () => false; }],
+    ['stored owner revision', f => { f.storedSession.ownerRevision++; }],
+    ['stored owner surface', f => { f.storedSession.ownerSurfaceId = 'TEST-other-surface'; }],
+    ['context', f => { f.state.activeContextId = 'TEST-other-context'; }],
+    ['Task identity', f => { f.detail.identity.taskId = 'TEST-other-task'; }],
+    ['assignment', f => { f.detail.full.owner = 'bob'; }],
+    ['metadata refresh', f => { f.work.refreshPending = true; }],
+    ['live metadata', f => { f.work.teamUnavailable = true; }],
+    ['detail refresh', f => { f.detail.refreshPending = true; }],
+    ['rendered resolve admission', f => { f.controller.canResolveClarification = false; }],
+    ['read failure', f => { Reflect.set(f.detail, 'error', 'TEST failed read'); }],
+    ['deletion intent', f => { Reflect.set(f.detail, 'deletionIntent', 'deleting'); }],
+    ['deleted Task', f => { Reflect.set(f.detail.full, 'deletedAt', 'TEST-deleted'); }],
+    ['changed clarification', f => { f.detail.full.needsClarification = 'lead'; }],
+    ['missing read token', f => { Reflect.deleteProperty(f.detail, 'fullToken'); }],
+    ['foreign resource', f => { f.detail.fullToken.resource = 'snapshot'; }],
+    ['foreign Task resource', f => { f.detail.fullToken.key = 'full:TEST-other-task'; }],
+    ['context epoch', f => { f.detail.fullToken.scope.contextEpoch++; }],
+    ['Team epoch', f => { f.detail.fullToken.scope.teamStateEpoch++; }],
+    ['foreign token context', f => { f.detail.fullToken.scope.contextId = 'TEST-other-context'; }],
+    ['foreign token Team', f => { f.detail.fullToken.scope.teamName = 'host-team:TEST-other'; }],
+  ];
+  for (const [label, change] of changes) {
+    const current = assignmentRuntime('clarification');
+    current.detail.loading = true;
+    assert.equal((await current.evaluate())?.surfaceId, 'TEST-original-surface', label);
+    change(current);
+    assert.equal(await current.evaluate(), null, label + ': no reuse of the earlier eligible observation');
+  }
+});

@@ -1,3 +1,5 @@
+import { parseHostTeamRunId, parseHostTeamSelectionKey } from '@features/agent-backend/contracts';
+
 import { areMemberSpawnSnapshotsSemanticallyEqual } from './teamMemberSpawnSnapshotEquality';
 import { isTerminalProvisioningState } from './teamProvisioningStateRules';
 
@@ -89,10 +91,26 @@ export function shouldAdoptSuccessorProvisioningRun(input: {
     return false;
   }
 
-  return (
+  if (
     input.currentRuntimeRunId === nextRunId ||
     isPinnedRuntimeRunFullyStopped(input.pinnedSpawnStatuses)
-  );
+  ) {
+    return true;
+  }
+
+  // The captured Host observer can advance a live roster within one launch.
+  // Its control token still includes the exact roster revision.
+  try {
+    const owner = parseHostTeamSelectionKey(input.teamName);
+    const previous = parseHostTeamRunId(previousRunId);
+    const next = parseHostTeamRunId(nextRunId);
+    const runtime = parseHostTeamRunId(input.currentRuntimeRunId ?? '');
+    return [previous, next, runtime].every(
+      (run) => run.handleId === owner && run.launchId === previous.launchId
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function nextRuntimeRunIdByTeamAfterAdoption(

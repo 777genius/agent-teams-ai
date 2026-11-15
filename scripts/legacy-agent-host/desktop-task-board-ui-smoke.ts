@@ -450,7 +450,7 @@ export async function runDesktopTaskBoardUiSmoke(
   // settling sample before one physical press. No effect retry.
   await ui.clickExpression(
     `(async()=>{
-      const owner=await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId })};
+      const owner=await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId }, 'clarification')};
       if(!owner)return null;
       return ${pointOf(`
         const dialog=document.getElementById(owner.inputId)?.closest('[role="dialog"]');

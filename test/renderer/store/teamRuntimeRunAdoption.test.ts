@@ -1,3 +1,4 @@
+import { hostTeamRunId, hostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -103,6 +104,35 @@ describe('teamRuntimeRunAdoption', () => {
         pinnedSpawnStatuses: { alice: { status: 'online', runtimeAlive: true } },
       })
     ).toBe(true);
+  });
+
+  it('accepts only current Host owner and launch lineage for a live roster revision', () => {
+    const teamName = hostTeamSelectionKey('TEST-owner');
+    const previousRunId = hostTeamRunId('TEST-owner', 'TEST-launch', 'original');
+    const nextRunId = hostTeamRunId('TEST-owner', 'TEST-launch', 'restored');
+    const input = {
+      teamName, previousRunId, nextRunId, previousState: 'ready' as const,
+      currentRuntimeRunId: previousRunId,
+      ignoredRuntimeRunIds: {},
+      pinnedSpawnStatuses: { bob: { status: 'online' as const, runtimeAlive: true } },
+    };
+    expect(shouldAdoptSuccessorProvisioningRun(input)).toBe(true);
+    expect(shouldAdoptSuccessorProvisioningRun({
+      ...input, currentRuntimeRunId: hostTeamRunId('TEST-owner', 'TEST-launch', 'added'),
+    })).toBe(true);
+    for (const overrides of [
+      { teamName: hostTeamSelectionKey('TEST-foreign') },
+      { teamName: 'legacy-team' },
+      { nextRunId: hostTeamRunId('TEST-foreign', 'TEST-launch', 'restored') },
+      { nextRunId: hostTeamRunId('TEST-owner', 'TEST-other-launch', 'restored') },
+      { nextRunId: 'host-run:invalid' },
+      { currentRuntimeRunId: hostTeamRunId('TEST-owner', 'TEST-other-launch', 'current') },
+      { currentRuntimeRunId: null },
+      { ignoredRuntimeRunIds: { [nextRunId]: teamName } },
+      { previousState: 'assembling' as const },
+    ]) {
+      expect(shouldAdoptSuccessorProvisioningRun({ ...input, ...overrides })).toBe(false);
+    }
   });
 
   it('does not steal an in-flight provisioning run', () => {
