@@ -3550,3 +3550,55 @@ The PR continuation `3cb6e9b2` and follow-up `e935176e` share `d382c393` but con
 The five conflict resolutions are limited to existing files. Preserve both insertion-only plan histories. Use the bounded, canonical captured-owner set from `3cb6e9b2` with the actual-DOM regression from `e935176e`, retaining the empty/duplicate/over-bound discovery refusals. Use the single bounded Retry result/stage recorder and first-catch failure record from `e935176e`; retain the nonoverlapping census timings and existing UI-step timestamps from `3cb6e9b2`. Consolidate their overlapping diagnostic tests instead of keeping two receipt schemas or two synthetic availability fixtures. Original actions, physical custody, deadlines, readiness predicates and cleanup assertions remain unchanged.
 
 This composition adds no production behavior beyond the two published cuts. Estimate for conflict resolution beyond those cuts: about 20 test lines; complexity 3/10, reliability 8/10, confidence 8/10 before resulting-source execution. Root review and independent migration CI review agree on these choices. Verify the complete affected Desktop helper files, platform/packaged helpers, retained scripts compiler and scoped lint; then publish the merged tree and await the existing resulting-source native/Desktop gates. Prior results remain attributed to their original source. Darwin P09 remains unresolved; no green aggregate is claimed by this reconciliation.
+
+## Original Windows service-pair failure localization — 15 November 2026
+
+### R1: observed failure and bounded correction
+
+Exact source `a02ab70edfdcb4169627e804f0337c9ad6b52af6` fails the original
+Windows process fixture at `debug-service / child-lines` on both
+[x64 job132959932736](https://github.com/777genius/agent-teams-ai/actions/runs/43762390679/job/132959932736)
+and [ARM64 job132959932738](https://github.com/777genius/agent-teams-ai/actions/runs/43762390679/job/132959932738).
+The preceding cancellation scenario completes. The retained broker target output
+has ended before the unchanged ten-second readiness deadline, but its original
+exit payload and the new fixture prerequisite outcomes are not retained in the
+failure log. Cleanup subsequently triggers the broker-exit callback assertion;
+the final event wait replaces the directly thrown readiness timeout. The
+independent outer controller drains with rootExitCode1 and zero active processes.
+This is failed qualification, and does not localize a production exception policy.
+
+Keep the correction in three existing TEST files:
+
+- `tools/owned-process-broker/nativeFixture.cpp`: separate the existing service-pair
+  prerequisites in their original order. On their first failure emit one bounded
+  fixed-key JSON record to existing stdout, with a closed numeric stage and an
+  already-observed numeric result where applicable. Preserve original return62/63,
+  short circuits, API calls, five-second waits, handle closes, CREATE_NEW publication
+  and eighty-child churn. In `wow64Startup`, retain the existing query, architecture,
+  wait, exit and publication results without repeating calls. Missing/unreached
+  observations are not represented as successful zero results.
+- `tools/owned-process-broker/nativeDebugServiceScenario.ts`: only when the existing
+  child-lines wait fails, project its already-held rootExit payload, observed
+  root/child counts, the two fixed success-marker booleans and the validated closed
+  prerequisite record. Never forward raw stdout/stderr, paths or environment.
+  Rethrow the original failure; no extra process query, action, retry or wait.
+- `tools/owned-process-broker/nativeGate.ts`: register the original caught scenario
+  error through the existing event guard before diagnostics and cleanup callbacks.
+  The original helper cleanup is still awaited independently. This prevents its
+  later callback assertion from replacing that error; a separate cleanup timeout
+  remains failure and is not represented as successful cleanup.
+
+Estimate: 60–100 changed TEST lines, zero product lines; complexity3/10,
+reliability8/10, confidence8/10 for localization, no product-fix claim.
+Root source review and independent qualification audit agree that the current
+logs do not justify changing startup breakpoint acceptance or deadlines.
+Independent P09 reviewer additionally required carrying the closed C++ record
+through the existing stdout collector, preserving short-circuit reachability,
+and latching the caught error before any diagnostic callback.
+
+After source application, independently review the exact diff; run the existing
+event/output/context helper suites, original scripts compiler, scoped lint and
+source-size guard. Await both original resulting-source Windows jobs. The
+result must determine the next correction; this diagnostic cut itself cannot
+qualify P08/P09. No source oracle, provider invocation policy, workflow selection,
+Draft/base, main, release or activation change is included.
