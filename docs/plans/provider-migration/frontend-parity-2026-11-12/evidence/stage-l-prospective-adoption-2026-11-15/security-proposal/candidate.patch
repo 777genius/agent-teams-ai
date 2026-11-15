@@ -1,0 +1,54 @@
+--- a/packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts
++++ b/packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts
+@@ -109,7 +109,14 @@
+       emit({ kind: 'process-output', stream: 'stderr', text: RUNTIME_DIAGNOSTIC_DUMP_HIDDEN });
+       return;
+     }
+-    const text = redactPrivateValues(redactSyntax(value), secrets);
++    const normalized = value.replace(/\s+/g, ' ').trim();
++    const sanitized = redactSyntax(value);
++    // A syntax rewrite can remove only part of a held value. Without source spans,
++    // hide the whole ambiguous line rather than guess which fragments survived.
++    const ambiguous = sanitized !== normalized &&
++      (redactPrivateValues(value, secrets) !== value ||
++        redactPrivateValues(normalized, secrets) !== normalized);
++    const text = ambiguous ? '[redacted]' : redactPrivateValues(sanitized, secrets);
+     if (text) emit(Buffer.byteLength(text) > MAX_LINE_BYTES
+       ? { kind: 'gap', reason: 'oversized' }
+       : { kind: 'process-output', stream: 'stderr', text });
+--- a/packages/legacy-agent-host/tests/member-process-stderr.test.ts
++++ b/packages/legacy-agent-host/tests/member-process-stderr.test.ts
+@@ -224,3 +224,33 @@
+     assert.ok(f.observations.some(value => value.kind === 'process-output' && value.text === 'TEST safe'));
+   });
+ }
++
++for (const [label, separator] of [['space', ' '], ['tab', '\t'], ['mixed', ' \t  ']] as const) {
++  test(`held whitespace values cannot leak after contextual syntax redaction (${label})`, async () => {
++    const f = fixture();
++    observeMemberProcessStderr(f.child, { ...f.context,
++      profile: { ...f.context.profile, environment: { API_KEY: 'TEST_HELD_PREFIX TEST_HELD_SUFFIX' } } }, []);
++    const output = `Bearer TEST_HELD_PREFIX${separator}TEST_HELD_SUFFIX\n`;
++    for (let at = 0; at < output.length; at += 7) f.child.stderr.write(output.slice(at, at + 7));
++    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
++    const retained = JSON.stringify(f.observations);
++    assert.equal(retained.includes('TEST_HELD_SUFFIX'), false, 'the complete already-held value stays private');
++    assert.equal(retained.includes('TEST_HELD_PREFIX'), false);
++    assert.deepEqual(f.observations, [{ kind: 'process-output', stream: 'stderr', text: '[redacted]' }]);
++  });
++}
++
++test('safe diagnostics and unambiguous held-value context remain readable', async () => {
++  const f = fixture();
++  observeMemberProcessStderr(f.child, { ...f.context,
++    profile: { ...f.context.profile, environment: { API_KEY: 'TEST_HELD_PREFIX TEST_HELD_SUFFIX' } } }, []);
++  f.child.stderr.write('TEST ordinary public diagnostic\n');
++  f.child.stderr.write('prefix TEST_HELD_PREFIX TEST_HELD_SUFFIX suffix\n');
++  f.child.stderr.write('status password=TEST_UNHELD_VALUE tail\n');
++  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
++  assert.deepEqual(f.observations, [
++    { kind: 'process-output', stream: 'stderr', text: 'TEST ordinary public diagnostic' },
++    { kind: 'process-output', stream: 'stderr', text: 'prefix [redacted] suffix' },
++    { kind: 'process-output', stream: 'stderr', text: 'status [redacted] tail' },
++  ]);
++});

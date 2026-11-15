@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "sourceBase": "35cbd6e99b620e9b41802af936143d900f5e2aca",
+  "scope": "two existing paths, scratch proposal only; no tracked source or execution",
+  "files": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "preimage": {
+        "bytes": 7826,
+        "lines": 164,
+        "gitBlob": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+        "sha256": "c30d9a9d7357275864ede578ec9a4c66e335ffb1a613a5d916c6aced9061e1bc"
+      },
+      "candidate": {
+        "bytes": 8281,
+        "lines": 171,
+        "gitBlob": "21aa3590f82939778a3fd657bbafa2d64c23d923",
+        "sha256": "eeec12dc4e1bfab70181c71c81aa05210b717cd18cb5261795d562d714925efd"
+      },
+      "delta": {
+        "insertions": 8,
+        "deletions": 1
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "preimage": {
+        "bytes": 12742,
+        "lines": 226,
+        "gitBlob": "c073ab7b8c6025313747f75e50e8b0a14985d589",
+        "sha256": "f2c89ada2f51d13e42af390229cc6b2fc58e2c82a48bf64154c006c5feedc573"
+      },
+      "candidate": {
+        "bytes": 14603,
+        "lines": 256,
+        "gitBlob": "d1b52658270cc53a9e1ec345de55f840e7549011",
+        "sha256": "fd7504cd6196122a450cab25dc3bce50f5125c4ab589510c005f08e68c731510"
+      },
+      "delta": {
+        "insertions": 30,
+        "deletions": 0
+      }
+    }
+  ],
+  "testCounts": {
+    "source35": 19,
+    "candidate": 23,
+    "predictedRed": {
+      "pass": 20,
+      "fail": 3,
+      "skip": 0,
+      "cancelled": 0
+    },
+    "predictedGreen": {
+      "pass": 23,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0
+    },
+    "observedExecution": false
+  },
+  "patch": {
+    "bytes": 3250,
+    "lines": 54,
+    "gitBlob": "5bb0d1a3b011fcc66f009b6b5e9cf8f44f1af36b",
+    "sha256": "e3f8a21efa078c299f6686d30f8c245c7857564d9ec160ef11d1de470526818b"
+  }
+}

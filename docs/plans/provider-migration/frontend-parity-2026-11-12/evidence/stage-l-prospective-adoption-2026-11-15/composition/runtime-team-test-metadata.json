@@ -1,0 +1,78 @@
+{
+  "result": "APPROVE_EXACT_SOURCE_COMPOSITION_FOR_R1_REVIEW_ONLY",
+  "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+  "commonBase": {
+    "head": "27b1acf48278dcd0fb348c626696eac2dc64de73",
+    "bytes": 182715,
+    "blob": "e77ec01ab472cacba5f73008c2a36abb70220cb1",
+    "sha256": "ab5bb408d5ce7485cbbbf2ab745c90bddaa067cef0fe8d815ad9d55718088e1b",
+    "lines": 3596
+  },
+  "retainedK": {
+    "head": "e3b661974cb7131cd3b1f7b6eaf6ede647b326f4",
+    "bytes": 198908,
+    "blob": "c22601ad6648e7a5c47bf46d3214c0f8f3105e0f",
+    "sha256": "c5f732771761b0ebad511bdc8d407b146f9c9636be5f6542e0a356920a749f2c",
+    "lines": 3809
+  },
+  "incoming35": {
+    "head": "35cbd6e99b620e9b41802af936143d900f5e2aca",
+    "bytes": 191234,
+    "blob": "ac07c852895c6cfbabb5015f0c1ef0abe13b3a7c",
+    "sha256": "a98eaa6aef701eba667a9b02edc0e49ed124786705469d8820a36b7c27cfd210",
+    "lines": 3715
+  },
+  "candidate": {
+    "bytes": 207427,
+    "blob": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+    "sha256": "5ecb1c76b7a3cccf205b9856f183095ef7da3fa06cd7617c2f403c37e3f41d2d",
+    "lines": 3928,
+    "deltaFromK": {
+      "additions": 119,
+      "deletions": 0
+    },
+    "deltaFromIncoming": {
+      "additions": 213,
+      "deletions": 0
+    }
+  },
+  "retainedSuffix": {
+    "bytes": 16193,
+    "blob": "064bd88e244433911e2ecaf93b0ff9f59e6cdc79",
+    "sha256": "b910c6f549d9233aef5a5aefd8543a60c39ad7115f247305c0e439a1493af53c",
+    "lines": 213
+  },
+  "recipe": "candidate = full incoming35 ac07 file + exact K c226 suffix after full common e77ec file; no other bytes change.",
+  "proofs": {
+    "fullKCommonPrefixExact": true,
+    "incomingOnlyTwoInsertions": true,
+    "incomingInsertionsLineCounts": [
+      105,
+      14
+    ],
+    "removeIncomingInsertionsReturnsFullK": true,
+    "removeRetainedSuffixReturnsFullIncoming": true,
+    "allOriginalAssertionsByteExact": true,
+    "allEightDeadlineCaptureCasesPreserved": true,
+    "noFormattingOrImportChanges": true
+  },
+  "staticExpectedCases": 47,
+  "expectedCountQualification": "Source-derived prediction: 44 retained K cases plus three incoming stderr cases. No candidate test/build/typecheck executed; K first build failed separately.",
+  "patch": {
+    "bytes": 9544,
+    "blob": "354b8d40a747e7156ba185caabdec0dfe9aaeff6",
+    "sha256": "fa1cda07fb42098bb1debf280175c3227db07a104082a9986036bb23f9dc814b"
+  },
+  "boundaries": [
+    "Only one test file composed in memory.",
+    "No 71/1f scheduled Thinking/stderr implementation.",
+    "No tracked file, dependency/install, ref, commit or CI mutation.",
+    "Candidate requires canonical R1 and independent review before application; no local or native qualification claimed."
+  ],
+  "remoteFullReadback": {
+    "exact": true,
+    "bytes": 207427,
+    "blob": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+    "sha256": "5ecb1c76b7a3cccf205b9856f183095ef7da3fa06cd7617c2f403c37e3f41d2d"
+  }
+}
