@@ -475,7 +475,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
       return { valid: false, error: `general.${key} is not a valid setting` };
     }
 
-    switch (key as keyof GeneralConfig) {
+    switch (key) {
       case 'launchAtLogin':
         if (typeof value !== 'boolean') {
           return { valid: false, error: `general.${key} must be a boolean` };
