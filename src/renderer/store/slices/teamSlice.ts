@@ -182,6 +182,7 @@ import {
   shouldPreserveSelectedTeamSnapshot,
 } from '../team/teamResolvedMembers';
 import {
+  captureHostProvisioningStatusRead,
   nextRuntimeRunIdByTeamAfterAdoption,
   projectIncomingMemberSpawnSnapshot,
   resolveIncomingRuntimeRunAdoption,
@@ -4590,10 +4591,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   getProvisioningStatus: async (runId: string) => {
+    const isCurrent = captureHostProvisioningStatusRead(runId, get, (teamName) => {
+      const scope = captureTeamRequestScope(get, teamName);
+      return () => isTeamRequestScopeCurrent(get, teamName, scope);
+    });
     const progress = await unwrapIpc('team:provisioningStatus', () =>
       api.teams.getProvisioningStatus(runId)
     );
-    get().onProvisioningProgress(progress);
+    if (isCurrent()) get().onProvisioningProgress(progress);
     return progress;
   },
   clearMissingProvisioningRun: (runId: string) => {
