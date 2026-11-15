@@ -14,6 +14,7 @@ import type { UiCdpPort } from './desktop-ui-controls.ts';
 export async function runDesktopEmulatedLifecycleUi(initialCdp: UiCdpPort, options: {
   fixture: EmulatedLifecycleFixture; evidence: Row; assertOwnedRenderer(): void;
   restartSameProfile(): Promise<UiCdpPort>;
+  originalStopOnly?: true;
 }) {
   const { fixture, evidence } = options;
   assert.equal(fixture.emulatedRuntime.provider, 'claude'); assert.equal(fixture.emulatedRuntime.variant, 'lifecycle');
@@ -22,7 +23,11 @@ export async function runDesktopEmulatedLifecycleUi(initialCdp: UiCdpPort, optio
   const proof: Row = { status: 'INCOMPLETE', provider: 'claude', steps, commands, nativeQualification: false,
     scope: 'Original Launch/Stop, full same-profile cold startup, explicit checkpoint Resume, Composer continuation and active/queued Quit with finite SDK peer',
     excluded: ['vendor inference/authentication', 'native provider qualification', 'automatic app.relaunch'] };
-  evidence.emulatedLifecycleUiProof = proof;
+  if (options.originalStopOnly) {
+    proof.scope = 'Original Launch, one successful SDK peer input and original Stop before automatic packaged app relaunch';
+    proof.excluded = ['vendor inference/authentication', 'native provider qualification', 'cold checkpoint Resume', 'active/queued Quit'];
+    evidence.emulatedLaunchStopUiProof = proof;
+  } else evidence.emulatedLifecycleUiProof = proof;
   const controls = () => createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
   let ui = controls();
   const effects = () => readDesktopEmulatedRuntimeEffects(fixture);
@@ -108,6 +113,7 @@ export async function runDesktopEmulatedLifecycleUi(initialCdp: UiCdpPort, optio
     payloadFileSha256: checkpoint.payloadFileSha256, historyPath: checkpoint.historyPath,
     historySha256: checkpoint.historySha256, nativeSession: checkpoint.nativeSession, originalPids };
   proof.stoppedScreenshot = await screenshot('stopped');
+  if (options.originalStopOnly) { proof.status = 'PASS'; return; }
   cdp = await options.restartSameProfile(); ui = controls();
   assert.equal(record(evidence.emulatedColdResumeBoundary).status, 'PASS');
   await ui.observeInput(); await ui.clickSidebar(fixture.uiSeed.subject);

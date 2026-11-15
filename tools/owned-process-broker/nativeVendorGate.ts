@@ -11,7 +11,7 @@ import type { PendingOwnedProcess, PreparedOwnedProcess, ProcessOwner } from '@a
 import { windowsLaunchSpec } from '../../packages/legacy-agent-host/dist/adapters/providers/WindowsCapturedProcess.js';
 import { runNativeWindowsClaude, type NativeWindowsClaudeObservation } from '../../packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts';
 import { verifyBrokerArchitecture } from '../../scripts/build/buildOwnedProcessBroker';
-import { brokerReleased, capturedWitness, timeout, waitFor } from './nativeGateContext';
+import { brokerReleased, capturedQueryableWitness, timeout, waitFor } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
 import { createFixtureOutputCollector } from './nativeGateOutput';
 import { nativeVendorBroker } from './nativeVendorBroker';
@@ -81,7 +81,7 @@ export async function runNativeVendorGate(debugBroker: string, fixture: string,
     return true;
   })();
   const marker = join(sandbox, 'native-service.started'), outputPath = join(sandbox, 'native-service.jsonl');
-  const witnesses: Awaited<ReturnType<typeof capturedWitness>>[] = [];
+  const witnesses: Awaited<ReturnType<typeof capturedQueryableWitness>>[] = [];
   let nativeProof: Awaited<ReturnType<typeof runNativeWindowsClaude>> | undefined;
   let nativeObservation: NativeWindowsClaudeObservation | undefined;
   let scopedProof: Awaited<ReturnType<typeof tap.stopService>> | undefined;
@@ -146,16 +146,15 @@ export async function runNativeVendorGate(debugBroker: string, fixture: string,
         phase('capture-original-witnesses');
         const observed = [prepared.root, output.root!, service, ...descendants, neighbor];
         witnesses.push(...await events.wait(Promise.all(observed.map(original =>
-          capturedWitness(fixture, original.pid, original.birth, track, events, 'vendor-wait-gated')))));
+          capturedQueryableWitness(fixture, original.pid, original.birth, track, events)))));
         const [providerWitness, backgroundWitness, serviceWitness, firstLeaf, secondLeaf, adjacent] = witnesses;
         assert.ok(providerWitness && backgroundWitness && serviceWitness && firstLeaf && secondLeaf && adjacent);
         phase('scoped-original-job-stop');
         scopedProof = await tap.stopService(service);
         assert.deepEqual(await timeout(events.wait(Promise.all(
-          [serviceWitness, firstLeaf, secondLeaf].map(witness => witness.exit)))), [0, 0, 0]);
-        assert.equal(providerWitness.process.exitCode, null);
-        assert.equal(backgroundWitness.process.exitCode, null);
-        assert.equal(adjacent.process.exitCode, null);
+          [serviceWitness, firstLeaf, secondLeaf].map(witness => witness.wait())))), [0, 0, 0]);
+        assert.deepEqual(await timeout(events.wait(Promise.all(
+          [providerWitness, backgroundWitness, adjacent].map(witness => witness.observe())))), ['alive', 'alive', 'alive']);
         assert.equal(sentinel.exitCode, null);
         assert.equal(facade.exitCode, null);
         assert.equal(cleanupProof, false, 'Service Stop cannot mint a provider cleanup receipt');
@@ -165,7 +164,7 @@ export async function runNativeVendorGate(debugBroker: string, fixture: string,
     assert.equal(launched, 1); assert.equal(nativeProof.cleanup, true);
     assert.deepEqual(nativeProof.failures, []);
     assert.equal(cleanupProof, true);
-    assert.deepEqual(await timeout(events.wait(Promise.all(witnesses.map(witness => witness.exit)))), [0, 0, 0, 0, 0, 0]);
+    assert.deepEqual(await timeout(events.wait(Promise.all(witnesses.map(witness => witness.wait())))), [0, 0, 0, 0, 0, 0]);
     assert.equal(sentinel.exitCode, null, 'Unrelated original process survived both scoped and provider Stop');
     verify(); assert.equal(hash(process.execPath), digests.node);
     passed = true;

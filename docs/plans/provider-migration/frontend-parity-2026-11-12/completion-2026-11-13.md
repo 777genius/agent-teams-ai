@@ -461,3 +461,73 @@ date fields (Linux C.UTF-8, Darwin en_US.UTF-8); fixture содержит про
 Root R2, полный scripts typecheck на TS 7.0.2, scoped fast lint трёх TEST файлов,
 source-size guard и diff check прошли. Эти локальные проверки не заменяют новый
 полный native/Electron run на опубликованном source.
+
+## 15 ноября: исходные Windows A/B закрыты; следующие scoped acceptance fixes
+
+На опубликованном `c28f1aa890c909c7b981254c5e30b874cbc84287` полный process
+workflow подтвердил Claude, Codex и OpenCode A/B, management и cold scenarios на
+[Windows x64](https://github.com/777genius/agent-teams-ai/actions/runs/43759098052/job/132949618051)
+и [Windows ARM64](https://github.com/777genius/agent-teams-ai/actions/runs/43759098052/job/132949618151).
+Проверены оригинальные ZIP: x64 artifact `14179847488`, SHA-256
+`b948518d266e7639ffb4f7f9aed3c2574b9f58902b65f40eaf90df6a266dd736`;
+ARM64 artifact `14179294406`, SHA-256
+`cc403b00257f38946f0888905bfcf46842fe892685fede6f8e0433bbedf4767e`.
+На каждой архитектуре все 25 Codex, 9 Claude и 7 OpenCode исходных Jobs имеют
+Stop/drain/release и подтверждённое отсутствие через исходный HANDLE. Codex
+standalone завершён; Claude cold Resume сохраняет исходную native session и
+добавляет только новый input; cold lookup не повторяет исходные inputs.
+OpenCode standalone остаётся вне исходного поддержанного profile. Receipt
+явно сохраняет `realProviderExecuted=false`, `desktopQualified=false`,
+`releaseQualified=false`; этот PASS не подменяет Desktop или vendor qualification.
+
+Следующий source содержит два ограниченных product исправления замечаний
+#1192/4567946530 и /4567946521. При отказе назначения нового Job во время
+подтверждённого Stop допускается только debug record того же исходного child
+HANDLE, чьё членство в уже завершающемся исходном Job подтверждено заново.
+Такой record не получает service authority: current/exact registration, Query,
+Stop и settlement не могут использовать его как scope родителя. Подтверждение
+dispatch публикуется под существующим mutex сразу после успешного native
+syscall; ожидание остаётся вне mutex, исходный deadline не возобновляется.
+Не вводятся история HANDLE, новая retention policy или изменение retirement.
+Для явно определённого I386/WOW64 процесса принимаются два первоначальных
+loader breakpoint; последующие и second-chance exceptions передаются приложению.
+API architecture query загружается поздно: новая минимальная версия Windows
+не вводится, отсутствие API не разрешает дополнительный WX86 breakpoint.
+
+Существующий TEST debug adapter получает конечный барьер pending CREATE:
+один исходный Stop, реальные active Job facts, отказ раннего Settle, отказ обоих
+способов регистрации inherited child, отсутствие first-effect marker,
+живые original provider/neighbor HANDLEs и последующие Missing после settlement.
+В том же native gate проверяются I386 корень и дочерний процесс через штатный
+Windows cmd, а также доставка поздних application breakpoints обработчикам.
+Барьер и environment selectors отсутствуют в product build. Новый native
+результат должен быть получен в CI; source review не является его заменой.
+
+Три прежних evidence gaps исправлены без vendor execution: late model failures
+делают Linux SDK receipt INCOMPLETE и завершают процесс с ошибкой; vendor Stop
+observer использует свежий query исходного HANDLE вместо живого процесса-свидетеля;
+terminal Runtime polling расходует оставшийся исходный phase budget. Проверка
+конечного Node witness: 3/3 PASS, без SKIP. Реальный vendor gate не запускался.
+
+Сверка исходной матрицы выявила ещё два пробела текущей приёмки, закрываемых
+существующими frontend controls:
+
+- Generic finite Runtime journey открывает уже завершённую исходным cron задачу,
+  Task Activity, detail и Task Log Stream. Task command/outbox/input/binding и
+  digest retained events связываются с реально отображённым sequence/text.
+  Просмотр не добавляет inputs, business commands или provider effects.
+- Существующая packaged macOS matrix использует фактические Node/Host/custody
+  текущего candidate и конечный Claude SDK peer. Исходные Launch/Stop дают одну
+  закрытую session; затем прежний observer выполняет ровно один public
+  app.relaunch и один public Quit преемника с writer/session/hash/absence checks.
+  Отдельный launch-stop receipt не объявляет full cold Resume/active Quit PASS;
+  native custody и natural exit code преемника по-прежнему не квалифицируются.
+
+Root и независимые reviewers проверили native и packaged boundaries. Полные
+scripts/native/retained-host typechecks на TS 7.0.2, scoped fast lint без warnings,
+source-size (800), provisioning guard, YAML parse и diff check прошли. Actual
+Windows C++/Electron и новые UI шаги ожидают CI следующего опубликованного source.
+Историческая ordinary solo-DO vendor proof не переименовывается в current finite
+peer proof: нынешний peer не выполняет child protocol. Исходная граница P09
+остаётся отдельно; её oracle не ослаблялся. Draft, Stage 1 scope, запрет реальных
+Claude/Codex запусков и отсутствие main/release/default activation сохранены.

@@ -70,7 +70,7 @@ process.stderr.write('TEST sentinel refuses native agent invocation\\n');process
 export async function prepareDesktopBackendFixture(
   repo: string,
   options: {
-    candidateRuntime?: CandidateRuntimePaths;
+    candidateRuntime?: Pick<CandidateRuntimePaths, 'nodeExecutable' | 'nodeVersion' | 'hostEntry' | 'processCustody'>;
     diagnosticHostEntry?: { path: string; sha256: string };
     claudeCheckpointDonor?: { repo: string; hostEntrySha256: string };
     approvalUi?: boolean;

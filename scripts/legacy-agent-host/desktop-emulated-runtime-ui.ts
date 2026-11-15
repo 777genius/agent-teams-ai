@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { readNativeHostCostProof } from '../../packages/legacy-agent-host/tests/fixtures/native-host-cost.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { processTable } from './desktop-backend-observations.ts';
@@ -37,7 +38,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   }
   const { fixture } = options, steps: Row[] = [], commands: Row[] = [], provider = fixture.emulatedRuntime.provider;
   const proof: Row = { status: 'INCOMPLETE', provider, steps, commands,
-    scope: 'Original Launch, Composer stream, permission/question controls, cost/Stats, schedules, renderer reload and Team Stop through original Host/D and finite TEST protocol peers',
+    scope: 'Original Launch, Composer stream, permission/question controls, cost/Stats, schedules, Task Activity/detail/Stream, renderer reload and Team Stop through original Host/D and finite TEST protocol peers',
     excluded: ['vendor inference/authentication', 'per-turn interrupt UI (no original control)', 'native provider qualification'] };
   options.evidence.emulatedRuntimeUiProof = proof;
   const ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
@@ -455,6 +456,77 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   await poll(schedules, rows => rows.length === 0, 'schedule removed');
   assert.equal((await rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend'))).find(row => row.id === taskId)?.status, 'completed');
   assert.equal((await rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend'))).find(row => row.id === automaticTaskId)?.status, 'completed');
+
+  // The original cron Task supplies real retained input facts; these UI reads never start work.
+  const activityCommands = await commandRows();
+  const starts = activityCommands.filter(row => record(row.command).operation === 'task.start' &&
+    record(record(row.command).payload).taskId === automaticTaskId);
+  assert.equal(starts.length, 1); const taskStart = starts[0]!; assert.equal(taskStart.phase, 'completed');
+  const deliveries = (await rows(join(teamRoot, '.host-owner/outbox'))).filter(row => row.commandId === taskStart.commandId);
+  assert.equal(deliveries.length, 1); const delivery = deliveries[0]!;
+  assert.equal(delivery.inputId, delivery.deliveryId); assert.equal(delivery.phase, 'admitted');
+  const activityRuntime = await terminal(delivery.inputId);
+  const taskInputs = array(activityRuntime.inputs).filter(row => record(row.intent).inputId === delivery.inputId);
+  assert.equal(taskInputs.length, 1); const taskInput = taskInputs[0]!, intent = record(taskInput.intent);
+  const { teamName: deliveryTeam, ...deliveryBinding } = record(delivery.binding);
+  assert.equal(deliveryTeam, 'test-desktop-backend');
+  assert.deepEqual(intent.binding, activityRuntime.binding); assert.deepEqual(intent.binding, deliveryBinding);
+  for (const field of ['inputId', 'deliveryId', 'messageId', 'content']) assert.equal(intent[field], delivery[field]);
+  const binding = record(activityRuntime.binding);
+  for (const field of ['backendId', 'teamId']) assert.equal(record(taskStart.binding)[field], binding[field]);
+  assert.equal(binding.runId, capture.launchId); assert.equal(binding.memberId, 'alice-id');
+  const activityPath = join(fixture.root, 'hoststore/runtime-events', runtimeDigest(binding) + '.json');
+  const retained = await json(activityPath), { digest: activityDigest, ...activityBody } = retained;
+  assert.equal(runtimeDigest(activityBody), activityDigest); assert.deepEqual(retained.binding, binding);
+  const inputEvents = array(retained.events).filter(row => row.inputId === delivery.inputId);
+  assert.ok(inputEvents.length > 0 && inputEvents.every(row => row.operationRef === taskInput.operationRef));
+  const completion = inputEvents.filter(row => record(row.data).kind === 'text' &&
+    record(row.data).text === 'TEST scheduled complete').at(-1);
+  assert.ok(completion, 'the original provider protocol result is retained for this Task input');
+  const beforeActivity = { inputs: activityRuntime.inputs, effects: await effects(),
+    tasks: await rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend')) };
+  const completedTask = beforeActivity.tasks.find(row => row.id === automaticTaskId)!;
+  assert.equal(completedTask.status, 'completed'); assert.equal(completedTask.owner, 'alice');
+  const card = `.kanban-task-card[data-task-id=${literal(automaticTaskId)}] h5`;
+  await ui.scrollTo(card, 'original completed cron Task card');
+  await ui.click(card, 'open original completed Task detail');
+  await ui.waitRead(`document.querySelector('[role="dialog"]')?.textContent.includes(${literal(completedTask.subject)})`, 'original completed Task detail');
+  const logs = '[role="dialog"] section:has([role="tab"][aria-controls$="-content-stream"])';
+  await ui.waitRead(`document.querySelectorAll(${literal(logs)}).length===1&&[...document.querySelector(${literal(logs)}).querySelectorAll('span')].some(e=>e.textContent==='Task Logs')`, 'one original Task Logs section');
+  await ui.scrollTo(`${logs} > div > button[aria-label="Expand section"]`, 'original Task Logs header');
+  await ui.click(`${logs} > div > button[aria-label="Expand section"]`, 'expand original Task Logs');
+  const activityViews: Row[] = [];
+  for (const [tab, marker] of [['Task Activity', 'Captured Task input'], ['Task Log Stream', 'Captured runtime activity']] as const) {
+    await ui.scrollTo(`${logs} [role="tab"]`, 'original ' + tab, tab);
+    await ui.click(`${logs} [role="tab"]`, 'select original ' + tab, tab);
+    const panel = `${logs} [role="tabpanel"][data-state="active"]`;
+    const title = await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll(${literal(panel + ' button[aria-expanded="false"]')})]
+      .filter(e=>e.textContent.includes(${literal('alice · ' + marker)})&&e.textContent.includes(${literal('generation ' + binding.generation)}));
+      return rows.length===1?rows[0].textContent.trim():null})()`, 'one original Task input in ' + tab);
+    assert.ok(typeof title === 'string');
+    await ui.scrollTo(`${panel} button[aria-expanded="false"]`, 'original ' + tab + ' disclosure', title);
+    await ui.click(`${panel} button[aria-expanded="false"]`, 'open original ' + tab + ' facts', title);
+    await ui.scrollTo(`${panel} pre`, 'original retained completion in ' + tab,
+      String(record(completion.data).text), 12, { requireCenterHit: true });
+    const rendered = await ui.waitRead(`(()=>{const panel=document.querySelector(${literal(panel)});if(!panel)return null;
+      const facts=[...panel.querySelectorAll('pre')].filter(e=>e.textContent===${literal(record(completion.data).text)}&&
+        e.parentElement.querySelector('span')?.textContent.trim()===${literal('#' + completion.sequence + ' text')});
+      if(facts.length!==1||!facts[0].getClientRects().length)return null;
+      return {sequence:${literal(completion.sequence)},text:facts[0].textContent,
+        source:panel.querySelector('button[aria-expanded="true"]')?.textContent.trim()}})()`, 'exact original retained event in ' + tab);
+    activityViews.push({ tab, rendered, screenshot: await screenshot(tab === 'Task Activity' ? 'task-activity' : 'task-log-stream') });
+  }
+  await ui.click('[role="dialog"] button', 'close original Task detail', 'Close');
+  await ui.waitRead(`!document.querySelector('[role="dialog"]')`, 'original Task detail closed');
+  assert.deepEqual((await session()).inputs, beforeActivity.inputs, 'Task reads add no Runtime input');
+  assert.deepEqual(await commandRows(), activityCommands, 'Task reads add no business command');
+  assert.deepEqual(await effects(), beforeActivity.effects, 'Task reads add no provider action');
+  assert.deepEqual(await rows(join(fixture.root, 'hoststore/tasks/test-desktop-backend')), beforeActivity.tasks);
+  assert.equal((await json(activityPath)).digest, activityDigest, 'Task reads do not rewrite retained events');
+  proof.taskActivity = { taskId: automaticTaskId, taskStartCommandId: taskStart.commandId,
+    deliveryId: delivery.deliveryId, inputId: delivery.inputId, binding, operationRef: taskInput.operationRef,
+    eventId: completion.eventId, sequence: completion.sequence, activityDigest, views: activityViews,
+    addedInputs: 0, addedBusinessCommands: 0, addedProviderActions: 0 };
 
   await ui.scrollTo('button[aria-label="Back to chats"]', 'original Back to chats before held input');
   await ui.click('button[aria-label="Back to chats"]', 'return to original chat list before held input');

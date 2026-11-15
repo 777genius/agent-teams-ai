@@ -464,7 +464,9 @@ export async function runNativeGate(
     await runScenario('capture-root-first', () => nativeCapturedScenario(context, 'claude', true, sentinel));
     await runScenario('debug-service-cancel', () => nativeDebugServiceScenario(context, debugServiceBroker, 'pre-resume-cancel', sentinel));
     await runScenario('debug-service', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-pair', sentinel));
+    await runScenario('debug-service-wow64-root', () => nativeDebugServiceScenario(context, debugServiceBroker, 'wow64-root', sentinel));
     await runScenario('debug-service-root-first', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-first', sentinel));
+    await runScenario('debug-service-admission-race', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-race', sentinel));
     for (const mode of ['tree', 'root-first'] as const)
       await runScenario(mode, () => treeScenario(context, mode, sentinel));
     for (const mode of ['flood', 'breakaway'] as const)
@@ -513,6 +515,8 @@ export async function runNativeGate(
           'captured-provider-native-argv-env-cwd-and-stop',
           'captured-root-first-original-descendants-and-neighbor',
           'TEST-only-debug-service-prebirth-nested-job-feasibility',
+          'TEST-only-scoped-stop-pending-create-isolation',
+          'TEST-only-wow64-root-child-startup-and-application-exceptions',
           'birth-failure-unknown-first-nonce',
           'owner-eof',
           'accounting-failure-latched-unknown-distinct-reconciliation',
