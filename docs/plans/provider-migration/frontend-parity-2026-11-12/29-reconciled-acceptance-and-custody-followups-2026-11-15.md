@@ -3615,3 +3615,71 @@ TypeScript7.0.2 and the complete legacy-host-scripts compiler, focused lint, sou
 The full-workspace typecheck was terminated with code137, including a separate
 memory-bounded invocation; neither is a PASS. Both actual Windows native runs
 remain required, and no product fix or P08/P09 acceptance is asserted.
+
+## Original Windows WOW64 path binding — 15 November 2026
+
+### R1: observed fixture refusal and bounded correction
+
+Exact diagnostic source `4dc08dea7eeed5c286cf310e09a2ba26d84a9546`
+fails the original [ARM64 job132968371746](https://github.com/777genius/agent-teams-ai/actions/runs/43765103075/job/132968371746).
+At `2026-11-15T21:52:59.7797577Z` the retained record is:
+
+```json
+{"nativeServiceReadinessFailure":{"rootExitCode":62,"rootCount":1,"childCount":0,"rootChildCount":0,"wow64Completed":false,"churnCompleted":false,"prerequisite":{"stage":5}}}
+```
+
+Stage5 is `Wow64Path`: `wow64Command()` returned empty before the x86
+child was created. Both preceding application-breakpoint checks completed.
+The original ten-second readiness error is now preserved through cleanup;
+the outer controller drains with rootExitCode1 and activeProcesses0.
+Source A/B is not reached. The same-source
+[x64 job132968371549](https://github.com/777genius/agent-teams-ai/actions/runs/43765103075/job/132968371549)
+is still queued at this review and has no qualification result.
+
+The helper currently asks the physical `Kernel32.dll` module for
+`GetSystemWow64Directory2W`. Microsoft's generated
+[Windows SDK import mappings](https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/libMappings.rsp)
+instead map that entry to `api-ms-win-core-wow64-l1-1-1.dll`, while mapping
+`IsWow64Process2` and `GetSystemWow64DirectoryW` to `KERNEL32.dll`.
+Microsoft's [API-set guidance](https://learn.microsoft.com/en-us/windows/win32/apiindex/windows-apisets)
+explains that the contract routes to its implementation independently of a
+physical module name. A missing physical-module export is therefore the leading
+source-level explanation, not a measured `GetProcAddress` error: stage5 also
+groups a zero or oversized directory result. No breakpoint-policy or deadline
+change is justified by this evidence.
+
+Keep the correction in `tools/owned-process-broker/nativeFixture.cpp`:
+
+- Define `_WIN32_WINNT 0x0A00` before `windows.h`, matching the existing broker.
+- Replace the helper's module/function-pointer lookup with the declared SDK call
+  `GetSystemWow64Directory2W(path,MAX_PATH,IMAGE_FILE_MACHINE_I386)`.
+- Keep the existing zero/oversized-result refusal, `MAX_PATH` buffer, suffix and
+  `IsWow64Process2` verification of the actual child. Preserve the closed stage5
+  diagnostic, return62/63, original child actions, waits, handle closes,
+  CREATE_NEW publication, application-breakpoint checks and eighty-child churn.
+
+The [official SDK header](https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/RecompiledIdlHeaders/um/wow64apiset.h)
+declares this function under `_WIN32_WINNT >= 0x0A00`; no NTDDI change is needed.
+The [API reference](https://learn.microsoft.com/en-us/windows/win32/api/wow64apiset/nf-wow64apiset-getsystemwow64directory2w)
+names `Kernel32.lib` and Windows10 version1511 or later. The fixture already uses
+the ordinary MSVC/CMake Windows SDK libraries, including Kernel32; no additional
+umbrella library, runtime module loader or fallback path is planned. The observed
+ARM build selects SDK10.0.26100.0 for Windows10.0.26200 with MSVC19.51.36260.0.
+This checks the declaration and intended link contract; actual resulting-source
+x64/ARM64 native compilation and execution remain required.
+
+Estimate: about10 changed TEST lines, zero product lines; complexity2/10,
+reliability8/10, confidence8/10 in correcting the binding, with the original
+stage5 subcause not independently measured. Root and qualification audit agree
+on this narrow correction; publish this plan before source changes, then review
+the exact source diff independently. Retain the prior failure evidence and await
+both original resulting-source Windows gates. Superseded queued work remains
+unqualified. No fallback, new process probe, ownership oracle, workflow, provider
+invocation, Draft/base, main, release or activation change is included.
+
+R2 `/root` independently read the exact ARM job log, Microsoft SDK import mapping,
+SDK declaration and local CMake targets. GO for this TEST-only binding correction
+after plan publication. The reviewed code must retain actual I386 verification;
+the API mapping supports the correction but does not prove the unmeasured stage5
+subcause or resulting native PASS. No additional product change is authorized by
+this failure localization.
