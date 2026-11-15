@@ -3789,7 +3789,7 @@ test('full original Process verifier accepts only authority-bound no-dispatch ev
   assert.equal(workflow.split(section).length, 2);
   const start = workflow.indexOf(command, workflow.indexOf(section)), stop = workflow.indexOf(end, start);
   assert.ok(start >= 0 && stop > start);
-  let script = workflow.slice(start + command.length, stop).split('\n').map(line => line.replace(/^          /, '')).join('\n');
+  let script = workflow.slice(start + command.length, stop).split('\n').map(line => line.replace(/^ {10}/, '')).join('\n');
   for (const declaration of ["import assert from 'node:assert/strict';", "import { readFileSync, writeFileSync } from 'node:fs';", "import { join } from 'node:path';"]) {
     assert.equal(script.split(declaration).length, 2); script = script.replace(declaration, '');
   }
