@@ -22,7 +22,6 @@ import {
 } from '@features/runtime-provider-management/main';
 import { readOpenCodeBinaryOverride } from '@main/services/runtime/openCodeRuntimeBinaryEnv';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
-import { RENAME_PUBLISH_RETRY, retryOnTransientFsError } from '@main/utils/transientFsRetry';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import {
   collectRuntimePathBinaryCandidates,
@@ -31,6 +30,7 @@ import {
 } from '@main/utils/runtimePathBinaryResolver';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { getShellPreferredHome, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { RENAME_PUBLISH_RETRY, retryOnTransientFsError } from '@main/utils/transientFsRetry';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import {
