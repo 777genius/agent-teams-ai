@@ -126,7 +126,7 @@ async function verifyFile(path: string, sha256: string, broker: boolean): Promis
     const opened = await file.stat({ bigint: true });
     if (opened.dev !== before.dev || opened.ino !== before.ino) unavailable();
     const hash = createHash('sha256');
-    for await (const chunk of file.createReadStream({ autoClose: false })) hash.update(chunk);
+    for await (const chunk of file.createReadStream({ autoClose: false, highWaterMark: 1024 * 1024 })) hash.update(chunk);
     const after = await file.stat({ bigint: true });
     const current = await lstat(path, { bigint: true });
     if (
