@@ -1,3 +1,5 @@
+import { readDesktopLinuxChildExecInput } from './desktop-runtime-source-fixture.ts';
+import { verifyLinuxChildExecInput } from '../../src/main/utils/linuxChildLaunchSelection.ts';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { closeSync, constants, openSync } from 'node:fs';
@@ -67,6 +69,8 @@ export async function qualifyLinuxProcessColdUi(input: {
     'LEGACY_DESKTOP_READBACK_ROOT', 'LEGACY_M19_COLD_UI_ACTION']) assert.equal(process.env[name], undefined);
   assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
   assert.equal(process.version, 'v24.21.0');
+  const linuxChildExec = readDesktopLinuxChildExecInput();
+  assert.ok(linuxChildExec, 'original explicitly pinned Linux child launcher is required');
   if (input.packedCapture) assert.equal(process.env.LEGACY_STAGE1_P7_GO, '1');
   assert.match(process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '', /^:\d+$/);
   assert.ok(process.env.LEGACY_DESKTOP_TEST_XAUTHORITY && process.env.LEGACY_DESKTOP_COREPACK_HOME);
@@ -120,6 +124,7 @@ export async function qualifyLinuxProcessColdUi(input: {
   const capture = await pinned({ path: capturePath, sha256: await fileDigest(capturePath) });
   const self = await pinned({ path: import.meta.filename, sha256: await fileDigest(import.meta.filename) });
   const verify = async () => {
+    assert.deepEqual(verifyLinuxChildExecInput(linuxChildExec), linuxChildExec);
     for (const pin of [sdkReceipt, self, capture, ...sourcePins]) await pinned(pin);
     for (const tree of trees) assert.equal(await treeHash(text(tree.path), text(tree.suffix)), hash(tree.sha256));
     if (packedCapture) assert.deepEqual(await readCapturedCandidateElectron(packedCapture), packed);
@@ -129,6 +134,7 @@ export async function qualifyLinuxProcessColdUi(input: {
   const proof: Record<string, unknown> = { schemaVersion: 1, status: 'INCOMPLETE', sdkReceipt, capture,
     scope: 'Linux controlled native services, cold Host restart, existing ProcessesSection original-ref Stop/history',
     sdkColdSurvivalClaim: false, packagedClaim: false, providerSessions: 0, wrapper: self,
+    linuxChildExecInput: linuxChildExec, linuxChildExecDelivery: 'separately-pinned-TEST-input',
     ...(packedCapture ? { packedCapture, packedCandidate: packed } : {}) };
   await writeFile(receiptPath, JSON.stringify(proof), { mode: 0o600, flag: 'wx' });
   const log = openSync(logPath, 'wx', 0o600);
@@ -144,6 +150,8 @@ export async function qualifyLinuxProcessColdUi(input: {
         LEGACY_DESKTOP_PNPM_PATH: entry.path, LEGACY_DESKTOP_PNPM_SHA256: entry.sha256,
         LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: packagePin.sha256, LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: library.sha256,
         LEGACY_DESKTOP_COREPACK_HOME: process.env.LEGACY_DESKTOP_COREPACK_HOME,
+        LEGACY_LINUX_CHILD_EXEC_MANIFEST: linuxChildExec.manifestPath,
+        LEGACY_LINUX_CHILD_EXEC_SHA256: linuxChildExec.manifestSha256,
         ...(packedCapture ? { LEGACY_STAGE1_P7_GO: '1', LEGACY_DESKTOP_PACKED_CAPTURE_PATH: packedCapture.path,
           LEGACY_DESKTOP_PACKED_CAPTURE_SHA256: packedCapture.sha256 } : {}),
         LEGACY_DESKTOP_TEST_DISPLAY: process.env.LEGACY_DESKTOP_TEST_DISPLAY,
@@ -158,6 +166,8 @@ export async function qualifyLinuxProcessColdUi(input: {
     fixtureRoot = dirname(desktopReceipt);
     const receipt = await json(desktopReceipt);
     assert.equal(receipt.mode, 'process-cold-ui'); assert.equal(receipt.status, 'PASS');
+    assert.deepEqual(receipt.linuxChildExecInput, linuxChildExec);
+    assert.equal(receipt.linuxChildExecInputVerifiedAfterCleanup, true);
     if (packed) {
       assert.equal(receipt.packedCandidateVerifiedAfterCleanup, true);
       assert.deepEqual(receipt.packedCandidate, packed);

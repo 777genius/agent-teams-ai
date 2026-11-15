@@ -115,7 +115,7 @@ export async function runDesktopEmulatedCodexInstallerUi(cdp: UiCdpPort, options
   assert.equal(readback.source, 'app-managed'); assert.equal(readback.binaryPath, undefined);
   assert.deepEqual(await indexBytes(), publishedBytes); assert.equal(await fileDigest(selected.manifestPath), manifestDigest);
   proof.readyScreenshot = await screenshot('ready');
-  await ui.click('[role="dialog"] button', 'close original completed Update dialog', 'Close');
+  await ui.click('[role="dialog"] > div.flex-col-reverse > button', 'close original completed Update dialog', 'Close');
   await ui.waitRead(`!document.querySelector('[role="dialog"]')`, 'original Update completed dialog closes');
   Object.assign(proof, { status: 'PASS', initialStatus: initial, installedStatus: current, readbackStatus: readback,
     installed, publication, command: commands[0], sourceWrites: 1, updateClicks: 1, downloads: 1,

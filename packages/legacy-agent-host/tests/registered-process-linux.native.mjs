@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { release } from 'node:os';
+import { closeSync, fstatSync, openSync, writeSync } from 'node:fs';
+import { verifyLinuxChildExecInput } from '../../../src/main/utils/linuxChildLaunchSelection.ts';
 import { createProcessCustody } from '../dist/composition/processCustody.js';
 import { createLinuxWarmProcess } from '../dist/process/LinuxWarmProcess.js';
 import { loadProcessNativeArtifact } from '../dist/process/loadProcessNativeArtifact.js';
 import { readPackagedLinuxProcessArtifact } from '../dist/process/readPackagedProcessArtifact.js';
-import { mkdtemp, realpath, readFile, writeFile, appendFile } from 'node:fs/promises';
+import { mkdtemp, realpath, readFile, writeFile, appendFile, chmod } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -87,8 +89,123 @@ if (command === 'cold' || command === 'cold-warm') {
   await log({ phase: 'start', scope: 'TEST original process custody; actual SDK and Desktop remain separate',
     selection: explicitWarm ? 'TEST internal warm owner' : 'Host automatic kernel capability',
     kernel: { release: release(), platform: process.platform, arch: process.arch }, versions: process.versions, artifactSha256 });
+
+  // Raw TEST stdio injects the exact high descriptor. Product adapters accept only 0–2.
+  const proveIsolatedChild = async () => {
+    const pin = { manifestPath: process.env.LEGACY_LINUX_CHILD_EXEC_MANIFEST,
+      manifestSha256: process.env.LEGACY_LINUX_CHILD_EXEC_SHA256 };
+    assert.ok(pin.manifestPath && pin.manifestSha256);
+    const selected = verifyLinuxChildExecInput(pin);
+    const helper = join(selected.manifestPath, '../linux-child-exec');
+    const high = 64, marker = 'original-high-descriptor';
+    const fd = openSync(join(workspace, 'original-parent-fd'), 'wx+', 0o600);
+    const original = fstatSync(fd, { bigint: true });
+    const identity = { dev: String(original.dev), ino: String(original.ino) };
+    const children = [];
+    const launch = (target, args, isolated, options = {}) => new Promise((resolve, reject) => {
+      const channels = Array.from({ length: high + 1 }, () => 'ignore');
+      channels[0] = 'pipe'; channels[1] = 'pipe'; channels[2] = 'pipe'; channels[3] = 'pipe'; channels[high] = fd;
+      const argv = isolated ? ['--linux-child-exec-v1', target, 'TEST-captured-node', ...args] : args;
+      const child = spawn(isolated ? helper : target, argv, { cwd: workspace, detached: true,
+        argv0: isolated ? helper : 'TEST-captured-node', stdio: channels,
+        env: { ...process.env, TEST_CHILD_EXEC_ORIGINAL: marker } });
+      const row = { child, closed: undefined }; children.push(row);
+      let stdout = Buffer.alloc(0), stderr = Buffer.alloc(0), status = Buffer.alloc(0), failure;
+      let signaled = false;
+      const stop = error => { failure ??= error; child.kill('SIGKILL'); };
+      const timer = setTimeout(() => stop(new Error('Original helper TEST child deadline')), 3000);
+      row.closed = new Promise(done => child.once('close', done));
+      child.once('error', error => { failure ??= error; });
+      for (const [name, stream] of [['stdout', child.stdout], ['stderr', child.stderr], ['status', child.stdio[3]]]) {
+        stream.on('data', chunk => {
+          const prior = name === 'stdout' ? stdout : name === 'stderr' ? stderr : status;
+          if (prior.length + chunk.length > (name === 'status' ? 12 : 8192)) {
+            stop(new Error('Original helper TEST output bound')); return;
+          }
+          const next = Buffer.concat([prior, chunk]);
+          if (name === 'stdout') stdout = next; else if (name === 'stderr') stderr = next; else status = next;
+          if (options.cancel && name === 'stdout' && stdout.includes(10) && !signaled) {
+            signaled = true; child.kill('SIGTERM');
+          }
+        });
+        stream.once('error', error => stop(error));
+      }
+      child.stdin.on('error', () => {}); // Missing target can close stdin before its original small write.
+      child.stdin.end('original-stdin');
+      child.once('close', (code, signal) => {
+        clearTimeout(timer);
+        if (failure) reject(failure);
+        else resolve({ child, code, signal, stdout: stdout.toString('utf8'), stderr: stderr.toString('utf8'), status, signaled });
+      });
+    });
+    const descriptorRead = `const fs=require('node:fs'); const expected=${JSON.stringify(identity)};
+      let same=false; try {const s=fs.fstatSync(${high},{bigint:true});
+        same=String(s.dev)===expected.dev&&String(s.ino)===expected.ino;} catch(e){if(e.code!=='EBADF')throw e;}`;
+    const target = descriptorRead + `
+      const cp=require('node:child_process'); const chunks=[];
+      process.stdin.on('data',b=>chunks.push(b)); process.stdin.on('end',()=>{
+        const descendant=cp.spawnSync(process.execPath,['-e',${JSON.stringify(descriptorRead + "process.stdout.write(JSON.stringify({same}));")}],
+          {encoding:'utf8',timeout:1000,maxBuffer:8192});
+        if(descendant.error||descendant.status!==0)throw new Error('Original descendant failed');
+        const stat=fs.readFileSync('/proc/self/stat','utf8'); const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');
+        process.stderr.write('original-stderr');
+        process.stdout.write(JSON.stringify({same,childSame:JSON.parse(descendant.stdout).same,pid:process.pid,
+          ppid:process.ppid,group:Number(fields[2]),argv0:process.argv0,argv:process.argv.slice(1),
+          cwd:process.cwd(),marker:process.env.TEST_CHILD_EXEC_ORIGINAL,input:Buffer.concat(chunks).toString()})+'\\n');
+      });`;
+    try {
+      writeSync(fd, marker);
+      const control = await launch(process.execPath, ['-e', target, 'original argument'], false);
+      assert.equal(control.code, 0);
+      assert.equal(JSON.parse(control.stdout).same, true, 'The raw original high-fd injection must be observable');
+      const isolated = await launch(process.execPath, ['-e', target, 'original argument'], true);
+      const observed = JSON.parse(isolated.stdout);
+      assert.deepEqual(observed, { same: false, childSame: false, pid: isolated.child.pid, ppid: process.pid,
+        group: isolated.child.pid, argv0: 'TEST-captured-node', argv: ['original argument'],
+        cwd: workspace, marker, input: 'original-stdin' });
+      assert.equal(isolated.code, 0); assert.equal(isolated.signal, null);
+      assert.equal(isolated.stderr, 'original-stderr'); assert.equal(isolated.status.length, 0);
+      for (const [targetPath, errno] of [[join(workspace, 'missing-target'), 2], [join(workspace, 'denied-target'), 13]]) {
+        if (errno === 13) await writeFile(targetPath, 'must never execute', { flag: 'wx', mode: 0o400 });
+        const failed = await launch(targetPath, [], true);
+        assert.equal(failed.code, 111); assert.equal(failed.signal, null);
+        assert.equal(failed.stdout, ''); assert.equal(failed.stderr, '');
+        assert.equal(failed.status.length, 12); assert.equal(failed.status.readUInt32BE(0), 0x41544c58);
+        assert.deepEqual([...failed.status.subarray(4, 8)], [1, 3, 0, 0]);
+        assert.equal(failed.status.readUInt32LE(8), errno);
+      }
+      const exited = await launch(process.execPath, ['-e', 'process.exit(111)'], true);
+      assert.equal(exited.code, 111); assert.equal(exited.status.length, 0, 'Target exit is not an exec errno');
+      const script = join(workspace, 'original-shell-script');
+      await writeFile(script, 'printf "original-script\\n"\n', { flag: 'wx', mode: 0o500 });
+      await chmod(script, 0o500);
+      const fallback = await launch(script, [], true);
+      assert.equal(fallback.code, 0); assert.equal(fallback.stdout, 'original-script\n');
+      const cancelled = await launch(process.execPath, ['-e',
+        "process.stdout.write(JSON.stringify({pid:process.pid})+'\\n');setInterval(()=>{},1000)"], true, { cancel: true });
+      assert.equal(JSON.parse(cancelled.stdout).pid, cancelled.child.pid);
+      assert.equal(cancelled.signaled, true); assert.equal(cancelled.signal, 'SIGTERM');
+      assert.equal(cancelled.status.length, 0);
+      const after = fstatSync(fd, { bigint: true });
+      assert.equal(after.dev, original.dev); assert.equal(after.ino, original.ino);
+      writeSync(fd, '-parent-still-usable');
+      assert.equal(await readFile(join(workspace, 'original-parent-fd'), 'utf8'), marker + '-parent-still-usable');
+      assert.deepEqual(verifyLinuxChildExecInput(pin), selected);
+      await log({ phase: 'isolated-same-child-launch', completed: true, parentUnchanged: true,
+        helperSha256: selected.binarySha256, originalChildPid: isolated.child.pid,
+        exactHighDescriptorAbsent: true, descendantDescriptorAbsent: true,
+        scope: 'Native child isolation only; Main integration and executable-byte race qualification remain separate' });
+    } finally {
+      for (const row of children)
+        if (row.child.exitCode === null && row.child.signalCode === null) row.child.kill('SIGKILL');
+      await Promise.all(children.map(row => row.closed));
+      closeSync(fd);
+    }
+  };
+
   let completed = false;
   try {
+    await proveIsolatedChild();
     const same = await start('same', 'same'), owned = await start('owned', 'cross');
     const peer = await start('peer', 'cross'), drift = await start('drift', 'cross');
     const leader = await start('leader', 'cross');

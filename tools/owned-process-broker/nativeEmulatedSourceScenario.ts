@@ -1,7 +1,7 @@
 /** TEST original Main source admission through Host/D and separately retained Windows Jobs. */
 import assert from 'node:assert/strict';
 import type { ChildProcess } from 'node:child_process';
-import { existsSync, lstatSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -10,13 +10,18 @@ import { TeamOwnerStore } from '../../packages/legacy-agent-host/dist/adapters/t
 import { readScheduledRunCapture } from '../../packages/legacy-agent-host/dist/composition/scheduledRunCapture.js';
 import { runtimeCaptureSourceSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeCaptureSource.js';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import { projectBackendResult } from '../../src/features/agent-backend/main/adapters/output/projectBackendResult';
+import { capturedTeamModelProbeRootId, prepareCapturedTeamModels } from '../../src/features/agent-backend/main/application/prepareCapturedTeamModels';
 import { CapturedHostClient } from '../../src/features/agent-backend/main/infrastructure/CapturedHostClient';
+import { captureLocalModelReadinessOrigin, captureRequestReadinessBudget, createReadinessPreparation,
+  readinessPreparationWire, readinessRemaining } from '../../src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness';
 import { captureProviderManagement } from '../../src/features/agent-backend/main/infrastructure/CapturedProviderManagement';
 import { captureRuntimeSources } from '../../src/features/agent-backend/main/infrastructure/CapturedRuntimeSources';
 import { captureMainWindowsCustody } from '../../src/features/agent-backend/main/infrastructure/CapturedWindowsCustody';
 import { prepareMainWindowsRuntimeSource, prepareMainWindowsRuntimeSourceRecovery,
   prepareMainWindowsRuntimeConfiguration } from '../../src/features/agent-backend/main/infrastructure/CapturedWindowsRuntimeSources';
 import { capturedRuntimeSourceGrant } from '../../src/features/agent-backend/main/infrastructure/capturedRuntimeSourceGrant';
+import { FileTeamModelProbeIntents } from '../../src/features/agent-backend/main/infrastructure/FileTeamModelProbeIntents';
 import { loadDesktopBackendDescriptor } from '../../src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor';
 import { capturedQueryableWitness } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
@@ -25,8 +30,11 @@ import { finiteSourceProbe, prepareEmulatedSourceProfile } from './nativeEmulate
 
 import type { HostCustodyOwner, RuntimeSourceProcessOrigin } from '@agent-teams/legacy-agent-host/owned-process';
 import type { RuntimeSourcePublishIntent, RuntimeSourceSummary } from '@agent-teams/legacy-agent-host/runtime-sources';
+import type { LocalModelReadinessTransfer } from '@agent-teams/legacy-agent-host/team-host';
 import type { JsonValue } from '../../packages/legacy-agent-host/dist/contracts.js';
 import type { ScheduledRunInput } from '../../packages/legacy-agent-host/dist/composition/scheduledRunContracts.js';
+import type { BackendOperationRequest } from '../../src/features/agent-backend/contracts/operations';
+import type { CapturedReadinessOrigin, LocalModelReadinessContext } from '../../src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness';
 import type { EmulatedSourceProvider } from './nativeEmulatedSourceProfile';
 
 const object = (raw: unknown): Record<string, unknown> => {
@@ -55,6 +63,7 @@ async function poll(check: () => Promise<boolean>, message: string, budget = 150
 }
 type Witness = Awaited<ReturnType<typeof capturedQueryableWitness>>;
 type CustodyPhase = 'allocate' | 'prepare' | 'resume' | 'stop' | 'drain' | 'release';
+type StagingPhase = 'launch-chunk' | 'launch-commit';
 interface CustodyTiming {
   calls: number;
   settled: number;
@@ -70,9 +79,13 @@ const custodyTimings = (): Record<CustodyPhase, CustodyTiming> => ({
   allocate: custodyTiming(), prepare: custodyTiming(), resume: custodyTiming(),
   stop: custodyTiming(), drain: custodyTiming(), release: custodyTiming(),
 });
+const stagingTimings = (): Record<StagingPhase, CustodyTiming> => ({
+  'launch-chunk': custodyTiming(), 'launch-commit': custodyTiming(),
+});
 interface Job {
   capability: string;
   timings: Record<CustodyPhase, CustodyTiming>;
+  stagingTimings: Record<StagingPhase, CustodyTiming>;
   origin?: RuntimeSourceProcessOrigin;
   root?: { pid: number; birth: string };
   witness?: Witness;
@@ -84,6 +97,10 @@ interface Job {
   threadEphemeral: boolean[];
   wire: string;
 }
+type Readiness = { budget: LocalModelReadinessContext } & (
+  { origin: CapturedReadinessOrigin; transfer?: never } |
+  { origin?: never; transfer: Omit<LocalModelReadinessTransfer, 'remainingMs'> }
+);
 
 /** This receipt is populated before work, so an incomplete original stage remains visible on failure. */
 export async function nativeEmulatedSourceScenario(sandbox: string, broker: string, actor: string,
@@ -91,6 +108,12 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
   Object.assign(evidence, { provider, status: 'INCOMPLETE', stage: 'capture', cleanup: false,
     realProviderExecuted: false, desktopQualified: false, releaseQualified: false });
   const fixture = await prepareEmulatedSourceProfile(sandbox, broker, provider);
+  if (provider === 'opencode') {
+    const configuration = text(fixture.profile.runtime!.members[0]!.environment?.OPENCODE_CONFIG_CONTENT);
+    const path = join(fixture.workspace, 'opencode.json');
+    writeFileSync(path, configuration, { mode: 0o600, flag: 'wx' });
+    fixture.pins.push({ path, sha256: fileHash(path) });
+  }
   const descriptor = await loadDesktopBackendDescriptor(fixture.descriptorSelection);
   const selected = descriptor.management![0]!, grant = capturedRuntimeSourceGrant(descriptor, selected);
   const events = createNativeGateEvents(), observedChildren: ChildProcess[] = [];
@@ -108,6 +131,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     const physical = captureMainWindowsCustody(fixture.host, [grant]); assert.ok(physical);
     const jobs: Job[] = [], pending = { admitted: 0, revoked: 0 }, counts = { service: 0 };
     const phaseClock = performance.now();
+    let firstCloseEntryMs: number | null = null;
     let available = true, foreground = true, closed = false;
     const observed: HostCustodyOwner = { mainEpoch: physical.mainEpoch,
       attach(context) {
@@ -120,7 +144,10 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
             call.operation === 'release' ? call.operation : undefined;
           const timings = phase === 'allocate' ? custodyTimings()
             : phase ? jobs.find(job => job.capability === call.capability)?.timings : undefined;
-          const timing = phase ? timings?.[phase] : undefined;
+          const stagingPhase = call.operation === 'launch-chunk' || call.operation === 'launch-commit'
+            ? call.operation : undefined;
+          const timing = phase ? timings?.[phase] : stagingPhase
+            ? jobs.find(job => job.capability === call.capability)?.stagingTimings[stagingPhase] : undefined;
           const phaseStarted = timing ? performance.now() : undefined;
           if (timing && phaseStarted !== undefined) {
             timing.calls++; timing.firstStartMs ??= phaseStarted - phaseClock;
@@ -139,7 +166,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
             }
             if (call.operation === 'allocate') {
               assert.ok(jobs.length < 64 && !jobs.some(value => value.capability === call.capability));
-              jobs.push({ capability: call.capability, timings: timings!,
+              jobs.push({ capability: call.capability, timings: timings!, stagingTimings: stagingTimings(),
                 ...(call.runtimeSourceOrigin ? { origin: structuredClone(call.runtimeSourceOrigin) } : {}),
                 resumed: false, stopped: false, drained: false, released: false, handleAbsent: false, threadEphemeral: [], wire: '' });
             }
@@ -194,19 +221,35 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       prepareNativeRecovery: () => prepareMainWindowsRuntimeSourceRecovery(physical, grant, current),
       prepareNativeConfiguration: input => prepareMainWindowsRuntimeConfiguration(physical, grant, input, current),
     });
-    const rpc = async (team: number, method: string, commandId: string, payload: unknown) => unwrap(await client.request(method,
-      json({ commandId, binding: { schemaVersion: 1, handleId: descriptor.handles[team]!.handleId,
-        owner: fixture.profile.owner, scope: fixture.profile.teams[team]!.scope }, payload }),
-      { control: method === 'runtime.read' || method === 'runtime.stop' || method.endsWith('.read') }));
+    const request = async (team: number, method: string, commandId: string, payload: unknown, readiness?: Readiness) => {
+      if (readiness) {
+        assert.equal(provider, 'opencode'); assert.ok(current());
+        assert.equal(method, readiness.origin ? 'team.launch.probe.start' : 'team.launch.capture');
+      }
+      const response = await client.request(method,
+        json({ commandId, binding: { schemaVersion: 1, handleId: descriptor.handles[team]!.handleId,
+          owner: fixture.profile.owner, scope: fixture.profile.teams[team]!.scope }, payload,
+          ...(readiness?.origin ? { localModelReadinessOrigin: readinessPreparationWire(readiness.origin) } : {}),
+          ...(readiness?.transfer ? { localModelReadinessTransfer: { ...readiness.transfer,
+            remainingMs: readinessRemaining(readiness.budget) } } : {}) }),
+        { control: method === 'runtime.read' || method === 'runtime.stop' || method.endsWith('.read'),
+          ...(readiness ? { remainingMs: readiness.budget.remainingMs.bind(readiness.budget) } : {}) });
+      if (readiness) { assert.ok(current()); readinessRemaining(readiness.budget, 'unknown'); }
+      return response;
+    };
+    const rpc = async (team: number, method: string, commandId: string, payload: unknown, readiness?: Readiness) =>
+      unwrap(await request(team, method, commandId, payload, readiness));
     const management = (source: RuntimeSourceSummary) => captureProviderManagement({
       targetId: capturedRuntimeSourceGrant(descriptor, { ...selected, profileId: source.profileId,
         configRevision: source.configRevision }).targetId,
       profileId: source.profileId, configRevision: source.configRevision, client, start: () => client.start(),
       ownerAvailable: () => available, foregroundCurrent: () => foreground,
     });
-    return { physical, client, jobs, pending, counts, sources, rpc, management,
+    return { physical, client, jobs, pending, counts, sources, rpc, request, current, management,
+      get firstCloseEntryMs() { return firstCloseEntryMs; },
       revokeForeground: () => { foreground = false; },
       async close() {
+        firstCloseEntryMs ??= performance.now() - phaseClock;
         if (closed) return;
         const failures: unknown[] = [];
         try { await client.shutdown(); } catch (error) { failures.push(error); }
@@ -218,7 +261,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
               jobSlot, source: job.origin ? sourceRef(job.origin) : null,
               rootCaptured: job.root !== undefined, witnessCaptured: job.witness !== undefined,
               resumed: job.resumed, stopped: job.stopped, drained: job.drained, released: job.released,
-              originalHandleAbsent: job.handleAbsent, custodyTimings: job.timings }));
+              originalHandleAbsent: job.handleAbsent, custodyTimings: job.timings,
+              stagingTimings: job.stagingTimings, firstCloseEntryMs }));
             assert.ok(job.root && job.witness && job.resumed && job.stopped && job.drained && job.released,
               'Every original physical Job retains confirmed Stop/drain/release');
             assert.equal(await job.witness.wait(), 0);
@@ -309,9 +353,69 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     stage('publish-A'); const a = await publish('A', captured);
     const launch = async (team: number, source: RuntimeSourceSummary, image: 'A' | 'B') => {
       const roster = await first.rpc(team, 'team.roster.read', `TEST-roster-${image}`, {});
-      await first.rpc(team, 'team.roster.replace', `TEST-save-${image}`, { expectedRevision: roster.revision,
+      const expected = structuredClone({ expectedRevision: text(roster.revision),
         members: [], savedSettings: fixture.profile.teams[team]!.savedSettings });
-      const capturedLaunch = await first.rpc(team, 'team.launch.capture', `TEST-capture-${image}`, { rosterCommandId: `TEST-save-${image}` });
+      const handle = { handleId: descriptor.handles[team]!.handleId };
+      const intents = provider === 'opencode' ? new FileTeamModelProbeIntents(join(fixture.root, 'model-intents'), fixture.root) : undefined;
+      let prepared: Awaited<ReturnType<typeof prepareCapturedTeamModels>> | undefined;
+      if (intents) {
+        const definition = fixture.profile.teams[team]!, member = fixture.profile.runtime!.members[team]!;
+        const before = first.jobs.length, inputBefore = inputs().length;
+        const current = () => { assert.ok(first.current(), 'Original Main owner and foreground remain current'); };
+        const invoke = async (request: BackendOperationRequest, preparation?: LocalModelReadinessContext) => {
+          current(); assert.equal(request.handle.handleId, handle.handleId);
+          assert.ok(request.operation === 'team.launch.model.configuration.read' ||
+            request.operation === 'team.launch.probe.start' || request.operation === 'team.launch.probe.read' ||
+            request.operation === 'team.launch.probe.cancel');
+          let readiness: Readiness | undefined;
+          if (request.operation === 'team.launch.probe.start') {
+            assert.ok(preparation);
+            // The Main helper's ceiling cannot restart or enlarge this original wire budget.
+            const original = captureRequestReadinessBudget(first.client.profile.requestTimeoutMs);
+            const budget = { remainingMs: () => Math.min(original.remainingMs(), preparation.remainingMs()) };
+            const origin = await captureLocalModelReadinessOrigin({ kind: 'team', owner: fixture.profile.owner,
+              contextId: descriptor.handles[team]!.contextId, commandId: request.commandId,
+              selection: { handleId: handle.handleId, scope: definition.scope, payload: request.payload },
+              workspaces: [fixture.workspace], targets: [{ workspace: fixture.workspace, providerId: 'test-provider' }],
+              current, budget, home: text(member.environment?.HOME), environment: member.environment });
+            current(); readiness = { budget, origin: createReadinessPreparation(origin, budget) };
+          }
+          const response = await first.request(team, request.operation, request.commandId, request.payload, readiness);
+          current(); return projectBackendResult(request, response);
+        };
+        prepared = await prepareCapturedTeamModels({ backend: { invoke }, handle, intents, isCurrent: first.current,
+          request: { cwd: fixture.workspace, providerId: 'opencode', preparationId: `TEST-source-preparation-${image}`,
+            modelChecks: [{ providerId: 'opencode', model: text(expected.savedSettings?.model), targets: [{ kind: 'lead' }] }] } });
+        assert.equal(prepared.ready, true, prepared.message);
+        const jobs = first.jobs.slice(before);
+        assertSourceJobs(jobs, source, image, 'runtime', definition.binding.teamId); noTeamConnection(jobs);
+        assert.ok(quiescent(jobs));
+        const actual = inputs().slice(inputBefore);
+        assert.equal(actual.length, 1); assert.equal(actual[0]!.marker, 'TEST_MODEL_PROBE');
+        assert.ok(jobs.some(job => jobEntry(job, 'peer').pid === actual[0]!.pid));
+        for (const job of jobs) {
+          assert.ok(job.root && job.witness && job.resumed);
+          assert.equal(await job.witness.wait(), 0); job.handleAbsent = true;
+        }
+      }
+      await first.rpc(team, 'team.roster.replace', `TEST-save-${image}`, expected);
+      let launchReadiness: Readiness | undefined;
+      if (intents) {
+        const captured = prepared?.capturedTeamReadiness;
+        assert.ok(captured?.selections); assert.equal(captured.handleId, handle.handleId);
+        assert.equal(captured.preparationId, `TEST-source-preparation-${image}`); assert.equal(captured.selections.length, 1);
+        const budget = captureRequestReadinessBudget(first.client.profile.requestTimeoutMs);
+        const probes: LocalModelReadinessTransfer['probes'] = [];
+        for (const selection of captured.selections) {
+          const retained = await intents.read(capturedTeamModelProbeRootId(handle, selection), captured.preparationId);
+          assert.ok(first.current()); readinessRemaining(budget); assert.equal(retained.retained, true);
+          probes.push({ commandId: retained.commandId, selection: structuredClone(selection) });
+        }
+        launchReadiness = { budget, transfer: { preparationId: captured.preparationId, probes,
+          roster: { commandId: `TEST-save-${image}`, expected } } };
+      }
+      const capturedLaunch = await first.rpc(team, 'team.launch.capture', `TEST-capture-${image}`,
+        { rosterCommandId: `TEST-save-${image}` }, launchReadiness);
       const selectedLaunch = object(capturedLaunch.launch), launchId = text(selectedLaunch.launchId);
       const store = new TeamOwnerStore(fixture.profile.owner.storageRoot, fixture.profile.teams[team]!.binding.teamName);
       const capturePath = join(store.directory, `launches/${runtimeDigest(launchId)}.json`);
@@ -526,7 +630,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     try { effects(); for (const pin of fixture.pins) assert.equal(fileHash(pin.path), pin.sha256); }
     catch (error) { errors.push(error); }
     evidence.epochs = epochs.map(epoch => ({ mainEpoch: epoch.physical.mainEpoch, pending: epoch.pending,
-      serviceOperations: epoch.counts.service, jobs: epoch.jobs.map(job => ({ capability: job.capability,
+      serviceOperations: epoch.counts.service, firstCloseEntryMs: epoch.firstCloseEntryMs,
+      jobs: epoch.jobs.map(job => ({ capability: job.capability, stagingTimings: job.stagingTimings,
         origin: job.origin ?? null, root: job.root ?? null, resumed: job.resumed, stopped: job.stopped,
         drained: job.drained, released: job.released, originalHandleAbsent: job.handleAbsent,
         threadEphemeral: job.threadEphemeral })) }));
