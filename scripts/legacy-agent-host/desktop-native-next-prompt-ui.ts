@@ -28,7 +28,9 @@ async function key(cdp: UiCdpPort, name: string, code: string, virtual: number, 
 }
 
 async function clearInsertedDraft(cdp: UiCdpPort, ui: Ui) {
-  // Mac Command+A followed by Backspace; no JS DOM mutation or synthetic React event.
+  // The Insert button receives focus on click. Return focus to the actual editor
+  // before physical Command+A/Backspace; never mutate React's draft via JS.
+  await ui.click('.message-composer-flat-layout textarea', 'focus original editor for physical clear');
   await key(cdp, 'a', 'KeyA', 65, 4);
   await key(cdp, 'Backspace', 'Backspace', 8);
   await ui.waitRead(
