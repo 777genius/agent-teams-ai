@@ -435,21 +435,42 @@ try {
 
   assertHostBirths();
   begin('one-explicit-same-Main-Retry', 10000);
+  const retryUi = { stages: { clickReturnedMs: null, writerObservedMs: null, hostCheckedMs: null, uiReadyMs: null },
+    returnedReads: 0, countTruncated: false, last: null };
+  const recordRetryUi = (stage, value) => {
+    try {
+      proof.retryUi = retryUi;
+      const elapsed = Math.round(performance.now() - startedAt - proof.phases.at(-1).atMs);
+      const atMs = Number.isSafeInteger(elapsed) && elapsed >= 0 ? elapsed : null;
+      if (stage === 'sample') {
+        if (retryUi.returnedReads < 500) retryUi.returnedReads++;
+        else retryUi.countTruncated = true;
+        retryUi.last = { atMs, result: ['surface-missing', 'refresh-not-enabled', 'retry-present', 'alert-present', 'ready'].includes(value) ? value : 'invalid' };
+      } else retryUi.stages[stage] = atMs;
+    } catch { /* Passive diagnostics never replace an original action, refusal or cleanup. */ }
+  };
   proof.counts.retryClicks++;
   await ui.click(surface + ' button', 'explicit product Retry once', 'Retry');
+  recordRetryUi('clickReturnedMs');
   const successorWriter = await poll(async () => {
     const writer = readWriter();
     if (!writer || writer.pid === writerA.pid) return false;
     assert.notEqual(writer.token, writerA.token); return writer;
   }, 'actual successor writer acquisition');
+  recordRetryUi('writerObservedMs');
   hostB = assertHost(successorWriter, captureCensus());
   assert.notEqual(hostB.pid, hostA.pid);
   proof.successorHost = { identity: hostB, writer: successorWriter };
   assertHostBirths();
-  await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) + ');if(!s)return false;' +
-    'const b=[...s.querySelectorAll("button")];return b.some(x=>x.textContent.trim()==="Refresh"&&!x.disabled)' +
-    '&&!b.some(x=>x.textContent.trim()==="Retry")&&!s.querySelector(\'[role="alert"]\');})()',
-  'original refreshed Team after positive product recovery', remaining());
+  recordRetryUi('hostCheckedMs');
+  await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) + ');if(!s)return "surface-missing";' +
+    'const b=[...s.querySelectorAll("button")];if(!b.some(x=>x.textContent.trim()==="Refresh"&&!x.disabled))return "refresh-not-enabled";' +
+    'if(b.some(x=>x.textContent.trim()==="Retry"))return "retry-present";' +
+    'if(s.querySelector(\'[role="alert"]\'))return "alert-present";return "ready";})()',
+  'original refreshed Team after positive product recovery', remaining(), value => {
+    recordRetryUi('sample', value); return value === 'ready';
+  });
+  recordRetryUi('uiReadyMs');
   await originalBinding();
   await within(() => fixture.afterRetry(activeDeadline));
   proof.afterRetryPublic = await readProcesses();
@@ -485,6 +506,11 @@ try {
 } catch (error) {
   primaryError = error;
   proof.error = errorText(error);
+  try {
+    const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase: activePhase,
+      error: proof.error.slice(0, 128) }) + '\n';
+    if (Buffer.byteLength(line, 'utf8') <= 1024) writeSync(1, line);
+  } catch { /* Keep the original failure and continue original cleanup after a diagnostic write error. */ }
 } finally {
   if (app && !quitStarted) {
     try {
