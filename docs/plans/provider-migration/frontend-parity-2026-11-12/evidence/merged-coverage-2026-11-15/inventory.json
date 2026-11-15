@@ -1,0 +1,826 @@
+{
+  "kind": "MERGED_CROSS_P08_COVERAGE_LOCAL_EVIDENCE",
+  "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+  "sourceTree": "95984c5c4aa1e7ff8c4d910dec582e6bc163e9b7",
+  "r1Commit": "9bc238045fe09f438343105e52e9f4fcf10073c5",
+  "rawFileCount": 28,
+  "rawTotalBytes": 108478,
+  "stageCount": 9,
+  "selectedUniqueSourceLeafCount": 20,
+  "selectedDependencyInputCount": 9,
+  "commonPreflight": {
+    "bytes": 8070,
+    "gitBlobSha1": "5e090953808e802424463163893d98881d4bf3c6",
+    "sha256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87"
+  },
+  "frozenDependencyReference": {
+    "path": "/workspace/scratch/82d3f9ba6b85/reconciliation-local/local-gates-dependency-postflight.json",
+    "bytes": 2910,
+    "gitBlobSha1": "a7d3373a3125fe2de9de2807b58888531190870d",
+    "sha256": "b29b60cb1823090e99af06e6f36d6d3fc8f817695d405dea12e8dac2e7af3bff"
+  },
+  "selectedSourceJoins": [
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "034d2253e0649bdeb5db0b12244656446150c31c",
+      "bytes": 34285,
+      "sha256": "a7057b647c13852fbabdebbb0d8da775a24d55382637d5947d06c733317213bc"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "217b189f231af2ea39b290d70568a1ae42379a53",
+      "bytes": 25185,
+      "sha256": "d63879ef91fc767f1d5633cdce509308e9fecafaa4bc880ae4e1307be77650b6"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "c956c196e4208c11b421b1eb5b68d4850ac50d43",
+      "bytes": 96492,
+      "sha256": "a34e37d28c377e2f76bd1fe774cd203fca95daf2bed7ad412ebec48536fb347e"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "e3f1eb2e81614d7136c4e685f93c99e68aed22d5",
+      "bytes": 44935,
+      "sha256": "9478a6cc8aa89040f389da7d527206ffdadb03fb66d1c6fe445e3f7fe22cdcf3"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "cc200151738da867232a6bcd9d0525642ab73ecb",
+      "bytes": 93799,
+      "sha256": "dbbe1f4f9aeae9e7c1fb7828a62ea209d5f861676a0bb7f5dc80ab0a4f2b28fe"
+    },
+    {
+      "path": "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+      "bytes": 8676,
+      "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+      "bytes": 24968,
+      "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "b8b6760f5623f55387dba4fec288947bce707bc7",
+      "bytes": 20305,
+      "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+      "bytes": 3804,
+      "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+      "bytes": 2115,
+      "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+      "bytes": 19234,
+      "sha256": "f4ea5ccdfd127a0ea0271a4923a8da12fcc2bf542a30a152f0b2d34360f781fe"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "d0c2e893bcede89c56c516242469e6e88cf43a88",
+      "bytes": 12335,
+      "sha256": "5d05c61bb9a5b0f8abb2533df0f7f12babd1162a57bb636e21b88f63b19b597b"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "bytes": 25052,
+      "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "71d5629149e8f499a45b54a99922145ee3cae09e",
+      "bytes": 12335,
+      "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.mjs",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "7da83c7a4e631f7599fc57861f19e14629db6036",
+      "bytes": 27780,
+      "sha256": "5fd9116cb656ce7804dc3253decb3f386e2c17feda57cc40586cc6e0df6fd8d5"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+      "bytes": 16835,
+      "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.test.mjs",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "751d80c1ea409d84b42e486e48853cfa1cd2c4a1",
+      "bytes": 67288,
+      "sha256": "df5427548f5d16b89967fbe656ad489d931953170ca1a57847a11d115700d40e"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "5c8d6a2ee1555257a4f83fa074a4e0de6549b14c",
+      "bytes": 17208,
+      "sha256": "1b42dba0f093e95ca716dda19ec8416cf59a964c35b388618a77886726e04aff"
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "bytes": 646,
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "gitBlobSha1": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "bytes": 7268,
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+    }
+  ],
+  "selectedDependencyInputs": [
+    {
+      "path": "package.json",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/package.json",
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/pnpm-lock.yaml",
+      "bytes": 956809,
+      "sha256": "8ac1ad56c4856ade77cc3747bfc9ac6feb93def40b280b972fd7e0aeab2356b5"
+    },
+    {
+      "path": "vitest.config.ts",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/vitest.config.ts",
+      "bytes": 1187,
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+    },
+    {
+      "path": "test/setup.ts",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/test/setup.ts",
+      "bytes": 5297,
+      "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b"
+    },
+    {
+      "path": "node_modules/.pnpm/lock.yaml",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/lock.yaml",
+      "bytes": 956809,
+      "sha256": "8ac1ad56c4856ade77cc3747bfc9ac6feb93def40b280b972fd7e0aeab2356b5"
+    },
+    {
+      "path": "node_modules/.modules.yaml",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/node_modules/.modules.yaml",
+      "bytes": 165605,
+      "sha256": "788c92a6d710a140815ca93fbe3cc4cea575d9bab25083babfe873dc433745e1"
+    },
+    {
+      "path": "node_modules/vitest/package.json",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/package.json",
+      "bytes": 5029,
+      "sha256": "86c8529110b6690e7ed95e243c867ee9b3118ac91d8ae8857d22f228666252c4"
+    },
+    {
+      "path": "node_modules/vitest/vitest.mjs",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs",
+      "bytes": 43,
+      "sha256": "39db22f579acf5639bbb17a261408debbde03f4692c0c439e77e7f13aeba74d6"
+    },
+    {
+      "path": "node_modules/@typescript/native/package.json",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/package.json",
+      "bytes": 3087,
+      "sha256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e"
+    }
+  ],
+  "toolchain": {
+    "nodePath": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "nodeVersion": "v24.21.0",
+    "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+  },
+  "executions": [
+    {
+      "stage": "cross",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "sourceTree": "95984c5c4aa1e7ff8c4d910dec582e6bc163e9b7",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+        "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+        "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+      ],
+      "nodeVersion": "v24.21.0",
+      "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "startedAtUTC": "2026-11-15T19:23:26.334021+00:00",
+      "finishedAtUTC": "2026-11-15T19:23:32.942114+00:00",
+      "elapsedSeconds": 6.608011127987993,
+      "exitCode": 0,
+      "preflightMetadataSHA256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87",
+      "logBytes": 10833,
+      "logSHA256": "9763227ea312abb55079844b80ad4639c5cdcd83657e75863763fc64676387ff",
+      "sourceHeadAfter": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "statusAfter": "",
+      "selectedLeavesUnchanged": true,
+      "selectedDependencyInputsUnchanged": true,
+      "logRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/cross.log",
+      "metadataRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/cross-metadata.json",
+      "preflightRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/cross-preflight.json",
+      "observedTestSummary": {
+        "tests": 101,
+        "pass": 101,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "retainedSkipLines": []
+    },
+    {
+      "stage": "process",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "sourceTree": "95984c5c4aa1e7ff8c4d910dec582e6bc163e9b7",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-native-process-ui.test.ts"
+      ],
+      "nodeVersion": "v24.21.0",
+      "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "startedAtUTC": "2026-11-15T19:23:43.757310+00:00",
+      "finishedAtUTC": "2026-11-15T19:23:45.669666+00:00",
+      "elapsedSeconds": 1.9121680720127188,
+      "exitCode": 0,
+      "preflightMetadataSHA256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87",
+      "logBytes": 857,
+      "logSHA256": "bcde2de84efde3d9658342f2ebd88fbff069399f8bf6fb3d5e8b6628785f672a",
+      "sourceHeadAfter": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "statusAfter": "",
+      "selectedLeavesUnchanged": true,
+      "selectedDependencyInputsUnchanged": true,
+      "logRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/process.log",
+      "metadataRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/process-metadata.json",
+      "preflightRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/process-preflight.json",
+      "observedTestSummary": {
+        "tests": 6,
+        "pass": 5,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 1,
+        "todo": 0
+      },
+      "retainedSkipLines": [
+        "﹣ captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime (0.292666ms) # requires the isolated Processes lane original native artifact capture"
+      ]
+    },
+    {
+      "stage": "helpers",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "sourceTree": "95984c5c4aa1e7ff8c4d910dec582e6bc163e9b7",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "scripts/e2e/opencode-diagnostics/packaged.test.mjs"
+      ],
+      "nodeVersion": "v24.21.0",
+      "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "startedAtUTC": "2026-11-15T19:24:11.094499+00:00",
+      "finishedAtUTC": "2026-11-15T19:24:20.834787+00:00",
+      "elapsedSeconds": 9.74025236700254,
+      "exitCode": 0,
+      "preflightMetadataSHA256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87",
+      "logBytes": 7968,
+      "logSHA256": "75ed41f16db22ccc336fb6e33c0adf37c4247fda58e277378e4b313e8297ca98",
+      "sourceHeadAfter": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "statusAfter": "",
+      "selectedLeavesUnchanged": true,
+      "selectedDependencyInputsUnchanged": true,
+      "logRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/helpers.log",
+      "metadataRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/helpers-metadata.json",
+      "preflightRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/helpers-preflight.json",
+      "observedTestSummary": {
+        "tests": 79,
+        "pass": 78,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 1,
+        "todo": 0
+      },
+      "retainedSkipLines": [
+        "﹣ Windows cleanup evidence retains current PID through independent read-only queries (0.361348ms) # SKIP"
+      ]
+    },
+    {
+      "stage": "parser",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "sourceTree": "95984c5c4aa1e7ff8c4d910dec582e6bc163e9b7",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--check",
+        "tools/owned-process-broker/nativeWindowsAppGate.mjs"
+      ],
+      "nodeVersion": "v24.21.0",
+      "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "startedAtUTC": "2026-11-15T19:24:39.387594+00:00",
+      "finishedAtUTC": "2026-11-15T19:24:39.428308+00:00",
+      "elapsedSeconds": 0.04069614100444596,
+      "exitCode": 0,
+      "preflightMetadataSHA256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87",
+      "logBytes": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceHeadAfter": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "statusAfter": "",
+      "selectedLeavesUnchanged": true,
+      "selectedDependencyInputsUnchanged": true,
+      "logRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/parser.log",
+      "metadataRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/parser-metadata.json",
+      "preflightRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/parser-preflight.json",
+      "observedTestSummary": null,
+      "retainedSkipLines": []
+    },
+    {
+      "stage": "types",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "sourceTree": "95984c5c4aa1e7ff8c4d910dec582e6bc163e9b7",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--project",
+        "tsconfig.legacy-agent-host-scripts.json"
+      ],
+      "nodeVersion": "v24.21.0",
+      "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "startedAtUTC": "2026-11-15T19:24:40.161622+00:00",
+      "finishedAtUTC": "2026-11-15T19:24:41.556901+00:00",
+      "elapsedSeconds": 1.3952608550025616,
+      "exitCode": 0,
+      "preflightMetadataSHA256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87",
+      "logBytes": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceHeadAfter": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "statusAfter": "",
+      "selectedLeavesUnchanged": true,
+      "selectedDependencyInputsUnchanged": true,
+      "logRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/types.log",
+      "metadataRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/types-metadata.json",
+      "preflightRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/types-preflight.json",
+      "observedTestSummary": null,
+      "retainedSkipLines": []
+    },
+    {
+      "stage": "lint",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "sourceTree": "95984c5c4aa1e7ff8c4d910dec582e6bc163e9b7",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.fast.config.js",
+        "--cache",
+        "--cache-location",
+        ".eslintcache-fast",
+        "--cache-strategy",
+        "content",
+        "--",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/desktop-native-process-ui.test.ts"
+      ],
+      "nodeVersion": "v24.21.0",
+      "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "startedAtUTC": "2026-11-15T19:24:42.339136+00:00",
+      "finishedAtUTC": "2026-11-15T19:24:44.128165+00:00",
+      "elapsedSeconds": 1.7889635259925853,
+      "exitCode": 0,
+      "preflightMetadataSHA256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87",
+      "logBytes": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceHeadAfter": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "statusAfter": "",
+      "selectedLeavesUnchanged": true,
+      "selectedDependencyInputsUnchanged": true,
+      "logRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/lint.log",
+      "metadataRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/lint-metadata.json",
+      "preflightRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/lint-preflight.json",
+      "observedTestSummary": null,
+      "retainedSkipLines": []
+    },
+    {
+      "stage": "size",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "sourceTree": "95984c5c4aa1e7ff8c4d910dec582e6bc163e9b7",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "./scripts/ci/check-source-file-size.mjs"
+      ],
+      "nodeVersion": "v24.21.0",
+      "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "startedAtUTC": "2026-11-15T19:24:44.789508+00:00",
+      "finishedAtUTC": "2026-11-15T19:24:45.366061+00:00",
+      "elapsedSeconds": 0.5765148259961279,
+      "exitCode": 0,
+      "preflightMetadataSHA256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87",
+      "logBytes": 202,
+      "logSHA256": "1eb83c975f69534c70814629b4eb6d3124c0367a12b2463dd9716b6741d1a167",
+      "sourceHeadAfter": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "statusAfter": "",
+      "selectedLeavesUnchanged": true,
+      "selectedDependencyInputsUnchanged": true,
+      "logRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/size.log",
+      "metadataRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/size-metadata.json",
+      "preflightRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/size-preflight.json",
+      "observedTestSummary": null,
+      "retainedSkipLines": []
+    },
+    {
+      "stage": "architecture",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "sourceTree": "95984c5c4aa1e7ff8c4d910dec582e6bc163e9b7",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "./scripts/ci/check-team-provisioning-architecture.mjs"
+      ],
+      "nodeVersion": "v24.21.0",
+      "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "startedAtUTC": "2026-11-15T19:24:46.058023+00:00",
+      "finishedAtUTC": "2026-11-15T19:24:46.224115+00:00",
+      "elapsedSeconds": 0.16607397199550178,
+      "exitCode": 0,
+      "preflightMetadataSHA256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87",
+      "logBytes": 184,
+      "logSHA256": "0f72f211f9285332305dc9d63650e47a7d741f2216f712df043bdccbc02f473d",
+      "sourceHeadAfter": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "statusAfter": "",
+      "selectedLeavesUnchanged": true,
+      "selectedDependencyInputsUnchanged": true,
+      "logRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/architecture.log",
+      "metadataRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/architecture-metadata.json",
+      "preflightRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/architecture-preflight.json",
+      "observedTestSummary": null,
+      "retainedSkipLines": []
+    },
+    {
+      "stage": "diff",
+      "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "sourceTree": "95984c5c4aa1e7ff8c4d910dec582e6bc163e9b7",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "9bc238045fe09f438343105e52e9f4fcf10073c5..4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+        "--",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/desktop-native-process-ui.test.ts"
+      ],
+      "nodeVersion": "v24.21.0",
+      "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "startedAtUTC": "2026-11-15T19:24:46.970016+00:00",
+      "finishedAtUTC": "2026-11-15T19:24:46.973311+00:00",
+      "elapsedSeconds": 0.0032802750065457076,
+      "exitCode": 0,
+      "preflightMetadataSHA256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87",
+      "logBytes": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceHeadAfter": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+      "statusAfter": "",
+      "selectedLeavesUnchanged": true,
+      "selectedDependencyInputsUnchanged": true,
+      "logRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/diff.log",
+      "metadataRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/diff-metadata.json",
+      "preflightRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/diff-preflight.json",
+      "observedTestSummary": null,
+      "retainedSkipLines": []
+    }
+  ],
+  "files": [
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/cross.log",
+      "bundlePath": "raw/cross.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/cross.log",
+      "classification": "original-command-stdout-and-stderr",
+      "stage": "cross",
+      "bytes": 10833,
+      "gitBlobSha1": "800bfe1150d5a66b35fe8110c76b6e941be8c159",
+      "sha256": "9763227ea312abb55079844b80ad4639c5cdcd83657e75863763fc64676387ff"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/cross-metadata.json",
+      "bundlePath": "raw/cross-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/cross-metadata.json",
+      "classification": "original-execution-metadata",
+      "stage": "cross",
+      "bytes": 1492,
+      "gitBlobSha1": "7c5876a5038ad713608393d707d53bf7d98e6af3",
+      "sha256": "8af5cb38bf05012b12b1922b3e300a92fb766eefac686c9bc4003eefd129810f"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/cross-preflight.json",
+      "bundlePath": "raw/cross-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/cross-preflight.json",
+      "classification": "original-source-toolchain-preflight",
+      "stage": "cross",
+      "bytes": 8070,
+      "gitBlobSha1": "5e090953808e802424463163893d98881d4bf3c6",
+      "sha256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/process.log",
+      "bundlePath": "raw/process.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/process.log",
+      "classification": "original-command-stdout-and-stderr",
+      "stage": "process",
+      "bytes": 857,
+      "gitBlobSha1": "f10f2a54b028e09c5d9197d0541d847d5f5b4ba8",
+      "sha256": "bcde2de84efde3d9658342f2ebd88fbff069399f8bf6fb3d5e8b6628785f672a"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/process-metadata.json",
+      "bundlePath": "raw/process-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/process-metadata.json",
+      "classification": "original-execution-metadata",
+      "stage": "process",
+      "bytes": 1011,
+      "gitBlobSha1": "1c6ce8139400df0cab790cd6615fadef2812d520",
+      "sha256": "9c120dcfb480051e1cfc26ac1ec43b4cc3854205c787b9b8ad0251704807d122"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/process-preflight.json",
+      "bundlePath": "raw/process-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/process-preflight.json",
+      "classification": "original-source-toolchain-preflight",
+      "stage": "process",
+      "bytes": 8070,
+      "gitBlobSha1": "5e090953808e802424463163893d98881d4bf3c6",
+      "sha256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/helpers.log",
+      "bundlePath": "raw/helpers.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/helpers.log",
+      "classification": "original-command-stdout-and-stderr",
+      "stage": "helpers",
+      "bytes": 7968,
+      "gitBlobSha1": "7bb42fce1f3d03fcc066b7e41ee899471d5905cf",
+      "sha256": "75ed41f16db22ccc336fb6e33c0adf37c4247fda58e277378e4b313e8297ca98"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/helpers-metadata.json",
+      "bundlePath": "raw/helpers-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/helpers-metadata.json",
+      "classification": "original-execution-metadata",
+      "stage": "helpers",
+      "bytes": 1059,
+      "gitBlobSha1": "29ebe9515dd36ae8b7468b3d7f69b221bbfff22b",
+      "sha256": "9da51dd0094f061f343f95205d811930cf03c5b20aa0520e5dc52454f791df7f"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/helpers-preflight.json",
+      "bundlePath": "raw/helpers-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/helpers-preflight.json",
+      "classification": "original-source-toolchain-preflight",
+      "stage": "helpers",
+      "bytes": 8070,
+      "gitBlobSha1": "5e090953808e802424463163893d98881d4bf3c6",
+      "sha256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/parser.log",
+      "bundlePath": "raw/parser.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/parser.log",
+      "classification": "original-command-stdout-and-stderr",
+      "stage": "parser",
+      "bytes": 0,
+      "gitBlobSha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/parser-metadata.json",
+      "bundlePath": "raw/parser-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/parser-metadata.json",
+      "classification": "original-execution-metadata",
+      "stage": "parser",
+      "bytes": 1002,
+      "gitBlobSha1": "4389dc27b08b616c796b058167bf8bc3b289fa01",
+      "sha256": "5e7e2771070310b463669f8a55a9ef463e853575890618058085281a747dad4b"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/parser-preflight.json",
+      "bundlePath": "raw/parser-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/parser-preflight.json",
+      "classification": "original-source-toolchain-preflight",
+      "stage": "parser",
+      "bytes": 8070,
+      "gitBlobSha1": "5e090953808e802424463163893d98881d4bf3c6",
+      "sha256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/types.log",
+      "bundlePath": "raw/types.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/types.log",
+      "classification": "original-command-stdout-and-stderr",
+      "stage": "types",
+      "bytes": 0,
+      "gitBlobSha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/types-metadata.json",
+      "bundlePath": "raw/types-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/types-metadata.json",
+      "classification": "original-execution-metadata",
+      "stage": "types",
+      "bytes": 1037,
+      "gitBlobSha1": "5226736b638c2b164a6972a6111168ca5dacd19f",
+      "sha256": "2b7c25fe19cac03e9cbeef01d18e18e2246cb9318376122757ee673990356459"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/types-preflight.json",
+      "bundlePath": "raw/types-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/types-preflight.json",
+      "classification": "original-source-toolchain-preflight",
+      "stage": "types",
+      "bytes": 8070,
+      "gitBlobSha1": "5e090953808e802424463163893d98881d4bf3c6",
+      "sha256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/lint.log",
+      "bundlePath": "raw/lint.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/lint.log",
+      "classification": "original-command-stdout-and-stderr",
+      "stage": "lint",
+      "bytes": 0,
+      "gitBlobSha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/lint-metadata.json",
+      "bundlePath": "raw/lint-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/lint-metadata.json",
+      "classification": "original-execution-metadata",
+      "stage": "lint",
+      "bytes": 1254,
+      "gitBlobSha1": "914361ca9a4a7bf6afac8d1e3c612110ab1db149",
+      "sha256": "c7d30f613ee98945ab3e53526750271935d1736825a7eef8ac7676b60bc5a1ed"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/lint-preflight.json",
+      "bundlePath": "raw/lint-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/lint-preflight.json",
+      "classification": "original-source-toolchain-preflight",
+      "stage": "lint",
+      "bytes": 8070,
+      "gitBlobSha1": "5e090953808e802424463163893d98881d4bf3c6",
+      "sha256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/size.log",
+      "bundlePath": "raw/size.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/size.log",
+      "classification": "original-command-stdout-and-stderr",
+      "stage": "size",
+      "bytes": 202,
+      "gitBlobSha1": "9e532b2a599bb5da3a6ea6de65a3e6a8db6c3b6b",
+      "sha256": "1eb83c975f69534c70814629b4eb6d3124c0367a12b2463dd9716b6741d1a167"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/size-metadata.json",
+      "bundlePath": "raw/size-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/size-metadata.json",
+      "classification": "original-execution-metadata",
+      "stage": "size",
+      "bytes": 974,
+      "gitBlobSha1": "b94b3bc12004f6032566a2384cb10ab3cc7bffa5",
+      "sha256": "bd90379a3de32ccfa2c09432ba54d29d16ff580413f32486999d8cf9be4754d6"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/size-preflight.json",
+      "bundlePath": "raw/size-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/size-preflight.json",
+      "classification": "original-source-toolchain-preflight",
+      "stage": "size",
+      "bytes": 8070,
+      "gitBlobSha1": "5e090953808e802424463163893d98881d4bf3c6",
+      "sha256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/architecture.log",
+      "bundlePath": "raw/architecture.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/architecture.log",
+      "classification": "original-command-stdout-and-stderr",
+      "stage": "architecture",
+      "bytes": 184,
+      "gitBlobSha1": "8cb9d8cb2385eb2e1c022c79e0af379ff3a1c601",
+      "sha256": "0f72f211f9285332305dc9d63650e47a7d741f2216f712df043bdccbc02f473d"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/architecture-metadata.json",
+      "bundlePath": "raw/architecture-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/architecture-metadata.json",
+      "classification": "original-execution-metadata",
+      "stage": "architecture",
+      "bytes": 997,
+      "gitBlobSha1": "329b3ba4ecbd47950282d04cab966096d820ee2b",
+      "sha256": "fa4a11cc92b1dce926b7256ce964749b6a1ea5f5745300b7ccf8cf4493373524"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/architecture-preflight.json",
+      "bundlePath": "raw/architecture-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/architecture-preflight.json",
+      "classification": "original-source-toolchain-preflight",
+      "stage": "architecture",
+      "bytes": 8070,
+      "gitBlobSha1": "5e090953808e802424463163893d98881d4bf3c6",
+      "sha256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/diff.log",
+      "bundlePath": "raw/diff.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/diff.log",
+      "classification": "original-command-stdout-and-stderr",
+      "stage": "diff",
+      "bytes": 0,
+      "gitBlobSha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/diff-metadata.json",
+      "bundlePath": "raw/diff-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/diff-metadata.json",
+      "classification": "original-execution-metadata",
+      "stage": "diff",
+      "bytes": 1131,
+      "gitBlobSha1": "734e7600fcc8846e207267da637bc1d504016aa2",
+      "sha256": "0889b453e2b9e876de1cf90c4ccf7f19a1b402298ceaeb8da5efc52b88df777e"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/diff-preflight.json",
+      "bundlePath": "raw/diff-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/diff-preflight.json",
+      "classification": "original-source-toolchain-preflight",
+      "stage": "diff",
+      "bytes": 8070,
+      "gitBlobSha1": "5e090953808e802424463163893d98881d4bf3c6",
+      "sha256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87"
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/merged-coverage-local/run_check.py",
+      "bundlePath": "raw/run_check.py.txt",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/merged-coverage-2026-11-15/run_check.py.txt",
+      "classification": "verbatim-execution-recorder-source-not-product-or-test-fixture",
+      "bytes": 5847,
+      "gitBlobSha1": "a34874293cdbd4e4bc3d0899214fb2a0267fa491",
+      "sha256": "d3025193472e9aeec111767b4473f81c866a9a16b0b861bb65157c78e93be5e1"
+    }
+  ],
+  "qualifications": {
+    "serialRecordedIntervals": true,
+    "sourceAndDependencyPostflightsAccepted": true,
+    "preflightsByteIdentical": true,
+    "crossPerFile44CountNotSeparatelyClaimed": true,
+    "nativeProcessCaptureAbsent": true,
+    "dedicatedBackendProjectExecuted": false,
+    "newRedExecuted": false,
+    "nativePackagedJourneyExecuted": false,
+    "realProviderExecuted": false,
+    "scope": "Twenty selected source leaves and nine frozen inputs are not a complete package payload census. The recorder is execution evidence, not a new test or native witness. Original resulting-source CI and native/custody/cleanup gates remain required."
+  }
+}
