@@ -39,7 +39,7 @@ export async function prepareDesktopEmulatedManagementFixture(repo: string, pnpm
     await mkdir(join(peerRoot, name), { mode: 0o700 });
   const peerPath = join(peerRoot, 'bin/TEST-opencode.ts');
   const sourcePath = join(repo, emulatedManagementSource);
-  await writeFile(peerPath, `#!${fixture.node}\n${await readFile(sourcePath, 'utf8')}`, { mode: 0o700, flag: 'wx' });
+  await writeFile(peerPath, `${desktopNodeScriptHeader(fixture.node)}${await readFile(sourcePath, 'utf8')}`, { mode: 0o700, flag: 'wx' });
   const endpoint = await reserveMixedOpenCodeEndpoint();
   const peer = { path: peerPath, sha256: await fileDigest(peerPath) };
   const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8')) as TeamHostProfile;

@@ -1,7 +1,8 @@
 // @vitest-environment node
-import { mkdtemp, readFile, readdir } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
 import { expect, it, vi } from 'vitest';
 
 import { CapturedProviderOAuth } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedProviderOAuth';
@@ -11,13 +12,14 @@ import {
   isSafeOAuthAuthorizationUrl,
   sanitizeOAuthInstructions,
 } from '../../../src/features/runtime-provider-management/main/infrastructure/runtimeProviderOAuthPresentation';
+
 import type {
   CapturedProviderManagement,
   ProviderManagementOperation,
 } from '../../../src/features/agent-backend/main';
 import type { RuntimeProviderOAuthProgressDto } from '../../../src/features/runtime-provider-management/contracts';
-import type { ProviderOAuthSnapshot } from '@agent-teams/legacy-agent-host/management/contracts';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
+import type { ProviderOAuthSnapshot } from '@agent-teams/legacy-agent-host/management/contracts';
 
 async function fixture(
   method: 'code' | 'auto' = 'code',

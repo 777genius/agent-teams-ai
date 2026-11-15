@@ -4,7 +4,7 @@ import { lstat, mkdir, readFile, readlink, realpath, symlink, unlink, writeFile 
 import { basename, dirname, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
-import { digest, fileDigest } from './desktop-backend-fixture.ts';
+import { desktopNodeScriptHeader, digest, fileDigest } from './desktop-backend-fixture.ts';
 import { json, record } from './desktop-resume-records.ts';
 
 export const emulatedCodexInstallerSource = 'tools/owned-process-broker/fixtures/codexInstallerRegistry.cjs';
@@ -38,8 +38,7 @@ export async function prepareDesktopEmulatedCodexInstaller(fixture: Fixture, rep
   for (const directory of ['bin', 'path', 'codex']) await mkdir(join(root, directory), { mode: 0o700 });
   const helper = '#!/bin/sh\nprintf "TEST finite Codex package helper\\n"\n';
   const manifest = (version: string) => JSON.stringify({ kind: 'TEST-emulated-codex-package', version, vendor, inference: false }) + '\n';
-  const wrapper = (version: string) => `#!${fixture.node}
-import assert from 'node:assert/strict';
+  const wrapper = (version: string) => `${desktopNodeScriptHeader(fixture.node)}import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {appendFileSync,lstatSync,readFileSync,realpathSync} from 'node:fs';
 import {dirname,join} from 'node:path';

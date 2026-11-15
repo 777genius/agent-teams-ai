@@ -1145,3 +1145,35 @@ Root and an independent reviewer must inspect and publish this bounded proposal 
 After the approved production import separator was removed, fast lint of the three incoming production OAuth files and their three related tests found one remaining import-order error in `test/features/runtime-provider-management/capturedProviderOAuth.test.ts`, exact preimage `86609c7b9f925a18479b2de584326e8172045387`. The other five files passed that invocation. A read-only single-file ESLint dry run confirmed the required changes are confined to the original import block; it did not write source.
 
 SOURCE PLAN for this additional TEST path is only: order the existing node:fs/promises bindings as mkdtemp, readdir, readFile with normal comma spacing; add the existing canonical blank separators before the Vitest value group and before the type-only group; place the existing JsonValue type import before the ProviderOAuthSnapshot type import. Preserve every binding and module, all bytes from `async function fixture` onward, all22 cases and every timer, mock, assertion and effect. No runtime dependency, test declaration or behavioral correction is added. Root and an independent reviewer must approve and publish this exact addition before its SOURCE GO. Rerun the same focused six-file fast lint; the earlier failed invocation remains failed, and the unfinished Vitest/whole-workspace gates remain unqualified.
+
+## Frozen finite acceptance continuation and executed verification
+
+Plans `f94f753879765bff43019a991c1e088ddd8458e9` and `9b10d95b9d61249cd792fdcc6563d2b2e296cee1` were independently reviewed and published before their respective SOURCE GO. Their complete ancestry and published document prefixes, including author d835, are preserved. The final cut changes only these eight source paths plus this evidence document. Root and an independent reviewer inspected each exact diff; the two native TEST authors cross-reviewed one another's final files, and the import-only OAuth regression received its own independent byte reconstruction.
+
+| Source path | Frozen Git blob | Lines |
+| --- | --- | ---: |
+| `packages/legacy-agent-host/tests/registered-process-commands.test.ts` | `5fedca0326ab0bc92a124af9c39d1df1e4bb90cd` | 844 |
+| `scripts/legacy-agent-host/desktop-emulated-codex-installer-fixture.ts` | `b68eabb08c71dc31d2f9d4205cff265498fefe1f` | 153 |
+| `scripts/legacy-agent-host/desktop-emulated-management-fixture.ts` | `ef66547e1216d1a14e41d6c3b23455fe0a254d30` | 132 |
+| `scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts` | `f2f299ea2457ce60a5044c44d190ad8e71c1e234` | 239 |
+| `src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts` | `0633b1dd7300e5af1a8a8b65bb2c0759a6ee9a30` | 2586 |
+| `test/features/runtime-provider-management/capturedProviderOAuth.test.ts` | `f3df9ae591e65d4266aa6e3cdbe724ccee9e37f3` | 481 |
+| `tools/owned-process-broker/nativeEmulatedProviderGate.ts` | `31a6c30bd3962500e20e99786353cb9ec418adaf` | 231 |
+| `tools/owned-process-broker/nativeEmulatedSourceScenario.ts` | `82cd78a07d2a9d6cabdbce08321b8437fe1dc9bc` | 647 |
+
+| Original check | Executed result and boundary |
+| --- | --- |
+| registered-process-commands file on pinned Node24.21 | PASS17/17, including original lost-ACK/replay, pending admission and natural-settlement cases with their new outer attempt assertion. This is synthetic native-contract coverage, not an OS qualification. |
+| candidate-runtime-paths file on pinned Node24.21 | PASS2/2, including real generated-wrapper execution from a Node path with spaces/apostrophe, literal argv and unavailable PATH. |
+| nativeGateContext file under its original broker Vitest configuration | PASS3/3, finite original Q/W protocol coverage. |
+| Original default broker and retained Host TS7 projects | Both PASS with unchanged compiler/options/includes; GOMAXPROCS1/GOMEMLIMIT512MiB affected local resource use only. |
+| Original legacy-host-scripts TS7 project | PASS on the complete native/header source cut; unchanged strict options and includes. |
+| Pinned Node24.21 with original tsx loader imports nativeEmulatedProviderGate and its source scenario | PASS without invoking main, allocating a provider or mocking Electron. This establishes module linking only. |
+| Focused fast lint of three incoming production OAuth files and three related tests | Final invocation PASS, zero errors or warnings after the two exact import-group corrections. The earlier production-only and six-file invocations remain failed. This is not typed/full lint. |
+| Source-size/provisioning/diff guards | PASS5010 production files,141 original frozen exceptions and800-line limit; original provisioning counters/caps unchanged; final diff clean. |
+| Incoming d835 finite Settings/extension file | PASS8/8 before this continuation, including original four mutation receipts and inventory-bound user removal. Kept as preceding-source evidence. |
+| Root Vitest attempts for incoming OAuth/Main-Host/Task Detail and the selected existing CapturedHostClient remaining-budget case | Three invocations ended with SIGKILL and no emitted test result or assertion diagnostic. The isolated OAuth attempt also used a768MiB JS heap. None is PASS; no new test configuration or further blind retry was used. |
+
+The earlier canonical full-workspace and Host-test compiler137 outcomes and incomplete full typed lint remain separate required gates. The original successful helper/Node/type checks are not an invented combined all-green suite, native qualification, Desktop continuation or current-head aggregate. The current source must still run the original x64/ARM Windows finite provider/source cases, packaged same-Main Retry, all required Desktop lanes and full workspace gates.
+
+The final d835 CI audit retained source-bound results separately: controlled Darwin x64/ARM process jobs PASS; Windows x64 V2 manual and auto/cold Resume PASS with11 model requests,2 succeeded inputs and2 clean Host exits per mode; Linux and Windows creation jobs PASS. The macOS creation job wrote original success and all three awaited teardown subfacts immediately before cancellation, but the job and Exercise step remain CANCELLED; no exit0 or creation-family3/3 PASS is claimed. Darwin x64 V2 again failed the original P09 compiler-default baseline with errno13/signing-67062; all10 original cleanup observations remained true. Remaining cancelled jobs and the Team full type/typed-lint step, which never started, remain unqualified. No historical observation is transferred to the next source head by documentation.

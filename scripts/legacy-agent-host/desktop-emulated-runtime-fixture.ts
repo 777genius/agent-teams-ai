@@ -7,7 +7,7 @@ import { createFilesystemTeamOwner } from '../../packages/legacy-agent-host/dist
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
 import { runtimeMemberProfileSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
 import { providerManagementProfileSchema } from '../../packages/legacy-agent-host/dist/management/profile.js';
-import { digest, fileDigest, prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
+import { desktopNodeScriptHeader, digest, fileDigest, prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable } from './desktop-backend-observations.ts';
 import { prepareDesktopOpenCodeVersionSentinel } from './desktop-emulated-management-fixture.ts';
 import { reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
@@ -49,7 +49,7 @@ export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEnt
   }));
   const installer = variant === 'installer' ? await prepareDesktopEmulatedCodexInstaller(fixture, repo, sources) : undefined;
   const codexProtocolRevision = '0.162.0';
-  const wrapper = `#!${fixture.node}\nimport assert from 'node:assert/strict';
+  const wrapper = `${desktopNodeScriptHeader(fixture.node)}import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';import {readFileSync,realpathSync} from 'node:fs';
 for(const source of ${JSON.stringify(sources)}){assert.equal(realpathSync(source.path),source.path);assert.equal(createHash('sha256').update(readFileSync(source.path)).digest('hex'),source.sha256)}
 ${provider === 'codex' ? `if(process.argv.length===3&&process.argv[2]==='--version')process.stdout.write('codex-cli ${codexProtocolRevision}\\n');else ` : ''}await import(${JSON.stringify(pathToFileURL(sources[0]!.path).href)});

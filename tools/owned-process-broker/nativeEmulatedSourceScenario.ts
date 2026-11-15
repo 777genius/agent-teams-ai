@@ -92,6 +92,8 @@ interface Job {
   origin?: RuntimeSourceProcessOrigin;
   root?: { pid: number; birth: string };
   witness?: Witness;
+  entryStart?: number;
+  entryEnd?: number;
   resumed: boolean;
   stopped: boolean;
   drained: boolean;
@@ -176,12 +178,17 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
               // Capture the original suspended root HANDLE before forwarding preparation to Host/resume.
               job.witness = await capturedQueryableWitness(actor, result.root.pid, result.root.birth, track, events,
                 'query-wait-gated');
+              job.entryStart = entries().length;
               if (preparation) preparation.phase = 'complete';
             }
             if (result.operation === 'resume') job.resumed = true;
             if (result.operation === 'stop' && result.state === 'confirmed') job.stopped = true;
             if (result.operation === 'drain' && result.state === 'complete') job.drained = true;
-            if (result.operation === 'release' && result.state === 'released') job.released = true;
+            if (result.operation === 'release' && result.state === 'released') {
+              job.released = true;
+              if (job.root && job.witness && job.entryStart !== undefined && !job.handleAbsent)
+                job.entryEnd ??= entries().length;
+            }
             if (call.operation.startsWith('service-')) counts.service++;
             if (provider === 'codex' && call.operation === 'write') {
               job.wire += Buffer.from(call.bytes, 'base64').toString('utf8');
@@ -262,8 +269,12 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
   };
   const epochs: ReturnType<typeof open>[] = [];
   const jobEntry = (job: Job, event: 'peer' | 'version') => {
-    assert.ok(job.root);
-    const values = entries().filter(value => value.event === event &&
+    assert.ok(job.root && job.witness && job.entryStart !== undefined && !job.handleAbsent &&
+      (!job.released || job.entryEnd !== undefined));
+    const all = entries(), start = job.entryStart, end = job.entryEnd ?? all.length;
+    assert.ok(Number.isSafeInteger(start) && Number.isSafeInteger(end) &&
+      0 <= start && start <= end && end <= all.length);
+    const values = all.slice(start, end).filter(value => value.event === event &&
       (value.pid === job.root!.pid || value.parentPid === job.root!.pid));
     if (values.length !== 1 && evidence.entryMatchFailure === undefined) {
       const processId = (value: unknown) =>
@@ -271,6 +282,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       evidence.entryMatchFailure = {
         event,
         root: { pid: job.root.pid, birth: job.root.birth },
+        entryStart: job.entryStart ?? null, entryEnd: job.entryEnd ?? null,
         matchCount: values.length,
         matches: values.slice(0, 8).map(value => ({
           event,
@@ -623,6 +635,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       jobs: epoch.jobs.map(job => ({ capability: job.capability, stagingTimings: job.stagingTimings,
         origin: job.origin ?? null, root: job.root ?? null, resumed: job.resumed, stopped: job.stopped,
         drained: job.drained, released: job.released, originalHandleAbsent: job.handleAbsent,
+        entryStart: job.entryStart ?? null, entryEnd: job.entryEnd ?? null,
         threadEphemeral: job.threadEphemeral })) }));
     evidence.cleanup = errors.length === 0;
     // Original Job/HANDLE cleanup above is mandatory; these are only gate-owned observer children.

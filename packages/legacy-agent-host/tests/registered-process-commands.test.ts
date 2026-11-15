@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { test } from 'node:test';
+import { test, type TestContext } from 'node:test';
 import { performance } from 'node:perf_hooks';
 import { createProcessMcpTools } from '../dist/mcp/processTools.js';
 import type { WindowsServiceCapture, WindowsServiceOutcome } from '../dist/owned-process/retainedServiceContracts.js';
@@ -375,7 +375,9 @@ test('cold warm history requires completed absence of the full original capture,
 
 
 /** Synthetic native port over the existing command store; this is not an OS qualification. */
-function windowsFixture() {
+function windowsFixture(t: TestContext) {
+  const runAttempts: string[] = [];
+  t.after(() => assert.equal(new Set(runAttempts).size, runAttempts.length, 'No native operation replay'));
   const f = fixture();
   const capture: WindowsServiceCapture = {
     version: 5, platform: 'win32', admission: 'main-owned-job-scope-v1',
@@ -417,6 +419,7 @@ function windowsFixture() {
         : { ...original, command: { operation: 'settle', capture: structuredClone(selected) } };
     },
     async run(intent, _deadline) {
+      runAttempts.push(intent.operationRef);
       assert.equal(f.fenceDepth(), 0, 'Native dispatch/await never holds the Team fence');
       const receipt = [...f.files.values()].find(value => {
         const row = value as ProcessCommandReceipt;
@@ -474,8 +477,8 @@ function windowsFixture() {
   };
 }
 
-test('Windows lost capture ACK uses original receipt on cold lookup and async MCP strips private capability', async () => {
-  const f = windowsFixture(); f.loseCapture();
+test('Windows lost capture ACK uses original receipt on cold lookup and async MCP strips private capability', async t => {
+  const f = windowsFixture(t); f.loseCapture();
   const tools = createProcessMcpTools({
     register: (commandId, input) => f.commands.windows!.register(commandId, input, f.deadline()),
     metadata: f.commands.metadata,
@@ -499,7 +502,7 @@ test('Windows lost capture ACK uses original receipt on cold lookup and async MC
   const missing: WindowsServiceOutcome = { state: 'refused', reason: 2, nativeCode: 1168 };
   const input = { pid: 1001, label: 'TEST missing original service' };
   for (const lost of [false, true]) {
-    const refused = windowsFixture(); refused.captureReply(missing);
+    const refused = windowsFixture(t); refused.captureReply(missing);
     if (lost) refused.loseCapture();
     const initial = await refused.commands.windows!.register('TEST-missing', input, refused.deadline());
     const originalIntent = stable(initial.nativeIntent), originalInput = stable(initial.originalRegistration);
@@ -523,7 +526,7 @@ test('Windows lost capture ACK uses original receipt on cold lookup and async MC
     { state: 'refused', reason: 4, nativeCode: 1168 }, { state: 'refused', reason: 6, nativeCode: 1168 },
   ];
   for (const reply of uncertain) {
-    const held = windowsFixture(); held.captureReply(reply);
+    const held = windowsFixture(t); held.captureReply(reply);
     const receipt = await held.commands.windows!.register('TEST-uncertain', input, held.deadline());
     assert.equal(receipt.phase, 'held');
     assert.deepEqual(await held.cold().windows!.lookup('TEST-uncertain', held.deadline()), receipt);
@@ -531,12 +534,12 @@ test('Windows lost capture ACK uses original receipt on cold lookup and async MC
     assert.equal(held.rows().length, 0); assert.equal(held.stops(), 0); assert.equal(held.settlements(), 0);
     assert.throws(() => held.coldUnavailable().assertReleased(), /hold/);
   }
-  const notSent = windowsFixture(); notSent.captureReply({ state: 'not-dispatched', reason: 'admission' });
+  const notSent = windowsFixture(t); notSent.captureReply({ state: 'not-dispatched', reason: 'admission' });
   const notDispatched = await notSent.commands.windows!.register('TEST-not-sent', input, notSent.deadline());
   assert.deepEqual(notDispatched.state, { phase: 'refused', native: 'not-requested' });
   assert.equal(notSent.policyRegistrations(), 0); notSent.coldUnavailable().assertReleased();
 
-  const retained = windowsFixture();
+  const retained = windowsFixture(t);
   const prior = await retained.commands.windows!.register('TEST-prior-capture', input, retained.deadline());
   const priorRows = stable(retained.rows()); retained.captureReply(missing);
   const rejected = await retained.commands.windows!.register('TEST-second-missing', input, retained.deadline());
@@ -548,8 +551,8 @@ test('Windows lost capture ACK uses original receipt on cold lookup and async MC
   assert.throws(() => retained.coldUnavailable().assertReleased(), /hold/);
 });
 
-test('Windows original input is checked outside Team fence after capture await and before any policy effect', async () => {
-  const f = windowsFixture(); f.pause('run');
+test('Windows original input is checked outside Team fence after capture await and before any policy effect', async t => {
+  const f = windowsFixture(t); f.pause('run');
   const pending = f.commands.windows!.register('TEST-source-change', { pid: 1001, label: 'TEST service' }, f.deadline());
   assert.equal(f.captures(), 1); f.sourceChanged(); f.release();
   await assert.rejects(pending, /forbidden/);
@@ -559,8 +562,8 @@ test('Windows original input is checked outside Team fence after capture await a
   assert.equal(f.captures(), 1); assert.equal(f.policyRegistrations(), 1);
 });
 
-test('Windows expired capture retains evidence without policy; a later saved-capture lookup still checks original source', async () => {
-  const f = windowsFixture(); f.pause('run');
+test('Windows expired capture retains evidence without policy; a later saved-capture lookup still checks original source', async t => {
+  const f = windowsFixture(t); f.pause('run');
   const deadline = performance.now() + 20;
   const pending = f.commands.windows!.register('TEST-expired-policy', { pid: 1001, label: 'TEST service' }, deadline);
   await new Promise<void>(resolve => setTimeout(resolve, Math.max(1, Math.ceil(deadline - performance.now()) + 1)));
@@ -579,9 +582,9 @@ test('Windows expired capture retains evidence without policy; a later saved-cap
   assert.equal(f.captures(), 1); assert.equal(f.policyRegistrations(), 1);
 });
 
-test('Windows uncertain original policy writes never register twice and only exact attached row can complete', async () => {
+test('Windows uncertain original policy writes never register twice and only exact attached row can complete', async t => {
   for (const interruption of ['register', 'attach'] as const) {
-    const f = windowsFixture(); f.interruptPolicy(interruption);
+    const f = windowsFixture(t); f.interruptPolicy(interruption);
     await assert.rejects(f.commands.windows!.register('TEST-policy-write', { pid: 1001, label: 'TEST service' }, f.deadline()), /TEST interrupted/);
     f.interruptPolicy();
     const receipt = await f.cold().windows!.lookup('TEST-policy-write', f.deadline());
@@ -605,8 +608,8 @@ test('Windows uncertain original policy writes never register twice and only exa
   }
 });
 
-test('Windows Stop uncertainty survives metadata removal and replacement; cold absence belongs to full original scope', async () => {
-  const f = windowsFixture();
+test('Windows Stop uncertainty survives metadata removal and replacement; cold absence belongs to full original scope', async t => {
+  const f = windowsFixture(t);
   await f.commands.windows!.register('TEST-native-register', { pid: 1001, label: 'TEST original' }, f.deadline());
   const row = (await f.commands.windows!.list(f.deadline()))[0]!;
   const stopped = await f.commands.windows!.terminate('TEST-native-stop', row.processRef, f.deadline());
@@ -626,7 +629,7 @@ test('Windows Stop uncertainty survives metadata removal and replacement; cold a
   assert.equal(f.coldUnavailable().lookup('TEST-native-stop')!.state.native, 'observed-absent');
   assert.equal(f.captures(), 1, 'Neither Stop lookup nor a replacement PID can recapture');
   for (const reason of ['capacity', 'deadline', 'unknown'] as const) {
-    const held = windowsFixture();
+    const held = windowsFixture(t);
     const registration = await held.commands.windows!.register('TEST-settle-register', { pid: 1001, label: 'TEST settlement' }, held.deadline());
     const target = (await held.commands.windows!.list(held.deadline()))[0]!;
     await held.commands.windows!.terminate('TEST-settle-stop', target.processRef, held.deadline());
@@ -664,8 +667,8 @@ test('Windows Stop uncertainty survives metadata removal and replacement; cold a
   }
 });
 
-test('Windows natural absence stays on one original register across principals and cold reads, without a Stop', async () => {
-  const f = windowsFixture(), member = f.asPrincipal('TEST-original-member');
+test('Windows natural absence stays on one original register across principals and cold reads, without a Stop', async t => {
+  const f = windowsFixture(t), member = f.asPrincipal('TEST-original-member');
   const registered = await member.windows!.register('TEST-natural-a', { pid: 1001, label: 'TEST natural' }, f.deadline());
   await member.windows!.register('TEST-natural-b', { pid: 1001, label: 'TEST same scope' }, f.deadline());
   const receipt = (id: string) => f.files.get('commands/' + digest(id) + '.json') as ProcessCommandReceipt;
@@ -696,7 +699,7 @@ test('Windows natural absence stays on one original register across principals a
 
 test('lifecycle settles the original completed Windows Stop before purge without repeating its signal', async t => {
   for (const mode of ['before-prepare', 'unknown', 'not-dispatched'] as const) {
-    const f = windowsFixture(), principal = f.asPrincipal('TEST-original-admin');
+    const f = windowsFixture(t), principal = f.asPrincipal('TEST-original-admin');
     await principal.windows!.register('TEST-maintenance-register', { pid: 1001, label: 'TEST original service' }, f.deadline());
     const target = (await principal.windows!.list(f.deadline()))[0]!;
     await principal.windows!.terminate('TEST-maintenance-stop', target.processRef, f.deadline());
@@ -754,8 +757,8 @@ test('lifecycle settles the original completed Windows Stop before purge without
   }
 });
 
-test('Windows natural settlement preserves pre-dispatch and lost-ACK uncertainty; only later proven no-dispatch may retry', async () => {
-  const f = windowsFixture();
+test('Windows natural settlement preserves pre-dispatch and lost-ACK uncertainty; only later proven no-dispatch may retry', async t => {
+  const f = windowsFixture(t);
   await f.commands.windows!.register('TEST-natural-concurrent', { pid: 1001, label: 'TEST natural' }, f.deadline());
   f.absent(); f.pause('admission');
   const first = f.commands.windows!.reconcileNaturalAbsence(f.deadline());
@@ -770,7 +773,7 @@ test('Windows natural settlement preserves pre-dispatch and lost-ACK uncertainty
   f.release(); await first;
   f.coldUnavailable().assertReleased(); assert.equal(f.settlements(), 1);
 
-  const lost = windowsFixture();
+  const lost = windowsFixture(t);
   await lost.commands.windows!.register('TEST-natural-lost', { pid: 1001, label: 'TEST lost ACK' }, lost.deadline());
   lost.absent(); lost.settlementReply({ state: 'unknown' });
   await lost.commands.windows!.reconcileNaturalAbsence(lost.deadline());
@@ -785,7 +788,7 @@ test('Windows natural settlement preserves pre-dispatch and lost-ACK uncertainty
   assert.equal(original.nativeAbsence?.settlement, 'requested', 'Previously returned unknown evidence is immutable');
   lost.coldUnavailable().assertReleased(); assert.equal(lost.settlements(), 1);
 
-  const refused = windowsFixture();
+  const refused = windowsFixture(t);
   await refused.commands.windows!.register('TEST-natural-no-dispatch', { pid: 1001, label: 'TEST pressure' }, refused.deadline());
   refused.absent(); refused.settlementReply({ state: 'not-dispatched', reason: 'capacity' });
   await refused.commands.windows!.reconcileNaturalAbsence(refused.deadline());
@@ -801,9 +804,9 @@ test('Windows natural settlement preserves pre-dispatch and lost-ACK uncertainty
   refused.coldUnavailable().assertReleased();
 });
 
-test('Windows natural evidence cannot cross a changed source, grant, deadline, capture or concurrent original Stop', async () => {
+test('Windows natural evidence cannot cross a changed source, grant, deadline, capture or concurrent original Stop', async t => {
   for (const change of ['source', 'grant', 'deadline', 'capture'] as const) {
-    const f = windowsFixture();
+    const f = windowsFixture(t);
     const registered = await f.commands.windows!.register('TEST-natural-guard', { pid: 1001, label: 'TEST guard' }, f.deadline());
     f.absent(); f.pause('query');
     const deadline = change === 'deadline' ? performance.now() + 20 : f.deadline();
@@ -822,7 +825,7 @@ test('Windows natural evidence cannot cross a changed source, grant, deadline, c
     assert.equal(stored.nativeAbsence, undefined); assert.equal(stored.fingerprint, registered.fingerprint);
     assert.equal(f.settlements(), 0); assert.equal(f.stops(), 0);
   }
-  const f = windowsFixture();
+  const f = windowsFixture(t);
   await f.commands.windows!.register('TEST-natural-stop-race', { pid: 1001, label: 'TEST race' }, f.deadline());
   const reference = (await f.commands.windows!.list(f.deadline()))[0]!.processRef;
   f.absent(); f.pause('query');

@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 import { CapturedHostClient } from '../../src/features/agent-backend/main/infrastructure/CapturedHostClient';
 import { captureMainWindowsCustody } from '../../src/features/agent-backend/main/infrastructure/CapturedWindowsCustody';
-import { capturedWitness, timeout } from './nativeGateContext';
+import { capturedQueryableWitness, timeout } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
 import { fileHash, prepareEmulatedProfile } from './nativeEmulatedProfile';
 import { nativeEmulatedSourceScenario } from './nativeEmulatedSourceScenario';
@@ -29,7 +29,7 @@ async function providerScenario(sandbox: string, broker: string, actor: string,
   provider: 'codex' | 'opencode', sentinel: ChildProcess) {
   const selected = await prepareEmulatedProfile(sandbox, broker, actor, provider);
   const physical = captureMainWindowsCustody(selected.host); assert.ok(physical);
-  const events = createNativeGateEvents(), witnesses: Awaited<ReturnType<typeof capturedWitness>>[] = [];
+  const events = createNativeGateEvents(), witnesses: Awaited<ReturnType<typeof capturedQueryableWitness>>[] = [];
   const observedChildren: ChildProcess[] = [];
   const track = (child: ChildProcess) => observedChildren.push(child);
   const captures = new Map<number, WindowsServiceCapture>();
@@ -72,10 +72,13 @@ async function providerScenario(sandbox: string, broker: string, actor: string,
   const envelope = (commandId: string, payload: JsonValue): JsonValue => ({ commandId,
     binding: { schemaVersion: 1, handleId: 'TEST-emulated-original', owner: selected.profile.owner,
       scope: selected.profile.teams[0]!.scope }, payload });
-  const rpc = async (method: string, commandId: string, payload: JsonValue) => {
+  const rpc = async (method: string, commandId: string, payload: JsonValue, cutoff?: number) => {
+    if (cutoff !== undefined) assert.ok(performance.now() < cutoff, 'TEST original RPC phase deadline');
     const result = object(await client.request(method, envelope(commandId, payload), {
       control: method === 'runtime.read' || method.startsWith('team.process.'),
+      ...(cutoff === undefined ? {} : { remainingMs: () => cutoff - performance.now() }),
     }));
+    if (cutoff !== undefined) assert.ok(performance.now() < cutoff, 'TEST original RPC phase deadline');
     assert.equal(result.ok, true, `TEST ${provider} ${method} refused: ${String(result.code)}`);
     return result.value;
   };
@@ -92,7 +95,7 @@ async function providerScenario(sandbox: string, broker: string, actor: string,
     const inputId = object(sent.effects).deliveryId; assert.equal(typeof inputId, 'string');
     const deadline = performance.now() + 15000;
     for (;;) {
-      const state = object(await rpc('runtime.read', 'TEST-input-read', { memberId: 'alice-id' }));
+      const state = object(await rpc('runtime.read', 'TEST-input-read', { memberId: 'alice-id' }, deadline));
       assert.ok(Array.isArray(state.inputs));
       const input = state.inputs.map(object).find(value => value.inputId === inputId);
       if (input?.phase === 'terminal') { assert.equal(input.terminal, 'succeeded'); break; }
@@ -108,7 +111,8 @@ async function providerScenario(sandbox: string, broker: string, actor: string,
     assert.equal(captures.size, 2); assert.ok(providerRoot);
     for (const captured of [providerRoot, ...captures.values()].map(value => 'target' in value
       ? { pid: value.target.pid, birth: value.target.birth } : value))
-      witnesses.push(await capturedWitness(actor, captured.pid, captured.birth, track, events));
+      witnesses.push(await capturedQueryableWitness(actor, captured.pid, captured.birth, track, events,
+        'query-wait-gated'));
     const list = async (id: string) => {
       const rows = await rpc('team.process.list', id, {}); assert.ok(Array.isArray(rows) && rows.length === 2);
       return rows.map(object);
@@ -122,16 +126,16 @@ async function providerScenario(sandbox: string, broker: string, actor: string,
       const originalRow = rows.find(value => value.processRef === service.processRef);
       assert.ok(originalRow, 'Select the original live registration before its one Stop');
       const commandId = `TEST-stop-${index}`, stopDeadline = performance.now() + 10000;
-      let receipt = object(await rpc('team.process.terminate', commandId, { processRef: String(service.processRef) }));
+      let receipt = object(await rpc('team.process.terminate', commandId, { processRef: String(service.processRef) }, stopDeadline));
       for (;;) {
         assert.equal(receipt.originalProcessRef, service.processRef);
         const state = object(receipt.state);
         if (receipt.phase === 'completed' && state.phase === 'completed' && state.native === 'observed-absent') break;
         assert.ok(performance.now() < stopDeadline, 'TEST original Stop deadline'); await delay(25);
-        receipt = object(await rpc('team.process.lookup', `TEST-lookup-${index}`, { originalCommandId: commandId }));
+        receipt = object(await rpc('team.process.lookup', `TEST-lookup-${index}`, { originalCommandId: commandId }, stopDeadline));
       }
       assert.equal(object(receipt.state).signalAccepted, 'unknown');
-      assert.equal(await timeout(witnesses[index + 1]!.exit), 0);
+      assert.equal(await timeout(witnesses[index + 1]!.wait()), 0);
       rows = await list(`TEST-after-stop-${index}`);
       // Stop updates metadata and therefore its content-addressed processRef, not the registration ID.
       const stopped = rows.filter(value => value.id === originalRow.id);
@@ -140,15 +144,15 @@ async function providerScenario(sandbox: string, broker: string, actor: string,
       if (index === 0) {
         const neighbor = rows.find(value => value.processRef === services[1]!.processRef)!;
         assert.equal(neighbor.observation, 'same-live'); assert.equal(neighbor.canTerminate, true);
-        assert.equal(witnesses[2]!.process.exitCode, null, 'Independent original neighbor HANDLE remains alive');
+        assert.equal(await timeout(witnesses[2]!.observe()), 'alive', 'Independent original neighbor HANDLE remains alive');
       }
-      assert.equal(witnesses[0]!.process.exitCode, null, 'Scoped Stop preserves the provider root');
+      assert.equal(await timeout(witnesses[0]!.observe()), 'alive', 'Scoped Stop preserves the provider root');
       assert.equal(sentinel.exitCode, null, 'Scoped Stop preserves an unrelated original child');
     }
     assert.equal(counts.serviceCapture, 2); assert.equal(counts.serviceStop, 2); assert.equal(counts.serviceSettle, 2);
     await client.shutdown();
     assert.equal(await physical.close(), true);
-    assert.equal(await timeout(witnesses[0]!.exit), 0);
+    assert.equal(await timeout(witnesses[0]!.wait()), 0);
     assert.equal(counts.release, 1); assert.ok(counts.stop >= 1 && counts.stop <= 4);
     assert.equal(sentinel.exitCode, null);
     passed = true;
@@ -156,7 +160,9 @@ async function providerScenario(sandbox: string, broker: string, actor: string,
   finally {
     try { await client.shutdown(); } catch (error) { errors.push(error); }
     try { assert.equal(await physical.close(), true); } catch (error) { errors.push(error); }
-    try { await timeout(Promise.all(witnesses.map(value => value.exit)), 10000); }
+    try { await timeout(Promise.all(witnesses.map(async value => {
+      assert.equal(await value.wait(), 0);
+    })), 10000); }
     catch (error) { errors.push(error); }
     cleanup = errors.length === 0;
     // These are only witness processes launched by this gate. Original native cleanup remains mandatory.
