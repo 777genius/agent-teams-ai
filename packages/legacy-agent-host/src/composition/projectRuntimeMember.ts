@@ -1,8 +1,11 @@
+import { channel } from 'node:diagnostics_channel';
 import { runtimeDigest } from '../runtime/identity.js';
 import type { JsonValue } from '../contracts.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { RuntimeBinding, RuntimeSessionRecord } from '../runtime/contracts.js';
 import type { MemberEntry } from './MemberEntry.js';
+
+const runtimeProjection = channel('agent-teams.legacy-host.runtime-projection');
 
 /** Existing public Runtime snapshot omits private operation references and native identities. */
 export function projectRuntimeMember(options: {
@@ -14,11 +17,13 @@ export function projectRuntimeMember(options: {
 }): JsonValue {
   const { entry, record, binding } = options;
   const observed = options.runtime.readSession(binding);
+  const bindingMatches = runtimeDigest(binding) === runtimeDigest(entry.binding);
+  let recordReady: boolean | null = null, providerReady: boolean | null = null, ownerCurrent: boolean | null = null;
   const nativeReady =
-    runtimeDigest(binding) === runtimeDigest(entry.binding) &&
-    !!record?.nativeReady &&
-    !!entry.provider?.isReady() &&
-    options.isCurrent();
+    bindingMatches &&
+    (recordReady = !!record?.nativeReady) &&
+    (providerReady = !!entry.provider?.isReady()) &&
+    (ownerCurrent = options.isCurrent());
   const captured =
     nativeReady &&
     observed.attached &&
@@ -37,7 +42,7 @@ export function projectRuntimeMember(options: {
         : []
       : entry.provider?.sessionCommands?.() ?? []
     : undefined;
-  return {
+  const value: JsonValue = {
     memberId: entry.profile.memberId,
     generation: binding.generation,
     phase: record?.phase ?? 'unopened',
@@ -63,4 +68,10 @@ export function projectRuntimeMember(options: {
     interactions: (record?.interactions ?? []).map(({ operationRef: _operation, ...safe }) => safe),
     ...(record?.diagnostic ? { diagnostic: record.diagnostic } : {}),
   };
+  try {
+    if (runtimeProjection.hasSubscribers) runtimeProjection.publish({
+      viewDigest: runtimeDigest(value), bindingMatches, recordReady, providerReady, ownerCurrent, nativeReady,
+    });
+  } catch { /* Private observation cannot replace the original public result. */ }
+  return value;
 }

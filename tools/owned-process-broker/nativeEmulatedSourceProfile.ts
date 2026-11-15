@@ -142,14 +142,15 @@ if(argv.length===1&&argv[0]==='--version'){
   });
   const cli = realpathSync(fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url)));
   const hostEntry = join(root, 'TEST-source-host.mjs');
-  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner']
+  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner', 'composition/projectRuntimeMember']
     .flatMap(name => (['src', 'dist'] as const).map(directory => {
       const path = fileURLToPath(new URL(`../../packages/legacy-agent-host/${directory}/${name}${directory === 'src' ? '.ts' : '.js'}`, import.meta.url));
       assert.equal(realpathSync(path), path); return { path, sha256: fileHash(path) };
     }));
   const refusals = join(root, 'TEST-first-refusals.ndjson'); writeFileSync(refusals, '', { mode: 0o600, flag: 'wx' });
+  const runtimeProjectionLedger = join(root, 'TEST-runtime-projections.json');
   writeFileSync(hostEntry, `import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto'; import { appendFileSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { createHash } from 'node:crypto'; import { appendFileSync, lstatSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { channel } from 'node:diagnostics_channel';
 for (const pin of ${JSON.stringify(diagnosticPins.filter(pin => pin.path.endsWith('.js')))}) { assert.equal(realpathSync(pin.path), pin.path); assert.equal(createHash('sha256').update(readFileSync(pin.path)).digest('hex'), pin.sha256); }
 function validateSourceRefusal(value, persisted) {
@@ -202,6 +203,31 @@ channel('agent-teams.legacy-host.first-refusal').subscribe(value => { try {
   appendFileSync(ledger, line); bytes += Buffer.byteLength(line); count++;
   if (pair !== null) references.add(pair);
 } catch { disabled = true; } });
+const projectionLedger = ${JSON.stringify(runtimeProjectionLedger)};
+const runtimeProjectionRows = new Map(); let projectionUnknown = false;
+channel('agent-teams.legacy-host.runtime-projection').subscribe(value => { try {
+  if (projectionUnknown) return;
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+  assert.ok([Object.prototype, null].includes(Object.getPrototypeOf(value)) && Object.getOwnPropertySymbols(value).length === 0);
+  const fields = ['viewDigest', 'bindingMatches', 'recordReady', 'providerReady', 'ownerCurrent', 'nativeReady'];
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  assert.deepEqual(Object.keys(descriptors).sort(), [...fields].sort());
+  assert.ok(Object.values(descriptors).every(row => 'value' in row));
+  const tuple = fields.map(key => descriptors[key].value);
+  assert.ok(typeof tuple[0] === 'string' && /^[a-f0-9]{64}$/.test(tuple[0]));
+  assert.equal(typeof tuple[1], 'boolean'); assert.equal(typeof tuple[5], 'boolean');
+  for (let index = 2; index <= 4; index++)
+    assert.ok(tuple.slice(1, index).every(value => value === true) ? typeof tuple[index] === 'boolean' : tuple[index] === null);
+  assert.equal(tuple[5], tuple.slice(1, 5).every(value => value === true));
+  const prior = runtimeProjectionRows.get(tuple[0]);
+  if (prior !== undefined) assert.deepEqual(tuple, prior);
+  else { assert.ok(runtimeProjectionRows.size < 4); runtimeProjectionRows.set(tuple[0], tuple); }
+} catch { projectionUnknown = true; runtimeProjectionRows.clear(); } });
+process.once('exit', () => { try {
+  const value = projectionUnknown ? { status: 'unknown' } : { status: 'observed', rows: [...runtimeProjectionRows.values()] };
+  const raw = JSON.stringify(value);
+  writeFileSync(projectionLedger, Buffer.byteLength(raw) <= 512 ? raw : '{"status":"unknown"}', { mode: 0o600, flag: 'wx' });
+} catch { /* Missing exit evidence remains unknown; never replace an earlier Host ledger. */ } });
 await import(${JSON.stringify(pathToFileURL(cli).href)});
 `, { flag: 'wx' });
   const profile: TeamHostProfile = { schemaVersion: 1, principalId: 'human', processCustody: { kind: 'main-windows-v1' },
@@ -233,6 +259,6 @@ await import(${JSON.stringify(pathToFileURL(cli).href)});
   const pins = [...new Set([node, broker, cli, hostEntry, profilePath, descriptorPath, ...ownSources,
     ...helpers.map(value => value.path), ...diagnosticPins.map(value => value.path), ...Object.values(images).flatMap(value => [value.path, value.entry.path])])]
     .map(path => ({ path, sha256: fileHash(path) }));
-  return { root, workspace, provider, providerId, model, profile, host, entries, effects, images, versions, pins, refusals,
+  return { root, workspace, provider, providerId, model, profile, host, entries, effects, images, versions, pins, refusals, runtimeProjectionLedger,
     descriptorSelection: { path: descriptorPath, sha256: fileHash(descriptorPath) } };
 }

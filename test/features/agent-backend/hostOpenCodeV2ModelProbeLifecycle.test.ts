@@ -1,5 +1,6 @@
 // @vitest-environment node
 import assert from 'node:assert/strict';
+import { channel } from 'node:diagnostics_channel';
 import { once } from 'node:events';
 import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -38,7 +39,7 @@ async function within<T>(work: Promise<T>, label: string): Promise<T> {
  * Production ModelProbe, its private configuration, both D clients and global fetch
  * remain real. These checks do not qualify an actual native process or credential.
  */
-async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http') {
+async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', startFailure?: unknown) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-model-probe-lifecycle-')));
   const pid = 48101, startIdentity = 'TEST-original-start-identity', password = 'TEST-loopback-only';
   const blocked = Promise.withResolvers<void>(), disconnected = Promise.withResolvers<void>();
@@ -146,7 +147,10 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http') {
   controlled.create = () => {
     nativeCreations++;
     return {
-      start: async () => ({ endpoint, pid, startIdentity }),
+      start: async () => {
+        if (startFailure !== undefined) throw startFailure;
+        return { endpoint, pid, startIdentity };
+      },
       readPassword: () => { passwordReads++; return password; },
       async readNativeCustody(signal: AbortSignal) {
         if (holdNextCustody) {
@@ -161,11 +165,15 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http') {
       },
     };
   };
+  const observations: unknown[] = [], diagnostic = channel('agent-teams:opencode-v2:host-probe-close-failed');
+  const observe = (value: unknown) => { observations.push(value); };
+  diagnostic.subscribe(observe);
   const probe = createOpenCodeV2ModelProbe(management, {
     commandId: 'TEST-original-probe', profileId: management.profileId, configRevision: management.configRevision,
     providerId: 'TEST-provider', modelId: 'TEST-model',
   }, () => true);
   return {
+    observations,
     probe, parent, disconnected: disconnected.promise, custodyReturned: custodyReturned.promise,
     releaseCustody: () => returnCustody.resolve(),
     heldSignal: () => heldSignal,
@@ -190,6 +198,7 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http') {
       const close = probe.close(); returnCustody.resolve();
       try { await close; if (run) await run.catch(() => {}); }
       finally {
+        diagnostic.unsubscribe(observe);
         server.closeAllConnections();
         await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
         rmSync(root, { recursive: true, force: true });
@@ -213,6 +222,7 @@ test.each(['close', 'parent-signal'] as const)(
       expect(f.counts().requests).toBe(before.requests);
       expect(f.counts().passwordReads).toBe(before.passwordReads);
       f.assertClosed();
+      expect(f.observations).toEqual([]);
     } finally { await f.dispose(); }
   }
 );
@@ -227,12 +237,17 @@ test('pending original custody stays UNKNOWN after the existing drain bound and 
     expect(f.probe.close()).toBe(closing);
     // Do not shorten, renew or replace the production five-second acquisition drain.
     await expect(closing).resolves.toBe(false);
+    // Original driver close settles submit before this final record; custody is still unreleased.
+    expect(f.observations).toEqual([expect.objectContaining({ probeDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+      runState: 'false', outcome: 'unobserved', errorClass: 'none', stage: 'request-drain', reason: 'unconfirmed' })]);
+    const retained = JSON.stringify(f.observations);
     expect(f.counts().requests).toBe(before.requests);
     expect(f.counts().passwordReads).toBe(before.passwordReads);
     f.releaseCustody(); await f.custodyReturned;
     await new Promise<void>(resolve => setImmediate(resolve));
     await expect(running).resolves.toBe(false);
     expect(f.probe.close()).toBe(closing); await expect(f.probe.close()).resolves.toBe(false);
+    expect(JSON.stringify(f.observations)).toBe(retained);
     expect(f.counts().requests).toBe(before.requests);
     expect(f.counts().passwordReads).toBe(before.passwordReads);
     f.assertClosed();
@@ -247,6 +262,33 @@ test('confirmed HTTP cancellation cannot repair an unknown original physical sto
     await within(f.disconnected, 'original unfinished response closed');
     await expect(closing).resolves.toBe(false); await expect(running).resolves.toBe(false);
     expect(f.probe.close()).toBe(closing); await expect(f.probe.close()).resolves.toBe(false);
+    // D's original confirmStopped call reports unknown before the Host's later explicit stop.
+    expect(f.observations).toEqual([expect.objectContaining({ stage: 'driver-close', reason: 'unconfirmed' })]);
     f.assertClosed();
+  } finally { await f.dispose(); }
+});
+
+test.each(['getter', 'proxy', 'held'] as const)('original probe exception survives %s diagnostic fields', async kind => {
+  const secret = 'TEST-private-probe-failure';
+  let getterCalls = 0;
+  const failure = kind === 'proxy' ? new Proxy({}, {
+    getOwnPropertyDescriptor() { throw new Error(secret); },
+  }) : Object.defineProperties({}, {
+    code: kind === 'held' ? { value: 'held' } : { get() { getterCalls++; throw new Error(secret); } },
+    message: { get() { getterCalls++; throw new Error(secret); } },
+    stack: { get() { getterCalls++; throw new Error(secret); } },
+    token: { value: secret },
+  });
+  const f = await fixture('stop-unknown', failure);
+  try {
+    await expect(f.start()).rejects.toBe(failure);
+    const closing = f.probe.close();
+    await expect(closing).resolves.toBe(false);
+    expect(f.probe.close()).toBe(closing);
+    expect(f.observations).toEqual([expect.objectContaining({ runState: 'threw', outcome: 'unobserved',
+      errorClass: kind === 'held' ? 'held' : 'unknown', stage: 'server-stop', reason: 'unconfirmed' })]);
+    expect(getterCalls).toBe(0);
+    expect(JSON.stringify(f.observations)).not.toContain(secret);
+    expect(f.counts()).toMatchObject({ requests: 0, nativeCreations: 1, physicalStops: 1 });
   } finally { await f.dispose(); }
 });

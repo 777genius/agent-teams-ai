@@ -252,4 +252,5 @@ export const desktopProofWindowsRetrySources = [
   'src/renderer/components/team/TeamAggregateReadNotice.tsx',
   'scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts',
   'scripts/e2e/external-agent-connection-desktop.ts',
+  'scripts/e2e/opencode-diagnostics/platform.test.mjs',
 ];

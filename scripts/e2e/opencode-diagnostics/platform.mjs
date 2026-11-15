@@ -5,6 +5,10 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const windows = process.platform === 'win32';
+const windowsProcessQuery =
+  "@(Get-CimInstance Win32_Process | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o'); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress";
+const windowsListenerQuery = port =>
+  `Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq ${port} | Select-Object -ExpandProperty OwningProcess`;
 export function powershell(script) {
   return execFileSync(
     path.join(
@@ -50,7 +54,7 @@ export function processes() {
   if (windows)
     return parseWindowsProcesses(
       powershell(
-        "@(Get-CimInstance Win32_Process | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o'); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress"
+        windowsProcessQuery
       )
     );
   return parseUnixProcesses(
@@ -116,7 +120,7 @@ export function listeners(port = 9222) {
   if (windows)
     return parseListeners(
       powershell(
-        `Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq ${port} | Select-Object -ExpandProperty OwningProcess`
+        windowsListenerQuery(port)
       )
     );
   try {
@@ -127,6 +131,22 @@ export function listeners(port = 9222) {
     if (e.status === 1 && !String(e.stdout).trim() && !String(e.stderr).trim()) return [];
     throw e;
   }
+}
+/** Fresh ordered observations, not an atomic snapshot or retained authority. */
+export function windowsProcessListenerSnapshot(port = 9222, execute = powershell) {
+  assertCdpPort(port);
+  const output = execute(
+    `$TESTProcessOutput = ${windowsProcessQuery};\n` +
+    `$TESTListenerOutput = ${windowsListenerQuery(port)};\n` +
+    '[pscustomobject]@{ processes = [string]$TESTProcessOutput; ' +
+    'listeners = [string]($TESTListenerOutput -join [Environment]::NewLine) } | ConvertTo-Json -Compress'
+  );
+  const value = JSON.parse(output.replace(/^\uFEFF/, '').trim());
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value), 'Invalid Windows observation envelope');
+  assert.deepEqual(Object.keys(value).sort(), ['listeners', 'processes']);
+  assert.equal(typeof value.processes, 'string');
+  assert.equal(typeof value.listeners, 'string');
+  return { processes: parseWindowsProcesses(value.processes), listeners: parseListeners(value.listeners) };
 }
 export function assertListenerOwnership(ids, owned) {
   assert(

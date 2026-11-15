@@ -17,6 +17,7 @@ import {
   launchCommand,
   allocateIsolatedCdpPort,
   assertPortAvailable,
+  windowsProcessListenerSnapshot,
 } from './platform.mjs';
 
 test('OS process and listener output parsing fails closed', () => {
@@ -33,6 +34,61 @@ test('OS process and listener output parsing fails closed', () => {
   assert.throws(() => parseWindowsProcesses('{"pid":42,"parent":1}'));
   assert.throws(() => parseUnixProcesses('garbage'));
   assert.throws(() => parseListeners('not a pid'));
+});
+test('one fresh Windows interpreter retains ordered original process and listener observations', () => {
+  const launcher = { pid: 42, parent: 1, birth: '2026-09-10T01:00:00.0000000Z', executable: 'C:\\TEST\\app.exe' };
+  const child = { pid: 43, parent: 42, birth: '2026-09-10T01:00:00.0000001Z' };
+  const processQuery = "@(Get-CimInstance Win32_Process | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o'); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress";
+  const listenerQuery = 'Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq 9222 | Select-Object -ExpandProperty OwningProcess';
+  let calls = 0;
+  const execute = script => {
+    calls++;
+    assert.equal(script.split(processQuery).length, 2);
+    assert.equal(script.split(listenerQuery).length, 2);
+    assert(script.indexOf(processQuery) < script.indexOf(listenerQuery));
+    return '\uFEFF' + JSON.stringify(calls === 1
+      ? { processes: '\uFEFF' + JSON.stringify(launcher), listeners: '42\r\n42\r\n' }
+      : { processes: JSON.stringify([launcher, child]), listeners: '43\r\n43\r\n' });
+  };
+  const first = windowsProcessListenerSnapshot(undefined, execute);
+  assert.equal(calls, 1);
+  assert.deepEqual(first, { processes: [launcher], listeners: [42] });
+  const second = windowsProcessListenerSnapshot(undefined, execute);
+  assert.equal(calls, 2);
+  assert.deepEqual(second, { processes: [launcher, child], listeners: [43] });
+  const tree = ownedTree(second.processes, launcher);
+  sameIdentity(child, tree.find(row => row.pid === child.pid));
+  assertListenerOwnership(second.listeners, tree);
+  assert.throws(() => ownedTree(second.processes, { ...launcher, birth: 'reused' }));
+  assert.throws(() => sameIdentity(child, { ...child, birth: 'reused' }));
+  assert.throws(() => assertListenerOwnership([99], tree));
+  assert.throws(() => assertListenerOwnership([43, 99], tree));
+  assert.throws(() => assertListenerOwnership([], tree));
+});
+test('combined Windows observations reject malformed envelopes and preserve executor failure', () => {
+  let calls = 0;
+  const empty = () => { calls++; return JSON.stringify({ processes: '', listeners: '' }); };
+  for (const port of [0, 1023, 65536, 1.5, NaN, '9222'])
+    assert.throws(() => windowsProcessListenerSnapshot(port, empty));
+  assert.equal(calls, 0, 'invalid port refuses before any observation');
+  assert.deepEqual(windowsProcessListenerSnapshot(9222, empty), { processes: [], listeners: [] });
+  assert.equal(calls, 1);
+  const invalid = [null, [], 1, {}, { processes: '[]' }, { listeners: '' },
+    { processes: '[]', listeners: '', extra: true }, { processes: [], listeners: '' },
+    { processes: '[]', listeners: null }, { processes: 'not JSON', listeners: '' },
+    { processes: '{"pid":42,"parent":1}', listeners: '' },
+    { processes: '[{"pid":"42","parent":1,"birth":"TEST"}]', listeners: '' },
+    { processes: '[]', listeners: 'not a pid' }, { processes: '[]', listeners: '0' }];
+  for (const value of invalid) {
+    let attempts = 0;
+    assert.throws(() => windowsProcessListenerSnapshot(9222, () => { attempts++; return JSON.stringify(value); }));
+    assert.equal(attempts, 1, 'invalid observation is never retried');
+  }
+  assert.throws(() => windowsProcessListenerSnapshot(9222, () => ''));
+  const failure = new Error('TEST original interpreter failure');
+  let attempts = 0;
+  assert.throws(() => windowsProcessListenerSnapshot(9222, () => { attempts++; throw failure; }), error => error === failure);
+  assert.equal(attempts, 1, 'executor failure is preserved without fallback');
 });
 test('ownership rejects stale launchers, reused child PIDs and unrelated listeners', () => {
   const launcher = { pid: 42, parent: 1, birth: '2026-09-10T01:00:00.0000000Z' };

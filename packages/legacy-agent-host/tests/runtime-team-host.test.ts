@@ -1,16 +1,19 @@
 import { initialContextDigest } from '../dist/team-launch/context.js';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { channel } from 'node:diagnostics_channel';
 import { lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, parse as parsePath, sep } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
+import { runInNewContext } from 'node:vm';
 
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { FileTeamRuntimeBindings } from '../dist/adapters/team/FileTeamRuntimeBindings.js';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
+import { projectRuntimeMember } from '../dist/composition/projectRuntimeMember.js';
 import { normalizeBinding, runtimeDigest } from '../dist/runtime/identity.js';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
 import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
@@ -22,6 +25,7 @@ import { localModelReadinessPreparationSchema } from '../dist/management/command
 import { managementDigest } from '../dist/management/identity.js';
 
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
+import type { MemberEntry } from '../dist/composition/MemberEntry.js';
 import type { LocalModelReadinessOrigin, ReadinessSourceReference } from '../dist/management/commandRecords.js';
 import type {
   MemberProvider,
@@ -3441,4 +3445,109 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
   assert.equal((await missingHistory.dispose()).cleanup, 'failed', 'unknown target remains genuine cleanup debt');
   writeFileSync(missingLaunchPath, originalLaunch); // Restore the TEST fault without erasing the unknown Runtime.
   assert.equal(readFileSync(missingLaunchPath, 'utf8'), originalLaunch);
+});
+
+test('Runtime projection privately observes only evaluated readiness operands and preserves the original view and errors', t => {
+  const diagnostic = channel('agent-teams.legacy-host.runtime-projection'), observations: unknown[] = [];
+  const receive = (value: unknown) => { observations.push(value); };
+  diagnostic.subscribe(receive); t.after(() => diagnostic.unsubscribe(receive));
+  const binding = normalizeBinding({ backendId: 'PRIVATE-backend', teamId: 'PRIVATE-team', runId: 'PRIVATE-run', memberId: 'alice', generation: '1' });
+  const failure = new Error('PRIVATE-original-error');
+  const sample = (bits: boolean[], absent: 'record' | 'provider' | undefined = undefined, throwing?: string) => {
+    const calls: string[] = [];
+    const call = (name: string) => { calls.push(name); if (throwing === name) throw failure; };
+    const record: NonNullable<Parameters<typeof projectRuntimeMember>[0]['record']> = {
+      schemaVersion: 1, binding, profileId: 'PRIVATE-profile', config: null, openFingerprint: null,
+      hostIncarnation: 'PRIVATE-host', phase: 'allocated', sealed: false, custody: 'owned', inputs: [], interactions: [],
+      get nativeReady() { call('record'); return bits[1]!; },
+    };
+    const entry = {
+      profile: { memberId: 'alice', provider: 'opencode' },
+      get binding() { call('binding'); return bits[0] ? binding : { ...binding, generation: '2' }; },
+      get provider() {
+        call('provider');
+        return absent === 'provider' ? undefined : { isReady() { call('isReady'); return bits[2]!; } };
+      },
+    } as unknown as MemberEntry;
+    const read = () => projectRuntimeMember({ entry, record: absent === 'record' ? undefined : record, binding,
+      runtime: { readSession(original) { call('read'); assert.equal(original, binding); return { record, attached: false }; } },
+      isCurrent() { call('current'); return bits[3]!; } });
+    return { calls, read };
+  };
+  const cases: { bits: boolean[]; absent?: 'record' | 'provider'; operands: (boolean | null)[]; calls: string[] }[] = [
+    { bits: [false, true, true, true], operands: [false, null, null, null], calls: ['read', 'binding'] },
+    { bits: [true, false, true, true], operands: [true, false, null, null], calls: ['read', 'binding', 'record'] },
+    { bits: [true, true, true, true], absent: 'record', operands: [true, false, null, null], calls: ['read', 'binding'] },
+    { bits: [true, true, true, true], absent: 'provider', operands: [true, true, false, null], calls: ['read', 'binding', 'record', 'provider'] },
+    { bits: [true, true, false, true], operands: [true, true, false, null], calls: ['read', 'binding', 'record', 'provider', 'isReady'] },
+    { bits: [true, true, true, false], operands: [true, true, true, false], calls: ['read', 'binding', 'record', 'provider', 'isReady', 'current'] },
+    { bits: [true, true, true, true], operands: [true, true, true, true], calls: ['read', 'binding', 'record', 'provider', 'isReady', 'current'] },
+  ];
+  for (const row of cases) {
+    observations.length = 0;
+    const selected = sample(row.bits, row.absent), view = selected.read(), ready = row.operands.every(value => value === true);
+    assert.deepEqual(selected.calls, row.calls);
+    assert.deepEqual(view, { memberId: 'alice', generation: '1', phase: row.absent === 'record' ? 'unopened' : 'allocated',
+      sealed: false, custody: row.absent === 'record' ? 'released' : 'owned', nativeReady: ready, attached: false, inputs: [], interactions: [] });
+    assert.deepEqual(observations, [{ viewDigest: runtimeDigest(view), bindingMatches: row.operands[0],
+      recordReady: row.operands[1], providerReady: row.operands[2], ownerCurrent: row.operands[3], nativeReady: ready }]);
+    assert.equal(JSON.stringify(observations).includes('PRIVATE-'), false);
+  }
+  const order = ['read', 'binding', 'record', 'provider', 'isReady', 'current'];
+  for (const [index, throwing] of order.entries()) {
+    observations.length = 0;
+    const selected = sample([true, true, true, true], undefined, throwing);
+    assert.throws(selected.read, error => error === failure);
+    assert.deepEqual(selected.calls, order.slice(0, index + 1)); assert.deepEqual(observations, []);
+  }
+  const plain = sample([true, true, true, true]).read();
+  t.mock.method(diagnostic, 'publish', () => { throw failure; });
+  assert.deepEqual(sample([true, true, true, true]).read(), plain, 'diagnostic failure cannot replace the public result');
+});
+
+test('the original passive Runtime projection receiver writes only bounded exit facts and keeps ambiguous evidence unknown', () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceProfile.ts', import.meta.url), 'utf8');
+  const begin = source.indexOf('const runtimeProjectionRows = new Map();');
+  const end = source.indexOf('await import(${JSON.stringify(pathToFileURL(cli).href)});', begin);
+  assert.ok(begin > 0 && end > begin);
+  const create = () => {
+    let receive: (value: unknown) => void = () => { throw new Error('receiver missing'); };
+    let exit: () => void = () => { throw new Error('exit missing'); };
+    const writes: string[] = [];
+    runInNewContext(source.slice(begin, end), { assert, Buffer, projectionLedger: 'TEST-private-ledger',
+      channel(name: string) { assert.equal(name, 'agent-teams.legacy-host.runtime-projection'); return { subscribe(fn: typeof receive) { receive = fn; } }; },
+      process: { once(name: string, fn: typeof exit) { assert.equal(name, 'exit'); exit = fn; } },
+      writeFileSync(path: string, raw: string, options: unknown) {
+        assert.equal(path, 'TEST-private-ledger'); assert.equal(JSON.stringify(options), '{"mode":384,"flag":"wx"}'); writes.push(raw);
+      } });
+    return { receive: (value: unknown) => receive(value), exit: () => exit(), writes };
+  };
+  const row = { viewDigest: 'a'.repeat(64), bindingMatches: true, recordReady: false,
+    providerReady: null, ownerCurrent: null, nativeReady: false };
+  Object.setPrototypeOf(row, null);
+  const copy = (overrides: Record<string, unknown> = {}) => Object.assign(Object.create(null) as Record<string, unknown>, row, overrides);
+  const good = create(); good.receive(row); good.receive(copy());
+  assert.deepEqual(good.writes, [], 'no polling or pre-exit write'); good.exit();
+  assert.equal(good.writes.length, 1); assert.ok(Buffer.byteLength(good.writes[0]!) <= 512);
+  assert.deepEqual(JSON.parse(good.writes[0]!), { status: 'observed', rows: [[row.viewDigest, true, false, null, null, false]] });
+  const empty = create(); empty.exit();
+  assert.deepEqual(JSON.parse(empty.writes[0]!), { status: 'observed', rows: [] }, 'missing digest never becomes a joined observation');
+  let getterCalls = 0;
+  const accessor = Object.defineProperty(copy(), 'recordReady', { get() { getterCalls++; throw new Error('PRIVATE-secret'); } });
+  const bad = [null, [], copy({ extra: 'PRIVATE-secret' }), copy({ viewDigest: 'a'.repeat(513) }),
+    copy({ bindingMatches: false }), copy({ providerReady: true }), copy({ nativeReady: true }), accessor,
+    new Proxy(Object.create(null) as Record<string, unknown>, { ownKeys() { throw new Error('PRIVATE-proxy'); } })];
+  for (const value of bad) {
+    const rejected = create(); rejected.receive(row); rejected.receive(value); rejected.receive(row); rejected.exit();
+    assert.deepEqual(JSON.parse(rejected.writes[0]!), { status: 'unknown' });
+    assert.equal(rejected.writes[0]!.includes('PRIVATE-'), false);
+  }
+  assert.equal(getterCalls, 0);
+  const conflict = create(); conflict.receive(row);
+  conflict.receive(copy({ recordReady: true, providerReady: false })); conflict.exit();
+  assert.deepEqual(JSON.parse(conflict.writes[0]!), { status: 'unknown' });
+  const bounded = create(); for (const digit of 'abcd') bounded.receive(copy({ viewDigest: digit.repeat(64) })); bounded.exit();
+  assert.equal(JSON.parse(bounded.writes[0]!).rows.length, 4); assert.ok(Buffer.byteLength(bounded.writes[0]!) <= 512);
+  const overflow = create(); for (const digit of 'abcde') overflow.receive(copy({ viewDigest: digit.repeat(64) })); overflow.exit();
+  assert.deepEqual(JSON.parse(overflow.writes[0]!), { status: 'unknown' });
 });

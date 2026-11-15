@@ -10,7 +10,7 @@ const maximum = 256;
 const maximumTraceBytes = 64 * 1024, maximumLineBytes = 512, reservedLineBytes = maximumLineBytes + 1;
 const events = ['child-spawn', 'child-ready', 'child-failed', 'child-exit', 'child-output-limit',
   'child-input-ended', 'host-input-ended', 'request', 'request-send-headers', 'request-body-sent',
-  'response', 'response-end', 'request-error', 'read-cut-failed', 'metadata-read-failed', 'trace-limit'] as const;
+  'response', 'response-end', 'request-error', 'read-cut-failed', 'metadata-read-failed', 'host-probe-close-failed', 'trace-limit'] as const;
 const routes = ['info', 'session-create', 'session-read', 'instructions', 'permissions', 'plugins',
   'mcp', 'log', 'prompt', 'provider-catalog', 'model-catalog', 'model-default', 'integration-read',
   'integration-connect', 'credential-remove', 'other-api'] as const;
@@ -72,10 +72,29 @@ function projectMetadataReadFailure(value: unknown) {
   } catch { return undefined; }
 }
 
+/** Host observation only: no raw D error, authority read or inferred final outcome. */
+function projectHostProbeCloseFailure(value: unknown) {
+  try {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const own = (key: string): unknown => {
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      return field && 'value' in field ? field.value as unknown : undefined;
+    };
+    const probeDigest = own('probeDigest'), runState = choice(own('runState'), ['not-started', 'pending', 'true', 'false', 'threw']);
+    const outcome = choice(own('outcome'), ['unobserved', 'succeeded', 'failed', 'cancelled', 'unknown']);
+    const errorClass = choice(own('errorClass'), ['none', 'held', 'invalid', 'conflict', 'busy', 'unknown']);
+    const stage = choice(own('stage'), ['request-drain', 'owner-client', 'driver-close', 'server-stop', 'namespace', 'close-result']);
+    const reason = choice(own('reason'), ['unconfirmed', 'threw', 'identity']);
+    if (typeof probeDigest !== 'string' || !/^[a-f0-9]{64}$/.test(probeDigest) ||
+        !runState || !outcome || !errorClass || !stage || !reason) return undefined;
+    return { probeDigest, runState, outcome, errorClass, stage, reason };
+  } catch { return undefined; }
+}
+
 /** Project again at the receipt boundary; native text/IDs/credentials are never retained. */
 export function createPassiveNativeDiagnosticCapture() {
   const entries: Record<string, unknown>[] = [];
-  let pending = '', ordinary = 0, bytes = 0, readObserved = false, metadataObserved = false, limitObserved = false, limited = false;
+  let pending = '', ordinary = 0, bytes = 0, readObserved = false, metadataObserved = false, closeObserved = false, limitObserved = false, limited = false;
   // These counters belong to this one original capture, including all of its Host epochs.
   return {
     entries,
@@ -92,20 +111,28 @@ export function createPassiveNativeDiagnosticCapture() {
           if (!event || atMs === null) continue;
           const failedCut = event === 'read-cut-failed' ? projectReadCutFailure(value) : undefined;
           const failedMetadata = event === 'metadata-read-failed' ? projectMetadataReadFailure(value) : undefined;
-          if (event === 'read-cut-failed' && !failedCut || event === 'metadata-read-failed' && !failedMetadata) continue;
+          const failedClose = event === 'host-probe-close-failed' ? projectHostProbeCloseFailure(value) : undefined;
+          if (event === 'read-cut-failed' && !failedCut || event === 'metadata-read-failed' && !failedMetadata ||
+              event === 'host-probe-close-failed' && !failedClose) continue;
           const failure = failedMetadata ?? failedCut;
           const entry = { epoch, event, atMs, child: integer(value.child, 5), request: integer(value.request, 4096),
             route: choice(value.route, routes), method: choice(value.method, ['GET', 'POST', 'PUT', 'DELETE']),
             durationMs: failure?.elapsedMs ?? integer(value.durationMs), status: integer(value.status, 599),
             contentEncoding: choice(value.contentEncoding, contentEncodings),
-            stage: failure?.stage ?? choice(value.stage, stages), code: failure?.reason ?? choice(value.code, codes),
+            stage: failedClose?.stage ?? failure?.stage ?? choice(value.stage, stages),
+            code: failedClose?.reason ?? failure?.reason ?? choice(value.code, codes),
             exitCode: integer(value.exitCode, 255), signal: choice(value.signal, signals),
-            ...(failure ? { deadlineExpired: failure.deadlineExpired, aborted: failure.aborted } : {}) };
+            ...(failure ? { deadlineExpired: failure.deadlineExpired, aborted: failure.aborted } : {}),
+            ...(failedClose ? { probeDigest: failedClose.probeDigest, runState: failedClose.runState,
+              outcome: failedClose.outcome, errorClass: failedClose.errorClass } : {}) };
           const size = Buffer.byteLength(JSON.stringify(entry)) + 1;
           if (size > reservedLineBytes) continue;
           const reserve = (readObserved ? 0 : reservedLineBytes) + (metadataObserved ? 0 : reservedLineBytes) +
-            (limitObserved ? 0 : reservedLineBytes);
-          if (failedMetadata) {
+            (closeObserved ? 0 : reservedLineBytes) + (limitObserved ? 0 : reservedLineBytes);
+          if (failedClose) {
+            if (closeObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
+            closeObserved = true;
+          } else if (failedMetadata) {
             if (metadataObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
             metadataObserved = true;
           } else if (failedCut) {
@@ -115,8 +142,8 @@ export function createPassiveNativeDiagnosticCapture() {
             if (limitObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
             limitObserved = true; limited = true;
           } else {
-            // Trade one ordinary row for the late read failure; retain the original 257-row ceiling.
-            if (ordinary >= maximum - 2 || bytes + size > maximumTraceBytes - reserve) { limited = true; continue; }
+            // Reserve all three failure observations within the original 257-row ceiling.
+            if (ordinary >= maximum - 3 || bytes + size > maximumTraceBytes - reserve) { limited = true; continue; }
             ordinary++;
           }
           bytes += size;
@@ -399,7 +426,7 @@ function responseContentEncoding(headers: unknown): typeof contentEncodings[numb
 
 function observeOriginalHost(): void {
   const started = performance.now();
-  let ordinary = 0, emittedBytes = 0, children = 0, requests = 0, readObserved = false, metadataObserved = false, limited = false;
+  let ordinary = 0, emittedBytes = 0, children = 0, requests = 0, readObserved = false, metadataObserved = false, closeObserved = false, limited = false;
   const elapsed = () => Math.max(0, Math.round(performance.now() - started));
   const line = (value: Record<string, unknown>) => prefix + JSON.stringify({ atMs: elapsed(), ...value }) + '\n';
   const write = (value: string) => { emittedBytes += Buffer.byteLength(value); process.stderr.write(value); };
@@ -407,7 +434,11 @@ function observeOriginalHost(): void {
     const frame = line(value), size = Buffer.byteLength(frame);
     if (size > reservedLineBytes) return;
     const reserve = (readObserved ? 0 : reservedLineBytes) + (metadataObserved ? 0 : reservedLineBytes) +
-      (limited ? 0 : reservedLineBytes);
+      (closeObserved ? 0 : reservedLineBytes) + (limited ? 0 : reservedLineBytes);
+    if (value.event === 'host-probe-close-failed') {
+      if (closeObserved || emittedBytes + size > maximumTraceBytes - reserve + reservedLineBytes) return;
+      closeObserved = true; write(frame); return;
+    }
     if (value.event === 'metadata-read-failed') {
       if (metadataObserved || emittedBytes + size > maximumTraceBytes - reserve + reservedLineBytes) return;
       metadataObserved = true; write(frame); return;
@@ -417,7 +448,7 @@ function observeOriginalHost(): void {
       readObserved = true; write(frame); return;
     }
     if (limited) return;
-    if (ordinary >= maximum - 2 || emittedBytes + size > maximumTraceBytes - reserve) {
+    if (ordinary >= maximum - 3 || emittedBytes + size > maximumTraceBytes - reserve) {
       limited = true; write(line({ event: 'trace-limit' })); return;
     }
     ordinary++; write(frame);
@@ -434,6 +465,12 @@ function observeOriginalHost(): void {
       const failure = projectMetadataReadFailure(message);
       if (failure) emit({ event: 'metadata-read-failed', ...failure });
     } catch { /* A passive TEST subscriber cannot replace original metadata failure/cleanup. */ }
+  });
+  channel('agent-teams:opencode-v2:host-probe-close-failed').subscribe(message => {
+    try {
+      const failure = projectHostProbeCloseFailure(message);
+      if (failure) emit({ event: 'host-probe-close-failed', ...failure });
+    } catch { /* A passive TEST observation cannot change the original close result. */ }
   });
   const childEntry = fileURLToPath(new URL('../../../dist/adapters/providers/OpenCodeV2EmbeddedChild.js', import.meta.url));
   channel('child_process').subscribe(message => {

@@ -43,6 +43,15 @@ for (const invalid of [{ ...metadata, stage: secret }, { ...metadata, reason: se
   { ...metadata, aborted: null }]) failedMetadata.publish(invalid);
 failedMetadata.publish(Object.defineProperty({ ...metadata }, 'reason', { get() { accessorCalls++; return 'held'; } }));
 if (accessorCalls !== 0) process.exit(3);
+const failedClose = channel('agent-teams:opencode-v2:host-probe-close-failed');
+const closeFailure = { probeDigest: 'a'.repeat(64), runState: 'pending', outcome: 'unobserved',
+  errorClass: 'none', stage: 'request-drain', reason: 'unconfirmed' };
+for (const field of ['probeDigest', 'runState', 'outcome', 'errorClass', 'stage', 'reason'])
+  failedClose.publish({ ...closeFailure, [field]: secret });
+failedClose.publish({ ...closeFailure, probeDigest: 'a'.repeat(65) });
+failedClose.publish(Object.defineProperty({ ...closeFailure }, 'outcome', { get() { accessorCalls++; throw new Error(secret); } }));
+failedClose.publish(new Proxy({}, { getOwnPropertyDescriptor() { throw new Error(secret); } }));
+if (accessorCalls !== 0) process.exit(3);
 for (let index = 0; index < 300; index++) publish('undici:request:create',
   { origin: 'http://127.0.0.1:65530', path: '/api/info?private=' + secret, method: 'GET' });
 failedRead.publish({ ...failure, reason: secret });
@@ -50,6 +59,8 @@ failedRead.publish({ ...failure, error: secret, stack: secret, sessionId: secret
 failedRead.publish({ ...failure, reason: 'cleanup_unknown', aborted: true });
 failedMetadata.publish({ ...metadata, error: secret, stack: secret, path: ${JSON.stringify(root)} });
 failedMetadata.publish({ ...metadata, reason: 'deadline', elapsedMs: 30001, deadlineExpired: true });
+failedClose.publish({ ...closeFailure, error: secret, stack: secret, token: secret, path: ${JSON.stringify(root)} });
+failedClose.publish({ ...closeFailure, stage: 'server-stop', runState: 'false' });
 const end = Date.now() + 50; while (Date.now() < end) Math.sqrt(Date.now());
 // Flush only these synthetic diagnostic bytes; the existing parent test keeps its original bound.
 process.stderr.write('', () => process.exit(1));
@@ -86,8 +97,15 @@ process.stderr.write('', () => process.exit(1));
       durationMs: metadataFailure.durationMs, deadlineExpired: metadataFailure.deadlineExpired, aborted: metadataFailure.aborted },
     { epoch: 1, stage: 'directory', code: 'invalid_native_catalog', durationMs: 42, deadlineExpired: false, aborted: false }),
     'first original metadata failure retains only the exact closed fields');
-    assert.deepEqual(originalTrace.entries.slice(-3).map(row => row.event),
-      ['trace-limit', 'read-cut-failed', 'metadata-read-failed']);
+    const closeFailures = originalTrace.entries.filter(row => row.event === 'host-probe-close-failed');
+    assert.equal(closeFailures.length, 1, 'one reserved Host close failure survives original trace saturation');
+    assert.deepEqual({ epoch: closeFailures[0]!.epoch, stage: closeFailures[0]!.stage, code: closeFailures[0]!.code,
+      probeDigest: closeFailures[0]!.probeDigest, runState: closeFailures[0]!.runState,
+      outcome: closeFailures[0]!.outcome, errorClass: closeFailures[0]!.errorClass },
+    { epoch: 1, stage: 'request-drain', code: 'unconfirmed', probeDigest: 'a'.repeat(64),
+      runState: 'pending', outcome: 'unobserved', errorClass: 'none' });
+    assert.deepEqual(originalTrace.entries.slice(-4).map(row => row.event),
+      ['trace-limit', 'read-cut-failed', 'metadata-read-failed', 'host-probe-close-failed']);
     assert.equal(originalTrace.entries.filter(row => row.event === 'trace-limit').length, 1);
     assert.equal(originalTrace.limited, true);
     assert.ok(originalTrace.entries.length <= 257);
@@ -346,8 +364,8 @@ process.stderr.write('', () => process.exit(1));
     for (let index = 0; index < 300; index++) passive.accept(Buffer.from(prefix + JSON.stringify(pressure) + '\n'), index < 150 ? 1 : 2);
     const ordinary = passive.entries.length;
     const beforeBytes = passive.entries.reduce((sum, row) => sum + Buffer.byteLength(JSON.stringify(row)) + 1, 0);
-    assert.ok(ordinary < 254, 'closed-row bytes saturate before ordinary count in this capture');
-    assert.ok(beforeBytes > 64 * 1024 - 4 * 513 && beforeBytes <= 64 * 1024 - 3 * 513);
+    assert.ok(ordinary < 253, 'closed-row bytes saturate before ordinary count in this capture');
+    assert.ok(beforeBytes > 64 * 1024 - 5 * 513 && beforeBytes <= 64 * 1024 - 4 * 513);
     const terminal = { event: 'metadata-read-failed', atMs: 11, stage: 'admission', reason: 'held',
       elapsedMs: 0, deadlineExpired: true, aborted: null, raw: secret };
     const lateRead = { event: 'read-cut-failed', atMs: 12, stage: 'after-log', reason: 'cleanup_unknown',
@@ -357,13 +375,30 @@ process.stderr.write('', () => process.exit(1));
     passive.accept(Buffer.from(prefix + JSON.stringify({ ...terminal, stage: 'directory' }) + '\n'), 2);
     passive.accept(Buffer.from(prefix + JSON.stringify({ ...lateRead, reason: secret }) + '\n'), 2);
     passive.accept(Buffer.from(prefix + JSON.stringify({ ...lateRead, aborted: null }) + '\n'), 2);
+    const hostClose = { event: 'host-probe-close-failed', atMs: 13, probeDigest: 'b'.repeat(64),
+      runState: 'threw', outcome: 'unknown', errorClass: 'held', stage: 'driver-close', reason: 'threw', raw: secret };
+    for (const field of ['probeDigest', 'runState', 'outcome', 'errorClass', 'stage', 'reason'])
+      passive.accept(Buffer.from(prefix + JSON.stringify({ ...hostClose, [field]: secret }) + '\n'), 2);
+    passive.accept(Buffer.from(prefix + JSON.stringify({ ...hostClose, probeDigest: 'b'.repeat(65) }) + '\n'), 2);
+    const oversizedClose = prefix + JSON.stringify({ ...hostClose, raw: 'é'.repeat(250) }) + '\n';
+    assert.ok(Buffer.byteLength(oversizedClose) > 513);
+    passive.accept(Buffer.from(oversizedClose), 2);
     assert.equal(passive.entries.length, ordinary + 1, 'malformed receiver records cannot consume reserved failure slots');
     passive.accept(Buffer.from(prefix + JSON.stringify(terminal) + '\n'), 2);
     passive.accept(Buffer.from(prefix + JSON.stringify(lateRead) + '\n'), 2);
+    passive.accept(Buffer.from(prefix + JSON.stringify(hostClose) + '\n'), 2);
     passive.accept(Buffer.from(prefix + JSON.stringify({ ...terminal, stage: 'directory', reason: 'deadline', aborted: true }) + '\n'), 1);
     passive.accept(Buffer.from(prefix + JSON.stringify({ ...lateRead, reason: 'deadline' }) + '\n'), 1);
     passive.accept(Buffer.from(prefix + JSON.stringify({ event: 'trace-limit', atMs: 12 }) + '\n'), 1);
-    assert.equal(passive.entries.length, ordinary + 3, 'epoch changes do not reset any reserved slot');
+    passive.accept(Buffer.from(prefix + JSON.stringify({ ...hostClose, stage: 'server-stop', reason: 'unconfirmed' }) + '\n'), 1);
+    assert.equal(passive.entries.length, ordinary + 4, 'epoch changes do not reset any reserved slot');
+    const hostCloses = passive.entries.filter(row => row.event === 'host-probe-close-failed');
+    assert.equal(hostCloses.length, 1);
+    assert.deepEqual({ epoch: hostCloses[0]!.epoch, stage: hostCloses[0]!.stage, code: hostCloses[0]!.code,
+      probeDigest: hostCloses[0]!.probeDigest, runState: hostCloses[0]!.runState,
+      outcome: hostCloses[0]!.outcome, errorClass: hostCloses[0]!.errorClass },
+    { epoch: 2, stage: 'driver-close', code: 'threw', probeDigest: 'b'.repeat(64),
+      runState: 'threw', outcome: 'unknown', errorClass: 'held' });
     const terminalRows = passive.entries.filter(row => row.event === 'metadata-read-failed');
     assert.equal(terminalRows.length, 1);
     assert.ok(isDeepStrictEqual({ epoch: terminalRows[0]!.epoch, stage: terminalRows[0]!.stage,

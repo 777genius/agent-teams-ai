@@ -1,5 +1,6 @@
 /** TEST real packaged Windows Main: explicit metadata Refresh, explicit Retry, original UI Kill. */
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import { spawn, execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createWriteStream, existsSync, readFileSync } from 'node:fs';
@@ -7,6 +8,8 @@ import { mkdir, realpath, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { performance } from 'node:perf_hooks';
+import process from 'node:process';
+import { setTimeout, clearTimeout } from 'node:timers';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
@@ -16,7 +19,7 @@ import {
   retainPackagedLineage, packagedOrphanObservation, packagedDrainSnapshot, closePackagedBrowser,
 } from '../../scripts/e2e/opencode-diagnostics/packaged.mjs';
 import {
-  assertPortAvailable, processes, ownedTree, sameIdentity, listeners,
+  assertPortAvailable, processes, ownedTree, sameIdentity, listeners, windowsProcessListenerSnapshot,
 } from '../../scripts/e2e/opencode-diagnostics/platform.mjs';
 import { readPackagedOpenCodeV2 } from '../../scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts';
 import { captureDesktopSourceHashes, verifyDesktopSourceFreeze } from '../../scripts/legacy-agent-host/desktop-source-freeze.ts';
@@ -27,6 +30,7 @@ import { desktopProcessOwnerExpression, readDesktopProcessData } from '../../scr
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { prepareNativeWindowsAppFixture } from './nativeWindowsAppFixture.ts';
 
+const { fetch, AbortSignal, structuredClone } = globalThis;
 const object = value => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value;
@@ -143,6 +147,7 @@ const check = () => {
   }
 };
 const poll = async (read, label) => {
+  void label;
   for (;;) {
     check();
     const value = await within(read);
@@ -150,9 +155,7 @@ const poll = async (read, label) => {
     await delay(Math.min(100, remaining()));
   }
 };
-const captureCensus = () => {
-  check();
-  const snapshot = processes();
+const validateCensus = snapshot => {
   assert.ok(snapshot.length <= 10000, 'Complete original Windows process census');
   sameIdentity(controllerIdentity, snapshot.find(row => row.pid === controllerIdentity.pid));
   const currentDriver = snapshot.find(row => row.pid === driverIdentity.pid);
@@ -170,8 +173,14 @@ const captureCensus = () => {
   remaining();
   return snapshot;
 };
+const captureCensus = () => {
+  check();
+  return validateCensus(processes());
+};
 const assertOwnedRenderer = () => {
-  const snapshot = captureCensus(), ids = listeners();
+  check();
+  const observation = windowsProcessListenerSnapshot();
+  const snapshot = validateCensus(observation.processes), ids = observation.listeners;
   assert.ok(ids.length > 0 && ids.every(pid => snapshot.some(current =>
     current.pid === pid && lineage.some(original => original.pid === pid && original.birth === current.birth))),
   'CDP listener belongs to this original Main family');

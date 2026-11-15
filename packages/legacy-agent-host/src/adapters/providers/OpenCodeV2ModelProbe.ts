@@ -1,3 +1,4 @@
+import { channel } from 'node:diagnostics_channel';
 import { lstatSync, realpathSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -87,6 +88,14 @@ export function createOpenCodeV2ModelProbe(
   let activeSignal: AbortSignal | undefined;
   let ownerCleanupUnknown = false;
   let rejected = false;
+  let runState: 'not-started' | 'pending' | 'true' | 'false' | 'threw' = 'not-started';
+  let outcome: 'unobserved' | 'succeeded' | 'failed' | 'cancelled' | 'unknown' = 'unobserved';
+  let errorClass: 'none' | 'held' | 'invalid' | 'conflict' | 'busy' | 'unknown' = 'none';
+  type CloseStage = 'request-drain' | 'owner-client' | 'driver-close' | 'server-stop' | 'namespace' | 'close-result';
+  let firstCloseFailure: { stage: CloseStage; reason: 'unconfirmed' | 'threw' | 'identity' } | undefined;
+  const noteCloseFailure = (stage: CloseStage, reason: NonNullable<typeof firstCloseFailure>['reason']) => {
+    if (!coordination) firstCloseFailure ??= { stage, reason };
+  };
   let coordinationResult: NativeCoordinationObservation | undefined;
   const requests = new Set<Promise<void>>();
   let driver: Session | undefined;
@@ -205,6 +214,7 @@ export function createOpenCodeV2ModelProbe(
       await client.dispose();
     } catch (error) {
       ownerCleanupUnknown = true;
+      noteCloseFailure('owner-client', 'threw');
       if (!failed) {
         failed = true;
         originalFailure = error;
@@ -364,7 +374,9 @@ export function createOpenCodeV2ModelProbe(
       else if (event.kind === 'result') {
         // V2 emits failed only for the original qualified execution.failed + idle
         // cut. Transport/cancellation/output failures are not a rejection proof.
-        rejected = event.outcome === 'failed' && event.code === undefined;
+        const consumed = event.outcome;
+        outcome = consumed === 'succeeded' || consumed === 'failed' || consumed === 'cancelled' ? consumed : 'unknown';
+        rejected = consumed === 'failed' && event.code === undefined;
         return event.outcome === 'succeeded' && hasText;
       }
       else if (event.kind !== 'usage') return false;
@@ -381,7 +393,24 @@ export function createOpenCodeV2ModelProbe(
       if (configuration.selectedFile && !proof) return unavailable();
       return proof;
     },
-    run: (signal, originalDeadline) => (running ??= run(signal, originalDeadline)),
+    run: (signal, originalDeadline) => {
+      if (running) return running;
+      if (coordination) return (running = run(signal, originalDeadline));
+      runState = 'pending';
+      return (running = run(signal, originalDeadline).then(result => {
+        runState = result ? 'true' : 'false'; return result;
+      }, (error: unknown) => {
+        runState = 'threw'; errorClass = 'unknown';
+        try {
+          if (error && (typeof error === 'object' || typeof error === 'function')) {
+            const field = Object.getOwnPropertyDescriptor(error, 'code');
+            const code: unknown = field && 'value' in field ? field.value : undefined;
+            if (code === 'held' || code === 'invalid' || code === 'conflict' || code === 'busy') errorClass = code;
+          }
+        } catch { /* An opaque diagnostic cannot replace the original exception. */ }
+        throw error;
+      }));
+    },
     close: originalDeadline => {
       closed = true;
       coordination?.seal();
@@ -405,15 +434,26 @@ export function createOpenCodeV2ModelProbe(
         } finally {
           clearTimeout(timer);
         }
+        if (!clean) noteCloseFailure('request-drain', 'unconfirmed');
         clean = clean && !ownerCleanupUnknown;
         try {
-          if (driver) clean = (await driver.close()).cleanup === 'confirmed' && clean;
+          if (driver) {
+            const confirmed = (await driver.close()).cleanup === 'confirmed';
+            if (!confirmed) noteCloseFailure('driver-close', 'unconfirmed');
+            clean = confirmed && clean;
+          }
         } catch {
+          noteCloseFailure('driver-close', 'threw');
           clean = false;
         }
         try {
-          if (server) clean = (await server.stopOwned()) && clean;
+          if (server) {
+            const stopped = await server.stopOwned();
+            if (!stopped) noteCloseFailure('server-stop', 'unconfirmed');
+            clean = stopped && clean;
+          }
         } catch {
+          noteCloseFailure('server-stop', 'threw');
           clean = false;
         }
         if (coordination) {
@@ -429,17 +469,31 @@ export function createOpenCodeV2ModelProbe(
               realpathSync(directory) !== directory ||
               stat.dev !== identity.dev ||
               stat.ino !== identity.ino
-            )
+            ) {
+              noteCloseFailure('namespace', 'identity');
               return false;
+            }
             await rm(directory, { recursive: true, force: true });
           }
           return true;
         } catch {
+          noteCloseFailure('namespace', 'threw');
           return false;
         }
       })();
       closing = (purposeBound ? closeCoordinationByDeadline(work, originalDeadline ?? deadline) : work)
-        .then(clean => { released = clean; return clean; });
+        .then(clean => {
+          released = clean;
+          if (!clean && !coordination) {
+            noteCloseFailure('close-result', 'unconfirmed');
+            try {
+              const diagnostic = channel('agent-teams:opencode-v2:host-probe-close-failed');
+              if (diagnostic.hasSubscribers) diagnostic.publish({ probeDigest: captured, runState, outcome,
+                errorClass, ...firstCloseFailure });
+            } catch { /* Failure-only observation cannot change the original cleanup result. */ }
+          }
+          return clean;
+        });
       return closing;
     },
   };

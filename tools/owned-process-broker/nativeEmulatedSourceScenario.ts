@@ -352,7 +352,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       (value.event === 'connected' || value.event === 'mcp-connected')), false);
   };
   const quiescent = (jobs: Job[]) => jobs.every(job => job.stopped && job.drained && job.released);
-  let failure: unknown, complete = false;
+  let failure: unknown, complete = false, lastRuntimeViewDigest: string | undefined;
   try {
     const first = open(); epochs.push(first); await first.client.start();
     const captured = await first.sources.current(); assert.equal(captured.sourceKind, 'captured');
@@ -438,8 +438,9 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const readinessStarted = performance.now();
       try {
         await poll(async () => { view = await first.rpc(team, 'runtime.read', `TEST-ready-${image}`, { memberId: 'alice-id' });
+          try { lastRuntimeViewDigest = runtimeDigest(view); } catch { lastRuntimeViewDigest = undefined; }
           Object.assign(readiness, { readCount: readiness.readCount + 1, elapsedMs: performance.now() - readinessStarted,
-            lastRuntimeRead: { memberId: view.memberId, generation: view.generation, phase: view.phase,
+            lastRuntimeRead: { viewDigest: lastRuntimeViewDigest ?? null, memberId: view.memberId, generation: view.generation, phase: view.phase,
               sealed: view.sealed, custody: view.custody, nativeReady: view.nativeReady, attached: view.attached,
               ...(view.diagnostic === undefined ? {} : { diagnostic: view.diagnostic }) } });
           return view.nativeReady === true; }, 'Original source Team readiness');
@@ -671,6 +672,26 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     // Original Job/HANDLE cleanup above is mandatory; these are only gate-owned observer children.
     for (const child of observedChildren) if (child.exitCode === null && child.signalCode === null) child.kill();
     if (errors.length) failure = new AggregateError([...(failure ? [failure] : []), ...errors], 'TEST source scenario cleanup incomplete');
+    if (failure) try {
+      const stat = lstatSync(fixture.runtimeProjectionLedger);
+      assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 512);
+      const raw = readFileSync(fixture.runtimeProjectionLedger, 'utf8'); assert.ok(Buffer.byteLength(raw) <= 512);
+      const ledger = object(JSON.parse(raw)); assert.deepEqual(Object.keys(ledger).sort(), ['rows', 'status']);
+      assert.equal(ledger.status, 'observed'); assert.ok(Array.isArray(ledger.rows) && ledger.rows.length <= 4);
+      const digests = new Set<string>();
+      const records = ledger.rows.map((tuple: unknown) => {
+        assert.ok(Array.isArray(tuple) && tuple.length === 6);
+        const digest = text(tuple[0]); assert.match(digest, /^[a-f0-9]{64}$/); assert.equal(digests.has(digest), false); digests.add(digest);
+        assert.equal(typeof tuple[1], 'boolean'); assert.equal(typeof tuple[5], 'boolean');
+        for (let index = 2; index <= 4; index++)
+          assert.ok(tuple.slice(1, index).every(value => value === true) ? typeof tuple[index] === 'boolean' : tuple[index] === null);
+        assert.equal(tuple[5], tuple.slice(1, 5).every(value => value === true));
+        return { viewDigest: digest, bindingMatches: tuple[1], recordReady: tuple[2],
+          providerReady: tuple[3], ownerCurrent: tuple[4], nativeReady: tuple[5] };
+      });
+      const matches = records.filter(row => row.viewDigest === lastRuntimeViewDigest); assert.equal(matches.length, 1);
+      evidence.runtimeProjection = { status: 'observed', atomicWithFailure: false, ...matches[0] };
+    } catch { evidence.runtimeProjection = { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' }; }
     if (failure) try {
       const stat = lstatSync(fixture.refusals); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 65536);
       const raw = readFileSync(fixture.refusals, 'utf8'); assert.ok(raw === '' || raw.endsWith('\n'));
