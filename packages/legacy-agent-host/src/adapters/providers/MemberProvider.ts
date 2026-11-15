@@ -16,6 +16,7 @@ import type { NativeSessionCommandCapability } from '../../team/nativeSessionCom
 import type { WindowsServiceIntent } from '../../owned-process/retainedServiceContracts.js';
 import type { HostWindowsLaunch } from '../../owned-process/HostWindowsLaunch.js';
 import type { RuntimeSourceProcessOrigin } from '../../composition/runtimeSourceProcessOrigin.js';
+import type { RuntimeProcessOutput } from '../../runtime/providerActivityContracts.js';
 
 export interface MemberProviderContext {
   profile: RuntimeMemberProfile;
@@ -40,6 +41,7 @@ export interface MemberProviderContext {
   canCaptureRegisteredProcess?(): boolean;
   readCheckpoint(reference: string, request: OpenConfig): Promise<unknown>;
   readCheckpointSource?: NonNullable<ClaudeDriverHost['readCheckpointSource']>;
+  observeProcessOutput?(observation: RuntimeProcessOutput): void;
   onProgress(): void;
 }
 

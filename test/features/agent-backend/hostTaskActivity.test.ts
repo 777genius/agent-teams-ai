@@ -163,6 +163,113 @@ describe('Host Task Activity original read scope', () => {
     for (const field of ['filePath', 'messageUuid', 'chunks', 'startTimestamp', 'endTimestamp'])
       expect(bytes).not.toContain(field);
   });
+  it('counts thinking and output once per message within each original input and retains their exact bytes', async () => {
+    const f = fixture(),
+      log = f.logs[0]!;
+    log.events.push(
+      {
+        eventId: 'source:7',
+        sequence: 7,
+        inputId: 'original-input',
+        data: {
+          kind: 'thinking',
+          messageRef: 'message-original',
+          block: 1,
+          text: 'Retained thought',
+          phase: 'snapshot',
+        },
+      },
+      {
+        eventId: 'source:8',
+        sequence: 8,
+        inputId: 'original-input',
+        data: {
+          kind: 'thinking',
+          messageRef: 'message-original',
+          block: 1,
+          text: 'Retained final thought',
+          phase: 'complete',
+        },
+      },
+      {
+        eventId: 'source:9',
+        sequence: 9,
+        inputId: 'original-input',
+        data: {
+          kind: 'thinking',
+          messageRef: 'thinking-only',
+          block: 0,
+          text: 'Another message',
+          phase: 'complete',
+        },
+      },
+      {
+        eventId: 'source:10',
+        sequence: 10,
+        inputId: 'another-original-input',
+        data: {
+          kind: 'thinking',
+          messageRef: 'message-original',
+          block: 0,
+          text: 'Other input thought',
+          phase: 'complete',
+        },
+      }
+    );
+    const exact = await f.api.getTaskExactLogSummaries('host-team:original', 'task-original');
+    expect(exact.items.map((row) => [row.inputId, row.messageCount])).toEqual([
+      ['original-input', 2],
+      ['another-original-input', 1],
+    ]);
+    const original = exact.items[0]!;
+    const detail = await f.api.getTaskExactLogDetail(
+      'host-team:original',
+      'task-original',
+      original.id,
+      original.sourceGeneration
+    );
+    expect(detail.status).toBe('ok');
+    if (detail.status !== 'ok') throw new Error('Expected original detail');
+    expect(detail.detail.log.events).toEqual(
+      log.events.filter((event) => event.inputId === 'original-input')
+    );
+    const thought = log.events.find((event) => event.eventId === 'source:8')!.data;
+    if (thought.kind !== 'thinking') throw new Error('Expected thinking');
+    thought.text = 'Changed retained thought';
+    expect(
+      await f.api.getTaskExactLogDetail(
+        'host-team:original',
+        'task-original',
+        original.id,
+        original.sourceGeneration
+      )
+    ).toEqual({ status: 'stale' });
+  });
+  it('does not attribute member-only stderr to exact task input details or message counts', async () => {
+    const f = fixture();
+    const before = await f.api.getTaskExactLogSummaries('host-team:original', 'task-original');
+    f.logs[0]!.events.push({
+      eventId: 'source:7',
+      sequence: 7,
+      data: { kind: 'process-output', stream: 'stderr', text: 'TEST member-only stderr' },
+    });
+    const after = await f.api.getTaskExactLogSummaries('host-team:original', 'task-original');
+    expect(after).toEqual(before);
+    for (const summary of after.items) {
+      const detail = await f.api.getTaskExactLogDetail(
+        'host-team:original',
+        'task-original',
+        summary.id,
+        summary.sourceGeneration
+      );
+      expect(detail.status).toBe('ok');
+      expect(JSON.stringify(detail)).not.toContain('TEST member-only stderr');
+    }
+    expect(
+      f.invoke.mock.calls.every(([request]) => request.operation === 'team.activity.logs.read')
+    ).toBe(true);
+  });
+
   it('counts output and thinking once per original input while preserving child facts and exact byte freshness', async () => {
     const f = fixture();
     const thinking: Extract<HostActivityContent, { kind: 'thinking' }> = {
@@ -199,6 +306,55 @@ describe('Host Task Activity original read scope', () => {
       'host-team:original', 'task-original', summary.id, summary.sourceGeneration
     )).toEqual({ status: 'stale' });
     expect(f.invoke.mock.calls.every(([request]) => request.operation === 'team.activity.logs.read')).toBe(true);
+  });
+
+  it('accepts member stderr but refuses the same anonymous fact before a Task stream accepts it', async () => {
+    const f = fixture();
+    const stderr: HostMemberActivityLog['events'][number] = {
+      sequence: 7,
+      eventId: 'source:7',
+      data: { kind: 'process-output', stream: 'stderr', text: 'TEST member diagnostic' },
+    };
+    f.logs[0]!.events.push(stderr);
+    const memberLogs = structuredClone(f.logs);
+    delete memberLogs[0]!.taskId;
+    const request = {
+      handle: { handleId: 'original' },
+      commandId: 'read',
+      operation: 'team.activity.logs.read' as const,
+      payload: { memberName: 'alice' },
+    };
+    expect(
+      projectBackendResult(request, {
+        ok: true,
+        value: { kind: 'team-activity-logs', logs: memberLogs },
+      })
+    ).toMatchObject({
+      ok: true,
+      value: { logs: [{ events: expect.arrayContaining([stderr]) }] },
+    });
+    expect(() =>
+      projectBackendResult(
+        { ...request, payload: { taskId: 'task-original' } },
+        { ok: true, value: { kind: 'team-activity-logs', logs: f.logs } }
+      )
+    ).toThrow('Unattributed process output in task logs');
+    f.invoke.mockImplementation(async (selected) =>
+      projectBackendResult(selected, {
+        ok: true,
+        value: { kind: 'team-activity-logs', logs: f.logs },
+      })
+    );
+    await expect(f.api.getTaskLogStream('host-team:original', 'task-original')).rejects.toThrow(
+      'Unattributed process output in task logs'
+    );
+    await expect(
+      f.api.getTaskExactLogSummaries('host-team:original', 'task-original')
+    ).rejects.toThrow('Unattributed process output in task logs');
+    expect(f.invoke).toHaveBeenCalledTimes(2);
+    expect(
+      f.invoke.mock.calls.every(([selected]) => selected.operation === 'team.activity.logs.read')
+    ).toBe(true);
   });
 
   it('refuses exact detail after retention/content change, never selects foreign or missing input', async () => {

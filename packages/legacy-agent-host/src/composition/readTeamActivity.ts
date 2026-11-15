@@ -89,6 +89,7 @@ export function readTeamActivity(options: TeamActivityReadOptions, raw: unknown)
       if (feed.gap) gaps.add(feed.gap.reason);
       for (const event of feed.events) {
         if (event.sequence > snapshot.cursor.sequence) break;
+        if ('taskId' in selected && event.data.kind === 'process-output') continue;
         if (event.inputId) {
           const input = bound.get(event.inputId);
           if (
@@ -109,6 +110,7 @@ export function readTeamActivity(options: TeamActivityReadOptions, raw: unknown)
           ![
             'text',
             'thinking',
+            'process-output',
             'tool',
             'tool-result',
             'usage',
@@ -206,7 +208,9 @@ export function readTeamActivity(options: TeamActivityReadOptions, raw: unknown)
 
 /** Reported units only. Per-operation token snapshots are deduplicated; cumulative session cost is never summed per turn. */
 export function summarizeTeamActivity(
-  memberName: string, logs: readonly ActivityLog[], sources: readonly RuntimeActivitySource[] = []
+  memberName: string,
+  logs: readonly ActivityLog[],
+  sources: readonly RuntimeActivitySource[] = []
 ) {
   const tools = new Map<string, string>(),
     messages = new Set<string>(),
@@ -214,15 +218,19 @@ export function summarizeTeamActivity(
   const usage = new Map<string, Record<string, JsonValue>>(),
     costs = new Map<string, number>();
   const gaps = new Set(logs.flatMap((log) => log.gaps));
-  const scopes = new Map(sources.map(source => [
-    `host-activity-${runtimeDigest(source.binding)}`, source.costScope ?? runtimeDigest(source.binding),
-  ]));
+  const scopes = new Map(
+    sources.map((source) => [
+      `host-activity-${runtimeDigest(source.binding)}`,
+      source.costScope ?? runtimeDigest(source.binding),
+    ])
+  );
   const generationsByScope = new Map<string, number>();
-  for (const log of logs) if (log.generation !== null) {
-    const scope = scopes.get(log.sessionId) ?? log.sessionId;
-    generationsByScope.set(scope, (generationsByScope.get(scope) ?? 0) + 1);
-  }
-  const unqualifiedContinuation = [...generationsByScope.values()].some(count => count > 1);
+  for (const log of logs)
+    if (log.generation !== null) {
+      const scope = scopes.get(log.sessionId) ?? log.sessionId;
+      generationsByScope.set(scope, (generationsByScope.get(scope) ?? 0) + 1);
+    }
+  const unqualifiedContinuation = [...generationsByScope.values()].some((count) => count > 1);
   let unattributedUsage = false;
   for (const log of logs)
     for (const event of log.events) {
@@ -258,7 +266,9 @@ export function summarizeTeamActivity(
       : null;
   const generations = logs.filter((log) => log.generation !== null).length;
   if (unqualifiedContinuation && costs.size)
-    gaps.add('Cumulative cost across resumed generations is not qualified for this captured runtime.');
+    gaps.add(
+      'Cumulative cost across resumed generations is not qualified for this captured runtime.'
+    );
   return {
     kind: 'host_activity_stats' as const,
     memberName,

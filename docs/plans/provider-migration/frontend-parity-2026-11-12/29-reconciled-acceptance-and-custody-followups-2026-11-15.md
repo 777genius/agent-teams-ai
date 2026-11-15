@@ -4197,3 +4197,52 @@ Existing ambient declarations:
 - `test/types/better-sqlite3-node.d.ts`
 
 Validation command manifest SHA256 `6e0cdfd39123c11e3b62bb5203577b204cc0067aac9583122a18440e5afbc556`; all runner commands use existing entrypoints with one test worker, inherited options and a180-second local subprocess ceiling, not any extension of product/native qualification deadlines. Candidate patch SHA256 `2358dfd11ebf5dc644bd6576c3d66595cd5a093347f3899a4d63202bbb703514`.
+
+## Actual closure of the bounded published Logs reconciliation
+
+Prospective R1 `534ba7c1729a55632122e6b8923334d82c4e22c9` / tree `567ace2a3a909c6584f90eb4c024730fb078fafe` was committed and immediately pushed at2026-11-15T22:58:33Z, then fully read back before source application and the first build at23:00:05Z. Independent R2 verified its complete unchanged Plan29 prefix, exact49-path boundary, preservation composition, strict selected configurations and the explicit remaining holds. The selected public reference for this cut is `27b1acf`; this private cut does not merge or qualify its other27 differing paths. A fresh read now sees public `35cbd6e99b620e9b41802af936143d900f5e2aca`, still Draft on the original base. Its later atomic provider/Thinking and TEST-oracle changes are not silently included in this validated cut; they require separate exact reconciliation.
+
+### Actual counterexamples and resulting source
+
+The assembled RED tree `bdc70a9027cf02fd6f3a7ac367bd75970d4e0750` retains the original Main Task mapper. Its canonical Host build passed. The complete nine-case Task file produced exactly8PASS/1FAIL, at the predicted first `.toThrow('Unattributed process output in task logs')` assertion. Member history had accepted the same anonymous stderr. This establishes the invalid Task-response boundary; it does not claim the normal Host producer emits such a reply.
+
+Applying only the reviewed two-line mapper produces GREEN tree `0618aebcc0c0ad2a464a3cd45149e4f348fb664a`. The same complete Task file passes9/9; its actual Stream and exact-summary calls both refuse the malformed reply and retain exactly two read-only invokes. RED-to-GREEN differs only in that mapper. All49 final candidate blobs match the prospective table, and all five private Thinking cases and every incoming assertion remain intact.
+
+Actual Node imports of the four pure original roster modules independently establish the source-attribution defect and correction:52 new paths are absent from the original ordinary export, then all52 are present after the exact block relocation. Ordinary membership grows1697→1749; Windows union remains exactly1790. Every old relative order, the Process array and the other three module blobs remain unchanged; root roster remains800lines. Both imports exited0 with empty stderr. This is source-closure evidence only, not Desktop execution.
+
+### Actual selected validation
+
+| Original selected check | Actual result on the bound source |
+| --- | --- |
+| Canonical Host build, including ledger prebuild | PASS on RED; Host sources/dist are unchanged by the subsequent Main-only mapper fix. |
+| Seven complete finite Host suites |94PASS,0FAIL/skip/cancel/todo on GREEN. |
+| Seven complete focused renderer/read-side suites |71PASS,0FAIL/skip on GREEN. |
+| Three complete existing diagnostic consumers |130PASS,0FAIL/skip on GREEN. |
+| Strict selected Host and app compiler configurations |PASS, inherited original options and existing ambient declarations; both outputs empty. |
+| Original legacy-host-scripts compiler |PASS. |
+| Fast scoped lint,44 code/test paths |exit0,0errors,4warnings; no suppression or lint-fix. |
+| Source-size guard |PASS:5018 production files,141 unchanged frozen exceptions,800-line limit. |
+| Provisioning architecture guard |PASS with unchanged original counters. |
+
+There are295 distinct passing cases in the three selected groups. The separate nine-case GREEN confirmation is already contained in the71 and is not added again. The130 diagnostic tests are the actual newly selected compatibility roster, not a reconstructed historical author40-case run. Two KaTeX quirks-mode warnings remain in focused renderer output. Lint retains two Fast Refresh warnings (including the new existing-file viewport hook export) and two accessibility warnings on the unchanged original MemberLogsTab tooltip span; these are not recorded as a warning-free run or silently fixed outside the reviewed cut.
+
+The first local source preflight stopped before build because a read-tree temporary index had unrefreshed stat entries. Refreshing only that temporary index produced the identical `bdc70a90` tree; no source or normal-index byte changed and no test was executed in that aborted preflight. Final normal index SHA256 remains `161fc5143f7e03fc593d16afa0d4bb588e230fb3667602302bc7019f225fe92a`. The existing scratch dependency link resolved both selected configurations without compiler options, declaration stubs or installs.
+
+Independent final R2 rehashed all49 resulting files, all12 raw logs and both actual roster exports, checked original command/source/chronology bindings, and confirmed the exact two-line RED→GREEN difference. Raw output stays in the internal validation record; the following hashes bind the reported results.
+
+| Raw output | Exit | SHA256 |
+| --- | ---: | --- |
+| `red-host-build` |0| `d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789` |
+| `red-task` |1| `5598fa521abd66235d52bf114cc43909b703a5e1018f98069932a3900c02141e` |
+| `green-task` |0| `90300bc15db77df3fa66f4141bff623ac98d768093a011c90fecf13479b23883` |
+| `green-node` |0| `facabf51c5cd2c69d66dce98e83570ffb36186268c90f17bf9d8ff97f3a43015` |
+| `green-focused` |0| `47b5bf3c7a0637523d46c6d9638b8db3836c9663dccbc4242daf9997cd161dea` |
+| `green-diagnostics` |0| `8076626f36dad3e45ea31dfcbd7592f09afe0efb916776e4d1d6cab926ac88cb` |
+| `host-selected-types` |0| `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| `app-selected-types` |0| `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| `legacy-script-types` |0| `497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015` |
+| `scoped-lint` |0| `37477a6694592ecc07ddc8d8740ed664da6a1e550233dc67d77ff752b3dfa034` |
+| `source-size` |0| `1ca99807b2fe044379f8e1a556d5769f4b61789e49a7c9be075e41e21fe013e6` |
+| `provisioning` |0| `7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c` |
+
+The final source commit adds only this factual Plan29 record to the already validated GREEN code/test tree. No original action,15-second qualifying deadline, provider pin, normalizeActivity/Event, source cap/exception, C++ policy, native fixture or custody/cleanup requirement changed. No real Claude/Codex or local GUI/native execution occurred. These local scoped passes do not replace the original complete workspace/typed-lint, graphical Desktop, native, packaged or genuine-upgrade gates. P08/P09, full incoming C++ reconciliation, checked provider Thinking adoption and resulting-source E2E remain open; Draft/base/no-release/no-activation/no-Stage2 remain unchanged.

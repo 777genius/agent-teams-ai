@@ -17,13 +17,14 @@ async function inputLogs(logs: readonly HostMemberActivityLog[]) {
     const ids = [...new Set(log.events.flatMap((event) => (event.inputId ? [event.inputId] : [])))];
     return ids.map((inputId) => {
       const events = log.events.filter((event) => event.inputId === inputId);
-      const messages = events.flatMap(({ data }) =>
-        data.kind === 'text' || data.kind === 'thinking' ? [data.messageRef] : []
-      );
       const selected: HostMemberActivityLog = {
         ...log,
         events,
-        messageCount: new Set(messages).size,
+        messageCount: new Set(
+          events.flatMap(({ data }) =>
+            data.kind === 'text' || data.kind === 'thinking' ? [data.messageRef] : []
+          )
+        ).size,
       };
       delete selected.lastOutputPreview;
       const id = `${log.sessionId}/input/${encodeURIComponent(inputId)}`;

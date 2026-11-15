@@ -125,7 +125,11 @@ export interface BackendOperationPayloads
     descriptionTaskRefs?: BackendTaskRef[];
   };
   'task.update': { taskId: string; subject?: string; description?: string };
-  'task.start': { taskId: string; notification: 'legacy' | 'user'; expectedRecipient?: BackendTaskRecipient };
+  'task.start': {
+    taskId: string;
+    notification: 'legacy' | 'user';
+    expectedRecipient?: BackendTaskRecipient;
+  };
   'task.board.clear': { taskId: string };
   'task.board.order': {
     columnId: 'todo' | 'in_progress' | 'done' | 'review' | 'approved';
@@ -183,7 +187,10 @@ export interface BackendOperationPayloads
   'team.roster.read': Record<string, never>;
   'team.roster.lookup': { expected?: BackendRosterReplacement };
   'team.roster.replace': BackendRosterReplacement;
-  'team.launch.capture': { rosterCommandId: string; modelPreparation?: BackendLaunchModelPreparation };
+  'team.launch.capture': {
+    rosterCommandId: string;
+    modelPreparation?: BackendLaunchModelPreparation;
+  };
   'team.launch.read': { launchId?: string };
   'team.launch.configuration.read': { launchId?: string };
   'team.launch.model.configuration.read': Record<string, never>;
@@ -248,9 +255,12 @@ export type BackendOperationRequest = {
   };
 }[BackendOperation];
 
-export type BackendHostRecoveryRequest = Extract<BackendOperationRequest, {
-  operation: 'host.recovery.capture' | 'host.recovery.start';
-}>;
+export type BackendHostRecoveryRequest = Extract<
+  BackendOperationRequest,
+  {
+    operation: 'host.recovery.capture' | 'host.recovery.start';
+  }
+>;
 export type BackendHostRecoveryResult =
   | { phase: 'ready' }
   | { phase: 'captured'; capability: string };
@@ -399,6 +409,7 @@ export type BackendActivityData =
       text: string;
       phase: 'snapshot' | 'complete';
     }
+  | { kind: 'process-output'; stream: 'stderr'; text: string }
   | { kind: 'tool'; messageRef: string; toolRef: string; name: string; input: BackendActivityValue }
   | { kind: 'tool-result'; toolRef: string; content: BackendActivityValue; isError: boolean }
   | { kind: 'usage'; inputTokens?: number; outputTokens?: number; cumulativeCostUsd?: number }
