@@ -112,6 +112,7 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
     model.finish(step); await options.observeNative();
     effects.push({ step, commandId: receipt.commandId, kind: receipt.kind, phase: receipt.phase,
       resourceHeld: receipt.resourceHeld, source: selectedSource.evidence });
+    return deadline;
   };
   const dialog = '[role="dialog"]';
   const directoryRow = `${dialog} [data-testid="runtime-provider-directory-row-${desktopV2ProviderId}"]`;
@@ -212,9 +213,19 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
       await ui.scrollTo(header, 'original configured provider'); await ui.click(header, 'expand original configured provider');
     }
     const selected = scope === 'global' ? modelA : modelB;
-    await originalStep(scope === 'global' ? 'global-default' : 'project-default',
-      `${dialog} [data-testid=${JSON.stringify('runtime-provider-model-row-' + selected)}] button[aria-label=${JSON.stringify('Select: ' + selected.split('/')[1] + ': Test this model successfully before using it.')}]`,
+    const row = `${dialog} [data-testid=${JSON.stringify('runtime-provider-model-row-' + selected)}]`;
+    const deadline = await originalStep(scope === 'global' ? 'global-default' : 'project-default',
+      `${row} button[aria-label=${JSON.stringify('Select: ' + selected.split('/')[1] + ': Test this model successfully before using it.')}]`,
       'select original ' + scope + ' default once');
+    const remaining = deadline - Date.now();
+    assert.ok(remaining > 0, 'original ' + scope + ' default deadline remains current');
+    await ui.waitRead(`(() => { const rows = document.querySelectorAll(${desktopJsLiteral(row)});
+      if (rows.length !== 1) return false;
+      const controls = rows[0].querySelectorAll('button[aria-pressed]');
+      return controls.length === 1 && controls[0].getAttribute('aria-pressed') === 'true' &&
+        !controls[0].querySelector('.animate-spin'); })()`,
+      'original ' + scope + ' default mutation settles', remaining);
+    assert.ok(Date.now() < deadline, 'original ' + scope + ' default settled before its deadline');
   };
   await choose('global'); await modelsTab(); await defaultId('base', modelA); await defaultId('project', modelA);
   const global = (await preferences())[0]!;
