@@ -1,0 +1,25 @@
+{
+  "stage": "helpers",
+  "sourceHead": "f4f5a2c7b7ede7bd231643cc60f1cab1e8a6043c",
+  "sourceTree": "7f24f5746eeea078800a60bdd971b08998bbb9c8",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--test",
+    "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "scripts/e2e/opencode-diagnostics/packaged.test.mjs"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T18:52:25.374271+00:00",
+  "finishedAtUTC": "2026-11-15T18:52:34.832077+00:00",
+  "elapsedSeconds": 9.457735292002326,
+  "exitCode": 0,
+  "preflightMetadataSHA256": "743571357fd5df12728641fa4fac85056af9b36c8b9d6455b775e4ac7610102f",
+  "logBytes": 7865,
+  "logSHA256": "33bb168496e6f2ac9c63db9bdf9fdce089c49e6de86a7c1ac29ff7724a57b849",
+  "sourceHeadAfter": "f4f5a2c7b7ede7bd231643cc60f1cab1e8a6043c",
+  "statusAfter": "",
+  "selectedLeavesUnchanged": true,
+  "selectedDependencyInputsUnchanged": true
+}

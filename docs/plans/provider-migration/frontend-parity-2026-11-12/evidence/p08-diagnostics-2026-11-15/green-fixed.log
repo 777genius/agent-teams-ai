@@ -1,0 +1,14 @@
+✔ post-Stop observer continues past stale original and pending alternate to fresh stopped props (2.150442ms)
+✔ initial original-ref observation remains exact and cannot select a replacement ref (1.803546ms)
+✔ background acceptance waits for atomic service publication without masking corrupt readiness (147.42305ms)
+﹣ captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime (0.239336ms) # requires the isolated Processes lane original native artifact capture
+✔ original same-Main Retry retains a bounded first UI refusal without changing the read or its error (709.146741ms)
+✔ original first failure retains one bounded stdout prefix before the unchanged cleanup boundary (2.177132ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 1936.28579
