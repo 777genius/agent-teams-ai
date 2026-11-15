@@ -59,6 +59,7 @@ function activityEvent(event: RuntimeActivityEvent): Record<string, JsonValue> {
   const data = event.data;
   const fields: Record<string, readonly string[]> = {
     text: ['kind', 'messageRef', 'block', 'text', 'phase'],
+    thinking: ['kind', 'messageRef', 'block', 'text', 'phase'],
     tool: ['kind', 'messageRef', 'toolRef', 'name', 'input'],
     'tool-result': ['kind', 'toolRef', 'content', 'isError'],
     usage: ['kind', 'inputTokens', 'outputTokens', 'cumulativeCostUsd'],

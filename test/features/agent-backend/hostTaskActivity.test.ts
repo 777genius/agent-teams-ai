@@ -7,7 +7,7 @@ import { projectTaskHistory } from '../../../src/features/agent-backend/main/ada
 import { createHostTaskActivityApi } from '../../../src/features/agent-backend/renderer/createHostTaskActivityApi';
 
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
-import type { HostMemberActivityLog } from '../../../src/shared/types/teamActivity';
+import type { HostActivityContent, HostMemberActivityLog } from '../../../src/shared/types/teamActivity';
 vi.stubGlobal('crypto', webcrypto);
 const history = [
   {
@@ -163,6 +163,44 @@ describe('Host Task Activity original read scope', () => {
     for (const field of ['filePath', 'messageUuid', 'chunks', 'startTimestamp', 'endTimestamp'])
       expect(bytes).not.toContain(field);
   });
+  it('counts output and thinking once per original input while preserving child facts and exact byte freshness', async () => {
+    const f = fixture();
+    const thinking: Extract<HostActivityContent, { kind: 'thinking' }> = {
+      kind: 'thinking', messageRef: 'message-original', block: 1, text: 'Observed thought', phase: 'complete',
+    };
+    const child: HostMemberActivityLog['events'][number]['data'] = {
+      kind: 'subagent', phase: 'fact', childId: 'child-' + 'a'.repeat(64),
+      parentToolRef: 'tool-' + 'b'.repeat(64), fact: thinking,
+    };
+    f.logs[0]!.events.push(
+      { eventId: 'source:7', sequence: 7, inputId: 'original-input', data: thinking },
+      { eventId: 'source:8', sequence: 8, inputId: 'original-input',
+        data: { ...thinking, messageRef: 'thinking-only' } },
+      { eventId: 'source:9', sequence: 9, inputId: 'another-original-input', data: thinking },
+      { eventId: 'source:10', sequence: 10, inputId: 'original-input', data: child }
+    );
+    const exact = await f.api.getTaskExactLogSummaries('host-team:original', 'task-original');
+    expect(exact.items.map((item) => [item.inputId, item.messageCount])).toEqual([
+      ['original-input', 2], ['another-original-input', 1],
+    ]);
+    const summary = exact.items[0]!;
+    const detail = await f.api.getTaskExactLogDetail(
+      'host-team:original', 'task-original', summary.id, summary.sourceGeneration
+    );
+    expect(detail.status).toBe('ok');
+    if (detail.status !== 'ok') throw new Error('Expected original detail');
+    expect(detail.detail.log.events.map((event) => event.data.kind)).toEqual([
+      'text', 'tool-result', 'thinking', 'thinking', 'subagent',
+    ]);
+    expect(detail.detail.log.events.at(-1)!.data).toEqual(child);
+    expect(detail.detail.log.lastOutputPreview).toBeUndefined();
+    thinking.text = 'Changed retained thought';
+    expect(await f.api.getTaskExactLogDetail(
+      'host-team:original', 'task-original', summary.id, summary.sourceGeneration
+    )).toEqual({ status: 'stale' });
+    expect(f.invoke.mock.calls.every(([request]) => request.operation === 'team.activity.logs.read')).toBe(true);
+  });
+
   it('refuses exact detail after retention/content change, never selects foreign or missing input', async () => {
     const f = fixture();
     const original = (await f.api.getTaskExactLogSummaries('host-team:original', 'task-original'))

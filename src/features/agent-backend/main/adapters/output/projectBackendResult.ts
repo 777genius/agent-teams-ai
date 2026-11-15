@@ -455,8 +455,9 @@ function activityData(value: unknown, nested = false): BackendActivityData {
       return result;
     }
     case 'text':
+    case 'thinking':
       return {
-        kind: 'text',
+        kind: data.kind,
         messageRef: activityText(data.messageRef),
         block: finite(data.block, true),
         text: activityText(data.text, 24 * 1024),

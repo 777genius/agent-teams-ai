@@ -108,6 +108,7 @@ export function readTeamActivity(options: TeamActivityReadOptions, raw: unknown)
         if (
           ![
             'text',
+            'thinking',
             'tool',
             'tool-result',
             'usage',
@@ -154,7 +155,7 @@ export function readTeamActivity(options: TeamActivityReadOptions, raw: unknown)
     if ('taskId' in selected && retained.length === 0) continue;
     const messages = new Set(
       retained
-        .filter((event) => event.data.kind === 'text')
+        .filter((event) => event.data.kind === 'text' || event.data.kind === 'thinking')
         .map((event) => `${event.inputId}:${String(event.data.messageRef)}`)
     );
     const output = retained.filter((event) => event.data.kind === 'text').at(-1)?.data.text;
@@ -229,7 +230,7 @@ export function summarizeTeamActivity(
         scope = log.sessionId;
       if (data.kind === 'tool')
         tools.set(`${scope}:${event.inputId}:${String(data.toolRef)}`, String(data.name));
-      if (data.kind === 'text')
+      if (data.kind === 'text' || data.kind === 'thinking')
         messages.add(`${scope}:${event.inputId}:${String(data.messageRef)}`);
       if (data.kind === 'compaction') compactions.add(`${scope}:${String(data.sourceRef)}`);
       if (data.kind === 'gap') gaps.add(String(data.reason));

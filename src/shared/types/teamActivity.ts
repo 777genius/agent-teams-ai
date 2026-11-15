@@ -14,6 +14,13 @@ export type HostActivityContent =
       text: string;
       phase: 'snapshot' | 'complete';
     }
+  | {
+      kind: 'thinking';
+      messageRef: string;
+      block: number;
+      text: string;
+      phase: 'snapshot' | 'complete';
+    }
   | { kind: 'tool'; messageRef: string; toolRef: string; name: string; input: HostActivityValue }
   | { kind: 'tool-result'; toolRef: string; content: HostActivityValue; isError: boolean }
   | { kind: 'usage'; inputTokens?: number; outputTokens?: number; cumulativeCostUsd?: number }

@@ -392,6 +392,13 @@ export type BackendActivityData =
       text: string;
       phase: 'snapshot' | 'complete';
     }
+  | {
+      kind: 'thinking';
+      messageRef: string;
+      block: number;
+      text: string;
+      phase: 'snapshot' | 'complete';
+    }
   | { kind: 'tool'; messageRef: string; toolRef: string; name: string; input: BackendActivityValue }
   | { kind: 'tool-result'; toolRef: string; content: BackendActivityValue; isError: boolean }
   | { kind: 'usage'; inputTokens?: number; outputTokens?: number; cumulativeCostUsd?: number }

@@ -4042,3 +4042,31 @@ Before one further selected application invocation, include the five unchanged a
 | `src/features/localization/renderer/resources.d.ts` | `129d05e2374aacdb365c9b8de50de101cb95d8a6` |
 
 Scratch `tsconfig.app-context-selected.json`: Git blob `d033254b98353e79c805ecd12e34bba032a8fe65`, SHA256 `65a71dcfa1e600670fb76c67665fce30fb60fd0e14da782402a6af35433ebbd9`. Run only this selected app compilation on the same ten-path source after this amendment is published and independently reviewed; do not replay the passed Host compiler,53 tests,lint or guards. Both earlier broad exit137 outcomes remain unqualified and may not be retried. All producer/archive/native/P08/P09/genuine-upgrade/M16 and Draft/base restrictions remain unchanged.
+
+
+### Exact read-side source completion after scoped checks
+
+The original ten-path candidate is unchanged from the prospective R1 and independent source R2: six production paths (+24/−7, 17 net) and four existing test files. No installed provider SPI, normalizer, artifact, workflow, proof roster or renderer implementation is included in this source commit. Both private prospective records (`e81f1b4f` and ambient-context child `f304f6c2a4a05a8f124358a5e668b753dc2dda95`) were immediately pushed and read back in full before their corresponding operations.
+
+Actual source-bound results on captured Node24.21.0 / TypeScript7.0.2: canonical Host build PASS; original two Node files37/37 and two Vitest files16/16, zero failed/skipped/cancelled/todo; exact ten-file fast lint PASS with0 warnings; unchanged source-size guard PASS (5014 production files,141 frozen exceptions,800-line cap); unchanged provisioning guard PASS. RED had exactly the four predicted behavior failures, with the other49 selected cases passing. GREEN and RED are overlapping executions, not106 distinct tests. The test-only RED tree is `2d14cb80e0939b2e75289ba39e57d00c10a3e7bd`; the approved source GREEN tree is `4e3f74732f43657a279585ad1e5290b12f41405c`.
+
+The selected Host test compiler passed after restoring the scratch dependency-resolution context; the selected application compiler passed after the published ambient amendment, in3.08seconds with empty output on tree `e3d8d6c11ee28de4ef9d83a8aa1d6bc8d5090a98`. That tree differs from GREEN only in Plan29. The five existing ambient declarations and all compiler options remain unchanged. Earlier TS2688 and missing-ambient failures are retained below. No broad workspace or whole-Host-test compiler was rerun; their prior exit137 observations remain unqualified. No optional test replay was performed after the final selected compiler passed.
+
+| Actual check/log | Exit | SHA256 of retained combined output |
+| --- | --- | --- |
+| `red-host-build.log` | 0 | `d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789` |
+| `red-node.log` | 1 | `2190c1773b3ec8cdf3c398d4fba82c10958d3f0e29521c0afac0e6485e19ff99` |
+| `red-vitest.log` | 1 | `ad52cc45f9e7123f71531d2aee8764f6670235c427e3e2fb1551b975455d002f` |
+| `green-host-build.log` | 0 | `d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789` |
+| `green-node.log` | 0 | `caa6f661f7bf05e75bda400289ec4e56a524017dce91b76bda04ffa29e72facd` |
+| `green-vitest.log` | 0 | `b1edf7154b8354935040207c9862495827306a8355aaad2501124c867208b536` |
+| `selected-host-types.log` | 1 | `22d754e33e5e414d820e237c9e477c81ec8db495c45ab51f7665351a89a3c783` |
+| `selected-app-types.log` | 1 | `3cf75b8d3891fbf6d450e712f6a912b8a32f136cb9ead355ce858180fba12453` |
+| `ten-file-fast-lint.log` | 0 | `801804649ea2a85eaa538aaeaeaf30e366a76baaedf920859a62479fa5e7e07c` |
+| `source-size-guard.log` | 0 | `961492c3971768c144057514917b4179f695089b172a31e2d3d3d62b9efdc8f3` |
+| `provisioning-guard.log` | 0 | `7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c` |
+| `selected-host-types-resolved.log` | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| `selected-app-types-resolved.log` | 1 | `51963707e44f262a293fd52303ad233ce2aeb07c5e29c81eab3e1049dbf566f2` |
+| `selected-app-types-original-ambient.log` | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+
+Independent candidate R2 covered all ten before/after file blobs and the scoped compiler amendments. Root verified all applied after blobs, the exact source diff and unchanged normal Git index; the final factual appendix changes documentation only. The qualified result is the bounded reader/DTO/task projection slice. Provider producer Thinking, checked immutable archives and atomic normalizer adoption, default Lead/shared rich Logs UI, selected-member stderr, resulting-source Electron/native and existing P08/P09/genuine-upgrade/M16 obligations remain open. Draft/base and every original deadline/custody/no-replay/no-release/no-Stage2 restriction remain.

@@ -767,6 +767,58 @@ describe('finite Runtime activity facade', () => {
       expect(serialized).not.toContain(privateField);
   });
 
+  it('projects distinct thinking and child facts through the original closed activity codec', async () => {
+    const { router, facade } = setup();
+    const thinking = {
+      kind: 'thinking', messageRef: 'message-A', block: 1, text: 'Observed thought', phase: 'complete',
+    };
+    const child = {
+      kind: 'subagent', phase: 'fact', childId: 'child-' + 'a'.repeat(64),
+      parentToolRef: 'tool-' + 'b'.repeat(64), fact: thinking,
+    };
+    router.request.mockResolvedValue({ ok: true, value: feed([
+      event(1, { ...thinking, native: 'PRIVATE-thinking', stream: 'stdout', thinkingTokens: 42 }),
+      event(2, { ...child, fact: { ...thinking, native: 'PRIVATE-child' } }),
+      event(3, { ...child, childId: 'child-' + 'c'.repeat(64) }),
+    ]) } as JsonValue);
+    const result = await facade.invoke(request);
+    expect(result.ok).toBe(true);
+    const projected = result as { ok: true; value: { events: { data: unknown }[] } };
+    expect(projected.value.events.map((row) => row.data)).toEqual([
+      thinking, child, { ...child, childId: 'child-' + 'c'.repeat(64) },
+    ]);
+    const serialized = JSON.stringify(result);
+    for (const privateField of ['PRIVATE-', 'operationRef', 'thinkingTokens', 'stdout'])
+      expect(serialized).not.toContain(privateField);
+    expect(router.request).toHaveBeenCalledExactlyOnceWith(request.handle, {
+      commandId: request.commandId, method: 'runtime.activity.feed', payload: request.payload, control: true,
+    });
+    expect(router.lookup).not.toHaveBeenCalled();
+  });
+
+  it('applies the original text bounds and nested identity refusal to thinking', async () => {
+    const { router, facade } = setup();
+    const thinking = {
+      kind: 'thinking', messageRef: 'message-A', block: 1, text: 'Observed thought', phase: 'complete',
+    };
+    const child = {
+      kind: 'subagent', phase: 'fact', childId: 'child-' + 'a'.repeat(64),
+      parentToolRef: 'tool-' + 'b'.repeat(64), fact: thinking,
+    };
+    for (const data of [
+      { ...thinking, block: -1 },
+      { ...thinking, block: 0.5 },
+      { ...thinking, phase: 'invented' },
+      { ...thinking, text: 'x'.repeat(24 * 1024 + 1) },
+      { ...thinking, text: 'unsafe\0text' },
+      { ...child, childId: 'native-child-id' },
+      { ...child, fact: { ...thinking, text: 'x'.repeat(24 * 1024 + 1) } },
+    ]) {
+      router.request.mockResolvedValueOnce({ ok: true, value: feed([event(1, data)]) } as JsonValue);
+      expect(await facade.invoke(request)).toEqual({ ok: false, code: 'hold', outcome: 'unknown' });
+    }
+  });
+
   it('preserves snapshot/gap semantics and unknown usage without fabricating attribution', async () => {
     const { router, facade } = setup();
     const sessionUsage = {
