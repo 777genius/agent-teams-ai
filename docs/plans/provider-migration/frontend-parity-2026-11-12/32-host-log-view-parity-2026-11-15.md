@@ -128,7 +128,10 @@ and `packages/legacy-agent-host/tests/native-claude-host.native.ts`. Keep workfl
 commands, required gates and deadlines. Historical donor archives/contracts hashes in
 `scripts/legacy-agent-host/desktop-claude-checkpoint-upgrade.ts` and CI remain unchanged.
 
-Extend `scripts/legacy-agent-host/desktop-proof-sources.ts` with missing renderer inputs:
+Extend the already-composed `desktopProofSupplementarySources` array in
+`scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts` with missing renderer inputs.
+The importing `desktop-proof-sources.ts` is already 800 physical lines; preserve
+its existing composition rather than adding another roster or a cap exception:
 `ClaudeLogsSection.tsx`, `ClaudeLogsPanel.tsx`, `ClaudeLogsFilterPopover.tsx`,
 `claudeLogsFilterState.ts`, `teamLogSources.ts`, `useClaudeLogsController.ts` under the
 existing team directory, and `members/MemberLogStreamWithLegacyFallback.tsx`.
@@ -173,3 +176,19 @@ tests/fixtures 200–350 and existing E2E additions 70–120. These are planning
 Complexity 4/10; source confidence 9/10; expected reliability 8/10 pending actual qualification.
 Keep Draft/base, contributor history, P08/P09 outstanding gates and the no-real-Claude/Codex,
 no-main-merge, no-release, no-default-activation and no-Stage2 boundaries.
+
+## Bounded acceptance amendment after source inspection
+
+R1 `/root` found the root proof roster already at 800 lines and the existing
+Host Emulated workflow already running all four safe offline Vitest shards.
+Independent R2 `/root/p09_review` confirmed both exact sources at `332fbe3420`.
+Use the existing supplementary roster for the finite dependency leaves above,
+keeping every previous entry and its order. Add only the missing
+`packages/legacy-agent-host/tests/team-activity-read.test.ts` to the existing
+`matrix.lane == 'team'` Node test command in
+`.github/workflows/host-emulated-acceptance.yml`. The five planned frontend test
+files already run in the four offline shards; do not duplicate their invocation.
+This strengthens controlled acceptance without altering workflow selectors,
+matrices, required gates, timeouts or native-provider execution. R2 GO recorded
+before these source/workflow edits. Exact implementation and actual test outcomes
+remain required; no checked-provider or native acceptance is inferred.
