@@ -1,11 +1,10 @@
-import { execFile } from 'node:child_process';
-
 import { buildTmuxEffectiveAvailability } from '@features/tmux-installer/core/domain/policies/buildTmuxEffectiveAvailability';
 import { TmuxInstallStrategyResolver } from '@features/tmux-installer/main/infrastructure/installer/TmuxInstallStrategyResolver';
 import { TmuxPackageManagerResolver } from '@features/tmux-installer/main/infrastructure/platform/TmuxPackageManagerResolver';
 import { TmuxPlatformResolver } from '@features/tmux-installer/main/infrastructure/platform/TmuxPlatformResolver';
 import { TmuxWslService } from '@features/tmux-installer/main/infrastructure/wsl/TmuxWslService';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
+import { execFileWithLinuxChildLaunch } from '@main/utils/linuxChildLaunch';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
 import type {
@@ -241,7 +240,7 @@ export class TmuxStatusSourceAdapter implements TmuxStatusSourcePort {
     timeout: number
   ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
-      execFile(command, args, { env, timeout }, (error, stdout, stderr) => {
+      execFileWithLinuxChildLaunch(command, args, { env, timeout }, (error, stdout, stderr) => {
         if (error) {
           reject(error instanceof Error ? error : new Error('tmux status probe failed'));
           return;

@@ -21,7 +21,7 @@ import { executeTeamModelProbe, teamModelProbeProfile } from '../../../packages/
 import { projectBackendResult } from '../../../src/features/agent-backend/main/adapters/output/projectBackendResult';
 import { projectLaunchConfiguration, projectLaunchModelConfiguration } from '../../../src/features/agent-backend/main/adapters/output/projectLaunchConfiguration';
 import { prepareCapturedTeamModels } from '../../../src/features/agent-backend/main/application/prepareCapturedTeamModels';
-import { captureLocalModelReadinessOrigin, captureRequestReadinessBudget } from '../../../src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness';
+import { captureLocalModelReadinessOrigin, captureRequestReadinessBudget, createReadinessPreparation, readinessPreparationWire } from '../../../src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness';
 import { FileTeamModelProbeIntents } from '../../../src/features/agent-backend/main/infrastructure/FileTeamModelProbeIntents';
 import { JsonLocalProviderPrivateNetworkApprovalStore } from '../../../src/features/runtime-provider-management/main/readiness';
 import { parseOpenCodeQualifiedModelRef } from '../../../src/shared/utils/opencodeModelRef';
@@ -209,7 +209,7 @@ it('captured OpenCode bare Start stays held while its original aggregate probe p
         home: join(f.scope, 'home'), environment: { ...f.profile.runtime!.members[0]!.environment },
         readApprovals: new JsonLocalProviderPrivateNetworkApprovalStore(approvalPath).capture() });
       await f.runtime.executeLaunch(teamId, 'start', commandId, payload, {
-        preparation: { origin, remainingMs: budget.remainingMs() },
+        preparation: readinessPreparationWire(createReadinessPreparation(origin, budget)),
         owner: f.profile.owner, handleId, scope: f.team.definition.scope });
       const read = async () => {
         const value = await f.runtime.execute(teamId, 'read', { memberId: 'alice-id' }, 'TEST-action-ready');

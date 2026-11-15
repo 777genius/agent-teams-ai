@@ -23,6 +23,10 @@ export const desktopProofProcessSources = [
   'src/main/services/team/AgentTeamsMcpHttpServer.ts',
   'packages/legacy-agent-host/native/linux-child-exec.c',
   'packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts',
+  'src/features/tmux-installer/main/infrastructure/platform/TmuxPackageManagerResolver.ts',
+  'src/features/tmux-installer/main/adapters/output/sources/TmuxStatusSourceAdapter.ts',
+  'src/features/tmux-installer/main/infrastructure/runtime/TmuxPlatformCommandExecutor.ts',
+  'src/main/services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup.ts',
 ];
 
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
@@ -195,6 +199,7 @@ export const desktopProofSupplementarySources = [
   'packages/legacy-agent-host/src/team/teamCommandFingerprint.ts',
   'scripts/legacy-agent-host/fixtures/process-bootstrap.ts',
   'scripts/legacy-agent-host/fixtures/process-service.ts',
+  'src/features/runtime-provider-management/main/readiness.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */

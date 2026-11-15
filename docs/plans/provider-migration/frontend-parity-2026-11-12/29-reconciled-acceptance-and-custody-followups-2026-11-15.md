@@ -917,3 +917,44 @@ SOURCE PLAN changes only `scripts/legacy-agent-host/desktop-emulated-collaborati
 There is no enclosing collaboration countdown supplied by its current caller; the original later75-second mutation-observation polls and90-second post-input model preflight remain byte-identical. The added passive transition read does not reset or extend an existing deadline. Preserve the subsequent bounded wheel scrolling, unique target, hit/visibility/stability checks, one real pointer click and keyboard/text input, exact input readback, every business action and source/provenance/cleanup assertion. No sleep, DOM focus, JavaScript scrolling, click retry, helper/product change or test hook is added. Do not move preflight before prompt entry: prompt participates in the captured draft and changing it invalidates the earlier preparation.
 
 Root and an independent reviewer inspected the source, exact receipt and PNG before this proposal publication. SOURCE GO is limited to the single passive settle wait. Validate original scripts typing and the unchanged current-head collaboration lane; syntax/type/source review is not actual UI continuation. The original failed receipt stays failed, and an unresolved later layout change must still fail the strict targeting oracle.
+
+## Frozen metadata and TEST continuation: executed local evidence
+
+The complete incoming author commit b00 remains in ancestry. Plans14c4 and29741c4 were independently reviewed and published before their respective SOURCE GO. The final source cut changes exactly the seven paths below plus this evidence document; no incoming author file is overwritten except the explicitly reviewed two-line TEST serialization correction. Each production seam and the shared roster received independent R2, and the two TEST authors cross-reviewed each other's exact final diff.
+
+| Source path | Frozen Git blob | Lines |
+| --- | --- | ---: |
+| `scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts` | `b2880ba69d91ee6641e8d8b3b8f2a5a78f432c9c` | 310 |
+| `scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts` | `102ec51de56784e0dc381fb17b2b6151f2cde00c` | 228 |
+| `src/features/tmux-installer/main/adapters/output/sources/TmuxStatusSourceAdapter.ts` | `f44c1fd305c74a6099513e74807ff12e8cf21266` | 266 |
+| `src/features/tmux-installer/main/infrastructure/platform/TmuxPackageManagerResolver.ts` | `04dce4d26a8a07d4028e5f4e02649f9237ede8ad` | 123 |
+| `src/features/tmux-installer/main/infrastructure/runtime/TmuxPlatformCommandExecutor.ts` | `79ec689c43d483115a1e94d0f36855e64a836796` | 448 |
+| `src/main/services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup.ts` | `1e19ce5bbbd74e666557b3eb020fbe199783a760` | 697 |
+| `test/features/agent-backend/capturedOpenCodeLaunchTransfer.test.ts` | `3dd29995bf28060cda370301b9a622e41044abb9` | 252 |
+
+Executed verification is scoped as follows. The original five-file attempt remains FAIL108/1; only the corrected two-case file was rerun because the other four suites and their source were unchanged. No synthetic all-green aggregate is inferred.
+
+| Original check | Observed result |
+| --- | --- |
+| Canonical Host build after incoming b00 | PASS, including its task-change-ledger prerequisite. |
+| Pinned Node24.21 with original tsx loader imports nativeEmulatedSourceScenario without calling it | PASS, no Electron mock or provider allocation. This checks module linking, not Windows/native behavior. |
+| Original windows-launcher-recipe file under pinned Node24.21 | PASS20/20, including the unchanged2-second long-input bound and retained-selection refusal cases. |
+| Unchanged tmux status/executor and OpenCode cleanup files | PASS1+7+61 in the five-file attempt; commands/cache/identity/escalation coverage retained. |
+| Original packaged smoke file, including author's finite metadata fence | PASS38/38 in the same attempt, including actual TEST children and owned cleanup. No real vendor program invoked. |
+| Original Main transfer file after canonical wire correction | PASS2/2; original transfer and new actual aggregate refusal/probe/one Runtime/replay/Stop cases. |
+| Existing selected child lifecycle checks | PASS2 selected cases/52 unselected; genuine-close callback, output/error bounds and allocated-failure cleanup/deadline paths. |
+| Original retained TS7 project | PASS on the complete production metadata cut, unchanged compiler/options/source includes. |
+| Original legacy-host-scripts TS7 project | PASS again after the final collaboration driver insertion. |
+| Fast lint of four metadata files and the three incoming Main readiness boundary files | PASS, zero errors or warnings; not a typed/full lint substitute. |
+| Source-size/provisioning/diff guards | PASS5009 production files/141 frozen exceptions/800-line limit, unchanged provisioning caps; no baseline raised. |
+| Canonical Host typecheck:test on b00 source | Exit137/Killed even serially, no TypeScript diagnostic. Not PASS and not blindly retried. Earlier full workspace typecheck and typed-lint137 limitations remain separate open gates. |
+
+Only local resource settings GOMAXPROCS/GOMEMLIMIT were used for compiler execution; no tsconfig, includes, compiler or strict option changed for these checks. No local Desktop/native qualification is claimed. The next original exact-head CI must exercise the collaboration transition, Linux strict-CDP import, installer continuation, Windows source A/B/ARM timing and actual same-Main packaged Retry.
+
+Independent final7d artifact reviews supplement the earlier source-bound table: safe shard3 passed538 files/6236 tests (3 files/7 tests skipped); Taskboard and cold Processes passed their original receipt verifier, source/helper pins and actual Quit/cleanup. Processes preserved a distinct surviving neighbor until separate cleanup, one original UI Stop and the cold Host replacement; it is not P08 Retry. Skills job132690583752/artifact14146502530 passed reviewed import/stale-source refusal/Create/Edit/Trash/held-intent/context replacement with original Quit exit0, observed Host absent and group absent. All its eight PNGs were inspected; the edit-applied frame is during fade and does not independently prove settled presentation. These filesystem/control journeys do not qualify provider readiness or inference.
+
+The7d collaboration artifact remains FAIL before prompt mutation. The cancelled installer artifact14146233393 contains only its initial INCOMPLETE receipt, without continuation or cleanup proof; Team full type/lint never obtained a runner. All b00 original workflow families were cancelled by plan publication without a completed job qualification. The original Darwin x64/ARM V2 image gates remain FAIL/INCOMPLETE with confirmed original cleanup and the script-negative counterexample; no successful preceding business subgate closes P09. New docs/source publication must not promote any of these historical or cancelled outcomes to current-head PASS.
+
+Independently retained artifact14146146870 ZIP SHA-256: `4010c59e29a24797791f35443228d6c29e2f5c116b69a458df1b4aee30e6e0e7`.
+
+Independently retained artifact14146502530 ZIP SHA-256: `067d685a73372c73c1d44a1891406d13ad188ac67b923f8b61ed1a9526bda790`.

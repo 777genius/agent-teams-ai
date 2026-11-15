@@ -80,6 +80,15 @@ export async function runDesktopEmulatedCollaborationUi(cdp: UiCdpPort, options:
     .filter(e=>e.textContent.includes('Optional launch settings')&&e.textContent.includes('sonnet'));
     return rows.length===1?{id:rows[0].getAttribute('aria-controls'),expanded:rows[0].getAttribute('aria-expanded')}:null})()`, 'saved launch settings hydrate'));
   if (settings.expanded !== 'true') await ui.click(`[role="dialog"] button[aria-controls=${literal(settings.id)}]`, 'expand original saved launch settings');
+  await ui.waitRead(`(() => {
+    const rows=[...document.querySelectorAll('[role="dialog"] .optional-settings-content')]
+      .filter(e=>e.id===${literal(settings.id)});
+    if(rows.length!==1)return false;
+    const content=rows[0], rect=content.getBoundingClientRect();
+    return content.getAttribute('data-state')==='open' && rect.width>0 && rect.height>0 &&
+      content.getAnimations().every(animation=>!animation.pending &&
+        (animation.playState==='finished'||animation.playState==='idle'));
+  })()`, 'original expanded launch settings settle');
   await fill('[role="dialog"] #dialog-prompt', 'TEST_UI_BOOT');
   assert.equal(await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'unchecked');
   await ui.scrollTo('[role="dialog"] button', 'original Launch team', 'Launch team');
