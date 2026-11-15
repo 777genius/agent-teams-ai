@@ -1,3 +1,5 @@
+import { isNativePromptOwnerHandle } from './ownerHandle';
+
 import type {
   NativeNextPromptCandidate,
   NativeNextPromptIdentity,
@@ -14,7 +16,9 @@ const SAME_ORIGIN_FIELDS = [
 function validIdentity(candidate: NativeNextPromptCandidate): boolean {
   return SAME_ORIGIN_FIELDS.every((key) => {
     const value = candidate[key];
-    return typeof value === 'string' && value.length > 0 && value.length <= 256;
+    return key === 'ownerHandle'
+      ? isNativePromptOwnerHandle(value)
+      : typeof value === 'string' && value.length > 0 && value.length <= 256;
   });
 }
 

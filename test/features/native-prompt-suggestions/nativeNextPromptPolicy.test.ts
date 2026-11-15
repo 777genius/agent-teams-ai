@@ -11,7 +11,7 @@ import type {
 } from '../../../src/features/native-prompt-suggestions/contracts';
 
 const candidate: NativeNextPromptCandidate = {
-  ownerHandle: 'TEST-owner-1',
+  ownerHandle: 'host-team:TEST-owner-1',
   teamId: 'TEST-team-1',
   runId: 'TEST-run-1',
   memberId: 'TEST-member-codex',
@@ -60,7 +60,7 @@ describe('native teammate next-prompt policy', () => {
   it.each([
     ['other teammate', { memberId: 'TEST-other-member' }],
     ['other team with same-named member', { teamId: 'TEST-team-2' }],
-    ['other owner', { ownerHandle: 'TEST-owner-2' }],
+    ['other owner', { ownerHandle: 'host-team:TEST-owner-2' }],
     ['other launch', { runId: 'TEST-run-2' }],
     ['stale runtime generation', { generation: 'TEST-gen-2' }],
     ['other direct chat', { conversationRef: 'direct:bob' }],
@@ -80,17 +80,22 @@ describe('native teammate next-prompt policy', () => {
     expect(canDisplayNativeNextPrompt(candidate, { ...view, ...mutation })).toBe(false);
   });
 
-  it('keeps Main-projected owner handles within the same bounded UI policy', () => {
-    const selected = 'host-team:' + 'a'.repeat(246); // 256 characters: Main boundary
-    expect(canDisplayNativeNextPrompt(
-      { ...candidate, ownerHandle: selected },
-      { ...view, ownerHandle: selected },
-    )).toBe(true);
-    const oversized = 'host-team:' + 'a'.repeat(247); // 257 must fail closed
-    expect(canDisplayNativeNextPrompt(
-      { ...candidate, ownerHandle: oversized },
-      { ...view, ownerHandle: oversized },
-    )).toBe(false);
+  it('accepts canonical Host handles up to 256 decoded characters, including percent-encoded keys', () => {
+    const selected = 'host-team:' + 'a'.repeat(256);
+    const encoded = 'host-team:' + '%E5%AD%97'.repeat(256);
+    expect(encoded.length).toBeGreaterThan(512);
+    for (const ownerHandle of [selected, encoded]) {
+      expect(canDisplayNativeNextPrompt(
+        { ...candidate, ownerHandle },
+        { ...view, ownerHandle },
+      )).toBe(true);
+    }
+    for (const ownerHandle of ['host-team:' + 'a'.repeat(257), 'host-team:%41', 'not-a-host-handle']) {
+      expect(canDisplayNativeNextPrompt(
+        { ...candidate, ownerHandle },
+        { ...view, ownerHandle },
+      )).toBe(false);
+    }
   });
 
   it('rejects invalid, control-character, overlong and stale provider candidates', () => {

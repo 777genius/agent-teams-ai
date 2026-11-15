@@ -1,4 +1,5 @@
 import type { NativeNextPromptCandidate } from '../contracts';
+import { isNativePromptOwnerHandle } from '../core/domain/ownerHandle';
 
 /** Read-only Main boundary: no provider/session objects or renderer-chosen identity. */
 export function projectHostPromptSuggestion(
@@ -22,7 +23,7 @@ export function projectHostPromptSuggestion(
   if (!teamId || teamId !== expectedTeamId ||
       bounded('runId') !== expectedRunId || !memberName || !text ||
       new TextEncoder().encode(text).length > 512 ||
-      !ownerHandle || ownerHandle.length > 256) return null;
+      !isNativePromptOwnerHandle(ownerHandle)) return null;
   const keys = ['runId','memberId','generation','suggestionId',
     'messageId','operationRef','inputId','completedTurnRef'] as const;
   const all = keys.map(key => bounded(key));

@@ -39,10 +39,11 @@ describe('captured Host suggestion projection', () => {
     expect(Object.isFrozen(result)).toBe(true);
   });
 
-  it('rejects owner handles outside the shared 256-character bound', () => {
-    const prefix = 'host-team:';
-    expect(projectHostPromptSuggestion(original, prefix + 'a'.repeat(256 - prefix.length), 'TEST-team-A', 'TEST-run-A')).not.toBeNull();
-    expect(projectHostPromptSuggestion(original, prefix + 'a'.repeat(257 - prefix.length), 'TEST-team-A', 'TEST-run-A')).toBeNull();
+  it('preserves canonical Host selection keys with 256 decoded characters, and rejects invalid ones', () => {
+    expect(projectHostPromptSuggestion(original, 'host-team:' + 'a'.repeat(256), 'TEST-team-A', 'TEST-run-A')).not.toBeNull();
+    expect(projectHostPromptSuggestion(original, 'host-team:' + '%E5%AD%97'.repeat(256), 'TEST-team-A', 'TEST-run-A')).not.toBeNull();
+    expect(projectHostPromptSuggestion(original, 'host-team:' + 'a'.repeat(257), 'TEST-team-A', 'TEST-run-A')).toBeNull();
+    expect(projectHostPromptSuggestion(original, 'host-team:%41', 'TEST-team-A', 'TEST-run-A')).toBeNull();
   });
 
   it('rejects an otherwise valid candidate when the descriptor run differs', () => {
