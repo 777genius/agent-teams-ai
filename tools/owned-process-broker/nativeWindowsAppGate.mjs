@@ -235,6 +235,15 @@ const assertHost = (writer, snapshot) => {
   assert.ok(lineage.some(row => row.pid === host.pid && row.birth === host.birth));
   return host;
 };
+const assertHostBirths = () => {
+  assert.ok(main && hostA, 'Original Main and Host writer identities were captured');
+  const expected = [hostA, ...(hostB ? [hostB] : [])].map(host => ({ pid: host.pid, parentPid: main.pid }));
+  const rows = fixture.hostBirths();
+  assert.deepEqual(rows, expected, 'Only the original Host and explicit Retry successor executed');
+  proof.hostBirths = rows;
+  proof.actualHostSuccessors = rows.length - 1;
+  return rows;
+};
 const screenshot = async name => {
   assertOwnedRenderer();
   const data = await port.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
@@ -344,6 +353,7 @@ try {
   writerA = await poll(async () => readWriter(), 'original Host writer publication');
   hostA = assertHost(writerA, captureCensus());
   proof.originalHost = { identity: hostA, writer: writerA };
+  assertHostBirths();
 
   begin('one-initial-Runtime-Open', 45000);
   proof.counts.initialRuntimeOpen++;
@@ -409,6 +419,7 @@ try {
   for (const row of original.rows)
     assert.equal(object(await ui.waitRead(processOwner(row), 'original rows retained during outage', remaining())).process.processRef, row.processRef);
 
+  assertHostBirths();
   begin('one-explicit-same-Main-Retry', 10000);
   proof.counts.retryClicks++;
   await ui.click(surface + ' button', 'explicit product Retry once', 'Retry');
@@ -420,6 +431,7 @@ try {
   hostB = assertHost(successorWriter, captureCensus());
   assert.notEqual(hostB.pid, hostA.pid);
   proof.successorHost = { identity: hostB, writer: successorWriter };
+  assertHostBirths();
   await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) + ');if(!s)return false;' +
     'const b=[...s.querySelectorAll("button")];return b.some(x=>x.textContent.trim()==="Refresh"&&!x.disabled)' +
     '&&!b.some(x=>x.textContent.trim()==="Retry")&&!s.querySelector(\'[role="alert"]\');})()',
@@ -449,6 +461,7 @@ try {
     proof.stops.push({ role, receipt, renderer: stopped });
     await readProcesses();
     sameIdentity(main, captureCensus().find(value => value.pid === main.pid));
+    assertHostBirths();
     await screenshot('after-' + role);
   }
   await quit();
@@ -482,7 +495,8 @@ try {
   proof.modelProbes = proof.peer?.probes;
   proof.realVendorExecutions = proof.peer?.realVendorExecutions;
   proof.originalRuntimeGenerations = proof.nativeCleanup?.runtimeGenerations ?? null;
-  proof.actualHostSuccessors = hostB ? 1 : 0;
+  try { assertHostBirths(); }
+  catch (error) { proof.hostBirthFailure = errorText(error); proof.actualHostSuccessors = null; }
   proof.lineage = lineage;
   try {
     fixture.assertPins();
@@ -492,7 +506,8 @@ try {
   } catch (error) { proof.inputFreezeFailure = errorText(error); }
   await verifyDesktopSourceFreeze(repository, sources, sourceHashes, proof);
   if (completed && !primaryError && proof.cleanup && proof.packagedAndNativeInputsUnchanged &&
-    !proof.sourceFreezeFailure && !proof.appLogFailure && !proof.fixtureCloseFailure && !proof.peerEvidenceFailure) {
+    !proof.sourceFreezeFailure && !proof.appLogFailure && !proof.fixtureCloseFailure && !proof.peerEvidenceFailure &&
+    !proof.hostBirthFailure) {
     try {
       assert.deepEqual(proof.counts, { mainStarts: 1, initialRuntimeOpen: 1, businessInput: 1,
         refreshClicks: 1, retryClicks: 1, uiStops: 2, quit: 1 });

@@ -72,7 +72,10 @@ export async function prepareEmulatedProfile(sandbox: string, broker: string, ac
     : realpathSync(fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url)));
   const hostEntry = join(root, 'TEST-host.mjs');
   const crash = packaged ? join(root, 'TEST-crash-original-host') : undefined;
-  const barrier = crash ? "import { existsSync } from 'node:fs';\n" +
+  const hostBirths = packaged ? join(root, 'TEST-host-births.ndjson') : undefined;
+  if (hostBirths) writeFileSync(hostBirths, '', { flag: 'wx' });
+  const barrier = crash && hostBirths ? "import { appendFileSync, existsSync } from 'node:fs';\n" +
+    `appendFileSync(${JSON.stringify(hostBirths)}, JSON.stringify({ pid: process.pid, parentPid: process.ppid }) + '\\n');\n` +
     `setInterval(() => { if (existsSync(${JSON.stringify(crash)})) process.exit(91); }, 25);\n` : '';
   writeFileSync(hostEntry, barrier + `await import(${JSON.stringify(pathToFileURL(cli).href)});\n`, { flag: 'wx' });
   const profile: TeamHostProfile = { schemaVersion: 1,
@@ -96,7 +99,7 @@ export async function prepareEmulatedProfile(sandbox: string, broker: string, ac
     expectedBuildId: profile.owner.buildId, cwd: root,
     env: { ...environment, LEGACY_AGENT_HOST_PROFILE_PATH: source, LEGACY_AGENT_HOST_PROFILE_SHA256: fileHash(source) },
     startupTimeoutMs: 10000, requestTimeoutMs: 15000, writeTimeoutMs: 5000, shutdownTimeoutMs: 1000 };
-  return { root, profile, host, effects, source, crash,
+  return { root, profile, host, effects, source, crash, hostBirths,
     pins: { node: fileHash(node), peer: fileHash(peer), wrapper: fileHash(wrapper), cli: fileHash(cli), source: fileHash(source) },
     pathPins: [node, peer, wrapper, cli, source, hostEntry].map(path => ({ path, sha256: fileHash(path) })) };
 }

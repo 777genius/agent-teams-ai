@@ -10,6 +10,7 @@ import { captureWindowsLauncher, capturedWindowsCommandLine,
   verifyCapturedWindowsLauncher } from '../../owned-process/capturedWindowsLauncher.js';
 
 import type { NativeProcessProfile } from '../../composition/nativeProcessProfile.js';
+import type { RetainedWindowsLaunchPort } from '../../owned-process/HostWindowsLaunch.js';
 import type { OwnedLaunchPort, PendingOwnedProcess, PreparedOwnedProcess, ProcessOwner, ResolvedLaunchSpec } from '../../owned-process/contract.js';
 import type { RegistrarBinding } from '../../process/registeredProcessContracts.js';
 import type { WindowsRegisteredProcessPort, WindowsServiceIntent } from '../../owned-process/retainedServiceContracts.js';
@@ -49,9 +50,10 @@ export class WindowsCapturedProcess {
 
   constructor(profile: NativeProcessProfile, private readonly current: () => boolean,
     private readonly verifyTarget: () => void,
-    retainedPort?: OwnedLaunchPort & { readonly registeredProcesses?: WindowsRegisteredProcessPort }) {
+    retainedPort?: OwnedLaunchPort & Partial<Pick<RetainedWindowsLaunchPort, 'registeredProcesses' | 'originalLauncher'>>) {
     this.profile = structuredClone(profile);
-    this.launcher = captureWindowsLauncher(this.profile);
+    this.launcher = retainedPort?.originalLauncher
+      ? retainedPort.originalLauncher(this.profile) : captureWindowsLauncher(this.profile);
     this.registeredProcesses = retainedPort?.registeredProcesses;
     if (this.profile.windowsBroker?.capability && !retainedPort)
       throw new Error('Scoped Windows custody requires the original Main owner');

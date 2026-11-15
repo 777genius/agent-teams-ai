@@ -467,6 +467,12 @@ test('POSIX original-path pre-user image gate keeps explicit mutation counterexa
           assert.equal(fact.execErrno, constants.errno.ETXTBSY);
           assert.equal(fact.resumed, false); assert.equal(markers, '');
         } else {
+          if (fact.errno !== 0 && fact.stage.startsWith('kernel-image')) {
+            try {
+              console.log(JSON.stringify({ kind: 'TEST_POSIX_IMAGE_WITNESS_FAILURE', case: label,
+                stage: fact.stage, errno: fact.errno, codeSigningError: fact.codeSigningError }));
+            } catch { /* Diagnostics cannot replace the original failing assertion. */ }
+          }
           assert.equal(fact.errno, 0);
           assert.ok(fact.stoppedBeforeUser && fact.payloadMarkersAbsentBeforeGate && fact.kernelImageObserved);
           assert.ok(fact.originalPid > 1 && fact.originalBirth !== '0');

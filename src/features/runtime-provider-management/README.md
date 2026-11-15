@@ -4,6 +4,11 @@ Public `contracts`, `main`, `preload` and `renderer` entrypoints preserve the ex
 settings workflow. `core/application/RuntimeProviderManagementPort.ts` is the
 consumer-owned conversation implemented by the CLI and captured Host adapters.
 
+The public `main/readiness` subentry exposes the same local configuration, target
+normalization and private-network approval capture implementations without loading
+Electron service composition. Main readiness and the pinned-Node acceptance
+harness use it; the `main` entrypoint retains the same exports for existing callers.
+
 When a Desktop backend descriptor is selected, app composition supplies
 `createCapturedRuntimeProviderManagementClient` exclusively. Its catalog/model
 metadata, native setup forms, credential set/forget, OAuth and scoped refresh use the

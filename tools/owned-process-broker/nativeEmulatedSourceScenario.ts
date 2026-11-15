@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import type { ChildProcess } from 'node:child_process';
 import { existsSync, lstatSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -10,31 +11,30 @@ import { TeamOwnerStore } from '../../packages/legacy-agent-host/dist/adapters/t
 import { readScheduledRunCapture } from '../../packages/legacy-agent-host/dist/composition/scheduledRunCapture.js';
 import { runtimeCaptureSourceSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeCaptureSource.js';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
-import { projectBackendResult } from '../../src/features/agent-backend/main/adapters/output/projectBackendResult';
-import { capturedTeamModelProbeRootId, prepareCapturedTeamModels } from '../../src/features/agent-backend/main/application/prepareCapturedTeamModels';
+import { BackendOwnerRouter } from '../../src/features/agent-backend/main/application/BackendOwnerRouter';
 import { CapturedHostClient } from '../../src/features/agent-backend/main/infrastructure/CapturedHostClient';
 import { captureLocalModelReadinessOrigin, captureRequestReadinessBudget, createReadinessPreparation,
-  readinessPreparationWire, readinessRemaining } from '../../src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness';
+  readCapturedLaunchReadiness } from '../../src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness';
+import { FileHandleBindingStore } from '../../src/features/agent-backend/main/infrastructure/FileHandleBindingStore';
+import { JsonLocalProviderPrivateNetworkApprovalStore } from '../../src/features/runtime-provider-management/main/readiness';
+import { parseOpenCodeQualifiedModelRef } from '../../src/shared/utils/opencodeModelRef';
 import { captureProviderManagement } from '../../src/features/agent-backend/main/infrastructure/CapturedProviderManagement';
 import { captureRuntimeSources } from '../../src/features/agent-backend/main/infrastructure/CapturedRuntimeSources';
 import { captureMainWindowsCustody } from '../../src/features/agent-backend/main/infrastructure/CapturedWindowsCustody';
 import { prepareMainWindowsRuntimeSource, prepareMainWindowsRuntimeSourceRecovery,
   prepareMainWindowsRuntimeConfiguration } from '../../src/features/agent-backend/main/infrastructure/CapturedWindowsRuntimeSources';
 import { capturedRuntimeSourceGrant } from '../../src/features/agent-backend/main/infrastructure/capturedRuntimeSourceGrant';
-import { FileTeamModelProbeIntents } from '../../src/features/agent-backend/main/infrastructure/FileTeamModelProbeIntents';
 import { loadDesktopBackendDescriptor } from '../../src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor';
 import { capturedQueryableWitness } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
 import { fileHash } from './nativeEmulatedProfile';
 import { finiteSourceProbe, prepareEmulatedSourceProfile } from './nativeEmulatedSourceProfile';
+import { readEmulatedSourceActionProbe } from './nativeEmulatedSourceReadiness';
 
 import type { HostCustodyOwner, RuntimeSourceProcessOrigin } from '@agent-teams/legacy-agent-host/owned-process';
 import type { RuntimeSourcePublishIntent, RuntimeSourceSummary } from '@agent-teams/legacy-agent-host/runtime-sources';
-import type { LocalModelReadinessTransfer } from '@agent-teams/legacy-agent-host/team-host';
 import type { JsonValue } from '../../packages/legacy-agent-host/dist/contracts.js';
 import type { ScheduledRunInput } from '../../packages/legacy-agent-host/dist/composition/scheduledRunContracts.js';
-import type { BackendOperationRequest } from '../../src/features/agent-backend/contracts/operations';
-import type { CapturedReadinessOrigin, LocalModelReadinessContext } from '../../src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness';
 import type { EmulatedSourceProvider } from './nativeEmulatedSourceProfile';
 
 const object = (raw: unknown): Record<string, unknown> => {
@@ -57,8 +57,11 @@ function journal(path: string): Record<string, unknown>[] {
 async function poll(check: () => Promise<boolean>, message: string, budget = 15000): Promise<void> {
   const deadline = performance.now() + budget;
   for (;;) {
-    if (await check()) return;
-    assert.ok(performance.now() < deadline, message); await delay(25);
+    assert.ok(performance.now() < deadline, message);
+    const ready = await check();
+    assert.ok(performance.now() < deadline, message);
+    if (ready) return;
+    await delay(25);
   }
 }
 type Witness = Awaited<ReturnType<typeof capturedQueryableWitness>>;
@@ -97,10 +100,6 @@ interface Job {
   threadEphemeral: boolean[];
   wire: string;
 }
-type Readiness = { budget: LocalModelReadinessContext } & (
-  { origin: CapturedReadinessOrigin; transfer?: never } |
-  { origin?: never; transfer: Omit<LocalModelReadinessTransfer, 'remainingMs'> }
-);
 
 /** This receipt is populated before work, so an incomplete original stage remains visible on failure. */
 export async function nativeEmulatedSourceScenario(sandbox: string, broker: string, actor: string,
@@ -221,31 +220,17 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       prepareNativeRecovery: () => prepareMainWindowsRuntimeSourceRecovery(physical, grant, current),
       prepareNativeConfiguration: input => prepareMainWindowsRuntimeConfiguration(physical, grant, input, current),
     });
-    const request = async (team: number, method: string, commandId: string, payload: unknown, readiness?: Readiness) => {
-      if (readiness) {
-        assert.equal(provider, 'opencode'); assert.ok(current());
-        assert.equal(method, readiness.origin ? 'team.launch.probe.start' : 'team.launch.capture');
-      }
-      const response = await client.request(method,
-        json({ commandId, binding: { schemaVersion: 1, handleId: descriptor.handles[team]!.handleId,
-          owner: fixture.profile.owner, scope: fixture.profile.teams[team]!.scope }, payload,
-          ...(readiness?.origin ? { localModelReadinessOrigin: readinessPreparationWire(readiness.origin) } : {}),
-          ...(readiness?.transfer ? { localModelReadinessTransfer: { ...readiness.transfer,
-            remainingMs: readinessRemaining(readiness.budget) } } : {}) }),
-        { control: method === 'runtime.read' || method === 'runtime.stop' || method.endsWith('.read'),
-          ...(readiness ? { remainingMs: readiness.budget.remainingMs.bind(readiness.budget) } : {}) });
-      if (readiness) { assert.ok(current()); readinessRemaining(readiness.budget, 'unknown'); }
-      return response;
-    };
-    const rpc = async (team: number, method: string, commandId: string, payload: unknown, readiness?: Readiness) =>
-      unwrap(await request(team, method, commandId, payload, readiness));
+    const rpc = async (team: number, method: string, commandId: string, payload: unknown) => unwrap(await client.request(method,
+      json({ commandId, binding: { schemaVersion: 1, handleId: descriptor.handles[team]!.handleId,
+        owner: fixture.profile.owner, scope: fixture.profile.teams[team]!.scope }, payload }),
+      { control: method === 'runtime.read' || method === 'runtime.stop' || method.endsWith('.read') }));
     const management = (source: RuntimeSourceSummary) => captureProviderManagement({
       targetId: capturedRuntimeSourceGrant(descriptor, { ...selected, profileId: source.profileId,
         configRevision: source.configRevision }).targetId,
       profileId: source.profileId, configRevision: source.configRevision, client, start: () => client.start(),
       ownerAvailable: () => available, foregroundCurrent: () => foreground,
     });
-    return { physical, client, jobs, pending, counts, sources, rpc, request, current, management,
+    return { physical, client, jobs, pending, counts, sources, rpc, management, current,
       get firstCloseEntryMs() { return firstCloseEntryMs; },
       revokeForeground: () => { foreground = false; },
       async close() {
@@ -353,77 +338,57 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     stage('publish-A'); const a = await publish('A', captured);
     const launch = async (team: number, source: RuntimeSourceSummary, image: 'A' | 'B') => {
       const roster = await first.rpc(team, 'team.roster.read', `TEST-roster-${image}`, {});
-      const expected = structuredClone({ expectedRevision: text(roster.revision),
+      await first.rpc(team, 'team.roster.replace', `TEST-save-${image}`, { expectedRevision: roster.revision,
         members: [], savedSettings: fixture.profile.teams[team]!.savedSettings });
-      const handle = { handleId: descriptor.handles[team]!.handleId };
-      const intents = provider === 'opencode' ? new FileTeamModelProbeIntents(join(fixture.root, 'model-intents'), fixture.root) : undefined;
-      let prepared: Awaited<ReturnType<typeof prepareCapturedTeamModels>> | undefined;
-      if (intents) {
-        const definition = fixture.profile.teams[team]!, member = fixture.profile.runtime!.members[team]!;
-        const before = first.jobs.length, inputBefore = inputs().length;
-        const current = () => { assert.ok(first.current(), 'Original Main owner and foreground remain current'); };
-        const invoke = async (request: BackendOperationRequest, preparation?: LocalModelReadinessContext) => {
-          current(); assert.equal(request.handle.handleId, handle.handleId);
-          assert.ok(request.operation === 'team.launch.model.configuration.read' ||
-            request.operation === 'team.launch.probe.start' || request.operation === 'team.launch.probe.read' ||
-            request.operation === 'team.launch.probe.cancel');
-          let readiness: Readiness | undefined;
-          if (request.operation === 'team.launch.probe.start') {
-            assert.ok(preparation);
-            // The Main helper's ceiling cannot restart or enlarge this original wire budget.
-            const original = captureRequestReadinessBudget(first.client.profile.requestTimeoutMs);
-            const budget = { remainingMs: () => Math.min(original.remainingMs(), preparation.remainingMs()) };
-            const origin = await captureLocalModelReadinessOrigin({ kind: 'team', owner: fixture.profile.owner,
-              contextId: descriptor.handles[team]!.contextId, commandId: request.commandId,
-              selection: { handleId: handle.handleId, scope: definition.scope, payload: request.payload },
-              workspaces: [fixture.workspace], targets: [{ workspace: fixture.workspace, providerId: 'test-provider' }],
-              current, budget, home: text(member.environment?.HOME), environment: member.environment });
-            current(); readiness = { budget, origin: createReadinessPreparation(origin, budget) };
-          }
-          const response = await first.request(team, request.operation, request.commandId, request.payload, readiness);
-          current(); return projectBackendResult(request, response);
-        };
-        prepared = await prepareCapturedTeamModels({ backend: { invoke }, handle, intents, isCurrent: first.current,
-          request: { cwd: fixture.workspace, providerId: 'opencode', preparationId: `TEST-source-preparation-${image}`,
-            modelChecks: [{ providerId: 'opencode', model: text(expected.savedSettings?.model), targets: [{ kind: 'lead' }] }] } });
-        assert.equal(prepared.ready, true, prepared.message);
-        const jobs = first.jobs.slice(before);
-        assertSourceJobs(jobs, source, image, 'runtime', definition.binding.teamId); noTeamConnection(jobs);
-        assert.ok(quiescent(jobs));
-        const actual = inputs().slice(inputBefore);
-        assert.equal(actual.length, 1); assert.equal(actual[0]!.marker, 'TEST_MODEL_PROBE');
-        assert.ok(jobs.some(job => jobEntry(job, 'peer').pid === actual[0]!.pid));
-        for (const job of jobs) {
-          assert.ok(job.root && job.witness && job.resumed);
-          assert.equal(await job.witness.wait(), 0); job.handleAbsent = true;
-        }
-      }
-      await first.rpc(team, 'team.roster.replace', `TEST-save-${image}`, expected);
-      let launchReadiness: Readiness | undefined;
-      if (intents) {
-        const captured = prepared?.capturedTeamReadiness;
-        assert.ok(captured?.selections); assert.equal(captured.handleId, handle.handleId);
-        assert.equal(captured.preparationId, `TEST-source-preparation-${image}`); assert.equal(captured.selections.length, 1);
-        const budget = captureRequestReadinessBudget(first.client.profile.requestTimeoutMs);
-        const probes: LocalModelReadinessTransfer['probes'] = [];
-        for (const selection of captured.selections) {
-          const retained = await intents.read(capturedTeamModelProbeRootId(handle, selection), captured.preparationId);
-          assert.ok(first.current()); readinessRemaining(budget); assert.equal(retained.retained, true);
-          probes.push({ commandId: retained.commandId, selection: structuredClone(selection) });
-        }
-        launchReadiness = { budget, transfer: { preparationId: captured.preparationId, probes,
-          roster: { commandId: `TEST-save-${image}`, expected } } };
-      }
-      const capturedLaunch = await first.rpc(team, 'team.launch.capture', `TEST-capture-${image}`,
-        { rosterCommandId: `TEST-save-${image}` }, launchReadiness);
+      const capturedLaunch = await first.rpc(team, 'team.launch.capture', `TEST-capture-${image}`, { rosterCommandId: `TEST-save-${image}` });
       const selectedLaunch = object(capturedLaunch.launch), launchId = text(selectedLaunch.launchId);
       const store = new TeamOwnerStore(fixture.profile.owner.storageRoot, fixture.profile.teams[team]!.binding.teamName);
       const capturePath = join(store.directory, `launches/${runtimeDigest(launchId)}.json`);
       const record = object(JSON.parse(readFileSync(capturePath, 'utf8')));
       const canonical = runtimeCaptureSourceSchema.parse(object(record.definition).capture);
       assert.deepEqual(canonical.recipeSources, [{ memberId: 'alice-id', ...sourceRef(source) }]);
-      const before = first.jobs.length;
-      await first.rpc(team, 'team.launch.start', `TEST-start-${image}`, { launchId, rosterRevision: selectedLaunch.rosterRevision });
+      const before = first.jobs.length, inputsBefore = inputs().length;
+      const commandId = `TEST-start-${image}`, payload = { launchId, rosterRevision: text(selectedLaunch.rosterRevision) };
+      if (provider === 'opencode') {
+        // Reuse the original Main aggregate phases with this fixture's private native inputs.
+        const budget = captureRequestReadinessBudget(fixture.host.requestTimeoutMs);
+        const definition = fixture.profile.teams[team]!, selectedHandle = descriptor.handles[team]!;
+        const bindingRoot = join(fixture.root, 'TEST-source-main-bindings');
+        await mkdir(bindingRoot, { recursive: true, mode: 0o700 });
+        const router = new BackendOwnerRouter(new FileHandleBindingStore(bindingRoot));
+        router.registerOwner({ ...fixture.profile.owner, client: first.client, nativeCustody: first.physical });
+        const handle = await router.createHandle(selectedHandle.handleId, definition.scope, selectedHandle.owner);
+        assert.deepEqual(router.ownerBinding(selectedHandle.owner), fixture.profile.owner);
+        const guard = { isCurrent: first.current };
+        const read = await readCapturedLaunchReadiness({ router, handle, definition: selectedHandle,
+          commandId, ...payload, guard, budget, capture: true });
+        assert.equal(read.capture, null, 'Only the original Host read can establish this initial branch');
+        assert.equal(read.view.launch.admission, undefined);
+        assert.equal(read.view.launch.members.length, 1);
+        assert.equal(read.view.launch.members[0]!.memberId, 'alice-id');
+        assert.equal(read.view.launch.members[0]!.status, 'not-started');
+        assert.equal(read.view.members.length, 1);
+        const selected = read.view.members[0]!;
+        assert.equal(selected.memberId, 'alice-id');
+        assert.ok(selected.selected && selected.selected.provider === 'opencode');
+        assert.equal(selected.selected.workspace, fixture.workspace);
+        assert.equal(selected.selected.model, fixture.model);
+        assert.equal(selected.selected.effort, undefined);
+        const seed = fixture.profile.runtime!.members.find(member => member.teamId === definition.binding.teamId);
+        assert.ok(seed && seed.provider === 'opencode' && seed.environment.HOME);
+        const current = () => { assert.ok(first.current(), 'Original source Main owner remains current'); };
+        const origin = await captureLocalModelReadinessOrigin({
+          kind: 'team', owner: router.ownerBinding(selectedHandle.owner), contextId: selectedHandle.contextId,
+          commandId, selection: { handleId: handle.handleId, scope: definition.scope, payload },
+          workspaces: [fixture.workspace], targets: [{ workspace: fixture.workspace,
+            providerId: parseOpenCodeQualifiedModelRef(selected.selected.model)?.sourceId ?? null }],
+          current, budget, home: seed.environment.HOME, environment: { ...seed.environment },
+          readApprovals: new JsonLocalProviderPrivateNetworkApprovalStore(
+            join(fixture.root, 'TEST-private-network-approvals.json')).capture(),
+        });
+        unwrap(await router.request(handle, { commandId, method: 'team.launch.start', payload,
+          guard, requestBudget: budget, localModelReadinessOrigin: createReadinessPreparation(origin, budget) }));
+      } else await first.rpc(team, 'team.launch.start', commandId, payload);
       let view: Record<string, unknown> = {};
       const readiness = { source: sourceRef(source), image, launchId, readCount: 0, elapsedMs: 0,
         lastRuntimeRead: null as Record<string, unknown> | null };
@@ -442,6 +407,30 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const jobs = first.jobs.slice(before);
       assertSourceJobs(jobs, source, image, 'runtime', fixture.profile.teams[team]!.binding.teamId);
       const live = jobs.filter(job => !job.released); assert.equal(live.length, 1);
+      if (provider === 'opencode') {
+        const probes = jobs.filter(job => job.released);
+        assert.equal(jobs.length, 2); assert.equal(probes.length, 1);
+        noTeamConnection(probes); assert.ok(quiescent(probes));
+        const probeEntry = jobEntry(probes[0]!, 'peer');
+        assert.equal(probeEntry.role, 'runtime');
+        const actualInputs = inputs().slice(inputsBefore);
+        assert.equal(actualInputs.length, 1);
+        assert.equal(actualInputs[0]!.pid, probeEntry.pid);
+        assert.equal(actualInputs[0]!.marker, 'TEST_MODEL_PROBE');
+        assert.equal(effects().filter(row => row.pid === probeEntry.pid && row.event === 'terminal' &&
+          row.marker === 'TEST_MODEL_PROBE' && row.outcome === 'succeeded').length, 1);
+        const receipt = readEmulatedSourceActionProbe({ profile: fixture.profile, team,
+          handleId: descriptor.handles[team]!.handleId, contextId: descriptor.handles[team]!.contextId,
+          commandId, payload, fingerprint: text(record.fingerprint), captureDigest: runtimeDigest(canonical) });
+        const replayJobs = first.jobs.length, replayInputs = inputs();
+        await first.rpc(team, 'team.launch.start', commandId, payload);
+        assert.equal(first.jobs.length, replayJobs); assert.deepEqual(inputs(), replayInputs);
+        if (evidence.modelPreparations === undefined) evidence.modelPreparations = [];
+        assert.ok(Array.isArray(evidence.modelPreparations));
+        evidence.modelPreparations.push({ source: sourceRef(source), image, startCommandId: commandId,
+          commandId: receipt.commandId, profileId: receipt.profileId, configRevision: receipt.configRevision,
+          noTeamConnection: true, originalProbeInputs: 1, replayAllocated: false });
+      }
       const entry = jobEntry(live[0]!, 'peer');
       assert.equal(effects().filter(value => value.pid === entry.pid &&
         (value.event === 'connected' || value.event === 'mcp-connected')).length, 1);

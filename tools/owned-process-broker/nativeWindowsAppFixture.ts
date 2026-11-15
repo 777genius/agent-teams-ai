@@ -154,6 +154,25 @@ export async function prepareNativeWindowsAppFixture(options: {
   try {
     const prepared = await prepareEmulatedProfile(root, options.broker, options.fixture, 'codex', options.packaged);
     const crash = prepared.crash; assert.ok(crash);
+    const birthPath = prepared.hostBirths; assert.ok(birthPath);
+    const birthFile = lstatSync(birthPath);
+    assert.deepEqual(ledger(birthPath, 2), []);
+    let birthPrefix: { pid: number; parentPid: number }[] = [];
+    const hostBirths = () => {
+      assert.ok(existsSync(birthPath), 'Original Host birth journal remains present');
+      const current = lstatSync(birthPath);
+      assert.equal(current.dev, birthFile.dev); assert.equal(current.ino, birthFile.ino);
+      const rows = ledger(birthPath, 2).map(row => {
+        fields(row, ['pid', 'parentPid']);
+        assert.ok(Number.isSafeInteger(row.pid) && Number(row.pid) > 1);
+        assert.ok(Number.isSafeInteger(row.parentPid) && Number(row.parentPid) > 1);
+        return { pid: Number(row.pid), parentPid: Number(row.parentPid) };
+      });
+      assert.deepEqual(rows.slice(0, birthPrefix.length), birthPrefix, 'Original Host births are append-only');
+      assert.equal(new Set(rows.map(row => row.pid)).size, rows.length);
+      birthPrefix = structuredClone(rows);
+      return rows;
+    };
     const team = prepared.profile.teams[0]!;
     const lease = acquireProfileWriterLease(prepared.profile.owner.storageRoot);
     const uiSeed = { subject: 'TEST same Main Windows original Processes', commandId: 'TEST-Windows-process-sidebar' };
@@ -310,7 +329,7 @@ export async function prepareNativeWindowsAppFixture(options: {
     };
     return {
       root, prepared, bootstrap, uiSeed, handleId, descriptorPath, descriptorSha256: hash(descriptorPath), pins,
-      metadataEnvironment, assertPeer, peerEvidence, assertPins, assertRows, runtimeIdentity, close,
+      metadataEnvironment, hostBirths, assertPeer, peerEvidence, assertPins, assertRows, runtimeIdentity, close,
       writer() {
         const path = join(prepared.profile.owner.storageRoot, '.legacy-agent-host-writer.lock');
         const info = lstatSync(path, { bigint: true });

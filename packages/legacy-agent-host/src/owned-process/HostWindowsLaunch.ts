@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { Readable, Writable } from 'node:stream';
+import { isDeepStrictEqual } from 'node:util';
 
 import { encodeLaunch } from './codec.js';
 import { sameOwner } from './contract.js';
@@ -56,6 +57,7 @@ const DRAIN_REPLY_RESERVE_MS = 100;
 
 export interface RetainedWindowsLaunchPort extends OwnedLaunchPort {
   readonly registeredProcesses: WindowsRegisteredProcessPort;
+  originalLauncher(profile: NativeProcessProfile): CapturedWindowsLauncher;
 }
 
 /** One private Host bridge; one readiness subscription and one bounded original preparation queue. */
@@ -105,6 +107,12 @@ export class HostWindowsLaunch {
     const originals = new WeakSet<RemotePending>();
     return {
       registeredProcesses: this.registeredProcesses,
+      originalLauncher: (profile) => {
+        if (profile.cwd !== selected.cwd || !isDeepStrictEqual(profile.environment, selected.environment) ||
+            !isDeepStrictEqual(profile.executable, selected.executable) ||
+            !isDeepStrictEqual(profile.windowsBroker, selected.windowsBroker)) unavailable();
+        return launcher;
+      },
       allocate: (owner) => {
         if (this.allocations.size >= 256) unavailable();
         const pending = new RemotePending(this, selected, launcher, Object.freeze({ ...owner }), current, captureCurrent, origin);

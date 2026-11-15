@@ -14,7 +14,7 @@ import {
   OPENCODE_PROJECT_CONFIG_CANDIDATES,
   readOpenCodeConfigTarget,
   resolveConfiguredProviderPreset,
-} from '@features/runtime-provider-management/main';
+} from '@features/runtime-provider-management/main/readiness';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { getNodeValue, parseTree } from 'jsonc-parser';
 

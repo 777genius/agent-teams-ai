@@ -585,3 +585,286 @@ Historical CI remains scoped to each exact head. On a2a the original Darwin-x64 
 The serial original retained TS7 project reached a concrete compiler failure after the OpenCode helper import: TS7016 for `agent-teams-controller`, followed by implicit-any parameters in its callers. The earlier new-local collision is gone. Running the existing Controller build does not supply declarations: its package main is `src/index.js`, and its build copies source JavaScript. The real typed module contract is already tracked at `src/types/agent-teams-controller.d.ts` (`d9211a4825dfecebecf5f3fd3a8834280360c4d9`) and is included by the normal root project. The narrow retained project replaces root `include`, so it must explicitly retain this existing declaration when checking the newly reached Main preparation graph.
 
 The only additional source scope is `tools/owned-process-broker/tsconfig.retained-host.json`, exact preimage `2233a4a8a33d6079e9f214e4c9d735e944226cca`: append `../../src/types/agent-teams-controller.d.ts` to its existing include array. Keep all current entries, strict compiler options and exclusions. Do not create or modify an ambient declaration, add any/skip checks, change the Controller package or compiler, exclude the new Main imports, or substitute a narrower compiler. Independently review and publish this exact amendment before its one-line SOURCE GO, then rerun the original project and original scripts gate. The failed attempts remain failures, not PASS evidence.
+
+## Source-bound follow-up after the Windows cleanup correction
+
+This section supersedes the prospective-preparation route recorded above and
+implemented in `7d023abc741b6849694d205a754c0a33b05b6306`; it does not undo that
+head's private project-configuration pin or staging observations. The production
+readiness hold remains correct.
+The first saved-only proposal was withheld before publication: one OpenCode
+provider template would preserve one endpoint into both A and B while A must
+remain running. The original per-Team runtime recipes, distinct endpoints,
+full roster CAS and launch capture remain authoritative.
+
+The implemented TEST route reuses the current Main aggregate phases for the
+already captured launch: an actual private readiness read establishes the
+unstarted selection and absent capture, then Main captures the original private
+configuration/owner origin and dispatches the existing start through the same
+Router and Host. The original request clock begins before those phases and its
+remaining budget travels to the Host. No initial seed admission, fake readiness,
+synthetic null, repeated CAS, changed endpoint or product API is introduced.
+The detailed source review and original exact-head execution results remain
+separate requirements.
+
+### Completed original jobs on their own source
+
+- [Windows x64 process job 132676819898](https://github.com/777genius/agent-teams-ai/actions/runs/43669698968/job/132676819898), source
+  `2fc10e4aab79bd374668a48dfafb166eab9fccbf`, is FAIL as an aggregate.
+  Its original Codex and Claude A/B sequences completed, including standalone
+  and cold replay/restore checks, with original controller root exit 0, fresh
+  Job-zero and controller exit 0. OpenCode separately refused
+  `team.launch.start` before Runtime allocation; its original root exit 1,
+  Job-zero and controller 104 show completed sandbox cleanup on the failed
+  case. None of the three source cases reported filesystem 103.
+- [Windows ARM process job 132679893642](https://github.com/777genius/agent-teams-ai/actions/runs/43670687494/job/132679893642), source
+  `f6372a198f12e8e60b462f886ece606bb57b595e`, remains FAIL at the original
+  Team-A readiness and root/witness assertion. After 102 reads over 15,487.8895 ms,
+  slot 6 had allocated but its original prepare/resume call counts were zero.
+  The six measured prepare/resume pairs returned; the slots 2–5 pairs account
+  for about 3.21 seconds, so the total wait is not attributable to Main native
+  awaits alone. No deadline, source recipe, identity check or witness oracle
+  was changed. The same failed case now drains to original root 1/Job-zero and
+  exits 104, without the preceding filesystem 145/103 cleanup failure.
+- [Darwin x64 process job 132676820070](https://github.com/777genius/agent-teams-ai/actions/runs/43669698968/job/132676820070), source
+  `2fc10e4a`, passed: Host: 150 PASS/2 SKIP, protocol: 53, retained Main: 69 in
+  eight files (including all four ModelProbe lifecycle cases), and POSIX: 23.
+  These preceding-source counts do not qualify the subsequent P08 additions.
+- Frontend [shard 1 job 132679836160](https://github.com/777genius/agent-teams-ai/actions/runs/43670687478/job/132679836160) and
+  [shard 3 job 132679836357](https://github.com/777genius/agent-teams-ai/actions/runs/43670687478/job/132679836357) on `f6372a1` passed:
+  12,438 passing tests, 13 skipped; 1,079 passing files, 3 skipped. The remaining
+  two shards were cancelled by the P08 publication. This is not a completed
+  four-shard qualification.
+- Teams creation [Windows job 132679833307](https://github.com/777genius/agent-teams-ai/actions/runs/43670687461/job/132679833307) and
+  [macOS job 132679833363](https://github.com/777genius/agent-teams-ai/actions/runs/43670687461/job/132679833363) on `f6372a1` passed with original physical cleanup.
+  These results are separate from the previously completed three-platform
+  `59fe8dc` run and do not establish an unfinished Ubuntu result.
+- Installer [Darwin ARM job 132679836461](https://github.com/777genius/agent-teams-ai/actions/runs/43670687478/job/132679836461) on `f6372a1`
+  reached the original completed Update assertions, then failed at its one
+  Close click because both the footer action and Radix's icon button have the
+  same accessible text. The narrow selector correction retains exact text and
+  one original click while targeting the footer's direct button. The old
+  scenario remains incomplete; its preceding successful assertions do not
+  make the full job PASS.
+
+### Bounded original image-failure observation
+
+The POSIX native test now prints its already-decoded kernel-image stage, errno
+and code-signing error immediately before the same original failing assertion.
+Only fixed case labels and existing enum/scalar fields are emitted. There is no
+new native query, image read, process action, deadline, retry or relaxed oracle.
+P09 selected-image/script consumption remains unresolved; a diagnostic line
+does not qualify either Darwin image failure.
+
+### Retained artifact metadata
+
+These SHA-256 values are from each original upload log/API record. The offline
+continuation has not extracted these ZIPs or visually reviewed their screenshots.
+The separate owner's verified 2fc OpenCode ZIP is recorded in the preceding plan.
+
+| Original artifact | Source | Upload/server SHA-256 |
+| --- | --- | --- |
+| Process Windows x64 14144187010 | 2fc10e4a | cb5e804cfebd384fb4dac7446be5203603ed4e54d10d8036a8a47845cd642012 |
+| Process Windows ARM 14144955423 | f6372a1 | e933bc3a70bcc1890e159207009eb960ec7a89a6d1f052b8c3f5a44932aa7116 |
+| Process Darwin x64 14143897507 | 2fc10e4a | 43651cd055ac131700a4a076515ae13cec2acd4d3aae75994c38ee50d6e3efab |
+| Frontend shard1 14144361302 | f6372a1 | 92735b2434cda30e389a4317a92367f82af68ba30c5fb11aa16e8ef91a36a5d0 |
+| Frontend shard3 14143859068 | f6372a1 | 45aa55c6cc1c9d7905a3a3fb67eeaeedd8594ef331e3bdf5c5d4ba10ecd0613d |
+| Teams Windows 14144033777 | f6372a1 | bc0a1b3d5b0a1e0ecf32310873673b6c6977a45d07e7949c66fcbf1fb0c56094 |
+| Teams macOS 14143843904 | f6372a1 | fb7e9a5962eb6ab6f090b08893057980831cea4336fa2451cdf9ade664c9508c |
+| Installer Darwin ARM 14143924794 | f6372a1 | e615e74fe30519865ed45baee5a092931ef690890dc81e7db3de9dfa761e551c |
+
+The P08 recovery composition on `ecbca89d7581d7717879f55889470e305ceb7dd8`
+and its original merge ancestry are preserved. Source review accepted the
+same physical owner, original close-event admission, one recovery cutoff,
+same-command flight joining and sealed failure cleanup. Plan 30 retains its
+independent local tests and compiler/linter limitations. New source still
+requires the original exact-head native, Desktop, packaged and full CI gates.
+Pending, cancelled, skipped and incomplete checks are never PASS. Keep Draft;
+no real Codex/Claude, main merge, release or default-path activation.
+
+### Captured direct-launch argument encoder
+
+A separate deterministic long-input issue remained in the direct
+CreateProcess argument encoder: its two original unanchored backslash regular
+expressions repeated scans. The replacement uses the same single forward scan
+already retained by the cmd encoder. Runs before quotes, ordinary characters
+and the end keep their exact Windows escaping relation. The existing 50,000
+backslash case now checks the direct encoder and actual captured command-line
+construction as well as every original cmd assertion, under its unchanged
+2,000 ms timeout and final elapsed assertion. This is not a demonstrated cause
+or repair of the Windows ARM readiness failure.
+
+Independent source review accepted the exact two-file change. A pure V8 check
+compared 19,608 short old/new strings (including quotes, slashes, Unicode and
+unpaired surrogates) with zero differences and checked three long literal
+outputs. That checks the pure algorithm only; it is not pinned Node,
+repository-suite, native or CI execution.
+
+### Measured same-Main Host starts in the packaged Retry case
+
+The original packaged case's successor count was derived from whether the
+expected Host B had been observed. That did not independently exclude an
+additional short-lived Host or a spawn during Refresh. The already pinned
+TEST Host entry now appends only its PID and parent PID before executing Host
+work. The original fixture retains that file's identity, accepts at most two
+complete rows with closed fields and unique PIDs, and requires an unchanged
+observed prefix.
+
+The original writer/census identities must join exactly to A alone after
+initialization and after metadata Refresh, then exactly A+B after explicit
+Retry, each original UI Stop and final Quit/cleanup. The final successor
+count comes from those verified rows; missing, changed or extra evidence
+remains unknown and disqualifies PASS. This observes the same processes and
+does not grant authority or introduce a new census, native operation, child,
+timeout, retry or cleanup mechanism. Nonpackaged fixture wrapper behavior
+remains unchanged. Original source hashes cover the revised TEST entry.
+
+The exact three-file journal cut received independent source review. Its generated
+entry and driver body also passed an isolated V8 syntax parse; imports, pinned
+Node, actual App/native execution and both packaged Windows gates remain pending.
+
+
+### Actual aggregate readiness on the original captured selection
+
+The earlier prospective preflight used the seed runtime rather than the published
+A/B runtime selection. The corrected scenario keeps both original runtime recipes,
+member deliveries, distinct endpoints, full roster CAS and raw launch capture.
+Its actual BackendOwnerRouter registers the same CapturedHostClient and physical
+Windows custody. An actual private readiness read must return absent capture and
+exactly one unstarted lead. For the original bare `TEST-model`, the original Main
+parser produces no qualified source ID; it is not rewritten into a qualified model.
+
+One existing 15-second budget begins before binding creation, Router handling,
+configuration/approval capture and start. The actual Main origin reads the original
+member HOME/environment and an explicitly private approval-store path. The same
+Router sends the original start with its real readiness preparation. The scenario
+does not invent a transfer, grant, capture, successful probe or wire operation.
+The native workspace keeps the already pinned private `opencode.json` introduced
+by 7d. The portable regression independently exercises the missing-config and
+missing-approval-file case without creating either file.
+
+The read-only receipt helper joins the original start to the captured launch,
+unique consumer, completed ModelProbe group and the full original selection,
+profile, configuration, owner, workspace, destination, source attempt and readiness
+digests. Exactly two original source-bound Jobs must exist: one fully released
+probe with one TEST_MODEL_PROBE input/terminal and no Team MCP connection, followed
+by the single live Runtime. The original start-command replay must not create a
+Job or input. A/B retention, boot, Stop, cold reconstruction, neighboring source
+and physical cleanup checks remain in place.
+
+The existing actual-Host transfer test gains the matching negative/positive flow,
+including the initial bare-start refusal, actual finite D probe/Runtime, retained
+receipt and source joins, same-command replay, Stop/release and absent private
+configuration/approval files. Its original test is unchanged. The source poll now
+checks the same deadline both before and after each original read, so a late true
+result cannot pass. No wait, retry interval or outer native bound is extended.
+The isolated V8 old/new clock example establishes only that assertion ordering;
+it is not repository or native execution.
+
+### Filesystem readiness entrypoint without Electron composition
+
+Both original 7d Windows process gates failed before any source-scenario witness:
+Node attempted to instantiate `ApiKeyService.ts` through the broad runtime-provider
+Main barrel, and Electron's Node package has no named `safeStorage` export. The
+failure is independent of the earlier Windows ARM readiness timeout.
+
+A narrow public `runtime-provider-management/main/readiness` entrypoint re-exports
+the same nine existing filesystem/configuration/target/approval helpers. The broad
+Main entrypoint keeps those same exports for existing callers. The actual captured
+Main readiness implementation and its source fixture/regression import the narrow
+entrypoint. Its reviewed transitive graph contains the existing Node helpers and
+pure domain logic, without Electron service composition. No implementation, policy,
+authority, loader mock, compiler exception or new environment discovery is added.
+The existing pinned-Node native gate remains the execution regression.
+
+### Reuse the original immutable Windows launcher within its retained owner
+
+The retained Windows launch port now exposes its original transitively frozen
+launcher capture through an internal accessor. It checks the requesting cwd,
+environment, executable and Windows broker against the same retained selection.
+WindowsCapturedProcess uses that original capture when the retained port supplies
+it; ordinary ports keep the original capture path. No global cache, wire operation
+or new authority is introduced.
+
+All three fresh selection-verification boundaries and the registered-process
+boundary remain unchanged. The Windows broker verification and process constructor
+bodies are unchanged. The existing launcher tests verify same-object reuse without
+a second selection read, eleven foreign native-profile refusals, each of nine
+wrapper/interpreter/script mutations across the three original launch boundaries,
+and the ordinary-port fallback. They use one mock per filesystem method so Node's
+original restoration order cannot retain another test's fake read. The original
+native Stop/drain/release and no-resume assertions remain mandatory.
+
+This removes a source-proven redundant initial capture. Neither this change nor
+the direct argument encoder is yet a measured repair of the ARM native deadline.
+The a2 ARM receipt still failed after 101 reads over 15,743.1542 ms, with slot6
+allocated and prepare/resume counts zero. No per-file hash cost is inferred from
+those broader observations.
+
+### Fence packaged metadata probes before the original App launch
+
+The original packaged smoke can reach default renderer runtime status without a
+Host descriptor. Codex installer status first examines its managed manifest and
+can otherwise probe inherited PATH; a CLI override alone does not cover that path.
+The smoke now creates private finite Codex/Claude metadata programs which accept
+only the exact `--version` argument and refuse every other command. A private
+managed Codex manifest and explicit CLI/HOME paths select those TEST programs.
+
+Four self-checks use the captured harness Node executable and a cloned environment
+with every case alias of NODE_OPTIONS and ELECTRON_RUN_AS_NODE removed. This is
+required by the existing regression that deliberately poisons those variables
+after harness startup. The original App environment normalizer and poison tests
+are unchanged. Finite programs drain stdout/stderr before exiting. The added
+existing-file regression exercises actual execCli with empty PATH, spaces and an
+apostrophe in the private path, exact manifest contents, accepted/refused commands
+and all eight ledger rows. This establishes no actual vendor execution on prior
+runners; none was observed. Original App ownership, waits, cleanup and receipt
+checks remain unchanged.
+
+### Additional completed original-source evidence
+
+These observations are tied to their stated source; they do not qualify this new
+follow-up. Source review and pure V8 checks in this offline continuation are not
+local Node, TypeScript, lint, Electron, native or E2E execution.
+
+| Source and original job | Result and limit |
+| --- | --- |
+| 7d Teams run43674183507, jobs132690580970/132690581114/132690581127 | All three original Ubuntu/Windows/macOS jobs PASS. Windows retains all three physical teardown observations and final cleanup. |
+| 7d safe frontend job132690583511 | PASS:541 files,6202 passing tests and6 skipped. This is one completed shard, not the full four-shard gate. |
+| 7d Taskboard job132690583717 | PASS through the original final receipt verifier and artifact publication. No independent screenshot review by this offline continuation. |
+| 7d native V2 Windows jobs132690608930/132690608897 | Both original x64/ARM jobs PASS, including original Windows custody and manual/automatic approval, tools/MCP, Stop and cold Host Resume. |
+| 7d process Windows jobs132690656011/132690656313 | Both FAIL at the static safeStorage import before source-scenario evidence. Earlier portable149PASS/3SKIP, protocol53 and Main69 assertions pass; they do not qualify the full jobs. |
+| 7d native V2 Darwin x64 job132690608957 | FAIL at the unchanged image witness errno13 assertion. Earlier native custody/business/Stop/cold Resume assertions pass, without qualifying selected-image consumption. |
+| a2 native V2 Windows x64 job132686952869 | PASS on a2 only, with original custody, manual/automatic business cases and final proof verifier. |
+| a2 Import job132686954425 | FAIL after original71/71 prerequisites and7/7 install tests. The strict census saw the same listening socket in Main and a second live child; the child's role remains unknown. Physical peer cleanup completed. No absent/zombie attribution or accepted foreign holder is inferred. |
+
+The a2 Import failure occurred during an existing read wait after the one original
+Launch click. It does not justify another click, accepting a second holder, bypassing
+the guarded reader, extending the wait or changing the existing identity predicate.
+Any follow-up must preserve the strict gate and original deadline.
+
+| Original artifact | Upload/server SHA-256 |
+| --- | --- |
+| 7d Teams Ubuntu14146216385 | 1ca6cc2345484a4b8a6b219c9fecd737fe8837cd48c02bf4e743117b51e0dca5 |
+| 7d Teams Windows14146185718 | 9ed909d9531028e4a9901868aee7901603c9585e78aef43679c61b01774ffbf1 |
+| 7d Teams macOS14145576198 | 88562217d570db989e3ce3c521b5593d5607fbb0790d15cc5d2f5c024c3eccdb |
+| 7d safe frontend shard1 14145681881 | 466c341f0cbab5aa545fecf426da14ab8b922d9ff9aeb045f931776d47e23102 |
+| 7d Taskboard14146630705 | 0bd8bf5c284e01218c24e4577474df97626ace77bd3301bd85992b0c4470e4c0 |
+| 7d native V2 Windows x64 14146321451 | acf1f54e89f2f921daf725ebfe495fb4169a5293f26fe59ea21dcd815a6a2e06 |
+| 7d native V2 Windows ARM 14145597898 | 3f35c977b37c9a35b4f88f86efe5abeab535b472b0f2f737e27f5c5a9b071019 |
+| 7d native V2 Darwin x64 14146476878 | a755f111c0a30a48102b01c21ec6578418e9aac7f26b89f4c3183a09c2d531e4 |
+| 7d process Windows x64 14145932843 | 81f85a8f8e9dbba9f5a8cfaa60bcaefb85c97e57be33959e91ad7915850d25d2 |
+| 7d process Windows ARM 14146580031 | 41f05d943e17b728a9b30b9d25d616e62ceddd39bc46865341459de2c62080cf |
+| a2 native V2 Windows x64 14145273347 | bfdc4c76bc63e88ef9fbc48ba30249d5ff3de06e8f1df9fb8d1eadc34c1a2cc8 |
+| a2 Import14145487207 | 490d661b184df664485e1df86b6e8b4f1738a2e308c5e3ee1a2a0ce43a4774a2 |
+
+The P08 recovery implementation, original merge parents, private configuration and
+staging observations, installer footer correction, existing Controller declarations
+and all six restored Linux qualification paths remain preserved. The original
+source-size limit, native cases, custody/physical cleanup, witness counts and
+deadlines remain unchanged. No new workflow, job or native authority is added.
+
+Keep Draft and await the original current-source aggregate. The same-Main packaged
+Retry proof, remaining Desktop/native/package/full-workspace gates and P09's
+selected-image/script contract remain open. No real Codex/Claude, Ready promotion,
+main merge, release, default activation or Stage2 is authorized by partial passes.

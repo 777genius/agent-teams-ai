@@ -95,7 +95,16 @@ export function verifyCapturedWindowsLauncher(captured: CapturedWindowsLauncher)
 
 /** Standard CreateProcessW argv quoting for a direct executable/interpreter. */
 export function quoteWindowsArg(value: string): string {
-  return `"${value.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/g, '$1$1')}"`;
+  let quoted = '"', backslashes = 0;
+  for (const character of value) {
+    if (character === '\\') {
+      backslashes += 1;
+      continue;
+    }
+    quoted += '\\'.repeat(character === '"' ? backslashes * 2 + 1 : backslashes) + character;
+    backslashes = 0;
+  }
+  return quoted + '\\'.repeat(backslashes * 2) + '"';
 }
 
 export function capturedWindowsCommandLine(captured: CapturedWindowsLauncher, args: readonly string[]): string {

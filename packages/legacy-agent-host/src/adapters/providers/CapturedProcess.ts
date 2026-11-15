@@ -10,9 +10,10 @@ import { ChildProcess } from 'node:child_process';
 import { WindowsCapturedProcess } from './WindowsCapturedProcess.js';
 
 import type { NativeProcessProfile } from '../../composition/nativeProcessProfile.js';
+import type { RetainedWindowsLaunchPort } from '../../owned-process/HostWindowsLaunch.js';
 import type { ObservableNativeProcess } from '../../owned-process/processFacade.js';
 import type { OwnedLaunchPort } from '../../owned-process/contract.js';
-import type { WindowsRegisteredProcessPort, WindowsServiceIntent } from '../../owned-process/retainedServiceContracts.js';
+import type { WindowsServiceIntent } from '../../owned-process/retainedServiceContracts.js';
 
 /** Process custody needs native selection only, independent of a Team member/session. */
 export type CapturedProcessProfile = NativeProcessProfile & {
@@ -75,7 +76,7 @@ export class CapturedProcess implements CapturedProcessPort {
     private readonly processCustody?: RegisteredProcessRootSource,
     private readonly canCaptureRegisteredProcess: () => boolean = canAllocate,
     private readonly processTreeSource?: CapturedProcessTreeSource,
-    retainedWindowsPort?: OwnedLaunchPort & { readonly registeredProcesses?: WindowsRegisteredProcessPort }
+    retainedWindowsPort?: OwnedLaunchPort & Partial<Pick<RetainedWindowsLaunchPort, 'registeredProcesses' | 'originalLauncher'>>
   ) {
     this.profile = { provider: profile.provider, cwd: profile.cwd,
       environment: { ...profile.environment }, executable: { ...profile.executable },

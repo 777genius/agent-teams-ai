@@ -168,7 +168,7 @@ if(argv.length===1&&argv[0]==='--version'){
   const descriptorPath = join(root, 'TEST-source-descriptor.json');
   writeFileSync(descriptorPath, JSON.stringify(descriptor), { mode: 0o600, flag: 'wx' });
   const ownSources = ['nativeEmulatedSourceProfile.ts', 'nativeEmulatedSourceScenario.ts', 'nativeEmulatedProviderGate.ts',
-    'nativeEmulatedProfile.ts', 'nativeGateContext.ts', 'nativeGateEvents.ts'].map(name => fileURLToPath(new URL(name, import.meta.url)));
+    'nativeEmulatedProfile.ts', 'nativeGateContext.ts', 'nativeGateEvents.ts', 'nativeEmulatedSourceReadiness.ts'].map(name => fileURLToPath(new URL(name, import.meta.url)));
   const pins = [...new Set([node, broker, cli, hostEntry, profilePath, descriptorPath, ...ownSources,
     ...helpers.map(value => value.path), ...Object.values(images).flatMap(value => [value.path, value.entry.path])])]
     .map(path => ({ path, sha256: fileHash(path) }));
