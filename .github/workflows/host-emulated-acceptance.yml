@@ -117,7 +117,9 @@ jobs:
             packages/legacy-agent-host/tests/opencode-configuration-source.test.ts \
             scripts/e2e/opencode-diagnostics/platform.mjs \
             scripts/e2e/opencode-diagnostics/platform.test.mjs \
+            scripts/legacy-agent-host/desktop-backend-observations.test.ts \
             scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts \
+            scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts \
             scripts/legacy-agent-host/desktop-emulated-selection-ui.ts \
             scripts/legacy-agent-host/desktop-native-process-ui.test.ts \
             scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts \
