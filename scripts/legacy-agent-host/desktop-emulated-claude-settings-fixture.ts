@@ -10,6 +10,22 @@ import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/comp
 export type DesktopEmulatedClaudeSettingsFixture = Awaited<ReturnType<typeof prepareDesktopEmulatedRuntimeFixture>>;
 
 /** Replace only this fresh TEST fixture's captured executable before any Host or UI starts. */
+export function desktopEmulatedClaudeSettingsWrapper(
+  node: string, kind: 'extensions' | 'saved-import',
+  sources: readonly { path: string; sha256: string }[],
+): string {
+  assert.equal(sources.length, kind === 'extensions' ? 3 : 2);
+  return `${desktopNodeScriptHeader(node)}import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';import {readFileSync,realpathSync} from 'node:fs';
+assert.equal(process.env.TEST_DESKTOP_SETTINGS,${JSON.stringify(kind)});
+assert.ok(${JSON.stringify(kind === 'saved-import' ? ['management', 'runtime'] : ['management'])}.includes(process.env.TEST_PEER_ROLE));
+for(const source of ${JSON.stringify(sources)}){assert.equal(realpathSync(source.path),source.path);assert.equal(createHash('sha256').update(readFileSync(source.path)).digest('hex'),source.sha256)}
+await import(process.argv[2]==='auth'?${JSON.stringify(pathToFileURL(sources.at(-1)!.path).href)}:${kind === 'extensions'
+    ? `['plugin','mcp'].includes(process.argv[2])?${JSON.stringify(pathToFileURL(sources[0]!.path).href)}:${JSON.stringify(pathToFileURL(sources[1]!.path).href)}`
+    : JSON.stringify(pathToFileURL(sources[0]!.path).href)});
+`;
+}
+
 export async function prepareDesktopEmulatedClaudeSettingsFixture(
   repo: string,
   pnpmEntry: string,
@@ -26,15 +42,7 @@ export async function prepareDesktopEmulatedClaudeSettingsFixture(
     assert.equal(await realpath(path), path);
     return { path, sha256: await fileDigest(path) };
   }));
-  const wrapper = `${desktopNodeScriptHeader(fixture.node)}import assert from 'node:assert/strict';
-import {createHash} from 'node:crypto';import {readFileSync,realpathSync} from 'node:fs';
-assert.equal(process.env.TEST_DESKTOP_SETTINGS,${JSON.stringify(kind)});
-assert.ok(${JSON.stringify(kind === 'saved-import' ? ['management', 'runtime'] : ['management'])}.includes(process.env.TEST_PEER_ROLE));
-for(const source of ${JSON.stringify(sources)}){assert.equal(realpathSync(source.path),source.path);assert.equal(createHash('sha256').update(readFileSync(source.path)).digest('hex'),source.sha256)}
-await import(process.argv[2]==='auth'?${JSON.stringify(pathToFileURL(sources.at(-1)!.path).href)}:${kind === 'extensions'
-    ? `['plugin','mcp'].includes(process.argv[2])?${JSON.stringify(pathToFileURL(sources[0]!.path).href)}:${JSON.stringify(pathToFileURL(sources[1]!.path).href)}`
-    : JSON.stringify(pathToFileURL(sources[0]!.path).href)});
-`;
+  const wrapper = desktopEmulatedClaudeSettingsWrapper(fixture.node, kind, sources);
   const executable = { path: join(fixture.root, `bin/TEST-claude-${kind}-peer`), sha256: digest(wrapper) };
   await writeFile(executable.path, wrapper, { mode: 0o700, flag: 'wx' });
   for (const peer of fixture.emulatedRuntime.peers) Object.assign(peer.environment, {

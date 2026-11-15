@@ -124,7 +124,7 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
   let comparison: 'off' | 'exact' | 'other-argv' | 'builder' | 'other-builder' |
     'builder-duplicate-output' | 'builder-empty-output' | 'builder-no-expectation' |
     'missing-flags' | 'duplicate-flags' | 'reused-birth' | 'changed-socket' |
-    'oversize-argv' | 'empty-argv' | 'incomplete-argv' = 'off';
+    'oversize-argv' | 'empty-argv' | 'incomplete-argv' | 'node-exec' | 'linux-child-exec' = 'off';
   let comparing = false;
   const links = new Map<number, number>();
   const fixture = { node: '/PRIVATE_FIXED/node', hostEntry: '/PRIVATE_FIXED/cli.js',
@@ -154,6 +154,8 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
       if (comparison === 'oversize-argv') value = 'PRIVATE_'.repeat(600);
       else if (comparison === 'empty-argv') value = '';
       else if (comparison === 'incomplete-argv') value = 'PRIVATE_INCOMPLETE';
+      else if (comparison === 'node-exec' || comparison === 'linux-child-exec')
+        value = '/PRIVATE_EXECUTABLE/' + comparison + '\0--\0' + fixture.node + '\0' + fixture.hostEntry + '\0';
       else if (comparison.includes('builder')) {
         const entry = comparison === 'other-builder' ? '/PRIVATE_OTHER/cli-default.js' : fixture.mcpBuilderEntry;
         const output = comparison === 'builder-empty-output' ? '' :
@@ -170,7 +172,9 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
     assert.match(path, /^\/proc\/(4100|4101)\/(fd\/61|exe)$/u);
     procReads.push(path);
     const pid = Number(path.split('/')[2]);
-    if (path.endsWith('/exe')) return pid === 4101 ? fixture.node : '/PRIVATE_EXECUTABLE/electron';
+    if (path.endsWith('/exe')) return pid === 4101
+      ? comparison === 'node-exec' || comparison === 'linux-child-exec'
+        ? '/PRIVATE_EXECUTABLE/' + comparison : fixture.node : '/PRIVATE_EXECUTABLE/electron';
     const count = (links.get(pid) ?? 0) + 1; links.set(pid, count);
     return comparing && pid === 4101 && comparison === 'changed-socket' && count >= 3
       ? 'socket:[99999]' : 'socket:[45678]';
@@ -230,7 +234,8 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
   }
   for (const variant of ['exact', 'other-argv', 'builder', 'other-builder', 'builder-duplicate-output',
     'builder-empty-output', 'builder-no-expectation', 'missing-flags', 'duplicate-flags',
-    'reused-birth', 'changed-socket', 'oversize-argv', 'empty-argv', 'incomplete-argv'] as const) {
+    'reused-birth', 'changed-socket', 'oversize-argv', 'empty-argv', 'incomplete-argv',
+    'node-exec', 'linux-child-exec'] as const) {
     comparison = variant; comparing = false; change = 'none';
     statReads.clear(); links.clear(); procReads.length = 0;
     let failure: unknown;
@@ -250,12 +255,12 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
       pid: 4101, fd: '61', scope: 'after-failed-census', atomic: false,
       birth: unknown ? 'unknown' : 'same', socket: unknown ? 'unknown' : 'same-as-supplemental',
       fixtureHostArgv: unknown || unreadableArgv ? null : ['exact', 'missing-flags', 'duplicate-flags'].includes(variant),
-      fixtureNodeExecutable: unknown ? null : true,
+      fixtureNodeExecutable: unknown ? null : !['node-exec', 'linux-child-exec'].includes(variant),
       fixtureMcpBuilderEntry: unknown || unreadableArgv || variant === 'builder-no-expectation' ? null : variant === 'builder',
       closeOnExec: unknown || variant === 'missing-flags' || variant === 'duplicate-flags' ? null : false,
       commandLineState: unknown ? 'unknown' : variant === 'oversize-argv' ? 'unavailable-or-over-limit' :
         variant === 'empty-argv' ? 'empty' : variant === 'incomplete-argv' ? 'incomplete' : 'complete',
-      executableKind: unknown ? 'unknown' : 'node',
+      executableKind: unknown ? 'unknown' : variant === 'node-exec' || variant === 'linux-child-exec' ? variant : 'node',
     });
     assert.equal(projected.fixtureCorrelation![0]!.fixtureHostArgv, false);
     assert.equal(projected.fixtureCorrelation![0]!.fixtureNodeExecutable, false);

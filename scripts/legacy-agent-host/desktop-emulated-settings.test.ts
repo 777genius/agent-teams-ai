@@ -11,12 +11,14 @@ import { ClaudeAuthenticationCoordinator } from '../../packages/legacy-agent-hos
 import { ClaudeManagementCoordinator } from '../../packages/legacy-agent-host/dist/composition/ClaudeManagementCoordinator.js';
 import { ClaudeAuthConversation } from '../../packages/legacy-agent-host/dist/adapters/providers/ClaudeAuthConversation.js';
 import { teamModelProbeProfile } from '../../packages/legacy-agent-host/dist/composition/teamLaunchModelProbe.js';
+import { runtimeMemberProfileSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
 import { NativeExtensionCoordinator } from '../../packages/legacy-agent-host/dist/extensions/NativeExtensionCoordinator.js';
 import { claudeManagementProfileSchema } from '../../packages/legacy-agent-host/dist/management/profile.js';
 import { ManagementResourceFence } from '../../packages/legacy-agent-host/dist/management/ManagementResourceFence.js';
 import { ModelProbeOwner } from '../../packages/legacy-agent-host/dist/management/ModelProbeOwner.js';
 import { desktopNodeScriptHeader, digest, fileDigest } from './desktop-backend-fixture.ts';
 import { assertDesktopEmulatedImportModelChecks } from './desktop-emulated-import-ui.ts';
+import { desktopEmulatedClaudeSettingsWrapper } from './desktop-emulated-claude-settings-fixture.ts';
 import { extensionMcpName, extensionMcpUrl, extensionPlugin } from './desktop-native-extensions-fixture.ts';
 import type { ClaudeManagementProfile } from '../../packages/legacy-agent-host/dist/management/profile.js';
 import type { TestContext } from 'node:test';
@@ -34,7 +36,9 @@ async function fixture(t: TestContext, kind: 'extensions' | 'saved-import') {
   const sourceSha256 = await fileDigest(source);
   const authSource = await realpath(join(import.meta.dirname, '../../tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts'));
   const authSha256 = await fileDigest(authSource);
-  const wrapper = `${desktopNodeScriptHeader(node)}import assert from 'node:assert/strict';
+  const wrapper = kind === 'saved-import' ? desktopEmulatedClaudeSettingsWrapper(node, kind,
+    [{ path: source, sha256: sourceSha256 }, { path: authSource, sha256: authSha256 }])
+    : `${desktopNodeScriptHeader(node)}import assert from 'node:assert/strict';
 import{createHash}from'node:crypto';import{readFileSync,realpathSync}from'node:fs';
 assert.equal(realpathSync(${JSON.stringify(source)}),${JSON.stringify(source)});
 assert.equal(createHash('sha256').update(readFileSync(${JSON.stringify(source)})).digest('hex'),${JSON.stringify(sourceSha256)});
@@ -166,7 +170,12 @@ test('saved-import finite metadata and actual original probe receipt preserve mo
   const metadata = await f.management.read(identity);
   assert.equal(metadata.models.length, 1); assert.equal(metadata.models[0]!.modelId, 'claude-sonnet-4-6');
   assert.equal(metadata.models[0]!.displayName, 'Sonnet 4.6');
-  const probeProfile = teamModelProbeProfile({
+  const auth = new ClaudeAuthenticationCoordinator([f.profile], (id, revision) => f.management.target(id, revision), () => {});
+  t.after(() => auth.close());
+  assert.deepEqual(await auth.read(identity), {
+    ...identity, loggedIn: true, authMethod: 'api_key', canLogin: false, canLogout: false,
+  });
+  const probeProfile = teamModelProbeProfile(runtimeMemberProfileSchema.parse({
     provider: 'claude', teamId: 'TEST-team', memberId: 'TEST-member', principalId: 'TEST-principal',
     sessionId: 'TEST-session', generation: 1, configRevision: 'TEST-runtime-selection',
     executable: f.profile.executable, cwd: f.profile.cwd, accountBinding: f.profile.accountBinding,
@@ -175,16 +184,20 @@ test('saved-import finite metadata and actual original probe receipt preserve mo
     nativeOptions: { settingSources: [...f.profile.settingSources!], effort: 'low' },
     limits: { queuedInputs: 1, inputBytes: 65536, outputBytes: 65536, outputEvents: 32,
       pendingInteractions: 1, timeoutMs: 5000 },
-  });
+  }));
   assert.equal(probeProfile.provider, 'claude');
   if (probeProfile.provider !== 'claude') throw new Error('Original Claude probe required');
+  assert.equal(probeProfile.environment.TEST_PEER_ROLE, 'runtime');
+  assert.deepEqual(probeProfile.settingSources, f.profile.settingSources);
+  assert.deepEqual(probeProfile.executable, f.profile.executable);
   f.management.admitProbeProfile(probeProfile);
   const probes = new ModelProbeOwner({ store: f.store, fence: new ManagementResourceFence(f.store.list()),
     assertWriter: () => {}, select: (id, revision) => f.management.target(id, revision),
     prepare: (input, current) => f.management.prepareProbe(input, current) });
   t.after(() => probes.close());
   const input = { profileId: probeProfile.profileId, configRevision: probeProfile.configRevision,
-    commandId: 'TEST-original-import-probe', providerId: 'anthropic', modelId: 'claude-sonnet-4-6', effort: 'low' };
+    commandId: 'TEST-original-import-probe', providerId: 'anthropic', modelId: 'claude-sonnet-4-6', effort: 'low',
+    modelContext: 'model-default' as const };
   probes.start(input);
   const deadline = performance.now() + 7000;
   const probeIdentity = { profileId: input.profileId, configRevision: input.configRevision, commandId: input.commandId };
@@ -197,7 +210,11 @@ test('saved-import finite metadata and actual original probe receipt preserve mo
   const records = [...f.store.list()] as unknown as Row[];
   const effects = await f.effects();
   const observed = assertDesktopEmulatedImportModelChecks(records, effects, { model: input.modelId, effort: input.effort });
-  assert.equal(observed.length, 1);
+  assert.equal(observed.length, 1); assert.equal(observed[0]!.role, 'runtime');
+  assert.equal(original.profileId, probeProfile.profileId);
+  assert.throws(() => assertDesktopEmulatedImportModelChecks(records,
+    effects.map(row => row.role === 'runtime' ? { ...row, role: 'management' } : row),
+    { model: input.modelId, effort: input.effort }));
   assert.throws(() => assertDesktopEmulatedImportModelChecks(records, [...effects, observed[0]!], { model: input.modelId, effort: input.effort }));
   assert.throws(() => assertDesktopEmulatedImportModelChecks(records, effects.map(row => row.event === 'input' ? { ...row, requestedEffort: 'high' } : row), { model: input.modelId, effort: input.effort }));
   assert.throws(() => assertDesktopEmulatedImportModelChecks(records, effects.filter(row => row.event !== 'terminal'), { model: input.modelId, effort: input.effort }));
@@ -216,10 +233,28 @@ test('saved-import peer refuses a business input without producing a probe or to
       parent_tool_use_id: null, message: { role: 'user', content: 'TEST launch an unrelated Team' } },
   ].map(row => JSON.stringify(row)).join('\n') + '\n';
   const result = spawnSync(f.profile.executable.path, args, { cwd: f.profile.cwd,
-    env: f.profile.environment, input, timeout: 5000 });
+    env: { ...f.profile.environment, TEST_PEER_ROLE: 'runtime' }, input, timeout: 5000 });
   assert.equal(result.status, 78);
   const effects = await f.effects();
   assert.equal(effects.filter(row => row.event === 'failure').length, 1);
   assert.equal(effects.filter(row => row.event === 'input' || row.event === 'terminal').length, 0);
+  assert.deepEqual([...f.store.list()], []);
+  for (const [role, command, status] of [
+    ['runtime', ['auth', 'status', '--json'], 1],
+    ['management', ['auth', 'login', '--claudeai'], 78],
+    ['management', ['auth', 'logout'], 78],
+    ['management', args, 1],
+    ['runtime', args.filter(arg => !/^--(?:model|effort|permission-prompt-tool|session-id)=/u.test(arg)), 1],
+    ['runtime', args.map(arg => arg === '--tools=' ? '--tools=Read' : arg), 1],
+    ['runtime', [...args, '--mcp-config={}'], 1],
+  ] as const) {
+    const refused = spawnSync(f.profile.executable.path, [...command], { cwd: f.profile.cwd,
+      env: { ...f.profile.environment, TEST_PEER_ROLE: role }, input, timeout: 5000 });
+    assert.equal(refused.status, status, JSON.stringify({ role, command }));
+  }
+  assert.equal((await f.effects()).some(row =>
+    row.event === 'auth-status' || row.event === 'input' || row.event === 'terminal'), false);
+  for (const name of ['settings.json', '.claude.json'])
+    await assert.rejects(readFile(join(f.peerRoot, 'config', name)), { code: 'ENOENT' });
   assert.deepEqual([...f.store.list()], []);
 });

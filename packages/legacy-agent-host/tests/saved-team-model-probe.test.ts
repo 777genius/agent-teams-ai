@@ -1390,6 +1390,9 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
     'technical Launch and product-roster revisions are separate identities');
   assert.equal(payload.launchId.startsWith('saved-model-'), false);
   const captured = own.runtime.captureLaunchModelProbe(own.team.definition.binding.teamId, payload, 'read');
+  assert.ok('productRosterRevision' in captured);
+  assert.equal(captured.productRosterRevision, originalRoster.revision,
+    'the exact prospective destination binds the original product revision');
   assert.equal(captured.profile?.provider, 'opencode');
   if (captured.profile?.provider !== 'opencode') assert.fail('TEST-retained-OpenCode-profile');
   const profile = captured.profile, commandId = 'TEST-retained-product-probe';

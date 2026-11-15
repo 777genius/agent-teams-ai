@@ -229,7 +229,9 @@ jobs:
           $gate = Join-Path $PWD 'tools\owned-process-broker\nativeEmulatedProviderGate.ts'
           $receipt = Join-Path $PWD 'process-acceptance-evidence\windows-source-codex-receipt.json'
           & $controller $node $runner --tsconfig $tsconfig $gate "$env:HOST_PROCESS_NATIVE_STAGE\owned-process-broker.exe" "$build\Release\owned-process-fixture.exe" "$build\Release\owned-process-broker-birth-failure.exe" "$build\Release\owned-process-broker-accounting-failure.exe" "$build\Release\owned-process-broker-release-delay.exe" "$env:HOST_PROCESS_SCOPED_STAGE\owned-process-broker.exe" $receipt --test-source-provider codex 2>&1 | Tee-Object process-acceptance-evidence/windows-source-codex.log
-          if ($LASTEXITCODE -ne 0) { throw 'Original codex source controller did not confirm cleanup' }
+          $controllerExitCode = $LASTEXITCODE
+          [ordered]@{ kind = 'TEST_SOURCE_CONTROLLER_EXIT'; provider = 'codex'; exitCode = [int]$controllerExitCode } | ConvertTo-Json -Compress
+          if ($controllerExitCode -ne 0) { throw 'Original codex source controller did not confirm cleanup' }
       - name: Qualify original claude source A B with TEST peer
         if: runner.os == 'Windows'
         shell: pwsh
@@ -242,7 +244,9 @@ jobs:
           $gate = Join-Path $PWD 'tools\owned-process-broker\nativeEmulatedProviderGate.ts'
           $receipt = Join-Path $PWD 'process-acceptance-evidence\windows-source-claude-receipt.json'
           & $controller $node $runner --tsconfig $tsconfig $gate "$env:HOST_PROCESS_NATIVE_STAGE\owned-process-broker.exe" "$build\Release\owned-process-fixture.exe" "$build\Release\owned-process-broker-birth-failure.exe" "$build\Release\owned-process-broker-accounting-failure.exe" "$build\Release\owned-process-broker-release-delay.exe" "$env:HOST_PROCESS_SCOPED_STAGE\owned-process-broker.exe" $receipt --test-source-provider claude 2>&1 | Tee-Object process-acceptance-evidence/windows-source-claude.log
-          if ($LASTEXITCODE -ne 0) { throw 'Original claude source controller did not confirm cleanup' }
+          $controllerExitCode = $LASTEXITCODE
+          [ordered]@{ kind = 'TEST_SOURCE_CONTROLLER_EXIT'; provider = 'claude'; exitCode = [int]$controllerExitCode } | ConvertTo-Json -Compress
+          if ($controllerExitCode -ne 0) { throw 'Original claude source controller did not confirm cleanup' }
       - name: Qualify original opencode source A B with TEST peer
         if: runner.os == 'Windows'
         shell: pwsh
@@ -255,7 +259,9 @@ jobs:
           $gate = Join-Path $PWD 'tools\owned-process-broker\nativeEmulatedProviderGate.ts'
           $receipt = Join-Path $PWD 'process-acceptance-evidence\windows-source-opencode-receipt.json'
           & $controller $node $runner --tsconfig $tsconfig $gate "$env:HOST_PROCESS_NATIVE_STAGE\owned-process-broker.exe" "$build\Release\owned-process-fixture.exe" "$build\Release\owned-process-broker-birth-failure.exe" "$build\Release\owned-process-broker-accounting-failure.exe" "$build\Release\owned-process-broker-release-delay.exe" "$env:HOST_PROCESS_SCOPED_STAGE\owned-process-broker.exe" $receipt --test-source-provider opencode 2>&1 | Tee-Object process-acceptance-evidence/windows-source-opencode.log
-          if ($LASTEXITCODE -ne 0) { throw 'Original opencode source controller did not confirm cleanup' }
+          $controllerExitCode = $LASTEXITCODE
+          [ordered]@{ kind = 'TEST_SOURCE_CONTROLLER_EXIT'; provider = 'opencode'; exitCode = [int]$controllerExitCode } | ConvertTo-Json -Compress
+          if ($controllerExitCode -ne 0) { throw 'Original opencode source controller did not confirm cleanup' }
       - name: Require completed original platform receipts and unchanged source
         run: |
           set -euo pipefail

@@ -243,7 +243,7 @@ interface CdpFixtureCorrelation {
   fixtureMcpBuilderEntry: boolean | null;
   closeOnExec: boolean | null;
   commandLineState: 'unknown' | 'unavailable-or-over-limit' | 'empty' | 'incomplete' | 'complete';
-  executableKind: 'unknown' | 'electron' | 'node' | 'git' | 'shell' | 'other';
+  executableKind: 'unknown' | 'electron' | 'node' | 'node-exec' | 'linux-child-exec' | 'git' | 'shell' | 'other';
 }
 type CdpFixtureSelection = { node: string; hostEntry: string; mcpBuilderEntry?: string };
 const cdpListenerFailures = new WeakMap<Error, CdpListenerFacts>();
@@ -272,8 +272,9 @@ function correlateCdpFixture(file: CdpListenerFile, fixture: CdpFixtureSelection
       ? 'empty' : argv.endsWith('\0') ? 'complete' : 'incomplete';
     const executableName = basename(executable);
     const executableKind = ['electron', 'agent-teams-ai', 'Agent Teams AI'].includes(executableName)
-      ? 'electron' : executableName === 'node' ? 'node' : executableName === 'git' ? 'git'
-        : ['sh', 'bash', 'dash', 'zsh'].includes(executableName) ? 'shell' : 'other';
+      ? 'electron' : executableName === 'node' ? 'node' : executableName === 'node-exec' ? 'node-exec'
+        : executableName === 'linux-child-exec' ? 'linux-child-exec' : executableName === 'git' ? 'git'
+          : ['sh', 'bash', 'dash', 'zsh'].includes(executableName) ? 'shell' : 'other';
     const info = boundedProcText(`/proc/${file.pid}/fdinfo/${file.fd}`);
     const flags = info?.split('\n').filter(line => line.startsWith('flags:')) ?? [];
     const octal = flags.length === 1 ? /^flags:\t(0[0-7]{1,10})$/u.exec(flags[0]!)?.[1] : undefined;

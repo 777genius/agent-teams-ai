@@ -62,7 +62,8 @@ assert.ok(options.effort === undefined || options.effort === 'low');
 assert.equal(options.model === undefined, options.effort === undefined, 'saved model and effort travel together');
 assert.equal(options['permission-prompt-tool'], options.model === undefined ? undefined : 'stdio');
 assert.equal(options['session-id'] === undefined, options.model === undefined);
-if (role === 'runtime') assert.equal(options.model, model, 'runtime-derived selection is a finite saved-model probe');
+assert.equal(role, options.model === undefined ? 'management' : 'runtime',
+  'only the original Runtime recipe may probe the saved selection');
 const session = options['session-id'] ?? randomUUID();
 assert.match(session, /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/iu);
 let initialized = false, inputId, finished = false, failed = false, buffer = '', inputBytes = 0;

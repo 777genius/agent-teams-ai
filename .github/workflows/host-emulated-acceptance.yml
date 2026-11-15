@@ -551,7 +551,7 @@ jobs:
               if (extensions || savedImport) {
                 assert.equal(proof.execution, 'finite-protocol-peer');
                 assert.equal(pins.provider, 'claude'); assert.equal(pins.protocolRevision, 'sdk-0.3.305');
-                assert.ok(cleanup.effects.every(row => row.provider === 'claude' && row.role === 'management'));
+                assert.ok(cleanup.effects.every(row => row.provider === 'claude' && (row.role === 'management' || savedImport && row.role === 'runtime')));
                 assert.deepEqual(readRecords(join(root, 'hoststore/runtime-sessions'), true), [], 'no allocated Runtime session');
               }
             }

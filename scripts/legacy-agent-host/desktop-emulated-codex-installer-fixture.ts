@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { lstat, mkdir, readFile, realpath, symlink, unlink, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readlink, realpath, symlink, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
@@ -8,7 +8,7 @@ import { digest, fileDigest } from './desktop-backend-fixture.ts';
 import { json, record } from './desktop-resume-records.ts';
 
 export const emulatedCodexInstallerSource = 'tools/owned-process-broker/fixtures/codexInstallerRegistry.cjs';
-type Fixture = { root: string; node: string; appEnvironment: Record<string, string> };
+type Fixture = { root: string; node: string; appEnvironment: Record<string, string>; pins: { sentinelSha256: string } };
 type Source = { path: string; sha256: string };
 const binaryVersionA = '0.162.0', binaryVersionB = '0.169.0';
 const vendor = 'aarch64-apple-darwin';
@@ -81,8 +81,10 @@ else {assert.equal(process.env.TEST_EMULATED_DESKTOP_PROVIDER,'1');assert.equal(
   // Cold CLI discovery prefers the private vendor directory before process PATH.
   // Select the same canonical A there; an override would hide the installed B.
   const pathAlias = join(fixture.root, 'claude/local/node_modules/.bin/codex');
+  assert.equal(await realpath(dirname(pathAlias)), dirname(pathAlias));
   const sentinel = await lstat(pathAlias);
   assert.ok(sentinel.isFile() && !sentinel.isSymbolicLink());
+  assert.equal(await fileDigest(pathAlias), fixture.pins.sentinelSha256);
   await unlink(pathAlias);
   await symlink(executable.path, pathAlias);
   const applicationEnvironment = fixture.appEnvironment as Record<string, string>;
@@ -104,13 +106,19 @@ else {assert.equal(process.env.TEST_EMULATED_DESKTOP_PROVIDER,'1');assert.equal(
 export type EmulatedCodexInstaller = Awaited<ReturnType<typeof prepareDesktopEmulatedCodexInstaller>>;
 
 export async function verifyDesktopEmulatedCodexInstaller(selected: EmulatedCodexInstaller) {
+  assert.equal(selected.pathAlias, join(dirname(selected.root), 'claude/local/node_modules/.bin/codex'));
+  assert.equal(await realpath(dirname(selected.pathAlias)), dirname(selected.pathAlias));
+  assert.ok((await lstat(selected.pathAlias)).isSymbolicLink());
+  assert.equal(await readlink(selected.pathAlias), selected.executable.path);
   assert.equal(await realpath(selected.pathAlias), selected.executable.path);
+  assert.equal(await fileDigest(selected.pathAlias), selected.executable.sha256);
   for (const pin of [selected.executable, selected.preload, selected.tarball, selected.fixture, ...selected.aFiles]) {
     assert.equal(await realpath(pin.path), pin.path); assert.equal(await fileDigest(pin.path), pin.sha256);
   }
   return { package: 'TEST finite package, not an official Codex distribution', aVersion: selected.binaryVersionA,
     bVersion: selected.binaryVersionB, aSha256: selected.executable.sha256, bSha256: selected.expectedBinarySha256,
-    packageSha256: selected.tarball.sha256, integrity: selected.integrity, preloadSha256: selected.preload.sha256 };
+    packageSha256: selected.tarball.sha256, integrity: selected.integrity, preloadSha256: selected.preload.sha256,
+    pathAlias: { path: selected.pathAlias, target: selected.executable.path, sha256: selected.executable.sha256 } };
 }
 
 /** Strict identity observation of the real stock installer output, never a path chosen by the test. */

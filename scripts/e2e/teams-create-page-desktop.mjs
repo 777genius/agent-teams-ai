@@ -3,7 +3,7 @@
 // team/project, exercises Back/resume, tab switches, process restart, copy and
 // config-only creation, and verifies launch still opens its original dialog.
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
@@ -91,12 +91,16 @@ async function seedFixture() {
       root, process.platform === 'win32' ? 'fixture-runtime-deny.cmd' : 'fixture-runtime-deny.cjs'
     ),
     runtimeLedgerPath: path.join(root, 'fixture-runtime-ledger.ndjson'),
+    providerLedgerPath: path.join(root, 'fixture-provider-ledger.ndjson'),
+    providerCliPaths: {},
+    codexHome: path.join(root, 'codex-home'),
     deliveryRuntimeVersion: runtimeLock.version,
   };
   for (const key of [
     'claudeRoot',
     'userDataRoot',
     'claudeConfigDir',
+    'codexHome',
     'multimodelDataHome',
     'multimodelCacheHome',
     'xdgConfigHome',
@@ -137,6 +141,44 @@ async function seedFixture() {
     await chmod(fixture.runtimeScriptPath, 0o755);
   }
   await writeFile(fixture.runtimeLedgerPath, '');
+  // Native installer/account checks do not use the orchestrator override.
+  // Fence them with explicit TEST metadata peers and a private managed-source seed.
+  await writeFile(fixture.providerLedgerPath, '', { flag: 'wx', mode: 0o600 });
+  for (const [provider, version] of [
+    ['codex', 'codex-cli 0.164.0'], ['claude', '2.1.0 (Claude Code)'],
+  ]) {
+    const script = path.join(root, `fixture-${provider}-deny.cjs`);
+    const wrapper = process.platform === 'win32' ? script.replace(/\.cjs$/u, '.cmd') : script;
+    await writeFile(script, `#!${nodeBinary}\n'use strict';\n` +
+      `const fs = require('node:fs');\n` +
+      `const args = process.argv.slice(2);\n` +
+      `const accepted = args.length === 1 && args[0] === '--version';\n` +
+      `fs.appendFileSync(${JSON.stringify(fixture.providerLedgerPath)}, JSON.stringify({ provider: ${JSON.stringify(provider)}, kind: accepted ? 'version' : 'refused', args }) + '\\n');\n` +
+      `if (accepted) { process.stdout.write(${JSON.stringify(version + '\n')}); process.exit(0); }\n` +
+      `process.stderr.write(${JSON.stringify('TEST ' + provider + ' refuses non-version commands\n')}); process.exit(77);\n`,
+      { flag: 'wx', mode: 0o700 });
+    if (process.platform === 'win32')
+      await writeFile(wrapper, `@echo off\r\n"${nodeBinary}" "${script}" %*\r\n`, { flag: 'wx' });
+    else await chmod(script, 0o700);
+    for (const [args, status, stdout] of [
+      [['--version'], 0, version + '\n'], [['TEST-forbidden-native-command'], 77, ''],
+    ]) {
+      const observed = spawnSync(nodeBinary, [script, ...args], {
+        cwd: fixture.projectPath, encoding: 'utf8', timeout: 5000, windowsHide: true,
+      });
+      assert.equal(observed.error, undefined); assert.equal(observed.signal, null);
+      assert.equal(observed.status, status); assert.equal(observed.stdout, stdout);
+    }
+    fixture.providerCliPaths[provider] = wrapper;
+  }
+  // This is initial TEST configuration, not an installed vendor package or Host receipt.
+  // The installer status path ignores CODEX_CLI_PATH and would otherwise scan ambient PATH.
+  await json(path.join(fixture.userDataRoot, 'data/runtimes/codex/current.json'), {
+    schemaVersion: 1, rootVersion: '0.164.0', platformVersion: '0.164.0',
+    platformTarget: `TEST-${process.platform}-${process.arch}`,
+    binaryPath: fixture.providerCliPaths.codex, integrity: 'TEST-finite-metadata-only',
+    installedAt: new Date().toISOString(),
+  });
   await writeFile(path.join(fixture.projectPath, 'README.md'), '# Disposable Teams Creation Page E2E\n');
   const member = {
     name: fixture.memberName,
@@ -252,6 +294,9 @@ async function startApp(fixture) {
     CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
     NODE_BINARY: nodeBinary,
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: fixture.runtimeWrapperPath,
+    CODEX_CLI_PATH: fixture.providerCliPaths.codex,
+    CLAUDE_CLI_PATH: fixture.providerCliPaths.claude,
+    CODEX_HOME: fixture.codexHome,
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     pnpm_config_verify_deps_before_run: 'false',
   };

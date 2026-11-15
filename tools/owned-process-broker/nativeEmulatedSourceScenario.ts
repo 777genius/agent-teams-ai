@@ -174,8 +174,13 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         try { await client.shutdown(); } catch (error) { failures.push(error); }
         try { assert.equal(await physical.close(), true); } catch (error) { failures.push(error); }
         available = false;
-        for (const job of jobs) {
+        for (const [jobSlot, job] of jobs.entries()) {
           try {
+            console.log(JSON.stringify({ kind: 'TEST_SOURCE_CLEANUP', provider, mainEpoch: physical.mainEpoch,
+              jobSlot, source: job.origin ? sourceRef(job.origin) : null,
+              rootCaptured: job.root !== undefined, witnessCaptured: job.witness !== undefined,
+              resumed: job.resumed, stopped: job.stopped, drained: job.drained, released: job.released,
+              originalHandleAbsent: job.handleAbsent }));
             assert.ok(job.root && job.witness && job.resumed && job.stopped && job.drained && job.released,
               'Every original physical Job retains confirmed Stop/drain/release');
             assert.equal(await job.witness.wait(), 0);

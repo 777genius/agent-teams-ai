@@ -732,29 +732,54 @@ describe('existing dialog multi-provider preflight', () => {
 });
 
 describe('existing Launch desired roster model preflight', () => {
-  it.each(['targeted', 'untargeted', 'captured-default'] as const)(
-    'retains the unchanged OpenCode destination for the later full roster CAS (%s)',
+  it.each(['targeted', 'untargeted', 'captured-default', 'member', 'saved-model', 'diagnostic'] as const)(
+    'retains the exact original OpenCode destination for the later full roster CAS (%s)',
     async (mode) => {
       const f = fixture();
-      f.view.members[0].selected = {
-        provider: 'opencode', workspace: '/TEST/workspace', model: 'test-local/TEST-model',
-        capabilities: ['model'],
+      const selected = {
+        provider: 'opencode' as const, workspace: '/TEST/workspace', model: 'test-local/TEST-model',
+        capabilities: ['model' as const],
       };
+      const memberId = mode === 'member' ? 'TEST-opencode' : 'TEST-member';
+      if (mode === 'member')
+        f.view.members.push({ memberId, label: 'alice', role: 'member', selected });
+      else f.view.members[0]!.selected = selected;
+      if (mode === 'saved-model') f.view.launch.launchId = 'saved-model-' + 'a'.repeat(64);
+      const before = structuredClone(f.view);
+      const target = mode === 'member'
+        ? { kind: 'member' as const, name: 'alice', originalName: 'alice' }
+        : { kind: 'lead' as const };
       const directory = await mkdtemp(join(tmpdir(), 'TEST-opencode-product-roster-'));
       try {
-        const choice: TeamProvisioningModelCheckRequest = { providerId: 'opencode',
-          model: 'test-local/TEST-model', ...(mode === 'targeted' ? { targets: [{ kind: 'lead' }] } : {}) };
+        const choice: TeamProvisioningModelCheckRequest = {
+          providerId: 'opencode', model: selected.model,
+          ...(mode === 'untargeted' || mode === 'captured-default' ? {} : { targets: [target] }),
+        };
         const options = { ...f.options, intents: new FileTeamModelProbeIntents(directory),
-          request: { cwd: '/TEST/workspace', providerId: 'opencode' as const,
-            preparationId: 'TEST-original-preparation', modelChecks: mode === 'captured-default' ? [] : [choice] } };
+          request: { cwd: selected.workspace, providerId: 'opencode' as const,
+            ...(mode === 'diagnostic' ? {} : { preparationId: 'TEST-original-preparation' }),
+            modelChecks: mode === 'captured-default' ? [] : [choice] } };
         const result = await prepareCapturedTeamModels(options);
-        const selection = { launchId: 'TEST-launch', rosterRevision: 'TEST-roster', memberId: 'TEST-member',
-          model: 'test-local/TEST-model', draft: { providerId: 'opencode', target: { kind: 'lead' }, workspace: '/TEST/workspace' } };
+        const selection = {
+          launchId: f.view.launch.launchId, rosterRevision: f.view.launch.rosterRevision,
+          memberId, model: selected.model,
+          ...(mode === 'diagnostic' ? {} :
+            { draft: { providerId: 'opencode', target, workspace: selected.workspace } }),
+        };
         expect(result.ready).toBe(true);
-        expect(result.capturedTeamReadiness?.selections).toEqual([selection]);
+        if (mode === 'diagnostic') expect(result.capturedTeamReadiness).toBeUndefined();
+        else expect(result.capturedTeamReadiness?.selections).toEqual([selection]);
         expect(f.starts.map(call => call.payload)).toEqual([selection]);
-        expect((await prepareCapturedTeamModels(options)).ready).toBe(true);
-        expect(f.starts).toHaveLength(1);
+        const originalId = f.starts[0]!.commandId;
+        const replay = await prepareCapturedTeamModels({
+          ...options, intents: new FileTeamModelProbeIntents(directory),
+        });
+        expect(replay.ready).toBe(true);
+        if (mode !== 'diagnostic') expect(replay.capturedTeamReadiness?.selections).toEqual([selection]);
+        expect(f.starts.map(call => call.commandId)).toEqual([originalId]);
+        expect(f.view).toEqual(before);
+        expect(f.calls.every(call => call.operation === 'team.launch.model.configuration.read' ||
+          call.operation.startsWith('team.launch.probe.'))).toBe(true);
       } finally { await rm(directory, { recursive: true, force: true }); }
     }
   );
