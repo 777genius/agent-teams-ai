@@ -86,6 +86,39 @@ jobs:
           root=.provider-native-18a1c276/.checked
           test -f "$root/agent-teams-provider-implementations-0.0.0.tgz"
           test -f "$root/agent-teams-provider-session-contracts-0.0.0.tgz"
+          # macOS zlib writes gzip OS=19; the immutable checked Linux archives use OS=3.
+          # Accept only the independently observed raw Mac hashes, change that one
+          # header byte, and still require the original complete archive hashes.
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import { gunzipSync } from 'node:zlib';
+          const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+          const root = '.provider-native-18a1c276/.checked/';
+          for (const [file, macSha, expectedSha] of [
+            ['agent-teams-provider-implementations-0.0.0.tgz',
+             '13116c48f2d947f79800f27c3391f150a97daba5127cc64830d049c670343abb',
+             '26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c'],
+            ['agent-teams-provider-session-contracts-0.0.0.tgz',
+             '2cd9c307644812321bd9891a383b0e00d6e9166d11e4a9f102b03c264a1fa6fa',
+             'aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db'],
+          ]) {
+            const original = readFileSync(root + file), inputSha = digest(original);
+            if (inputSha === expectedSha) continue;
+            assert.equal(inputSha, macSha, 'refuse any unrecognized archive difference');
+            assert.equal(original[9], 19, 'only the proven macOS gzip OS byte may differ');
+            const canonical = Buffer.from(original);
+            canonical[9] = 3;
+            assert.equal(digest(canonical), expectedSha, 'original immutable archive SHA256');
+            assert.ok(canonical.subarray(0, 9).equals(original.subarray(0, 9)));
+            assert.ok(canonical.subarray(10).equals(original.subarray(10)));
+            assert.ok(gunzipSync(canonical).equals(gunzipSync(original)), 'unchanged tar bytes');
+            writeFileSync(root + file, canonical);
+            console.log(JSON.stringify({ file, inputSha, canonicalSha: expectedSha,
+              gzipOsHeader: { from: 19, to: 3 }, tarBytesUnchanged: true }));
+          }
+          JS
           echo "26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c  $root/agent-teams-provider-implementations-0.0.0.tgz" | shasum -a 256 -c -
           echo "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db  $root/agent-teams-provider-session-contracts-0.0.0.tgz" | shasum -a 256 -c -
           tar -tzf "$root/agent-teams-provider-implementations-0.0.0.tgz" | grep -Fx 'package/dist/prompt-suggestions.js' >/dev/null

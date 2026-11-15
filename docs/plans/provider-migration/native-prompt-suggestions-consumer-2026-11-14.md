@@ -21,6 +21,8 @@ Local evidence: **61/61 focused feature tests PASS**; the original Claude Host g
 
 The existing workflow now separates already-adopted-pin qualification from publication. Its read-only source job uses the existing macOS ARM runner, retains the complete provider `pnpm check`, and compares the reproduced implementation and contracts archives with the exact event consumer commit, deterministic receipt and frozen lockfile resolution. Only then can native jobs consume its verified SHA. The publisher is skipped for that already-adopted pin; the recognized old pin still takes the original serialized publication path. A skipped publisher is not test evidence, and the new macOS source reproduction still needs its actual CI result.
 
+The first macOS source execution passed all 536 source tests and both packed checks, then correctly refused the archive checksum mismatch. Independent comparisons proved that both archives differ from the immutable Linux bytes only at gzip header byte 9 (OS 19 versus 3). The workflow accepts only those two observed raw Mac digests, normalizes that one header byte, verifies unchanged compressed and expanded tar data, and still demands the original immutable SHA256 values. No package contents, pin or historical receipt are changed.
+
 After actual feature acceptance, independent review and required checks, the scoped merges are consumer **#1197 → existing #1186 branch** and provider **#9 → existing #8 branch**. No `main`/default-path/release cutover or automatic merge of the broader #1186/#982 migration is included. Pending, queued, skipped and previous-SHA results never qualify the final source.
 
 ## Purpose and exact scope
