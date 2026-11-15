@@ -10,6 +10,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { TeamOwnerStore } from '../../packages/legacy-agent-host/dist/adapters/team/TeamOwnerStore.js';
 import { readScheduledRunCapture } from '../../packages/legacy-agent-host/dist/composition/scheduledRunCapture.js';
 import { runtimeCaptureSourceSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeCaptureSource.js';
+import { resolveRuntimeRecipe } from '../../packages/legacy-agent-host/dist/composition/runtimeRecipe.js';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { managementDigest } from '../../packages/legacy-agent-host/dist/management/identity.js';
 import { BackendOwnerRouter } from '../../src/features/agent-backend/main/application/BackendOwnerRouter';
@@ -398,7 +399,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const before = first.jobs.length, inputsBefore = inputs().length;
       const commandId = `TEST-start-${image}`, payload = { launchId, rosterRevision: text(selectedLaunch.rosterRevision) };
       diagnosticLaunches.push({ actionDigest: runtimeDigest(commandId), bindingDigests: rows(capturedDefinition.members).map(member => managementDigest(object(member.binding))), launchId, source: sourceRef(source) });
-      if (provider === 'codex') {
+      if (provider !== 'claude') {
         assert.equal(capturedDefinition.launchId, payload.launchId);
         assert.equal(capturedDefinition.rosterRevision, payload.rosterRevision);
         assert.equal(record.startCommandId, undefined);
@@ -607,6 +608,13 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const capture = readScheduledRunCapture(new TeamOwnerStore(fixture.profile.owner.storageRoot,
         fixture.profile.teams[1]!.binding.teamName), scheduled.runId);
       assert.ok(capture); assert.deepEqual(capture.input, scheduled); assert.deepEqual(capture.source, sourceRef(b.source));
+      if (provider === 'codex') {
+        assert.equal(capture.memberId, 'alice-id');
+        assert.equal(capture.teamScope, runtimeDigest(fixture.profile.teams[1]!.scope));
+        const recipe = resolveRuntimeRecipe(fixture.profile.runtime, fixture.profile.teams[1]!.binding.teamId,
+          capture.memberId, scheduled.config.providerId);
+        assert.equal(runtimeDigest(recipe), capture.recipeDigest);
+      }
       const jobs = first.jobs.slice(before); assertSourceJobs(jobs, b.source, 'B', 'runtime', fixture.profile.teams[1]!.binding.teamId);
       noTeamConnection(jobs); assert.ok(quiescent(jobs));
       if (provider === 'codex') assert.deepEqual(jobs.flatMap(job => job.threadEphemeral), [true]);

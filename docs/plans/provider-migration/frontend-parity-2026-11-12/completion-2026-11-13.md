@@ -411,3 +411,61 @@ summary/binding поля и включение обоих файлов в пре
 scripts typecheck (TS 7.0.2), scoped fast lint, source-size и diff check прошли;
 новых тестовых helpers, profiling protocol или production performance changes
 не добавлено. Native Windows результат этой поправки пока не заявляется.
+
+### Следующие original Windows observations на `2cb0c0a9`
+
+[ARM64](https://github.com/777genius/agent-teams-ai/actions/runs/43755682747/job/132939165328)
+подтвердил готовность обеих Codex Teams за 15,76/15,78 с. Следующий original
+standalone run был ещё `running`, когда его общий TEST poll оборвался через
+15,47 с. Все 24 подготовленных процесса подтвердили отсутствие; ещё один Job
+был allocated непосредственно перед cleanup, без staging/root/resume, и получил
+Stop/drain/release. Строгий source receipt остался `cleanup=false`, внешний
+controller подтвердил отсутствие процессов. Этот run не засчитывается как PASS.
+
+[x64](https://github.com/777genius/agent-teams-ai/actions/runs/43755682747/job/132939165622)
+полностью прошёл Codex и Claude source scenarios; OpenCode прошёл подготовку,
+но следующий общий poll остановил `opening` через 15,19 с. Отказа по expiry в
+этом receipt нет, все исходные Jobs очищены. Полный OpenCode scenario остаётся
+INCOMPLETE.
+
+Для этих двух наблюдений применяется уже установленное правило captured budget:
+OpenCode Team-ready использует ту же проверку исходного member и один deadline
+до подготовки/Start; Codex standalone использует timeout исходного recipe,
+связанного с сохранённым run через input/source/teamScope/member/recipeDigest.
+Существующее чтение standalone capture перенесено сразу после Start; нового RPC
+или повторного запуска нет. Это консервативный TEST budget по timeout native
+operations, а не новый общий product wall-clock limit standalone; время Start/ACK
+входит в бюджет наблюдателя. Прежние success,
+cold replay и cleanup assertions, общий poll default для остальных вызовов,
+production deadlines и controller 120 с сохранены. Новая native приёмка нужна
+на следующем опубликованном source; результаты `2cb0c0a9` не переименовываются.
+
+### Исходный Desktop peer между census и записью launch
+
+Замечания #1192/4567946375 и /4567946386 воспроизведены на прежнем observer:
+короткий catalog peer может завершиться до отдельного argv read, а новый peer
+может ещё не записать launch. Наблюдатель теперь сохраняет один исходный census
+с argv/parent/group/birth и за общий бюджет 3 с ожидает единственную исходную
+launch row. Живой процесс должен сохранить исходные поля; завершившийся требует
+свежего подтверждения отсутствия. Несовпадение, неоднозначность и истечение
+бюджета остаются отказами; PID не используется для сигналов или новой authority.
+Это ограниченное TEST-наблюдение `ps`, не kernel HANDLE и не универсальная ABA proof.
+
+В существующем observations test file: до исправления 26 PASS / 7 ожидаемых FAIL
+при 25 прошедших прежних проверках; после — 33/33 PASS, без SKIP, Node 24.21.0.
+Root дополнительно воспроизвёл потерю Unicode argv у `ps` в locale C на отдельном
+короткоживущем TEST Node и подтвердил его cleanup. Выбрана UTF-8 locale с English
+date fields (Linux C.UTF-8, Darwin en_US.UTF-8); fixture содержит пробелы, Я и 路径.
+Эта regression дала 31 PASS / 2 ожидаемых FAIL до locale fix и 33/33 PASS после.
+Проверки source/provider/role, исходного Host, cleanup и source pins сохранены.
+Root R2, полный scripts typecheck на TS 7.0.2, scoped fast lint трёх TEST файлов,
+source-size guard и diff check прошли. Эти локальные проверки не заменяют новый
+полный native/Electron run на опубликованном source.
+
+### Согласованное продолжение: исходные сроки и проверки приёмки
+
+Продолжение объединяет историю `c28f1aa8` с опубликованной веткой `185c39a8`, сохраняя её исправления интерфейса, транспортной ёмкости и диагностику первого отказа OpenCode. Приведённые выше изменения captured-budget относятся к входящей ветке. В согласованном исходном коде сохранены первоначальные 15-секундные проверки готовности и standalone; расширенные сроки не считаются прохождением первоначального контракта. Новые проверки member/source/recipe сохранены, а чтение standalone capture остаётся на первоначальном месте после завершения.
+
+Входящий Desktop observer сохранён вместе с проверкой журнала при пустом census дочерних процессов. Дополнительные узкие исправления не допускают PASS при поздней ошибке Linux model oracle, требуют свежих retained-HANDLE наблюдений соседних целей после scoped Stop и применяют исходный 35-секундный cutoff к terminal-read RetainedHost. Новых запусков, повторов действий, полномочий или увеличений существующих сроков нет.
+
+Точный prospective R1, исходные blobs, фактически выполненные ограниченные проверки и их пределы записаны в [Plan29](29-reconciled-acceptance-and-custody-followups-2026-11-15.md). Локальные проверки этих условий не заменяют исходные native/Desktop/packaged сценарии на объединённом source. P08, P09 и незавершённые проверки остаются открыты; PR остаётся Draft на прежней базе, genuine Claude/Codex не разрешены.

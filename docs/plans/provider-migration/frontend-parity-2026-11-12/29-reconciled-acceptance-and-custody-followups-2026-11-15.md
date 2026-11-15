@@ -3777,3 +3777,32 @@ Use scratch-only, whole-file-hash-bound harnesses for the two small qualifier in
 After correction, use the original complete legacy-host-scripts compiler, existing bounded broker and retained-Host compiler closures, scoped fast lint, unchanged source-size/provisioning guards and diff check. Use captured Node24.21.0/TypeScript7.0.2, the verified current Host dist and original finite-test environment. Do not rerun the broad workspace compiler or the whole Host test compiler: the prior stage-only source's latter gate was killed137 twice and remains unqualified for CI. No dependency reinstall, native/GUI run, timeout increase, workflow rerun/cancellation, new matrix or waiver is authorized.
 
 Independently review exact source composition and actual results before the guarded source push, then fully read back both parents, complete changed content and tree. Retain source-specific c28 and predecessor CI outcomes separately. Original resulting-source Desktop/native/packaged gates, P08 Windows same-Main recovery, P09 selected-image/script writer authority, inactive genuine vendor qualification, WOW64 startup evidence and scoped-Job capture/Stop race remain open. No blanket unsigned/script restriction or new C++ exception policy is authorized by this cut. Keep PR1192 Draft and its original base; no Ready, main merge, release, default activation or Stage2.
+
+### Actual validation of the selected c28 composition and original oracles
+
+Prospective R1 `87509f8a0e2b6c1b752729057ec1db08f6f1f425`, tree `bdf481599bc344c39699dd22ffdbacf9bd96ae0b`, was published and fully read back before source application or execution. RED tree `0534880a36cc48727db9d5c7bcd61b2128580d2f` differs from that R1 only in the incoming Desktop observer, its additive test file and the additive vendor context test. The two scratch harnesses read the unchanged, whole-blob-verified qualifier files; no qualifier/vendor entrypoint was imported. The original Node24.21.0 and existing verified Host dist were used; no dependency or build shortcut was introduced.
+
+Every planned counterexample was reproduced. The Desktop file retained all33 preceding passes and failed only its six new assertions: four missing refusals and two missing journal reads. The vendor context file retained its three prior passes and failed the new actual-block case at the first missing rejection for an absent provider target with a live witness child. Linux finalization retained two controls and incorrectly returned PASS for the late model failure. RetainedHost retained three controls and failed the four deadline/budget assertions. These are finite actual-source logical failures, not new native Windows or provider-execution failures. Assertions after an early RED failure are qualified by GREEN below.
+
+Applying the exact reviewed seven source/test candidates and the preserved incoming completion document with its composition note produced tree `69079f2fae708cd28f3b361c2860010e2a802dc6`. The same complete files/harnesses then passed with no failures, skips or cancellations. Source and current Host dist hashes were unchanged after all checks. The Linux scratch harness SHA256 is `fc8c53b7229a005df72f167041f716c3d144cf7e9120228f65034ed0efd7278c`; RetainedHost remains the R1-pinned `67bc5f920921473537ddfd364408f0052b12e1f6494ef5319f182250762f4c76`.
+
+| Scope | Actual RED | Actual GREEN | RED log SHA256 | GREEN log SHA256 |
+| --- | --- | --- | --- | --- |
+| Complete Desktop observations file |33 PASS /6 intended FAIL |39 PASS |3687fd7c6e6be6db4a162522bcc6fc9fbf9ce236a9e32a99576bc79d17ff8aa2 |82c7b9cffaed5fe82cdd3e704518cf1aa0958a207f1479e72cc4e798930dbdb0 |
+| Complete original vendor context file |3 PASS /1 intended FAIL |4 PASS |e4cfca773c504d54517fd1ef81fe01b22a273a68f8c6348a692928ad83f6cfc3 |7e0439fa41bbbfc2a1e1ab4221d9e6e02177bed97f8e1ba60b83dc703c7b4ca0 |
+| Actual Linux finalization suffix |2 PASS /1 intended FAIL |3 PASS |ebff0edd6923270bb594df005c04300f60169fd628e7f078e1704eb18627ac91 |d46529d446b80b361ab568fed255fdf73e1aa0ad8b06050f95a5e9dc018ec7d7 |
+| Actual RetainedHost rpc/terminal loop |3 PASS /4 intended FAIL |7 PASS |11096d0506e5f7920ebbc85fc15a1a90eb785fcd398762fea26d5c80a06dd09a |9ad34edcb36869d4c722bcd439c2c8ccf77c1559d41a246c03b93e2514c01be9 |
+
+The original complete scripts compiler passed on TypeScript7.0.2. Both existing bounded broker and retained-Host compiler configurations passed. Scoped fast lint for all seven changed TypeScript files passed with no errors or warnings. The source-size guard retained5014 production files,141 exceptions and the800-line cap; provisioning architecture guard passed unchanged. Exact diff check was clean. Their raw log identities are retained below; the empty compiler/diff outputs share the standard empty-byte hash.
+
+| Gate | Actual outcome | Raw log SHA256 |
+| --- | --- | --- |
+| Whole legacy-host-scripts compiler |PASS |497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015 |
+| Existing broker compiler |PASS |e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 |
+| Existing retained-Host compiler |PASS |e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 |
+| Seven-file scoped fast lint |PASS |5a97584a25c14ad9f13b971878d0e8dffc01005490e582ca11e9aa8bc415ba88 |
+| Source-size guard |PASS |961492c3971768c144057514917b4179f695089b172a31e2d3d3d62b9efdc8f3 |
+| Provisioning guard |PASS |7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c |
+| Exact source diff check |PASS |e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 |
+
+No broad workspace or whole Host test compiler was retried. The stage source's two exit137 Host-test-type results remain unqualified for CI; the smaller passing closures do not replace that gate. No real Claude/Codex, native SDK/vendor entrypoint, GUI, workflow rerun or cancellation was performed. Original deadlines and all custody/source/cleanup requirements remain. The public76 head and its19 incoming paths remain separate from this selected c28 private merge; several overlapping oracle corrections are already source-addressed there and require semantic reconciliation, not a claim that public76 lacks them. Resulting-source native/Desktop/packaged acceptance, P08/P09 and the other R1 limitations remain open.

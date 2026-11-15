@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 
 import { afterEach, beforeEach, describe, it, vi } from 'vitest';
 
@@ -88,4 +90,57 @@ describe('original query witness protocol', () => {
       () => {}, createNativeGateEvents(), 'query-wait-gated'), /Original HANDLE witness unavailable/);
     assert.equal(children[0]!.exitCode, 24);
   });
+
+  it('requires fresh retained target facts even while all survivor witness children remain alive', async () => {
+    // Exercise the actual gate block without importing its vendor fixture or invoking a CLI.
+    const source = readFileSync(new URL('./nativeVendorGate.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+    const begin = '        scopedProof = await tap.stopService(service);';
+    const end = "        phase('same-native-session-continuation');";
+    const from = source.indexOf(begin), to = source.indexOf(end, from);
+    assert.ok(from >= 0 && to > from);
+    assert.equal(source.indexOf(begin, from + begin.length), -1);
+    assert.equal(source.indexOf(end, to + end.length), -1);
+    const body = source.slice(from, to + end.length);
+    const exercise = (absent: string | null, refusal?: Error) => {
+      const calls: string[] = [];
+      let continued = false;
+      const witness = (name: string) => ({
+        process: { exitCode: null }, exit: Promise.resolve(0),
+        wait: async () => { calls.push('wait:' + name); return 0; },
+        observe: async () => {
+          calls.push('observe:' + name);
+          if (refusal && name === 'background') throw refusal;
+          return name === absent ? 'absent' : 'alive';
+        },
+      });
+      const service = Object.freeze({ original: true });
+      const promise = runInNewContext('(async () => { ' + body + ' })()', {
+        assert, service, scopedProof: undefined, cleanupProof: false,
+        tap: { stopService: async (target: unknown) => {
+          assert.equal(target, service); calls.push('stop'); return Object.freeze({ original: true });
+        } },
+        timeout: (operation: Promise<unknown>) => operation,
+        events: { wait: (operation: Promise<unknown>) => operation },
+        providerWitness: witness('provider'), backgroundWitness: witness('background'),
+        serviceWitness: witness('service'), firstLeaf: witness('first'), secondLeaf: witness('second'),
+        adjacent: witness('neighbor'), sentinel: { exitCode: null }, facade: { exitCode: null },
+        phase: (value: string) => { assert.equal(value, 'same-native-session-continuation'); continued = true; },
+      }) as Promise<void>;
+      return { promise, calls, continued: () => continued };
+    };
+    const expected = ['stop', 'wait:service', 'wait:first', 'wait:second',
+      'observe:provider', 'observe:background', 'observe:neighbor'];
+    for (const absent of ['provider', 'background', 'neighbor']) {
+      const sample = exercise(absent);
+      await assert.rejects(sample.promise, assert.AssertionError);
+      assert.deepEqual(sample.calls, expected); assert.equal(sample.continued(), false);
+    }
+    const alive = exercise(null);
+    await alive.promise; assert.deepEqual(alive.calls, expected); assert.equal(alive.continued(), true);
+    const refusal = new Error('TEST original HANDLE observation unavailable');
+    const unavailable = exercise(null, refusal);
+    await assert.rejects(unavailable.promise, error => error === refusal);
+    assert.deepEqual(unavailable.calls, expected); assert.equal(unavailable.continued(), false);
+  });
+
 });
