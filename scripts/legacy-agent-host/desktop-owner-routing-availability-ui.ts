@@ -33,6 +33,13 @@ export async function assertDesktopOwnerRoutingAvailability(options: {
   assert.equal(options.discovery.state, 'ready', 'Partial UI proof requires original ready discovery');
   assert.ok(Array.isArray(options.discovery.bindings) && Array.isArray(options.discovery.unavailableOwners));
   assert.deepEqual(options.discovery.bindings.filter(value => row(row(value).handle).handleId === row(bPublic.handle).handleId), [bPublic]);
+  const aTeamNames = new Set(options.discovery.bindings.filter(value =>
+    row(value).ownerResourceRef === aPublic.ownerResourceRef).map(value => {
+    const handleId = row(row(value).handle).handleId;
+    assert.ok(typeof handleId === 'string' && handleId.length > 0);
+    return hostTeamSelectionKey(handleId);
+  }));
+  assert.ok(aTeamNames.has(a), 'Original A binding must remain captured');
   const unavailable = options.discovery.unavailableOwners.map(row);
   assert.equal(unavailable.length, 1); assert.equal(unavailable[0]!.kind, 'owner');
   assert.equal(unavailable[0]!.ownerResourceRef, aPublic.ownerResourceRef);
@@ -104,7 +111,7 @@ export async function assertDesktopOwnerRoutingAvailability(options: {
     assert.ok(rows.length > 0 && rows.length <= 16);
     assert.ok(rows.every(entry => ['busy', 'unavailable', 'shutting-down'].includes(String(entry.code)) &&
       ['not-dispatched', 'rejected', 'unknown'].includes(String(entry.outcome)) &&
-      (entry.kind === 'owner' ? entry.ownerResourceRef === aPublic.ownerResourceRef : entry.kind === 'team' && entry.teamName === a)));
+      (entry.kind === 'owner' ? entry.ownerResourceRef === aPublic.ownerResourceRef : entry.kind === 'team' && typeof entry.teamName === 'string' && aTeamNames.has(entry.teamName))));
     assert.equal(rows.filter(entry => entry.kind === 'owner').length, 1);
     assert.equal(healthy.teamName, b); assert.equal(healthy.ownerResourceRef, bPublic.ownerResourceRef);
     if (surface === 'tasks') {
