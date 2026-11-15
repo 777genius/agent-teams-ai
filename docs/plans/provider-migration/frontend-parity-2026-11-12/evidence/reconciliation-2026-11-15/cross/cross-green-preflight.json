@@ -1,0 +1,44 @@
+{
+  "sourceHead": "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+  "sourceTree": "1db97f452abcd5996f061a8a3ed476a44cf33302",
+  "clean": true,
+  "selectedLeaves": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+      "blob": "5852944f37635afc9d7c6b2c444616b812bd5e84",
+      "bytes": 12074,
+      "sha256": "712e94c874b666ad195c434d12830c814525138230cf09d592334d24bb3d996f"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "blob": "28dc887aa3b27284a43b5253632c56765618f876",
+      "bytes": 87280,
+      "sha256": "5ce2ec9458c35b9a9352b50868ec9b62b917f6de7bd96dbebcfcb16cc6fce9ce"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "blob": "5c8d6a2ee1555257a4f83fa074a4e0de6549b14c",
+      "bytes": 17208,
+      "sha256": "1b42dba0f093e95ca716dda19ec8416cf59a964c35b388618a77886726e04aff"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "blob": "bbda2bdb52953cedd6683fc2a282e11d8ed57ded",
+      "bytes": 96243,
+      "sha256": "be7a94c11e50d7f9fb52e2c6d039c010b5189eff4ea5d0d6b8561786ca20a9c1"
+    }
+  ],
+  "nodePath": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "originalHelperFileBlobs": {
+    "scripts/legacy-agent-host/desktop-backend-observations.test.ts": "e3f1eb2e81614d7136c4e685f93c99e68aed22d5",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts": "28dc887aa3b27284a43b5253632c56765618f876",
+    "scripts/legacy-agent-host/test-child-process-trace.test.ts": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+    "scripts/legacy-agent-host/desktop-emulated-settings.test.ts": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+    "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts": "b8b6760f5623f55387dba4fec288947bce707bc7",
+    "scripts/legacy-agent-host/desktop-resume-records.test.ts": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+    "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+    "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts": "7628e511b2f219ad27e517d4a96ecb7aec604131"
+  }
+}

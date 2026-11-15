@@ -1,0 +1,2 @@
+Source file size guard passed: 5014 production files checked, 141 frozen legacy exceptions, 800-line limit.
+86 legacy file(s) are below their frozen caps; lower those caps when committing the refactor.

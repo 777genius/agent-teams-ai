@@ -1,0 +1,45 @@
+{
+  "kind": "independent-source-and-raw-evidence-review",
+  "sourceRed": "68b1c0177044835d4700f2111b1c4179a25842d1",
+  "sourceGreen": "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+  "rawFiles": [
+    {
+      "file": "cross-red.log",
+      "path": "/workspace/scratch/82d3f9ba6b85/cross-availability-local/cross-red.log",
+      "bytes": 8430,
+      "sha256": "176d21f57536825d6be7b302a742efff6f5ee8517f3bf8e9ead8e6559d2dc064"
+    },
+    {
+      "file": "cross-red-metadata.json",
+      "path": "/workspace/scratch/82d3f9ba6b85/cross-availability-local/cross-red-metadata.json",
+      "bytes": 948,
+      "sha256": "0e82a66a8f7714b50e8279cd0237af575ff191a3e74599ed52592c54acfd6d1c"
+    },
+    {
+      "file": "cross-red-preflight.json",
+      "path": "/workspace/scratch/82d3f9ba6b85/cross-availability-local/cross-red-preflight.json",
+      "bytes": 1361,
+      "sha256": "9b514f949dea34af14e9128de3c5fdacd6a005ea3e466f3c9dcff4f03e0a4d11"
+    },
+    {
+      "file": "cross-green-original-eight-helpers.log",
+      "path": "/workspace/scratch/82d3f9ba6b85/cross-availability-local/cross-green-original-eight-helpers.log",
+      "bytes": 9856,
+      "sha256": "9153267272685735740d85335d155fb773286816455656c102a7e2279d7f1b15"
+    },
+    {
+      "file": "cross-green-metadata.json",
+      "path": "/workspace/scratch/82d3f9ba6b85/cross-availability-local/cross-green-metadata.json",
+      "bytes": 1447,
+      "sha256": "5ba70f94e0d43864af1b230132a1514b38e6366542d49db3c9227e5cf330a112"
+    },
+    {
+      "file": "cross-green-preflight.json",
+      "path": "/workspace/scratch/82d3f9ba6b85/cross-availability-local/cross-green-preflight.json",
+      "bytes": 2297,
+      "sha256": "53cf89a46f9c5bb681dbbb1113cb4e3fc4169fbe7e10a31ce439245063d51f87"
+    }
+  ],
+  "executionBy": "parent agent; child read-only review",
+  "completeCrossJourneyQualified": false
+}
