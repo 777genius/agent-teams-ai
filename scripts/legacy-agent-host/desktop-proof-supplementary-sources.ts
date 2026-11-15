@@ -207,6 +207,7 @@ export const desktopProofSupplementarySources = [
   'test/features/agent-backend/hostProvisioningProgress.test.ts',
   'src/renderer/store/team/teamRuntimeRunAdoption.ts',
   'test/renderer/store/teamSlice.test.ts',
+  'test/renderer/store/teamRuntimeRunAdoption.test.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */

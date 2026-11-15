@@ -128,11 +128,14 @@ function captureOpenCodeProbeAccountInspection(
   const before = bracket && capturedOrigin
     ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined;
   if (bracket && before?.policy?.hasConfiguredApiKey !== true) held();
+  let capturedConfig: Record<string, unknown> | undefined;
   const source = captureOpenCodeConfigurationSource(profile,
-    profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent);
+    profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent, undefined,
+    bracket ? value => { capturedConfig = value; } : undefined);
   const policy = before ?? (capturedOrigin
     ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined);
-  const raw = source.read(), provider = object(raw.provider) ? raw.provider[input.providerId] : undefined;
+  const raw = bracket ? capturedConfig ?? held() : source.read();
+  const provider = object(raw.provider) ? raw.provider[input.providerId] : undefined;
   const options = object(provider) && object(provider.options) ? provider.options : {};
   const resolve = (value: unknown): unknown => {
     if (typeof value !== 'string') return value;

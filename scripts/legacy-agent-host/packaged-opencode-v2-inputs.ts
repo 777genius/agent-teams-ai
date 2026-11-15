@@ -43,7 +43,7 @@ const inside = (root: string, target: string) => {
   return value !== '' && value !== '..' && !value.startsWith(`..${sep}`) && !isAbsolute(value);
 };
 
-/** Initial Windows TEST relocation only; a retry never proves process cleanup. */
+/** Windows TEST relocation/restoration only; a retry never proves process cleanup. */
 export async function renameCapturedPackagedBundle(source: string, destination: string): Promise<void> {
   const parent = dirname(destination);
   assert.ok(isAbsolute(source) && isAbsolute(destination) && source !== destination);
