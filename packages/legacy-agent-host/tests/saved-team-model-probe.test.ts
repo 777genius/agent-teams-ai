@@ -1545,7 +1545,7 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
   for (const change of ['unchanged', 'shadowed-native', 'main-origin', 'owner', 'expiry', 'credential'] as const) {
     // Independent observations of the same fixed lease, never an updated receipt.
     t.mock.timers.setTime(original.expiresAt - 1);
-    const binding = { backendId: own.team.definition.binding.backendId, teamId: member.teamId,
+    const binding: MemberEntry['binding'] = { backendId: own.team.definition.binding.backendId, teamId: member.teamId,
       runId: 'TEST-private-origin-' + change, memberId: member.memberId, generation: '1' };
     const entry: MemberEntry = { profile: member, baseProfile: structuredClone(member), team: own.team,
       binding, delivery: { ...binding, teamName: own.team.definition.binding.teamName },
@@ -1573,7 +1573,7 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
     } };
     const inspection = { management: manager, launch, entry, hostIncarnation: 'TEST-retained-host',
       assertCurrent() { if (!active) throw Error('TEST original member owner revoked'); } };
-    const read = () => launch.readModelReadiness({ binding, configRevision: member.configRevision,
+    const read = (): ReturnType<TeamLaunchOwner['readModelReadiness']> => launch.readModelReadiness({ binding, configRevision: member.configRevision,
       configurationDigest: runtimeDigest(member) });
     try {
       attachMemberModelReadiness({ launch, entry, reference: selectedReference,
