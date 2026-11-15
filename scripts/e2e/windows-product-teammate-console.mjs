@@ -46,6 +46,7 @@ let stopped = false;
 let originalMember;
 let log = '';
 let phase = 'setup';
+let protocolFailure = null;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const literal = (value) => JSON.stringify(value);
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -72,7 +73,10 @@ function modelToolDecision(body) {
       .map(part => contentText(part.content));
   }).at(-1);
   if (result !== undefined) {
-    assert(result.includes(expected.get(key)), 'Actual tool result omitted its OS execution marker');
+    if (!result.includes(expected.get(key))) {
+      protocolFailure = 'Actual ' + kind + ' tool result omitted its OS execution marker';
+      return { id: 'failed_' + token.replaceAll('-', ''), text: 'Tool result did not qualify.' };
+    }
     proofs.set(key, { kind, token, marker: expected.get(key), toolId, realToolResultSeen: true });
     return { id: 'done_' + token.replaceAll('-', ''), text: 'Native tool completed.' };
   }
@@ -82,7 +86,7 @@ function modelToolDecision(body) {
   assert(bash, 'Native runtime did not expose a Bash/shell tool to teammate');
   const marker = expected.get(key);
   const command = kind === 'cmd'
-    ? 'cmd.exe /d /s /c "echo ' + marker + ' & ping -n 2 127.0.0.1 >NUL"'
+    ? 'cmd.exe /d /c echo ' + marker
     : kind === 'git'
       ? 'git.exe --version && echo ' + marker
       : 'powershell.exe -NoProfile -NonInteractive -Command "Write-Output ' +
@@ -94,6 +98,7 @@ async function wait(label, read, timeoutMs = 180_000) {
   const deadline = Date.now() + timeoutMs;
   let last;
   while (Date.now() < deadline) {
+    if (protocolFailure) throw new Error(protocolFailure);
     if (app && (app.exitCode !== null || app.signalCode !== null))
       throw new Error('Owned desktop exited during ' + label + ': ' + log.slice(-3000));
     try {
