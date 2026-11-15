@@ -80,6 +80,12 @@ function modelToolDecision(body) {
       .map(part => contentText(part.content));
   }).at(-1);
   if (result !== undefined) {
+    // The tool result must contain output of the actual native executable;
+    // Git Bash built-in echo may be unable to write through Claude Code pipes.
+    if (kind === 'git' && !/git version\s+[0-9]/i.test(result)) {
+      protocolFailure = 'Native git.exe did not produce its actual version text';
+      return { id: 'failed_' + token.replaceAll('-', ''), text: 'Tool result did not qualify.' };
+    }
     if (!result.includes(expected.get(key))) {
       protocolFailure = 'Actual ' + kind + ' tool result omitted its OS execution marker';
       return { id: 'failed_' + token.replaceAll('-', ''), text: 'Tool result did not qualify.' };
@@ -96,7 +102,7 @@ function modelToolDecision(body) {
   const command = kind === 'cmd'
     ? 'cmd.exe //d //c echo ' + marker
     : kind === 'git'
-      ? 'git.exe --version && echo ' + marker
+      ? 'git.exe --version && powershell.exe -NoProfile -NonInteractive -Command "Write-Output ' + marker + '"'
       : 'powershell.exe -NoProfile -NonInteractive -Command "Write-Output ' +
         marker + '; Start-Sleep -Milliseconds 600"';
   return { id: toolId, name: bash, input: { command, description: 'Disposable Windows E2E native tool probe' } };
