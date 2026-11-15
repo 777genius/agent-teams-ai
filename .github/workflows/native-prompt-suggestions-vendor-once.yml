@@ -8,12 +8,26 @@ on:
       - feat/native-prompt-suggestions-stage1-20261114
     paths:
       - .github/workflows/native-prompt-suggestions-vendor-once.yml
+      - "src/features/native-prompt-suggestions/**"
+      - src/main/ipc/configValidation.ts
+      - "packages/legacy-agent-host/tests/native-prompt-suggestions*.ts"
+      - packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts
+      - "packages/legacy-agent-host/tests/fixtures/native-codex-team/suggestion-*.ts"
+      - "scripts/legacy-agent-host/desktop-native-next-prompt*.ts"
+      - scripts/legacy-agent-host/desktop-composer-ui-smoke.ts
   pull_request:
     types: [synchronize]
     branches:
       - feat/provider-host-frontend-parity-20261112
     paths:
       - .github/workflows/native-prompt-suggestions-vendor-once.yml
+      - "src/features/native-prompt-suggestions/**"
+      - src/main/ipc/configValidation.ts
+      - "packages/legacy-agent-host/tests/native-prompt-suggestions*.ts"
+      - packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts
+      - "packages/legacy-agent-host/tests/fixtures/native-codex-team/suggestion-*.ts"
+      - "scripts/legacy-agent-host/desktop-native-next-prompt*.ts"
+      - scripts/legacy-agent-host/desktop-composer-ui-smoke.ts
 
 # Source reproduction and native qualifications are read-only.
 # Serialize ONLY publication to the feature branch, not unrelated runner waits.

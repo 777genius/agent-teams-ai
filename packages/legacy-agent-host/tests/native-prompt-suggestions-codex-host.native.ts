@@ -164,8 +164,8 @@ test(
       memberId,
       generation: '1',
     });
-    const envelope = (payload: unknown) => ({
-      commandId: `TEST-${randomUUID()}`,
+    const envelope = (payload: unknown, commandId = `TEST-${randomUUID()}`) => ({
+      commandId,
       binding: { schemaVersion: 1, handleId: `TEST-handle-${namespace}`, owner, scope },
       payload,
     });
@@ -258,18 +258,25 @@ test(
         const messageId = `TEST-message-${randomUUID()}`;
         const result = await host!.rpc(
           'team.execute',
-          envelope({
-            operation: 'message.send',
-            payload: {
-              to: name,
-              text: marker,
-              messageId,
-              summary: 'TEST original human DM',
-              actionMode: 'do',
+          envelope(
+            {
+              operation: 'message.send',
+              payload: {
+                to: name,
+                text: marker,
+                messageId,
+                summary: 'TEST original human DM',
+                actionMode: 'do',
+              },
             },
-          })
+            messageId
+          )
         );
-        assert.equal(result.ok, true);
+        assert.equal(
+          result.ok,
+          true,
+          `original Team send rejected: ${JSON.stringify(result).slice(0, 2000)}`
+        );
         assert.equal(record(result.value).phase, 'completed');
         const inputId = record(record(result.value).effects).deliveryId;
         assert.ok(typeof inputId === 'string' && inputId.length > 0);

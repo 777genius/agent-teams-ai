@@ -50,12 +50,7 @@ export async function clearInsertedDraft(cdp: UiCdpPort, ui: Ui) {
     return editor && document.activeElement===editor &&
       editor.selectionStart===0 && editor.selectionEnd===editor.value.length;
   })()`, 'the original editor has its entire draft selected before Backspace');
-  await cdp.send('Input.dispatchKeyEvent', {
-    type: 'keyDown', key: 'Backspace', code: 'Backspace',
-  });
-  await cdp.send('Input.dispatchKeyEvent', {
-    type: 'keyUp', key: 'Backspace', code: 'Backspace',
-  });
+  await key(cdp, 'Backspace', 'Backspace', 8);
   await ui.waitRead(
     "document.querySelector('.message-composer-flat-layout textarea')?.value === ''",
     'ordinary editor is empty after physical clear',
