@@ -1,4 +1,5 @@
 #define WIN32_LEAN_AND_MEAN
+#define _WIN32_WINNT 0x0A00
 #include <windows.h>
 #include <cstdint>
 #include <cstring>
@@ -43,13 +44,8 @@ static bool prerequisiteFailure(PrerequisiteStage stage,const DWORD* result=null
   std::fflush(stdout); return false;
 }
 static std::wstring wow64Command() {
-  const auto module=GetModuleHandleW(L"Kernel32.dll");
-  if(!module) return {};
-  const auto directory=reinterpret_cast<UINT (WINAPI*)(LPWSTR,UINT,WORD)>(
-    GetProcAddress(module,"GetSystemWow64Directory2W"));
-  if(!directory) return {};
   wchar_t path[MAX_PATH]{};
-  const auto length=directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386);
+  const auto length=GetSystemWow64Directory2W(path,MAX_PATH,IMAGE_FILE_MACHINE_I386);
   if(!length||length>=MAX_PATH) return {};
   return std::wstring(path)+L"\\cmd.exe";
 }
