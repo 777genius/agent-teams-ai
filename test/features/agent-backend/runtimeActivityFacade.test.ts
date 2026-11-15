@@ -417,7 +417,7 @@ describe('finite Runtime activity facade', () => {
       expect(JSON.stringify(projected)).not.toContain(root);
       expect((await teams.getData(key)).isAlive).toBe(true);
       await teams.cancelProvisioning(runId);
-      expect((await teams.getProvisioningStatus(runId)).state).toBe('cancelled');
+      expect((await teams.getProvisioningStatus(runId)).state).toBe('disconnected');
       await teams.stop(key);
       expect(await teams.processAlive(key)).toBe(false);
       expect((await teams.getData(key)).isAlive).toBe(false);
@@ -651,7 +651,7 @@ describe('finite Runtime activity facade', () => {
       expect(nativeProfiles[1].sessionId).not.toBe(nativeProfiles[0].sessionId);
       expect(nativeProfiles[1].principalId).not.toBe(nativeProfiles[0].principalId);
       expect((await teams.getProvisioningStatus(launched.runId)).state).toBe('ready');
-      expect((await teams.getProvisioningStatus(runId)).state).toBe('cancelled');
+      expect((await teams.getProvisioningStatus(runId)).state).toBe('disconnected');
       const historical = await facade.invoke({
         ...request,
         operation: 'runtime.activity.snapshot',
@@ -670,7 +670,7 @@ describe('finite Runtime activity facade', () => {
         },
       });
       await teams.cancelProvisioning(launched.runId);
-      expect((await teams.getProvisioningStatus(launched.runId)).state).toBe('cancelled');
+      expect((await teams.getProvisioningStatus(launched.runId)).state).toBe('disconnected');
       expect(legacy.launchTeam).not.toHaveBeenCalled();
     } finally {
       await host.dispose();
