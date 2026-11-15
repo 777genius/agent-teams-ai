@@ -1,3 +1,5 @@
+import type { ChildProcess } from 'node:child_process';
+
 import {
   type AnthropicApiKeyHelperRunOwner,
   cleanupRunOwnedAnthropicApiKeyHelper,
@@ -28,6 +30,56 @@ async function awaitAllOwnedProcessStops(stops: Promise<void>[]): Promise<void> 
   }
 }
 
+const WINDOWS_ORIGINAL_MEMBER_EXIT_TIMEOUT_MS = 15_000;
+
+/** Kill by the original ChildProcess handle; a recycled PID never grants authority. */
+function killOriginalWindowsDirectMember(child: ChildProcess): Promise<void> {
+  const pid = child.pid;
+  if (typeof pid !== 'number' || !Number.isSafeInteger(pid) || pid <= 0) {
+    return Promise.reject(new Error('Original Windows member process handle has no valid PID'));
+  }
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+
+  return new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      child.off('exit', onExit);
+      child.off('error', onError);
+      if (error) reject(error);
+      else resolve();
+    };
+    const onExit = () => finish();
+    const onError = () => finish(new Error('Original Windows teammate process failed on exit'));
+    const timer = setTimeout(() =>
+      finish(new Error('Original Windows teammate exit not confirmed')),
+      WINDOWS_ORIGINAL_MEMBER_EXIT_TIMEOUT_MS
+    );
+    child.once('exit', onExit);
+    child.once('error', onError);
+    try {
+      // Node/libuv targets this original process handle on Windows, never a
+      // later process which might have acquired the same integer PID.
+      if (!child.kill('SIGKILL') && child.exitCode === null && child.signalCode === null) {
+        finish(new Error('Could not signal the original Windows teammate handle'));
+      }
+    } catch {
+      finish(new Error('Original Windows teammate handle signal failed'));
+    }
+  });
+}
+
+/** Independent stop attempts: one uncooperative member must not spare another. */
+export async function stopOriginalWindowsDirectMembers(
+  processes: ReadonlySet<ChildProcess> | undefined,
+  platform: NodeJS.Platform = process.platform
+): Promise<void> {
+  if (platform !== 'win32' || !processes?.size) return;
+  await awaitAllOwnedProcessStops([...processes].map(killOriginalWindowsDirectMember));
+}
+
 export interface TeamProvisioningStopRun
   extends AnthropicApiKeyHelperRunOwner, LeadRelayCaptureOwner {
   runId: string;
@@ -35,6 +87,7 @@ export interface TeamProvisioningStopRun
   processKilled: boolean;
   cancelRequested: boolean;
   child: unknown;
+  directMemberProcesses?: ReadonlySet<ChildProcess>;
   onProgress(progress: TeamProvisioningProgress): void;
 }
 
@@ -175,6 +228,7 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   if (run.processKilled || run.cancelRequested) {
     await awaitAllOwnedProcessStops([
       ports.killTeamProcessAndWait(run.child),
+      stopOriginalWindowsDirectMembers(run.directMemberProcesses),
       stopRuntimeLanesForRun(run.runId),
     ]);
     await (ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
@@ -186,7 +240,8 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   run.cancelRequested = true;
   const stopCurrentTeamProcess = ports.killTeamProcessAndWait(run.child);
   const stopCurrentRuntimeLanes = stopRuntimeLanesForRun(run.runId);
-  await awaitAllOwnedProcessStops([stopCurrentTeamProcess, stopCurrentRuntimeLanes]);
+  const stopDirectMembers = stopOriginalWindowsDirectMembers(run.directMemberProcesses);
+  await awaitAllOwnedProcessStops([stopCurrentTeamProcess, stopCurrentRuntimeLanes, stopDirectMembers]);
   const progress = ports.updateProgress(run, 'disconnected', 'Team stopped by user');
   run.onProgress(progress);
   ports.logger.info(`[${teamName}] Process stopped (SIGKILL)`);

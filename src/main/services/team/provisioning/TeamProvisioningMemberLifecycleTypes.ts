@@ -1,3 +1,5 @@
+import type { ChildProcess } from 'node:child_process';
+
 import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 import type {
   EffortLevel,
@@ -33,6 +35,7 @@ export interface ProvisioningRun {
   teamName: string;
   request: TeamCreateRequest;
   spawnContext?: { claudePath?: string };
+  directMemberProcesses?: Set<ChildProcess>;
   detectedSessionId: string | null;
   memberMcpConfigPaths: string[];
   memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;

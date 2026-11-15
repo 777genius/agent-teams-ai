@@ -994,6 +994,13 @@ export class TeamProvisioningMemberLifecycleController {
         throw new Error(`Failed to spawn teammate process for ${agentId}: missing pid`);
       }
       const runtimePid = child.pid;
+      // Retain original libuv process handles on Windows. Numeric runtime PIDs
+      // alone can be reused, and a failed global WMI table is not kill authority.
+      if (process.platform === 'win32') {
+        const owned = (input.run.directMemberProcesses ??= new Set());
+        owned.add(child);
+        child.once('close', () => { owned.delete(child); });
+      }
       const processPaneId = `process:${runtimePid}`;
       const runtimeEventSource = `TeamProvisioningService.direct_process_${operation}`;
       child.stdout?.pipe(stdoutLog);

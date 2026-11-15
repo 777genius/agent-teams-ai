@@ -93,6 +93,8 @@ export interface ProvisioningRun {
   cancelRequested: boolean;
   teamsBasePathsToProbe: { location: TeamsBaseLocation; basePath: string }[];
   child: ReturnType<typeof spawn> | null;
+  /** Original Windows process handles for app-managed direct members, never adopted numeric PIDs. */
+  directMemberProcesses?: Set<ReturnType<typeof spawn>>;
   timeoutHandle: NodeJS.Timeout | null;
   fsMonitorHandle: NodeJS.Timeout | null;
   onProgress: (progress: TeamProvisioningProgress) => void;
