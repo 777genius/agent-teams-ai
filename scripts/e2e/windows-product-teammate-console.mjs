@@ -85,8 +85,9 @@ function modelToolDecision(body) {
   const bash = names.find(n => /^(?:Bash|bash|shell|functions\.shell)$/.test(n));
   assert(bash, 'Native runtime did not expose a Bash/shell tool to teammate');
   const marker = expected.get(key);
+  // Git Bash/MSYS translates native /c into a drive path; //c reaches cmd.exe as /c.
   const command = kind === 'cmd'
-    ? 'cmd.exe /d /c echo ' + marker
+    ? 'cmd.exe //d //c echo ' + marker
     : kind === 'git'
       ? 'git.exe --version && echo ' + marker
       : 'powershell.exe -NoProfile -NonInteractive -Command "Write-Output ' +
