@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "scope": "review-only source object; no application, commit or ref mutation",
+  "publishedR1": {
+    "commit": "6a8a0136f7002a7db12409fea920424f6a84f358",
+    "tree": "e81a3e09dde3e3dd170fefc5f4359ce3163e23f6",
+    "appendix": "a8f32cfddc07dc4eaae35ebe8ef4b6682b2c297e"
+  },
+  "candidateTree": "adc311fae172043047b4161ca72637c3f171ff76",
+  "path": "tools/owned-process-broker/nativeFixture.cpp",
+  "preimage": "21b080fd65679e903837e1cc5eabb8a451d7d55b",
+  "postimage": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+  "prePhysical": 277,
+  "postPhysical": 283,
+  "additions": 8,
+  "deletions": 2,
+  "bytes": 15038,
+  "sha256": "42749224f0194fd70f4b3df50f5fc64fbb2e11c58801c629463387cb4a4a1e25",
+  "fnv1a": "837082dd",
+  "transform": {
+    "oldUnique": true,
+    "newUnique": true,
+    "old": "static std::wstring wow64Command() {\n  wchar_t path[MAX_PATH]{};\n  const auto length=GetSystemWow64Directory2W(path,MAX_PATH,IMAGE_FILE_MACHINE_I386);\n  if(!length||length>=MAX_PATH) return {};\n  return std::wstring(path)+L\"\\\\cmd.exe\";\n}",
+    "new": "static std::wstring wow64Command() {\n  // Resolve the documented API-set contract with one bounded module lifetime.\n  const auto module=LoadLibraryExW(L\"api-ms-win-core-wow64-l1-1-1.dll\",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);\n  if(!module) return {};\n  const auto directory=reinterpret_cast<decltype(&GetSystemWow64Directory2W)>(\n    GetProcAddress(module,\"GetSystemWow64Directory2W\"));\n  wchar_t path[MAX_PATH]{};\n  const auto length=directory?directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386):0;\n  const bool closed=FreeLibrary(module)!=FALSE;\n  if(!closed||!length||length>=MAX_PATH) return {};\n  return std::wstring(path)+L\"\\\\cmd.exe\";\n}",
+    "fullInverseExact": true
+  },
+  "diff": [
+    {
+      "op": "+",
+      "old": 34,
+      "new": 34,
+      "text": "  // Resolve the documented API-set contract with one bounded module lifetime."
+    },
+    {
+      "op": "+",
+      "old": 34,
+      "new": 35,
+      "text": "  const auto module=LoadLibraryExW(L\"api-ms-win-core-wow64-l1-1-1.dll\",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);"
+    },
+    {
+      "op": "+",
+      "old": 34,
+      "new": 36,
+      "text": "  if(!module) return {};"
+    },
+    {
+      "op": "+",
+      "old": 34,
+      "new": 37,
+      "text": "  const auto directory=reinterpret_cast<decltype(&GetSystemWow64Directory2W)>("
+    },
+    {
+      "op": "+",
+      "old": 34,
+      "new": 38,
+      "text": "    GetProcAddress(module,\"GetSystemWow64Directory2W\"));"
+    },
+    {
+      "op": "+",
+      "old": 35,
+      "new": 40,
+      "text": "  const auto length=directory?directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386):0;"
+    },
+    {
+      "op": "+",
+      "old": 35,
+      "new": 41,
+      "text": "  const bool closed=FreeLibrary(module)!=FALSE;"
+    },
+    {
+      "op": "+",
+      "old": 35,
+      "new": 42,
+      "text": "  if(!closed||!length||length>=MAX_PATH) return {};"
+    },
+    {
+      "op": "-",
+      "old": 35,
+      "new": 43,
+      "text": "  const auto length=GetSystemWow64Directory2W(path,MAX_PATH,IMAGE_FILE_MACHINE_I386);"
+    },
+    {
+      "op": "-",
+      "old": 36,
+      "new": 43,
+      "text": "  if(!length||length>=MAX_PATH) return {};"
+    }
+  ],
+  "allOtherBytesIdentical": true,
+  "evidence": {
+    "failedSource": "332fbe3420c811c095dac4187d3f9664e8c47179",
+    "failedFixture": "43603d29138a5c43547f46099c5dad39d3d75815",
+    "completeOriginalHelperIdentical": true,
+    "completeCMakeIdentical": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+    "selectedIncoming": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+    "selectedCommit": "bb48cb81493fbadb8b1e451ba5c35d7bc8488952"
+  },
+  "qualification": {
+    "sourceReviewOnly": true,
+    "compiler": false,
+    "windowsRuntime": false,
+    "physicalCleanup": false,
+    "oldNativeCasesPreserved": true,
+    "originalHelper64CapPreserved": true,
+    "originalAck15sPreserved": true,
+    "frozen1208Unchanged": true
+  }
+}

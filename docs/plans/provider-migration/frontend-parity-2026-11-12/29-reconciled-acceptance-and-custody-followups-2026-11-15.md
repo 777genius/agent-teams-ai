@@ -4466,3 +4466,298 @@ Status: documentation-only reconciliation proposal for independent review. No im
 14. Compiler and final-qualification holds. The two ambient declarations are exact existing source files, not new shims: src/renderer/vite-env.d.ts (33cda8d4fb22a8df0bf4d2e692bc60a8d4339358) and test/types/better-sqlite3-node.d.ts (b7053c121eafaede736f979f3ca371ebfa20eda5). The dedicated test config gains only their two include entries. That does not reset the own branch's exhausted local workspace, backend, legacy-host-scripts or Host test-types attempts; no such additional local invocation is authorized by adoption. Their unchanged original resulting-source CI gates remain required, along with the full four safe shards, original applicable Desktop journeys, original native/platform gates and artifact/source/cleanup review. Incoming claimed 62/92/40 and scoped compiler PASS remain author-attributed until exact raw/source/toolchain verification; no old own native/41-case Desktop/capacity result transfers to this new source. Producer-to-renderer Thinking remains HOLD until separately reviewed atomic normalize plus both checked provider archives and all pins, followed by actual original acceptance. Current provider-package review is separate and grants no archive adoption here. Actual Claude/Codex execution, including --version, remains forbidden; allowed finite-localhost OpenCode is unchanged. No Ready/main/merge/release/default activation or Stage2 is authorized.
 
 15. Publication and reconciliation discipline. Root preserves fresh full own document prefixes, incoming Plans32/33 verbatim and incoming author history; if a two-parent reconciliation is chosen, the second parent does not grant permission to select any additional tree leaf. Before source publication, compare every selected current preimage and the complete resulting inventory; stop on any new overlap and review it rather than overwrite another writer. Preserve all own native eight-path source, Desktop observer and 41-case tests, reservation/capacity/currentness/cleanup source, unrelated receipts and evidence. This proposal's only newly authored changes after published permission are the exact 53-line roster relocation, bounded existing Task proof DOM correction, and single-line existing whole-test-cohort append; all other selected implementation remains exact incoming bytes. Any other source correction, provider archive adoption, actual CI delivery action or experiment needs its own concrete reviewed scope.
+
+
+## Preserved incoming history before selective reconciliation
+
+The following exact published appendices retain the incoming authors' observations and decisions at 27b1acf48278dcd0fb348c626696eac2dc64de73 and 35cbd6e99b620e9b41802af936143d900f5e2aca. They are historical records; their broader source selections, expanded budgets and claimed results do not qualify this branch. The independently reviewed selective R1 following them determines the current permitted source composition.
+
+
+## Original Windows service-pair failure localization — 15 November 2026
+
+### R1: observed failure and bounded correction
+
+Exact source `a02ab70edfdcb4169627e804f0337c9ad6b52af6` fails the original
+Windows process fixture at `debug-service / child-lines` on both
+[x64 job132959932736](https://github.com/777genius/agent-teams-ai/actions/runs/43762390679/job/132959932736)
+and [ARM64 job132959932738](https://github.com/777genius/agent-teams-ai/actions/runs/43762390679/job/132959932738).
+The preceding cancellation scenario completes. The retained broker target output
+has ended before the unchanged ten-second readiness deadline, but its original
+exit payload and the new fixture prerequisite outcomes are not retained in the
+failure log. Cleanup subsequently triggers the broker-exit callback assertion;
+the final event wait replaces the directly thrown readiness timeout. The
+independent outer controller drains with rootExitCode1 and zero active processes.
+This is failed qualification, and does not localize a production exception policy.
+
+Keep the correction in three existing TEST files:
+
+- `tools/owned-process-broker/nativeFixture.cpp`: separate the existing service-pair
+  prerequisites in their original order. On their first failure emit one bounded
+  fixed-key JSON record to existing stdout, with a closed numeric stage and an
+  already-observed numeric result where applicable. Preserve original return62/63,
+  short circuits, API calls, five-second waits, handle closes, CREATE_NEW publication
+  and eighty-child churn. In `wow64Startup`, retain the existing query, architecture,
+  wait, exit and publication results without repeating calls. Missing/unreached
+  observations are not represented as successful zero results.
+- `tools/owned-process-broker/nativeDebugServiceScenario.ts`: only when the existing
+  child-lines wait fails, project its already-held rootExit payload, observed
+  root/child counts, the two fixed success-marker booleans and the validated closed
+  prerequisite record. Never forward raw stdout/stderr, paths or environment.
+  Rethrow the original failure; no extra process query, action, retry or wait.
+- `tools/owned-process-broker/nativeGate.ts`: register the original caught scenario
+  error through the existing event guard before diagnostics and cleanup callbacks.
+  The original helper cleanup is still awaited independently. This prevents its
+  later callback assertion from replacing that error; a separate cleanup timeout
+  remains failure and is not represented as successful cleanup.
+
+Estimate: 60–100 changed TEST lines, zero product lines; complexity3/10,
+reliability8/10, confidence8/10 for localization, no product-fix claim.
+Root source review and independent qualification audit agree that the current
+logs do not justify changing startup breakpoint acceptance or deadlines.
+Independent P09 reviewer additionally required carrying the closed C++ record
+through the existing stdout collector, preserving short-circuit reachability,
+and latching the caught error before any diagnostic callback.
+
+After source application, independently review the exact diff; run the existing
+event/output/context helper suites, original scripts compiler, scoped lint and
+source-size guard. Await both original resulting-source Windows jobs. The
+result must determine the next correction; this diagnostic cut itself cannot
+qualify P08/P09. No source oracle, provider invocation policy, workflow selection,
+Draft/base, main, release or activation change is included.
+
+### Exact source review and local checks
+
+Independent reviewer `/root/p09_review` accepted the three-file diff over
+published plan `3957f2b28417647578d71a465cd61d4e09b5deb9`: nativeFixture
+`579a7aadf70a284cb44f7ec3690dab32c4d76e92`, scenario
+`f8eb84e20fb323e5838b918a7934853785ab9ee5`, nativeGate
+`17f5e7b66605bd4d28cf3935b7fa73ea2933a21d` (the final source tree is authoritative).
+The existing owned-process helper suite passed53/53 with no skips; scoped
+TypeScript7.0.2 and the complete legacy-host-scripts compiler, focused lint, source-size and diff checks passed.
+The full-workspace typecheck was terminated with code137, including a separate
+memory-bounded invocation; neither is a PASS. Both actual Windows native runs
+remain required, and no product fix or P08/P09 acceptance is asserted.
+
+## Original Windows WOW64 path binding — 15 November 2026
+
+### R1: observed fixture refusal and bounded correction
+
+Exact diagnostic source `4dc08dea7eeed5c286cf310e09a2ba26d84a9546`
+fails the original [ARM64 job132968371746](https://github.com/777genius/agent-teams-ai/actions/runs/43765103075/job/132968371746).
+At `2026-11-15T21:52:59.7797577Z` the retained record is:
+
+```json
+{"nativeServiceReadinessFailure":{"rootExitCode":62,"rootCount":1,"childCount":0,"rootChildCount":0,"wow64Completed":false,"churnCompleted":false,"prerequisite":{"stage":5}}}
+```
+
+Stage5 is `Wow64Path`: `wow64Command()` returned empty before the x86
+child was created. Both preceding application-breakpoint checks completed.
+The original ten-second readiness error is now preserved through cleanup;
+the outer controller drains with rootExitCode1 and activeProcesses0.
+Source A/B is not reached. The same-source
+[x64 job132968371549](https://github.com/777genius/agent-teams-ai/actions/runs/43765103075/job/132968371549)
+is still queued at this review and has no qualification result.
+
+The helper currently asks the physical `Kernel32.dll` module for
+`GetSystemWow64Directory2W`. Microsoft's generated
+[Windows SDK import mappings](https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/libMappings.rsp)
+instead map that entry to `api-ms-win-core-wow64-l1-1-1.dll`, while mapping
+`IsWow64Process2` and `GetSystemWow64DirectoryW` to `KERNEL32.dll`.
+Microsoft's [API-set guidance](https://learn.microsoft.com/en-us/windows/win32/apiindex/windows-apisets)
+explains that the contract routes to its implementation independently of a
+physical module name. A missing physical-module export is therefore the leading
+source-level explanation, not a measured `GetProcAddress` error: stage5 also
+groups a zero or oversized directory result. No breakpoint-policy or deadline
+change is justified by this evidence.
+
+Keep the correction in `tools/owned-process-broker/nativeFixture.cpp`:
+
+- Define `_WIN32_WINNT 0x0A00` before `windows.h`, matching the existing broker.
+- Replace the helper's module/function-pointer lookup with the declared SDK call
+  `GetSystemWow64Directory2W(path,MAX_PATH,IMAGE_FILE_MACHINE_I386)`.
+- Keep the existing zero/oversized-result refusal, `MAX_PATH` buffer, suffix and
+  `IsWow64Process2` verification of the actual child. Preserve the closed stage5
+  diagnostic, return62/63, original child actions, waits, handle closes,
+  CREATE_NEW publication, application-breakpoint checks and eighty-child churn.
+
+The [official SDK header](https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/RecompiledIdlHeaders/um/wow64apiset.h)
+declares this function under `_WIN32_WINNT >= 0x0A00`; no NTDDI change is needed.
+The [API reference](https://learn.microsoft.com/en-us/windows/win32/api/wow64apiset/nf-wow64apiset-getsystemwow64directory2w)
+names `Kernel32.lib` and Windows10 version1511 or later. The fixture already uses
+the ordinary MSVC/CMake Windows SDK libraries, including Kernel32; no additional
+umbrella library, runtime module loader or fallback path is planned. The observed
+ARM build selects SDK10.0.26100.0 for Windows10.0.26200 with MSVC19.51.36260.0.
+This checks the declaration and intended link contract; actual resulting-source
+x64/ARM64 native compilation and execution remain required.
+
+Estimate: about10 changed TEST lines, zero product lines; complexity2/10,
+reliability8/10, confidence8/10 in correcting the binding, with the original
+stage5 subcause not independently measured. Root and qualification audit agree
+on this narrow correction; publish this plan before source changes, then review
+the exact source diff independently. Retain the prior failure evidence and await
+both original resulting-source Windows gates. Superseded queued work remains
+unqualified. No fallback, new process probe, ownership oracle, workflow, provider
+invocation, Draft/base, main, release or activation change is included.
+
+R2 `/root` independently read the exact ARM job log, Microsoft SDK import mapping,
+SDK declaration and local CMake targets. GO for this TEST-only binding correction
+after plan publication. The reviewed code must retain actual I386 verification;
+the API mapping supports the correction but does not prove the unmeasured stage5
+subcause or resulting native PASS. No additional product change is authorized by
+this failure localization.
+
+## Windows SDK import-library correction — 15 November 2026
+
+Both original jobs for `332fbe3420c811c095dac4187d3f9664e8c47179`
+failed before native qualification: [x64 job132973378700](https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973378700)
+at22:10:20Z and [ARM64 job132973379104](https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973379104)
+at22:12:43Z. Both report LNK2019 for
+`__imp_GetSystemWow64Directory2W`, then LNK1120. This falsifies the previous
+assumption that the ordinary Kernel32 import library is sufficient; neither
+job reached the original runtime gate.
+
+R1 `/root/qualification_audit` inspected Microsoft's official
+[Windows SDK26100.1 x64 package](https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.cpp.x64/10.0.26100.1/microsoft.windows.sdk.cpp.x64.10.0.26100.1.nupkg)
+and [ARM64 package](https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.cpp.arm64/10.0.26100.1/microsoft.windows.sdk.cpp.arm64.10.0.26100.1.nupkg).
+Their Kernel32.Lib lacks this import. Both OneCore.Lib archives define the exact
+import symbol and route its COFF import member to
+`api-ms-win-core-wow64-l1-1-1.dll`; ZIP entries and CRCs were checked.
+The inspected OneCore.Lib SHA-256 values are
+`038b7c879acc32eb122597c9938af1025c8601ed1103558a52ef04c837439a44`
+for x64 (2374038 bytes) and
+`ede054272d34f637af76b9cb57e798afe2bbcf21a3875677fda5ae9132fbb46f`
+for ARM64 (6585362 bytes). These are source-investigation artifacts, not
+substitutes for the runner's selected SDK or native PASS.
+
+A fixture-only OneCore link was reviewed as a possible repair. Before its plan
+could be published, concurrent commit
+[`bb48cb81493fbadb8b1e451ba5c35d7bc8488952`](https://github.com/777genius/agent-teams-ai/commit/bb48cb81493fbadb8b1e451ba5c35d7bc8488952)
+instead repaired this helper through the documented API-set contract. The
+compare-and-swap correctly rejected the stale plan publication. Preserve that
+contributor's commit and do not add an unused import library on top of it.
+
+Exact blob `ca0ded66441b8818bdf5726ee7d8ffa95abb8518` loads only
+`api-ms-win-core-wow64-l1-1-1.dll` with
+`LOAD_LIBRARY_SEARCH_SYSTEM32`, obtains the SDK-typed function pointer, makes
+the same one I386 directory query and checks one FreeLibrary on every successful
+load path. A missing entry still closes the module and returns the same refusal.
+The decltype reference is unevaluated and introduces no static SDK import.
+There is no directory fallback, new process probe, product edit or changed
+action, timeout, child identity, release/cleanup check or control-channel rule.
+
+R2 `/root/qualification_audit` independently accepted that exact preserved
+source diff; `/root` inspected and imported it without overwriting concurrent
+history. Microsoft's API-set guidance supports loading the named contract.
+The SDK archive investigation above corroborates its contract name, but neither
+review establishes the original stage5 subcause or a native PASS. Await both
+original resulting-source Windows compile/runtime jobs. The earlier linker
+failures and P08/P09 INCOMPLETE status remain explicit.
+
+
+### Preserved 35cb pending-CREATE follow-up
+
+
+## Original pending-CREATE observation after Stop
+
+At `27b1acf48278dcd0fb348c626696eac2dc64de73`, original ARM64
+[job132984523065](https://github.com/777genius/agent-teams-ai/actions/runs/43770293297/job/132984523065)
+passes CMake/link and the original service, service-pair, I386-root and
+root-first scenarios. It then fails the pending-CREATE scenario because a
+post-dispatch query reuses the warm-scope `activeProcesses > 0` assertion.
+The original query has matching key/birth, zero query/dispatch errors and
+zero active Job processes; rootExited was not retained in the old failure
+record, so this does not establish an early Stop ACK or native PASS.
+Artifact14184765230 is15521 bytes, SHA-256
+`5b1e4ddc8988dca12e90842b144a5f0cb7e2a72ad66ab04c1e75343f3294031f`.
+
+The bounded TEST-only correction keeps the warm query assertion and uses the
+existing completion predicate for this one observation after TerminateJobObject:
+the original root HANDLE must still be unsignalled or the original Job active.
+Root-exited plus Job-empty still fails. The C++ barrier uses the same existing
+`absent` predicate. One bounded record retains both original query facts before
+the assertion. Single Stop, pending reply, Settle and registration refusals,
+no-child-effect, final original HANDLE absence and all deadlines remain intact.
+Product custody, actors and workflow gates are unchanged. R1 and R2 reviewed
+the exact two-file correction; resulting-source Windows execution is required.
+
+
+# R1: retain useful incoming acceptance work without replacing the reviewed original gates
+
+Status: independently reviewable documentation-only proposal. Publication and full independent readback are required before source authoring or application. No source candidate, source application, commit, ref move, CI action or execution is claimed by this draft. The parent may publish the reviewed appendix; a child may create only immutable review objects. The existing frozen PR1206, PR1207 and PR1208 heads, bases, Draft state and active cohorts remain untouched.
+
+## Source and history boundary
+
+This is a selective reconciliation on the published own branch at d9266a2eb8dca47fb11d68bd98e3d9b951c925ed, tree b89f0e7a22934a29ca3518741dfcd3a4b8f8953b. Its nativeFixture.cpp a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062 already contains the separately published and independently reviewed SDK API-set helper; that file is not changed again here. The frozen incoming feature source is 27b1acf48278dcd0fb348c626696eac2dc64de73, tree df57310cd096bfc628b31ca05b0caae91eb5ae09, with merge base 9a34bb28de0a0deee2eecc42099fd9500563eb1b. The additional two pending-CREATE test corrections come only from 35cbd6e99b620e9b41802af936143d900f5e2aca, sole parent 27b. Neither incoming head is selected wholesale.
+
+The assigned frozen6e-to-27b source/workflow/test/plan inventory, excluding evidence leaves, has 72 changed paths. Forty-eight belong to the separately reviewed Logs/stderr scope. The remaining 24 consist of 21 executable/test/workflow paths and three documentation paths. This is not the total full-tree difference: later own documentation and all additional evidence/history leaves must also be inventoried and preserved separately. This appendix selects ten useful executable paths from that remainder and the two narrowly related 35cb native test corrections, for exactly twelve executable paths. It does not authorize adoption of the other 35cb source, dependency pins, Thinking changes or later primary advances. The separate Logs R1 and its current-delta review remain independent gates. Before application, compare a fresh complete own tree and all intended merge parents; any overlap, changed preimage or additional leaf requires exact rebasing and independent R2, not an additive assumption.
+
+Preserve complete histories and all existing evidence bytes. The incoming 27b Doc29 blob 411f9e7943bd9323006ea67ef470624b873419c9 is a true append to merge-base a8f84647a4f79bf677744ce93a6604162f63bb96: its 11,819-character / 11,827-byte historical suffix has SHA-256 ede291584e74ca5b1aacf52404733dd1afde643509b174251d09247bda898f7d. The incoming completion-2026-11-13.md b4388507ea00bb808461175b4163230fcb0cbe18 is a true append to own/base 06eb8aa3b98d0a00d34423fd85b5ca64f1c7cd5b: preserve its full 12,261-character / 17,626-byte suffix, SHA-256 0c54ce73383e33c1a4781177c4f90f9ac8639a6e3cb88c687fd1a26fcbe2ece6. Preserve the further 1,478-byte 35cb Doc29 suffix from 8361210618ffe71d4a1fc8785d717d318563e274, SHA-256 b29162a6753fda25ee16550f809eaf8afd118cfa61f257492811b06f29c1a41e, as source-attributed history as well. Their full prior prefixes must not replace the larger own plans. Retain historical author claims, failures and scopes as historical; an incoming expanded-budget success or unverified artifact claim does not qualify this branch. Incoming Plan30 6cb630bb666ea806e9f8bbcd253f5f68a44326ef equals the old merge-base version and must not replace the full current own Plan30.
+
+## Exact twelve-path selection and physical ceilings
+
+All deltas below are against the named own preimage, except the new script whose reviewed incoming template is named explicitly. Exact candidate full-file readback and reversible hunk checks are required before application. No unrelated formatting, extraction, code compression, helper framework, public protocol or file split is authorized.
+
+| Existing path, or the one already-incoming new path | Own preimage | Selected incoming source or bounded transformation | Maximum delta and physical ceiling |
+| --- | --- | --- | --- |
+| .github/workflows/electron-packaged-ci.yml | f520674551d54754e900686f3b051a55faf4cf6f | Exact 0938e9f31bad7520fec025ebde6aad8e071cfe69: one Darwin-only packaged relaunch step and six artifact globs | +23/-0; 313 |
+| scripts/legacy-agent-host/desktop-backend-fixture.ts | 0d515263f17c965f2073e69d5e181eb50ac4fc69 | Exact 495118ecb0d895dcc87f5782f8a4b0ccd35d3587: narrow structural type for existing candidateRuntime | +1/-1; 770 |
+| scripts/legacy-agent-host/desktop-captured-app.ts | e43e68508d17900948210de2c523e0289301c6b1 | Exact 865494ab5f5e45c5158fbf74ac858987fb322608: narrow existing packed input type only | +2/-1; 787 |
+| scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts | 933347bf047f0150e15a8a0845d12087704881ce | Exact b33e5290e4ed86a48b902a24ffc80509f1c89236: explicit originalStopOnly option and separately labelled proof | +7/-1; 253 |
+| scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts | 3d22185325dc1f0d9d25d4b64461e521e00b9388 | Only candidateRuntime signature, Claude/lifecycle assertion and forwarding hunks from 32e4d666c962619e9251843db6e9aa4e21fbaba9; retain own unconditional effects validation | +3/-2; 280 |
+| scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts | Absent; reviewed incoming template 404a3806398590b340fa89a5709f0ab32286ba80, 179 lines | Template plus only the missing imported version-source helper in this script's local capture/freeze source array | At most +182/-0 against absent path; 182 |
+| scripts/legacy-agent-host/qualify-linux-process-sdk.ts | 865401e9e925d34d97c792a62fa345a9d85f0f80 | Exact f6fdf6a32240c20d5e1cf6e4ea0ceaab9d38d242: retain already-observed late model failure | +1/-0; 147 |
+| tools/owned-process-broker/nativeRetainedHostGate.ts | d94742582f0cc937118db5ed82c7ffef27bc9d50 | Exact d7a56276a6baa63ee65a357a98fc52c7cfe03bdd: carry original terminal cutoff through existing RPC wrapper | +6/-3; 614 |
+| tools/owned-process-broker/nativeVendorGate.ts | bf4ee1f1c73b6ba9885f48dad9c5379fddd422e1 | Exact f704852f8f01b03907502dbaba99fc16bcceeed4: original-HANDLE queryable witnesses and three post-Stop liveness observations | +7/-8; 204 |
+| tools/owned-process-broker/nativeGate.ts | 0640b35744192a0dbe1b6755a069fb544d2cf347 | Only the two added catch lines from 17f5e7b66605bd4d28cf3935b7fa73ea2933a21d, before existing diagnostics.failure | +2/-0; 586 |
+| tools/owned-process-broker/debugServiceTest.h | 9edcec8fffca780706cbde634c35d7929552f9f6 | Exact f8a03669780c34de68010184ad6ca03a8440a2e4: existing absent predicate at pending-CREATE barrier | +2/-2; 153 |
+| tools/owned-process-broker/nativeDebugServiceScenario.ts | 25158d10870b78d5b8f6a77b4678fb5d7333600e | Only observe(requireActive=true) and one pending-CREATE observation block from e3cb3ac88b3b46c8935f64bc2f2b0060e163676b, inside own appended nativeAdditionalDebugServiceScenario | +11/-3; 477 |
+
+The ceilings are physical source lines, not a waiver of existing source guards. All affected production/driver files remain below the existing 800-line boundary. The script-local source pin correction may use at most three added lines and one replaced line against the 179-line incoming template; its complete resulting new file must remain at most 182 lines. The remaining template, imports, assertions, cleanup and receipt behavior must be byte-preserved. Candidate review must separately show the exact new-file difference from 404a and the complete newly added file against the own tree.
+
+## Packaged macOS relaunch: new, separately scoped acceptance journey
+
+The six packaged paths add a finite packaged journey; they do not shorten an existing mandatory lifecycle run. Only the new macOS script opts into originalStopOnly=true after the original Launch, finite SDK business input, Stop and screenshots. All prior callers leave the option absent and retain the entire existing cold Resume/active Quit tail. The shortened result has its own emulatedLaunchStopUiProof; it must not fabricate emulatedLifecycleUiProof, and the new script explicitly requires that full-proof field to remain absent.
+
+The candidate runtime is read from the exact built bundle's original manifest and bundled Node/Host/custody entries. The two structural type widenings accept only fields the unchanged helper bodies consume; they add no alternate launch, filesystem lookup, ownership inference or cleanup capability. In the runtime fixture, the optional candidateRuntime is accepted only for provider='claude' and variant='lifecycle', and forwarded to the existing preparer. Crucially, retain the own unconditional await readDesktopEmulatedRuntimeEffects(fixture) immediately after the original Host-cardinality assertion. The incoming deletion is rejected. Keep the entire 41-case b47e3a6e0227e2c3521a4e0124074ce6ec94bae8 observation test, including all eight empty-Host/empty-child journal refusal cases. Existing full-census, PID-reuse, physical cleanup and three-second shared sampling rules stay exactly as independently reviewed and executed on the own source.
+
+The new script selects one original candidate executable, checks bundle identity, app.asar and manifest hashes, requires actual Node24.21.0 and the existing isolated Corepack0.36.0, uses the finite TEST peer, and starts the candidate once. It executes one original finite business input and Stop, invokes the existing public app.relaunch once, observes the actual successor, and requests its one original public Quit. The harness restart callback deliberately refuses; a retry, second harness app spawn, PID-based signal or business replay is not a substitute. Preserve original input-effect equality across relaunch, captured executable/Host/node/manifest/source identity, session/lease and public binding checks, original parent/descendant/listener observations, final sentinel and peer absence, app exit and all cleanup checks. INCOMPLETE remains INCOMPLETE if any fails. This journey does not qualify full cold Resume/active Quit, real Claude/Codex, vendor inference/authentication, native custody or release.
+
+One source-closure defect in the incoming template is corrected before acceptance: it imports and calls packages/legacy-agent-host/tests/opencode-v1-version-source.ts at 78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4, but neither the incoming script's local sources array nor the common Desktop source arrays include that helper. Add this exact existing path to the same local sources array already used for both captureDesktopSourceHashes and verifyDesktopSourceFreeze, beside the new script's existing self-pin. The helper's existing native-host fixture dependency is already in the common source closure. Do not replace this with an initial-only hash check, add a new source framework or silently claim that the common roster already covers the helper. The separately reviewed Logs pin relocation must be preserved if composed first; the final unique source count is derived from the actual combined tree, not copied from an earlier head.
+
+The workflow delta is exactly the incoming Darwin-only step after original packaged V2 qualification plus its six original receipt/log/screenshot upload globs. Its existing earlier setup-node step already selects Node24.21.0. Keep the original five-tuple matrix, whole-job 90-minute bound, existing commands and before/after gates, conditions, always upload, action pins and all other workflow bytes. This adds a distinct macOS journey and its work to the same job; it is not timing- or call-count-equivalent to the former job. It does not extend any old UI/RPC/native phase allowance, enable a real Claude/Codex command, or declare missing uploads successful. Original app-relaunch startup/exit/cleanup budgets remain unchanged. No added workflow or auxiliary PR is authorized here.
+
+## Three existing qualification guards and first-error preservation
+
+The Linux SDK qualifier adds only a check of the already-retained model.failures after original model.close and the existing validation/copy steps. Assign failure with ??= so an earlier failure is not replaced. This prevents an already-observed late model failure from being serialized as PASS. It performs no fresh model request, process read or teardown. The source change does not authorize executing the real Claude/Codex SDK qualifier; that qualification remains unavailable under the current user restriction.
+
+The retained-Host RPC wrapper accepts a cutoff defaulting to Infinity but resolves the actual deadline to min(cutoff, now + captured.host.requestTimeoutMs), checks it before and after the unchanged original client call, and passes remainingMs into that call. Only the existing terminal observation passes its already-created absolute phase deadline. No fresh per-poll phase allowance replaces the original cutoff. The additional clock reads and tighter refusal are explicit behavioral differences; do not describe this as identical clock count or infer that it repairs any earlier latency failure. Payload identity, owner/currentness, original errors and all physical custody boundaries remain unchanged.
+
+The vendor gate replaces six existing vendor wait witnesses with the existing queryable original-HANDLE witness and performs three zero-time queries of provider, background and adjacent witnesses after the service subtree Stop. Each actor still owns its originally captured PID/birth/HANDLE, and final waits still require all six original exits. The old vendor-wait-gated and existing vendor-query-wait-gated modes both use their original infinite native wait under the existing outer vendor gate; this selection does not re-anchor the non-vendor 15-second witness used by the preserved original service cases. The three Q observations are additional pipe/native observations and are not call-count-equivalent to helper exitCode reads. No PID reopen, new kill authority, cached liveness or guessed absence is introduced. This code is retained for correctness, but actual vendor qualification and real Claude/Codex execution remain prohibited and cannot be reported as covered by finite OpenCode or static source review.
+
+In nativeGate.ts, add only the original catch's comment and events.guard(() => { throw error; })() immediately before its existing events.guard(diagnostics.failure)(). The existing guarded event accumulator latches the first error before an owned cleanup exit callback can replace its diagnostic. Keep the original throw and the entire original finally, owned-child cleanup and final events.wait. This is diagnostic first-error ordering, not a cleanup bypass or a new success path; non-Error normalization follows the already-existing event guard. Preserve our nativeAdditionalDebugServiceScenario import, all three old scenario calls, race-before-WOW64 ordering and every other Gate byte. Do not import the incoming older scenario composition along with these two lines.
+
+## Pending-CREATE: correct one post-dispatch TEST observation
+
+Retained original evidence is source-bound to 27b, not to the new composed own source: run43770293297 attempt1, ARM job132984523065. Its original build passes and Node gate then fails at nativeDebugServiceScenario's post-dispatch observe activeProcesses>0 assertion. The full independently retained 174,712-byte raw has SHA-256 7097e606f569d6ac5563adb9076a585081e8cc95408d22b58d50b9c3911306f3. The matching key/birth and zero query/dispatch error checks had returned first; zero Job active processes is observed, while rootExited was not retained. The job failed, the whole run is CANCELLED, and later Electron/source-provider steps were skipped. Artifact14184765230 was uploaded (15,521 bytes; published SHA-256 5b1e4ddc8988dca12e90842b144a5f0cb7e2a72ad66ab04c1e75343f3294031f); this appendix makes no archive-content or physical cleanup claim from that metadata. Prior service/WOW64 phases and a drained controller do not make this job PASS.
+
+After TerminateJobObject dispatch, Job accounting may be empty before the originally retained root HANDLE is signalled. The already-existing production absent predicate is rootExited && active==0 && !queryError. The one pending-CREATE barrier must reject actual absence, rather than insist on the earlier warm-scope active>0 condition. The C++ test still rejects queryError and requires testOriginalDispatch(key, child); replace only !pending.active with owned_service::absent(pending) and its adjacent explanation. This does not alter product registry, Stop, HANDLE acquisition or completion code.
+
+Inside only our appended nativeAdditionalDebugServiceScenario, retain the default warm observe requirement activeProcesses>0. The one post-dispatch call uses observe(false), retains the original matching key/birth and zero query/dispatch errors, writes one closed five-field record from that same returned object (rootExited, activeProcesses, queryError, dispatchError, stopReplied), and requires !rootExited || activeProcesses>0. Root-exited plus Job-empty still fails. No extra query, timer, native action or authority is introduced; the single diagnostic console write is added and is not a flush/completion receipt or timing-equivalence claim. Its failure cannot turn the gate into PASS.
+
+Preserve single Stop, still-pending reply, Settle refusal, both registration-route refusals, no race-child effect, original provider/background/neighbor witnesses, exact final original HANDLE absence, retirement/replay checks, all original deadlines and helper cap64. The complete original nativeDebugServiceScenario function and its three old calls, fixture service-pair/churn and capture-ACK-started 15-second witnesses remain byte-identical. Do not adopt the incoming monolithic function, old re-anchored wait, whole fixture, production header changes or any extra diagnostics.
+
+## Explicit retain list and excluded relaxations
+
+Keep exact own nativeEmulatedSourceProfile.ts 0486ca44781ab8b9da889df212f3aeeb3879b6c3 and nativeEmulatedSourceScenario.ts 60548e4b0477924fd2c068283b9372f21946b198: original 15-second readiness/RPC obligations, no 60/90-second replacement, and reviewed no-local-dispatch reservation receipt/cleanup correction. Keep host-process-acceptance.yml 70202d22a5840401a00025cd60b797c514f3e455 and runtime-team-host.test.ts aed70893add6ddf460ce7d13231511be4113b86e, including all physical and reservation negatives. Incoming123e/e77 are merge-base rollbacks, not newer fixes.
+
+Keep nativeWindowsAppGate.mjs ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b and desktop-native-process-ui.test.ts 076fbd26bac85c4195312a83c1ae78067a8d742e, preserving simultaneous retained-row admission, rich passive Retry facts, census clocks, partial-write/Unicode/frozen-record oracles and original cutoff. Keep desktop-team-ui-smoke.test.ts cc200151738da867232a6bcd9d0525642ab73ecb and teamSlice.test.ts 8b5bde2a0ac8a79b4563a810f1a66e21bc0df861, including prior Cross and publication-entry test unions. Their incoming older blobs must not remove cases. Keep the complete Desktop41 test b47 and journal read as above. Keep all already-published native8 production headers, clean old/new scenario isolation and the SDK a42 helper. All unlisted own source, dependencies, workflow triggers, tests, documentation and evidence are retained.
+
+## Review and qualification gates
+
+First publish this R1 and obtain full independent prefix/source-inventory readback. Then prepare only the twelve selected source files as immutable candidates. Independent R2 must prove the exact incoming-byte selections, bounded partial hunk inverses, complete own retain list, no extra path/mode/deletion, local packaged pin coverage, old native function/call/witness anchors and exact source ceilings. The root may compose with already-reviewed Logs or other separately authorized non-overlapping work only after complete fresh three-way inventory; a source overlap is a new review, not implicit permission.
+
+No synthetic missing-helper/import failure is accepted as RED. The historical 27b assertion is evidence for the pending-CREATE correction, not a test-first execution of the composed own scenario. This cut adds an incoming acceptance journey and preserves existing integrated native oracles; it does not invent a narrow unit imitation of the OS. On the resulting source, retain the original full Desktop observation file (41 cases, including all eight empty-state journal negatives) through a fresh original Host build, and the existing applicable source/lint/provisioning/diff gates. Any actual test failure must remain attributed to its exact source and phase, with unexecuted later checks stated.
+
+The original resulting-source Windows x64/ARM Node and Electron native gates remain mandatory for the SDK binding, pending-CREATE and all preserved old/native8 cases, with the helper census and original complete cleanup; source review or prior6e/27b success cannot substitute. Both original packaged macOS tuples must execute the new exact-source relaunch journey plus their unchanged earlier/later gates and retain original receipts/logs/artifacts. Full Desktop shared prerequisites and relevant GUI journeys remain required; original resulting-source native/retained-Host/scripts typechecks are not waived. The current frozen1208 head6e cannot qualify a later source.
+
+This R1 grants no further local canonical scripts/workspace/backend compiler retry, no repeat of the killed Host test compiler, no real Claude/Codex execution and no new CI venue, dispatch, rerun, cancel, PR metadata update or frozen-head move. A later integration venue and any additional local execution allowance must be concrete, independently reviewed and separately authorized. Ordinary already-authorized resulting-source CI gates retain their unchanged commands. Native vendor and real Claude/Codex qualifications remain explicitly unavailable under the current restriction. Missing execution, failed cleanup, absent artifacts, skipped/cancelled jobs and earlier whole1207 Windows failures remain unqualified; no Ready/main/release/default activation or Stage2 is authorized.
