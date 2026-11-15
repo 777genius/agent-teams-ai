@@ -304,19 +304,38 @@ export async function runDesktopNativeNextPromptMixedUi(
       await ui.clickSidebar(team.seed.subject);
       selectedTeam = team.key;
     }
-    await ui.click(
-      `button[aria-label^=${desktopJsLiteral((actor.name === 'team-lead' ? 'lead' : actor.name) + ',')}]`,
-      `open original ${actor.key} direct chat`
-    );
+    const memberSelector = `button[aria-label^=${desktopJsLiteral((actor.name === 'team-lead' ? 'lead' : actor.name) + ',')}]`;
+    await ui.click(memberSelector, `open original ${actor.key} direct chat`);
+    const providerId = actor.provider === 'claude' ? 'anthropic' : 'codex';
+    const model = actor.provider === 'claude' ? 'claude-opus-4-6' : 'mock-model';
     await ui.waitRead(
       `(() => {
       const state=window.__agentTeamsDevStore?.getState?.();
+      const member=state?.selectedTeamData?.members?.find(value=>
+        value.hostMemberId===${desktopJsLiteral(actor.memberId)});
       return state?.selectedTeamName===${desktopJsLiteral(ownerKey(team))}&&
-        state.selectedTeamData?.members?.some(member=>member.hostMemberId===${desktopJsLiteral(actor.memberId)}&&
-          member.runtimeOwner==='captured-host')&&Boolean(document.querySelector(${desktopJsLiteral(editor)}));
+        member?.runtimeOwner==='captured-host'&&
+        member.providerId===${desktopJsLiteral(providerId)}&&member.model===${desktopJsLiteral(model)}&&
+        member.configuredRuntimeSettings?.providerId===${desktopJsLiteral(providerId)}&&
+        member.configuredRuntimeSettings?.model===${desktopJsLiteral(model)}&&
+        Boolean(document.querySelector(${desktopJsLiteral(editor)}));
     })()`,
-      `original owner and member selected for ${actor.key}`
+      `original ${actor.key} configured provider and model match its actual native Launch`
     );
+    if (actor.provider === 'codex')
+      await ui.waitRead(
+        `(() => {
+        const text=document.querySelector(${desktopJsLiteral(memberSelector)})?.textContent??'';
+        return text.includes('Codex')&&text.includes('mock-model');
+      })()`,
+        `actual ${actor.key} card shows its Codex provider and localhost TEST model`
+      );
+    step({
+      assertion: 'original projected provider and model match the selected native actor',
+      actor: actor.key,
+      providerId,
+      model,
+    });
   };
   const noOffer = async (label: string) => {
     const expression = `document.querySelector(${desktopJsLiteral(offer)})===null&&document.querySelector(${desktopJsLiteral(editor)})?.value===''`,

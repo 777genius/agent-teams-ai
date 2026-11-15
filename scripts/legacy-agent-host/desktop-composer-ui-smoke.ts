@@ -406,6 +406,9 @@ export async function runDesktopComposerUiSmoke(
     path: screenshotPath,
     sha256: await fileDigest(screenshotPath),
   };
+  if (nativeNextPromptUi)
+    await ui.scrollTo('button[aria-label="Stop"]',
+      'reveal original Stop after the native suggestion conversation', 'Stop');
   await ui.click(
     'button[aria-label="Stop"]',
     'ordinary Stop once after native conversation',

@@ -188,11 +188,27 @@ export async function prepareDesktopNativeNextPromptMixedFixture(
       memberId: actor.memberId,
       name: actor.name,
       role: actor.role,
+      // Explicit configured intent for the original renderer, matching this scenario's explicit native Launch.
+      settings: {
+        cwd: join(base.root, `native-${actor.key}`, 'workspace'),
+        ...(actor.provider === 'claude'
+          ? {
+              providerId: 'anthropic' as const,
+              model: 'claude-opus-4-6',
+              effort: 'medium' as const,
+              fastMode: 'off' as const,
+            }
+          : { providerId: 'codex' as const, model: 'mock-model' }),
+      },
       delivery: { ...binding, runId, memberId: actor.memberId, generation: '1' },
     }));
+    const leads = members.filter((member) => member.role === 'lead');
+    assert.equal(leads.length, 1);
     profile.teams.push({
       scope: { ...originalTeam.scope, teamId, runId },
       binding,
+      // The original projection reads lead choices from savedSettings, peer choices from settings.
+      savedSettings: { ...leads[0]!.settings },
       members,
       grants: [
         originalTeam.grants[0]!,
@@ -264,9 +280,11 @@ export async function prepareDesktopNativeNextPromptMixedFixture(
     for (const team of teams) {
       lease.assertCurrent();
       const selected = profile.teams.find((item) => item.binding.teamId === team.teamId)!;
+      assert.ok(selected.savedSettings);
       const owner = createFilesystemTeamOwner({
         root: profile.owner.storageRoot,
         binding: selected.binding,
+        savedSettings: selected.savedSettings,
         members: selected.members,
         grants: selected.grants,
       });
