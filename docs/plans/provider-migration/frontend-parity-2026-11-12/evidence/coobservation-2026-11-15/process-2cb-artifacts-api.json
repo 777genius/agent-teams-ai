@@ -1,0 +1,85 @@
+{
+  "total_count": 4,
+  "artifacts": [
+    {
+      "id": 14179310387,
+      "node_id": "MDg6QXJ0aWZhY3QxNDE3OTMxMDM4Nw==",
+      "name": "host-process-fixtures-darwin-x64-2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+      "size_in_bytes": 12296,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14179310387",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14179310387/zip",
+      "expired": false,
+      "digest": "sha256:fb46a8030f2168f52947794f0216c99013ad0a22b1fe04b800a69efbf3d19713",
+      "created_at": "2026-11-15T20:19:49Z",
+      "updated_at": "2026-11-15T20:19:49Z",
+      "expires_at": "2026-11-29T20:19:47Z",
+      "workflow_run": {
+        "id": 43755682747,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+      }
+    },
+    {
+      "id": 14179001604,
+      "node_id": "MDg6QXJ0aWZhY3QxNDE3OTAwMTYwNA==",
+      "name": "host-process-fixtures-darwin-arm64-2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+      "size_in_bytes": 11978,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14179001604",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14179001604/zip",
+      "expired": false,
+      "digest": "sha256:958134680e076f9ed55989f0926e288546a6611c20e563258f6159cbc8b1159b",
+      "created_at": "2026-11-15T20:17:22Z",
+      "updated_at": "2026-11-15T20:17:22Z",
+      "expires_at": "2026-11-29T20:17:21Z",
+      "workflow_run": {
+        "id": 43755682747,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+      }
+    },
+    {
+      "id": 14178717477,
+      "node_id": "MDg6QXJ0aWZhY3QxNDE3ODcxNzQ3Nw==",
+      "name": "host-process-fixtures-win32-x64-2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+      "size_in_bytes": 52962,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178717477",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178717477/zip",
+      "expired": false,
+      "digest": "sha256:5c80ebb740fe585fc6749694e8430a465dc4ea692ff1c72d5a836d764e9f5e40",
+      "created_at": "2026-11-15T20:18:06Z",
+      "updated_at": "2026-11-15T20:18:06Z",
+      "expires_at": "2026-11-29T20:18:05Z",
+      "workflow_run": {
+        "id": 43755682747,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+      }
+    },
+    {
+      "id": 14178133525,
+      "node_id": "MDg6QXJ0aWZhY3QxNDE3ODEzMzUyNQ==",
+      "name": "host-process-fixtures-win32-arm64-2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+      "size_in_bytes": 38874,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178133525",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178133525/zip",
+      "expired": false,
+      "digest": "sha256:716bf8e52216e9485b848a2f9f92001eec374f7d4fb7ac32e169f2528ed68870",
+      "created_at": "2026-11-15T20:17:05Z",
+      "updated_at": "2026-11-15T20:17:05Z",
+      "expires_at": "2026-11-29T20:17:04Z",
+      "workflow_run": {
+        "id": 43755682747,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+      }
+    }
+  ]
+}
