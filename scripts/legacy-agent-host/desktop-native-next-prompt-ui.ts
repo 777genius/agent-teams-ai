@@ -270,13 +270,9 @@ export async function qualifyNativeNextPromptUiStep(
     await ui.waitRead('!document.querySelector(\'button[aria-label="Message bottom sheet actions"]\')',
       'ordinary inline layout restored before native Stop');
     // Returning from the compact bottom sheet restores the long Team page.
-    // Use one real wheel gesture; the inline editor is below its initial viewport.
-    const viewport = await cdp.evaluate(
-      '({x:Math.floor(innerWidth/2),y:Math.floor(innerHeight*0.35)})'
-    ) as { x: number; y: number };
-    await cdp.send('Input.dispatchMouseEvent', {
-      type: 'mouseWheel', ...viewport, deltaX: 0, deltaY: 4000,
-    });
+    // Reveal the editor with bounded physical wheel input in its actual scroll container.
+    await ui.scrollTo('.message-composer-flat-layout textarea',
+      'reveal restored inline Composer through its actual scroll container');
     await ui.waitRead(`(() => {
       const editor=document.querySelector('.message-composer-flat-layout textarea');
       if(!editor)return false;

@@ -540,6 +540,45 @@ jobs:
             [['dark', false], ['dark', false], ['dark', false], ['light', true],
              ['light', false], ['light', false], ['light', false]]);
           JS
+      - name: Original Claude Host binding and native E2E on pinned macOS SDK
+        if: ${{ !cancelled() && (steps.native_claude_composer.outcome == 'success' || steps.native_claude_composer.outcome == 'failure') }}
+        env:
+          NATIVE_SUGGESTIONS_HOST_GO: "1"
+          NATIVE_SUGGESTIONS_HOST_RECEIPT: ${{ runner.temp }}/native-prompt-suggestions-host-macos-receipt.json
+          NATIVE_SUGGESTIONS_HOST_SOURCE_SHA: ${{ needs.reproduce-source.outputs.verified_consumer_sha || needs.stage-exact-archive.outputs.pinned_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @agent-teams/legacy-agent-host typecheck:test
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" --test packages/legacy-agent-host/tests/native-prompt-suggestions-binding.test.ts 2>&1 |
+            tee "$RUNNER_TEMP/native-prompt-suggestions-host-macos.log"
+          "$selected_node" --test packages/legacy-agent-host/tests/native-prompt-suggestions-host.native.ts 2>&1 |
+            tee -a "$RUNNER_TEMP/native-prompt-suggestions-host-macos.log"
+          "$selected_node" --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { readFileSync } from 'node:fs';
+          const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], {encoding:'utf8'}).trim();
+          assert.equal(sourceSha, process.env.NATIVE_SUGGESTIONS_HOST_SOURCE_SHA);
+          const text = readFileSync(process.env.NATIVE_SUGGESTIONS_HOST_RECEIPT, 'utf8');
+          assert.ok(Buffer.byteLength(text) < 64 * 1024);
+          const receipt = JSON.parse(text);
+          assert.equal(receipt.passed, true);
+          assert.equal(receipt.nativeSdk, '0.3.305');
+          assert.equal(receipt.nativeBinarySha256,
+            'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f');
+          assert.equal(receipt.environment, 'darwin-arm64');
+          assert.equal(receipt.normalHumanMessages, 2);
+          assert.equal(receipt.qualifiedHostNotifications, 1);
+          assert.ok(receipt.originalHostNotifications === 1 || receipt.originalHostNotifications === 2);
+          assert.ok(Number.isInteger(receipt.localhostModelCalls) &&
+            receipt.localhostModelCalls >= 3 && receipt.localhostModelCalls <= 7);
+          assert.equal(receipt.allModelCallsContainOriginalHuman, true);
+          assert.equal(receipt.vendorAuth, false);
+          assert.equal(receipt.nativeCustody, 'released');
+          console.log(JSON.stringify({originalClaudeHostMac:{sourceSha, ...receipt}}));
+          JS
       - name: Full application native TypeScript 7 on the verified source
         if: ${{ !cancelled() && (steps.native_claude_composer.outcome == 'success' || steps.native_claude_composer.outcome == 'failure') }}
         shell: bash
@@ -557,6 +596,8 @@ jobs:
             ${{ runner.temp }}/native-next-prompt-electron-ui.log
             ${{ runner.temp }}/native-next-prompt-electron-evidence.json
             ${{ runner.temp }}/native-next-prompt-*.png
+            ${{ runner.temp }}/native-prompt-suggestions-host-macos.log
+            ${{ runner.temp }}/native-prompt-suggestions-host-macos-receipt.json
 
   captured-original-codex-after-pin:
     needs: [reproduce-source, stage-exact-archive]

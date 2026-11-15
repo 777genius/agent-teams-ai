@@ -28,7 +28,17 @@ test('original captured Host forwards native Claude follow-up for the exact huma
   const sdk = createRequire(providerEntry).resolve('@anthropic-ai/claude-agent-sdk');
   const sdkPackage = JSON.parse(await readFile(join(dirname(sdk), 'package.json'), 'utf8'));
   assert.equal(sdkPackage.version, '0.3.305');
-  const binary = await realpath(createRequire(sdk).resolve('@anthropic-ai/claude-agent-sdk-linux-x64/claude'));
+  const nativePlatform = process.platform + '-' + process.arch;
+  assert.ok(nativePlatform === 'linux-x64' || nativePlatform === 'darwin-arm64',
+    'original native proof supports only Linux x64 and macOS ARM64');
+  const binaryModule = nativePlatform === 'darwin-arm64'
+    ? '@anthropic-ai/claude-agent-sdk-darwin-arm64/claude'
+    : '@anthropic-ai/claude-agent-sdk-linux-x64/claude';
+  const binary = await realpath(createRequire(sdk).resolve(binaryModule));
+  const binarySha256 = await fileHash(binary);
+  if (nativePlatform === 'darwin-arm64') assert.equal(binarySha256,
+    'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f',
+    'same pinned native Claude SDK executable as the original Electron proof');
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-followup-host-')));
   const relative = ['workspace','store','home','config','tmp','xdg-config','xdg-data','xdg-cache'];
   for (const p of relative) await mkdir(join(root,p),{recursive:true,mode:0o700});
@@ -107,7 +117,7 @@ test('original captured Host forwards native Claude follow-up for the exact huma
         teamId:scope.teamId,memberId:'alice-id',principalId:'alice-session',provider:'claude',
         sessionId,generation:1,configRevision:'TEST-native-suggestions',
         cwd:join(root,'workspace'),model:'claude-sonnet-4-6',accountBinding:'TEST-no-real-auth',
-        executable:{path:binary,sha256:await fileHash(binary)},
+        executable:{path:binary,sha256:binarySha256},
         environment:{
           HOME:join(root,'home'),CLAUDE_CONFIG_DIR:join(root,'config'),
           TMPDIR:join(root,'tmp'),XDG_CONFIG_HOME:join(root,'xdg-config'),
@@ -258,7 +268,7 @@ test('original captured Host forwards native Claude follow-up for the exact huma
       'wrong operation is rejected rather than self-matching browser candidate fields');
     const stopped=await host.rpc('runtime.stop',envelope('TEST-stop',{memberId:'alice-id',expectedGeneration:latestGeneration}));
     assert.equal(stopped.ok,true);
-    receipt={passed:true,nativeSdk:'0.3.305',normalHumanMessages:2,originalHostNotifications:received.length,qualifiedHostNotifications:offers.length,
+    receipt={passed:true,nativeSdk:'0.3.305',nativeBinarySha256:binarySha256,normalHumanMessages:2,originalHostNotifications:received.length,qualifiedHostNotifications:offers.length,
       localhostModelCalls:bodies.length,allModelCallsContainOriginalHuman:bodies.every(x=>x.inputHasHuman),
       vendorAuth:false,environment:process.platform+'-'+process.arch,nativeCustody:'released'};
   }finally{
