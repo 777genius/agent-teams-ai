@@ -269,6 +269,22 @@ export async function qualifyNativeNextPromptUiStep(
     await ui.click('[role="menuitem"]', 'return through ordinary layout menu', 'Move to inline');
     await ui.waitRead('!document.querySelector(\'button[aria-label="Message bottom sheet actions"]\')',
       'ordinary inline layout restored before native Stop');
+    // Returning from the compact bottom sheet restores the long Team page.
+    // Use one real wheel gesture; the inline editor is below its initial viewport.
+    const viewport = await cdp.evaluate(
+      '({x:Math.floor(innerWidth/2),y:Math.floor(innerHeight*0.35)})'
+    ) as { x: number; y: number };
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseWheel', ...viewport, deltaX: 0, deltaY: 4000,
+    });
+    await ui.waitRead(`(() => {
+      const editor=document.querySelector('.message-composer-flat-layout textarea');
+      if(!editor)return false;
+      const r=editor.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+      const hit=document.elementFromPoint(x,y);
+      return r.width>0&&r.height>0&&x>0&&x<innerWidth&&y>0&&y<innerHeight&&
+        !!hit&&(hit===editor||editor.contains(hit));
+    })()`, 'physical Team-page scroll reveals the restored inline Composer');
   } else if (options.turn === 'NATIVE_TEAM_THREE') {
     await key(cdp, 'Escape', 'Escape', 27);
     await ui.waitRead(
