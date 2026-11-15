@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { spawn, execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { createWriteStream, existsSync, readFileSync } from 'node:fs';
+import { createWriteStream, existsSync, readFileSync, writeSync } from 'node:fs';
 import { mkdir, realpath, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
@@ -125,7 +125,12 @@ const remaining = () => {
 const begin = (name, milliseconds) => {
   activePhase = name;
   activeDeadline = Math.min(outerDeadline, performance.now() + milliseconds);
-  proof.phases.push({ phase: name, atMs: performance.now() - startedAt, budgetMs: milliseconds });
+  const phase = { phase: name, atMs: performance.now() - startedAt, budgetMs: milliseconds };
+  proof.phases.push(phase);
+  try {
+    const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_PHASE', ...phase }) + '\n';
+    if (Buffer.byteLength(line, 'utf8') <= 512) writeSync(1, line);
+  } catch { /* The original phase admission remains authoritative. */ }
   remaining();
 };
 const within = async action => {

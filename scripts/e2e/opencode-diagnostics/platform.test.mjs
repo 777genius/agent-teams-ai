@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
+import { runInThisContext } from 'node:vm';
 import { mkdtemp, copyFile, writeFile, rm } from 'node:fs/promises';
 import { spawn, spawnSync } from 'node:child_process';
 import os from 'node:os';
@@ -236,4 +238,62 @@ test('Windows cleanup evidence retains current PID through independent read-only
   assert(evidence.cim.some(entry => entry.pid === process.pid && entry.creationDate));
   assert(evidence.native.some(entry => entry.pid === process.pid && entry.startTime && entry.hasExited === false));
   assert(Array.isArray(evidence.tcp));
+});
+
+test('Windows phase observations use the original phase clocks and cannot bypass admission', () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8');
+  const start = 'const remaining = () => {', end = 'const within = async action => {';
+  assert.equal(source.split(start).length, 2);
+  assert.equal(source.split(end).length, 2);
+  const from = source.indexOf(start), to = source.indexOf(end);
+  assert(to > from);
+  const create = runInThisContext('(function(assert, performance, proof, writeSync) { ' +
+    "let startedAt = 100, outerDeadline = 300100, activeDeadline, activePhase = 'prepare'; " +
+    source.slice(from, to) +
+    'return { begin, state: () => ({ activeDeadline, activePhase }) }; })');
+  const phase = 'one-explicit-same-Main-Retry';
+  for (const writerThrows of [false, true]) {
+    const calls = [], lines = [], proof = { phases: [] };
+    let now = 110;
+    const original = create(assert, { now: () => { calls.push('clock'); return now++; } }, proof, (fd, line) => {
+      calls.push('write'); assert.equal(fd, 1); lines.push(line);
+      if (writerThrows) throw new Error('TEST private stdout failure');
+    });
+    assert.equal(original.begin(phase, 10000), undefined);
+    assert.deepEqual(calls, ['clock', 'clock', 'write', 'clock']);
+    assert.deepEqual(proof, { phases: [{ phase, atMs: 11, budgetMs: 10000 }] });
+    assert.deepEqual(original.state(), { activeDeadline: 10110, activePhase: phase });
+    assert.equal(lines.length, 1);
+    assert.deepEqual(JSON.parse(lines[0]), {
+      kind: 'TEST_WINDOWS_PACKAGED_UI_PHASE', phase, atMs: 11, budgetMs: 10000,
+    });
+    assert(lines[0].endsWith('\n')); assert(Buffer.byteLength(lines[0], 'utf8') <= 512);
+    assert.equal(lines[0].includes('TEST private stdout failure'), false);
+  }
+
+  const calls = [], proof = { phases: [] }, cutoff = new Error('TEST original cutoff');
+  let now = 110;
+  const expired = create({
+    ok: (admitted, message) => {
+      assert.equal(message, 'Original Windows UI phase expired: ' + phase);
+      if (!admitted) throw cutoff;
+    },
+  }, { now: () => { calls.push('clock'); return now++; } }, proof, (_fd, line) => {
+    calls.push('write'); assert.equal(JSON.parse(line).phase, phase);
+    now = 10110;
+  });
+  assert.throws(() => expired.begin(phase, 10000), error => error === cutoff);
+  assert.deepEqual(calls, ['clock', 'clock', 'write', 'clock']);
+  assert.deepEqual(expired.state(), { activeDeadline: 10110, activePhase: phase });
+  assert.deepEqual(proof.phases, [{ phase, atMs: 11, budgetMs: 10000 }],
+    'a recorded phase does not grant admission or claim completion');
+
+  const oversized = '界'.repeat(180), omitted = [], retained = { phases: [] };
+  let clocks = 0;
+  const bounded = create(assert, { now: () => { clocks++; return 110; } }, retained,
+    (...args) => omitted.push(args));
+  bounded.begin(oversized, 10000);
+  assert.equal(clocks, 3); assert.deepEqual(omitted, []);
+  assert.deepEqual(retained.phases, [{ phase: oversized, atMs: 10, budgetMs: 10000 }],
+    'the byte bound changes only the diagnostic output');
 });
