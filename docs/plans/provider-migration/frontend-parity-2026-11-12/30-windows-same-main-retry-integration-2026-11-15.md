@@ -689,3 +689,44 @@ receipts remain unchanged. Frozen 1207's Main 81/8 passes on all five tuples whi
 whole Process run is still FAILURE on the two later Windows lanes; it cannot qualify native8.
 No additional local compiler attempt, metadata change to existing frozen PRs,
 cancellation, real Claude/Codex execution, default activation or Stage2 is authorized here.
+
+
+### R1 amendment: resolve the TEST WOW64 directory API through its documented API-set contract after the original Windows linker refusal
+
+Status: review-only documentation proposal. Publication and independent full readback must precede source authoring/application; the exact one-file candidate then requires independent R2. This amendment preserves the published native Stop/WOW64 R1 and SDK-binding addendum `34582e095069b9ccbb435371b46d3430b4dc6350` as historical evidence. It revises only the latter's direct-import implementation choice, using the actual original Windows linker result below. No source object, commit, ref or PR is created by this proposal.
+
+**Observed failure and source join.** Original Host Process run [43766708055](https://github.com/777genius/agent-teams-ai/actions/runs/43766708055), attempt 1, checked out `332fbe3420c811c095dac4187d3f9664e8c47179`. Windows x64 job [132973378700](https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973378700) and Windows ARM64 job [132973379104](https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973379104) both failed the original step 15, `Build original Windows product broker and C++ fixtures`, before native runtime qualification. Their full original raw logs independently join checkout/source head and report SDK 10.0.26100.0, `LNK2019: unresolved external symbol __imp_GetSystemWow64Directory2W`, then `LNK1120`. The x64 error is timestamped 2026-11-15T22:10:20.2085336Z; the ARM64 error is timestamped 22:12:43.3820394Z. Both jobs are FAILURE; the whole run is CANCELLED. Neither is a native execution or cleanup PASS.
+
+| Original raw evidence | Exact UTF-8 bytes | SHA-256 |
+| --- | ---: | --- |
+| x64 job 132973378700 | 94192 | `dd5e6457a7a4d1ddad575e3ca59c4a59197b1ef7f87a7627253c0aa2c8030b79` |
+| ARM64 job 132973379104 | 120277 | `35a82d37a581106c8e2482be5ad05edf3b2c964f2ca994dc7d5d04704d2e177b` |
+
+The failed source's fixture blob `43603d29138a5c43547f46099c5dad39d3d75815` and our accepted fixture preimage `21b080fd65679e903837e1cc5eabb8a451d7d55b` contain the exact same complete `wow64Command` function. Their original CMake blob is also identical, `cf158110832d24afd7f97b6e9ef2dbf7472b0410`. This is a source-bound reason to correct that import in our fixture; it does not claim that our frozen 6e222 cohort has already reproduced the linker error. The source reference for the selected correction is the single-file commit `bb48cb81493fbadb8b1e451ba5c35d7bc8488952`, parent `6e90f38155f5a8edf57b0336b6d79e4ca60c110b`, whose fixture postimage is `ca0ded66441b8818bdf5726ee7d8ffa95abb8518`. Only its exact `wow64Command` delta is selected; the rest of that fixture and the broader incoming native branch are not selected.
+
+**Exact executable scope.** One existing path only: `tools/owned-process-broker/nativeFixture.cpp`, preimage `21b080fd65679e903837e1cc5eabb8a451d7d55b`, 277 physical lines. The bounded replacement is exactly +8/-2, yielding 283 physical lines, below the existing 800-line ceiling. Replace the unique complete helper with the following; inverse substitution must restore the entire original file byte-for-byte. Keep the approved `_WIN32_WINNT 0x0A00` declaration and all other includes, functions, branches and call sites unchanged.
+
+```cpp
+static std::wstring wow64Command() {
+  // Resolve the documented API-set contract with one bounded module lifetime.
+  const auto module=LoadLibraryExW(L"api-ms-win-core-wow64-l1-1-1.dll",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);
+  if(!module) return {};
+  const auto directory=reinterpret_cast<decltype(&GetSystemWow64Directory2W)>(
+    GetProcAddress(module,"GetSystemWow64Directory2W"));
+  wchar_t path[MAX_PATH]{};
+  const auto length=directory?directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386):0;
+  const bool closed=FreeLibrary(module)!=FALSE;
+  if(!closed||!length||length>=MAX_PATH) return {};
+  return std::wstring(path)+L"\\cmd.exe";
+}
+```
+
+This uses the SDK-declared function type in the unevaluated `decltype`, rather than emitting a direct call that requires the unresolved import. It loads one literal API-set contract with `LOAD_LIBRARY_SEARCH_SYSTEM32`, performs at most one directory call with the same `MAX_PATH` and `IMAGE_FILE_MACHINE_I386`, and calls `FreeLibrary` exactly once after every successful load, including when the entry lookup fails. Failed load, missing entry, failed release, zero length or oversized length returns the existing empty-path failure. The successful path and `\\cmd.exe` suffix remain the same. There is no search-path fallback, retry, alternate API, new process, PID reopen, authority grant or new timeout. The bounded claim concerns operation count and module lifetime; it is not a hard wall-clock bound for Windows loader calls.
+
+**Primary-source basis and limits.** Microsoft's [SDK mapping](https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/libMappings.rsp) maps `GetSystemWow64Directory2W` to `api-ms-win-core-wow64-l1-1-1.dll`; its [SDK header](https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/RecompiledIdlHeaders/um/wow64apiset.h) supplies the guarded declaration and calling convention. Microsoft's [API-set guidance](https://learn.microsoft.com/en-us/windows/win32/apiindex/windows-apisets) documents resolving an API-set contract through the loader. The [LoadLibraryExW](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw) and [FreeLibrary](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary) contracts support the selected search restriction and one-load/one-release lifetime. The API reference's Kernel32.dll label alone did not establish that the unchanged link command supplied the required import; the retained LNK result is the concrete failure. This amendment does not claim that a physical Kernel32 export was measured absent, that all SDK import libraries were inspected, or that runtime API-set resolution has already succeeded on either runner.
+
+**Preserved native obligations.** Keep all eight previously reviewed native source paths and their history; only the one helper above changes in the fixture. In particular preserve the entire original scenario function, its three original call sites, the original service-pair/churn path, ACK-anchored 15-second witnesses, original Stop/deadline/currentness/custody predicates, all old cases, the separately added pending-CREATE race before the WOW64-root case, all TEST barriers, first-/second-chance breakpoint routing, and the 64-helper cap. Do not import the incoming query-witness reanchoring, 4dc diagnostic prelude, whole `ca0` fixture, changed scenario topology, provider deadlines or unrelated production changes. Existing physical Job/HANDLE absence and cleanup assertions remain mandatory. No actual Claude or Codex execution, including version, is allowed; permitted finite OpenCode scope is unchanged.
+
+**Qualification and scheduling.** Independent R2 must verify the unique exact replacement, +8/-2 count, 283-line result, full inverse, all unchanged native leaves and source-pin closure. Retain the two original linker failures as their own exact-source evidence; do not manufacture a test-only RED by removing symbols or weakening compilation. The later resulting-source qualification must run the unchanged original Windows x64 and ARM64 Node and Electron gates, including original build/link/load, every retained old and new scenario, helper accounting and physical cleanup. A preceding compiler/linker failure leaves later runtime assertions unexecuted. Prior TypeScript/protocol checks and older Windows results do not qualify this new C++ binding. No new local compiler attempt or retry is authorized by this amendment. A future integrated CI venue must receive its own exact source/trigger/Draft review before any ref or PR action.
+
+Frozen PR1208 remains Draft at base `58c14e5fbe6188aea70307e2b0734b125d899a03` and head `6e222b57f700832cfd78a934a3b6a205a5764761`; preserve its original and externally triggered same-head cohorts, outcomes and any absent artifacts. Do not move or edit its refs or metadata, cancel or rerun it to substitute the correction. Existing PR1206/1207 and the primary PR are likewise untouched. This amendment authorizes no workflow/flag/deadline/provider-pin change, manual dispatch, Ready/merge/auto-merge/review request, release/default activation or Stage2.
