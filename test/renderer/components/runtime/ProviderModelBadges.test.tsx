@@ -580,6 +580,52 @@ describe('ProviderModelBadges', () => {
     }
   });
 
+  it('does not exceed React update depth with a crowded provider catalog', () => {
+    const originalOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
+    Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
+      configurable: true,
+      get() {
+        const siblings = Array.from(this.parentElement?.children ?? []);
+        const index = Math.max(0, siblings.indexOf(this));
+        return Math.floor(index / 3) * 20;
+      },
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      const models = Array.from(
+        { length: 120 },
+        (_, index) => `model-${String(index + 1).padStart(3, '0')}`
+      );
+      expect(() => {
+        act(() => {
+          root.render(
+            <ProviderModelBadges
+              providerId="opencode"
+              models={models}
+              collapseAfter={100}
+              maxCollapsedRows={2}
+            />
+          );
+        });
+      }).not.toThrow();
+      expect(host.querySelectorAll('button')).toHaveLength(1);
+      expect(host.textContent).toContain('+115 more');
+    } finally {
+      act(() => {
+        root.unmount();
+      });
+      if (originalOffsetTop) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetTop', originalOffsetTop);
+      } else {
+        delete (HTMLElement.prototype as { offsetTop?: number }).offsetTop;
+      }
+    }
+  });
+
   it('does not restart row measurements for equivalent refreshed model arrays', () => {
     const originalOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
     let offsetTopReads = 0;
