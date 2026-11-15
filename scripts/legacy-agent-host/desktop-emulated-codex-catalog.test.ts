@@ -9,7 +9,14 @@ import { dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { createInterface } from 'node:readline';
 import { test } from 'node:test';
+import { pathToFileURL } from 'node:url';
+import { FileManagementCommandStore } from '../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js';
+import { CodexManagementCoordinator } from '../../packages/legacy-agent-host/dist/composition/CodexManagementCoordinator.js';
+import { teamModelProbeProfile } from '../../packages/legacy-agent-host/dist/composition/teamLaunchModelProbe.js';
+import { ManagementResourceFence } from '../../packages/legacy-agent-host/dist/management/ManagementResourceFence.js';
+import { ModelProbeOwner } from '../../packages/legacy-agent-host/dist/management/ModelProbeOwner.js';
 import { codexMcpPolicyArgs } from '../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/codex.js';
+import { desktopNodeScriptHeader, digest, fileDigest } from './desktop-backend-fixture.ts';
 import type { TestContext } from 'node:test';
 
 const catalog = { digest: createHash('sha256').update('[]').digest('hex'), servers: [] };
@@ -147,6 +154,70 @@ test('finite managed Codex policy refuses alternate syntax, extra servers and en
     assert.equal(result.status, 1); assert.equal(result.error, undefined); assert.equal(result.stdout, '');
     assert.deepEqual(await f.effects(), []);
   }
+});
+
+for (const effort of [undefined, 'low'] as const)
+test(`runtime-derived Codex ordinary model probe (${effort ?? 'default'}) completes through original Host/D once`, {
+  timeout: 15000, skip: process.platform === 'win32' ? 'POSIX Node-script fixture; Windows broker acceptance is separate' : false,
+}, async t => {
+  const f = await fixture(t), sourceSha256 = await fileDigest(f.source);
+  const wrapper = `${desktopNodeScriptHeader(f.node)}import assert from 'node:assert/strict';
+import{createHash}from'node:crypto';import{readFileSync,realpathSync}from'node:fs';
+assert.equal(realpathSync(${JSON.stringify(f.source)}),${JSON.stringify(f.source)});
+assert.equal(createHash('sha256').update(readFileSync(${JSON.stringify(f.source)})).digest('hex'),${JSON.stringify(sourceSha256)});
+await import(${JSON.stringify(pathToFileURL(f.source).href)});
+`;
+  const executable = { path: join(f.scope, 'TEST-selected-codex.mjs'), sha256: digest(wrapper) };
+  await writeFile(executable.path, wrapper, { mode: 0o700, flag: 'wx' });
+  const profile = teamModelProbeProfile({
+    provider: 'codex', protocolRevision: '0.162.0', teamId: 'TEST-team', memberId: 'TEST-member',
+    principalId: 'TEST-principal', sessionId: 'TEST-session', generation: 1,
+    configRevision: 'TEST-runtime-selection', accountBinding: 'TEST-no-vendor-account',
+    executable, cwd: f.workspace, model: 'TEST-model',
+    environment: { ...f.environment, TEST_DESKTOP_SELECTION: 'two-models-v1' },
+    nativeOptions: { approvalPolicy: 'never', sandbox: 'read-only',
+      ...(effort === undefined ? {} : { reasoningEffort: effort }) },
+    limits: { queuedInputs: 1, inputBytes: 65536, outputBytes: 65536, outputEvents: 32,
+      pendingInteractions: 1, timeoutMs: 5000 },
+  });
+  assert.equal(profile.provider, 'codex');
+  if (profile.provider !== 'codex') throw new Error('Original Codex probe required');
+  assert.equal(profile.environment.TEST_PEER_ROLE, 'runtime');
+  const storePath = join(f.scope, 'hoststore'); await mkdir(storePath, { mode: 0o700 });
+  const store = new FileManagementCommandStore(storePath);
+  const management = new CodexManagementCoordinator([], () => {}); management.admitProbeProfile(profile);
+  const probes = new ModelProbeOwner({ store, fence: new ManagementResourceFence(store.list()),
+    assertWriter: () => {}, select: (id, revision) => management.target(id, revision),
+    prepare: (input, current) => management.prepareProbe(input, current) });
+  f.cleanupWith(async () => { try { await probes.close(); } finally { await management.close(); } });
+  const input = { profileId: profile.profileId, configRevision: profile.configRevision,
+    commandId: `TEST-original-codex-probe-${effort ?? 'default'}`, providerId: 'codex', modelId: 'TEST-model',
+    ...(effort === undefined ? {} : { effort }) };
+  const identity = { profileId: input.profileId, configRevision: input.configRevision, commandId: input.commandId };
+  probes.start(input);
+  const deadline = performance.now() + 5000;
+  while (probes.read(identity)?.phase === 'running' && performance.now() < deadline)
+    await new Promise(resolve => setTimeout(resolve, 10));
+  const original = probes.read(identity), effects = await f.effects();
+  assert.equal(original?.phase, 'completed', JSON.stringify({ original, effects }));
+  assert.equal(original.ok, true);
+  const receipts = [...store.list()]; assert.equal(receipts.length, 1);
+  const receipt = receipts[0]; assert.ok(receipt?.kind === 'model.probe');
+  assert.equal(receipt.resourceHeld, false);
+  for (const event of ['launch', 'thread-selection', 'input', 'terminal'])
+    assert.equal(effects.filter(row => row.event === event).length, 1, event);
+  assert.ok(effects.every(row => row.provider === 'codex' && row.role === 'runtime'));
+  const launch = effects.find(row => row.event === 'launch')!;
+  assert.equal(launch.argc, effort === undefined ? 3 : 5);
+  assert.ok(effects.every(row => row.pid === launch.pid));
+  const selected = effects.find(row => row.event === 'thread-selection')!;
+  assert.equal(selected.model, input.modelId); assert.equal(selected.effort, effort ?? null);
+  assert.equal(selected.runtimeMcp, false);
+  assert.deepEqual(effects.filter(row => row.event === 'input').map(row => row.marker), ['TEST_MODEL_PROBE']);
+  assert.deepEqual(effects.filter(row => row.event === 'terminal').map(row => row.status), ['completed']);
+  assert.equal(effects.some(row => ['failure', 'connected', 'mcp-call', 'managed-configuration-read'].includes(String(row.event))), false);
+  assert.deepEqual(probes.read(identity), original); assert.deepEqual(probes.start(input), original);
+  assert.deepEqual(await f.effects(), effects, 'lookup and original command replay allocate no peer or input');
 });
 
 test('finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread', async t => {

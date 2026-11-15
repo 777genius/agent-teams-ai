@@ -198,6 +198,23 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     assert.ok(job.root);
     const values = entries().filter(value => value.event === event &&
       (value.pid === job.root!.pid || value.parentPid === job.root!.pid));
+    if (values.length !== 1 && evidence.entryMatchFailure === undefined) {
+      const processId = (value: unknown) =>
+        typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : null;
+      evidence.entryMatchFailure = {
+        event,
+        root: { pid: job.root.pid, birth: job.root.birth },
+        matchCount: values.length,
+        matches: values.slice(0, 8).map(value => ({
+          event,
+          source: value.source === 'A' || value.source === 'B' ? value.source : null,
+          role: value.role === 'runtime' || value.role === 'management' ? value.role : null,
+          pid: processId(value.pid),
+          parentPid: processId(value.parentPid),
+        })),
+        truncated: values.length > 8,
+      };
+    }
     assert.equal(values.length, 1, 'One pinned entry belongs to this original Job root');
     return values[0]!;
   };
