@@ -70,6 +70,7 @@ export function normalizeActivity(event: Event): RuntimeActivityEvent['data'] {
   try {
     switch (event.kind) {
       case 'text':
+      case 'thinking':
         if (
           !id(event.messageRef) ||
           !Number.isSafeInteger(event.block) ||
@@ -80,7 +81,7 @@ export function normalizeActivity(event: Event): RuntimeActivityEvent['data'] {
           return gap('unsupported');
         if (Buffer.byteLength(event.text) > 24 * 1024) return gap('oversized');
         return {
-          kind: 'text',
+          kind: event.kind,
           messageRef: event.messageRef,
           block: event.block,
           text: event.text,

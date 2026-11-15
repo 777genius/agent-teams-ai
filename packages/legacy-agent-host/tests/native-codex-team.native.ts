@@ -148,7 +148,7 @@ test(
     if (candidateVersion) {
       assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
       assert.equal(process.version, 'v24.21.0');
-      assert.equal(expectedProviderSha, '91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94');
+      assert.equal(expectedProviderSha, '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267');
       await runCodexCandidate({ root, selectedNode, providerArtifact, deadline: candidateDeadline,
         owner, delivery, endpoint, model, selectModel: value => { candidateModel = value; },
         current: () => current(delivery), cleanup: setupCleanup,

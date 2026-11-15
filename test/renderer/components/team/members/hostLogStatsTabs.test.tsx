@@ -454,7 +454,7 @@ it('keeps equal child message identities independent and preserves their collaps
   }
 });
 
-it('restores the viewed anchor when the compact viewport is replaced by fullscreen', async () => {
+it('restores the same source across fullscreen remounts and resets its viewport when the source changes', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   const view: HostLogViewOptions = {
     ...createDefaultClaudeLogsSidebarUiState(),
@@ -462,8 +462,8 @@ it('restores the viewed anchor when the compact viewport is replaced by fullscre
       view.viewerState = state;
     },
   };
-  function Probe() {
-    const viewport = useHostLogViewport(view, facts.events);
+  function Probe({ source = 'original-source' }: { source?: string }) {
+    const viewport = useHostLogViewport(view, facts.events, source);
     return (
       <div
         onScroll={viewport.onScroll}
@@ -502,6 +502,11 @@ it('restores the viewed anchor when the compact viewport is replaced by fullscre
     expect((host.firstElementChild as HTMLDivElement).scrollTop).toBe(200);
     await act(async () => root.render(<Probe key="fullscreen-reopened" />));
     expect((host.firstElementChild as HTMLDivElement).scrollTop).toBe(200);
+    await act(async () => root.render(<Probe key="fullscreen-reopened" source="other-source" />));
+    expect((host.firstElementChild as HTMLDivElement).scrollTop).toBe(0);
+    expect(view.viewerState.viewport).toEqual({ mode: 'edge', edge: 'newest' });
+    await act(async () => root.render(<Probe key="compact-reopened" source="other-source" />));
+    expect((host.firstElementChild as HTMLDivElement).scrollTop).toBe(0);
   } finally {
     await act(async () => root.unmount());
     host.remove();

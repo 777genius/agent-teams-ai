@@ -20,6 +20,9 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { CapturedProcess } from '../dist/adapters/providers/CapturedProcess.js';
+import { createClaudeMemberProvider } from '../dist/adapters/providers/ClaudeMemberProvider.js';
+import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
+import { startTeamMcpEndpoint } from '../dist/mcp/endpoint.js';
 import { observeMemberProcessStderr } from '../dist/adapters/providers/observeMemberProcessStderr.js';
 import type { RuntimeMemberProfile } from '../dist/composition/runtimeProfile.js';
 import type { RuntimeProcessOutput } from '../dist/runtime/providerActivityContracts.js';
@@ -95,6 +98,53 @@ test('the original finite captured child retains sanitized stderr and excludes i
       await custody.confirmStopped();
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+test('original Claude SDK child stderr reaches the member observer before failed startup and flushes its final tail',
+  { skip: process.platform === 'win32' }, async () => {
+    const { root, profile } = await setup(`#!${process.execPath}
+const { writeSync } = require('node:fs');
+writeSync(2, 'TEST original Claude startup diagnostic\\n');
+writeSync(2, 'TEST original Claude final tail');
+process.exit(7);
+`);
+    try {
+      const binding = { backendId: 'TEST-backend', teamId: profile.teamId, teamName: 'test-claude-stderr' };
+      const delivery = { ...binding, runId: 'TEST-run', memberId: profile.memberId, generation: '1' };
+      const owner = createFilesystemTeamOwner({
+        root, binding,
+        members: [{ memberId: profile.memberId, name: 'alice', role: 'lead', delivery }],
+        grants: [{ principalId: profile.principalId, memberName: 'alice',
+          permissions: ['read', 'task.write', 'message.write'] }],
+      });
+      const connection = owner.connect(profile.principalId);
+      const endpoint = await startTeamMcpEndpoint({ connection, binding: delivery,
+        expiresAtMs: Date.now() + profile.limits.timeoutMs, isCurrentBinding: () => true });
+      try {
+        const request = { tenantId: 'TEST-tenant', projectId: 'TEST-project',
+          sessionId: profile.sessionId, generation: profile.generation,
+          configRevision: profile.configRevision, requiredCapabilities: ['session.conversation'] };
+        const observations: RuntimeProcessOutput[] = [];
+        let progress = 0;
+        const provider = createClaudeMemberProvider({
+          profile, request, endpoint, connection, instructions: 'TEST finite selected Node child only',
+          isCurrent: () => true, canAllocate: () => true,
+          readCheckpoint: async () => { throw new Error('TEST checkpoint must not be read'); },
+          observeProcessOutput: value => observations.push(value), onProgress: () => { progress++; },
+        });
+        try {
+          await assert.rejects(provider.factory.open(request));
+          assert.equal(await provider.cleanup(), true, 'the original finite child is physically stopped');
+          assert.deepEqual(observations, [
+            { kind: 'process-output', stream: 'stderr', text: 'TEST original Claude startup diagnostic' },
+            { kind: 'process-output', stream: 'stderr', text: 'TEST original Claude final tail' },
+          ]);
+          assert.equal(provider.isReady(), false); assert.equal(progress, 0);
+        } finally {
+          provider.seal(); assert.equal(await provider.cleanup(), true);
+        }
+      } finally { await endpoint.close(); }
+    } finally { await rm(root, { recursive: true, force: true }); }
   });
 
 test('captured native executable is pinned again at launch and sealing forbids late allocation', async () => {
