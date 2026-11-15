@@ -22,7 +22,7 @@ import type { TeamsAPI } from '../../../src/shared/types/api';
 import type { ReplaceMembersRequest } from '../../../src/shared/types/team';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
-type Provider = ReturnType<NonNullable<Parameters<typeof createTeamHost>[2]>['createProvider']>;
+type Provider = ReturnType<NonNullable<NonNullable<Parameters<typeof createTeamHost>[2]>['createProvider']>>;
 type Session = Awaited<ReturnType<Provider['factory']['open']>>['driver'];
 type Input = Parameters<Session['submit']>[0];
 
@@ -114,7 +114,7 @@ describe('finite Runtime activity facade', () => {
     let nativeOpens = 0;
     const nativeInputs: Input[] = [];
     const nativeProfiles: Parameters<
-      NonNullable<Parameters<typeof createTeamHost>[2]>['createProvider']
+      NonNullable<NonNullable<Parameters<typeof createTeamHost>[2]>['createProvider']>
     >[0]['profile'][] = [];
     const host = createTeamHost(
       {
