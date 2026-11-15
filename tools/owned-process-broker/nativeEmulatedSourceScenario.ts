@@ -32,7 +32,8 @@ import { fileHash } from './nativeEmulatedProfile';
 import { finiteSourceProbe, prepareEmulatedSourceProfile } from './nativeEmulatedSourceProfile';
 import { readEmulatedSourceActionProbe } from './nativeEmulatedSourceReadiness';
 
-import type { HostCustodyOwner, RuntimeSourceProcessOrigin } from '@agent-teams/legacy-agent-host/owned-process';
+import { sameOwner } from '@agent-teams/legacy-agent-host/owned-process';
+import type { HostCustodyOwner, ProcessOwner, RuntimeSourceProcessOrigin, TreeReceipt } from '@agent-teams/legacy-agent-host/owned-process';
 import type { RuntimeSourcePublishIntent, RuntimeSourceSummary } from '@agent-teams/legacy-agent-host/runtime-sources';
 import type { JsonValue } from '../../packages/legacy-agent-host/dist/contracts.js';
 import type { ScheduledRunInput } from '../../packages/legacy-agent-host/dist/composition/scheduledRunContracts.js';
@@ -115,6 +116,10 @@ const stagingTimings = (): Record<StagingPhase, CustodyTiming> => ({
 });
 interface Job {
   capability: string;
+  allocatedOwner?: ProcessOwner;
+  noDispatchStops: Map<string, { receipt: TreeReceipt; attemptRef: string; drained: boolean }>;
+  noDispatchRelease?: { receiptRef: string; receipt: TreeReceipt; attemptRef: string };
+  cleanupEvidence?: Record<string, unknown>;
   timings: Record<CustodyPhase, CustodyTiming>;
   stagingTimings: Record<StagingPhase, CustodyTiming>;
   origin?: RuntimeSourceProcessOrigin;
@@ -168,6 +173,17 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       attach(context) {
         const original = physical.attach(context);
         return { ...original, async handle(call) {
+          const allocatedOwner = (() => { try { return call.operation === 'allocate' ? {
+            teamIncarnation: call.owner.teamIncarnation, runId: call.owner.runId,
+            laneId: call.owner.laneId, processGeneration: call.owner.processGeneration,
+          } : undefined; } catch { return undefined; } })();
+          const cleanupBefore = (() => { try {
+            if (call.operation !== 'drain' && call.operation !== 'release') return undefined;
+            const job = jobs.find(value => value.capability === call.capability);
+            if (call.operation === 'drain') return { stops: [...(job?.noDispatchStops.values() ?? [])] };
+            const retained = job?.noDispatchStops.get(call.receiptRef);
+            return retained?.drained ? { released: { ...retained, receiptRef: call.receiptRef } } : undefined;
+          } catch { return undefined; } })();
           const preparation = call.operation === 'prepare'
             ? { phase: 'owner' as 'owner' | 'witness' | 'complete', started: performance.now() } : undefined;
           const phase = call.operation === 'allocate' || call.operation === 'prepare' ||
@@ -197,7 +213,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
             }
             if (call.operation === 'allocate') {
               assert.ok(jobs.length < 64 && !jobs.some(value => value.capability === call.capability));
-              jobs.push({ capability: call.capability, timings: timings!, stagingTimings: stagingTimings(),
+              jobs.push({ capability: call.capability, timings: timings!, stagingTimings: stagingTimings(), noDispatchStops: new Map(),
+                ...(result.operation === 'allocate' && result.state === 'allocated' && allocatedOwner ? { allocatedOwner } : {}),
                 ...(call.runtimeSourceOrigin ? { origin: structuredClone(call.runtimeSourceOrigin) } : {}),
                 resumed: false, stopped: false, drained: false, released: false, handleAbsent: false, threadEphemeral: [], wire: '' });
             }
@@ -219,6 +236,19 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
               if (job.root && job.witness && job.entryStart !== undefined && !job.handleAbsent)
                 job.entryEnd ??= entries().length;
             }
+            try {
+              if (call.operation === 'stop' && result.operation === 'stop' && result.state === 'confirmed' &&
+                result.receiptRef && result.receipt && job.allocatedOwner && sameOwner(result.receipt.owner, job.allocatedOwner) &&
+                result.receipt.attemptId === call.attemptRef && result.receipt.coverage === 'no-local-dispatch' && result.receipt.rootExited === false &&
+                !job.noDispatchStops.has(result.receiptRef) && job.noDispatchStops.size < 64)
+                job.noDispatchStops.set(result.receiptRef, { receipt: result.receipt, attemptRef: call.attemptRef, drained: false });
+              if (call.operation === 'drain' && result.operation === 'drain' && result.state === 'complete')
+                for (const retained of cleanupBefore?.stops ?? []) retained.drained = true;
+              if (call.operation === 'release' && result.operation === 'release' && result.state === 'released') {
+                const retained = cleanupBefore?.released;
+                if (retained) job.noDispatchRelease = retained;
+              }
+            } catch { /* Observation failure cannot replace the original native result or receipt authority. */ }
             if (call.operation.startsWith('service-')) counts.service++;
             if (provider === 'codex' && call.operation === 'write') {
               job.wire += Buffer.from(call.bytes, 'base64').toString('utf8');
@@ -280,12 +310,36 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         available = false;
         for (const [jobSlot, job] of jobs.entries()) {
           try {
+            delete job.cleanupEvidence;
+            try {
+              const owner = job.allocatedOwner, released = job.noDispatchRelease, receipt = released?.receipt;
+              if (owner && released && receipt && sameOwner(owner, receipt.owner) &&
+                receipt.coverage === 'no-local-dispatch' && receipt.rootExited === false && receipt.attemptId === released.attemptRef &&
+                job.root === undefined && job.witness === undefined && job.entryStart === undefined && job.entryEnd === undefined &&
+                job.resumed === false && job.handleAbsent === false && job.stopped === true && job.drained === true && job.released === true &&
+                [job.timings.allocate.calls, job.timings.allocate.settled, job.timings.allocate.returned].every(value => value === 1) &&
+                [job.timings.prepare, job.timings.resume].every(value => value.calls === 0 && value.settled === 0 && value.returned === 0) &&
+                [physical.mainEpoch, job.capability, owner.teamIncarnation, owner.runId, owner.laneId, released.attemptRef,
+                  released.receiptRef, receipt.attemptId].every(value => typeof value === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(value)) &&
+                typeof owner.processGeneration === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(owner.processGeneration) &&
+                typeof receipt.proofDigest === 'string' && /^[0-9a-f]{64}$/.test(receipt.proofDigest)) {
+                const cleanupEvidence = { kind: 'confirmed-no-local-dispatch', mainEpoch: physical.mainEpoch, capability: job.capability,
+                  allocatedOwner: { ...owner }, stop: { state: 'confirmed', attemptRef: released.attemptRef, receiptRef: released.receiptRef,
+                    receipt: { owner: { ...owner }, attemptId: receipt.attemptId, coverage: receipt.coverage,
+                      rootExited: receipt.rootExited, proofDigest: receipt.proofDigest } },
+                  drain: { state: 'complete', afterStopReceiptRef: released.receiptRef }, release: { state: 'released', receiptRef: released.receiptRef },
+                  observedCalls: { allocate: { calls: 1, settled: 1, returned: 1 }, prepare: { calls: 0, settled: 0, returned: 0 },
+                    resume: { calls: 0, settled: 0, returned: 0 } }, witnessCaptured: false };
+                if (Buffer.byteLength(JSON.stringify(cleanupEvidence), 'utf8') <= 4096) job.cleanupEvidence = cleanupEvidence;
+              }
+            } catch { /* Missing evidence keeps the original physical-or-unconfirmed cleanup assertion. */ }
             console.log(JSON.stringify({ kind: 'TEST_SOURCE_CLEANUP', provider, mainEpoch: physical.mainEpoch,
               jobSlot, source: job.origin ? sourceRef(job.origin) : null,
               rootCaptured: job.root !== undefined, witnessCaptured: job.witness !== undefined,
               resumed: job.resumed, stopped: job.stopped, drained: job.drained, released: job.released,
               originalHandleAbsent: job.handleAbsent, custodyTimings: job.timings,
-              stagingTimings: job.stagingTimings, firstCloseEntryMs }));
+              stagingTimings: job.stagingTimings, firstCloseEntryMs, ...(job.cleanupEvidence ? { cleanupEvidence: job.cleanupEvidence } : {}) }));
+            if (job.cleanupEvidence) continue;
             assert.ok(job.root && job.witness && job.resumed && job.stopped && job.drained && job.released,
               'Every original physical Job retains confirmed Stop/drain/release');
             assert.equal(await job.witness.wait(), 0);
@@ -669,7 +723,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         origin: job.origin ?? null, root: job.root ?? null, resumed: job.resumed, stopped: job.stopped,
         drained: job.drained, released: job.released, originalHandleAbsent: job.handleAbsent,
         entryStart: job.entryStart ?? null, entryEnd: job.entryEnd ?? null,
-        threadEphemeral: job.threadEphemeral })) }));
+        threadEphemeral: job.threadEphemeral, ...(job.cleanupEvidence ? { cleanupEvidence: job.cleanupEvidence } : {}) })) }));
     evidence.cleanup = errors.length === 0;
     // Original Job/HANDLE cleanup above is mandatory; these are only gate-owned observer children.
     for (const child of observedChildren) if (child.exitCode === null && child.signalCode === null) child.kill();

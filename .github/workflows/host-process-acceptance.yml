@@ -317,6 +317,22 @@ jobs:
             const controllers = rows('windows-emulated-provider.log').filter(row => row.gateController);
             assert.deepEqual(controllers, [{ gateController: 'drained', rootExitCode: 0, activeProcesses: 0 }]);
             native.push({ log: 'windows-emulated-provider.log', scope: 'captured Windows wrappers and Main Host Codex/V1 adapters with Node peers', receipt: emulated });
+            const cleanupShape = (value, keys) => {
+              assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+              assert.equal(Object.getPrototypeOf(value), Object.prototype);
+              assert.equal(Object.getOwnPropertySymbols(value).length, 0);
+              assert.deepEqual(Object.getOwnPropertyNames(value).sort(), [...keys].sort());
+              for (const key of keys) assert.ok(Object.hasOwn(Object.getOwnPropertyDescriptor(value, key), 'value'));
+              return value;
+            };
+            const cleanupRef = value => assert.ok(typeof value === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(value));
+            const cleanupOwner = value => {
+              const owner = cleanupShape(value, ['teamIncarnation', 'runId', 'laneId', 'processGeneration']);
+              for (const key of ['teamIncarnation', 'runId', 'laneId']) cleanupRef(owner[key]);
+              assert.ok(typeof owner.processGeneration === 'string' &&
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(owner.processGeneration));
+              return owner;
+            };
             const sourceReceipts = [
               ['codex', 'windows-source-codex-receipt.json', 'windows-source-codex.log'],
               ['claude', 'windows-source-claude-receipt.json', 'windows-source-claude.log'],
@@ -357,7 +373,38 @@ jobs:
               assert.equal(row.epochs.length, 2); assert.ok(row.epochs[0].jobs.length > 0);
               for (const epoch of row.epochs) {
                 assert.equal(epoch.serviceOperations, 0);
-                for (const job of epoch.jobs) for (const field of ['resumed', 'stopped', 'drained', 'released', 'originalHandleAbsent']) assert.equal(job[field], true);
+                for (const job of epoch.jobs) {
+                  if (!Object.hasOwn(job, 'cleanupEvidence')) {
+                    for (const field of ['resumed', 'stopped', 'drained', 'released', 'originalHandleAbsent']) assert.equal(job[field], true);
+                    continue;
+                  }
+                  const evidence = cleanupShape(job.cleanupEvidence,
+                    ['kind', 'mainEpoch', 'capability', 'allocatedOwner', 'stop', 'drain', 'release', 'observedCalls', 'witnessCaptured']);
+                  assert.ok(Buffer.byteLength(JSON.stringify(evidence), 'utf8') <= 4096);
+                  assert.equal(evidence.kind, 'confirmed-no-local-dispatch'); assert.equal(evidence.witnessCaptured, false);
+                  cleanupRef(evidence.mainEpoch); cleanupRef(evidence.capability);
+                  assert.equal(evidence.mainEpoch, epoch.mainEpoch); assert.equal(evidence.capability, job.capability);
+                  const owner = cleanupOwner(evidence.allocatedOwner);
+                  const stop = cleanupShape(evidence.stop, ['state', 'attemptRef', 'receiptRef', 'receipt']);
+                  assert.equal(stop.state, 'confirmed'); cleanupRef(stop.attemptRef); cleanupRef(stop.receiptRef);
+                  const receipt = cleanupShape(stop.receipt, ['owner', 'attemptId', 'coverage', 'rootExited', 'proofDigest']);
+                  assert.deepEqual(cleanupOwner(receipt.owner), owner); cleanupRef(receipt.attemptId);
+                  assert.equal(receipt.attemptId, stop.attemptRef); assert.equal(receipt.coverage, 'no-local-dispatch');
+                  assert.equal(receipt.rootExited, false);
+                  assert.ok(typeof receipt.proofDigest === 'string' && /^[0-9a-f]{64}$/.test(receipt.proofDigest));
+                  const drain = cleanupShape(evidence.drain, ['state', 'afterStopReceiptRef']);
+                  assert.equal(drain.state, 'complete'); assert.equal(drain.afterStopReceiptRef, stop.receiptRef);
+                  const release = cleanupShape(evidence.release, ['state', 'receiptRef']);
+                  assert.equal(release.state, 'released'); assert.equal(release.receiptRef, stop.receiptRef);
+                  const observed = cleanupShape(evidence.observedCalls, ['allocate', 'prepare', 'resume']);
+                  for (const phase of ['allocate', 'prepare', 'resume']) {
+                    const counts = cleanupShape(observed[phase], ['calls', 'settled', 'returned']);
+                    for (const field of ['calls', 'settled', 'returned']) assert.equal(counts[field], phase === 'allocate' ? 1 : 0);
+                  }
+                  assert.equal(job.root, null); assert.equal(job.entryStart, null); assert.equal(job.entryEnd, null);
+                  assert.equal(job.resumed, false); assert.equal(job.originalHandleAbsent, false);
+                  for (const field of ['stopped', 'drained', 'released']) assert.equal(job[field], true);
+                }
               }
               const originalController = rows(log).filter(value => value.gateController);
               assert.deepEqual(originalController, [{ gateController: 'drained', rootExitCode: 0, activeProcesses: 0 }]);
