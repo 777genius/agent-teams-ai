@@ -1070,7 +1070,16 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
   await client.waitFor("document.querySelector('[role=dialog][aria-label=Delete]')",
     'schedule deletion confirmation');
   await captureScreenshot(client, fixture, 'schedules-delete-confirm');
-  await client.click("document.querySelector('[role=dialog][aria-label=Delete] button:not([data-confirm-btn])')");
+  await client.click(`(() => {
+    const dialogs = document.querySelectorAll('[role=dialog][aria-label=Delete]');
+    if (dialogs.length !== 1) return null;
+    const buttons = dialogs[0].querySelectorAll('button:not([data-confirm-btn])');
+    if (buttons.length !== 1 || buttons[0].disabled) return null;
+    const button = buttons[0], rect = button.getBoundingClientRect();
+    if (!(rect.width > 0 && rect.height > 0)) return null;
+    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return hit && button.contains(hit) ? button : null;
+  })()`);
   assert((await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.id === scheduled.id),
     'Cancel deleted a scheduled task');
   await client.waitFor("!document.querySelector('[role=dialog]')",

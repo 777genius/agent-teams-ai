@@ -48,6 +48,7 @@ import type {
 
 const hoisted = vi.hoisted(() => ({
   isElectronMode: vi.fn(() => false),
+  useOriginalTeamListUnwrapOnce: false,
   list: vi.fn(),
   getData: vi.fn(),
   getTaskChangePresence: vi.fn(),
@@ -208,7 +209,11 @@ vi.mock('../../../src/renderer/utils/unwrapIpc', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../src/renderer/utils/unwrapIpc')>();
   return {
     ...actual,
-    unwrapIpc: async <T>(_operation: string, fn: () => Promise<T>): Promise<T> => {
+    unwrapIpc: async <T>(operation: string, fn: () => Promise<T>): Promise<T> => {
+      if (hoisted.useOriginalTeamListUnwrapOnce && operation === 'team:list') {
+        hoisted.useOriginalTeamListUnwrapOnce = false;
+        return actual.unwrapIpc(operation, fn);
+      }
       try {
         return await fn();
       } catch (error) {
@@ -684,6 +689,7 @@ describe('teamSlice actions', () => {
       expect(store.getState().teamsUnavailable).toBe(accepted.teamsUnavailable);
       expect(store.getState().teamManagementNoticeByTeam[a.teamName]).toBe(notice);
 
+      hoisted.useOriginalTeamListUnwrapOnce = true;
       hoisted.list.mockRejectedValueOnce(new Error('TEST original registry failed'));
       await store.getState().fetchTeams();
       expect(store.getState().teams).toBe(accepted.teams);
@@ -704,7 +710,7 @@ describe('teamSlice actions', () => {
         expect(publication.names).toEqual([b.teamName]);
       }
       expect(hoisted.list).toHaveBeenCalledTimes(5);
-    } finally { unsubscribe(); consoleError.mockRestore(); }
+    } finally { hoisted.useOriginalTeamListUnwrapOnce = false; unsubscribe(); consoleError.mockRestore(); }
   });
 
   it('retains only an unknown Host notice when owner membership cannot yet be observed', async () => {
