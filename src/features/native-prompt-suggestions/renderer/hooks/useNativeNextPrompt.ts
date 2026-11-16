@@ -64,7 +64,9 @@ export function useNativeNextPrompt(input: {
     // readback is still catching up: the pure display guard hides it until
     // the exact messageId becomes the latest.
     const pending = pendingSendRef.current;
-    if (pending && pending.previousMessageId !== input.latestDirectMessageId) {
+    // A transient empty inbox is not proof of a new human message.
+    if (pending && input.latestDirectMessageId !== null &&
+        pending.previousMessageId !== input.latestDirectMessageId) {
       if (pending.editCounter !== input.localEditCounter) {
         invalidatedMessageIdRef.current = input.latestDirectMessageId;
         validationEpochRef.current++;

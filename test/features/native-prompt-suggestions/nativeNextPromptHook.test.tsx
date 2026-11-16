@@ -299,6 +299,10 @@ describe('native next prompt UX in the actual feature hook + row', () => {
     // The offer can precede the exact message's canonical inbox readback.
     x.emit(next);
     expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+    // A transient refresh can temporarily provide no canonical message.
+    x.input.latestDirectMessageId = null;
+    x.render();
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
     x.input.latestDirectMessageId = next.messageId;
     x.render();
     expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
