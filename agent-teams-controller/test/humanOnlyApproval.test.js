@@ -76,6 +76,40 @@ describe('human-only review approval', () => {
     expect(events(task.id, 'review_completed')).toHaveLength(1);
   });
 
+  it('recovers interrupted review completion without duplicating the cycle event', () => {
+    const task = board.createTask({ subject: 'Interrupted review completion', owner: 'bob' });
+    board.completeTask(task.id, 'bob');
+    board.setHumanOnlyApproval(true);
+    board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    const cycle = events(task.id, 'review_requested')[0].id;
+    board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
+    const state = JSON.parse(fs.readFileSync(kanbanFile(), 'utf8'));
+    state.tasks[task.id] = { column: 'review', movedAt: new Date().toISOString() };
+    fs.writeFileSync(kanbanFile(), JSON.stringify(state));
+    expect(board.completeReview(task.id, {
+      from: 'alice', expectedReviewRequestId: cycle,
+    })).toMatchObject({ alreadyCompleted: true, column: 'done' });
+    expect(board.getKanbanState().tasks[task.id]).toBeUndefined();
+    expect(events(task.id, 'review_completed')).toHaveLength(1);
+  });
+
+  it('repairs an Approved placement without treating it as recorded human consent', () => {
+    const task = board.createTask({ subject: 'Recover human history', owner: 'bob' });
+    board.completeTask(task.id, 'bob');
+    board.setHumanOnlyApproval(true);
+    const state = JSON.parse(fs.readFileSync(kanbanFile(), 'utf8'));
+    state.tasks[task.id] = { column: 'approved', movedAt: new Date().toISOString() };
+    fs.writeFileSync(kanbanFile(), JSON.stringify(state));
+    const rawTask = JSON.parse(fs.readFileSync(taskFile(task.id), 'utf8'));
+    rawTask.reviewState = 'approved';
+    fs.writeFileSync(taskFile(task.id), JSON.stringify(rawTask));
+    expect(events(task.id, 'human_approved')).toHaveLength(0);
+    expect(board.approveAsHuman(task.id).reviewState).toBe('approved');
+    expect(events(task.id, 'human_approved')).toHaveLength(1);
+    board.approveAsHuman(task.id);
+    expect(events(task.id, 'human_approved')).toHaveLength(1);
+  });
+
   it('rejects stale, absent, wrong-reviewer and superseded cycle IDs without mutation', () => {
     const task = board.createTask({ subject: 'Stale cycle', owner: 'bob' });
     board.completeTask(task.id, 'bob');

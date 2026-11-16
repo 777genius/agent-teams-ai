@@ -514,6 +514,15 @@ function completeReview(context, taskId, flags = {}) {
       (event) => event.type === 'review_completed' && event.reviewRequestId === expectedId
     );
     if (completedCycle && (state === 'reviewed' || state === 'approved')) {
+      const placement = kanban.getKanbanState(context).tasks?.[task.id]?.column;
+      if (state === 'reviewed' && placement === 'review') {
+        // Recover a preceding partial write: task event persisted, overlay did not.
+        kanban.clearKanban(context, task.id, {
+          transition: 'review_complete', nextReviewState: 'reviewed',
+        });
+      } else if (state === 'reviewed' && placement === 'approved') {
+        throw new Error('Human approval placement awaits a recorded human decision');
+      }
       return { duplicate: true, payload: {
         ok: true, taskId: task.id, displayId: task.displayId,
         column: state === 'approved' ? 'approved' : 'done',
@@ -583,12 +592,20 @@ function approveAsHuman(context, taskId) {
     if (!policyEnabled && prevReviewState !== 'reviewed') {
       throw new Error('Human-only approval policy is not enabled');
     }
-    if (prevReviewState === 'approved') {
-      return { task: task, alreadyApproved: true };
+    const recordedApproval = Array.isArray(task.historyEvents) &&
+      task.historyEvents.some((event) =>
+        event.type === 'human_approved' || event.type === 'review_approved'
+      );
+    if (prevReviewState === 'approved' && recordedApproval) {
+      // Recreate missing placement after an interrupted file write, if needed.
+      if (kanban.getKanbanState(context).tasks?.[task.id]?.column !== 'approved') {
+        kanbanStore.setKanbanColumn(context.paths, context.teamName, task.id, 'approved');
+      }
+      return { task: tasks.getTask(context, task.id), alreadyApproved: true };
     }
     const timestamp = new Date().toISOString();
-    // Placement and review history share the same board lock.
-    kanbanStore.setKanbanColumn(context.paths, context.teamName, task.id, 'approved');
+    // History is committed first: if the overlay write fails, the same human
+    // action retries the missing placement without duplicating acceptance.
     tasks.updateTask(context, task.id, (current) => {
       closeReviewIntervals(current, timestamp);
       current.historyEvents = tasks.appendHistoryEvent(current.historyEvents, {
@@ -598,6 +615,7 @@ function approveAsHuman(context, taskId) {
       current.reviewState = 'approved';
       return current;
     });
+    kanbanStore.setKanbanColumn(context.paths, context.teamName, task.id, 'approved');
     return { task: tasks.getTask(context, task.id), alreadyApproved: false };
   });
   if (!result.alreadyApproved) {

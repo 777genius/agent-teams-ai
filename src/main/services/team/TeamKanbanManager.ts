@@ -149,7 +149,7 @@ export class TeamKanbanManager {
     columnId: KanbanColumnId,
     orderedTaskIds: string[]
   ): Promise<void> {
-    const state = await this.getState(teamName);
+    const state = await this.getState(teamName, { strict: true });
     const columnOrder = { ...state.columnOrder };
     if (orderedTaskIds.length > 0) {
       columnOrder[columnId] = orderedTaskIds;
@@ -160,7 +160,7 @@ export class TeamKanbanManager {
   }
 
   async updateTask(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
-    const state = await this.getState(teamName);
+    const state = await this.getState(teamName, { strict: true });
 
     if (patch.op === 'remove' || patch.op === 'request_changes') {
       delete state.tasks[taskId];
@@ -181,7 +181,7 @@ export class TeamKanbanManager {
   }
 
   async garbageCollect(teamName: string, validTaskIds: Set<string>): Promise<void> {
-    const state = await this.getState(teamName);
+    const state = await this.getState(teamName, { strict: true });
     const before = Object.keys(state.tasks).length;
 
     for (const taskId of Object.keys(state.tasks)) {

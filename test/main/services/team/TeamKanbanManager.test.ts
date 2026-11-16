@@ -110,6 +110,23 @@ describe('TeamKanbanManager', () => {
     await expect(manager.getState('my-team', { strict: true })).rejects.toThrow('corrupt');
   });
 
+  it('never downgrades a corrupt approval policy through Kanban mutations', async () => {
+    const corrupt = JSON.stringify({
+      teamName: 'my-team', reviewers: [], tasks: {}, humanOnlyApproval: 'true',
+    });
+    const actions = [
+      () => manager.updateColumnOrder('my-team', 'review', ['1']),
+      () => manager.updateTask('my-team', '1', { op: 'set_column' as const, column: 'approved' as const }),
+      () => manager.garbageCollect('my-team', new Set(['1'])),
+    ];
+    for (const action of actions) {
+      hoisted.files.set(statePath, corrupt);
+      await expect(action()).rejects.toThrow('corrupt');
+      expect(hoisted.files.get(statePath)).toBe(corrupt);
+    }
+    expect(hoisted.atomicWrite).not.toHaveBeenCalled();
+  });
+
   it('writes review state with movedAt on set_column', async () => {
     await manager.updateTask('my-team', '12', { op: 'set_column', column: 'review' });
     const persisted = JSON.parse(hoisted.files.get(statePath) ?? '{}') as {
