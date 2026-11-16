@@ -246,17 +246,15 @@ export class TeamInboxWriter {
             if (await shouldAbortWrite()) {
               return;
             }
-            const explicitDuplicateIndex = explicitMessageId
-              ? this.findExplicitMessageIdDuplicateIndex(list, explicitMessageId)
-              : -1;
-            const matchedExplicitMessageId = explicitDuplicateIndex >= 0;
-            const duplicateIndex = matchedExplicitMessageId
-              ? explicitDuplicateIndex
+            const messageIdIndex = this.findMessageIdDuplicateIndex(list, messageId);
+            const matchedMessageId = messageIdIndex >= 0;
+            const duplicateIndex = matchedMessageId
+              ? messageIdIndex
               : this.findRuntimeDeliveryDuplicateIndex(list, payload);
             if (duplicateIndex >= 0) {
               const duplicate = list[duplicateIndex];
-              if (matchedExplicitMessageId) {
-                this.assertMatchingExplicitMessagePayload(duplicate, payload, messageId);
+              if (matchedMessageId) {
+                this.assertMatchingMessageIdPayload(duplicate, payload, messageId);
               }
               const merged = this.mergeTaskRefs(duplicate.taskRefs, payload.taskRefs);
               resultMessageId = duplicate.messageId ?? messageId;
@@ -273,8 +271,8 @@ export class TeamInboxWriter {
                   return;
                 }
                 const written = await this.readInbox(inboxPath);
-                const writtenDuplicateIndex = matchedExplicitMessageId
-                  ? this.findExplicitMessageIdDuplicateIndex(written, messageId)
+                const writtenDuplicateIndex = matchedMessageId
+                  ? this.findMessageIdDuplicateIndex(written, messageId)
                   : this.findRuntimeDeliveryDuplicateIndex(written, payload);
                 const writtenDuplicate =
                   writtenDuplicateIndex >= 0 ? written[writtenDuplicateIndex] : null;
@@ -323,7 +321,7 @@ export class TeamInboxWriter {
     };
   }
 
-  private findExplicitMessageIdDuplicateIndex(
+  private findMessageIdDuplicateIndex(
     messages: readonly InboxMessage[],
     messageId: string
   ): number {
@@ -336,7 +334,7 @@ export class TeamInboxWriter {
     );
   }
 
-  private assertMatchingExplicitMessagePayload(
+  private assertMatchingMessageIdPayload(
     existing: InboxMessage,
     incoming: InboxMessage,
     messageId: string
@@ -354,8 +352,8 @@ export class TeamInboxWriter {
 
   private getImmutableExplicitMessagePayload(message: InboxMessage): Record<string, unknown> {
     const isRuntimeDelivery = message.source === 'runtime_delivery';
-    // An explicit messageId is a caller-supplied identity claim, not a
-    // best-effort retry match: a second message with the same messageId but
+    // An existing messageId (explicit or generated) is a stable retry identity,
+    // not a best-effort match: a second message with the same ID but
     // different text/summary is a real content change (e.g. a corrected
     // reply from a re-attempted read-commit-policy pass), and dropping it
     // silently would lose it rather than raise the collision the caller can

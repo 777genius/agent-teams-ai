@@ -10,13 +10,21 @@ const hoisted = vi.hoisted(() => {
   let failWrites = 0;
   let failTransientWrites = 0;
   let failReadAfterWrite = 0;
+  let failTransientReadAfterWrite = 0;
   let pendingReadFailures = 0;
+  let pendingTransientReadFailures = 0;
   const fileLockTails = new Map<string, Promise<void>>();
 
   // Normalize path separators so tests pass on Windows (backslash → forward slash)
   const norm = (p: string): string => p.replace(/\\/g, '/');
 
   const readFile = vi.fn(async (filePath: string, encoding?: BufferEncoding) => {
+    if (pendingTransientReadFailures > 0) {
+      pendingTransientReadFailures -= 1;
+      const error = new Error('EACCES') as NodeJS.ErrnoException;
+      error.code = 'EACCES';
+      throw error;
+    }
     if (pendingReadFailures > 0) {
       pendingReadFailures -= 1;
       const error = new Error('EIO') as NodeJS.ErrnoException;
@@ -60,6 +68,10 @@ const hoisted = vi.hoisted(() => {
       if (failReadAfterWrite > 0) {
         failReadAfterWrite -= 1;
         pendingReadFailures += 1;
+      }
+      if (failTransientReadAfterWrite > 0) {
+        failTransientReadAfterWrite -= 1;
+        pendingTransientReadFailures += 1;
       }
     }
   );
@@ -117,11 +129,16 @@ const hoisted = vi.hoisted(() => {
     setFailReadAfterWrite: (count: number) => {
       failReadAfterWrite = count;
     },
+    setFailTransientReadAfterWrite: (count: number) => {
+      failTransientReadAfterWrite = count;
+    },
     resetFailures: () => {
       failWrites = 0;
       failTransientWrites = 0;
       failReadAfterWrite = 0;
+      failTransientReadAfterWrite = 0;
       pendingReadFailures = 0;
+      pendingTransientReadFailures = 0;
       fileLockTails.clear();
     },
   };
@@ -335,6 +352,46 @@ describe('TeamInboxWriter', () => {
     expect(hoisted.atomicWrite).toHaveBeenCalledTimes(3);
     expect(persisted).toHaveLength(1);
     expect(persisted[0]?.messageId).toBe(sent.messageId);
+  });
+
+  it('does not duplicate a generated message after EACCES on its verification read', async () => {
+    hoisted.setFailTransientReadAfterWrite(1);
+    const result = await writer.sendMessage('my-team', {
+      member: 'alice',
+      text: 'same generated identity',
+    });
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as
+      Array<{ messageId: string; text: string }>;
+    expect(result.deliveredToInbox).toBe(true);
+    expect(result.deduplicated).toBe(true);
+    expect(hoisted.atomicWrite).toHaveBeenCalledTimes(1);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]).toMatchObject({
+      text: 'same generated identity',
+      messageId: result.messageId,
+    });
+  });
+
+  it('rejects changed payload for a generated ID after a lost write acknowledgement', async () => {
+    hoisted.atomicWrite.mockImplementationOnce(async (filePath, data, options) => {
+      await options?.beforeCommit?.();
+      const rows = JSON.parse(data) as Array<{ messageId: string; text: string }>;
+      rows[0].text = 'conflicting overwrite from another writer';
+      hoisted.files.set(filePath, JSON.stringify(rows));
+      const error = new Error('EACCES') as NodeJS.ErrnoException;
+      error.code = 'EACCES';
+      throw error;
+    });
+    await expect(writer.sendMessage('my-team', {
+      member: 'alice',
+      text: 'original immutable body',
+    })).rejects.toThrow('Inbox messageId collision for immutable payload');
+    expect(hoisted.atomicWrite).toHaveBeenCalledTimes(1);
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as
+      Array<{ messageId: string; text: string }>;
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0].text).toBe('conflicting overwrite from another writer');
   });
 
   it('fails closed on persistent inbox EPERM', async () => {
