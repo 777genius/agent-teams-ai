@@ -56,6 +56,9 @@ jobs:
           - lane: opencode-v2-management
             runner: ubuntu-latest
             platform: linux-x64
+          - lane: opencode-v2-review
+            runner: macos-15
+            platform: darwin-arm64
     defaults:
       run:
         shell: bash
@@ -303,7 +306,7 @@ jobs:
           for (const [key, value] of Object.entries(values)) appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
           writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), JSON.stringify({
             sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, platform: process.platform,
-            architecture: process.arch, nativeProviders: process.env.HOST_EMULATED_LANE === 'opencode-v2-management' ? 'OpenCode V2 with finite localhost model only' : 'forbidden',
+            architecture: process.arch, nativeProviders: ['opencode-v2-management', 'opencode-v2-review'].includes(process.env.HOST_EMULATED_LANE) ? 'OpenCode V2 with finite localhost model only' : 'forbidden',
             values, linuxChildExec, processLauncher,
           }, null, 2), { mode: 0o600 });
           NODE
@@ -498,14 +501,14 @@ jobs:
           node scripts/legacy-agent-host/desktop-backend-smoke.ts \
             2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-installer-ui.log"
       - name: Stage checksum-pinned OpenCode base without executing the legacy CLI
-        if: matrix.lane == 'opencode-v2-management'
+        if: contains(fromJSON('["opencode-v2-management", "opencode-v2-review"]'), matrix.lane)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/stage-runtime.mjs --platform linux-x64
+        run: node scripts/stage-runtime.mjs --platform "$HOST_EMULATED_PLATFORM"
       - name: Prepare exact OpenCode V2 Bun and engine graph
-        if: matrix.lane == 'opencode-v2-management'
+        if: contains(fromJSON('["opencode-v2-management", "opencode-v2-review"]'), matrix.lane)
         env:
-          OPENCODE_V2_TEST_PLATFORM: linux-x64
+          OPENCODE_V2_TEST_PLATFORM: ${{ env.HOST_EMULATED_PLATFORM }}
           OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
           OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ runner.temp }}/host-emulated-opencode-v2-inputs.json
         run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
@@ -538,8 +541,178 @@ jobs:
       - name: Verify original V2 membership receipts and physical cleanup
         if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane == 'opencode-v2-management' }}
         run: node scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts
+      - name: Exercise original OpenCode V2 native Review controls
+        if: matrix.lane == 'opencode-v2-review'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: native-review-ui
+          LEGACY_DESKTOP_OPENCODE_GENERATION: v2
+        run: |
+          set -euo pipefail
+          unset LEGACY_DESKTOP_EMULATED_ONLY
+          node scripts/legacy-agent-host/desktop-backend-smoke.ts \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-opencode-v2-review-ui.log"
+      - name: Capture original successful V2 Review receipt for cold readback
+        if: matrix.lane == 'opencode-v2-review'
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
+          import { basename, dirname, join } from 'node:path';
+          import { compiledBundleHashes } from './scripts/legacy-agent-host/desktop-backend-observations.ts';
+          import { captureDesktopSourceHashes } from './scripts/legacy-agent-host/desktop-source-freeze.ts';
+          import { desktopProofSources } from './scripts/legacy-agent-host/desktop-proof-sources.ts';
+          const inputs = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), 'utf8'));
+          assert.equal(inputs.sourceHead, process.env.HOST_EMULATED_SOURCE_HEAD);
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), inputs.sourceHead);
+          assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          const prepared = readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-opencode-v2-review-ui.log'), 'utf8')
+            .split('\n').flatMap(line => { try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; } catch { return []; } });
+          assert.equal(prepared.length, 1, 'one original native Review attempt');
+          const path = realpathSync(prepared[0].receipt), root = dirname(path);
+          assert.equal(path, prepared[0].receipt); assert.equal(basename(path), 'desktop-backend-receipt.json');
+          assert.equal(dirname(root), realpathSync(process.env.RUNNER_TEMP));
+          assert.match(basename(root), /^TEST-desktop-backend-[A-Za-z0-9]+$/);
+          assert.ok(!/[\r\n\0]/.test(root));
+          const bytes = readFileSync(path), receipt = JSON.parse(bytes.toString('utf8'));
+          assert.equal(receipt.root, root); assert.equal(receipt.mode, 'native-review-ui'); assert.equal(receipt.status, 'PASS');
+          assert.equal(receipt.nativeReviewUiProof?.status, 'PASS');
+          assert.deepEqual(receipt.selectedSourceHashesBeforeApp, await captureDesktopSourceHashes(process.cwd(), desktopProofSources));
+          assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+          // Verify this epoch before cold startup can rebuild the same output paths.
+          assert.deepEqual(receipt.compiledBundleHashesAfterStartup, await compiledBundleHashes(join(process.cwd(), 'dist-electron')));
+          appendFileSync(process.env.GITHUB_ENV, 'LEGACY_DESKTOP_READBACK_ROOT=' + root + '\n');
+          appendFileSync(process.env.GITHUB_ENV, 'LEGACY_DESKTOP_READBACK_RECEIPT_SHA256=' + createHash('sha256').update(bytes).digest('hex') + '\n');
+          NODE
+      - name: Read original V2 Review after cold app and Host restart
+        if: matrix.lane == 'opencode-v2-review'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: native-review-readback-ui
+          LEGACY_DESKTOP_OPENCODE_GENERATION: v2
+        run: |
+          set -euo pipefail
+          unset LEGACY_DESKTOP_EMULATED_ONLY
+          node scripts/legacy-agent-host/desktop-backend-smoke.ts \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-opencode-v2-review-readback-ui.log"
+      - name: Verify original V2 Review receipts, source binding and cleanup
+        if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane == 'opencode-v2-review' }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { basename, dirname, join } from 'node:path';
+          import { compiledBundleHashes } from './scripts/legacy-agent-host/desktop-backend-observations.ts';
+          import { captureDesktopSourceHashes } from './scripts/legacy-agent-host/desktop-source-freeze.ts';
+          import { desktopProofSources } from './scripts/legacy-agent-host/desktop-proof-sources.ts';
+          import { assertDesktopMetadataLineageRetained } from './scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts';
+          const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const inputs = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), 'utf8'));
+          const native = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-opencode-v2-inputs.json'), 'utf8'));
+          assert.equal(inputs.sourceHead, process.env.HOST_EMULATED_SOURCE_HEAD);
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), inputs.sourceHead);
+          assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64'); assert.equal(process.version, 'v24.21.0');
+          assert.equal(inputs.platform + '-' + inputs.architecture, 'darwin-arm64');
+          assert.equal(inputs.nativeProviders, 'OpenCode V2 with finite localhost model only');
+          assert.equal(native.sourceHead, inputs.sourceHead); assert.equal(native.platform, 'darwin-arm64'); assert.equal(native.status, 'READY');
+          const currentSources = await captureDesktopSourceHashes(process.cwd(), desktopProofSources);
+          assert.equal(new Set(desktopProofSources).size, desktopProofSources.length);
+          function read(mode, filename, log) {
+            const prepared = readFileSync(join(process.env.RUNNER_TEMP, log), 'utf8').split('\n')
+              .flatMap(line => { try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; } catch { return []; } });
+            assert.equal(prepared.length, 1, 'one original prepared epoch, no automatic retry');
+            const path = realpathSync(prepared[0].receipt), root = dirname(path);
+            assert.equal(path, prepared[0].receipt); assert.equal(basename(path), filename);
+            assert.equal(dirname(root), realpathSync(process.env.RUNNER_TEMP));
+            assert.match(basename(root), /^TEST-desktop-backend-[A-Za-z0-9]+$/);
+            const receipt = JSON.parse(readFileSync(path, 'utf8'));
+            assert.equal(receipt.root, root); assert.equal(receipt.mode, mode); assert.equal(receipt.status, 'PASS');
+            return { path, root, receipt, sha256: sha(path) };
+          }
+          const warm = read('native-review-ui', 'desktop-backend-receipt.json', 'host-emulated-opencode-v2-review-ui.log');
+          const cold = read('native-review-readback-ui', 'desktop-native-review-readback-receipt.json', 'host-emulated-opencode-v2-review-readback-ui.log');
+          assert.equal(cold.root, warm.root); assert.equal(cold.root, process.env.LEGACY_DESKTOP_READBACK_ROOT);
+          assert.equal(warm.sha256, process.env.LEGACY_DESKTOP_READBACK_RECEIPT_SHA256);
+          for (const { root, receipt } of [warm, cold]) {
+            for (const key of ['failure', 'sourceFreezeFailure', 'nativeInputFreezeFailure', 'sentinelCensusFailure', 'logCleanupFailure', 'metadataObservationFailure'])
+              assert.equal(receipt[key], undefined, key);
+            assert.equal(receipt.quitRequested, true);
+            assert.deepEqual(receipt.selectedSourceHashesBeforeApp, currentSources);
+            assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+            // These original arrays are Codex-specific, not a V2 final Bun/graph rehash.
+            assert.deepEqual(receipt.selectedNativeInputHashesBeforeApp ?? [], []);
+            assert.deepEqual(receipt.selectedNativeInputHashesAfterCleanup ?? [], []);
+            const cleanup = receipt.cleanup;
+            assert.equal(cleanup.appExitCode, 0); assert.equal(cleanup.appSignalCode, null);
+            assert.equal(cleanup.capturedHostObserved, true); assert.equal(cleanup.capturedHostAbsent, true);
+            assert.deepEqual(cleanup.remaining, []); assert.equal(cleanup.cleanupFailure, undefined);
+            assert.equal(receipt.hostChild.observedBeforeShutdown, true);
+            for (const [pathKey, pinKey, inputKey] of [
+              ['node', 'nodeSha256', 'LEGACY_DESKTOP_NODE_SHA256'],
+              ['hostEntry', 'hostEntrySha256', 'LEGACY_DESKTOP_HOST_ENTRY_SHA256'],
+              ['pnpm', 'pnpmSha256', 'LEGACY_DESKTOP_PNPM_SHA256'],
+            ]) { assert.equal(receipt.pins[pinKey], inputs.values[inputKey]); assert.equal(sha(receipt.paths[pathKey]), receipt.pins[pinKey]); }
+            assert.equal(receipt.paths.node, realpathSync(process.execPath));
+            assert.equal(receipt.paths.hostEntry, realpathSync('packages/legacy-agent-host/dist/cli.js'));
+            assert.equal(receipt.paths.pnpm, realpathSync(inputs.values.LEGACY_DESKTOP_PNPM_PATH));
+            for (const [pathKey, pinKey, filename] of [['profile', 'profileSha256', 'host-profile.json'], ['descriptor', 'descriptorSha256', 'desktop-descriptor.json']]) {
+              assert.equal(receipt.paths[pathKey], join(root, filename)); assert.equal(sha(receipt.paths[pathKey]), receipt.pins[pinKey]);
+            }
+            for (const [pathKey, pinKey, inputKey] of [
+              ['packagePath', 'corepackPackageSha256', 'LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256'],
+              ['libraryPath', 'corepackLibrarySha256', 'LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256'],
+            ]) { assert.equal(receipt.pins[pinKey], inputs.values[inputKey]); assert.equal(sha(receipt.packageManager[pathKey]), receipt.pins[pinKey]); }
+            const census = receipt.finalSentinelCensus;
+            assert.ok(receipt.sentinel.length > 0 && receipt.sentinel.every(row => row.allowed === true));
+            assert.equal(census.preQuitCount, receipt.sentinel.length);
+            assert.deepEqual(census.invocations.slice(0, census.preQuitCount), receipt.sentinel);
+            assert.deepEqual(census.refusedInvocations, census.invocations.filter(row => row.allowed !== true));
+          }
+          // The warm step checked its own compiled epoch; do not compare two builds to each other.
+          assert.deepEqual(cold.receipt.compiledBundleHashesAfterStartup, await compiledBundleHashes(join(process.cwd(), 'dist-electron')));
+          const review = warm.receipt.nativeReviewUiProof, readback = cold.receipt.nativeReviewReadbackProof;
+          assert.equal(warm.receipt.nativeProvider, 'opencode'); assert.equal(warm.receipt.nativeGeneration, 'v2');
+          assert.equal(review.status, 'PASS'); assert.equal(review.provider, 'opencode-v2'); assert.equal(review.version, '2.1.4');
+          assert.equal(review.events.length, 1); assert.equal(review.events[0].nativeCaptureProof.kind, 'opencode-update-patch-v2');
+          assert.equal(review.stop.releasedBeforeReview, true); assert.equal(review.originalEventsUnchanged, true);
+          assert.equal(review.nativeModelObservations.length, 6);
+          assert.deepEqual(review.nativeModelObservations, warm.receipt.model.observations); assert.deepEqual(warm.receipt.model.failures, []);
+          assert.equal(readback.status, 'PASS'); assert.equal(readback.originalReceiptSha256, warm.sha256);
+          assert.equal(readback.taskId, review.taskId); assert.equal(readback.fileSha256, review.fileSha256);
+          assert.equal(readback.nativeInputsReplayed, 0); assert.equal(readback.nativeAllocations, 0);
+          assert.equal(readback.nativeAllocationScope, 'Runtime sessions'); assert.equal(readback.metadataProcessCount, 1);
+          for (const key of ['runtimeRecordUnchanged', 'nativeEventsUnchanged', 'reviewDecisionsUnchanged']) assert.equal(readback[key], true);
+          const metadata = cold.receipt.coldOpenCodeMetadata;
+          assert.equal(metadata.sourceSha256, warm.sha256); assert.equal(metadata.profileSha256, warm.receipt.pins.profileSha256);
+          assert.equal(metadata.executableSha256, native.bun.sha256);
+          assert.equal(metadata.metadataProcessCount, 1); assert.equal(metadata.nativeRuntimeAllocations, 0);
+          assert.equal(metadata.captured.children.length, 1);
+          for (const [proof, retained] of [[review, review.metadataAfterStop], [metadata, metadata.metadataAfterReadback]]) {
+            assert.equal(proof.metadataAbsentBeforeHarnessCleanup, true);
+            assert.ok(proof.metadataAtHostClose.events.length > 0);
+            assertDesktopMetadataLineageRetained(retained.metadataLineage, proof.metadataAtHostClose);
+          }
+          for (const [proof, filename] of [[review, 'ui-native-v2-review-history.png'], [readback, 'ui-native-review-host-restarted.png']]) {
+            const screenshot = proof.screenshot;
+            assert.equal(realpathSync(screenshot.path), join(warm.root, filename));
+            assert.equal(readFileSync(screenshot.path).subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+            assert.equal(sha(screenshot.path), screenshot.sha256);
+          }
+          writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-opencode-v2-review-summary.json'), JSON.stringify({
+            status: 'PASS', lane: 'opencode-v2-review', sourceHead: inputs.sourceHead, platform: 'darwin-arm64',
+            completed: [warm, cold].map(({ path, sha256, receipt }) => ({ receipt: path, sha256, mode: receipt.mode })),
+            nativeProviders: inputs.nativeProviders, vendorAuthQualified: false, fullMixedQualified: false,
+            fullStage1Qualified: false, fullM13Qualified: false, releaseQualified: false,
+            visualReview: 'original warm and cold screenshots retained for independent inspection',
+          }, null, 2));
+          NODE
       - name: Verify exact source, original screenshots, receipts and cleanup
-        if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane != 'opencode-v2-management' }}
+        if: ${{ !cancelled() && steps.inputs.outcome == 'success' && !contains(fromJSON('["opencode-v2-management", "opencode-v2-review"]'), matrix.lane) }}
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
@@ -1232,7 +1405,7 @@ jobs:
           name: host-emulated-${{ matrix.platform || 'linux-x64' }}-${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.lane }}
           retention-days: 14
           if-no-files-found: warn
-          include-hidden-files: ${{ matrix.lane == 'opencode-v2-management' }}
+          include-hidden-files: ${{ contains(fromJSON('["opencode-v2-management", "opencode-v2-review"]'), matrix.lane) }}
           path: |
             ${{ runner.temp }}/host-emulated-*.json
             ${{ runner.temp }}/host-emulated-*.log
@@ -1292,6 +1465,20 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/process-ui-seed.json
             ${{ runner.temp }}/TEST-desktop-backend-*/workspace/process-*.json
             ${{ runner.temp }}/TEST-desktop-backend-*/workspace/process-*.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-native-review-readback-receipt.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-native-review-readback-app.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/native-review-ui-seed.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/runtime-sessions/**/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/tasks/test-desktop-backend/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/.host-owner/state.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/.host-owner/commands/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/.host-owner/outbox/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/.host-evidence/.board-task-changes/events/*.jsonl
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/.host-evidence/.board-task-changes/blobs/**
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/review-decisions/**/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/workspace/native-review.ts
+            ${{ runner.temp }}/TEST-desktop-backend-*/workspace/.git/index
+            ${{ runner.temp }}/TEST-desktop-backend-*/workspace/pre-existing-untracked.txt
 
   offline-frontend-tests:
     name: Offline frontend tests (${{ matrix.shard }}/4)
