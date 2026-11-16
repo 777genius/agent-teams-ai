@@ -6331,3 +6331,60 @@ Postflight at `2026-11-16T03:09:44.959311+00:00` has SHA256`4de223faa00e4cb393ef
 The four final source/test payloads total131,334bytes: TaskCommentInput `fde63957a08c0b076bd50ae272115737c4a4af19`, MentionableTextarea `94a360626de2ee67ceac964e3fd8529d345e3843`, component test `4b81622262f5f690d1c5e17dfc289f27cbb80b70`, session integration test `0f18886c763559877aff19f319e11575058af08a`. Publication is limited to those four existing paths and this appended Plan, on the same isolated delivery branch, with immediate expected-head ordinary push and full payload/tree/parent/ref readback after independent result R2. No other leaf is included.
 
 This qualifies the selected happy-dom component/handler behavior and preservation of current controller authority. It does not identify the missing input to isOwner in the original Cross-team receipt, qualify Chromium physical focus/timing or close its original20s one-click/action/attachment/cleanup scenario. Those original resulting-source gates remain. During this isolated work, primary#1192 independently advanced to608efb78823d7c74b35f8a674fcfb6faea8ecfc5; its observed update and remaining-original-job cancellations are not attributed to this branch's commands. No primary ref or incoming source was modified here. That authored history must be reconciled under fresh exact R1/R2 before any later ordinary primary advance. All P08/P09/I386/M16/native-policy, original15s, Draft/base/Stage1 and real-vendor limits stay unchanged.
+
+### Exact later public R1 binding for the live Windows listener-presence CIM query
+
+The actual delivery parent is `ff41b743dbf36ebd3290560927a3de652b5585ee`, complete tree `5d7369dc7cbcd590cbd7f659add20911f84db19d`, after completed read8/public7/Desktop3/I3866/Task read-only cuts. Preserve the complete Plan29 prefix `ce3018cd3906fe05468becccdfc9a0870df579f0` (1423267 bytes), every unrelated leaf, and the complete Plan30 prefix `eb68d2643eb11527594d546d8a5088f48f8e2865` (120803 bytes). The simultaneous Plan30 amendment appends its already independently reviewed §13: append `8a3023f2872a1fa35b7b043edf981ed2ab4494c9`,11,931bytes, with the original one separating LF, yielding whole Plan30 `74e17f8bc1abfa1cb4f7567e83b640bfe29fe3fb`,132,735bytes. That exact source/semantic proposal is incorporated by reference; this Plan29 entry supplies its final later parent and execution context. No earlier Plan30 byte is rewritten. Root has verified both exact source preimages and all four unchanged reference blobs against this selected tree and current bytes.
+
+This R1 deliberately amends only Plan30's combined live-listener statement. The source change remains platform `71d5629149e8f499a45b54a99922145ee3cae09e`→`5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9`,315lines, and its existing test `d04bcf2af48a696c71821f0346d5abdc2807ce9c`→`0be43ad7d6549642c60080caf6001aa5f6d2a23b`,396lines. Source manifest `ae356e5047e26e91900eb18b75f5ef454c49da6b` and patch SHA256 `cab1ad6ee20900dea1b0c0a8f3324358559c84b9f78d2cc73f4f147fe474fe1e` remain exact. The real unchanged assertOwnedRenderer remains the sole runtime consumer, including live target discovery, and rejects an empty owner list before renderer access. All standalone availability/startup/listener/drain queries, Gate/source roster, current controls and packaged test remain unchanged. Query backend errors are not claimed equivalent; native/performance qualification remains pending. No clock, action count, await-boundary guard, retry, cache, fallback or cleanup authority changes.
+
+First publish exactly these two documentation leaves on the same isolated delivery branch, immediately ordinarily push with the selected expected parent, and fully read back both whole Plans, tree, sole parent and ref. Only afterward run the baseline audit, apply the test-only image, run the RED audit and execute the selected full helper pair. Preserve actual different failures and stop on unexpected errors. Then apply only the platform image and rerun the same complete pair. No primary PR mutation or incoming608 source is included in this local phase. Incoming primary privacy helper is being independently reconciled; this selected delivery still has the original StageM source, which these commands do not execute.
+
+Execution manifest `14c97aee6a0783e2db9dec393accc33565ba6e97` (5127bytes; SHA256 `e45a9d2776054cd1cb06bb806636c9aab266f658da4215f58e909c04d016ce26`) is the reviewed native proposal with the existing root runner's explicit scalar prependPath, one .mjs redPath, four unchanged-source references and no new selected-config dependency link. Seven serial outer commands are authorized: full platform/packaged pair RED, same pair GREEN, Node parser check for each changed MJS file, fast lint of those two paths and the original source-size/provisioning guards. No test-name selector, new skip, broader compiler, Host build, install, PowerShell/native query, GUI, real provider or StageM command is included. Exact argv:
+
+```json
+{
+  "tests": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--test",
+    "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "scripts/e2e/opencode-diagnostics/packaged.test.mjs"
+  ],
+  "parserSource": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--check",
+    "scripts/e2e/opencode-diagnostics/platform.mjs"
+  ],
+  "parserTest": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--check",
+    "scripts/e2e/opencode-diagnostics/platform.test.mjs"
+  ],
+  "lint": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/pnpm/bin/pnpm.mjs",
+    "lint:fast:files",
+    "--",
+    "scripts/e2e/opencode-diagnostics/platform.mjs",
+    "scripts/e2e/opencode-diagnostics/platform.test.mjs"
+  ],
+  "sourceSize": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/pnpm/bin/pnpm.mjs",
+    "guard:source-file-size"
+  ],
+  "provisioning": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/pnpm/bin/pnpm.mjs",
+    "guard:team-provisioning-architecture"
+  ]
+}
+```
+
+Use the same pinned Node24.21.0/pnpm11.25, original four environment unsets, pinned Node PATH/AGENT_BACKEND_TEST_NODE, pnpm_config_verify_deps_before_run=false and original180s subgroup ceilings. Keep the original controlled TEST children and loopback behavior in the existing helper pair and any original Windows-only skip on this Linux host. A reported skip is not a passed native case. The revised literal query expectation is the sole anticipated structural query-contract RED; the added actual-live-guard extraction/real parser cases preserve baseline behavior. Neither that failure nor a finite GREEN proves actual CIM service behavior or latency. No private preview, copied alternative guard or fake wall-clock expiry replaces the real closure/source path.
+
+Dependency plan `2da688a52fc62d1ca94c4495133e9afdd74c17fd` (SHA256 `2ea2ae8bc157ad4f93a4449b66b965e09fba17e788c583180758038e1e077787`) remains exact. Audit all133 links, six workspace aliases/five directories,253+12 approved provider payloads, five original edges, archive bytes and checked configuration pins before/after. Keep both ordinary indexes7a2489dc3aa3880dae0e6203dd4fbadc31b59b4f634a7a773638b6297ee228c4 and161fc5143f7e03fc593d16afa0d4bb588e230fb3667602302bc7019f225fe92a unchanged. Existing read8/OpenCode/I386/readonly scratch links stay as they are; this MJS cut creates no link. The unchanged public7 successful build receipt a7cb56eaf66454cd5dc4706bfc2b5e96fc6319ac66b1de136809acca8165bdd4 and original1504 output files/inventoryf6f6335efc3c44cfbd7c2d93a1beba1fe2e061c6005bc930e04cb61b7c70f5b9 are environmental context only, not qualification of later renderer or native source. No output is rebuilt or replaced.
+
+Audit `89674468d24ecd82f56f8f3b7789342e520e89b7` (SHA256 `52d32875c8efd029ff75c5522738f5fe2ef8c2eb683bef4b4260b98fcf6d529d`) and runner `3a282e583bcd8b9dac0a089662e4853e60c4257a` (SHA256 `58b396fe2c794675e3e8895479503daf09053e3130bcaa637188a50cb13e6749`) are the previously independently reviewed exact wrappers. Their documentationFiles list binds both whole Plans. Temporary-index tracked delta must be those two docs at baseline, those docs plus the one test for RED, and those docs plus exactly both images for GREEN. Every other leaf, both normal indexes, installed closure and1,504 output files stay exact. All six GREEN receipts must match source/argv/publication/log/dists at final postflight; timeout/signal is never PASS. No project command or canonical source application was performed during this binding preparation.
+
+After actual finite-result/source R2, publish only the two MJS source/test paths and factual Plan29 append with immediate ordinary expected-head push/full payload readback; Plan30 stays the exact published amendment. Reconciliation with incoming608 must preserve its authored helper/evidence/history and the complete independently published delivery history under a separate exact R1/R2. Original resulting-source Windows x64 and ARM must still run the unchanged real query/UI scenarios with original deadlines, both original live process references, two physical Stops and all custody/receipt/cleanup requirements. The ARM0660 artifact lacks its UI receipt and does not prove query latency or successful Quit; it supplies no additional authority. P08/P09/I386/M16/native-policy/15s/real-vendor/Draft/original-base/Stage1 holds remain.
