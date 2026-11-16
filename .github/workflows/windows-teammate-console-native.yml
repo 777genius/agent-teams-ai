@@ -12,6 +12,13 @@ on:
       - 'src/main/utils/cliProcessDefaults.ts'
       - 'src/main/utils/childProcess.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningMemberLifecycle.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningCreateDeterministicSpawnFlow.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningLaunchDeterministicSpawnFlow.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningAuthRetryRecovery.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningWindowsRuntimeLauncher.ts'
+      - 'tools/opencode-console-wrapper/OpenCodeConsoleWrapper.cs'
+      - 'tools/opencode-console-wrapper/WrapperNativeFixture.cs'
+      - 'scripts/stage-opencode-console-wrapper.mjs'
       - 'src/features/token-usage/main/infrastructure/CliUsageImporters.ts'
   push:
     branches: [main]
@@ -24,6 +31,13 @@ on:
       - 'src/main/utils/cliProcessDefaults.ts'
       - 'src/main/utils/childProcess.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningMemberLifecycle.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningCreateDeterministicSpawnFlow.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningLaunchDeterministicSpawnFlow.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningAuthRetryRecovery.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningWindowsRuntimeLauncher.ts'
+      - 'tools/opencode-console-wrapper/OpenCodeConsoleWrapper.cs'
+      - 'tools/opencode-console-wrapper/WrapperNativeFixture.cs'
+      - 'scripts/stage-opencode-console-wrapper.mjs'
       - 'src/features/token-usage/main/infrastructure/CliUsageImporters.ts'
   workflow_dispatch:
 
@@ -87,6 +101,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
         run: node scripts/stage-runtime.mjs --platform win32-x64
+      - name: Stage Windows teammate-owned Job wrapper
+        run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
+      - name: Qualify real teammate native handle and Job containment
+        shell: pwsh
+        run: |
+          $compiler = Join-Path $env:SystemRoot 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+          $fixture = Join-Path $env:RUNNER_TEMP 'TEST-teammate-wrapper-native.exe'
+          $source = (Resolve-Path 'tools/opencode-console-wrapper/WrapperNativeFixture.cs').Path
+          & $compiler /nologo /target:exe /optimize "/out:$fixture" $source
+          if ($LASTEXITCODE -ne 0) { throw 'Native teammate wrapper fixture compilation failed' }
+          & $fixture (Resolve-Path 'resources/runtime/teammate-console/teammate.exe').Path
+          if ($LASTEXITCODE -ne 0) { throw 'Native teammate wrapper Job containment failed' }
       - name: Verify actual Electron product teammate with synthetic localhost model
         env:
           WINDOWS_PRODUCT_CONSOLE_EVIDENCE: ${{ runner.temp }}/windows-product-console

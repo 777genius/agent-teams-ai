@@ -77,3 +77,19 @@ real binary. Without the build, the runtime keeps launching the real binary
 directly.
 
 Set `AGENT_TEAMS_OPENCODE_CONSOLE_WRAPPER=0` to bypass the wrapper at runtime.
+
+## Windows teammate process containment
+
+The existing staging command also compiles the same qualified managed Job
+implementation to `resources/runtime/teammate-console/teammate.exe`. This
+separately named executable reads only the existing absolute
+`AGENT_TEAMS_TEAMMATE_WRAPPER_TARGET` `.exe` target, not the OpenCode target
+variable or sidecar. Windows app-managed lead, direct member and auth-retry
+flows use it when staged. The original wrapper PID and process handle remain
+the app's Stop authority, while its no-breakaway kill-on-close Job contains
+the actual runtime and native tool descendants even if Electron Main crashes.
+The Windows product E2E requires both this wrapper and a native handle/Job
+fixture PASS, then tests actual cmd/git/PowerShell, Stop, HWND/focus and
+retirement of the active tool descendant following forced Electron Main exit.
+Packaged Windows release staging compiles both targets and PE validation
+admits only the exact new AnyCPU managed path.

@@ -227,6 +227,7 @@ async function run() {
   model = await startGroupChatModelServer(modelPath, modelToolDecision);
   Object.assign(env, {
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: runtimePath,
+    AGENT_TEAMS_REQUIRE_TEAMMATE_WRAPPER: '1',
     ANTHROPIC_BASE_URL: model.baseUrl,
     ANTHROPIC_API_KEY: 'synthetic-owned-key',
     ANTHROPIC_AUTH_TOKEN: '',
@@ -449,6 +450,8 @@ async function run() {
   }, 30_000);
   assert.equal(originalMember.pid, attachedEvent.pid,
     'Observed original Windows process must match the app-managed spawn event');
+  assert(originalMember.command.toLowerCase().includes('teammate.exe'),
+    'Live product Bob must use an owned Windows Job launcher');
   appManagedRosterAttachConfirmed = true;
   await client.screenshot(screenshot);
   phase = 'native-tool-invocations';
@@ -547,6 +550,8 @@ async function run() {
   }, 150_000);
   assert(forceExitMember.pid !== originalMember.pid,
     'Forced-exit product member must be a new process, not a recycled stopped member');
+  assert(forceExitMember.command.toLowerCase().includes('teammate.exe'),
+    'Forced-exit lead must use an owned Windows Job launcher');
   assert(await ownedStillAlive(forceExitMember),
     'Forced-exit teammate had already retired before Electron Main was killed');
   // Qualify the actual Electron force-exit path with a live native tool
