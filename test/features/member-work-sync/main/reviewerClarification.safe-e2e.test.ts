@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { createMemberWorkSyncFeature } from '@features/member-work-sync/main';
+import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamKanbanManager } from '@main/services/team/TeamKanbanManager';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { TeamTaskReader } from '@main/services/team/TeamTaskReader';
@@ -65,6 +66,8 @@ describe('reviewer clarification safe E2E', () => {
         JSON.stringify(assignment.map((row) => ({ ...row, read: true })))
       );
       const deliveries: string[] = [];
+      const readConfig: TeamConfigReader['getConfig'] = async () =>
+        JSON.parse(await fs.readFile(path.join(teamRoot, 'config.json'), 'utf8'));
       const makeFeature = () =>
         createMemberWorkSyncFeature({
           teamsBasePath: path.join(root!, 'teams'),
@@ -72,10 +75,10 @@ describe('reviewer clarification safe E2E', () => {
           isManagedByThisProfile: async () => true,
           startBackground: false,
           isTeamActive: async () => true,
-          configReader: {
-            getConfig: async () =>
-              JSON.parse(await fs.readFile(path.join(teamRoot, 'config.json'), 'utf8')),
-          } as Parameters<typeof createMemberWorkSyncFeature>[0]['configReader'],
+          configReader: Object.assign(new TeamConfigReader(), {
+            getConfig: readConfig,
+            getConfigSnapshot: readConfig,
+          }),
           taskReader: new TeamTaskReader(),
           kanbanManager: new TeamKanbanManager(),
           membersMetaStore: new TeamMembersMetaStore(),
