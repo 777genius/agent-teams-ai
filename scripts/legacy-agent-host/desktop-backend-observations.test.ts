@@ -915,7 +915,7 @@ function emulatedObserverFixture(t: TestContext, mode: string,
     ? mode === 'later-row' || mode === 'missing' ? '' : mode === 'duplicate' ? row + row : row
     : mode === 'healthy-empty' ? '' : mode === 'retained-failure'
       ? JSON.stringify({ ...launch, event: 'failure' }) + '\n' : mode === 'malformed-json'
-        ? '{"event":\n' : JSON.stringify({ ...launch, provider: 'opencode' }) + '\n';
+        ? '{"event":\n' : JSON.stringify({ ...launch, provider: mode === 'wrong-provider-claude' ? 'claude' : 'opencode' }) + '\n';
   fs.writeFileSync(journal, journalText);
   let now = 0, censusReads = 0, journalReads = 0, signalCalls = 0;
   t.mock.method(performance, 'now', () => now);
@@ -998,9 +998,31 @@ test(`empty peer observation validates the original ${mode} journal ${phase}`, a
   });
   else if (mode === 'malformed-json') await assert.rejects(f.observe(), SyntaxError);
   else await assert.rejects(f.observe(), { code: 'ERR_ASSERTION', actual: 'opencode', expected: 'codex' });
+  assert.equal(f.reads().censusReads, 1);
   assert.equal(f.reads().journalReads, 1, 'the original journal is read even without a current child');
   assert.equal(f.reads().signalCalls, 0, 'journal validation creates no signal authority');
   assert.equal(fs.readFileSync(f.journal, 'utf8'), f.journalText, 'observation appends no effect');
   assert.equal(f.fixture.emulatedRuntime.observedPeerPids, observed);
   assert.deepEqual(observed, [4300], 'empty or refused observations preserve the original PID inventory');
+});
+
+for (const [label, mode, phase] of [
+  ['no-child-provider-mismatch', 'wrong-provider-claude', 'after-team-read'],
+  ['zero-host-failure', 'retained-failure', 'before-first-team-read'],
+  ['zero-host-clean', 'healthy-empty', 'before-first-team-read'],
+] as const)
+test(`empty peer census preserves ${label} through the original journal oracle`, async t => {
+  const f = emulatedObserverFixture(t, mode, phase);
+  const observed = f.fixture.emulatedRuntime.observedPeerPids;
+  if (mode === 'wrong-provider-claude')
+    await assert.rejects(f.observe(), { code: 'ERR_ASSERTION', actual: 'claude', expected: 'codex' });
+  else if (mode === 'retained-failure') await assert.rejects(f.observe(), {
+    code: 'ERR_ASSERTION', actual: true, expected: false,
+    message: /TEST protocol refusal cannot become a passing UI proof/u,
+  });
+  else await f.observe();
+  assert.equal(f.fixture.emulatedRuntime.observedPeerPids, observed);
+  assert.deepEqual(observed, []);
+  assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1, signalCalls: 0 });
+  assert.equal(fs.readFileSync(f.journal, 'utf8'), f.journalText);
 });

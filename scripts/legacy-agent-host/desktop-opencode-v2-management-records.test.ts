@@ -188,7 +188,8 @@ test('original V2 default intent joins its selected saving row within the same r
     pauses: number; finishes: number; begins: number; bindings: number; native: number; guards: number;
     busy: boolean; selected: boolean; rowCount: number; buttonCount: number; width: number; revoked: boolean };
   const setup = (step: string, settings: { initial?: Partial<State>;
-    onRead?: (state: State) => void; onPause?: (state: State) => void } = {}) => {
+    onRead?: (state: State) => void; onPause?: (state: State) => void;
+    onCommands?: (state: State) => void } = {}) => {
     const state: State = { now: 0, commands: 0, clicks: 0, scrolls: 0, reads: 0, pauses: 0,
       finishes: 0, begins: 0, bindings: 0, native: 0, guards: 0, busy: true, selected: true,
       rowCount: 1, buttonCount: 1, width: 10, revoked: false, ...settings.initial };
@@ -216,7 +217,11 @@ test('original V2 default intent joins its selected saving row within the same r
       '(function () {\n' + block + '\nreturn originalStep; })()', {
         assert, desktopJsLiteral, desktopV2ProviderId: 'test-local', modelA, modelB,
         dialog: '[role="dialog"]', authority, effects, Date: { now: () => state.now },
-        commands: async () => { state.commands++; return state.commands === 1 ? [] : [receipt]; },
+        commands: async () => {
+          state.commands++;
+          settings.onCommands?.(state);
+          return state.commands === 1 ? [] : [receipt];
+        },
         bindDesktopV2ManagementReceipt: (owner: unknown, rows: unknown[], command: unknown, intent: string) => {
           assert.equal(owner, authority); assert.equal(rows[0], receipt);
           assert.equal(command, receipt); assert.equal(intent, step); state.bindings++; return { evidence };
@@ -284,6 +289,17 @@ test('original V2 default intent joins its selected saving row within the same r
   await assert.rejects(revoked.run(), error => error === revoked.revoked);
   assert.equal(revoked.state.clicks, 1); assert.equal(revoked.state.reads, 1);
   assert.equal(revoked.state.finishes, 0); assert.equal(revoked.effects.length, 0);
+  for (const step of ['global-default', 'project-default']) {
+    const beforeRead = setup(step, { initial: { busy: false },
+      onCommands: state => { if (state.commands === 2) state.revoked = true; } });
+    await assert.rejects(beforeRead.run(), error => error === beforeRead.revoked);
+    assert.equal(beforeRead.state.commands, 2, 'owner is revoked by the original awaited receipt read');
+    assert.equal(beforeRead.state.clicks, 1);
+    assert.equal(beforeRead.state.reads, 0, 'no DOM evaluation after the receipt read revokes its owner');
+    assert.equal(beforeRead.state.finishes, 0);
+    assert.equal(beforeRead.state.bindings, 0);
+    assert.equal(beforeRead.effects.length, 0);
+  }
   const ordinary = setup('project-test'); await ordinary.run();
   assert.equal(ordinary.state.clicks, 1); assert.equal(ordinary.state.reads, 0); assert.equal(ordinary.state.pauses, 0);
   assert.equal(ordinary.state.finishes, 1); assert.equal(ordinary.effects.length, 1);

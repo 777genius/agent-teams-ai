@@ -1,0 +1,239 @@
+{
+  "status": "SOURCE TRACE COMPLETE; cause not established; no correction selected",
+  "reviewedUtc": "2026-11-16T04:54:11.329427+00:00",
+  "source608": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "currentAe": "ae727104656e2feb288fde84c86cffef313546e1",
+  "currentTree": "4ad86790621c72f1f65ee30fa8229abd03df99de",
+  "paths": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "source608": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "currentAe": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "workingBytesMatchAe": true,
+      "bytes": 74351,
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx",
+      "source608": "32403fc3f01c93153e1325dd1bf1a6b17fa64499",
+      "currentAe": "32403fc3f01c93153e1325dd1bf1a6b17fa64499",
+      "workingBytesMatchAe": true,
+      "bytes": 12020,
+      "sha256": "fdeae416c9017d9b377625a32ee4487b8391cc8b6041fb09c2ee292b71f9db31"
+    },
+    {
+      "path": "src/features/runtime-provider-management/preload/createRuntimeProviderManagementBridge.ts",
+      "source608": "90de36f60943b38e97f808f490b38594cde8aded",
+      "currentAe": "90de36f60943b38e97f808f490b38594cde8aded",
+      "workingBytesMatchAe": true,
+      "bytes": 8549,
+      "sha256": "d2078aa7f8c06b6f7b14f98c4919f3953d8fd487df614ab7eef113d4f32c7342"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/input/registerRuntimeProviderManagementIpc.ts",
+      "source608": "c6e1ec3ab16fb0a382770edb7e3821360d823a16",
+      "currentAe": "c6e1ec3ab16fb0a382770edb7e3821360d823a16",
+      "workingBytesMatchAe": true,
+      "bytes": 27730,
+      "sha256": "36c5cc932cc37817aa050a30203f408ebffa57af8b098b7ea824738ad229d01f"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature.ts",
+      "source608": "017399a48a4ee62332eb994afcf50b9c967ad674",
+      "currentAe": "017399a48a4ee62332eb994afcf50b9c967ad674",
+      "workingBytesMatchAe": true,
+      "bytes": 9591,
+      "sha256": "c00cbde468308d94fd9ebae79f97d2a22d58bb1f72d00ecdc8f348a8c4778bb2"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts",
+      "source608": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+      "currentAe": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+      "workingBytesMatchAe": true,
+      "bytes": 23900,
+      "sha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedManagementPreferences.ts",
+      "source608": "9a680f0ed4f847ae4612809e342a25ca448036be",
+      "currentAe": "9a680f0ed4f847ae4612809e342a25ca448036be",
+      "workingBytesMatchAe": true,
+      "bytes": 2201,
+      "sha256": "32fa7f106d94bea044cf9a4db3df7056c4e626312ec079e18409e1056af9ef23"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/FileManagedProviderPreferences.ts",
+      "source608": "cefb5f79158f10edff53380d6f6707ef49558b66",
+      "currentAe": "cefb5f79158f10edff53380d6f6707ef49558b66",
+      "workingBytesMatchAe": true,
+      "bytes": 6485,
+      "sha256": "458753e693d6f69f0db661886dddec1a6c68806e1e156efd0c0f5c7de424bd3b"
+    },
+    {
+      "path": "src/main/ipc/agentBackend.ts",
+      "source608": "084739af2f190dd10565b41f76f592a7b49ea36a",
+      "currentAe": "084739af2f190dd10565b41f76f592a7b49ea36a",
+      "workingBytesMatchAe": true,
+      "bytes": 30204,
+      "sha256": "8ef04885251a1033bd6a9ba947e810969e66a9cde48ee5db716e3688cdbb05d7"
+    },
+    {
+      "path": "src/features/agent-backend/main/composition/DesktopBackendFeature.ts",
+      "source608": "ecde3d53f56e879a52abd7312e646c9497bff106",
+      "currentAe": "ecde3d53f56e879a52abd7312e646c9497bff106",
+      "workingBytesMatchAe": true,
+      "bytes": 35368,
+      "sha256": "7188000ca255e8de0f1e1bacd00e61f9194dcb0fe74cb97ce0b18cc258367f48"
+    },
+    {
+      "path": "src/features/agent-backend/main/application/refreshCapturedRuntimeConfiguration.ts",
+      "source608": "0efed1ce0f5fd1d879b1ef473ec475c77cc6d8a9",
+      "currentAe": "0efed1ce0f5fd1d879b1ef473ec475c77cc6d8a9",
+      "workingBytesMatchAe": true,
+      "bytes": 2816,
+      "sha256": "fa97bff889ab288fed4eb983a2f1a3ffb528f8cbd98935c4fe6151732ea0322e"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedRuntimeSources.ts",
+      "source608": "4c582d9bd2c8e20ef9e8a2bfc310ad58d4a40a96",
+      "currentAe": "4c582d9bd2c8e20ef9e8a2bfc310ad58d4a40a96",
+      "workingBytesMatchAe": true,
+      "bytes": 6954,
+      "sha256": "e92ece600fc2cc3833fb9fbc31cfc5c6b89a5ac9a56342fee034a6ed0d03b186"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedProviderManagement.ts",
+      "source608": "60b08011e5aa2df1a6d2215155d7dabf0b2b15af",
+      "currentAe": "60b08011e5aa2df1a6d2215155d7dabf0b2b15af",
+      "workingBytesMatchAe": true,
+      "bytes": 5433,
+      "sha256": "8ea983e9aec5c56ca5e2438a39e4272c0133ae6c2d4839bbcb6926afb605b760"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "source608": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+      "currentAe": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+      "workingBytesMatchAe": true,
+      "bytes": 32767,
+      "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeSourceMethods.ts",
+      "source608": "404d35f2cd9d62d933a846eb5b464ee1cf52014c",
+      "currentAe": "404d35f2cd9d62d933a846eb5b464ee1cf52014c",
+      "workingBytesMatchAe": true,
+      "bytes": 2376,
+      "sha256": "2613fd32414c9aadc0ee25ab1fc914a8de5d86a6bde484e2d74d72fce3e13c71"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/RuntimeSourceIndex.ts",
+      "source608": "0ba80099a7bd5e11bb9fd2440cbd49c330f3c4f2",
+      "currentAe": "0ba80099a7bd5e11bb9fd2440cbd49c330f3c4f2",
+      "workingBytesMatchAe": true,
+      "bytes": 34196,
+      "sha256": "5e5cf42970c822082e64464dffbf6a51cb28c47ca4697027c4f3357346c89e8f"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+      "source608": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead",
+      "currentAe": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead",
+      "workingBytesMatchAe": true,
+      "bytes": 36898,
+      "sha256": "e54fda9c30ec3d53f20027d59faf81f59c75fd3ad3987593bd4cd64315a17d3a"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts",
+      "source608": "384b4c00a05d5886cce267ae76166c93d5892262",
+      "currentAe": "384b4c00a05d5886cce267ae76166c93d5892262",
+      "workingBytesMatchAe": true,
+      "bytes": 21840,
+      "sha256": "0d97f35fcb8ffab937b25ff6656509f51267d43f7d9a5018928f7ea194c91f42"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "source608": "74c3aaddba29d7309af436610f6a8b64c8c337e1",
+      "currentAe": "7f224d52e429bbdecb173d65b470a2ac154de475",
+      "workingBytesMatchAe": true,
+      "bytes": 20435,
+      "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6"
+    }
+  ],
+  "all18ProductPathsEqual608AndAe": true,
+  "uiDifference": "--- 608\n+++ ae\n@@ -89,10 +89,11 @@\n         let intentComplete = true;\n         if (step === 'global-default' || step === 'project-default') {\n           assert.ok(Date.now() < deadline, 'original default intent remains within its deadline');\n           const modelId = step === 'global-default' ? modelA : modelB;\n           const row = dialog + ' [data-testid=' + JSON.stringify('runtime-provider-model-row-' + modelId) + ']';\n+          options.assertOwnedRenderer();\n           intentComplete = await cdp.evaluate('(() => { const rows=[...document.querySelectorAll(' +\n             desktopJsLiteral(row) + ')]; if(rows.length!==1)return false;' +\n             'const buttons=[...rows[0].querySelectorAll(\"button[aria-pressed]\")]; if(buttons.length!==1)return false;' +\n             'const button=buttons[0], rect=button.getBoundingClientRect();' +\n             'return rect.width>0&&rect.height>0&&button.getAttribute(\"aria-pressed\")===\"true\"&&' +\n",
+  "evidence": [
+    {
+      "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/archive/host-emulated-opencode-v2-management-ui.log",
+      "blob": "86d264558824a349c62eedf794a3a5ed2828ec11",
+      "bytes": 1544,
+      "sha256": "045878e1e88ba1732ab7d5c03cabd368f6b343fbbc9573f3f08f41f78e2472c6"
+    },
+    {
+      "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/archive/TEST-desktop-backend-dpoqO5/desktop-backend-app.log",
+      "blob": "d2e3dfb9a98dc8f384a4adcb0beaefda84441f5d",
+      "bytes": 11213,
+      "sha256": "8eb7c4c08e22d620071c77fb20f2baaff837c70aab3d53620706f88fcd015992"
+    },
+    {
+      "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/archive/TEST-desktop-backend-dpoqO5/desktop-backend-receipt.json",
+      "blob": "bf50b28cce01bfb953aa8d243d9d3bdae1e325eb",
+      "bytes": 698424,
+      "sha256": "1ecfe58c9fc3b49a83e65cd31e83ba34c381f7e1980a78c83ee374d76bdefd46"
+    },
+    {
+      "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/archive/TEST-desktop-backend-dpoqO5/hoststore/runtime-sources/index.json",
+      "blob": "0ca03a1b2e43eb1be929a417a3a46c24cb0ec17c",
+      "bytes": 2201,
+      "sha256": "00de049755c024320f7e05444e05f28d4ed5d11a0e40002d413e9c60c94dcce3"
+    },
+    {
+      "path": "/workspace/scratch/c2f5ff7c30ee/cohort-608-preservation-0442/v2-133062441738.log",
+      "blob": "337cb3d4eaa523bb2911473b25eb36135e1d0597",
+      "bytes": 111977,
+      "sha256": "11f743a78d0efcfdb36343ceddff59c0dd05f1f6c81a417c6584a141ef842bbb"
+    }
+  ],
+  "retainedCommandRecords": [
+    {
+      "file": "archive/TEST-desktop-backend-dpoqO5/hoststore/management-commands/2354e94c93297af74d3612e3a71cb75ee45204d4e62efdd0450f27234c019c00.json",
+      "kind": "credential.set",
+      "phase": "completed",
+      "resourceHeld": false,
+      "commandId": "84e90e2f-9a1e-4818-9a7f-3526415e9667",
+      "blob": "32dc6b21f33408ca3204d09f733add0d0b274e0b",
+      "bytes": 1345,
+      "sha256": "ebbb2d2c5eb73a3c8c0857d4bc1b530f7c5fa8901c2b0d3376086ad640291677"
+    },
+    {
+      "file": "archive/TEST-desktop-backend-dpoqO5/hoststore/management-commands/ef45e3c49e72575bee34348d81aef4c2ac9637a704c30a241723ed19417bd596.json",
+      "kind": "credential.set",
+      "phase": "held",
+      "resourceHeld": false,
+      "commandId": "12eca69e-d177-4a31-a241-d79fa1c873ad",
+      "blob": "10df166b2de85d15c612582c87a2b106dd1cdaa5",
+      "bytes": 1370,
+      "sha256": "c7ecb8c02bc7877919f57512615bac72860d35afb7acc046e67b0e72a365784d"
+    },
+    {
+      "file": "archive/TEST-desktop-backend-dpoqO5/hoststore/management-commands/fefd432972665517b8cf09828d0c0988c315e9255e1ee3e885877ad992e9298d.json",
+      "kind": "runtime.source",
+      "phase": "published",
+      "resourceHeld": false,
+      "commandId": "ebddf58e-5072-4cdf-8108-67440f6e034b",
+      "blob": "c3d550eccfc658ce26233e39c5a7116cd683c94c",
+      "bytes": 2811,
+      "sha256": "9eefcb8f42f46b36220b1411130d11ea7fc379d7f07aba44bbd001c5adb9e7e9"
+    }
+  ],
+  "runtimeSourceIndexRecords": 1,
+  "timingContextOnly": {
+    "uiModelsWaitMs": 30000,
+    "mainHostRequestCapMs": 60000,
+    "hostManagementCapMs": 120000
+  },
+  "noQueueOccupancyOrRequestJoinEvidence": true,
+  "projectExecution": false,
+  "gitReadsOnly": true,
+  "canonicalMutation": false,
+  "gitOrIndexWrites": false,
+  "networkRetrievals": 0
+}

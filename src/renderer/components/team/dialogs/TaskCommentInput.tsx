@@ -284,7 +284,8 @@ export const TaskCommentInput = ({
           minRows={2}
           maxRows={6}
           maxLength={MAX_TEXT_LENGTH}
-          disabled={addingComment || !controller.isOwner}
+          disabled={addingComment}
+          readOnly={!controller.isOwner}
           cornerAction={
             <div className="flex items-center gap-2">
               <Tooltip>

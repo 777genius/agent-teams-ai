@@ -79,6 +79,8 @@ export function projectTeamActivityLogs(
           : { lastOutputPreview: text(log.lastOutputPreview, true) }),
         events: log.events.map((raw) => {
           const event = projectEvent(raw);
+          if ('taskId' in selected && event.data.kind === 'process-output')
+            throw new Error('Unattributed process output in task logs');
           if (event.data.kind === 'state' || event.data.kind === 'interaction')
             throw new Error('Not a log content fact');
           return {
