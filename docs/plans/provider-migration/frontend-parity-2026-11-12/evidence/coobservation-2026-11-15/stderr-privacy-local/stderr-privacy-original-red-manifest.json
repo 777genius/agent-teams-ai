@@ -1,0 +1,48 @@
+{
+  "sourceHead": "0c534c9eed4c99b8cb85fb2e0860226beb0a4a7d",
+  "sourceTree": "b2eed58316093e85aacbc6bf74ffcbfb1673991a",
+  "publishedR1": "7129c83e73e17b0f79d6116dc14a7f811596d647",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--test",
+    "--test-concurrency=1",
+    "packages/legacy-agent-host/tests/member-process-stderr.test.ts"
+  ],
+  "startedAt": "2026-11-16T01:03:51.870574+00:00",
+  "completedAt": "2026-11-16T01:03:52.046664+00:00",
+  "exitCode": 1,
+  "sourceFiles": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+      "bytes": 7855,
+      "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "blob": "2891a53b464c400c64ab41dd99674ac6c463b39a",
+      "bytes": 17991,
+      "sha256": "99af998fb6d65e0e5b7f3957268a07898530c985aebbebed55df6bc3c3e2c493"
+    }
+  ],
+  "originalBuiltDist": {
+    "sha256": "352833eba40dc6c8e463ea4888d30c967a591bea439814d7e529a5027ac80965",
+    "bytes": 8126,
+    "mtimeNs": 1794788625983090701,
+    "builtFrom": "a3a9f56baf00a67f18256caea7721c3f6b954ca3",
+    "originalBuildStartedAt": "2026-11-16T00:23:43.745119+00:00",
+    "originalBuildCompletedAt": "2026-11-16T00:23:46.304528+00:00",
+    "unchangedSincePreflight": true
+  },
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "dependencyGraph": "unchanged frozen c79 pair from a3a9",
+  "resourceFlags": null,
+  "statusAfter": "",
+  "raw": {
+    "path": "stderr-privacy-original-red.log",
+    "bytes": 6778,
+    "sha256": "5952611e1a536690797b5e53473fa413b13aa30ffa159e7c27a3d5e0dfc41759"
+  },
+  "qualification": "Actual whole-file original-producer observation; semantic RED requires full raw review, not just exit1"
+}

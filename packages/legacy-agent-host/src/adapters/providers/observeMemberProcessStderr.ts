@@ -97,8 +97,11 @@ export function observeMemberProcessStderr(
   const emit = (value: RuntimeProcessOutput) => {
     try { observer(value); } catch { /* Observations never replace provider outcomes. */ }
   };
-  let secrets: string[];
-  try { secrets = privateValues(context, args); }
+  let secrets: string[], normalizedSecrets: string[];
+  try {
+    secrets = privateValues(context, args);
+    normalizedSecrets = secrets.map(secret => secret.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  }
   catch { emit({ kind: 'gap', reason: 'oversized' }); return; }
   let pending = Buffer.alloc(0), oversized = false, suppressed = false, finished = false, scanTail = '';
   const line = (bytes: Buffer) => {
@@ -113,7 +116,9 @@ export function observeMemberProcessStderr(
     const text = redactPrivateValues(redactSyntax(value), secrets);
     if (text) emit(Buffer.byteLength(text) > MAX_LINE_BYTES
       ? { kind: 'gap', reason: 'oversized' }
-      : { kind: 'process-output', stream: 'stderr', text });
+      : { kind: 'process-output', stream: 'stderr',
+        text: text === redactSyntax(redactPrivateValues(value.replace(/\s+/g, ' ').trim(), normalizedSecrets))
+          ? text : '[redacted]' });
   };
   const complete = () => {
     const bytes = pending, dropped = oversized;
