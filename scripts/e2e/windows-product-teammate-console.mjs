@@ -62,6 +62,7 @@ let teamAliveBeforeAttach = null;
 let attachLivenessDiagnostics = null;
 let addMemberIpcReceipt = null;
 let forceExitMember;
+let forceExitOwnedLauncher;
 let forceExitHeldTool;
 let forceExitPidEvidence = null;
 let hwndObserver;
@@ -182,6 +183,22 @@ async function ownedStillAlive(before) {
   // Never signal or wait for that unrelated successor.
   if (now.creation !== before.creation) return false;
   return true;
+}
+
+/** Verify the original owned teammate wrapper in the live Win32 ancestry, not by assuming
+ * the runtime snapshot's PID names the wrapper rather than its real CLI child. */
+async function findOriginalTeammateJobLauncher(member, teamName) {
+  let current = member;
+  const inspected = [];
+  for (let depth = 0; depth < 8 && current; depth++) {
+    inspected.push({ pid: current.pid, parent: current.parent, command: current.command });
+    if (current.command?.toLowerCase().includes('teammate.exe') &&
+        current.command.includes(teamName)) return current;
+    if (!Number.isSafeInteger(current.parent) || current.parent <= 0) break;
+    current = await getProcess(current.parent);
+  }
+  throw new Error('Product lead has no verified original Windows Job launcher ancestor: ' +
+    JSON.stringify(inspected));
 }
 
 async function freePort() {
@@ -550,8 +567,10 @@ async function run() {
   }, 150_000);
   assert(forceExitMember.pid !== originalMember.pid,
     'Forced-exit product member must be a new process, not a recycled stopped member');
-  assert(forceExitMember.command.toLowerCase().includes('teammate.exe'),
-    'Forced-exit lead must use an owned Windows Job launcher');
+  forceExitOwnedLauncher = await findOriginalTeammateJobLauncher(
+    forceExitMember, forcedTeamName);
+  assert(await ownedStillAlive(forceExitOwnedLauncher),
+    'Owned Windows Job launcher retired before forced Electron Main shutdown');
   assert(await ownedStillAlive(forceExitMember),
     'Forced-exit teammate had already retired before Electron Main was killed');
   // Qualify the actual Electron force-exit path with a live native tool
@@ -580,8 +599,11 @@ async function run() {
   while (Date.now() < forceExitDeadline) {
     const memberNow = await getProcess(forceExitMember.pid);
     const toolNow = await getProcess(forceExitHeldTool.pid);
+    const launcherNow = forceExitOwnedLauncher.pid === forceExitMember.pid
+      ? memberNow : await getProcess(forceExitOwnedLauncher.pid);
     const memberAlive = memberNow?.creation === forceExitMember.creation;
     const toolAlive = toolNow?.creation === forceExitHeldTool.creation;
+    const launcherAlive = launcherNow?.creation === forceExitOwnedLauncher.creation;
     forceExitPidEvidence = {
       member: {
         pid: forceExitMember.pid, originalBirthAlive: memberAlive,
@@ -589,6 +611,13 @@ async function run() {
         commandStillOwned: memberAlive
           ? memberNow.command.includes(forcedTeamName) : null,
         parentPid: memberAlive ? memberNow.parent : null,
+      },
+      launcher: {
+        pid: forceExitOwnedLauncher.pid, originalBirthAlive: launcherAlive,
+        reusedPid: Boolean(launcherNow && !launcherAlive),
+        commandStillOwned: launcherAlive
+          ? launcherNow.command.includes(forcedTeamName) : null,
+        parentPid: launcherAlive ? launcherNow.parent : null,
       },
       tool: {
         pid: forceExitHeldTool.pid, originalBirthAlive: toolAlive,
@@ -598,7 +627,7 @@ async function run() {
         parentPid: toolAlive ? toolNow.parent : null,
       },
     };
-    if (!memberAlive && !toolAlive) {
+    if (!memberAlive && !launcherAlive && !toolAlive) {
       forceExitDescendantsRetired = true;
       break;
     }
@@ -624,6 +653,7 @@ async function run() {
     forceAppExitDescendantsVerified: true,
     forcedElectronMainPid: mainBirth.pid,
     forceExitTeammatePid: forceExitMember.pid,
+    forceExitOwnedLauncherPid: forceExitOwnedLauncher.pid,
     forceExitHeldToolPid: forceExitHeldTool.pid,
     forceExitPidEvidence,
     screenshot: path.basename(screenshot), runtimeVersion: lock.version,
@@ -694,6 +724,7 @@ try {
     { identity: originalMember, marker: teamName },
     { identity: heldTool, marker: 'powershell.exe' },
     { identity: forceExitMember, marker: teamName + '-force' },
+    { identity: forceExitOwnedLauncher, marker: 'teammate.exe' },
     { identity: forceExitHeldTool, marker: 'powershell.exe' },
   ]) {
     if (!identity) continue;
