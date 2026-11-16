@@ -1,0 +1,141 @@
+{
+  "kind": "INERT_P10_B2_FROZEN_FIVE_SOURCE_SET",
+  "revision": "closed-env-actual-attachment-terminal-order-v4",
+  "parentBinding": null,
+  "sourceSelection": false,
+  "projectExecution": false,
+  "planBefore": {
+    "gitBlob": "509311af179416e647f8571126746ab09333f5c0",
+    "bytes": 156904
+  },
+  "files": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.ts",
+      "before": {
+        "gitBlob": "fad33b79cb0e6f780d1c2caf435b11e07c03bf87",
+        "bytes": 12509,
+        "sha256": "c797fe0d8e9c9f9819a79dbcc638bd4d96d5e56f32f4101a85e4f2d7ff3ae917",
+        "lines": 200
+      },
+      "after": {
+        "gitBlob": "369505df3d6a37b5833550954f4ef2a1c501b342",
+        "bytes": 17743,
+        "sha256": "ba42719bae92fb4c5a6e6a307100e873b096a03594a2c6755b1fddd15ed695a8",
+        "lines": 269
+      },
+      "beforeCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/before/scripts/legacy-agent-host/desktop-retained-opencode-model.ts",
+      "afterCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/after/scripts/legacy-agent-host/desktop-retained-opencode-model.ts",
+      "forwardExact": true,
+      "reverseExact": true,
+      "addedLines": 75,
+      "removedLines": 6
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "before": {
+        "gitBlob": "507b2e4243e99a2285822ea8bce8103760c43022",
+        "bytes": 43481,
+        "sha256": "cf7f4fd9661ffaccac2b520bda40c455f0ec3954f4c5c1efbcaf74270f3c9fe7",
+        "lines": 600
+      },
+      "after": {
+        "gitBlob": "a910209438b29f04ea4a30f28e69620d98802183",
+        "bytes": 54340,
+        "sha256": "df5a4d103e63525991854ce8054588b2fcd9d56e21e90efd7ebd6d95414432bc",
+        "lines": 727
+      },
+      "beforeCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/before/scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "afterCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/after/scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "forwardExact": true,
+      "reverseExact": true,
+      "addedLines": 131,
+      "removedLines": 4
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "before": {
+        "gitBlob": "71cc2aa1c55540d027bdf321120e850cb650f0c3",
+        "bytes": 37580,
+        "sha256": "2930df9471446610ed3cf4a5642bc6d6314b8f946a5669e343ffee7058a205d9",
+        "lines": 577
+      },
+      "after": {
+        "gitBlob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+        "bytes": 49147,
+        "sha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef",
+        "lines": 727
+      },
+      "beforeCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/before/scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "afterCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/after/scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "forwardExact": true,
+      "reverseExact": true,
+      "addedLines": 160,
+      "removedLines": 10
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+      "before": {
+        "gitBlob": "053b6c09383aeae5186322b2e8b0b17fc8cd1021",
+        "bytes": 10565,
+        "sha256": "1eb5e8a3e14eee4babe9102074fc17b1c1dffee5e1a04ae4993319fefc6f3336",
+        "lines": 178
+      },
+      "after": {
+        "gitBlob": "45f0d34a10f1928c0ecc7e102a5015188d193ccf",
+        "bytes": 14802,
+        "sha256": "4088858201c2ba46b2c6d2d0957340f7b313ec1a5cfb391240c1a759ada926d7",
+        "lines": 236
+      },
+      "beforeCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/before/scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+      "afterCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/after/scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+      "forwardExact": true,
+      "reverseExact": true,
+      "addedLines": 58,
+      "removedLines": 0
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "before": {
+        "gitBlob": "478323fbcb60bc0b0f29c0e430fdb3d001d0a456",
+        "bytes": 189024,
+        "sha256": "b65900ed9394287e42c67d147fa15349f098c6fa074d74403789112c27f7f1b4",
+        "lines": 2818
+      },
+      "after": {
+        "gitBlob": "4e4554ec3330d0c06b0736e861348d7279511361",
+        "bytes": 199733,
+        "sha256": "76e4d2d8e21ba6d2fefdc7aa8c06eb24cc831caa0c2d08939a6a66ec378dc66b",
+        "lines": 2927
+      },
+      "beforeCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/before/.github/workflows/ci.yml",
+      "afterCopy": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/after/.github/workflows/ci.yml",
+      "forwardExact": true,
+      "reverseExact": true,
+      "addedLines": 115,
+      "removedLines": 6
+    }
+  ],
+  "patch": {
+    "gitBlob": "00113be820c82452468f40c43e18833aba9aab72",
+    "bytes": 63740,
+    "sha256": "f703b2b8aa75e0b4064d9c21024d72c45fe1c1d8130cba2fc45c374cf2042d6f",
+    "lines": 798
+  },
+  "sourceImages": {
+    "gitBlob": "4516f663acdef933d8b8f8238888fb1c516cecf5",
+    "bytes": 643070,
+    "sha256": "56ea2ca335154ba978de90e541f8ba9ace6f332f1df3f383c9577046034bbdd4",
+    "lines": 91
+  },
+  "preservation": {
+    "gitBlob": "a1d27c3e70fcb3c5519c11a5210f35ac6abf54bb",
+    "bytes": 15394,
+    "sha256": "68b77dc2f68d2c13bc2534ad60116ad42935f344b6238074bfce47824ea939e0",
+    "lines": 817
+  },
+  "supersedes": {
+    "oldRunner": "40545ace89e28ed96c296b1cc9d7b73a801a68c9",
+    "oldPatch": "6b0bc244ecd58ce80938a4cc39b1f2577b98dcd4",
+    "reason": "Require the future deliveredUserMessageId only after the already selected same-row wait reaches responded; preserve all prior actor/task/session checks and same wait budget. App4f conditional expansion and closed Git environment retained."
+  }
+}

@@ -1,0 +1,183 @@
+{
+  "kind": "INDEPENDENT_PUBLISHED_PLAN46_SEMANTIC_R2",
+  "disposition": "APPROVE_SOURCE_ONLY",
+  "sourceIdentity": {
+    "packet": {
+      "bytes": 252640,
+      "gitBlob": "04424c3b66a05edf781929481077c5791eaaf62f",
+      "sha256": "e588be31595bed71fdf528f9facedf75414c142450d5a5ea2518dcc8db39cc13",
+      "lines": 438
+    },
+    "governingPlan46": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/46-composer-command-availability-2026-11-16.md",
+      "bytes": 12469,
+      "gitBlob": "92b58dfe69da83c2571121a2d8d67065c4bfe0c3",
+      "sha256": "021379f20a9dbed39d2e758076b266ef2ad1951442c57faa9268eb2f3e5ea0da",
+      "lines": 69
+    },
+    "commit": "efca69211fa3c23c02e0404a2d829d1a5c0c4841",
+    "parent": "56c925464087e6f95b5309de77e7f7a6682cff7f",
+    "tree": "9b60625622515c8885f10c026d9bfcdcd943fd94",
+    "leafCount": 11055,
+    "files": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "before": {
+          "bytes": 105537,
+          "gitBlob": "34e7447dffd5ce545f17cbe873db91aa975d43ea",
+          "sha256": "fe5df0a3f811c544fd941e3192ac8edef3604f8f7e9f710b1437a349d0b235d3",
+          "lines": 1360
+        },
+        "after": {
+          "bytes": 105599,
+          "gitBlob": "941fc37fa9da9d15bad80acfec8f03b3cb266359",
+          "sha256": "c6c1736d597be39faa44e5b502f34ea3d47dce80a2b09a63818c7fc462184897",
+          "lines": 1361
+        },
+        "exactInverse": true,
+        "additions": 2,
+        "deletions": 1
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "before": {
+          "bytes": 21454,
+          "gitBlob": "0fe5cdf19fdd28b224c505d831bea97d89837d05",
+          "sha256": "2ea994f1c1716d1ec3e8f887a0df27212a90bb57cde6ca26f301439b7085d7a4",
+          "lines": 329
+        },
+        "after": {
+          "bytes": 21557,
+          "gitBlob": "443f498018e63a23b33fe887b0381ccc2833d2d2",
+          "sha256": "91a29639fd383caf835a4b8811d453ee8bb075764d157029af8fb9059c98b7f7",
+          "lines": 331
+        },
+        "exactInverse": true,
+        "additions": 2,
+        "deletions": 0
+      },
+      {
+        "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+        "before": {
+          "bytes": 52375,
+          "gitBlob": "94a360626de2ee67ceac964e3fd8529d345e3843",
+          "sha256": "12bd4d337c50ac6308e72e583f29b791be3c9effe7b8b71dcdefa2cc9676133a",
+          "lines": 1431
+        },
+        "after": {
+          "bytes": 52343,
+          "gitBlob": "17de0f929ba013629b6a94a36688f705147673d4",
+          "sha256": "83b0a188b3c524482735399c860f7c47da741ba8ae160ae37d12661981710343",
+          "lines": 1429
+        },
+        "exactInverse": true,
+        "additions": 5,
+        "deletions": 7
+      },
+      {
+        "path": "src/renderer/hooks/useMentionDetection.ts",
+        "before": {
+          "bytes": 12294,
+          "gitBlob": "d0c4d0c3ddccf8caf13a13dbfe5971ad0678f96e",
+          "sha256": "0223931871187f7e905acdf23d3386c627264885c7b61d6dcbfb269b6aa450c3",
+          "lines": 379
+        },
+        "after": {
+          "bytes": 13556,
+          "gitBlob": "f8b5d3ef1213001fba4e943742bec0f1cbb8ba05",
+          "sha256": "0f5ebf912d18740c93110c978fd8eb928296ba13b76b3aa2bd8b070e747594f0",
+          "lines": 421
+        },
+        "exactInverse": true,
+        "additions": 101,
+        "deletions": 59
+      },
+      {
+        "path": "test/renderer/hooks/useMentionDetection.test.ts",
+        "before": {
+          "bytes": 2439,
+          "gitBlob": "83be0ff8e2b731490fbef7c51175dff110036947",
+          "sha256": "6ca184c42ebce75b4c288a494aabead295ba984ebcbc82c388c4d8c411dcc8e0",
+          "lines": 70
+        },
+        "after": {
+          "bytes": 12198,
+          "gitBlob": "cb9eb07f2bbfe4d213e4ec39ceae54bb828399fd",
+          "sha256": "74bb24c5c86495a4243778a3b058bda97f5fa9be7b37b1b0b752bca31f935821",
+          "lines": 311
+        },
+        "exactInverse": true,
+        "additions": 243,
+        "deletions": 2
+      }
+    ],
+    "original13ParserCasesByteExact": true,
+    "newActualHookCasesStaticExpandedCount": 20,
+    "expectedTotalFullFileCases": 33,
+    "twoRosterRowsOnly": true,
+    "existingDynamicTriggerExpressionByteExact": true,
+    "readonlyHandlersByteExact": true,
+    "projectExecution": false
+  },
+  "method": "Read retained full after-images and governing published Plan46; independently inverse every exact unified hunk to complete before Git blobs. Data-only Python/hash/JSON/text operations only; no application imports, hook/test execution, compiler, lint, browser, native, API or source mutation.",
+  "findings": [
+    {
+      "area": "Bounded ownership of pending input",
+      "status": "APPROVE",
+      "source": "useMentionDetection.ts198-217,282-348",
+      "reason": "Exactly one nullable observation is recorded only after a real change/select finds no active valid trigger, for the same connected focused editable collapsed textarea. Pending contains original element/text/endpoints only, no catalog/provider authority. Deferred activation requires the same ref/element/connectivity/focus/editability/text/caret and original recognition/enable/validation gates; mismatch clears pending."
+    },
+    {
+      "area": "Scalar availability transition",
+      "status": "APPROVE",
+      "source": "useMentionDetection.ts202-205,312-348",
+      "reason": "The enabled supported character set is deduplicated/sorted/serialized. The effect begins with scalar equality and returns before reading DOM or pending state on identity-only rerenders. A genuine transition may re-evaluate one original observation; without pending it performs no state update. A still unsupported/invalid trigger remains closed. activateTrigger clears pending before opening."
+    },
+    {
+      "area": "Actual event text and stable activation",
+      "status": "APPROVE",
+      "source": "useMentionDetection.ts262-309,350-365",
+      "reason": "Change and select use event.currentTarget and its current value, eliminating render-captured stale selection text. Both use the same activation helper. Original text-change reset and same-query select navigation-index preservation remain. The helper does not add a timer, synthetic event, read loop, text/focus/caret write or provider request."
+    },
+    {
+      "area": "Explicit dismissal, Escape and IME",
+      "status": "APPROVE",
+      "source": "useMentionDetection.ts207-217,368-403; MentionableTextarea.ts919-964",
+      "reason": "dismiss clears pending and original state. Non-IME closed-menu Escape clears pending before the existing open/count guard and does not newly consume the key. Textarea passes non-IME events to the already-guarded hook; its subsequent defaultPrevented return retains the old isOpen+nonempty scope. The existing above-popup Escape path and early IME return remain. Navigation/Enter/special composer/chip paths retain their owners."
+    },
+    {
+      "area": "Original dynamic grammar/readOnly behavior",
+      "status": "APPROVE",
+      "reason": "The exact dynamic triggerChars expression remains, so unavailable slash does not steal @src/file recognition. Per-trigger enable and slash-leading validation stay intact. Existing readOnly suppression of input/key/select handlers is byte-exact. No task authority/submit/owner guard is widened."
+    },
+    {
+      "area": "Meaningful existing-file tests",
+      "status": "APPROVE_STATIC",
+      "reason": "The original13 parser cases and assertions are byte-exact after imports. Twenty expanded new cases mount the real hook with a real happy-dom textarea, while controlling prop commits and invoking actual hook event callbacks. They cover late supported character and enable predicate, stale select, dismiss/Escape, eight identity/editability mismatches, @ path grammar, three invalid strings, navigation/Enter and both IME signals. These are hook semantics, not proof of full React Composer event integration or native Chromium behavior."
+    },
+    {
+      "area": "Source and validation closure",
+      "status": "APPROVE",
+      "reason": "Only two production dependencies append to the common supplementary source roster; the complete remainder/all exports/order invert exactly. Only one existing test operand appends to the fast-lint list (root117 to118); no command, parser, timeout, suite/config or existing operand is removed. Production textarea shrinks1431 to1429; hook421/test311 remain below800. No cap/baseline changes."
+    }
+  ],
+  "costAndLimits": [
+    "Each render now derives the scalar enabled signature and calls the supplied enable predicate for supported unique characters; the actual caller predicates are pure length/boolean reads. Identity-only rerenders still incur this scalar work and an effect equality check, not a claim of zero overhead.",
+    "A genuine availability transition adds bounded DOM reads and, if admitted, existing caret-position mirror measurement plus React state updates. It adds no polling/timer/input action.",
+    "Focus qualification is current focus only; no blur listener proves uninterrupted focus. The published plan explicitly retains this limit.",
+    "Only changes in the enabled supported-character set trigger deferred re-evaluation, not arbitrary catalog-content or validation-predicate changes with an identical set; this is the selected contract.",
+    "IME change/select can still display suggestions under the old contract; no new composition state machine is claimed.",
+    "Tests directly invoke actual hook callbacks in happy-dom; real Composer/Chromium order, provider behavior and original Claude route require resulting-source CI.",
+    "All source/type/lint/test execution outcomes remain unclaimed. Source review is retrospective and does not manufacture prepublication review chronology."
+  ],
+  "historicalEvidenceBoundary": {
+    "rawJob": 133387314546,
+    "sourceHead": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+    "result": "INCOMPLETE; one slash followed by original suggestion-read timeout before option click or Send",
+    "cause": "Not established. Late catalog and textarea state are explicitly non-atomic with input; these independently reachable hook defects are not asserted as the historical cause.",
+    "uiAuditCorrection": "My original UI audit labeled cost from a late diagnostic; corrected audit a05fd3f55ce0a41f78e8daca7c57100437561808 now states generic requested command. Published Plan46 names compact first; this review does not independently claim that caller loop body was retained."
+  },
+  "concreteBlockers": [],
+  "requestedChanges": [],
+  "futureQualification": "Original resulting-source full types, typed lint, complete safe frontend shard and original Claude UI lane; no local or new mandatory CI cycle selected."
+}

@@ -1,0 +1,798 @@
+--- a/scripts/legacy-agent-host/desktop-retained-opencode-model.ts
++++ b/scripts/legacy-agent-host/desktop-retained-opencode-model.ts
+@@ -36,20 +36,25 @@
+ }
+ 
+ /** A finite inference oracle. Only the genuine selected engines execute tools or write history. */
+-export async function startRetainedOpenCodeModel(options: { sourceSelection?: true } = {}) {
++export async function startRetainedOpenCodeModel(options: { sourceSelection?: true;
++  donorReview?: { filePath: string; before: string; after: string } } = {}) {
+   const observations: { owner: 'legacy' | 'host'; marker: string | null; tools: string[];
+     strictLaunch?: { model: string; challenge: string }; sourcePreflight?: true;
+-    preparationCommandId?: 'TEST-coexist-launch-once' }[] = [];
++    preparationCommandId?: 'TEST-coexist-launch-once'; donorStage?: 'read' | 'edit' | 'reply';
++    toolCallId?: string; toolResultIds?: string[] }[] = [];
+   const failures: string[] = [];
+   const markers = new Set<string>();
+   let expectedSource: SourceMarker | undefined;
+   let hostPreparation: { active: boolean; consumed: number } | undefined;
++  let donorStep = 0, donorPrompt: string | undefined;
++  assert.ok(!(options.sourceSelection && options.donorReview));
+   const server = createServer((request, response) => {
+     void (async () => {
+       assert.equal(failures.length, 0, 'seal after the first model contract failure');
+       const owner = request.url?.startsWith('/legacy/') ? 'legacy' :
+         request.url?.startsWith('/host/') ? 'host' : null;
+       assert.ok(owner, 'one selected owner-specific inference endpoint');
++      if (options.donorReview) assert.equal(owner, 'legacy', 'donor model is unavailable to a Host');
+       if (request.method === 'GET' && request.url === `/${owner}/v1/models`) {
+         response.writeHead(200, { 'content-type': 'application/json' });
+         response.end(JSON.stringify({ object: 'list', data: [{ id: 'TEST-model', object: 'model' }] }));
+@@ -74,6 +79,9 @@
+       let strictLaunch: { model: string; challenge: string } | undefined;
+       let sourcePreflight: true | undefined;
+       let preparationCommandId: 'TEST-coexist-launch-once' | undefined;
++      let donorStage: 'read' | 'edit' | 'reply' | undefined;
++      let toolCall: { id: string; type: 'function'; function: { name: string; arguments: string } } | undefined;
++      let toolResultIds: string[] | undefined;
+       if (options.sourceSelection) {
+         assert.equal(owner, 'host', 'source-selection inputs belong to the original Host');
+         assert.equal(JSON.stringify(messages).includes('TEST_RETAINED_V1_'), false);
+@@ -108,6 +116,62 @@
+           assertNoToolMessageRoles(messages);
+           sourcePreflight = true;
+         }
++      } else if (options.donorReview && lastUser?.includes('TEST_RETAINED_V1_HISTORY')) {
++        assert.equal(owner, 'legacy', 'only the selected genuine donor may request native edits');
++        assert.equal(JSON.stringify(messages).includes('TEST_OWNED_V2_'), false);
++        assert.ok(donorStep < 3, 'one Read, one Edit and one reply for the single original Send');
++        const selected = options.donorReview;
++        assert.ok(selected.filePath.startsWith('/') && selected.before && selected.after !== selected.before);
++        const row = (value: unknown): Record<string, unknown> => {
++          assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Record<string, unknown>;
++        };
++        const users = messages.filter(message => message.role === 'user' &&
++          JSON.stringify(message.content).includes('TEST_RETAINED_V1_HISTORY'));
++        assert.equal(users.length, 1, 'the one business prompt is never resubmitted');
++        if (donorStep === 0) {
++          assert.equal(markers.has('TEST_RETAINED_V1_HISTORY'), false);
++          donorPrompt = lastUser; marker = 'TEST_RETAINED_V1_HISTORY'; markers.add(marker);
++        } else assert.equal(lastUser, donorPrompt, 'only tool results continue the original prompt');
++        const actions = [
++          { id: 'TEST_DONOR_REVIEW_READ', name: 'read', input: { filePath: selected.filePath } },
++          { id: 'TEST_DONOR_REVIEW_EDIT', name: 'edit', input: {
++            filePath: selected.filePath, oldString: selected.before, newString: selected.after, replaceAll: false,
++          } },
++        ];
++        const catalog = (Array.isArray(body.tools) ? body.tools : []).map(row).map(tool => row(tool.function));
++        tools = catalog.map(tool => { assert.equal(typeof tool.name, 'string'); return tool.name as string; });
++        for (const action of actions) {
++          const offered = catalog.filter(tool => tool.name === action.name);
++          assert.equal(offered.length, 1, 'the original donor advertises the exact native tool');
++          const schema = row(offered[0]!.parameters), properties = row(schema.properties);
++          assert.equal(schema.type, 'object'); assert.ok(Array.isArray(schema.required));
++          for (const key of Object.keys(action.input)) {
++            assert.equal(row(properties[key]).type, key === 'replaceAll' ? 'boolean' : 'string');
++            if (key !== 'replaceAll') assert.ok(schema.required.includes(key));
++          }
++          assert.ok(schema.required.every(key => typeof key === 'string' && Object.hasOwn(action.input, key)));
++        }
++        const tail = messages.slice(messages.findLastIndex(message => message.role === 'user') + 1).map(row);
++        const calls = tail.filter(message => message.role === 'assistant').flatMap(message =>
++          Array.isArray(message.tool_calls) ? message.tool_calls.map(row) : []);
++        const results = tail.filter(message => message.role === 'tool');
++        assert.equal(calls.length, donorStep); assert.equal(results.length, donorStep);
++        toolResultIds = [];
++        for (let index = 0; index < donorStep; index++) {
++          const action = actions[index]!, call = calls[index]!, result = results[index]!;
++          assert.equal(call.id, action.id); assert.equal(call.type, 'function');
++          assert.equal(row(call.function).name, action.name);
++          assert.deepEqual(JSON.parse(String(row(call.function).arguments)), action.input);
++          assert.equal(result.tool_call_id, action.id); toolResultIds.push(action.id);
++          assert.ok(typeof result.content === 'string' || Array.isArray(result.content));
++          if (index === 0) assert.ok(JSON.stringify(result.content).includes(selected.before.trim()),
++            'the actual native Read returns the preexisting Git fixture before Edit');
++        }
++        donorStage = (['read', 'edit', 'reply'] as const)[donorStep]!;
++        const action = actions[donorStep]; donorStep++;
++        if (action) toolCall = { id: action.id, type: 'function', function: {
++          name: action.name, arguments: JSON.stringify(action.input),
++        } };
+       } else {
+         const ownPrefix = owner === 'legacy' ? 'TEST_RETAINED_V1_' : 'TEST_OWNED_V2_';
+         const otherPrefix = owner === 'legacy' ? 'TEST_OWNED_V2_' : 'TEST_RETAINED_V1_';
+@@ -115,6 +179,7 @@
+           'no business input or history crosses the original owner boundary');
+         marker = [...lastUser?.matchAll(/TEST_(?:RETAINED_V1|OWNED_V2)_(?:HISTORY|FIRST|AFTER_STOP)/g) ?? []].at(-1)?.[0] ?? null;
+         if (marker) {
++          assert.equal(options.donorReview, undefined, 'the donor accepts only its one HISTORY tool sequence');
+           assert.ok(owner !== 'host' || !hostPreparation?.active, 'Host business input cannot replace preparation');
+           assert.ok(marker.startsWith(ownPrefix));
+           assert.equal(markers.has(marker), false, 'no repeated business inference'); markers.add(marker);
+@@ -152,11 +217,14 @@
+         }
+       }
+       observations.push({ owner, marker, tools, ...(strictLaunch ? { strictLaunch } : {}),
+-        ...(sourcePreflight ? { sourcePreflight } : {}), ...(preparationCommandId ? { preparationCommandId } : {}) });
+-      const content = marker ? `REPLY_${marker}` : sourcePreflight || preparationCommandId ? 'OK' : strictLaunch?.challenge ?? 'PONG';
++        ...(sourcePreflight ? { sourcePreflight } : {}), ...(preparationCommandId ? { preparationCommandId } : {}),
++        ...(donorStage ? { donorStage, toolResultIds, ...(toolCall ? { toolCallId: toolCall.id } : {}) } : {}) });
++      const content = donorStage === 'reply' ? 'REPLY_TEST_RETAINED_V1_HISTORY' :
++        marker ? `REPLY_${marker}` : sourcePreflight || preparationCommandId ? 'OK' : strictLaunch?.challenge ?? 'PONG';
+       if (body.stream === true) {
+         response.writeHead(200, { 'content-type': 'text/event-stream' });
+-        for (const [delta, finish_reason] of [[{ role: 'assistant', content }, null], [{}, 'stop']] as const)
++        const message = toolCall ? { role: 'assistant', tool_calls: [{ index: 0, ...toolCall }] } : { role: 'assistant', content };
++        for (const [delta, finish_reason] of [[message, null], [{}, toolCall ? 'tool_calls' : 'stop']] as const)
+           response.write(`data: ${JSON.stringify({ id: `TEST-${owner}-${observations.length}`,
+             object: 'chat.completion.chunk', created: 1700000000, model: 'TEST-model',
+             choices: [{ index: 0, delta, finish_reason }] })}\n\n`);
+@@ -164,7 +232,8 @@
+       } else {
+         response.writeHead(200, { 'content-type': 'application/json' });
+         response.end(JSON.stringify({ id: `TEST-${owner}-${observations.length}`, object: 'chat.completion',
+-          model: 'TEST-model', choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }] }));
++          model: 'TEST-model', choices: [{ index: 0, message: toolCall ? { role: 'assistant', tool_calls: [toolCall] } :
++            { role: 'assistant', content }, finish_reason: toolCall ? 'tool_calls' : 'stop' }] }));
+       }
+     })().catch(error => {
+       failures.push(error instanceof Error ? error.message : 'model contract failure');
+--- a/scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts
++++ b/scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts
+@@ -516,7 +516,9 @@
+     general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark' },
+     httpServer: { enabled: false, port: await reservePort() },
+   }), { mode: 0o600, flag: 'wx' });
+-  const model = await startRetainedOpenCodeModel();
++  const reviewFixture = await prepareDonorReviewFixture(root, environment);
++  proof.reviewFixture = reviewFixture;
++  const model = await startRetainedOpenCodeModel({ donorReview: reviewFixture });
+   const errorsBefore = input.cleanupErrors.length;
+   let failure: unknown, completed = false;
+   const assertClosedInputs = async () => {
+@@ -539,9 +541,12 @@
+         node: { path: String(node.path) }, runtime: { path: String(runtime.path), sha256: String(runtime.sha256) },
+         custody: { sha256: String(custody.sha256) } }, v1: input.v1, env: environment, model, proof,
+       cleanupErrors: input.cleanupErrors, baseline: input.processBaseline, assertInputs: assertClosedInputs,
+-      preserveCorpus: teamName => preserveDonorCorpus(root, teamName),
++      reviewFixture, captureReview: identity => captureDonorReview(root, reviewFixture, identity, environment),
++      preserveCorpus: (teamName, taskId) => preserveDonorCorpus(root, teamName, taskId, reviewFixture),
+     });
+     assert.deepEqual(model.failures, []);
++    assert.deepEqual(model.observations.filter(row => row.donorStage).map(row => row.donorStage), ['read', 'edit', 'reply']);
++    assert.equal(await readFile(reviewFixture.filePath, 'utf8'), reviewFixture.after);
+     completed = true;
+   } catch (error) { failure = error; }
+   finally {
+@@ -564,8 +569,121 @@
+   assert.equal(proof.status, 'PASS', 'donor history and original cleanup are required before final PASS');
+ }
+ 
++/** Fresh CI-only Git input; the model cannot fabricate product history or Review events. */
++async function prepareDonorReviewFixture(root: string, environment: Record<string, string>) {
++  const project = join(root, 'project'), relativePath = 'TEST-donor-review.txt';
++  const before = 'TEST donor native review before\n', after = 'TEST donor native review after\n';
++  const filePath = join(project, relativePath);
++  await writeFile(filePath, before, { mode: 0o600, flag: 'wx' });
++  const git = (args: string[]) => execFileSync('/usr/bin/git', ['-C', project,
++    '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', ...args], { encoding: 'utf8', timeout: 5000,
++    env: { ...environment, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null',
++      GIT_AUTHOR_NAME: 'TEST donor', GIT_AUTHOR_EMAIL: 'test-donor@example.invalid',
++      GIT_COMMITTER_NAME: 'TEST donor', GIT_COMMITTER_EMAIL: 'test-donor@example.invalid',
++      GIT_AUTHOR_DATE: '2000-01-01T00:00:00Z', GIT_COMMITTER_DATE: '2000-01-01T00:00:00Z' } }).trim();
++  git(['init', '--template=', '--initial-branch=TEST-donor']);
++  await mkdir(join(project, '.git/info'), { recursive: true, mode: 0o700 });
++  await writeFile(join(project, '.git/info/exclude'), '/opencode.json\n', { mode: 0o600 });
++  git(['add', '--', relativePath]); git(['commit', '-m', 'TEST donor native Review input']);
++  assert.equal(git(['ls-files']), relativePath); assert.equal(git(['status', '--porcelain']), '');
++  const commit = git(['rev-parse', 'HEAD']), tree = git(['rev-parse', 'HEAD^{tree}']);
++  assert.match(commit, /^[a-f0-9]{40}$/); assert.match(tree, /^[a-f0-9]{40}$/);
++  const pngBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=', 'base64');
++  const png = { path: join(root, 'TEST-donor-task.png'), name: 'TEST-donor-task.png',
++    bytes: pngBytes.length, sha256: createHash('sha256').update(pngBytes).digest('hex') };
++  await writeFile(png.path, pngBytes, { mode: 0o600, flag: 'wx' });
++  return { filePath, relativePath, before, after, beforeSha256: digest(before), afterSha256: digest(after), commit, tree, png };
++}
++
++/** Read the old frontend's persisted strict-delivery join after its own Task Changes opened. */
++async function captureDonorReview(root: string, fixture: Awaited<ReturnType<typeof prepareDonorReviewFixture>>,
++  identity: Record<string, unknown>, environment: Record<string, string>) {
++  const value = (key: string) => { const item = identity[key]; assert.ok(typeof item === 'string' && item.length > 0); return item; };
++  const binding = Object.fromEntries(['teamName', 'runId', 'memberName', 'laneId', 'nativeSessionId',
++    'taskId', 'displayId', 'messageId'].map(key => [key, value(key)]));
++  assert.equal(binding.teamName, 'test-donor-4a-opencode-history'); assert.match(value('taskId'), /^[A-Za-z0-9_-]+$/);
++  const read = async (path: string) => {
++    assert.ok(path.startsWith(root + '/')); assert.equal(await realpath(path), path);
++    const before = await lstat(path, { bigint: true });
++    assert.ok(before.isFile() && !before.isSymbolicLink() && before.nlink === 1n && before.uid === BigInt(process.getuid!()));
++    assert.ok(before.size <= 8n * 1024n * 1024n, 'finite selected provenance file');
++    const bytes = await readFile(path), after = await lstat(path, { bigint: true });
++    assert.ok(before.dev === after.dev && before.ino === after.ino && before.size === after.size &&
++      before.mtimeNs === after.mtimeNs && before.ctimeNs === after.ctimeNs, 'same file throughout provenance read');
++    return { bytes, pin: { path: path.slice(root.length + 1), sha256: createHash('sha256').update(bytes).digest('hex') } };
++  };
++  const { file: deliveryFile, row: deliveryRow } = await waitFor(async () => {
++    const file = await read(join(root, 'claude/teams', value('teamName'), '.opencode-runtime/lanes',
++      encodeURIComponent(value('laneId')), 'opencode-prompt-delivery-ledger.json'));
++    const envelope = record(JSON.parse(file.bytes.toString('utf8')));
++    assert.equal(envelope.schemaVersion, 1); assert.ok(Array.isArray(envelope.data) && envelope.data.length <= 200);
++    const matches = envelope.data.map(record).filter(row => row.inboxMessageId === value('messageId'));
++    assert.equal(matches.length, 1); const row = matches[0]!;
++    for (const key of ['teamName', 'runId', 'memberName', 'laneId']) assert.equal(row[key], binding[key]);
++    assert.equal(row.runtimeSessionId, binding.nativeSessionId);
++    assert.ok(row.source === 'ui-send' || row.source === 'watcher');
++    assert.deepEqual(row.taskRefs, [{ taskId: value('taskId'), displayId: value('displayId'), teamName: value('teamName') }]);
++    assert.ok(['pending', 'accepted', 'responded'].includes(String(row.status)));
++    if (row.status !== 'responded') return null;
++    assert.ok(typeof row.deliveredUserMessageId === 'string' && row.deliveredUserMessageId.length > 0);
++    return { file, row };
++  }, 'original donor reply settles its exact delivery ledger', 30_000);
++  const projects = join(root, 'claude/projects'), names = await readdir(projects);
++  assert.ok(names.length <= 128); const journals: string[] = [];
++  for (const name of names) {
++    const path = join(projects, name, '.board-task-changes/events', value('taskId') + '.jsonl');
++    try { await lstat(path); journals.push(path); }
++    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT' && (error as NodeJS.ErrnoException).code !== 'ENOTDIR') throw error; }
++  }
++  assert.equal(journals.length, 1, 'one original donor task ledger');
++  const journal = await read(journals[0]!);
++  const events = journal.bytes.toString('utf8').trim().split('\n').filter(Boolean).map(line => record(JSON.parse(line)));
++  assert.ok(events.length > 0 && events.length <= 128);
++  for (const event of events) {
++    assert.ok(typeof event.eventId === 'string' && event.eventId.length > 0);
++    assert.equal(event.taskId, binding.taskId); assert.equal(event.toolUseId, 'TEST_DONOR_REVIEW_EDIT');
++    assert.equal(event.filePath, fixture.filePath); assert.equal(event.sourceRuntime, 'opencode');
++  }
++  assert.equal(new Set(events.map(row => row.eventId)).size, events.length);
++  const superseded = new Set<unknown>(events.map(row => row.supersedesEventId).filter(item => typeof item === 'string'));
++  for (const id of superseded) assert.ok(events.some(row => row.eventId === id));
++  const active = events.filter(row => row.suppressed !== true && !superseded.has(row.eventId));
++  assert.equal(active.length, 1); const selected = active[0]!;
++  for (const [key, expected] of Object.entries({ taskRef: value('taskId'), taskRefKind: 'canonical', phase: 'work',
++    sessionId: value('nativeSessionId'), memberName: value('memberName'), relativePath: fixture.relativePath,
++    source: 'opencode_toolpart_edit', sourceProvider: 'opencode', sourceSessionId: value('nativeSessionId'),
++    parentUserMessageId: deliveryRow.deliveredUserMessageId, attributionMethod: 'delivery-ledger-taskrefs',
++    toolStatus: 'succeeded', operation: 'modify', snapshotSource: 'opencode', confidence: 'high' })) assert.equal(selected[key], expected);
++  assert.ok(['opencode-snapshot', 'inverse-edit-chain'].includes(String(selected.evidenceProof)));
++  for (const key of ['eventId', 'sourcePartId', 'sourceMessageId', 'sourceImportKey', 'snapshotId'])
++    assert.ok(typeof selected[key] === 'string' && selected[key].length > 0);
++  const sides: Record<string, { sha256: string; bytes: number }> = {};
++  for (const [side, expected] of [['before', fixture.before], ['after', fixture.after]] as const) {
++    const ref = record(selected[side]); assert.equal(ref.sha256, digest(expected));
++    assert.equal(ref.sizeBytes, Buffer.byteLength(expected)); assert.equal(ref.blobRef, `sha256/${digest(expected)}`);
++    const blob = await read(join(dirname(dirname(journals[0]!)), 'blobs', String(ref.blobRef)));
++    assert.equal(blob.bytes.toString('utf8'), expected); sides[side] = { sha256: digest(expected), bytes: blob.bytes.length };
++  }
++  assert.equal(await readFile(fixture.filePath, 'utf8'), fixture.after);
++  const project = join(root, 'project');
++  const gitEnvironment = { ...environment, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' };
++  assert.equal(execFileSync('/usr/bin/git', ['-C', project, 'rev-parse', 'HEAD'],
++    { encoding: 'utf8', timeout: 5000, env: gitEnvironment }).trim(), fixture.commit);
++  assert.equal(execFileSync('/usr/bin/git', ['-C', project, 'rev-parse', 'HEAD^{tree}'],
++    { encoding: 'utf8', timeout: 5000, env: gitEnvironment }).trim(), fixture.tree);
++  const fields = (row: Record<string, unknown>, keys: string[]) => Object.fromEntries(keys.map(key => [key, row[key]]));
++  return { binding, delivery: fields(deliveryRow, ['id', 'source', 'status', 'inboxMessageId', 'deliveredUserMessageId',
++    'runtimeSessionId', 'runId', 'laneId', 'memberName', 'taskRefs']),
++    event: fields(selected, ['eventId', 'toolUseId', 'taskId', 'sessionId', 'memberName', 'filePath', 'relativePath',
++      'source', 'sourceRuntime', 'sourceProvider', 'sourceSessionId', 'sourcePartId', 'sourceMessageId',
++      'parentUserMessageId', 'attributionMethod', 'sourceImportKey', 'evidenceProof', 'snapshotId', 'snapshotSource',
++      'toolStatus', 'operation', 'confidence']),
++    before: sides.before!, after: sides.after!, sources: { delivery: deliveryFile.pin, journal: journal.pin } };
++}
++
+ /** Preserve raw stopped product/history bytes; exclude executables and unrelated Electron caches. */
+-async function preserveDonorCorpus(root: string, teamName: string) {
++async function preserveDonorCorpus(root: string, teamName: string, taskId: string,
++  fixture: Awaited<ReturnType<typeof prepareDonorReviewFixture>>) {
+   const directory = join(root, 'evidence-corpus');
+   const files: { path: string; copy: string; bytes: number; sha256: string }[] = [];
+   let totalBytes = 0;
+@@ -589,11 +707,20 @@
+     await writeFile(join(directory, copy), bytes, { mode: 0o600, flag: 'wx' });
+     files.push({ path: relative, copy, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
+   };
+-  for (const path of ['claude', 'runtime-data', 'data', 'state', 'config/opencode', 'project/opencode.json']) await visit(path);
++  assert.match(taskId, /^[A-Za-z0-9_-]+$/);
++  for (const path of ['claude', 'runtime-data', 'data', 'state', 'config/opencode', 'project/opencode.json',
++    `project/${fixture.relativePath}`, `userData/data/task-attachments/${teamName}/${taskId}`]) await visit(path);
+   assert.ok(files.some(row => row.path.startsWith(`claude/teams/${teamName}/`)), 'real donor team corpus');
+   assert.ok(files.some(row => row.path.startsWith(`claude/tasks/${teamName}/`)), 'real donor task corpus');
+   assert.ok(files.some(row => /^runtime-data\/opencode\/profiles\/[^/]+\/data\/opencode\//.test(row.path)),
+     'real native OpenCode managed-profile history corpus');
++  assert.ok(files.some(row => /^runtime-data\/opencode\/profiles\/[^/]+\/data\/opencode\/snapshot\/[^/]+\/[a-f0-9]{40}\//.test(row.path)),
++    'original managed-profile native Git snapshots remain in the raw stopped corpus');
++  assert.ok(files.some(row => row.path === `project/${fixture.relativePath}` && row.sha256 === fixture.afterSha256));
++  assert.ok(files.some(row => row.path.startsWith(`userData/data/task-attachments/${teamName}/${taskId}/`) &&
++    row.sha256 === fixture.png.sha256 && row.bytes === fixture.png.bytes), 'actual original Task PNG corpus');
++  assert.ok(files.some(row => row.path.includes('/.board-task-changes/events/') && row.path.endsWith(`/${taskId}.jsonl`)),
++    'old frontend persisted its actual native Task Changes before Quit');
+   const manifest = { directory, files, bytes: totalBytes };
+   await writeFile(join(directory, 'manifest.json'), JSON.stringify(manifest, null, 2), { mode: 0o600, flag: 'wx' });
+   return manifest;
+--- a/scripts/legacy-agent-host/desktop-retained-opencode-app.ts
++++ b/scripts/legacy-agent-host/desktop-retained-opencode-app.ts
+@@ -364,9 +364,14 @@
+   model: Awaited<ReturnType<typeof startRetainedOpenCodeModel>>;
+   proof: Record<string, unknown>; cleanupErrors: unknown[];
+   baseline: Awaited<ReturnType<typeof snapshotLinuxProcesses>>;
+-  assertInputs(): Promise<void>; preserveCorpus(teamName: string): Promise<Record<string, unknown>>;
++  reviewFixture: { filePath: string; relativePath: string; before: string; after: string;
++    beforeSha256: string; afterSha256: string; commit: string; tree: string;
++    png: { path: string; name: string; bytes: number; sha256: string } };
++  assertInputs(): Promise<void>;
++  captureReview(identity: Record<string, unknown>): Promise<Record<string, unknown>>;
++  preserveCorpus(teamName: string, taskId: string): Promise<Record<string, unknown>>;
+ }) {
+-  const { proof, model, donor, root } = input;
++  const { proof, model, donor, root, reviewFixture } = input;
+   const literal = desktopJsLiteral;
+   const teamName = 'test-donor-4a-opencode-history', subject = 'TEST donor 4a retained sidebar record';
+   const marker = 'TEST_RETAINED_V1_HISTORY', reply = 'REPLY_TEST_RETAINED_V1_HISTORY';
+@@ -376,8 +381,11 @@
+   let app: RetainedApp | undefined, failure: unknown;
+   let member: Record<string, unknown>, memberName: string, taskId: string, messageId: string;
+   let savedTask: unknown, savedMessage: unknown, nativeReply: Record<string, unknown>;
++  let displayId: string, messageText: string, attachment: Record<string, unknown> | undefined;
++  let savedReview: Record<string, unknown> | undefined;
+   let inferenceAtDonorQuit: number | undefined;
+   const getData = () => app!.call(`window.__TEST_retainedApi.teams.getData(${literal(teamName)})`);
++  const getTask = () => app!.call(`window.__TEST_retainedApi.teams.getTask(${literal(teamName)},${literal(taskId!)})`);
+   const captureProcesses = async () => {
+     const values = [
+       ...await app!.nativeChildren(donor.runtime.path),
+@@ -429,6 +437,69 @@
+           const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&e.innerText?.trim()===${literal(expected)};
+         });return rows.length>0&&rows.length<=32?{text:${literal(expected)},matches:rows.length}:null;
+       })()`, 'original visible ' + expected, 90_000);
++      const openTask = async () => {
++        const selector = '.kanban-task-card[data-task-id=' + literal(taskId!) + '] h5';
++        await ui.scrollTo(selector, 'original retained Task subject', subject);
++        await ui.click(selector, 'open original retained Task detail', subject);
++        epoch.taskDetail = await ui.waitRead(`(() => {
++          const nodes=[...document.querySelectorAll('[role="dialog"] [data-task-detail-content]')];
++          if(nodes.length!==1)return null;const node=nodes[0];
++          const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));
++          let fiber=key?node[key]:null;
++          for(let depth=0;fiber&&depth<64;depth++,fiber=fiber.return){
++            const model=fiber.memoizedProps?.model,task=model?.currentTask;
++            if(model?.teamName===${literal(teamName)}&&task?.id===${literal(taskId!)}&&task.subject===${literal(subject)})
++              return {teamName:model.teamName,taskId:task.id,subject:task.subject};
++          }return null;
++        })()`, 'exact original Task detail owner');
++      };
++      const attachmentSection = '[role="dialog"] section:has(svg.lucide-image)';
++      const readAttachment = async () => {
++        const task = record(await getTask());
++        assert.equal(task.id, taskId); assert.ok(Array.isArray(task.attachments));
++        assert.equal(task.attachments.length, 1, 'one actual Task attachment');
++        const current = record(task.attachments[0]);
++        assert.equal(current.filename, reviewFixture.png.name);
++        assert.equal(current.mimeType, 'image/png'); assert.equal(current.size, reviewFixture.png.bytes);
++        assert.ok(text(current.id));
++        if (attachment) assert.deepEqual(current, attachment);
++        const encoded = await app!.call<string>(
++          `window.__TEST_retainedApi.teams.getTaskAttachment(${literal(teamName)},${literal(taskId!)},${literal(text(current.id))},'image/png')`
++        );
++        assert.equal(typeof encoded, 'string'); assert.ok(encoded.length <= 4096);
++        const bytes = Buffer.from(encoded, 'base64');
++        assert.equal(bytes.length, reviewFixture.png.bytes);
++        assert.equal(createHash('sha256').update(bytes).digest('hex'), reviewFixture.png.sha256);
++        app!.assertCurrent();
++        const section = record(await app!.cdp.evaluate(`(() => {
++          const sections=[...document.querySelectorAll(${literal(attachmentSection)})];
++          if(sections.length!==1)return null;
++          const headers=[...sections[0].querySelectorAll(':scope > div:first-child > button[aria-label]')]
++            .filter(e=>['Expand section','Collapse section'].includes(e.getAttribute('aria-label')));
++          if(headers.length!==1)return null;const button=headers[0],r=button.getBoundingClientRect();
++          return button instanceof HTMLButtonElement&&!button.disabled&&r.width>0&&r.height>0
++            ?{collapsed:button.getAttribute('aria-label')==='Expand section'}:null;
++        })()`));
++        app!.assertCurrent();
++        if (section.collapsed === true) {
++          const header = attachmentSection + ' > div:first-child > button[aria-label="Expand section"]';
++          await ui.scrollTo(header, 'original Task attachment header visible');
++          await ui.click(header, 'expand original retained Task attachments');
++        }
++        await ui.scrollTo(attachmentSection + ' img[alt=' + literal(reviewFixture.png.name) + ']', 'original Task PNG visible');
++        const image = record(await ui.waitRead(`(() => {
++          const images=[...document.querySelectorAll(${literal(attachmentSection + ' img')})]
++            .filter(e=>e.alt===${literal(reviewFixture.png.name)}&&e.complete&&e.naturalWidth===2&&e.naturalHeight===1);
++          if(images.length!==1)return null;const image=images[0],r=image.getBoundingClientRect();
++          return r.width>0&&r.height>0?{src:image.currentSrc||image.src,width:image.naturalWidth,height:image.naturalHeight}:null;
++        })()`, 'actual original Task PNG visible'));
++        assert.match(text(image.src), /^data:image\/png;base64,/);
++        const visibleBytes = Buffer.from(text(image.src).split(',')[1]!, 'base64');
++        assert.equal(visibleBytes.length, reviewFixture.png.bytes);
++        assert.equal(createHash('sha256').update(visibleBytes).digest('hex'), reviewFixture.png.sha256);
++        attachment = current;
++        epoch.attachment = { ...current, sha256: reviewFixture.png.sha256, width: image.width, height: image.height };
++      };
+       if (kind === 'donor') {
+         assert.deepEqual(await app.call('window.__TEST_retainedApi.teams.list()'), [], 'fresh donor has no seeded teams');
+         await ui.click('button[aria-label="More actions"]', 'open existing More menu');
+@@ -490,23 +561,60 @@
+           const tasks = data.tasks.map(record).filter(row => row.subject === subject);
+           assert.ok(tasks.length <= 1); return tasks[0] ?? null;
+         }, 'actual donor task identity', 30_000);
+-        taskId = text(task.id); savedTask = task;
++        taskId = text(task.id); proof.createdTask = task;
+         await ui.waitRead('!document.querySelector("#task-subject")', 'original create task dialog settled');
++        await openTask();
++        await ui.scrollTo(attachmentSection + ' > div > button[aria-label="Expand section"]', 'original Task attachment section');
++        await ui.click(attachmentSection + ' > div > button[aria-label="Expand section"]', 'expand original Task attachments');
++        const fileSelector = attachmentSection + ' input[type="file"]';
++        await ui.waitRead(`(() => {const nodes=document.querySelectorAll(${literal(fileSelector)});
++          return nodes.length===1&&!nodes[0].disabled;})()`, 'original Task file input eligible');
++        assert.equal(await fileHash(reviewFixture.png.path), reviewFixture.png.sha256);
++        const dom = await app.cdp.send<{ root: { nodeId: number } }>('DOM.getDocument');
++        app.assertCurrent();
++        const fileInputs = await app.cdp.send<{ nodeIds: number[] }>('DOM.querySelectorAll', {
++          nodeId: dom.root.nodeId, selector: fileSelector,
++        });
++        assert.equal(fileInputs.nodeIds.length, 1);
++        app.assertCurrent();
++        steps.push({ epoch: kind, action: 'fileInput', name: reviewFixture.png.name, sha256: reviewFixture.png.sha256 });
++        await app.cdp.send('DOM.setFileInputFiles', { nodeId: fileInputs.nodeIds[0], files: [reviewFixture.png.path] });
++        await ui.waitRead(
++          `Boolean(document.querySelector(${literal(attachmentSection + ' img[alt=' + literal(reviewFixture.png.name) + ']')}))`,
++          'Task upload acknowledged'
++        );
++        await readAttachment();
++        await ui.click('[role="dialog"] button', 'close original Task detail before message', 'Close');
++        await ui.waitRead('!document.querySelector("[role=dialog] [data-task-detail-content]")', 'Task detail closed');
+         await openLead();
+         await ui.click('[role="dialog"] button', 'open direct lead message', 'Send Message');
+-        await fill('#smd-message', marker);
++        await fill('#smd-message', marker + ' #');
++        const suggestionSelector = '[role="listbox"] [role="option"]:has(svg.lucide-hash)';
++        const suggestion = record(await ui.waitRead(`(() => {
++          const rows=[...document.querySelectorAll(${literal(suggestionSelector)})].filter(e=>e.getBoundingClientRect().width>0);
++          if(rows.length!==1||![...rows[0].querySelectorAll('div')].some(e=>e.textContent.trim()===${literal(subject)}))return null;
++          const label=rows[0].querySelector('div > div > span')?.textContent.trim();
++          return label&&/^#[A-Za-z0-9-]{1,128}$/.test(label)?{displayId:label.slice(1),subject:${literal(subject)}}:null;
++        })()`, 'one real Task reference suggestion'));
++        displayId = text(suggestion.displayId); messageText = marker + ' #' + displayId;
++        await ui.click(suggestionSelector, 'choose original Task reference once');
++        epoch.taskMention = suggestion;
++        await ui.waitRead(`(() => {const value=document.querySelector('#smd-message')?.value;
++          return typeof value==='string'&&value.startsWith(${literal(messageText)})&&value.includes('\\u2063')&&value.includes('\\u2064');})()`,
++          'original encoded Task reference acknowledged');
+         await ui.click('[role="dialog"] button', 'send one original HISTORY message', 'Send');
+         await waitFor(async () => { assert.deepEqual(model.failures, []); return model.markers.has(marker) || null; }, 'donor inference observes original input', 90_000);
+         nativeReply = await waitFor(() => readRetainedNativeReply({ app: app!, teamName, memberName, member,
+           expectedReply: reply, failures: model.failures, observe: value => { epoch.nativeRead = value; } }), 'actual donor native reply', 90_000);
+         const message = await waitFor(async () => {
+           const data = await getData(); assert.ok(Array.isArray(data.messages));
+-          const rows = data.messages.map(record).filter(row => row.from === 'user' && row.to === memberName && row.text === marker && row.source === 'user_sent');
++          const rows = data.messages.map(record).filter(row => row.from === 'user' && row.to === memberName && row.text === messageText && row.source === 'user_sent');
+           assert.ok(rows.length <= 1); return rows[0] ?? null;
+         }, 'actual donor sent message identity', 30_000);
+         messageId = text(message.messageId); savedMessage = message;
++        assert.deepEqual(message.taskRefs, [{ taskId, displayId, teamName }]);
+         proof.identity = { teamName, runId: launched.runId, memberName, laneId: text(member.laneId),
+-          nativeSessionId: text(member.runtimeSessionId), taskId, messageId, ...nativeReply };
++          nativeSessionId: text(member.runtimeSessionId), taskId, displayId, messageId, ...nativeReply };
+         const children = await captureProcesses();
+         assert.ok(children.some(row => 'sha256' in row && row.sha256 === input.v1.sha256), 'real original donor V1 image captured');
+         epoch.nativeProcesses = children;
+@@ -516,9 +624,12 @@
+       }
+       const data = await getData();
+       assert.ok(Array.isArray(data.tasks)); assert.ok(Array.isArray(data.messages));
+-      assert.deepEqual(data.tasks.map(record).find(row => row.id === taskId!), savedTask);
++      const taskBeforeReview = data.tasks.map(record).find(row => row.id === taskId!);
++      assert.ok(taskBeforeReview); assert.equal(taskBeforeReview.subject, subject);
+       assert.deepEqual(data.messages.map(record).find(row => row.messageId === messageId! && row.source === 'user_sent'), savedMessage);
+-      epoch.task = { id: taskId!, subject }; epoch.message = { messageId: messageId!, text: marker, to: memberName! };
++      epoch.task = { id: taskId!, displayId: displayId!, subject };
++      epoch.message = { messageId: messageId!, text: messageText!, to: memberName!,
++        taskRefs: [{ taskId: taskId!, displayId: displayId!, teamName }] };
+       epoch.visibleTask = await ui.waitRead(`(() => {
+         const rows=[...document.querySelectorAll('#sidebar-tasks-panel [data-task-key]')].filter(e=>
+           e.dataset.taskKey===${literal(JSON.stringify([teamName, taskId!]))}&&e.getBoundingClientRect().width>0);
+@@ -526,9 +637,48 @@
+         return value===${literal(subject)}?{key:rows[0].dataset.taskKey,subject:value}:null;
+       })()`, 'same original visible task identity');
+       await ui.waitRead('!document.querySelector("#smd-message")', 'original send dialog settled');
++      await openTask();
++      await readAttachment();
++      const taskImage = await app.cdp.send<{ data: string }>('Page.captureScreenshot', { format: 'png' });
++      await writeFile(join(root, `donor-history-${kind}-task.png`), Buffer.from(taskImage.data, 'base64'), { mode: 0o600 });
++      const changesSection = '[role="dialog"] section:has(svg.lucide-file-diff) > div > button[aria-label="Expand section"]';
++      await ui.scrollTo(changesSection, 'original Task Changes section');
++      await ui.click(changesSection, 'open original Task Changes');
++      const changedFile = '[role="dialog"] [role="button"][aria-label=' + literal(reviewFixture.relativePath) + ']';
++      await ui.scrollTo(changedFile, 'actual native Task file');
++      await ui.click(changedFile, 'open original native Task diff');
++      epoch.review = await ui.waitRead(`(() => {
++        if(document.querySelectorAll('button[aria-label="Close Changes"]').length!==1||
++          ![...document.querySelectorAll('h2')].some(e=>e.textContent.includes(${literal(subject)})))return null;
++        const editors=[...document.querySelectorAll('.cm-editor')].filter(e=>e.getBoundingClientRect().width>0);
++        if(editors.length!==1)return null;
++        const visible=text=>[...editors[0].querySelectorAll('div,span')].some(e=>{
++          const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&e.textContent.trim()===text;
++        });
++        return visible(${literal(reviewFixture.before.trim())})&&visible(${literal(reviewFixture.after.trim())})
++          ?{filePath:${literal(reviewFixture.filePath)},relativePath:${literal(reviewFixture.relativePath)},
++            visibleBefore:${literal(reviewFixture.before.trim())},visibleAfter:${literal(reviewFixture.after.trim())}}:null;
++      })()`, 'actual native before and after in original Task Changes');
++      const provenance = await input.captureReview(record(proof.identity));
++      const stableReview = Object.fromEntries(
++        ['binding', 'delivery', 'event', 'before', 'after'].map(key => [key, record(provenance[key])])
++      );
++      if (savedReview) assert.deepEqual(stableReview, savedReview, 'same persisted native Task change after restart');
++      else savedReview = stableReview;
++      record(epoch.review).provenance = provenance;
++      const reviewImage = await app.cdp.send<{ data: string }>('Page.captureScreenshot', { format: 'png' });
++      await writeFile(join(root, `donor-history-${kind}-review.png`), Buffer.from(reviewImage.data, 'base64'), { mode: 0o600 });
++      await ui.click('button[aria-label="Close Changes"]', 'close original Task Changes without decisions');
++      await ui.waitRead(`!document.querySelector('button[aria-label="Close Changes"]')&&
++        !document.querySelector('[role="dialog"] [data-task-detail-content]')`, 'original Changes and Task detail closed');
++      const afterReview = await getData(); assert.ok(Array.isArray(afterReview.tasks));
++      const reviewedTask = afterReview.tasks.map(record).find(row => row.id === taskId!);
++      assert.ok(reviewedTask); assert.equal(reviewedTask.subject, subject);
++      if (kind === 'donor') savedTask = reviewedTask;
++      else assert.deepEqual(reviewedTask, savedTask, 'whole retained Task after its original Changes read');
+       await openLead();
+       await ui.click('[role="dialog"] [role="tab"]', 'open original native Logs', 'Logs');
+-      epoch.visibleMessage = await visibleText('[role="dialog"] [role="tabpanel"][data-state="active"]', marker);
++      epoch.visibleMessage = await visibleText('[role="dialog"] [role="tabpanel"][data-state="active"]', messageText!);
+       epoch.visibleReply = await visibleText('[role="dialog"] [role="tabpanel"][data-state="active"]', reply);
+       const observed = await waitFor(() => readRetainedNativeReply({ app: app!, teamName, memberName: memberName!, member: member!,
+         expectedReply: reply, failures: model.failures, observe: value => { epoch.nativeRead = value; } }), 'same original native history tuple', 90_000);
+@@ -558,7 +708,7 @@
+         record(proof.stop).originalNativeAbsentAfterQuit = true;
+         inferenceAtDonorQuit = model.observations.length;
+         assert.equal(model.observations.filter(row => row.marker === marker).length, 1);
+-        proof.corpus = await input.preserveCorpus(teamName);
++        proof.corpus = await input.preserveCorpus(teamName, taskId!);
+       } else assert.equal(model.observations.length, inferenceAtDonorQuit, 'retained UI read never replays inference');
+       await input.assertInputs();
+     }
+--- a/scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts
++++ b/scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts
+@@ -176,3 +176,61 @@
+     } finally { preparation?.disarm(); await host.close(); }
+   }
+ });
++
++test('selected donor continues one HISTORY through native Read and Edit IDs and refuses prompt or result replay', async () => {
++  const fixture = { filePath: '/TEST-donor/project/review.txt', before: 'TEST original file\n', after: 'TEST edited file\n' };
++  const marker = 'TEST_RETAINED_V1_HISTORY';
++  const user = { role: 'user', content: marker + ' #1' };
++  const tools = [
++    { type: 'function', function: { name: 'read', parameters: { type: 'object',
++      properties: { filePath: { type: 'string' } }, required: ['filePath'] } } },
++    { type: 'function', function: { name: 'edit', parameters: { type: 'object', properties: {
++      filePath: { type: 'string' }, oldString: { type: 'string' }, newString: { type: 'string' },
++      replaceAll: { type: 'boolean' } }, required: ['filePath', 'oldString', 'newString'] } } },
++  ];
++  const model = await startRetainedOpenCodeModel({ donorReview: fixture });
++  try {
++    const first = await request(model.url, { model: 'TEST-model', tools, messages: [user], stream: true });
++    assert.equal(first.status, 200);
++    const chunks = first.text.split('\n').filter(line => line.startsWith('data: {')).map(line => JSON.parse(line.slice(6)));
++    const call = chunks[0].choices[0].delta.tool_calls[0];
++    assert.equal(call.id, 'TEST_DONOR_REVIEW_READ'); assert.equal(call.function.name, 'read');
++    assert.deepEqual(JSON.parse(call.function.arguments), { filePath: fixture.filePath });
++    assert.equal(chunks[1].choices[0].finish_reason, 'tool_calls');
++    const history: Record<string, unknown>[] = [user, { role: 'assistant', tool_calls: [
++      { id: call.id, type: call.type, function: call.function },
++    ] }, { role: 'tool', tool_call_id: call.id, content: fixture.before }];
++    const second = await request(model.url, { model: 'TEST-model', tools, messages: history });
++    assert.equal(second.status, 200);
++    const editMessage = JSON.parse(second.text).choices[0].message, edit = editMessage.tool_calls[0];
++    assert.equal(edit.id, 'TEST_DONOR_REVIEW_EDIT'); assert.equal(edit.function.name, 'edit');
++    assert.deepEqual(JSON.parse(edit.function.arguments), { filePath: fixture.filePath,
++      oldString: fixture.before, newString: fixture.after, replaceAll: false });
++    history.push(editMessage, { role: 'tool', tool_call_id: edit.id, content: 'Edit applied successfully.' });
++    const final = await request(model.url, { model: 'TEST-model', tools, messages: history });
++    assert.equal(final.status, 200);
++    assert.equal(JSON.parse(final.text).choices[0].message.content, 'REPLY_' + marker);
++    assert.deepEqual(model.observations.map(row => row.donorStage), ['read', 'edit', 'reply']);
++    assert.deepEqual(model.observations.map(row => row.marker), [marker, null, null]);
++    assert.deepEqual(model.observations.map(row => row.toolResultIds), [[], ['TEST_DONOR_REVIEW_READ'],
++      ['TEST_DONOR_REVIEW_READ', 'TEST_DONOR_REVIEW_EDIT']]);
++    assert.deepEqual([...model.markers], [marker]); assert.deepEqual(model.failures, []);
++    assert.equal((await request(model.url, { model: 'TEST-model', tools, messages: history })).status, 500);
++    assert.equal(model.observations.length, 3, 'completed original input cannot be repeated');
++  } finally { await model.close(); }
++  for (const invalid of ['prompt replay', 'result replay', 'wrong result identity'] as const) {
++    const rejected = await startRetainedOpenCodeModel({ donorReview: fixture });
++    try {
++      const first = await request(rejected.url, { model: 'TEST-model', tools, messages: [user] });
++      assert.equal(first.status, 200);
++      const message = JSON.parse(first.text).choices[0].message;
++      const result = { role: 'tool', tool_call_id: invalid === 'wrong result identity' ? 'OTHER' :
++        message.tool_calls[0].id, content: fixture.before };
++      const history = [user, message, result, ...(invalid === 'prompt replay' ? [user] :
++        invalid === 'result replay' ? [result] : [])];
++      assert.equal((await request(rejected.url, { model: 'TEST-model', tools, messages: history })).status, 500);
++      assert.equal(rejected.observations.length, 1, 'refusal cannot dispatch the Edit');
++      assert.equal(rejected.failures.length, 1);
++    } finally { await rejected.close(); }
++  }
++});
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -614,7 +614,9 @@
+           pnpm lint:fast:files -- \
+             scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts \
+             scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts \
+-            scripts/legacy-agent-host/desktop-retained-opencode-app.ts
++            scripts/legacy-agent-host/desktop-retained-opencode-app.ts \
++            scripts/legacy-agent-host/desktop-retained-opencode-model.ts \
++            scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts
+       - name: Prepare existing verified V2 graph and original Bun
+         run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+       - name: Verify the retained release matches the pinned stock helper source
+@@ -923,14 +925,43 @@
+             assert.match(d.inputs.custody[key], /^[a-f0-9]{64}$/);
+           assert.equal(d.marker, 'TEST_RETAINED_V1_HISTORY'); assert.equal(d.reply, 'REPLY_TEST_RETAINED_V1_HISTORY');
+           assert.equal(d.identity.teamName, d.teamName); assert.equal(d.identity.provider, 'opencode_runtime');
+-          for (const key of ['teamName', 'runId', 'memberName', 'laneId', 'nativeSessionId', 'taskId', 'messageId', 'replyUuid'])
++          for (const key of ['teamName', 'runId', 'memberName', 'laneId', 'nativeSessionId', 'taskId', 'displayId', 'messageId', 'replyUuid'])
+             assert.ok(typeof d.identity[key] === 'string' && d.identity[key].length > 0);
+           assert.match(d.identity.replyContentSha256, /^[a-f0-9]{64}$/);
++          assert.match(d.identity.taskId, /^[A-Za-z0-9_-]+$/);
++          assert.match(d.identity.displayId, /^[A-Za-z0-9-]{1,128}$/);
++          const taskRefs = [{ taskId: d.identity.taskId, displayId: d.identity.displayId, teamName: d.teamName }];
++          const messageText = d.marker + ' #' + d.identity.displayId;
++          const fixture = d.reviewFixture;
++          const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
++          assert.equal(fixture.relativePath, 'TEST-donor-review.txt');
++          assert.equal(fixture.filePath, join(d.root, 'project', fixture.relativePath));
++          assert.equal(fixture.before, 'TEST donor native review before\n');
++          assert.equal(fixture.after, 'TEST donor native review after\n');
++          assert.equal(fixture.beforeSha256, sha256(fixture.before)); assert.equal(fixture.afterSha256, sha256(fixture.after));
++          assert.match(fixture.commit, /^[a-f0-9]{40}$/); assert.match(fixture.tree, /^[a-f0-9]{40}$/);
++          assert.deepEqual(fixture.png, { path: join(d.root, 'TEST-donor-task.png'), name: 'TEST-donor-task.png',
++            bytes: 71, sha256: '5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6' });
++          const pick = (row, keys) => Object.fromEntries(keys.map(key => [key, row[key]]));
++          const bindingKeys = ['teamName', 'runId', 'memberName', 'laneId', 'nativeSessionId', 'taskId', 'displayId', 'messageId'];
++          const deliveryKeys = ['id', 'source', 'status', 'inboxMessageId', 'deliveredUserMessageId',
++            'runtimeSessionId', 'runId', 'laneId', 'memberName', 'taskRefs'];
++          const eventKeys = ['eventId', 'toolUseId', 'taskId', 'sessionId', 'memberName', 'filePath', 'relativePath',
++            'source', 'sourceRuntime', 'sourceProvider', 'sourceSessionId', 'sourcePartId', 'sourceMessageId',
++            'parentUserMessageId', 'attributionMethod', 'sourceImportKey', 'evidenceProof', 'snapshotId', 'snapshotSource',
++            'toolStatus', 'operation', 'confidence'];
++          const stableReview = value => pick(value, ['binding', 'delivery', 'event', 'before', 'after']);
+           assert.deepEqual(d.epochs.map(epoch => epoch.kind), ['donor', 'current', 'cold']);
+           assert.deepEqual(d.model.failures, []); assert.ok(Array.isArray(d.model.observations) && d.model.observations.length <= 32);
+           assert.ok(Number.isSafeInteger(d.inferenceAtDonorQuit) && d.inferenceAtDonorQuit > 0);
+           assert.equal(d.model.observations.length, d.inferenceAtDonorQuit);
+           assert.deepEqual(d.model.observations.filter(row => row.marker).map(row => row.marker), [d.marker]);
++          const turns = d.model.observations.filter(row => row.donorStage);
++          assert.deepEqual(turns.map(row => row.donorStage), ['read', 'edit', 'reply']);
++          assert.deepEqual(turns.map(row => row.toolCallId ?? null), ['TEST_DONOR_REVIEW_READ', 'TEST_DONOR_REVIEW_EDIT', null]);
++          assert.deepEqual(turns.map(row => row.toolResultIds), [[], ['TEST_DONOR_REVIEW_READ'],
++            ['TEST_DONOR_REVIEW_READ', 'TEST_DONOR_REVIEW_EDIT']]);
++          assert.ok(turns.every(row => row.owner === 'legacy'));
+           const nativeHistory = { provider: d.identity.provider, laneId: d.identity.laneId,
+             nativeSessionId: d.identity.nativeSessionId, replyUuid: d.identity.replyUuid,
+             replyContentSha256: d.identity.replyContentSha256 };
+@@ -942,15 +973,47 @@
+           for (const [index, epoch] of d.epochs.entries()) {
+             assert.equal(epoch.sourceCommit, index === 0 ? d.inputs.commit : r.sourceHead);
+             epochProcesses.push(processKey(epoch.original), processKey(epoch.electron));
+-            assert.equal(epoch.task.id, d.identity.taskId); assert.ok(typeof epoch.task.subject === 'string' && epoch.task.subject.length > 0);
++            assert.equal(epoch.task.id, d.identity.taskId); assert.equal(epoch.task.displayId, d.identity.displayId);
++            assert.ok(typeof epoch.task.subject === 'string' && epoch.task.subject.length > 0);
+             assert.deepEqual(epoch.task, d.epochs[0].task);
+-            assert.deepEqual(epoch.message, { messageId: d.identity.messageId, text: d.marker, to: d.identity.memberName });
++            assert.deepEqual(epoch.message, { messageId: d.identity.messageId, text: messageText, to: d.identity.memberName, taskRefs });
+             assert.deepEqual(epoch.visibleTask, { key: JSON.stringify([d.teamName, d.identity.taskId]), subject: epoch.task.subject });
+-            for (const [field, expected] of [['visibleMessage', d.marker], ['visibleReply', d.reply]]) {
++            for (const [field, expected] of [['visibleMessage', messageText], ['visibleReply', d.reply]]) {
+               assert.equal(epoch[field].text, expected);
+               assert.ok(Number.isSafeInteger(epoch[field].matches) && epoch[field].matches >= 1 && epoch[field].matches <= 32);
+             }
+             assert.deepEqual(epoch.nativeHistory, nativeHistory);
++            const attachment = epoch.attachment;
++            assert.ok(typeof attachment.id === 'string' && attachment.id.length > 0);
++            assert.equal(attachment.filename, fixture.png.name); assert.equal(attachment.mimeType, 'image/png');
++            assert.equal(attachment.size, fixture.png.bytes); assert.equal(attachment.sha256, fixture.png.sha256);
++            assert.equal(attachment.width, 2); assert.equal(attachment.height, 1);
++            assert.deepEqual(attachment, d.epochs[0].attachment);
++            assert.equal(epoch.review.filePath, fixture.filePath); assert.equal(epoch.review.relativePath, fixture.relativePath);
++            assert.equal(epoch.review.visibleBefore, fixture.before.trim()); assert.equal(epoch.review.visibleAfter, fixture.after.trim());
++            const provenance = epoch.review.provenance, delivery = provenance.delivery, event = provenance.event;
++            assert.deepEqual(provenance.binding, pick(d.identity, bindingKeys));
++            assert.deepEqual(stableReview(provenance), stableReview(d.epochs[0].review.provenance));
++            assert.ok(['ui-send', 'watcher'].includes(delivery.source)); assert.equal(delivery.status, 'responded');
++            assert.equal(delivery.inboxMessageId, d.identity.messageId); assert.equal(delivery.runtimeSessionId, d.identity.nativeSessionId);
++            for (const key of ['runId', 'laneId', 'memberName']) assert.equal(delivery[key], d.identity[key]);
++            assert.deepEqual(delivery.taskRefs, taskRefs);
++            for (const key of ['id', 'deliveredUserMessageId']) assert.ok(typeof delivery[key] === 'string' && delivery[key].length > 0);
++            for (const [key, expected] of Object.entries({ toolUseId: 'TEST_DONOR_REVIEW_EDIT', taskId: d.identity.taskId,
++              sessionId: d.identity.nativeSessionId, memberName: d.identity.memberName, filePath: fixture.filePath,
++              relativePath: fixture.relativePath, source: 'opencode_toolpart_edit', sourceRuntime: 'opencode',
++              sourceProvider: 'opencode', sourceSessionId: d.identity.nativeSessionId,
++              parentUserMessageId: delivery.deliveredUserMessageId, attributionMethod: 'delivery-ledger-taskrefs',
++              snapshotSource: 'opencode', toolStatus: 'succeeded', operation: 'modify', confidence: 'high' })) assert.equal(event[key], expected);
++            assert.ok(['opencode-snapshot', 'inverse-edit-chain'].includes(event.evidenceProof));
++            for (const key of ['eventId', 'sourcePartId', 'sourceMessageId', 'sourceImportKey', 'snapshotId'])
++              assert.ok(typeof event[key] === 'string' && event[key].length > 0);
++            for (const side of ['before', 'after'])
++              assert.deepEqual(provenance[side], { sha256: fixture[side + 'Sha256'], bytes: Buffer.byteLength(fixture[side]) });
++            assert.equal(provenance.sources.delivery.path, `claude/teams/${d.teamName}/.opencode-runtime/lanes/${encodeURIComponent(d.identity.laneId)}/opencode-prompt-delivery-ledger.json`);
++            assert.match(provenance.sources.journal.path, /^claude\/projects\/[^/]+\/\.board-task-changes\/events\//);
++            assert.ok(provenance.sources.journal.path.endsWith(`/${d.identity.taskId}.jsonl`));
++            for (const field of ['delivery', 'journal']) assert.match(provenance.sources[field].sha256, /^[a-f0-9]{64}$/);
+             assert.deepEqual(epoch.quit, { launcherAbsent: true, electronAbsent: true, launcherExitCode: 0,
+               launcherSignal: null, originalGroupReleased: true, namespaceAfter: [] });
+             assert.equal(epoch.inferenceAfterQuit, d.inferenceAtDonorQuit);
+@@ -967,7 +1030,13 @@
+           assert.equal(realpathSync(d.corpus.directory), d.corpus.directory);
+           assert.deepEqual(JSON.parse(readFileSync(join(d.corpus.directory, 'manifest.json'), 'utf8')), d.corpus);
+           assert.ok(d.corpus.files.length > 0 && d.corpus.files.length <= 4096);
+-          const corpusPaths = new Set(); let corpusBytes = 0;
++          const donorProvenance = d.epochs[0].review.provenance;
++          const donorLedgerRoot = donorProvenance.sources.journal.path.slice(0, donorProvenance.sources.journal.path.lastIndexOf('/events/'));
++          const selectedRawPaths = new Set([donorProvenance.sources.delivery.path, donorProvenance.sources.journal.path,
++            `project/${fixture.relativePath}`,
++            `userData/data/task-attachments/${d.teamName}/${d.identity.taskId}/${d.epochs[0].attachment.id}--${fixture.png.name}`,
++            ...['before', 'after'].map(side => `${donorLedgerRoot}/blobs/sha256/${fixture[side + 'Sha256']}`)]);
++          const corpusPaths = new Set(), corpusData = new Map(); let corpusBytes = 0;
+           for (const [index, row] of d.corpus.files.entries()) {
+             assert.ok(typeof row.path === 'string' && !isAbsolute(row.path) && row.path.split('/').every(part => part && part !== '.' && part !== '..'));
+             assert.equal(corpusPaths.has(row.path), false); corpusPaths.add(row.path);
+@@ -979,11 +1048,45 @@
+             corpusBytes += row.bytes; assert.ok(corpusBytes <= 256 * 1024 * 1024);
+             const bytes = readFileSync(path);
+             assert.equal(bytes.length, row.bytes); assert.equal(createHash('sha256').update(bytes).digest('hex'), row.sha256);
++            if (selectedRawPaths.has(row.path)) {
++              assert.ok(bytes.length <= 8 * 1024 * 1024); corpusData.set(row.path, bytes);
++            }
+           }
+           assert.equal(corpusBytes, d.corpus.bytes);
+           for (const prefix of [`claude/teams/${d.teamName}/`, `claude/tasks/${d.teamName}/`])
+             assert.ok(d.corpus.files.some(row => row.path.startsWith(prefix)));
+           assert.ok(d.corpus.files.some(row => /^runtime-data\/opencode\/profiles\/[^/]+\/data\/opencode\//.test(row.path)));
++          assert.ok(d.corpus.files.some(row => /^runtime-data\/opencode\/profiles\/[^/]+\/data\/opencode\/snapshot\/[^/]+\/[a-f0-9]{40}\//.test(row.path)));
++          assert.equal(corpusData.has('project/.git'), false);
++          assert.equal(d.corpus.files.some(row => row.path.startsWith('project/.git/')), false);
++          assert.equal(corpusData.get(`project/${fixture.relativePath}`)?.toString('utf8'), fixture.after);
++          const attachmentPath = `userData/data/task-attachments/${d.teamName}/${d.identity.taskId}/${d.epochs[0].attachment.id}--${fixture.png.name}`;
++          const attachmentBytes = corpusData.get(attachmentPath);
++          assert.ok(attachmentBytes); assert.equal(attachmentBytes.length, fixture.png.bytes); assert.equal(sha256(attachmentBytes), fixture.png.sha256);
++          const provenance = d.epochs[0].review.provenance;
++          const deliveryEnvelope = JSON.parse(corpusData.get(provenance.sources.delivery.path).toString('utf8'));
++          assert.equal(deliveryEnvelope.schemaVersion, 1); assert.ok(deliveryEnvelope.data.length <= 200);
++          const deliveries = deliveryEnvelope.data.filter(row => row.inboxMessageId === d.identity.messageId);
++          assert.equal(deliveries.length, 1); assert.deepEqual(pick(deliveries[0], deliveryKeys), provenance.delivery);
++          const events = corpusData.get(provenance.sources.journal.path).toString('utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
++          assert.ok(events.length > 0 && events.length <= 128);
++          assert.equal(new Set(events.map(row => row.eventId)).size, events.length);
++          const superseded = new Set(events.map(row => row.supersedesEventId).filter(id => typeof id === 'string'));
++          for (const id of superseded) assert.ok(events.some(row => row.eventId === id));
++          for (const event of events) {
++            assert.equal(event.taskId, d.identity.taskId); assert.equal(event.toolUseId, 'TEST_DONOR_REVIEW_EDIT');
++            assert.equal(event.filePath, fixture.filePath); assert.equal(event.sourceRuntime, 'opencode');
++          }
++          const active = events.filter(row => row.suppressed !== true && !superseded.has(row.eventId));
++          assert.equal(active.length, 1); assert.deepEqual(pick(active[0], eventKeys), provenance.event);
++          assert.equal(active[0].taskRef, d.identity.taskId); assert.equal(active[0].taskRefKind, 'canonical'); assert.equal(active[0].phase, 'work');
++          const ledgerRoot = provenance.sources.journal.path.slice(0, provenance.sources.journal.path.lastIndexOf('/events/'));
++          for (const side of ['before', 'after']) {
++            const ref = active[0][side]; assert.equal(ref.sha256, fixture[side + 'Sha256']);
++            assert.equal(ref.sizeBytes, Buffer.byteLength(fixture[side])); assert.equal(ref.blobRef, `sha256/${ref.sha256}`);
++            const bytes = corpusData.get(`${ledgerRoot}/blobs/${ref.blobRef}`);
++            assert.ok(bytes); assert.equal(bytes.toString('utf8'), fixture[side]); assert.equal(sha256(bytes), ref.sha256);
++          }
+           NODE
+       - name: Preserve original coexistence receipts and failure diagnostics
+         if: always()
+@@ -1005,6 +1108,12 @@
+             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor.png
+             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-current.png
+             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-cold.png
++            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor-task.png
++            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor-review.png
++            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-current-task.png
++            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-current-review.png
++            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-cold-task.png
++            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-cold-review.png
+             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-3.log
+             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-4.log
+             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-5.log

@@ -1,0 +1,264 @@
+{
+  "kind": "INDEPENDENT_ORIGINAL_AA01_COMPILE_AND_SELECTED_PLAN52_NARROWING_REVIEW",
+  "reviewedUTC": "2026-11-16T18:00:51.782805+00:00",
+  "disposition": "APPROVE_SELECTED_TYPE_ONLY_CORRECTION_SOURCE_REASONING; ACTUAL_POSTIMAGE_AND_COMPILER_PASS_NOT_REVIEWED",
+  "blockers": [],
+  "scope": "Bounded existing original log/source review. No competing candidate, full source-tree reconstruction, new network request, status poll, project execution, native action or canonical mutation.",
+  "inputs": {
+    "originalJobLog": {
+      "path": "/tmp/e2e-original-artifacts/aa01-process-windows-arm64/original-job-133477580440.log",
+      "bytes": 78334,
+      "gitBlob": "9adaa0c7fc98de2c5be86340fd3c2e0996fa8f0e",
+      "sha256": "244991ca67b1d8053702db58a12fa279e0be08adcc26873ec4ac539799ff7d30"
+    },
+    "originalJobMetadata": {
+      "path": "/tmp/e2e-original-artifacts/aa01-process-windows-arm64/original-job-metadata.json",
+      "bytes": 7973,
+      "gitBlob": "1070ef4c16be35647052e5604a946fb39dc281e0",
+      "sha256": "33e9a2324161e35e027e208be1d383f52afc5590f42bf22ae9ae4d7f557d36f7"
+    },
+    "originalSourceReadback": {
+      "path": "/tmp/e2e-original-artifacts/aa01-process-windows-arm64/compiler-source-readback.json",
+      "bytes": 19444,
+      "gitBlob": "ade34ce6f4538a23a60c831a85095f96f14dcc39",
+      "sha256": "29202fd13c5a9591546cb5eb3c1872253f0d64e4827fd7f7ebcbbb249adf8c0a"
+    },
+    "fullMatchedSourceFile": {
+      "path": "/tmp/e2e-original-artifacts/reviews/incoming-7428/after/src/features/agent-backend/main/infrastructure/matchesWindowsLaunchEnvironment.ts",
+      "bytes": 18853,
+      "gitBlob": "8d3abd63b2098c33694f15e211f03753815aff81",
+      "sha256": "700ae1b6955bb95924f1f44143fb2f8d0a48a90e99c9a1a09f9bfcdc1b49cfd7"
+    },
+    "currentDocumentPacket": {
+      "path": "/tmp/migration-evidence-20261116/root/plan50-52-efecd-doc-readback.json",
+      "bytes": 55682,
+      "gitBlob": "e95733d6f8b6e4091d5d98a12fd4bc319e0b23e3",
+      "sha256": "4a26dccd130f259e6328fff75cad57166146cd70d6593c6b520a57d01a973430"
+    }
+  },
+  "originalJob": {
+    "jobId": 133477580440,
+    "runId": 43918080732,
+    "attempt": 1,
+    "sourceHead": "aa01c426d0abe52504ba8ca21f929e4072024315",
+    "platform": "win32-arm64",
+    "name": "Host process fixtures (win32-arm64)",
+    "conclusion": "failure",
+    "sourceJoins": [
+      "Raw lines40/45/62 bind HOST_PROCESS_SOURCE_HEAD and checkout ref to aa01.",
+      "Raw237/239–240 confirms the actual checked-out commit aa01.",
+      "Retained original job metadata independently pins job/run/attempt/head.",
+      "Full source packet and independently retained source file both rehash to exact8d3, which also matches the complete verified current24df leaf map; subsequent efecd packet has only documentary deltas."
+    ],
+    "eventLimit": "The retained job metadata has run_attempt/head but no event field. PR attribution is recorded in the parent assignment and Plan52; no additional event lookup was made."
+  },
+  "rawPreservation": {
+    "utf8BOMRetained": true,
+    "crlfCount": 898,
+    "originalBytesNotModified": true
+  },
+  "firstFailure": {
+    "step": {
+      "name": "Build existing controller and Host",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 9,
+      "started_at": "2026-11-16T17:48:10Z",
+      "completed_at": "2026-11-16T17:48:18Z"
+    },
+    "groupStartUTC": "2026-11-16T17:48:10.0416582Z",
+    "groupCommandsInOriginalOrder": [
+      "node node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json",
+      "node agent-teams-controller/scripts/build.mjs",
+      "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json",
+      "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json",
+      "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json",
+      "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json"
+    ],
+    "commandBoundary": "The full six-line group is echoed with set -euo pipefail. The raw log supplies no per-command tracing marker that independently identifies which of the compiler project invocations emitted these seven diagnostics. The evidenced failure is the canonical compile group; no alternate compiler or diagnostic run is inferred.",
+    "observedToolchain": [
+      "Raw285 and318 record Node v24.21.0.",
+      "Original install raw771 reports @typescript/native <- typescript 7.0.2; raw806 separately lists typescript5.9.3. The selected commands explicitly use node_modules/@typescript/native/bin/tsc."
+    ],
+    "errors": [
+      {
+        "rawLogLine": 838,
+        "sourceLine": 110,
+        "sourceColumn": 23,
+        "code": "TS18046",
+        "message": "'headers.Authorization' is of type 'unknown'.",
+        "timeUTC": "2026-11-16T17:48:18.5959477Z"
+      },
+      {
+        "rawLogLine": 839,
+        "sourceLine": 111,
+        "sourceColumn": 71,
+        "code": "TS2345",
+        "message": "Argument of type 'unknown' is not assignable to parameter of type 'string'.",
+        "timeUTC": "2026-11-16T17:48:18.5971104Z"
+      },
+      {
+        "rawLogLine": 840,
+        "sourceLine": 114,
+        "sourceColumn": 12,
+        "code": "TS2322",
+        "message": "Type 'unknown' is not assignable to type 'string'.",
+        "timeUTC": "2026-11-16T17:48:18.5973682Z"
+      },
+      {
+        "rawLogLine": 841,
+        "sourceLine": 204,
+        "sourceColumn": 50,
+        "code": "TS18046",
+        "message": "'server.command' is of type 'unknown'.",
+        "timeUTC": "2026-11-16T17:48:18.5976086Z"
+      },
+      {
+        "rawLogLine": 842,
+        "sourceLine": 204,
+        "sourceColumn": 75,
+        "code": "TS18046",
+        "message": "'server.command' is of type 'unknown'.",
+        "timeUTC": "2026-11-16T17:48:18.5978314Z"
+      },
+      {
+        "rawLogLine": 843,
+        "sourceLine": 293,
+        "sourceColumn": 7,
+        "code": "TS2345",
+        "message": "Argument of type '{ witnessAgent: string; witness: unknown; password: string; coordination: false; }' is not assignable to parameter of type '{ password: string; witnessAgent: string; witness: string; coordination: boolean; }'.",
+        "timeUTC": "2026-11-16T17:48:18.5982275Z"
+      },
+      {
+        "rawLogLine": 846,
+        "sourceLine": 321,
+        "sourceColumn": 5,
+        "code": "TS2345",
+        "message": "Argument of type '{ witnessAgent: string; witness: unknown; password: string; coordination: true; }' is not assignable to parameter of type '{ password: string; witnessAgent: string; witness: string; coordination: boolean; }'.",
+        "timeUTC": "2026-11-16T17:48:18.5987193Z"
+      }
+    ],
+    "groupExit": {
+      "rawLogLine": 849,
+      "timeUTC": "2026-11-16T17:48:18.6664115Z",
+      "code": 1
+    },
+    "unreached": "Original contract step10, Electron preparation12, Windows broker/fixtures build16, Host Node17, Electron Node18, wrappers19 and original source A/B20–22 plus final native receipt gate23 are skipped in retained metadata. No native fixture observation or cleanup qualification follows from this failure.",
+    "artifactLimit": "Original log records upload14253358084 of301 bytes after the failed group. No ZIP retrieval/inspection was needed or performed by this review; upload success and post-job Git cleanup are not native fixture cleanup."
+  },
+  "source": {
+    "path": "src/features/agent-backend/main/infrastructure/matchesWindowsLaunchEnvironment.ts",
+    "gitBlob": "8d3abd63b2098c33694f15e211f03753815aff81",
+    "bytes": 18853,
+    "physicalLines": 371,
+    "sha256": "700ae1b6955bb95924f1f44143fb2f8d0a48a90e99c9a1a09f9bfcdc1b49cfd7",
+    "line50Before": "const invalid = (): never => { throw new Error('Captured Windows environment mismatch'); };",
+    "line50Selected": "const invalid: () => never = () => { throw new Error('Captured Windows environment mismatch'); };",
+    "erasedHelper": "const invalid = () => { throw new Error('Captured Windows environment mismatch'); };",
+    "sameErasedHelperByExactTextComparison": true,
+    "physicalLineDelta": 0,
+    "byteDeltaOfSelectedLine": 6,
+    "fullPostimageLimit": "Only the exact already-selected one-line Plan52 transformation is reviewed. No new full afterimage or competing patch was authored, and no separately published source child was read in this pass."
+  },
+  "diagnosticSourceJoins": [
+    {
+      "diagnostics": [
+        110,
+        111,
+        114
+      ],
+      "guardLines": [
+        107,
+        109
+      ],
+      "fact": "endpoint reads unknown record properties. The existing compound guard requires server.url and headers.Authorization to be strings and the same Bearer prefix; the subsequent slice/RegExp/return use those values. The sole invalid() call terminates the rejected branch at runtime but its variable function type is inferred in the original declaration."
+    },
+    {
+      "diagnostics": [
+        204,
+        204
+      ],
+      "guardLines": [
+        201,
+        203
+      ],
+      "fact": "capturedMcp local-server branch checks Array.isArray(server.command) and nonempty command before indexing and slicing. The source keeps the same schema parse after constructing the selected MCP representation."
+    },
+    {
+      "diagnostics": [
+        293,
+        321
+      ],
+      "guardLines": [
+        268,
+        277
+      ],
+      "fact": "witness finds a constrained management agent, calls the existing value-is-string token guard on value.prompt, and uses invalid() on refusal before returning it. The two errors are the management and coordination uses of that inferred witness result."
+    }
+  ],
+  "narrowingReasoning": {
+    "selectedMechanism": "Annotating the const variable itself with () => never makes its terminating call signature explicit for control-flow analysis. Every problematic postguard property is already protected by an existing runtime predicate; no new cast, non-null assertion or relaxed acceptance is needed.",
+    "runtimePreservation": "Both declarations erase to exactly the same const-bound zero-argument arrow and identical throw new Error body/message. The binding, allocation/call behavior, callsites, schemas, validation order, property accesses, return expressions and catches remain the same if the published source child is limited to this selected line.",
+    "limits": "This is source-based diagnosis consistent with all seven actual errors. It does not substitute for the unchanged original canonical compiler gate or prove that all resulting-source checks pass. No TypeScript compiler or JavaScript execution was performed."
+  },
+  "routingAndCaps": {
+    "referenceBodies": [
+      {
+        "path": "/tmp/migration-evidence-20261116/native/current-consumer-regions-proposal/reference/package.json",
+        "bytes": 26839,
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+      },
+      {
+        "path": "/tmp/migration-evidence-20261116/migration-scope/a07-scoped-lint-three-inert-proposal/reference/eslint.fast.config-8a6d66ce.js",
+        "bytes": 7268,
+        "gitBlob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+        "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+      },
+      {
+        "path": "/tmp/migration-evidence-20261116/migration-scope/p10-retained-job-routing-review/reference/ci-feedback-9d734783.mts",
+        "bytes": 19265,
+        "gitBlob": "9d734783b4e273a4e4fbad27d4e51984646d436d",
+        "sha256": "c89f9b195d5efb183db154f87f3fee0c4e30345e4f24c6797b9a99e09311e40e"
+      },
+      {
+        "path": "/tmp/migration-evidence-20261116/migration-scope/p10-donor-preparation-inert-proposal/after/.github/workflows/ci.yml",
+        "bytes": 189024,
+        "gitBlob": "478323fbcb60bc0b0f29c0e430fdb3d001d0a456",
+        "sha256": "b65900ed9394287e42c67d147fa15349f098c6fa074d74403789112c27f7f1b4"
+      },
+      {
+        "path": "/tmp/migration-evidence-20261116/native/plan51-actual-source-review/after/.github/workflows/host-emulated-acceptance.yml",
+        "bytes": 106144,
+        "gitBlob": "2c57fc6733ddc0e0b7f61f8ef56550b1f4ad553a",
+        "sha256": "1bd8efcf0228f3349960a78282bd03f9342467095424b3efb92b0b9c0fbee4dc"
+      },
+      {
+        "path": "/tmp/migration-evidence-20261116/native/plan51-actual-source-review/after/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "bytes": 22049,
+        "gitBlob": "a3d7047a1d081852263726b59f3fa39ab0428a29",
+        "sha256": "57c46c53b141f00d18c7377afe15476c3587ad46e0ac3b48dc8011080b517618"
+      }
+    ],
+    "sourceRoster": "The exact existing common supplementary roster includes the file at line281; no new roster path is needed for this one erased annotation.",
+    "typed": "The existing Team workflow still invokes full workspace and dedicated feature type checks, then typed lint on src/features. These are unchanged source routes, not observed passing results on the correction.",
+    "fast": "General CI478323 line122 invokes pnpm lint:fast; exact packagef80 expands to eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content src/. Exact fast config8a6 includes TS files and has no matching exclusion for this file.",
+    "conditionalRouting": "The General feedback job condition is needs.plan.outputs.full == false && needs.plan.outputs.metadata == false. Current classifier9d734 selects fast/full:false for valid ordinary Draft opened/synchronize/reopened events; metadata-only and fallback routes remain distinct. No actual Plan52 job selection or lint success is inferred.",
+    "explicitTeamDistinction": "The current125-operand Team fast-lint list does not explicitly contain matchesWindowsLaunchEnvironment.ts. Plan52 fast coverage refers to the existing conditional General src/ invocation, not a nonexistent Team operand. No workflow amendment is selected or proposed by this review.",
+    "cap": "371 physical production lines remain371, under the unchanged800 bound; no baseline, config, rule, package or test change is selected."
+  },
+  "documentDisposition": {
+    "plan52Path": "docs/plans/provider-migration/frontend-parity-2026-11-12/52-windows-environment-refusal-narrowing-2026-11-16.md",
+    "plan52Git": "1a47ede0b6b1430486a160ce107ade5a906120e2",
+    "bytes": 3868,
+    "sha256": "adf80cff634105a87a3689de717d43128646899c66786599681882d2eb4f83df",
+    "documentHead": "efecd96984eca3bb1fbe97492bd1984445befd24",
+    "executableSourceStill": "24df232166b6ac51817deaccc4a37008ebd971d3",
+    "fact": "Retained packet shows only Plan50 amendment and newPlan52 documentary paths. Plan50 Main stage diagnostics remain separate/unimplemented in this packet, and Plan51/P10 source leaves are not altered. No unseen prior review chronology or current runtime qualification is credited."
+  },
+  "remainingGates": [
+    "Exact source child full readback must remain the single erased annotation.",
+    "Run only the already-existing original resulting-source compiler/feature/environment admission/native/Desktop gates through their original CI routes.",
+    "No new mirror test, extra test-only RED cycle, timeout relaxation, native authority change or cleanup claim is warranted by this type-only defect."
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "kind": "INERT_B2_PROSPECTIVE_EXISTING_VALIDATION",
+  "executed": false,
+  "sourcePaths": [
+    "scripts/legacy-agent-host/desktop-retained-opencode-model.ts",
+    "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+    "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+    "scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+    ".github/workflows/ci.yml"
+  ],
+  "planPrefix": {
+    "gitBlob": "509311af179416e647f8571126746ab09333f5c0",
+    "bytes": 156904
+  },
+  "requiredBeforeSource": [
+    "Root fresh exact current-parent/prefix/Merkle and ref lease binding",
+    "Independent exact source/R1 R2",
+    "Published R1 complete readback and independent published binding R2"
+  ],
+  "existingCommands": [
+    "pnpm typecheck:legacy-host-scripts",
+    "pnpm lint:fast:files -- scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts scripts/legacy-agent-host/desktop-retained-opencode-app.ts scripts/legacy-agent-host/desktop-retained-opencode-model.ts scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+    "node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+    "node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts"
+  ],
+  "existingProject": {
+    "path": "tsconfig.legacy-agent-host-scripts.json",
+    "gitBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+    "packageJson": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+    "changed": false
+  },
+  "sameJob": {
+    "path": ".github/workflows/ci.yml",
+    "name": "retained-opencode-coexistence",
+    "minutes": 30,
+    "nativeTestMilliseconds": 900000,
+    "newJobs": 0,
+    "newManualActions": 0,
+    "mandatoryExtraRedCycles": 0,
+    "fastLintOperandCountBefore": 3,
+    "after": 5,
+    "newWorkflowRunCommands": 0
+  },
+  "positiveEvidence": [
+    "Whole existing model-contract file and appended direct HTTP case",
+    "Original full retained0.158/HostV2/native donor/current/cold program and exact receipt verifier",
+    "Original V1 and V2 source-selection invocations/validators",
+    "Actual source/argv/toolchain/full log/receipts/raw corpus/nine donor screenshots and original cleanup",
+    "All other original resulting-source repository gates"
+  ],
+  "newProtocolCase": {
+    "oldWholePrefixBytes": 10565,
+    "oldWholePrefixLines": 178,
+    "newCases": 1,
+    "realHttp": true,
+    "mockedNativeEffects": false,
+    "checks": [
+      "Read SSE ID/input",
+      "Edit JSON ID/input after exact Read result",
+      "Final reply after exact Edit result",
+      "One business marker",
+      "Completed prompt replay refused",
+      "Repeated user prompt refused",
+      "Repeated tool result refused",
+      "Wrong tool-result identity refused"
+    ]
+  },
+  "nominalDeliveryReadiness": {
+    "sameExactRowOnly": true,
+    "terminal": "responded",
+    "nonterminal": [
+      "pending",
+      "accepted"
+    ],
+    "milliseconds": 30000,
+    "serialRead": true,
+    "delayMilliseconds": 100,
+    "perReadBytesCap": 8388608,
+    "hardPerReadCancellation": false,
+    "hardClockIndependentReadCountBound": false,
+    "perReadOverrunPossible": true,
+    "sameOuter900s": true,
+    "sameJob30min": true,
+    "extraSends": 0,
+    "deliveredUserMessageIdRequired": "only after responded, before returning the successful same-row observation"
+  },
+  "caps": {
+    "changedTypeScriptMaxLines": 727,
+    "sourceLimit": 800,
+    "requestCount": 32,
+    "requestBytes": 2000000,
+    "corpusFiles": 4096,
+    "corpusPerFileBytes": 67108864,
+    "corpusTotalBytes": 268435456,
+    "journalEvents": 128,
+    "selectedDeliveryRecords": 200,
+    "newSourceModules": 0
+  },
+  "limitations": [
+    "No local project execution or claimed actual PASS",
+    "Original native Read/Edit source owner not independently available; actual advertised schema and native effect gates required",
+    "Before/after stat observations are not atomic filesystem custody",
+    "No transfer to P08/P09/full native/release/vendor or historical Darwin Stop-import",
+    "No additional inference in current/cold",
+    "Root fresh parent binding remains unbound in this inert packet"
+  ],
+  "closedGitCalls": {
+    "fixtureSetup": true,
+    "captureHeadAndTree": true,
+    "systemConfiguration": false,
+    "globalConfiguration": "/dev/null",
+    "ambientGitEnvironment": false,
+    "commandTimeoutMs": 5000
+  },
+  "attachmentHeaderObservation": {
+    "oneReadPerExistingAttachmentRead": true,
+    "currentnessBeforeAfter": true,
+    "oneConditionalOriginalExpandClickMaximumPerRead": true,
+    "newWaits": 0,
+    "newTimers": 0,
+    "newTimeouts": 0,
+    "newSends": 0,
+    "malformedOrAmbiguousRefuses": true
+  }
+}
