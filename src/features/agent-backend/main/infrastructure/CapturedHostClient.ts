@@ -148,12 +148,12 @@ export class CapturedHostClient {
       createLogger('Host:ClaudeManagement').diagnostic('Claude management stage', observation);
     },
     (observation) => {
+      const { startIdentity, ...fields } = observation;
       if (this.child?.pid !== undefined)
         createLogger('Host:OpenCodeMetadata').diagnostic('OpenCode metadata stage', {
-          profileHash: observation.profileHash, mode: observation.mode,
-          providerHash: observation.providerHash, pid: observation.pid,
-          startIdentityHash: createHash('sha256').update(observation.startIdentity, 'utf8').digest('hex'),
-          stage: observation.stage, hostPid: this.child.pid,
+          ...fields,
+          ...(startIdentity === undefined ? {} : { startIdentityHash: createHash('sha256').update(startIdentity, 'utf8').digest('hex') }),
+          hostPid: this.child.pid,
         });
     }
   );

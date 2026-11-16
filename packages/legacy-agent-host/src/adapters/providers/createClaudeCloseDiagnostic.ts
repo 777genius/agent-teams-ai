@@ -70,6 +70,16 @@ export function createClaudeManagementDiagnostic(
   };
 }
 
+export type MetadataReadStage = 'admission' | 'native-client' | 'identity' | 'plugins' | 'permissions' | 'mcp'
+  | 'credential' | 'directory' | 'activation-wait' | 'current' | 'projection' | 'dispose' | 'result-current';
+export const metadataFailureReasons: ReadonlySet<string> = new Set(['held', 'conflict', 'invalid', 'busy', 'deadline', 'cleanup_unknown',
+  'transport_failure', 'authority_mismatch', 'disposed', 'http_failure', 'media_type', 'body_limit',
+  'frame_limit', 'invalid_response', 'invalid_native_catalog', 'native_catalog_binding_mismatch',
+  'capabilities_pending', 'unqualified_version', 'ABORT_ERR']);
+const metadataReadStages = new Set<MetadataReadStage>(['admission', 'native-client', 'identity',
+  'plugins', 'permissions', 'mcp', 'credential', 'directory', 'activation-wait', 'current',
+  'projection', 'dispose', 'result-current']);
+
 /** Catalog observation only; these captured facts never grant process or cleanup authority. */
 export function createOpenCodeMetadataDiagnostic(
   selected: { profileId: string; configRevision: string },
@@ -88,6 +98,21 @@ export function createOpenCodeMetadataDiagnostic(
     } catch { /* Missing diagnostics cannot confirm custody or change the catalog result. */ }
   };
   return Object.freeze({
+    readFailed(observation: {
+      stage: MetadataReadStage; reason: string; elapsedMs: number;
+      deadlineExpired: boolean; aborted: boolean | null;
+    }): void {
+      try {
+        const { stage, reason, elapsedMs, deadlineExpired, aborted } = observation;
+        if (!metadataReadStages.has(stage) ||
+            (reason !== 'unknown' && !metadataFailureReasons.has(reason)) ||
+            !Number.isSafeInteger(elapsedMs) || elapsedMs < 0 || elapsedMs > 3_600_000 ||
+            typeof deadlineExpired !== 'boolean' || !(aborted === null || typeof aborted === 'boolean')) return;
+        write('legacy-agent-host: opencode-metadata ' + JSON.stringify({
+          ...identity, stage: 'read-failed', readStage: stage, reason, elapsedMs, deadlineExpired, aborted,
+        }) + '\n');
+      } catch { /* The original read error and cleanup do not depend on this diagnostic sink. */ }
+    },
     ready(value: { pid: number; startIdentity: string }): void {
       if (original || closed || !Number.isSafeInteger(value.pid) || value.pid <= 1 || !safeId(value.startIdentity)) return;
       original = Object.freeze({ pid: value.pid, startIdentity: value.startIdentity });

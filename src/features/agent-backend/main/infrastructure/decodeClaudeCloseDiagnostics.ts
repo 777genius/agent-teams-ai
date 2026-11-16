@@ -13,14 +13,36 @@ const stages = new Set([
   'capture-close-error',
 ]);
 const metadataPrefix = 'legacy-agent-host: opencode-metadata ';
-export interface OpenCodeMetadataDiagnostic {
+interface OpenCodeMetadataIdentity {
   readonly profileHash: string;
   readonly mode: 'directory' | 'provider';
   readonly providerHash: string | null;
+}
+interface OpenCodeMetadataLifecycleDiagnostic extends OpenCodeMetadataIdentity {
   readonly pid: number;
   readonly startIdentity: string;
   readonly stage: 'ready' | 'released' | 'cleanup-unknown';
 }
+interface OpenCodeMetadataReadFailureDiagnostic extends OpenCodeMetadataIdentity {
+  readonly pid?: never;
+  readonly startIdentity?: never;
+  readonly stage: 'read-failed';
+  readonly readStage: string;
+  readonly reason: string;
+  readonly elapsedMs: number;
+  readonly deadlineExpired: boolean;
+  readonly aborted: boolean | null;
+}
+export type OpenCodeMetadataDiagnostic =
+  | OpenCodeMetadataLifecycleDiagnostic
+  | OpenCodeMetadataReadFailureDiagnostic;
+const metadataReadStages = new Set(['admission', 'native-client', 'identity', 'plugins',
+  'permissions', 'mcp', 'credential', 'directory', 'activation-wait', 'current',
+  'projection', 'dispose', 'result-current']);
+const metadataReadReasons = new Set(['held', 'conflict', 'invalid', 'busy', 'deadline', 'cleanup_unknown',
+  'transport_failure', 'authority_mismatch', 'disposed', 'http_failure', 'media_type', 'body_limit',
+  'frame_limit', 'invalid_response', 'invalid_native_catalog', 'native_catalog_binding_mismatch',
+  'capabilities_pending', 'unqualified_version', 'ABORT_ERR', 'unknown']);
 const managementPrefix = 'legacy-agent-host: claude-management ';
 const managementStages = new Set([
   'auth-cleanup',
@@ -101,6 +123,27 @@ export function decodeClaudeCloseDiagnostics(
       if (text.startsWith(metadataPrefix)) {
         if (!retainMetadata) return;
         const value: unknown = JSON.parse(text.slice(metadataPrefix.length));
+        if (exact(value, ['profileHash', 'mode', 'providerHash', 'stage', 'readStage', 'reason',
+          'elapsedMs', 'deadlineExpired', 'aborted']) && value.stage === 'read-failed') {
+          if (!hash(value.profileHash) || !(value.mode === 'directory' || value.mode === 'provider') ||
+              !(value.providerHash === null || hash(value.providerHash)) ||
+              ((value.mode === 'directory') !== (value.providerHash === null)) ||
+              typeof value.readStage !== 'string' || !metadataReadStages.has(value.readStage) ||
+              typeof value.reason !== 'string' || !metadataReadReasons.has(value.reason) ||
+              typeof value.elapsedMs !== 'number' || !Number.isSafeInteger(value.elapsedMs) ||
+              value.elapsedMs < 0 || value.elapsedMs > 3_600_000 ||
+              typeof value.deadlineExpired !== 'boolean' ||
+              !(value.aborted === null || typeof value.aborted === 'boolean')) return;
+          const diagnostic: OpenCodeMetadataDiagnostic = Object.freeze({
+            profileHash: value.profileHash, mode: value.mode, providerHash: value.providerHash,
+            stage: 'read-failed', readStage: value.readStage, reason: value.reason,
+            elapsedMs: value.elapsedMs, deadlineExpired: value.deadlineExpired, aborted: value.aborted,
+          });
+          void Promise.resolve(retainMetadata(diagnostic)).catch(() => {
+            /* Failure diagnostics never determine the original read or cleanup outcome. */
+          });
+          return;
+        }
         if (
           !exact(value, ['profileHash', 'mode', 'providerHash', 'pid', 'startIdentity', 'stage']) ||
           !hash(value.profileHash) ||

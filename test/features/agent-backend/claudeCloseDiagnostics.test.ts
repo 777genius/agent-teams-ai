@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 
 import { it as test } from 'vitest';
 
@@ -132,4 +133,68 @@ test('metadata diagnostics bind original catalog identity and reject missing, ex
     const broken = createOpenCodeMetadataDiagnostic(selected, undefined, () => { throw new Error(secret); });
     broken.ready({ pid: 44, startIdentity: 'TEST:44' }); broken.closed(true);
   });
+});
+
+test('metadata read failures retain closed original facts before ready without acquiring custody authority', async () => {
+  const secret = 'TEST-private-key-path-or-error';
+  const selected = { profileId: 'TEST-original-profile', configRevision: 'TEST-original-revision' };
+  const expectedHash = createHash('sha256').update(JSON.stringify([selected.profileId, selected.configRevision])).digest('hex');
+  const lines: string[] = [];
+  const observe = createOpenCodeMetadataDiagnostic(selected, undefined, line => { lines.push(line); });
+  selected.profileId = secret; selected.configRevision = secret;
+  observe.readFailed({ stage: 'native-client', reason: 'unknown', elapsedMs: 0, deadlineExpired: false, aborted: null });
+  observe.ready({ pid: 73, startIdentity: 'TEST-boot:73' });
+  observe.readFailed({ stage: 'directory', reason: 'transport_failure', elapsedMs: 3_600_000, deadlineExpired: true, aborted: true });
+  observe.closed(true);
+  assert.equal(lines.length, 4);
+  assert.equal(lines.join('').includes(secret), false);
+  assert.equal(lines.join('').includes('TEST-original-profile'), false);
+  const values: Record<string, unknown>[] = [];
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, value => { values.push({ ...value }); });
+  for (const byte of Buffer.from(lines.join(''))) decode(Buffer.from([byte]));
+  assert.equal(values.length, 4);
+  assert.deepEqual(values.map(value => value.stage), ['read-failed', 'ready', 'read-failed', 'released']);
+  const failures = values.filter(value => value.stage === 'read-failed');
+  assert.deepEqual(failures, [
+    { profileHash: expectedHash, mode: 'directory', providerHash: null, stage: 'read-failed',
+      readStage: 'native-client', reason: 'unknown', elapsedMs: 0, deadlineExpired: false, aborted: null },
+    { profileHash: expectedHash, mode: 'directory', providerHash: null, stage: 'read-failed',
+      readStage: 'directory', reason: 'transport_failure', elapsedMs: 3_600_000, deadlineExpired: true, aborted: true },
+  ]);
+  assert.ok(failures.every(value => !Object.hasOwn(value, 'pid') && !Object.hasOwn(value, 'startIdentity')));
+  assert.equal(values[1]!.pid, 73); assert.equal(values[3]!.pid, 73);
+  const prefix = 'legacy-agent-host: opencode-metadata ';
+  const valid = failures[0]!;
+  const frame = (value: Record<string, unknown>) => prefix + JSON.stringify(value) + '\n';
+  for (const unsafe of [
+    { ...valid, extra: secret }, { ...valid, pid: 73 }, { ...valid, startIdentity: secret },
+    { ...valid, stage: 'released' }, { ...valid, readStage: secret }, { ...valid, reason: secret },
+    { ...valid, profileHash: secret }, { ...valid, mode: 'provider' },
+    { ...valid, providerHash: 'a'.repeat(64) }, { ...valid, elapsedMs: -1 },
+    { ...valid, elapsedMs: 3_600_001 }, { ...valid, elapsedMs: 0.5 },
+    { ...valid, elapsedMs: null }, { ...valid, deadlineExpired: 1 },
+    { ...valid, aborted: 0 }, { ...valid, aborted: undefined },
+  ]) decode(Buffer.from(frame(unsafe)));
+  assert.equal(values.length, 4, 'unknown, extra, missing or non-finite facts cannot cross the decoder');
+  decode(Buffer.concat([Buffer.from(prefix), Buffer.from([0xff]), Buffer.from('\n')]));
+  decode(Buffer.from(prefix + 'x'.repeat(8193)));
+  decode(Buffer.from('\n' + frame(valid)));
+  assert.equal(values.length, 5, 'invalid UTF-8 and oversized lines cannot swallow the next original record');
+  const provider = createOpenCodeMetadataDiagnostic(
+    { profileId: 'TEST-provider-profile', configRevision: 'TEST-provider-revision' }, 'TEST-provider',
+    line => decode(Buffer.from(line)));
+  provider.readFailed({ stage: 'credential', reason: 'held', elapsedMs: 1, deadlineExpired: false, aborted: false });
+  assert.equal(values.length, 6);
+  assert.equal(values[5]!.mode, 'provider');
+  assert.equal(values[5]!.providerHash, createHash('sha256').update(JSON.stringify('TEST-provider')).digest('hex'));
+  assert.equal(values[5]!.readStage, 'credential'); assert.equal(values[5]!.aborted, false);
+  let calls = 0;
+  const failing = decodeClaudeCloseDiagnostics(() => {}, undefined, () => {
+    calls++; if (calls === 1) throw new Error(secret); return Promise.reject(new Error(secret));
+  });
+  assert.doesNotThrow(() => failing(Buffer.from(frame(valid) + frame(valid))));
+  await new Promise<void>(resolve => setImmediate(resolve));
+  assert.equal(calls, 2, 'a failed sink cannot prevent the next closed diagnostic');
+  assert.doesNotThrow(() => createOpenCodeMetadataDiagnostic(selected, undefined, () => { throw new Error(secret); })
+    .readFailed({ stage: 'admission', reason: 'held', elapsedMs: 0, deadlineExpired: false, aborted: null }));
 });

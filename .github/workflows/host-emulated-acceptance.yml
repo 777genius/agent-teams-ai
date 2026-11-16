@@ -239,7 +239,10 @@ jobs:
             src/renderer/components/team/useTeamProvisioningPresentation.ts \
             test/renderer/components/team/TeamProvisioningBanner.test.ts \
             test/features/runtime-provider-management/capturedManagementClient.test.ts \
-            scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts
+            scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts \
+            packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts \
+            packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts \
+            test/features/agent-backend/claudeCloseDiagnostics.test.ts
           pnpm typecheck:workspace
           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main
