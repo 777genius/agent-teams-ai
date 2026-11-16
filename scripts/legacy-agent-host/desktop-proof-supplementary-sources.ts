@@ -289,6 +289,7 @@ export const desktopProofSupplementarySources = [
   'test/features/runtime-provider-management/capturedManagementClient.test.ts',
   'src/features/runtime-provider-management/renderer/hooks/refreshRuntimeProviderConnection.ts',
   'src/shared/utils/logger.ts',
+  'test/renderer/components/cli/CliStatusVisibility.test.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */

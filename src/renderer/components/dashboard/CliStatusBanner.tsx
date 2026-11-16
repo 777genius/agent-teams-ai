@@ -1685,7 +1685,7 @@ export const CliStatusBanner = ({
     runtimeStatus: openCodeRuntimeStatus,
   });
   const openCodeDashboardCatalog = useOpenCodeConnectedModelCatalog({
-    enabled: openCodeDashboardStatus.enabled,
+    enabled: openCodeDashboardStatus.enabled && !manageDialogOpen,
     statusChecking: cliStatusLoading || cliProviderStatusLoading.opencode === true,
     refreshRevision: providerQuickConnectRefreshKey,
     projectPath: selectedProjectPath,
@@ -2064,7 +2064,7 @@ export const CliStatusBanner = ({
   const renderInstalledBanner = (status: InstalledBannerProps['cliStatus']) => (
     <InstalledBanner
       inline={mode === 'settings'}
-      isActive={isDashboardActive}
+      isActive={isDashboardActive && !manageDialogOpen}
       catalogFailures={openCodeDashboardCatalog.failures}
       cliStatus={status}
       sourceProviderMap={loadingCliProviderMap}

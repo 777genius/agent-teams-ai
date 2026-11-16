@@ -74,6 +74,7 @@ let providerRuntimeSettingsDialogProps: {
   onRefreshProvider?: (providerId: string) => Promise<boolean>;
   open?: boolean;
   disabled?: boolean;
+  providers?: readonly unknown[];
   onOpenChange?: (open: boolean) => void;
   nativeClaudeAuthAction?: NativeClaudeAuthenticationAction | null;
   initialProviderId?: string;
@@ -92,6 +93,7 @@ let terminalModalProps: {
 } | null = null;
 let quickConnectConnectedCount = 0;
 let quickConnectRefreshKeys: (number | undefined)[] = [];
+let quickConnectEnabled: boolean[] = [];
 const refreshOpenCodeCatalog = vi.fn();
 let openCodeCatalogHookInputs: {
   refreshRevision?: number;
@@ -140,12 +142,14 @@ vi.mock('@features/runtime-provider-management/renderer', async (importOriginal)
       return { providerStatus: input.passiveProviderStatus, refresh: refreshOpenCodeCatalog };
     },
     RuntimeProviderQuickConnect: (props: {
+      enabled: boolean;
       refreshKey?: number;
       onRefreshOpenCode?: () => void;
       onOpenCodeProviderAction?: (providerId: string, action: 'connect' | 'select') => void;
       onConnectedCountChange?: (count: number) => void;
     }) => {
       quickConnectRefreshKeys.push(props.refreshKey);
+      quickConnectEnabled.push(props.enabled);
       React.useEffect(() => {
         props.onConnectedCountChange?.(quickConnectConnectedCount);
       }, [props.onConnectedCountChange]);
@@ -202,6 +206,7 @@ vi.mock('@renderer/components/runtime/ProviderRuntimeSettingsDialog', () => ({
     onRefreshProvider?: (providerId: string) => Promise<boolean>;
     open?: boolean;
     disabled?: boolean;
+    providers?: readonly unknown[];
     onOpenChange?: (open: boolean) => void;
     nativeClaudeAuthAction?: NativeClaudeAuthenticationAction | null;
     initialProviderId?: string;
@@ -499,6 +504,7 @@ describe('CLI status visibility during completed install state', () => {
     quickConnectConnectedCount = 0;
     openCodeCatalogHookInputs = [];
     quickConnectRefreshKeys = [];
+    quickConnectEnabled = [];
     refreshOpenCodeCatalog.mockClear();
     codexAccountHookState.snapshot = null;
     codexAccountHookState.loading = false;
@@ -5287,6 +5293,120 @@ describe('CLI status visibility during completed install state', () => {
     } finally {
       await act(async () => root.unmount());
       vi.useRealTimers();
+    }
+  });
+
+  it('pauses passive readers while provider settings stay open without losing foreground or close refresh', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const { useOpenCodeDashboardConnectedCountProbe } =
+      await import('@features/runtime-provider-management/renderer');
+    storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      source: 'app-managed',
+      state: 'ready',
+      version: '2.1.4',
+      v2Support: 'ready',
+    };
+    const provider = {
+      ...createDeferredMultimodelProvider('opencode', 'OpenCode'),
+      supported: true,
+      authenticated: true,
+      verificationState: 'verified',
+      statusMessage: 'TEST cached OpenCode',
+      models: ['test-local/TEST-model'],
+      capabilities: { teamLaunch: true, oneShot: true },
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      binaryPath: null,
+      providers: [provider],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = async (active: boolean) => {
+      await act(async () => {
+        root.render(
+          React.createElement(CliStatusBanner, { isDashboardActive: active, mode: 'settings' })
+        );
+        await flushLazyImports();
+      });
+    };
+    const passiveReaders = () => [
+      openCodeCatalogHookInputs.at(-1)?.enabled,
+      quickConnectEnabled.at(-1),
+      vi.mocked(useOpenCodeDashboardConnectedCountProbe).mock.lastCall?.[0].enabled,
+    ];
+    try {
+      await render(true);
+      expect(passiveReaders()).toEqual([true, true, true]);
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(0);
+      expect(quickConnectRefreshKeys.at(-1)).toBe(0);
+      const manage = host.querySelector<HTMLButtonElement>('[data-testid="runtime-manage-opencode"]');
+      expect(manage).not.toBeNull();
+      expect(manage!.disabled).toBe(false);
+      await act(async () => {
+        manage!.click();
+        await flushLazyImports();
+      });
+      expect(providerRuntimeSettingsDialogProps?.open).toBe(true);
+      expect(providerRuntimeSettingsDialogProps?.disabled).toBe(false);
+      expect(providerRuntimeSettingsDialogProps?.providers).toContain(provider);
+      expect(host.textContent).toContain('OpenCode');
+      expect(passiveReaders()).toEqual([false, false, false]);
+
+      let finishRefresh!: (value: boolean) => void;
+      let refreshed!: Promise<boolean>;
+      storeState.fetchCliProviderStatus.mockClear();
+      storeState.fetchCliProviderStatus.mockImplementationOnce(
+        () =>
+          new Promise<boolean>((resolve) => {
+            finishRefresh = resolve;
+          })
+      );
+      await act(async () => {
+        refreshed = providerRuntimeSettingsDialogProps!.onRefreshProvider!('opencode');
+      });
+      expect(storeState.fetchCliProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode', {
+        checkReason: 'manual_refresh',
+      });
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(0);
+      expect(quickConnectRefreshKeys.at(-1)).toBe(0);
+      expect(passiveReaders()).toEqual([false, false, false]);
+      await act(async () => {
+        finishRefresh(true);
+        expect(await refreshed).toBe(true);
+      });
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(1);
+      expect(quickConnectRefreshKeys.at(-1)).toBe(1);
+      expect(passiveReaders()).toEqual([false, false, false]);
+      expect(providerRuntimeSettingsDialogProps?.disabled).toBe(false);
+      expect(providerRuntimeSettingsDialogProps?.providers).toContain(provider);
+
+      await act(async () => {
+        providerRuntimeSettingsDialogProps!.onOpenChange!(false);
+        await flushLazyImports();
+      });
+      expect(host.querySelector('[data-testid="provider-runtime-settings-dialog"]')).toBeNull();
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(2);
+      expect(quickConnectRefreshKeys.at(-1)).toBe(2);
+      expect(passiveReaders()).toEqual([true, true, true]);
+      await render(false);
+      expect(passiveReaders()).toEqual([false, false, false]);
+      expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+      expect(refreshOpenCodeCatalog).not.toHaveBeenCalled();
+      expect(storeState.invalidateCliStatus).not.toHaveBeenCalled();
+      expect(storeState.installCli).not.toHaveBeenCalled();
+      expect(storeState.installOpenCodeRuntime).not.toHaveBeenCalled();
+      expect(storeState.installCodexRuntime).not.toHaveBeenCalled();
+      expect(loadNativeClaudeSetupForm).not.toHaveBeenCalled();
+      expect(codexAccountHookState.startChatgptLogin).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await flushLazyImports();
+      });
     }
   });
 
