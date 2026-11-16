@@ -1,0 +1,737 @@
+{
+  "kind": "INDEPENDENT_ORIGINAL_LINUX_75CF_NATIVE_FAILURE_R1",
+  "status": "EXACT_FAILURE_LOCALIZED_NO_PROVEN_SOURCE_REPAIR",
+  "originalTuple": {
+    "repository": "777genius/agent-teams-ai",
+    "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "runId": 43959134948,
+    "jobId": 133621512488,
+    "jobConclusion": "failure",
+    "artifactId": 14277621511,
+    "artifactName": "opencode-v2-embedded-native-linux-x64",
+    "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43959134948/job/133621512488"
+  },
+  "bindings": {
+    "zip": {
+      "path": "native-75cf-linux-x64/artifact.zip",
+      "bytes": 12696,
+      "sha256": "eb596b99c0cc19e246c3070a89f7d87195db78d9a83c26a5a38d84ba63860635"
+    },
+    "metadata": {
+      "path": "native-75cf-linux-x64/metadata.json",
+      "bytes": 781,
+      "sha256": "37391e3f5e5db217279f185745a9e2b9ac6b1a62e08500577097966da0aefe30"
+    },
+    "originalDecodedLog": {
+      "path": "native-75cf-linux-x64/job.log",
+      "bytes": 94683,
+      "sha256": "54d0d1a7240bf9ad96792fc940fc0017d078417f97d2105bbdf2f14473068f77"
+    },
+    "members": [
+      {
+        "path": "opencode-v2-model-probe.json",
+        "bytes": 82020,
+        "sha256": "b1ea904a8432aaea63196e75e166dab18ecc41b745ae9362be50d9ca4610f226"
+      },
+      {
+        "path": "opencode-v2-posix-exec.json",
+        "bytes": 11349,
+        "sha256": "28baefe178d0cf5b4b4743063ae71a7b0efc48f3663e2186f8341d449a307fe8"
+      },
+      {
+        "path": "opencode-v2-embedded-host.json",
+        "bytes": 95628,
+        "sha256": "84152d29057b44f2e9808a5d215ad4152d0eca4ff83e2df30833cce90d7b6ac9"
+      },
+      {
+        "path": "opencode-v2-embedded-inputs.json",
+        "bytes": 783,
+        "sha256": "1a7bca823a63a78333653fbad0814d19c233ba7a3001a1fa325d18fd10081d2b"
+      }
+    ],
+    "providerArchive": {
+      "path": "native-proposal/c930-archives/agent-teams-provider-implementations-0.0.0.tgz",
+      "bytes": 186425,
+      "sha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+    },
+    "previousCredentialsR1": {
+      "path": "native-proposal/linux-credential-cancellation-3be-r1/review.json",
+      "bytes": 25853,
+      "sha256": "16d741cc060e86abb763c9e2098c6fd764ebdb38fb307f004ddd768c0fb16be7"
+    },
+    "prospectiveAttributionR1": {
+      "path": "linux-observation-feasibility/full-attribution-r1.json",
+      "bytes": 25292,
+      "sha256": "fb90ba7153698a455085d4cb6f0a2ec0ad594ecc705199847134da6fcf2468fc"
+    }
+  },
+  "originalFailure": {
+    "primary": {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-model-probe.native.ts",
+      "line": 328,
+      "operation": "third explicit management.probe.cancel",
+      "expected": "cancelled",
+      "actual": "held"
+    },
+    "secondary": {
+      "source": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "line": 344,
+      "calledFromModelProbeFinallyLine": 449,
+      "expectedHostExit": 0,
+      "actualHostExit": 1
+    },
+    "aggregate": "Exactly these two original assertions are retained; no additional process-group absence assertion or receipt-write failure appears in the aggregate.",
+    "runner": {
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0,
+      "caseDurationMs": 35452.239738,
+      "runnerDurationMs": 35577.302654
+    },
+    "summaryRecord": {
+      "kind": "TEST_NATIVE_V2_CATALOG_FAILURE",
+      "diagnosticOnly": true,
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "unknownProbeCancelled": false,
+      "catalogAttempted": false,
+      "catalogCompleted": false,
+      "catalogPhase": "not-started",
+      "catalogReply": "unavailable",
+      "modelRequests": 3,
+      "cleanup": false,
+      "traceLimited": false,
+      "metadataFailure": null
+    },
+    "flagMeaning": "unknownProbeCancelled is assigned only after the later unlisted-variant cancellation case; false here does not mean the preceding explicit third cancellation was never requested.",
+    "budgets": "Original test timeout 240000ms and captured modelProbeTimeoutMs 60000 remain. The reported assertion failure is not a test-runner timeout. The inner read-cut false deadline/abort flags do not independently attest the app/Owner outer signal snapshot."
+  },
+  "positiveScope": {
+    "embeddedHost": {
+      "status": "PASS",
+      "cleanup": true,
+      "platform": "linux-x64",
+      "approvalMode": "manual",
+      "steps": [
+        "original_native_coordination_and_cleanup_before_business_host",
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "businessModelRequests": 11,
+      "successfulInputs": 2,
+      "resolvedPermissions": 2,
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "elapsedMs": 58938,
+      "coordination": {
+        "purpose": "native-local-readiness-v1",
+        "nativeGeneration": "v2",
+        "status": "PASS",
+        "cleanup": true,
+        "modelRequests": 4,
+        "metadataRequests": 1,
+        "originalReceiptUnchanged": true
+      }
+    },
+    "modelProbe": {
+      "steps": [
+        "actual_native_no_tool_request_completed_once_and_owned_child_gone",
+        "selected_model_B_declared_high_variant_observed_in_native_request"
+      ],
+      "requests": [
+        {
+          "tools": 0,
+          "promptMatched": true,
+          "model": "TEST-model",
+          "configScope": "global"
+        },
+        {
+          "tools": 0,
+          "promptMatched": true,
+          "model": "TEST-model-B",
+          "configScope": "project",
+          "effort": "high"
+        },
+        {
+          "tools": 0,
+          "promptMatched": true,
+          "model": "TEST-model-B",
+          "configScope": "project",
+          "effort": "high"
+        }
+      ],
+      "nativeProcessCount": 3,
+      "status": "INCOMPLETE",
+      "cleanup": false
+    },
+    "posixAlwaysStep": {
+      "status": "PASS_NATIVE_FIXTURE_ONLY",
+      "observations": 8,
+      "cleanup": true,
+      "nativeFixtureQualified": true,
+      "productQualified": false,
+      "installedRuntimeQualified": false,
+      "customExecutableQualified": false,
+      "scriptQualified": false,
+      "scope": "Retained original native fixture result only; this audit does not requalify broader product-path P09."
+    }
+  },
+  "trace": {
+    "rows": 237,
+    "traceLimited": false,
+    "counts": {
+      "child-exit": 3,
+      "child-input-ended": 3,
+      "child-ready": 3,
+      "child-spawn": 3,
+      "host-input-ended": 1,
+      "host-probe-close-failed": 1,
+      "read-cut-failed": 1,
+      "request": 92,
+      "request-body-sent": 15,
+      "request-send-headers": 15,
+      "response": 92,
+      "response-end": 8
+    },
+    "firstRetainedReadCut": {
+      "epoch": 1,
+      "event": "read-cut-failed",
+      "atMs": 32361,
+      "child": null,
+      "request": null,
+      "route": null,
+      "method": null,
+      "durationMs": 340,
+      "status": null,
+      "contentEncoding": null,
+      "stage": "before-log",
+      "code": "cleanup_unknown",
+      "exitCode": null,
+      "signal": null,
+      "deadlineExpired": false,
+      "aborted": false
+    },
+    "closeFailure": {
+      "epoch": 1,
+      "event": "host-probe-close-failed",
+      "atMs": 32442,
+      "child": null,
+      "request": null,
+      "route": null,
+      "method": null,
+      "durationMs": null,
+      "status": null,
+      "contentEncoding": null,
+      "stage": "driver-close",
+      "code": "unconfirmed",
+      "exitCode": null,
+      "signal": null,
+      "probeDigest": "17038dac4cdb254e78c3848d2faab2c895261d3f0b0c108e8aa8577130b9da1f",
+      "runState": "threw",
+      "outcome": "unobserved",
+      "errorClass": "unknown"
+    },
+    "nativeChildExitFacts": [
+      {
+        "epoch": 1,
+        "child": 1,
+        "atMs": 14189,
+        "exitCode": 0,
+        "signal": null
+      },
+      {
+        "epoch": 1,
+        "child": 2,
+        "atMs": 23605,
+        "exitCode": 0,
+        "signal": null
+      },
+      {
+        "epoch": 1,
+        "child": 3,
+        "atMs": 32440,
+        "exitCode": 0,
+        "signal": null
+      }
+    ],
+    "causalLimits": [
+      "All network response-end observations are lower-level transport events, not proof of caller reader acquisition, cancellation, full consumption or lock release.",
+      "The lack of a trace-limit event establishes the existing cap was not reached; it does not establish complete instrumentation of internal branches.",
+      "The same read-cut event can arise from several original response/reader custody failure branches. The original exception and particular catch/lock branch are not retained."
+    ]
+  },
+  "physicalCleanup": {
+    "nativeChildren": "All three original native child-exit events report exit 0, signal null. The original finally attempts process-group ESRCH checks for all three recorded native PIDs; no such failure appears in the exact two-error aggregate.",
+    "host": "The original management Host exits 1 with valid stdout; its provider cleanup is not confirmed.",
+    "durablePolicy": "ModelProbeOwner cancels by retiring and aborting the original entry before native.close. A false close result intentionally writes held/resourceHeld:true and retains fence debt. Host shutdown then preserves that unresolved cleanup condition.",
+    "namespace": "The test only removes its sandbox when cleanupErrors is empty. Cleanup is false, so root namespace removal is not established. The third per-case post-cancel namespace/replay assertions are unreached.",
+    "notClaimed": "Native process exits and absence checks do not justify changing cleanup false, declaring all I/O released, or converting held to cancelled."
+  },
+  "sourceNarrowing": {
+    "proven": "The before-log raw cleanup_unknown is produced by the underlying ExecutionTransport path, then translated by v2-native-cut to native_read_cleanup_unknown. This is narrower than the old credentials after-log transport_failure leaf.",
+    "remainingCandidates": [
+      "Response body/reader cannot be acquired or has an invalid ownership handle.",
+      "Error-path cancellation of an unclaimed response body fails or does not settle within its unchanged original cleanup bound.",
+      "Error-path reader.cancel or releaseLock fails or does not settle within its unchanged original cleanup bound.",
+      "Final reader.releaseLock throws."
+    ],
+    "missing": "No retained event distinguishes those branches or the triggering lower-level failure. The app injects a combined outer signal into fetch while the native read diagnostic reports its own cut signal. Explicit cancel is proven, but its exact signal-to-reader/close ordering is not.",
+    "repairDecision": "No narrow runtime/harness correction is established by these receipts. Preserve all custody, cleanup, no-replay, signal and deadline predicates; do not increase timeouts or infer a successful cleanup from child exit."
+  },
+  "comparisonTo3be": {
+    "earlier": "Original 3be Linux failed the credentials third Host timeout path, with after-log/transport_failure, five earlier credential steps and a saturated trace.",
+    "current": "Current 75cf fails earlier in a different workflow step: the third explicit no-tool model-probe cancel, before-log/cleanup_unknown, with 237 uncapped rows. Credentials is not reached.",
+    "sharedLimit": "Both preserve driver-close/unconfirmed and unknown overall cleanup; this alone does not identify a common concrete cause or a fix."
+  },
+  "unreached": [
+    "Third per-case cancelled/replay/namespace assertions after line328.",
+    "Later unknown-variant cancellation and catalog/reused metadata owner/cold Host probe proof.",
+    "Following Linux credential, permission and captured external-MCP workflow steps.",
+    "Final complete native management/permission evidence validator."
+  ],
+  "prospectiveDesignReassessment": {
+    "decision": "Existing bounded observation design remains feasible but unselected; no new source or producer/archive cut is selected by this report.",
+    "usefulFacts": [
+      "First app close-entry outer signal/deadline snapshot before that close invokes its own abort.",
+      "First false-to-true sticky native cleanupUnknown transition.",
+      "Exact failed original driver.close stage: drain, protocol-dispose or confirm-stopped."
+    ],
+    "explicitCancelCaveat": "ModelProbeOwner has already called entry.abort.abort before native.close on this explicit cancellation path. An outer-aborted snapshot at close is expected in that path and does not prove the first cause or distinguish reader failure from cancellation timing.",
+    "remainingReaderGap": "Those two producer and two app changes would still not distinguish ExecutionTransport getReader/body.cancel/reader.cancel/releaseLock failure branches. Do not call the proposed three facts complete causal attribution for this new leaf.",
+    "preservation": "Any later selected observation must retain existing total/frame/byte limits and first-failure reservations, default-off activation, no public API or native actions/timers, V2-only Session observation and unchanged V1 behavior. Only the existing TEST subscriber containment is claimed, never arbitrary-subscriber immunity.",
+    "dependency": "Producer modifications still require normal exact-source producer CI and original accepted native receipts, verified rebuilt archive, then separate app adoption. Current c930 archive and SPI remain unchanged."
+  },
+  "sourceBindings": [
+    {
+      "repositoryPath": "packages/legacy-agent-host/tests/opencode-v2-model-probe.native.ts",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "native-75cf-linux-x64/installer-review/source/packages/legacy-agent-host/tests/opencode-v2-model-probe.native.ts",
+      "bytes": 27317,
+      "sha256": "b2a967c875bf2cff37b7a24ee45152cfec2ebf68e2a93969afe55c9f58809ac1",
+      "gitBlob": "a1f8ce79fb7a50460ad50e0a095c595cce43baf1",
+      "provenance": "official immutable 75cf raw-file response, preserved original final LF"
+    },
+    {
+      "repositoryPath": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "native-75cf-linux-x64/installer-review/source/packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "bytes": 22177,
+      "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+      "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+      "provenance": "official immutable 75cf raw-file response, preserved original final LF"
+    },
+    {
+      "repositoryPath": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "native-75cf-linux-x64/installer-review/source/packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "bytes": 37181,
+      "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+      "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+      "provenance": "official immutable 75cf raw-file response, preserved original final LF"
+    },
+    {
+      "repositoryPath": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "native-75cf-linux-x64/installer-review/source/packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "bytes": 30721,
+      "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+      "provenance": "official immutable 75cf raw-file response, preserved original final LF"
+    },
+    {
+      "repositoryPath": "packages/legacy-agent-host/src/composition/ProviderModelProbePreparation.ts",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "native-75cf-linux-x64/installer-review/source/packages/legacy-agent-host/src/composition/ProviderModelProbePreparation.ts",
+      "bytes": 8891,
+      "sha256": "299bc0e774ab00d38271c652ad04e76843ac8886c0ac256fadd793aef7f4d137",
+      "gitBlob": "e55795dcfd065139c0e798fa4e062f4e3ffcc6c6",
+      "provenance": "official immutable 75cf raw-file response, preserved original final LF"
+    },
+    {
+      "repositoryPath": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "native-75cf-windows-review/source/.github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36309,
+      "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a",
+      "gitBlob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+      "provenance": "reuse exact official 75cf source already independently bound in Windows review; no refetch"
+    },
+    {
+      "repositoryPath": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "native-75cf-windows-review/source/packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "bytes": 15303,
+      "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+      "gitBlob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+      "provenance": "reuse exact official 75cf source already independently bound in Windows review; no refetch"
+    },
+    {
+      "repositoryPath": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "native-75cf-windows-review/source/packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "bytes": 33259,
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff",
+      "gitBlob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "provenance": "reuse exact official 75cf source already independently bound in Windows review; no refetch"
+    }
+  ],
+  "providerBindings": [
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.js",
+      "path": "native-3be-linux64/installer-review/provider-source/v2-driver-session.js",
+      "bytes": 1002,
+      "sha256": "1d5a74bfdc4a62a468c267ce1b5406cd851782ee9f9c625d0734c8cef64634ad"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.js",
+      "path": "native-3be-linux64/installer-review/provider-source/v2-driver-native.js",
+      "bytes": 11517,
+      "sha256": "36d56ce01cccbf3e29bfddab14b0470b59abb783a253b775e7e924ec5fda2db8"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-backend.js",
+      "path": "native-3be-linux64/installer-review/provider-source/v2-driver-backend.js",
+      "bytes": 4496,
+      "sha256": "08ac2e50660d6cde38c3068ee5f299cf2197091782ab88b76e8a05bffe933fc3"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js",
+      "path": "native-3be-linux64/installer-review/provider-source/v2-execution-transport.js",
+      "bytes": 18899,
+      "sha256": "837879f06134b994247136c5e6346962a20bab069eb2054a64757fb72eea942f"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-control-transport.js",
+      "path": "native-3be-linux64/installer-review/provider-source/v2-control-transport.js",
+      "bytes": 15272,
+      "sha256": "7d0ccaa0fe81a1438452d46fdbf349d61dedd68b95479f83207ea77edb68d9b7"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-session-client.js",
+      "path": "native-3be-linux64/installer-review/provider-source/v2-owned-session-client.js",
+      "bytes": 8535,
+      "sha256": "7876f55d85ed25994a124f7a6307af2d1c0033510b2ec9dda7145a015279f42c"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-session-control.js",
+      "path": "native-3be-linux64/installer-review/provider-source/v2-session-control.js",
+      "bytes": 6935,
+      "sha256": "51bb35aeaee64d2d146ba7e837b420d1ac9f3e857809eb59b6300dd2cb49063b"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.js",
+      "path": "native-3be-linux64/installer-review/provider-source/driver-session.js",
+      "bytes": 16934,
+      "sha256": "eba608d275608d85369cce4f0a641583c008504fa00345dbc808b633abbe07f7"
+    },
+    {
+      "archiveMember": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+      "path": "native-3be-linux64/installer-review/provider-source/v2-native-cut.js",
+      "bytes": 17378,
+      "sha256": "cbf0762238de460547f3eeeaf77789e591c8877c5fe651d922c96374fa93d7c1"
+    }
+  ],
+  "checks": [
+    {
+      "check": "Official artifact source/run/id/size/digest tuple",
+      "pass": true
+    },
+    {
+      "check": "Original ZIP expected SHA256",
+      "pass": true
+    },
+    {
+      "check": "Original ZIP CRCs",
+      "pass": true
+    },
+    {
+      "check": "Exactly four unique ordinary JSON members",
+      "pass": true
+    },
+    {
+      "check": "Safe member opencode-v2-model-probe.json",
+      "pass": true
+    },
+    {
+      "check": "Retained original member bytes opencode-v2-model-probe.json",
+      "pass": true
+    },
+    {
+      "check": "Safe member opencode-v2-posix-exec.json",
+      "pass": true
+    },
+    {
+      "check": "Retained original member bytes opencode-v2-posix-exec.json",
+      "pass": true
+    },
+    {
+      "check": "Safe member opencode-v2-embedded-host.json",
+      "pass": true
+    },
+    {
+      "check": "Retained original member bytes opencode-v2-embedded-host.json",
+      "pass": true
+    },
+    {
+      "check": "Safe member opencode-v2-embedded-inputs.json",
+      "pass": true
+    },
+    {
+      "check": "Retained original member bytes opencode-v2-embedded-inputs.json",
+      "pass": true
+    },
+    {
+      "check": "Exact head opencode-v2-model-probe.json",
+      "pass": true
+    },
+    {
+      "check": "Exact head opencode-v2-embedded-host.json",
+      "pass": true
+    },
+    {
+      "check": "Exact head opencode-v2-embedded-inputs.json",
+      "pass": true
+    },
+    {
+      "check": "Exact head opencode-v2-posix-exec.json",
+      "pass": true
+    },
+    {
+      "check": "Exact model-probe member SHA",
+      "pass": true
+    },
+    {
+      "check": "Model probe remains INCOMPLETE and cleanup false",
+      "pass": true
+    },
+    {
+      "check": "Three native processes and three original no-tool requests",
+      "pass": true
+    },
+    {
+      "check": "Original two completed steps only",
+      "pass": true
+    },
+    {
+      "check": "Model selections and native request configuration retained",
+      "pass": true
+    },
+    {
+      "check": "Original failed Host fact retained",
+      "pass": true
+    },
+    {
+      "check": "probe broader qualifications remain false",
+      "pass": true
+    },
+    {
+      "check": "embedded broader qualifications remain false",
+      "pass": true
+    },
+    {
+      "check": "Embedded original Linux manual journey PASS/cleanup",
+      "pass": true
+    },
+    {
+      "check": "Embedded eleven business calls plus two confirmed original Host exits",
+      "pass": true
+    },
+    {
+      "check": "Embedded seven original steps",
+      "pass": true
+    },
+    {
+      "check": "Original coordination is separately counted and released",
+      "pass": true
+    },
+    {
+      "check": "Both business inputs terminal succeeded",
+      "pass": true
+    },
+    {
+      "check": "Both original permissions resolved",
+      "pass": true
+    },
+    {
+      "check": "Prepared exact Linux inputs retain product false",
+      "pass": true
+    },
+    {
+      "check": "Host/probe original binary/source/provider digests agree",
+      "pass": true
+    },
+    {
+      "check": "Prepared Bun/manifest agree with original receipts",
+      "pass": true
+    },
+    {
+      "check": "Independent always POSIX fixture keeps narrow qualification",
+      "pass": true
+    },
+    {
+      "check": "Corrected original API decoded log exact bytes",
+      "pass": true
+    },
+    {
+      "check": "Original first and secondary assertion stack retained",
+      "pass": true
+    },
+    {
+      "check": "Aggregate contains exactly two assertions",
+      "pass": true
+    },
+    {
+      "check": "Original bounded failure record binds catalog not started and uncapped trace",
+      "pass": true
+    },
+    {
+      "check": "Original test rejected rather than runner cancellation",
+      "pass": true
+    },
+    {
+      "check": "All 237 original trace rows retained without limit",
+      "pass": true
+    },
+    {
+      "check": "Three child launch/ready/end/exit facts",
+      "pass": true
+    },
+    {
+      "check": "Three original child exits zero without signal",
+      "pass": true
+    },
+    {
+      "check": "Exactly one retained read cut and close failure",
+      "pass": true
+    },
+    {
+      "check": "Specific native read failure before-log/cleanup_unknown",
+      "pass": true
+    },
+    {
+      "check": "Specific close failure remains driver-close/unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "Failure sequence ends with original child exit then Host input closure",
+      "pass": true
+    },
+    {
+      "check": "92 requests/responses and eight observed response ends",
+      "pass": true
+    },
+    {
+      "check": "Source first explicit cancel assertion and later unknown variant flag ordering",
+      "pass": true
+    },
+    {
+      "check": "Original model-probe and test-runner deadlines retained",
+      "pass": true
+    },
+    {
+      "check": "Original final process group checks and conditional namespace removal retained",
+      "pass": true
+    },
+    {
+      "check": "V2 route and seed-derived model probe timeout retained",
+      "pass": true
+    },
+    {
+      "check": "Owner finish aborts before native close and preserves debt",
+      "pass": true
+    },
+    {
+      "check": "App close self-abort precedes its actual driver close",
+      "pass": true
+    },
+    {
+      "check": "Original c930 provider archive is exact receipt pin",
+      "pass": true
+    },
+    {
+      "check": "Original provider archive member v2-driver-session.js",
+      "pass": true
+    },
+    {
+      "check": "Original provider archive member v2-driver-native.js",
+      "pass": true
+    },
+    {
+      "check": "Original provider archive member v2-driver-backend.js",
+      "pass": true
+    },
+    {
+      "check": "Original provider archive member v2-execution-transport.js",
+      "pass": true
+    },
+    {
+      "check": "Original provider archive member v2-control-transport.js",
+      "pass": true
+    },
+    {
+      "check": "Original provider archive member v2-owned-session-client.js",
+      "pass": true
+    },
+    {
+      "check": "Original provider archive member v2-session-control.js",
+      "pass": true
+    },
+    {
+      "check": "Original provider archive member driver-session.js",
+      "pass": true
+    },
+    {
+      "check": "Original provider archive member v2-native-cut.js",
+      "pass": true
+    },
+    {
+      "check": "Native-cut preserves raw cleanup_unknown then translates it",
+      "pass": true
+    },
+    {
+      "check": "Multiple distinct response-reader uncertainty branches remain closed to original diagnostics",
+      "pass": true
+    },
+    {
+      "check": "Existing bounded design remains unselected",
+      "pass": true
+    },
+    {
+      "check": "Existing design still has two producer/two app/three test paths",
+      "pass": true
+    },
+    {
+      "check": "Old credential analysis exact retained binding",
+      "pass": true
+    }
+  ],
+  "checkCount": 68,
+  "execution": {
+    "project": false,
+    "tests": false,
+    "compiler": false,
+    "provider": false,
+    "native": false,
+    "GUI": false,
+    "CIpolling": false,
+    "remoteMutation": false,
+    "downloads": 0,
+    "analysis": "Retained JSON/ZIP/tar/source bytes only; no imports or execution of repository/producer code."
+  },
+  "afterimages": false
+}

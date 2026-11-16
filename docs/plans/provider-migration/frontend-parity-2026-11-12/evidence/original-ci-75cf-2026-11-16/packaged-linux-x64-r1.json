@@ -1,0 +1,243 @@
+{
+  "kind": "ORIGINAL_75CF_PACKAGED_LINUX_X64_RETAINED_R1",
+  "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959134974,
+  "jobId": 133638325243,
+  "jobConclusion": "success",
+  "artifact": {
+    "artifactId": 14280355137,
+    "bytes": 347264,
+    "sha256": "2d54e136aa32eeff876343bee77bbdeb25a926c1dadce1dfb29f5efd70a355b6",
+    "crcValid": true,
+    "safePaths": true,
+    "members": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1154820,
+        "sha256": "849c4c2ba67590d27a1a969c99490ccf03bdab232fc239fa98522d15432c8212"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5286,
+        "sha256": "01b7aebf799e67d2eb1e84cbec42c3ae57d5ed20edcee8c95289188b8f1e9898"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 783,
+        "sha256": "1a7bca823a63a78333653fbad0814d19c233ba7a3001a1fa325d18fd10081d2b"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "bytes": 1186,
+        "sha256": "df81e3e20c95c424b8371ae495e38c7e63c1099bf21c6a671b630c9ce52a6bdc"
+      }
+    ]
+  },
+  "result": "PASS_SCOPED_PACKAGED_NATIVE_ONLY",
+  "checks": [
+    {
+      "check": "Original exact head in all four receipts",
+      "passed": true
+    },
+    {
+      "check": "Original Linux x64 tuple in all four receipts",
+      "passed": true
+    },
+    {
+      "check": "API size matches original ZIP",
+      "passed": true
+    },
+    {
+      "check": "ZIP CRC and safe paths retained",
+      "passed": true
+    },
+    {
+      "check": "Exactly four original members",
+      "passed": true
+    },
+    {
+      "check": "Candidate byte hash joins both original receipts",
+      "passed": true
+    },
+    {
+      "check": "Native PASS and cleanup retained",
+      "passed": true
+    },
+    {
+      "check": "Relay PASS and cleanup retained",
+      "passed": true
+    },
+    {
+      "check": "Relay binds original native receipt bytes",
+      "passed": true
+    },
+    {
+      "check": "Original wrapper native exit0 no signal",
+      "passed": true
+    },
+    {
+      "check": "Both original Hosts exit0 valid stdout",
+      "passed": true
+    },
+    {
+      "check": "Actual packaged extraResources origin",
+      "passed": true
+    },
+    {
+      "check": "Checkout and legacy runtime unavailable during original run",
+      "passed": true
+    },
+    {
+      "check": "Original source bundle and legacy inputs restored",
+      "passed": true
+    },
+    {
+      "check": "Relay cleanup joins all original observations",
+      "passed": true
+    },
+    {
+      "check": "Manifest package/file counts match receipt",
+      "passed": true
+    },
+    {
+      "check": "Exact c930 provider artifact retained",
+      "passed": true
+    },
+    {
+      "check": "Original appAsar and Host entry joins",
+      "passed": true
+    },
+    {
+      "check": "Original Node joins",
+      "passed": true
+    },
+    {
+      "check": "Original source/harness joins",
+      "passed": true
+    },
+    {
+      "check": "Original Bun and graph joins",
+      "passed": true
+    },
+    {
+      "check": "All six original native phases retained",
+      "passed": true
+    },
+    {
+      "check": "11 finite localhost business calls with no model failures",
+      "passed": true
+    },
+    {
+      "check": "Two terminal succeeded original inputs",
+      "passed": true
+    },
+    {
+      "check": "Two manual permissions resolved",
+      "passed": true
+    },
+    {
+      "check": "No Desktop/auth/release claim",
+      "passed": true
+    },
+    {
+      "check": "Coordination remains independently unqualified",
+      "passed": true
+    }
+  ],
+  "checkCount": 27,
+  "native": {
+    "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "platform": "linux-x64",
+    "version": "2.1.4",
+    "approvalMode": "manual",
+    "digests": {
+      "bun": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "manifest": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+      "node": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "hostSource": "d66151c6534dce86869bf0a088db51bf3d9a13683bf6f356b83e4f795d04bda5",
+      "hostDist": "53f8d64a58741e94c50b16b09fad5bde977e3ac975bfaa39531403ac65bf7f63",
+      "provider": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+    },
+    "steps": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "modelRequests": 11,
+    "terminalInputs": [
+      {
+        "phase": "terminal",
+        "terminal": "succeeded"
+      },
+      {
+        "phase": "terminal",
+        "terminal": "succeeded"
+      }
+    ],
+    "permissions": [
+      {
+        "kind": "permission",
+        "phase": "resolved"
+      },
+      {
+        "kind": "permission",
+        "phase": "resolved"
+      }
+    ],
+    "hosts": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "cleanup": true,
+    "elapsedMs": 40851
+  },
+  "packaged": {
+    "executionOrigin": "packaged-extraResources",
+    "appAsarSha256": "23df0ef659c9cc5f710e2cb3cf9f663655bea87b975a6cce9fcc0521d4a59848",
+    "candidateManifestSha256": "849c4c2ba67590d27a1a969c99490ccf03bdab232fc239fa98522d15432c8212",
+    "harnessSha256": "4333daaae6d7aa51b79d282bc851cb5074ae6f3af891f6abcdf2b5e9afe517fd",
+    "sourceCheckoutUnavailable": true,
+    "legacyRuntimeUnavailable": true,
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "nodeArchiveSha256": "6e1db87ef58b8819e5d5402eff1536491b18edd8eb7bee5ef7897876e88dc5ff",
+    "providerArtifacts": [
+      {
+        "name": "@agent-teams/provider-implementations",
+        "sha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+      },
+      {
+        "name": "@agent-teams/provider-session-contracts",
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+      }
+    ],
+    "packages": 120,
+    "files": 8133,
+    "sourceRestored": true,
+    "bundleRestored": true,
+    "legacyRuntimeRestored": true,
+    "nativeReceiptSha256": "01b7aebf799e67d2eb1e84cbec42c3ae57d5ed20edcee8c95289188b8f1e9898",
+    "nativeExit": {
+      "code": 0,
+      "signal": null
+    }
+  },
+  "limits": [
+    "Original scoped packaged actual OpenCode V2 plus finite localhost model only.",
+    "No GUI app relaunch/quit receipt exists in this Linux artifact; desktopJourneyQualified remains false.",
+    "The source-native Linux explicit probe cancellation failure is separate and remains INCOMPLETE.",
+    "All tuples, manual/auto variants, historical donor work, P09, genuine Claude/Codex and release gates retain their independent requirements.",
+    "Inert audit checked retained receipt/hash/count joins; packaged binary files were not re-executed or independently rehashed from a bundle in this workspace."
+  ],
+  "execution": "NONE: original artifact read/hash/CRC and receipt comparison only"
+}

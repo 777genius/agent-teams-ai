@@ -1,0 +1,12 @@
+{
+  "kind": "plan66-independent-plan65-integration",
+  "originalPlanSha256": "dd953399e0a86e00fb9fdc642837d14e98665c19d0ab443475ac6f39377ebe7c",
+  "planSha256": "c31df909b5eb6f27e6a83aaa7b83c18f681fe7c75fc2d9558905b31c9be7b4e1",
+  "planGitBlob": "10d13481f2f870382770e566ec3dca5d5a052cab",
+  "bytes": 7884,
+  "originalPrefixPreserved": true,
+  "incoming": "7136f0dfd721db2d0f3edb757b1f9f8bb7498332",
+  "ownSourceInventoryUnchanged": true,
+  "plan65SourcePresent": false,
+  "afterimagesPrepared": false
+}

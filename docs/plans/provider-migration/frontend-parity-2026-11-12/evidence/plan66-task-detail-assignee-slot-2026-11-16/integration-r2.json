@@ -1,0 +1,224 @@
+{
+  "kind": "PLAN66_INTEGRATION_APPENDIX_PROSPECTIVE_R2",
+  "status": "ACCEPT_EXACT_APPENDIX_ONLY",
+  "reviewer": "installer_review",
+  "integratedPlan": {
+    "path": "frontend-proposal/taskboard-75cf/integration/plan.md",
+    "bytes": 7884,
+    "sha256": "c31df909b5eb6f27e6a83aaa7b83c18f681fe7c75fc2d9558905b31c9be7b4e1",
+    "gitBlob": "10d13481f2f870382770e566ec3dca5d5a052cab"
+  },
+  "originalPlan": {
+    "path": "frontend-proposal/taskboard-75cf/plan.md",
+    "bytes": 6200,
+    "sha256": "dd953399e0a86e00fb9fdc642837d14e98665c19d0ab443475ac6f39377ebe7c",
+    "gitBlob": "7ddc05b1be98c0df91d679d8705b1be8bd312c98"
+  },
+  "unchangedPriorR2": {
+    "path": "installer-proposal/plan66-prospective-r2/prospective-r2.json",
+    "bytes": 15967,
+    "sha256": "3e45dfef28c3c7576d1e7f3abc051ce49b4a414518b9b566af39228a93b49806",
+    "gitBlob": "b230696e0d2b40560709b51ad6bfc05c90ce1a2d"
+  },
+  "appendix": {
+    "bytes": 1684,
+    "sha256": "45eebb1b21873d9d86fb81fa1b4297bf07d64aa58afe7ec602e86dae186e9cdc",
+    "newSections": 1
+  },
+  "incomingDocumentCommit": "7136f0dfd721db2d0f3edb757b1f9f8bb7498332",
+  "incomingRetainedBodies": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/65-taskboard-clarification-refresh-2026-11-16.md",
+      "bytes": 8760,
+      "sha256": "ed08632a83f7918cbcba0d58d4e2cc42a6945082a342872bb863e23c1241ac2a",
+      "gitBlob": "5df22caf981497d23ef3137783e951fc7470ab80"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-actual-source-r2.json",
+      "bytes": 2653,
+      "sha256": "179d092f895f68eb49ed8e55f00d800b367f22b7b1ece5e00ab8de0ef0d249ca",
+      "gitBlob": "fa4d6286d7d26891d1c5fbc2e57d53e004ab36ce"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-parent-rebind-r2.json",
+      "bytes": 5410,
+      "sha256": "04b30cc62f1450e8e2cc8fefb62e0418524f265098240d72b15fbe25f47007b0",
+      "gitBlob": "462db51740f413d759a3034e34a399a836e3f110"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-published-r1-r2.json",
+      "bytes": 13825,
+      "sha256": "be5c06da6c6772b803d2a19eb94249feccf39dbfa895c93a10138dbb349ec7ac",
+      "gitBlob": "15e4b9e337d690997435cf8be833c93b26ed29c6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-source-r1.json",
+      "bytes": 2169,
+      "sha256": "89218179bee6a9fcfa99d7fb786e6051edebb6cd8e139acef2e0ee15864de8ba",
+      "gitBlob": "2f328e76c7e67417c94bf2e47e1e528db77d8e4c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-source-r2.json",
+      "bytes": 7946,
+      "sha256": "c3cf43b5e3c69064ed3a5a4c8799e73ec3ce70c2e65666b3103bca1f6e48469e",
+      "gitBlob": "6d142339da567214d28bfe507aa47cb414fc05be"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan65-taskboard-clarification-refresh-2026-11-16/prospective-r2.json",
+      "bytes": 9731,
+      "sha256": "e41141b37fc3304d47eb6c2458d65d53acf89f908688dd3ad194167abc9fa9fa",
+      "gitBlob": "0cb8355458560a3208efd63590d729194c889694"
+    }
+  ],
+  "retainedPreimages": [
+    {
+      "path": "frontend-proposal/taskboard-75cf/before/src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "bytes": 17067,
+      "sha256": "9aa3aabc0d50852af7010fc9dfd1834905c6c078ac4bfe691e789f002ac05bd1",
+      "gitBlob": "68499fd50746417a48883f73ca1d25592c644089"
+    },
+    {
+      "path": "frontend-proposal/taskboard-75cf/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 22366,
+      "sha256": "aa3f5a3d846570be1066db23b657fda483216dcef15c1581903d007b6540e34f",
+      "gitBlob": "fc47d6a0a2c38b33e8a5a6439dbddc9ee240ce10"
+    }
+  ],
+  "blockingFindings": [],
+  "reasoning": [
+    "The complete original 6200-byte prospective plan is preserved exactly. The sole 1684-byte appendix clarifies compatibility; it does not select a third source path or change the accepted Header minimum-height correction.",
+    "The exact incoming Plan65 document selects only a stronger Boolean acceptance condition inside the existing clarification-banner wait, using the existing default assignment-readiness predicate and captured context/surface. Its original interval, cadence, subsequent Close action, final exact guard and all surrounding assertions stay selected.",
+    "The two cuts address different reachable source properties: settled renderer authority before Close, and stable assignee-slot minimum height. Neither establishes the historical invalidating event.",
+    "Plan66 must preserve whichever independently selected Plan65 caller afterimage is present in the actual parent. Its own implementation must not edit or restore either Task Board caller or shared controls.",
+    "The retained Header and common-roster preimages still match their exact approved Git blobs. The appendix appropriately requires the original R1/R2 records to remain immutable."
+  ],
+  "qualificationLimits": [
+    "This is exact-document prospective R2 only. No Plan65 or Plan66 source afterimage, patch, runtime execution or resulting CI outcome is approved or asserted.",
+    "The seven retained official incoming documentation bodies were independently rehashed; complete incoming-tree/source-leaf preservation remains the parent root review, not a second independent full-tree proof.",
+    "The earlier 47-check Plan66 source-mechanism/evidence review remains the separate immutable record. This appendix review does not repeat or enlarge it.",
+    "A final source review must rebind the immediate parent, verify exactly the two Plan66 leaves and preserve all independently landed acceptance changes."
+  ],
+  "checks": [
+    {
+      "name": "Original selected plan exact retained SHA",
+      "passed": true
+    },
+    {
+      "name": "Integrated plan exact requested SHA",
+      "passed": true
+    },
+    {
+      "name": "Original plan is complete byte-identical prefix",
+      "passed": true
+    },
+    {
+      "name": "Only one appended section",
+      "passed": true
+    },
+    {
+      "name": "Prior R2 bytes unchanged",
+      "passed": true
+    },
+    {
+      "name": "Incoming retained bundle has seven entries",
+      "passed": true
+    },
+    {
+      "name": "All incoming retained entries are repository documentation",
+      "passed": true
+    },
+    {
+      "name": "Incoming retained Git blob docs/plans/provider-migration/frontend-parity-2026-11-12/65-taskboard-clarification-refresh-2026-11-16.md",
+      "passed": true
+    },
+    {
+      "name": "Incoming retained Git blob docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-actual-source-r2.json",
+      "passed": true
+    },
+    {
+      "name": "Incoming retained Git blob docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-parent-rebind-r2.json",
+      "passed": true
+    },
+    {
+      "name": "Incoming retained Git blob docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-published-r1-r2.json",
+      "passed": true
+    },
+    {
+      "name": "Incoming retained Git blob docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-source-r1.json",
+      "passed": true
+    },
+    {
+      "name": "Incoming retained Git blob docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-source-r2.json",
+      "passed": true
+    },
+    {
+      "name": "Incoming retained Git blob docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan65-taskboard-clarification-refresh-2026-11-16/prospective-r2.json",
+      "passed": true
+    },
+    {
+      "name": "Unique exact incoming Plan65 document",
+      "passed": true
+    },
+    {
+      "name": "Incoming selects one existing caller path",
+      "passed": true
+    },
+    {
+      "name": "Incoming selects Boolean conjunction at original wait",
+      "passed": true
+    },
+    {
+      "name": "Incoming uses captured original context and surface",
+      "passed": true
+    },
+    {
+      "name": "Incoming retains original interval and cadence",
+      "passed": true
+    },
+    {
+      "name": "Incoming explicitly preserves final exact guard and refuses replay",
+      "passed": true
+    },
+    {
+      "name": "Appendix keeps Plan66 cut limited to Header and pin",
+      "passed": true
+    },
+    {
+      "name": "Appendix forbids historical caller restoration",
+      "passed": true
+    },
+    {
+      "name": "Appendix preserves stronger incoming acceptance",
+      "passed": true
+    },
+    {
+      "name": "Appendix preserves actions, authority, strict geometry and cleanup",
+      "passed": true
+    },
+    {
+      "name": "Appendix disclaims historical event identification",
+      "passed": true
+    },
+    {
+      "name": "Retained Plan66 preimage src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "passed": true
+    },
+    {
+      "name": "Retained Plan66 preimage scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    }
+  ],
+  "checkCount": 27,
+  "execution": {
+    "project": false,
+    "compiler": false,
+    "tests": false,
+    "linter": false,
+    "providers": false,
+    "native": false,
+    "gui": false,
+    "ciPollOrMutation": false,
+    "remoteMutation": false
+  },
+  "sourceAfterimagesCreated": false
+}

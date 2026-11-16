@@ -1,0 +1,403 @@
+{
+  "kind": "INDEPENDENT_PLAN66_PROSPECTIVE_R2",
+  "status": "ACCEPT_PROSPECTIVE_TWO_PATH_LAYOUT_SCOPE",
+  "plan": {
+    "path": "frontend-proposal/taskboard-75cf/plan.md",
+    "bytes": 6200,
+    "sha256": "dd953399e0a86e00fb9fdc642837d14e98665c19d0ab443475ac6f39377ebe7c",
+    "gitBlob": "7ddc05b1be98c0df91d679d8705b1be8bd312c98"
+  },
+  "authorR1": {
+    "path": "frontend-proposal/taskboard-75cf/r1.md",
+    "bytes": 6477,
+    "sha256": "da3800082aba9689dcff654bd1c478bb946de54dacb521572c523b922d626e5c",
+    "gitBlob": "975d8f162ad4397a5f78b4a6fb144537604e5fd4"
+  },
+  "authorReview": {
+    "path": "frontend-proposal/taskboard-75cf/review.json",
+    "bytes": 8344,
+    "sha256": "da3d6efd87eb6f4258415a3a521725e669fb8c20b45c9b97dffe29e51dce67f3",
+    "gitBlob": "ed38a47a88bcbea6150a76114bcedd3c279ef742"
+  },
+  "blockingFindings": [],
+  "decision": "The existing assignee slot has a reachable height transition between its unchanged editable/read-only branches. Matching its minimum to the existing select h-8 is a minimal presentation correction with the original authority and strict physical-input oracle preserved. This is prospective approval only, not source or E2E PASS.",
+  "sourceInventory": [
+    {
+      "repositoryPath": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "path": "frontend-proposal/taskboard-75cf/before/src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "bytes": 17067,
+      "lines": 465,
+      "sha256": "9aa3aabc0d50852af7010fc9dfd1834905c6c078ac4bfe691e789f002ac05bd1",
+      "gitBlob": "68499fd50746417a48883f73ca1d25592c644089"
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "path": "frontend-proposal/taskboard-75cf/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 22366,
+      "lines": 344,
+      "sha256": "aa3f5a3d846570be1066db23b657fda483216dcef15c1581903d007b6540e34f",
+      "gitBlob": "fc47d6a0a2c38b33e8a5a6439dbddc9ee240ce10"
+    }
+  ],
+  "dependencies": [
+    {
+      "repositoryPath": "src/renderer/components/ui/MemberSelect.tsx",
+      "path": "frontend-proposal/taskboard-75cf/source/src/renderer/components/ui/MemberSelect.tsx",
+      "bytes": 13481,
+      "lines": 313,
+      "sha256": "69bf0eb3e109ee241e61619fd73bc7515415f45414eb61cbd56fd408ec1e782c",
+      "gitBlob": "56bd2c298ec1a7c9d74568d6338151e9b0e900cb"
+    },
+    {
+      "repositoryPath": "src/renderer/components/team/MemberBadge.tsx",
+      "path": "frontend-proposal/taskboard-75cf/source/src/renderer/components/team/MemberBadge.tsx",
+      "bytes": 6525,
+      "lines": 202,
+      "sha256": "9b3cb4a234416582ed836ba8358f45ea11d16c92698f3becc20b08d8c48765a9",
+      "gitBlob": "d0285af90257ad90e1aaf0c2a6cb4be6915282e8"
+    },
+    {
+      "repositoryPath": "src/renderer/components/ui/dialog.tsx",
+      "path": "frontend-proposal/taskboard-75cf/source/src/renderer/components/ui/dialog.tsx",
+      "bytes": 4914,
+      "lines": 130,
+      "sha256": "038c9966ee8a0047c0ab1e32f5feb61ca8a2a38ea838260139187b5f041767f2",
+      "gitBlob": "046c7452239fccb9d18858c86e9d075984888031"
+    },
+    {
+      "repositoryPath": "src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts",
+      "path": "frontend-proposal/taskboard-75cf/source/src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts",
+      "bytes": 12402,
+      "lines": 342,
+      "sha256": "245a59c0715bb05dc9da07c7ea51745734480a9e09863a09100bdbfe40fca019",
+      "gitBlob": "6640fd23e9941c261612517b6d583f7d4ddc5079"
+    },
+    {
+      "repositoryPath": "src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+      "path": "frontend-proposal/taskboard-75cf/source/src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+      "bytes": 27853,
+      "lines": 734,
+      "sha256": "cc73af4fab0ee40b4711173ed71db67776e16027009156cd373a1abcb942cb30",
+      "gitBlob": "4ebf5a55d7cdcc5c29cc63e2bc9915c631222165"
+    }
+  ],
+  "originalGuardBindings": [
+    {
+      "path": "desktop-taskboard-75cf/source/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 30733,
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e"
+    },
+    {
+      "path": "desktop-taskboard-75cf/source/scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+    },
+    {
+      "path": "desktop-taskboard-75cf/source/scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "bytes": 8576,
+      "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a",
+      "gitBlob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5"
+    },
+    {
+      "path": "desktop-taskboard-75cf/source/src/renderer/components/team/dialogs/TaskCommentsSection.tsx",
+      "bytes": 22718,
+      "sha256": "3d7e30507a2c757f4d065922f569ec991bf37823a1ce44222488c629740c51b6",
+      "gitBlob": "f5326f5bf956c3d7e6b72ea1860c5618b0e740c2"
+    },
+    {
+      "path": "desktop-taskboard-75cf/source/src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
+      "bytes": 11909,
+      "sha256": "8efb9b58de0e0b41d0a1264cccef6ac6b530792698d6b7fcd3b1aadfe3fc046b",
+      "gitBlob": "003228a68f91bd3be004b8388fbb400f5b6a7aa6"
+    }
+  ],
+  "workflowValidationBinding": {
+    "path": "native-proposal/w05-completed-install-r1/source/.github/workflows/host-emulated-acceptance.yml",
+    "bytes": 141809,
+    "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88",
+    "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b"
+  },
+  "evidenceBindings": [
+    {
+      "path": "desktop-taskboard-75cf/artifact.zip",
+      "bytes": 868196,
+      "lines": 6166,
+      "sha256": "f15cfa972cd2b4fd0852f9a2de62751bbcd84353249bf1daf2960c1c53bd1b76",
+      "gitBlob": "924503d1c488fa732de496592e1ee3e615b22f42"
+    },
+    {
+      "path": "desktop-taskboard-75cf/job.log",
+      "bytes": 194804,
+      "lines": 1853,
+      "sha256": "8e3749c2a70f2e82723d60cdf8862e91e83584bddc6428f4ae55f2b6c6f30931",
+      "gitBlob": "3c72f8f6d0d8c1b0bf94c43dfe23f92fa4d74091"
+    },
+    {
+      "path": "desktop-taskboard-75cf/extracted/TEST-desktop-backend-p6JQJh/desktop-backend-receipt.json",
+      "bytes": 968210,
+      "lines": 25041,
+      "sha256": "39a8125ebd1db403bad8c5ff640748d46159df0a5c33ed851b1e613ce9711ef9",
+      "gitBlob": "8300fadbac3db8149a2619ed0bf404c0e98e49e2"
+    },
+    {
+      "path": "desktop-taskboard-75cf/extracted/TEST-desktop-backend-p6JQJh/ui-failure.png",
+      "bytes": 98825,
+      "lines": 750,
+      "sha256": "e66933bed8ba6d52ab6bb54f454d5ea264d7b17dc180e65d9d691e0b8180dc37",
+      "gitBlob": "df11cff794192b0565b962a04f024097ed94a914"
+    }
+  ],
+  "evidence": {
+    "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "runId": 43959134362,
+    "jobId": 133621515452,
+    "artifactId": 14276860896,
+    "status": "INCOMPLETE",
+    "completedOriginalReceipts": [
+      "create",
+      "assignment",
+      "clarification"
+    ],
+    "closeHoverCount": 1,
+    "closeClickAttemptCount": 0,
+    "stableTarget": [
+      1121,
+      167.125,
+      "BUTTON"
+    ],
+    "finalTarget": [
+      1121,
+      171.125,
+      "BUTTON"
+    ],
+    "dialogHeightBefore": 619.75,
+    "dialogHeightAfter": 611.75,
+    "stableAndFinalAnimations": 0,
+    "fonts": "loaded",
+    "originalSourceRows": 1777
+  },
+  "reasoning": [
+    "min-h-8 uses the same spacing token as the existing small select h-8. It reserves the existing editable height without a fixed dialog height or new wrapper.",
+    "At the recorded single-row width, the assigned badge size-6 versus select h-8 difference is consistent with the exact 8 px dialog contraction and 4 px movement of the centered absolute Close target.",
+    "The original final check correctly refused before mousePressed. The proposed source fix leaves the complete helper, visibility/hit testing, current renderer ownership, two stable observations, final equality and click count/order unchanged.",
+    "Authority transitions remain legitimate. The fix neither preserves stale ownership nor stops reads or changes canReassign, onOwnerChange, canEditNow, deletion/readiness/surface/context checks.",
+    "The minimum allows larger/wrapped content to grow. It addresses this reachable assignee-height transition; it does not guarantee every possible responsive reflow or all dialog geometry is stationary."
+  ],
+  "precisionLimits": [
+    "The historical snapshot is not atomic with the failed guarded read. The exact owner/read-phase transition that caused that original move remains unproven.",
+    "The 8 px delta is the observed assigned-badge/small-select comparison. Do not promote it to a universal upper bound on added space for every unassigned-only or wrapped header.",
+    "The archived later screenshot is byte-bound here; no new screenshot or GUI execution was performed. This review independently checks retained geometry and source, not a recreated historical render.",
+    "Original INCOMPLETE status and unreached Task Board actions remain. Empty app process-group cleanup is not a separately observed captured Host absence."
+  ],
+  "futureSourceReviewObligations": [
+    "Exactly one min-h-8 token in the existing assignee slot; all condition/handler/child bytes stay unchanged.",
+    "Exactly one Header path appended after the landed CDP common operand;256 old common paths remain ordered prefix, count257;27 process and46 Windows Retry arrays remain byte-identical.",
+    "Reverse those two selected insertions to restore both entire beforeimages; verify actual fresh parent leaves and preserve all incoming work.",
+    "No workflow, helper, selector, action, delay, coordinate tolerance, retry/reacquisition, deadline, new class-mirroring test or permission alteration.",
+    "Existing original CI must compile/lint and execute the unchanged Task Board journey on the exact resulting head; no prior failure is converted into PASS."
+  ],
+  "checks": [
+    {
+      "check": "Exact frozen prospective Plan66 document",
+      "pass": true
+    },
+    {
+      "check": "Exact frozen author R1 documents",
+      "pass": true
+    },
+    {
+      "check": "Input binding frontend-proposal/taskboard-75cf/before/src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "pass": true
+    },
+    {
+      "check": "Input binding frontend-proposal/taskboard-75cf/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "pass": true
+    },
+    {
+      "check": "Input binding frontend-proposal/taskboard-75cf/source/src/renderer/components/ui/MemberSelect.tsx",
+      "pass": true
+    },
+    {
+      "check": "Input binding frontend-proposal/taskboard-75cf/source/src/renderer/components/team/MemberBadge.tsx",
+      "pass": true
+    },
+    {
+      "check": "Input binding frontend-proposal/taskboard-75cf/source/src/renderer/components/ui/dialog.tsx",
+      "pass": true
+    },
+    {
+      "check": "Input binding frontend-proposal/taskboard-75cf/source/src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts",
+      "pass": true
+    },
+    {
+      "check": "Input binding frontend-proposal/taskboard-75cf/source/src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+      "pass": true
+    },
+    {
+      "check": "Input binding desktop-taskboard-75cf/artifact.zip",
+      "pass": true
+    },
+    {
+      "check": "Input binding desktop-taskboard-75cf/job.log",
+      "pass": true
+    },
+    {
+      "check": "Input binding desktop-taskboard-75cf/extracted/TEST-desktop-backend-p6JQJh/desktop-backend-receipt.json",
+      "pass": true
+    },
+    {
+      "check": "Input binding desktop-taskboard-75cf/extracted/TEST-desktop-backend-p6JQJh/ui-failure.png",
+      "pass": true
+    },
+    {
+      "check": "Exactly selected Header and rebound Plan63 roster",
+      "pass": true
+    },
+    {
+      "check": "One exact inner assignee slot matches selected edit",
+      "pass": true
+    },
+    {
+      "check": "Original editable and assigned read-only size choices retained",
+      "pass": true
+    },
+    {
+      "check": "Original unassigned branch is text and may be shorter",
+      "pass": true
+    },
+    {
+      "check": "Outer metadata wrapping and owner controls are unchanged selected scope",
+      "pass": true
+    },
+    {
+      "check": "Small default MemberSelect uses h-8",
+      "pass": true
+    },
+    {
+      "check": "Medium assigned badge has displayed size-6 avatar",
+      "pass": true
+    },
+    {
+      "check": "Dialog centers intrinsic content and Close is absolute",
+      "pass": true
+    },
+    {
+      "check": "Original reassignment authority remains pending-task and current owner",
+      "pass": true
+    },
+    {
+      "check": "Original call-time owner guard is separate and remains required",
+      "pass": true
+    },
+    {
+      "check": "Original common/process/Retry roster counts exact",
+      "pass": true
+    },
+    {
+      "check": "Landed Plan63 CDP remains the final common prefix entry",
+      "pass": true
+    },
+    {
+      "check": "Changed Header not already pinned in common array",
+      "pass": true
+    },
+    {
+      "check": "Original clean exact head and INCOMPLETE remain authoritative",
+      "pass": true
+    },
+    {
+      "check": "Original source before/after arrays identical at 1777",
+      "pass": true
+    },
+    {
+      "check": "Create Assign and Mark resolved have actual completed receipts",
+      "pass": true
+    },
+    {
+      "check": "One Close hover and no Close press attempt",
+      "pass": true
+    },
+    {
+      "check": "Two exact original stable target observations",
+      "pass": true
+    },
+    {
+      "check": "Final original target shifts exactly4px",
+      "pass": true
+    },
+    {
+      "check": "Recorded dialog contraction matches centered 4 px shift",
+      "pass": true
+    },
+    {
+      "check": "Stable and final observations have loaded fonts and zero animations",
+      "pass": true
+    },
+    {
+      "check": "Original failure is exact final-point mismatch",
+      "pass": true
+    },
+    {
+      "check": "Failure snapshot Close rectangle matches final guarded rectangle",
+      "pass": true
+    },
+    {
+      "check": "Cleanup retains no independent Host-absence claim",
+      "pass": true
+    },
+    {
+      "check": "Original receipt-bound guard/caller scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "pass": true
+    },
+    {
+      "check": "Original receipt-bound guard/caller scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "Original receipt-bound guard/caller scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "Original receipt-bound guard/caller src/renderer/components/team/dialogs/TaskCommentsSection.tsx",
+      "pass": true
+    },
+    {
+      "check": "Original receipt-bound guard/caller src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
+      "pass": true
+    },
+    {
+      "check": "Strict final owned-renderer read/equality still precedes physical press",
+      "pass": true
+    },
+    {
+      "check": "Original two-stable-sample criterion unchanged",
+      "pass": true
+    },
+    {
+      "check": "One original Mark resolved and Close sequence remains",
+      "pass": true
+    },
+    {
+      "check": "Existing typed feature lint and common-roster fast operand",
+      "pass": true
+    },
+    {
+      "check": "No source afterimage created by author packet",
+      "pass": true
+    }
+  ],
+  "checkCount": 47,
+  "execution": {
+    "project": false,
+    "tests": false,
+    "compiler": false,
+    "GUI": false,
+    "providers": false,
+    "CIpolling": false,
+    "remoteMutation": false,
+    "downloads": 0
+  },
+  "afterimages": false
+}

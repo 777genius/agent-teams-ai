@@ -1,0 +1,393 @@
+{
+  "kind": "INERT_ORIGINAL_PENDING_OPEN_QUIT_FAILURE_R1",
+  "result": "FAILURE_PRESERVED_NO_BEHAVIORAL_REPAIR_SELECTED",
+  "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959134362,
+  "jobId": 133621515525,
+  "artifact": {
+    "artifact": {
+      "id": 14275998097,
+      "name": "host-emulated-darwin-arm64-75cf2dcbfe2b540325ea50a022cb5195306a8c59-opencode-v2-quit-pending-open",
+      "size_in_bytes": 260967,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14275998097",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14275998097/zip",
+      "expired": false,
+      "created_at": "2026-11-16T22:07:46Z",
+      "expires_at": "2026-11-30T22:07:45Z",
+      "updated_at": "2026-11-16T22:07:46Z",
+      "digest": "sha256:111973e670d22bb8d3d582215bdc96058f959bc7045afacea14f9bf03e4f0c37",
+      "workflow_run": {
+        "id": 43959134362,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "75cf2dcbfe2b540325ea50a022cb5195306a8c59"
+      }
+    },
+    "zipBytes": 260967,
+    "zipSha256": "111973e670d22bb8d3d582215bdc96058f959bc7045afacea14f9bf03e4f0c37",
+    "zipCrcVerified": true,
+    "members": [
+      {
+        "path": "TEST-desktop-backend-k2k19y/desktop-app.log",
+        "bytes": 15461,
+        "sha256": "d8cdf0acf2ed9f31a70ad1bb7f966e03c44ce04d4bda034bd3ac0384e8ad6686"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/desktop-backend-receipt.json",
+        "bytes": 733177,
+        "sha256": "dd9a0141a4d444eed2673185584b14cc100902d09b6cea563c2ea82a56bef8e5"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/desktop-descriptor.json",
+        "bytes": 2511,
+        "sha256": "a326a0445eb13ac2ce8db75c1b14c10ee00bd32b92838ae40caa03b40090ad78"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/host-profile.json",
+        "bytes": 5787,
+        "sha256": "e983911978f1e6ec0a95476b0544725664fd9ac91a217d9540f83700dcd38870"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/hoststore/management-commands/65c9073eb188ea5b2f566f632d4bc185118f19b6f6501b96e1e33bcb0255aaf0.json",
+        "bytes": 2739,
+        "sha256": "a4ef948888b1120f92e10f6522d40921257a159d85912690705e6ca3e944c0d1"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/hoststore/management-commands/8784c521b1aa211cd1845b1e510c3ab6e365e68345b63b6c7a412e953b2abb33.json",
+        "bytes": 3147,
+        "sha256": "423b558700d04eaa70860f095d6b157ab3a195f01c26deacc4bc9ed3a65db1be"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/hoststore/management-commands/dd3722279d33adcceb8ca2ff6483bf31d35210fb950276a625360c3ea25ee9d2.json",
+        "bytes": 5437,
+        "sha256": "f29ccdc7181f72bf05e6d1a0c950c60e65ef1b91e0f9b2b627bf1bfc8d3cdbf1"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/hoststore/runtime-sessions/e934ed9feaacc309b45412afb9aaf229ffde2ab46987824aa87d397d51ecc4b4/a43ee95d2e604e9ac7a1b18f8cc8591df6203f75b3a159f4ec3b58f3ef612759.json",
+        "bytes": 714,
+        "sha256": "1a4ae48402836b1db18c066300373d17b7f2d25b5d3e54e48fe1a54ad78d5137"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/hoststore/runtime-sources/index.json",
+        "bytes": 4541,
+        "sha256": "ad44f6d21eaa36dc8d8389f008abd40e9d390dd2b166b54b9bd73e17340c8734"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/hoststore/tasks/test-desktop-backend/79b12281-de41-5790-b9c0-af444003650b.json",
+        "bytes": 868,
+        "sha256": "dda790cbbd292fb8f211efdb076bae2af2f2604b757cbfdd10b73a32f43adee2"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/hoststore/teams/test-desktop-backend/.host-owner/commands/73d51a47022bad35094134a650a17f09916cdc1f2cab13ca2201e1ac8ef59773.json",
+        "bytes": 2335,
+        "sha256": "14760a667d5d88f08a15b00b3ba37da2435d504c18d8f9d28aed41b7058bbb6c"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/hoststore/teams/test-desktop-backend/.host-owner/launches/88e422291e09babdc8f465ad85dc8cfb80a1d13069034bb5b9b8192437a03fae.json",
+        "bytes": 4082,
+        "sha256": "2a4c7001f0721a711d0c678214ccc2e4d4da5b4da7313ab9c3753ae9ce751f23"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/hoststore/teams/test-desktop-backend/.host-owner/state.json",
+        "bytes": 1225,
+        "sha256": "90f4ca8e35377717878a9f82bb3a8da99c42148a0e700562ffa84eed106fe7a1"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/sentinel-invocations.ndjson",
+        "bytes": 338,
+        "sha256": "e2324d54a83b2b94596c0b90dc00796aa1d3843476600f47acfef50324c38692"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/ui-failure.png",
+        "bytes": 50593,
+        "sha256": "91fd27d2ad5ef95ec9b99c9da13ccfcd5cf9295ca44a4531cdcd8c5860ec35f8"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/ui-seed-receipt.json",
+        "bytes": 2335,
+        "sha256": "14760a667d5d88f08a15b00b3ba37da2435d504c18d8f9d28aed41b7058bbb6c"
+      },
+      {
+        "path": "TEST-desktop-backend-k2k19y/userData/logs/app-errors.ndjson",
+        "bytes": 35441,
+        "sha256": "ebe7712daaece1db62b606134408da2ff15505b75e6353fe572a2ccae8be2422"
+      },
+      {
+        "path": "host-emulated-opencode-v2-inputs.json",
+        "bytes": 2374,
+        "sha256": "f7c160687a4c2b6203f9b7b5c677372b65657c114ebd8e9f9d9b560ab37b410d"
+      },
+      {
+        "path": "host-emulated-opencode-v2-quit-pending-open-ui.log",
+        "bytes": 1024,
+        "sha256": "61e7e5973acac25500f7bc71fd12665be95086a135e90b125b1c0bb94cea36ac"
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "bytes": 1090,
+        "sha256": "cee7f3d234447ac81d2890195f95e631e6914a6025cb97d6cc6d4fae0233a6c2"
+      }
+    ]
+  },
+  "decodedJobLog": {
+    "bytes": 149503,
+    "sha256": "e9571bafa63eefa5f8ca63c09c11885fb336be0f1f378b33c9562896b564e11a"
+  },
+  "checks": [
+    {
+      "name": "original exact-head artifact",
+      "pass": true
+    },
+    {
+      "name": "original ZIP size/digest",
+      "pass": true
+    },
+    {
+      "name": "original ZIP CRC",
+      "pass": true
+    },
+    {
+      "name": "twenty original members rehash",
+      "pass": true
+    },
+    {
+      "name": "exact original decoded job log",
+      "pass": true
+    },
+    {
+      "name": "original failed receipt bytes",
+      "pass": true
+    },
+    {
+      "name": "original pending-open scope remains INCOMPLETE",
+      "pass": true
+    },
+    {
+      "name": "first failure is original CDP timeout",
+      "pass": true
+    },
+    {
+      "name": "no native UI proof or launch response recorded",
+      "pass": true
+    },
+    {
+      "name": "zero original business/probe inference",
+      "pass": true
+    },
+    {
+      "name": "original source census unchanged1777",
+      "pass": true
+    },
+    {
+      "name": "exact source and original pin scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "name": "exact source and original pin scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "pass": true
+    },
+    {
+      "name": "exact source and original pin scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+      "pass": true
+    },
+    {
+      "name": "exact source and original pin scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "pass": true
+    },
+    {
+      "name": "exact source and original pin scripts/legacy-agent-host/desktop-proof-fixture.ts",
+      "pass": true
+    },
+    {
+      "name": "exact source and original pin packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "pass": true
+    },
+    {
+      "name": "exact source and original pin packages/legacy-agent-host/tests/fixtures/native-opencode-team/model-probe.ts",
+      "pass": true
+    },
+    {
+      "name": "original pre63 census excludes CDP implementation",
+      "pass": true
+    },
+    {
+      "name": "one real persisted model preparation",
+      "pass": true
+    },
+    {
+      "name": "model preparation bound to exact original setup action",
+      "pass": true
+    },
+    {
+      "name": "original running preparation debt retained",
+      "pass": true
+    },
+    {
+      "name": "only seed Runtime record closed with no native open fingerprint",
+      "pass": true
+    },
+    {
+      "name": "failure-path Quit acknowledged and app zero exit",
+      "pass": true
+    },
+    {
+      "name": "original group cleanup debt remains",
+      "pass": true
+    },
+    {
+      "name": "no captured Host absence claim",
+      "pass": true
+    },
+    {
+      "name": "finite sentinels only",
+      "pass": true
+    },
+    {
+      "name": "independent exact-head CDP dependency retains30000ms default and awaitPromise",
+      "pass": true
+    }
+  ],
+  "sourceBindings": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "gitBlob": "4415bad7752c91a0c0fbad789f5c712908643425",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "bytes": 20245,
+      "sha256": "4f3c5460147352c8bbc472bac0e74ae54c646425d23ffb3a97bc0a8d9886b40e",
+      "physicalLines": 455
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "gitBlob": "d2f58f7dd6ce6b05ff6200fabe67a4945f94a506",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "bytes": 29580,
+      "sha256": "2b954cec0846e30f530ae615e63ac05ae9a3969e0338e5d2ab03ec80a62a0f0d",
+      "physicalLines": 545
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+      "gitBlob": "9d6a158fe27134c6f0559ea058f2ecfa5ad478d1",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "bytes": 7577,
+      "sha256": "22a46aa137e87c4f1a282aae5518e9aada69ce8b947169457d3aadde3b2ace1d",
+      "physicalLines": 177
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "gitBlob": "e2e7029c56de6343eb4ad2a2395044efd009ae0b",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "bytes": 26007,
+      "sha256": "e96f15e68a59f991034d68ca37b0125d4c798cd06eb34d58ceeb2f3e537966de",
+      "physicalLines": 536
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-fixture.ts",
+      "gitBlob": "4f26fd0f9654dd40f4591c5078a5cf7dc119e769",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "bytes": 11248,
+      "sha256": "6c75fec75d81407cec6d1552d4a6a3a87ccac3145cdaa0aca7fb0187308f8db0",
+      "physicalLines": 223
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "gitBlob": "ff0aeba42e3a4e845428146969360dff91c25de8",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "bytes": 38584,
+      "sha256": "f25659fe4c89e30072e9c2bc923fcdf6f1a3dd2efdca81387659e485170c74c3",
+      "physicalLines": 753
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model-probe.ts",
+      "gitBlob": "3a74b1a1e8aaacebc6b19ee7196e8c72ba93342d",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "bytes": 6579,
+      "sha256": "c0c25903a71601d7fac8037088a705b025c3edfde35591a743161714f24d53b9",
+      "physicalLines": 143
+    }
+  ],
+  "firstAwait": {
+    "operation": "team.launch.start",
+    "commandId": "TEST-explicit-sandbox-setup-launch",
+    "source": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+    "lines": "146-154",
+    "evidence": "Its response is assigned immediately after the only matching setup await, but no response is recorded; the ordinary readiness journal is bound to the same command. Earlier native catalog load precedes this call.",
+    "timer": "Original CdpClient default Runtime.evaluate timeout is30000ms; not changed.",
+    "notEstablished": "The original artifact does not distinguish pending ordinary.run from ordinary.close, or a lower readiness/transport phase. Zero model calls alone is not a complete native lifecycle trace."
+  },
+  "persistedPreparation": {
+    "commandId": "action-probe-1f2913eb736a006426104a02c8951012a35a421d4dfd4fa7166ba901d29d5c63",
+    "profileId": "team-probe-45eb5c6350b0f201b8d722314a8936b6ac893f4df881220966ef343f264e7a2a",
+    "kind": "model.probe",
+    "purpose": "native-local-readiness-v1",
+    "phase": "running",
+    "ok": false,
+    "resourceHeld": true,
+    "digest": "5a08a49492b32c77572c3091c5cdde26f0499bb8f47c385526e4017990cbd845"
+  },
+  "seedRuntime": {
+    "runId": "TEST-run-TEST-desktop-backend-k2k19y",
+    "config": null,
+    "openFingerprint": null,
+    "phase": "closed",
+    "custody": "released",
+    "inputs": [],
+    "limit": "This is the original empty TEST-run seed, not proof of the selected Team launch opening or closing."
+  },
+  "cleanup": {
+    "processGroup": 8470,
+    "remaining": [
+      {
+        "pid": 8501,
+        "ppid": 1,
+        "pgid": 8470
+      }
+    ],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "cleanupFailure": "captured leader absent; retain cleanup debt without signaling",
+    "capturedHostObserved": false,
+    "capturedHostAbsent": null,
+    "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+  },
+  "originalRequestedQuitExit": {
+    "initialExitCode": 0,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "failureQuit": {
+    "attempted": true,
+    "scope": "Close only the verified TEST window before stopping its dev wrapper",
+    "reply": "acknowledged",
+    "listenerAbsent": true
+  },
+  "comparisonWithOriginalPng": {
+    "same": "Both original75cf variants time out during configured Launch preparation before their actual UI journey.",
+    "different": "PNG recorded one ordinary model probe; this pending-open row recorded none and retained one group member after leader exit. Neither becomes PASS.",
+    "causality": "No shared lower failure or timing repair is established from these post-failure records."
+  },
+  "screenshotReview": {
+    "sha256": "91fd27d2ad5ef95ec9b99c9da13ccfcd5cf9295ca44a4531cdcd8c5860ec35f8",
+    "observed": "Original Dashboard with persisted TEST sidebar Task; no Team chat or pending-open native UI proof visible.",
+    "atomicWithFailure": false
+  },
+  "limits": [
+    "No actual pending native Team open/guarded scenario Quit/cold readback qualification was reached.",
+    "The failure-path Quit is not the planned scenario Quit and does not qualify it.",
+    "App exit0 and seed Runtime release do not clear the model preparation or group cleanup debt.",
+    "No identity/capability authorizes a further numeric PID/group signal after captured leader absence.",
+    "No larger deadline, retry, guard weakening, fabricated evidence or provider execution selected.",
+    "Plan63 future source pin binds CDP bytes; it does not fix this timeout or add a filtered stack frame."
+  ],
+  "execution": "Inert API text, original ZIP/JSON/hash/source and screenshot inspection only.",
+  "outsideOriginalCensusDependency": {
+    "path": "scripts/e2e/comment-notification/cdp.mjs",
+    "gitBlob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+    "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa",
+    "bytes": 3704,
+    "readAtExactHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "includedInOriginalCensus": false,
+    "futurePlan63Change": "Pin only; implementation and deadline unchanged."
+  }
+}
