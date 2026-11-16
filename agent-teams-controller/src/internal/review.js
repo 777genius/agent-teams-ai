@@ -615,10 +615,22 @@ function approveAsHuman(context, taskId) {
     }
     if (prevReviewState === 'approved' && recordedApproval) {
       // Recreate missing placement after an interrupted file write, if needed.
-      if (kanban.getKanbanState(context).tasks?.[task.id]?.column !== 'approved') {
+      const recovered =
+        kanban.getKanbanState(context).tasks?.[task.id]?.column !== 'approved';
+      if (recovered) {
         kanbanStore.setKanbanColumn(context.paths, context.teamName, task.id, 'approved');
       }
-      return { task: tasks.getTask(context, task.id), alreadyApproved: true };
+      const humanEvent = [...(task.historyEvents || [])].reverse()
+        .find((event) => event.type === 'human_approved');
+      return {
+        task: tasks.getTask(context, task.id),
+        alreadyApproved: true,
+        recovered,
+        // Retry the original dependency release only if this repaired a
+        // partially written approval directly from an open Review/Needs Fixes.
+        releasesDependencies: recovered &&
+          (humanEvent?.from === 'review' || humanEvent?.from === 'needsFix'),
+      };
     }
     const timestamp = new Date().toISOString();
     // History is committed first: if the overlay write fails, the same human
@@ -641,7 +653,7 @@ function approveAsHuman(context, taskId) {
       releasesDependencies: prevReviewState === 'review' || prevReviewState === 'needsFix',
     };
   });
-  if (!result.alreadyApproved && result.releasesDependencies) {
+  if (result.releasesDependencies && (!result.alreadyApproved || result.recovered)) {
     try {
       tasks.notifyUnblockedOwners(context, result.task, {
         reviewCycleId: [...(result.task.historyEvents || [])].reverse()

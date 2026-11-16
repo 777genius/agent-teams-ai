@@ -188,6 +188,30 @@ describe('human-only review approval', () => {
     expect(events(task.id, 'review_changes_requested')).toHaveLength(1);
   });
 
+  it('recovers dependency wake-ups after interrupted human acceptance from Review', () => {
+    const blocker = board.createTask({ subject: 'Human review blocker', owner: 'bob' });
+    board.completeTask(blocker.id, 'bob');
+    board.setHumanOnlyApproval(true);
+    board.requestReview(blocker.id, { from: 'alice', reviewer: 'alice' });
+    const dependent = board.createTask({
+      subject: 'Dependent of user approval', owner: 'bob', blockedBy: [blocker.id],
+    });
+    const beforeComments = board.getTask(dependent.id).comments.length;
+    const fail = vi.spyOn(kanbanStore, 'setKanbanColumn').mockImplementationOnce(() => {
+      throw new Error('synthetic approval overlay write failed');
+    });
+    expect(() => board.approveAsHuman(blocker.id)).toThrow(/synthetic approval overlay/);
+    fail.mockRestore();
+    expect(events(blocker.id, 'human_approved')).toHaveLength(1);
+    expect(board.getTask(dependent.id).comments).toHaveLength(beforeComments);
+    expect(board.approveAsHuman(blocker.id).reviewState).toBe('approved');
+    const afterComments = board.getTask(dependent.id).comments.length;
+    expect(afterComments).toBeGreaterThan(beforeComments);
+    expect(events(blocker.id, 'human_approved')).toHaveLength(1);
+    board.approveAsHuman(blocker.id);
+    expect(board.getTask(dependent.id).comments).toHaveLength(afterComments);
+  });
+
   it('rejects stale, absent, wrong-reviewer and superseded cycle IDs without mutation', () => {
     const task = board.createTask({ subject: 'Stale cycle', owner: 'bob' });
     board.completeTask(task.id, 'bob');
