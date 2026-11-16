@@ -1,0 +1,909 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "jobs": [
+      {
+        "id": 133062438603,
+        "name": "Native V2.0.21 Host SPI instructions (Ubuntu TEST only)",
+        "status": "queued",
+        "conclusion": null,
+        "run_id": 43795234721,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 133062438856,
+        "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+        "status": "queued",
+        "conclusion": null,
+        "run_id": 43795234721,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 133062438874,
+        "name": "Embedded V2.1.4 original Host (linux-x64)",
+        "status": "queued",
+        "conclusion": null,
+        "run_id": 43795234721,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 133062438882,
+        "name": "Embedded V2.1.4 original Host (win32-x64)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43795234721,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Require immutable source HEAD and record actual runner tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Install exact source workspace dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Build original Host and its pinned provider implementation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Check original graph and custody boundaries",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Prepare exact Bun, engine graph and original-process artifact",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Prove actual Darwin executable custody and adversarial cleanup",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11
+          },
+          {
+            "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12
+          },
+          {
+            "name": "Prove original Windows Job custody and surviving descendant cleanup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Require exact Windows original-process evidence",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Check original Desktop private recipe composition",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Exercise Windows automatic approval and cold Host Resume",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Exercise native catalog and model probe without tool allocation",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Exercise effective permissions and active Stop with a surviving sibling",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Exercise captured external MCP and app-only through the native Host",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Require complete native management and permission evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require product-path Host proof after exact candidate qualification",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23
+          },
+          {
+            "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 24
+          },
+          {
+            "name": "Preserve exact native evidence or candidate HOLD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 25
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 48
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 49
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 50
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 51
+          }
+        ]
+      },
+      {
+        "id": 133062438887,
+        "name": "Static V01 source test (windows-2022)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43795234721,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Require immutable PR source HEAD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Record exact current product commit",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Prove retry classification on the exact source HEAD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Install pinned workspace dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Build Stage1 Host without launching providers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Typecheck Host TEST contracts",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Verify captured and native model variants through Host SPI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Verify generation-preserving install and update policy",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Execute V2 static preflight, current-main lock and FIFO negatives",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Native V1 baseline and latest Host compatibility (Linux TEST)",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Preserve native V1 version evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 16
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 29
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 30
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 31
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 32
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 33
+          }
+        ]
+      },
+      {
+        "id": 133062438907,
+        "name": "Embedded V2.1.4 original Host (win32-arm64)",
+        "status": "in_progress",
+        "conclusion": null,
+        "run_id": 43795234721,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Require immutable source HEAD and record actual runner tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Install exact source workspace dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Build original Host and its pinned provider implementation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Check original graph and custody boundaries",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Prepare exact Bun, engine graph and original-process artifact",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Prove actual Darwin executable custody and adversarial cleanup",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11
+          },
+          {
+            "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12
+          },
+          {
+            "name": "Prove original Windows Job custody and surviving descendant cleanup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Require exact Windows original-process evidence",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Check original Desktop private recipe composition",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+            "status": "in_progress",
+            "conclusion": null,
+            "number": 16
+          },
+          {
+            "name": "Exercise Windows automatic approval and cold Host Resume",
+            "status": "pending",
+            "conclusion": null,
+            "number": 17
+          },
+          {
+            "name": "Exercise native catalog and model probe without tool allocation",
+            "status": "pending",
+            "conclusion": null,
+            "number": 18
+          },
+          {
+            "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+            "status": "pending",
+            "conclusion": null,
+            "number": 19
+          },
+          {
+            "name": "Exercise effective permissions and active Stop with a surviving sibling",
+            "status": "pending",
+            "conclusion": null,
+            "number": 20
+          },
+          {
+            "name": "Exercise captured external MCP and app-only through the native Host",
+            "status": "pending",
+            "conclusion": null,
+            "number": 21
+          },
+          {
+            "name": "Require complete native management and permission evidence",
+            "status": "pending",
+            "conclusion": null,
+            "number": 22
+          },
+          {
+            "name": "Require product-path Host proof after exact candidate qualification",
+            "status": "pending",
+            "conclusion": null,
+            "number": 23
+          },
+          {
+            "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+            "status": "pending",
+            "conclusion": null,
+            "number": 24
+          },
+          {
+            "name": "Preserve exact native evidence or candidate HOLD",
+            "status": "pending",
+            "conclusion": null,
+            "number": 25
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "pending",
+            "conclusion": null,
+            "number": 48
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "pending",
+            "conclusion": null,
+            "number": 49
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "pending",
+            "conclusion": null,
+            "number": 50
+          }
+        ]
+      },
+      {
+        "id": 133062439001,
+        "name": "Embedded V2.1.4 original Host (darwin-arm64)",
+        "status": "in_progress",
+        "conclusion": null,
+        "run_id": 43795234721,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Require immutable source HEAD and record actual runner tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Install exact source workspace dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Build original Host and its pinned provider implementation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Check original graph and custody boundaries",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Prepare exact Bun, engine graph and original-process artifact",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Prove actual Darwin executable custody and adversarial cleanup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Prove original Windows Job custody and surviving descendant cleanup",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Require exact Windows original-process evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Check original Desktop private recipe composition",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+            "status": "in_progress",
+            "conclusion": null,
+            "number": 16
+          },
+          {
+            "name": "Exercise Windows automatic approval and cold Host Resume",
+            "status": "pending",
+            "conclusion": null,
+            "number": 17
+          },
+          {
+            "name": "Exercise native catalog and model probe without tool allocation",
+            "status": "pending",
+            "conclusion": null,
+            "number": 18
+          },
+          {
+            "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+            "status": "pending",
+            "conclusion": null,
+            "number": 19
+          },
+          {
+            "name": "Exercise effective permissions and active Stop with a surviving sibling",
+            "status": "pending",
+            "conclusion": null,
+            "number": 20
+          },
+          {
+            "name": "Exercise captured external MCP and app-only through the native Host",
+            "status": "pending",
+            "conclusion": null,
+            "number": 21
+          },
+          {
+            "name": "Require complete native management and permission evidence",
+            "status": "pending",
+            "conclusion": null,
+            "number": 22
+          },
+          {
+            "name": "Require product-path Host proof after exact candidate qualification",
+            "status": "pending",
+            "conclusion": null,
+            "number": 23
+          },
+          {
+            "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+            "status": "pending",
+            "conclusion": null,
+            "number": 24
+          },
+          {
+            "name": "Preserve exact native evidence or candidate HOLD",
+            "status": "pending",
+            "conclusion": null,
+            "number": 25
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "pending",
+            "conclusion": null,
+            "number": 48
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "pending",
+            "conclusion": null,
+            "number": 49
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "pending",
+            "conclusion": null,
+            "number": 50
+          }
+        ]
+      },
+      {
+        "id": 133062439014,
+        "name": "Static V01 source test (ubuntu-24.04)",
+        "status": "queued",
+        "conclusion": null,
+        "run_id": 43795234721,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 133062439089,
+        "name": "Embedded V2.1.4 original Host (darwin-x64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "run_id": 43795234721,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Require immutable source HEAD and record actual runner tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Install exact source workspace dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Build original Host and its pinned provider implementation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Check original graph and custody boundaries",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Prepare exact Bun, engine graph and original-process artifact",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Prove actual Darwin executable custody and adversarial cleanup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Prove original Windows Job custody and surviving descendant cleanup",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Require exact Windows original-process evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Check original Desktop private recipe composition",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Exercise Windows automatic approval and cold Host Resume",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 17
+          },
+          {
+            "name": "Exercise native catalog and model probe without tool allocation",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Exercise effective permissions and active Stop with a surviving sibling",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Exercise captured external MCP and app-only through the native Host",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Require complete native management and permission evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require product-path Host proof after exact candidate qualification",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23
+          },
+          {
+            "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 24
+          },
+          {
+            "name": "Preserve exact native evidence or candidate HOLD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 25
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 48
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 49
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 50
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 51
+          }
+        ]
+      }
+    ]
+  },
+  "isError": false
+}

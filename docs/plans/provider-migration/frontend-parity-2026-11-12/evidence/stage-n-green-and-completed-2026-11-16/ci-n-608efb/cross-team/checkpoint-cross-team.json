@@ -1,0 +1,219 @@
+{
+  "kind": "N608EFB_ORIGINAL_CROSS_TEAM_FAILURE_CHECKPOINT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "jobId": 133062441284,
+  "status": "FAIL",
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/job-133062441284.log",
+      "bytes": 188871,
+      "gitBlob": "3f08e2b6743d7c68e6e06fbddb2cf790e9bb7144",
+      "sha256": "799cf996695235651fb85d0e435a24ec72a879a5aa7690e997fceefd8d103ecb"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/original-job-log-response.json",
+      "bytes": 199295,
+      "gitBlob": "e69b7198eefa1d62413e699a4f48253033776eba",
+      "sha256": "5dfab8e60842e72eb75ce6d59a16d557161bb29e03637ffaef4f64054d0bcbe7"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/artifact-14195982353.zip",
+      "bytes": 1404703,
+      "gitBlob": "49b81ed455c838e66eeb31ddbc33a7875c1e5c8e",
+      "sha256": "44bea2b531b44eedf9f59646679db1d7a6d57be62623498769de23a853cd3247"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/archive-retention.json",
+      "bytes": 5014,
+      "gitBlob": "80944b4d9858f588d203c5768f00931a3ee26275",
+      "sha256": "56e49a4cd7aea492a13476acabfae54ea10ea462de751a3092685f7411a6d2bd"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/official-artifact-response.json",
+      "bytes": 2039,
+      "gitBlob": "e134e65a84e4018d0fcf0126b33582464d8cc2c9",
+      "sha256": "758f1532738a10676e69f34d60868365c752df7e414caf1e37243c36204693cc"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/host-original-run-0258.json",
+      "bytes": 30088,
+      "gitBlob": "ea302039d9efa1062aad0a3c3c062fb462c39774",
+      "sha256": "c1cefe9db820bb9a40b1e371d99d4aa628bd66d1826a35bd8787c99d5e7a9a10"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0348.json",
+      "bytes": 53107,
+      "gitBlob": "7c2f7b4bc017b9863677760913f1a355d05a6943",
+      "sha256": "4133be423f21f4dc836de9a5ef23cfbf3a4d26ffc20c60e0b3b8398a1f6ee900"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/source-pin-audit.json",
+      "bytes": 461936,
+      "gitBlob": "bc23e5da6e447ed75d4d17adcc4fe1d5de5dbf64",
+      "sha256": "b3a5a97d7b4ba5406ef566cc61351eca3f04b7bbd2f7a6e3d673f56f8a85558a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/audit.json",
+      "bytes": 168819,
+      "gitBlob": "92aa2d8ad41987c669e66bf6f7223fd9e7e78414",
+      "sha256": "2da1fa6b9ad9d2e2b443dd05d345bebc5ea0ef3ff19ac4faa8bd49c29e94eafb"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/Plan29-cross-team-failure-appendix.md",
+      "bytes": 7719,
+      "gitBlob": "cf08b09a9f17b87b6015a8e240351eeda0f20296",
+      "sha256": "5b2eca2d1ea7512171bb7836423639a8cdaf20a5131ca6942a10c63ac1019d41"
+    }
+  ],
+  "payloadCount": 10,
+  "archiveMembers": [
+    {
+      "path": "TEST-desktop-backend-3XSRp3/desktop-app.log",
+      "bytes": 23246,
+      "sha256": "e4301666397bfce2034db5dfc4ac7a7c7e309dd687d93ea97cfa9ade24b08be2",
+      "crc32": "68495976"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/desktop-backend-receipt.json",
+      "bytes": 904868,
+      "sha256": "5ffed0d493d0af6b6b8fe786866ec6234da7cbd78fc1ae02a7c251f8a1a2b569",
+      "crc32": "74454a0a"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/desktop-descriptor.json",
+      "bytes": 2993,
+      "sha256": "a5b68708543a5c4c779ba6b69be172d4f14edf91a04e53eb27fd7bf9d0994b1f",
+      "crc32": "30a0bfae"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/host-profile.json",
+      "bytes": 2618,
+      "sha256": "617cb11431aa6dfce4c4e5d2e591b72ef21cb6a7c26c346277eaa20498c32800",
+      "crc32": "21f1ffd1"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/hoststore/teams/test-desktop-backend/group-chats.json",
+      "bytes": 340,
+      "sha256": "5172ae892171eba59d361a71faee717992cdf288f8d50df3702fd534617ddcdf",
+      "crc32": "2d2dd0cf"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "bytes": 1295,
+      "sha256": "fc85ee46bc0fb2c908cf244a7e79e3dff78f3527b5ec014bf1b2acabcd15dff5",
+      "crc32": "70fc04cb"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/ui-failure.png",
+      "bytes": 126062,
+      "sha256": "52d01bcdde06815dbbce153ff39b7d0b4ad063eb0b9b0ea77fdbfececa4dc9d1",
+      "crc32": "4e69e9b8"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "crc32": "9fc3bdb4"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/ui-group-seed-receipt.json",
+      "bytes": 593,
+      "sha256": "9a8434782f4d4b99001e9f858bd29590371c55c85912d80515a2013a06a41dc3",
+      "crc32": "25e163cc"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/ui-seed-receipt.json",
+      "bytes": 2197,
+      "sha256": "0e03b1dc002fa10c1464f6bfae37c40dcb8d386fe85c2fb4ce1b0bfa00fd6f01",
+      "crc32": "e5a686f5"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/ui-task-board-assigned-blocked.png",
+      "bytes": 109432,
+      "sha256": "9da8738f5cef02e33e7534756921bc976e516b4dc8c432440c50cd8678148aaf",
+      "crc32": "a381b723"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/ui-task-board-attachment-added.png",
+      "bytes": 127489,
+      "sha256": "cb919821dd04f1d95a179556a43aa406ccfe50cfbc0a926b5698d9b7062e6764",
+      "crc32": "28cc563a"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/ui-task-board-blocked-start.png",
+      "bytes": 132313,
+      "sha256": "6ba0d5da3c7492f9ae676433312a4b11b0967ddfeee3cda0802519cb25abea9e",
+      "crc32": "b8a8d5df"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/ui-task-board-initial.png",
+      "bytes": 103061,
+      "sha256": "489338570f32426ce563287dcabacb22f106e73eee2bc24c8398f7d78d6fdc94",
+      "crc32": "4558fd2d"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/ui-task-board-reloaded.png",
+      "bytes": 124513,
+      "sha256": "a2722f44f1086bd5d75294895d6843b50eb9c563c75bdb4806db7f316b1359a4",
+      "crc32": "b2bde7ad"
+    },
+    {
+      "path": "TEST-desktop-backend-3XSRp3/ui-task-board-reordered.png",
+      "bytes": 132235,
+      "sha256": "cd473f88c1900339ee66b6f0e773effd433b2f34752e09b546118a8ef9fb91d5",
+      "crc32": "547d1200"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-7et9n3/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-7et9n3/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "crc32": "e06f2443"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "19d61e428786dff31197091c1dd40c8519d27195771e41eb2f847aa10863f023",
+      "crc32": "126c8283"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "51cb6608701875334ab92fa02e8a64f2b068d37b0f98c06e9df2e7d00d1f69f5",
+      "crc32": "cfa344e1"
+    },
+    {
+      "path": "host-emulated-task-board-cross-team-ui.log",
+      "bytes": 6557,
+      "sha256": "aef7ac36ea5e1d878914b7967977a41e2a74d6ff19b87831c5f8d24acea789c2",
+      "crc32": "dc02ec80"
+    }
+  ],
+  "imagesActuallyViewed": 7,
+  "qualification": {
+    "fullCrossQualified": false,
+    "commentSubmitted": false,
+    "separateHostCustodyQualified": false,
+    "privacyGreenQualified": false,
+    "nativeProviderQualified": false,
+    "repairProposed": false
+  },
+  "limits": [
+    "This is an original offline task-board prefix failure, before the later review/notification/cross-Team routing sequence; no availability or clarification cause is transferred from historical failures.",
+    "The original 20-second wait has a before-read cutoff only; no strict after-read bound or atomic/continuous focus guarantee is invented.",
+    "Retained event callbacks prove the one click reached the actual textarea and focus later left it. They do not identify why it became disabled or why React/current-owner observations changed.",
+    "Last transition samples have no per-transition timestamps; post-read and event clocks are separate observation windows, not an atomic state history.",
+    "The final empty process group and launcher0/null are retained; a separately captured Host identity/absence/custody proof is unavailable. Passive Main child callbacks are preserved without assigning the long-lived child a Host identity.",
+    "No Runtime or management providers were configured. The single admitted sentinel version check does not qualify native providers. preQuitCount/postQuitOrCleanupInvocations are null.",
+    "Original post-failure verifier step30 fails as well. No Task comment submission, attachment comment, final Cross availability route, complete flow or privacy GREEN is qualified.",
+    "The N receipt and images are independently observed. Same message and unchanged interpretation source do not establish a common M/N cause or authorize replay/relaxation."
+  ],
+  "originalsFrozen": true,
+  "independentReviewPending": true
+}

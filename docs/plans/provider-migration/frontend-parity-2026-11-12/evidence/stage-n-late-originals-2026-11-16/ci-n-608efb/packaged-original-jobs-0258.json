@@ -1,0 +1,27 @@
+{
+  "observedAt": "2026-11-16 02:58:21 UTC",
+  "kind": "packaged",
+  "runId": 43795234711,
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "jobs": [
+        {
+          "id": 133062441795,
+          "name": "classify packaged smoke",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234711,
+          "logs_url": null,
+          "steps": null
+        }
+      ]
+    },
+    "isError": false
+  }
+}

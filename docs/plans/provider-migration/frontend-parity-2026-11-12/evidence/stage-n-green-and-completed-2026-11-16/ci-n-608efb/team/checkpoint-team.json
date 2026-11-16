@@ -1,0 +1,79 @@
+{
+  "kind": "N608EFB_ORIGINAL_TEAM_TERMINAL_CHECKPOINT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "jobId": 133062441494,
+  "jobConclusion": "failure",
+  "contractStep9": "success",
+  "staticStep10": "failure",
+  "counts": {
+    "complete10Files": 10,
+    "total": 177,
+    "passed": 177,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "stderrCases": 24,
+    "priorHeldWhitespaceCasesNowPassed": 3
+  },
+  "firstFailure": "renderer typed lint src/renderer/store/team/teamRuntimeRunAdoption.ts:201:12 no-unnecessary-type-assertion",
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/job-133062441494.log",
+      "bytes": 2205340,
+      "gitBlob": "c5446ac9cf26e5515cf8c2b2c9f0df55f8e43795",
+      "sha256": "52b2fd9b7d2f66475e7e1818b91d3b3ca0f90636e8dee0fb1527279f68021fdd"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/original-job-log-response.json",
+      "bytes": 2221302,
+      "gitBlob": "cc9ef5825d11764ba1849705815a8b408aa75be0",
+      "sha256": "c1d612ec191ea3bbc403bd38e9346d9823274a81043baf7f89aa87da2014b5c8"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0359.json",
+      "bytes": 74155,
+      "gitBlob": "1d22478c6f314ce2384e2aa49be1cfc5f5d24691",
+      "sha256": "a1c4586cff2c3355ca035f881a1d42211247a89c3136fe8a347676f5b3b8d014"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/host-original-run-0258.json",
+      "bytes": 30088,
+      "gitBlob": "ea302039d9efa1062aad0a3c3c062fb462c39774",
+      "sha256": "c1cefe9db820bb9a40b1e371d99d4aa628bd66d1826a35bd8787c99d5e7a9a10"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/official-host-artifacts-0359.json",
+      "bytes": 6683,
+      "gitBlob": "14b0bd728f5173fba3a26cba373e2c7fd3fb1002",
+      "sha256": "c11a14868785e967397dd0307da8c2be6ea320f1d1ec933b7859a8b47d2f8318"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/git-host-source-inventory.json",
+      "bytes": 164295,
+      "gitBlob": "bebc0b8d96c8a398ef85766e2f3280bf5f999ccd",
+      "sha256": "f1f6ce40f12dc99de44e5931ccb2d1071eec714846eadc3ed5c00ed354e74c4a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/audit.json",
+      "bytes": 76050,
+      "gitBlob": "f6e8820787c297fa925a314e1ef3ff1b9301c104",
+      "sha256": "85c9ad72e4397c3bfc7cf7d72f6a7abce267857954c758583d74f7aa6d6fc367"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/Plan29-Team-privacy-GREEN-and-static-FAIL-appendix.md",
+      "bytes": 5979,
+      "gitBlob": "1a3deb0e3e867f978eefab9ab44805f3bf725bdb",
+      "sha256": "9daff99b05e0e48d63dad6d9fb2345b0d17273706b47bdda8e1214230e4e346e"
+    }
+  ],
+  "payloadCount": 8,
+  "artifactZip": null,
+  "businessSteps11to30": "skipped",
+  "limits": [
+    "Original177/24 contract GREEN is preserved separately from whole-job FAIL.",
+    "No Desktop/native/vendor/release qualification; no source/test/CI mutation or local project execution.",
+    "Exact frozen dependency inputs and successful original install/fresh build are joined; no installed or generated-payload census is invented."
+  ],
+  "independentReviewPending": true
+}

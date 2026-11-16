@@ -1,0 +1,27 @@
+{
+  "artifactId": 14193041377,
+  "originalZip": {
+    "bytes": 3156,
+    "blob": "d83f3b001549ffba2ca5850dbd3303aa4a5f32b0",
+    "sha256": "71a0c93dcd053cfb20e6518f30fa220675d11cb2f1c8297ba8e66fa8fa02af35"
+  },
+  "officialDigestVerified": true,
+  "safeUniquePaths": true,
+  "crcAllPassed": true,
+  "entries": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/opencode-v2-host-native-instructions.json",
+      "bytes": 3225,
+      "blob": "3b2c8685d514b6e5f57a6eb90ec79a4dd244640d",
+      "sha256": "8bf8a9c7adb9099f7138cc75349a404b913189ad2b039d1a5ee449104b277133",
+      "crc32": "36307b89"
+    },
+    {
+      "path": "_temp/opencode-v2-host-cli/package-lock.json",
+      "bytes": 6764,
+      "blob": "9267217bc0c99ae3a1f502bbc7cc33ff7aa0061f",
+      "sha256": "8300e598ffc99a2575effe83c6fb504af9698e1effa4947feb6feed94036a550",
+      "crc32": "570e75df"
+    }
+  ]
+}

@@ -1,0 +1,2978 @@
+{
+  "schemaVersion": 1,
+  "result": "APPROVE",
+  "independentReadbackExact": true,
+  "reviewedAtUtc": "2026-11-16T03:50:48.064146+00:00",
+  "reviewer": "migration_scope",
+  "scope": "Original M0660 finite Codex browser/device pending/copy/open/reopen/cancel UI evidence only.",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916174,
+  "artifactId": 14192695442,
+  "reviewedAuthorInputs": {
+    "audit": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/audit.json",
+      "bytes": 74522,
+      "blob": "084b871ceb469798c27cd57ee47faafbc19c2d7f",
+      "sha256": "1175b99f1977bbabcf53bfdadbb781d44a547a4beb4e8f4ee2623f5f37eadbb9"
+    },
+    "appendix": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/Plan29-codex-login-appendix.md",
+      "bytes": 8380,
+      "blob": "010275f826a1b9696e5dae46455ab5a067dc8562",
+      "sha256": "6283cc5f04463784c252344f3dc64655577f2cf8f7aa5d4eb89b4dfe1c99f24d"
+    },
+    "checkpoint": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/checkpoint-codex-login.json",
+      "bytes": 2867,
+      "blob": "9ef2c0819abf4879af6c547f69cc6702a028a14e",
+      "sha256": "556168024f99dc0a4aebb8ec04770f1e11182f218c09e92523f61f41372f2107"
+    }
+  },
+  "allCheckpointPayloadsRehashed": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/job-133017916174.log",
+      "bytes": 182370,
+      "blob": "bd05f6df850e0297619f254753f07db65009dffe",
+      "sha256": "9c5dab9f821af249b5d7515dc08091ae360afa40b3f622ff3f1fb30cb56fe172"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/artifact-14192695442.zip",
+      "bytes": 681033,
+      "blob": "d2cc1c8910a82a2ad5435edb620d00e1134231b2",
+      "sha256": "9532212509d360d901efadd0cc306cb882df5c90673098e0391e83c9dffddd67"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/archive-audit.json",
+      "bytes": 5369,
+      "blob": "0265846c61038c2bc729e7922477facabe8b8eae",
+      "sha256": "84d99b585e9de54e91e95358ad511dc5581c515c2dd965f9fd858ec1d360def3"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/audit.json",
+      "bytes": 74522,
+      "blob": "084b871ceb469798c27cd57ee47faafbc19c2d7f",
+      "sha256": "1175b99f1977bbabcf53bfdadbb781d44a547a4beb4e8f4ee2623f5f37eadbb9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/Plan29-codex-login-appendix.md",
+      "bytes": 8380,
+      "blob": "010275f826a1b9696e5dae46455ab5a067dc8562",
+      "sha256": "6283cc5f04463784c252344f3dc64655577f2cf8f7aa5d4eb89b4dfe1c99f24d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0215.json",
+      "bytes": 19753,
+      "blob": "699d3f9f470c9aba779664f159cefac43cbc4861",
+      "sha256": "f434f1a38fce2695c3e828119cd6424c0a986afbf95406a147c2eadfca87416e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0300.json",
+      "bytes": 212142,
+      "blob": "aaa9e447920ba1d0e4ae3797169058bc2df43a72",
+      "sha256": "2056635c64f9372a98d560f3ceb63a025fbd92de2bef0eaa5a6a72e8f8dd4f80"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    }
+  ],
+  "archive": {
+    "file": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/artifact-14192695442.zip",
+      "bytes": 681033,
+      "blob": "d2cc1c8910a82a2ad5435edb620d00e1134231b2",
+      "sha256": "9532212509d360d901efadd0cc306cb882df5c90673098e0391e83c9dffddd67"
+    },
+    "crcAllPassed": true,
+    "safeUniqueNames": true,
+    "all18ExtractedByteEqual": true,
+    "members": [
+      {
+        "path": "TEST-desktop-backend-sTh641/TEST-codex-login-management/home/TEST-wire.ndjson",
+        "crc32": "74a22dfc",
+        "bytes": 7697,
+        "blob": "0238d2f565a228545739f0e3addd650b8a80b0f8",
+        "sha256": "177eedf643c8496a859dea279652033f243f5bece29b807fa46bb6309c5db437"
+      },
+      {
+        "path": "TEST-desktop-backend-sTh641/TEST-codex-login-management/home/TEST-login-processes.ndjson",
+        "crc32": "76706c7e",
+        "bytes": 1140,
+        "blob": "9faffbb9608c2c747393a8fa40a3f749d3ecbb65",
+        "sha256": "de19d68a7c6620909cdd2bd726bb40aa6a3bce56d03e4c0ccfce243a51388141"
+      },
+      {
+        "path": "TEST-desktop-backend-sTh641/desktop-app.log",
+        "crc32": "4d4c2274",
+        "bytes": 13622,
+        "blob": "93affcda7acc181ef2786ce48d31eda43b09379e",
+        "sha256": "d80cb4aed0f1dfb47f081fa637bde6865d9a3ab63ae6d18004555b324b19b379"
+      },
+      {
+        "path": "TEST-desktop-backend-sTh641/desktop-backend-receipt.json",
+        "crc32": "3c45095b",
+        "bytes": 679585,
+        "blob": "cbd7707f1eca512b93b46fcde93875da5f6b9612",
+        "sha256": "f4e24f24c8cad3600639961c982b5ddc7c6da69cdf144f9bb74a99a5922ffc43"
+      },
+      {
+        "path": "TEST-desktop-backend-sTh641/desktop-descriptor.json",
+        "crc32": "5c66ea3b",
+        "bytes": 2487,
+        "blob": "acd44237b7fe1162c7a17818f9d91d844d7f0a1b",
+        "sha256": "93f3b5196b0e41f4b40c9bd66c9040737cfbf6b0dfdc1532a0924551a1982b09"
+      },
+      {
+        "path": "TEST-desktop-backend-sTh641/external-open.jsonl",
+        "crc32": "2dfaf991",
+        "bytes": 156,
+        "blob": "05961e38952ccb852a75f3e757a66cf552683600",
+        "sha256": "c9bfde977c7fcac68ec3d1458f335f74f8f1640231ffaf87bbce5c8130cd2dad"
+      },
+      {
+        "path": "TEST-desktop-backend-sTh641/host-profile.json",
+        "crc32": "2485fb87",
+        "bytes": 2310,
+        "blob": "7bebc2163372b6f2932bf2f39385bb060f24d098",
+        "sha256": "ad902343f04f5f97296cf92f271d577c055e726c6207765de8b237ff5378a268"
+      },
+      {
+        "path": "TEST-desktop-backend-sTh641/hoststore/management-commands/5a4872e4d387c6cd77de666d34120af689a86a7fe4945672f56e394bb3cf1bd3.json",
+        "crc32": "fed2343b",
+        "bytes": 743,
+        "blob": "a3f3b573c6f68244fae746cd04817b9c9761710f",
+        "sha256": "eb905182be053c7f1e6c16dd33104221ee823fb7413695fece19e8de4dfaf35c"
+      },
+      {
+        "path": "TEST-desktop-backend-sTh641/hoststore/management-commands/e9fa00ad2ea5aa4a697a0e984990c29aa2cff45ceb179d31a1f91e780762a326.json",
+        "crc32": "dd3ee851",
+        "bytes": 743,
+        "blob": "e430f4e31a667b33b77fae9deca06a2b3991ede2",
+        "sha256": "d70206875e6a2c58537ac4e2a58d4a1fb0a3b1922f1f8d9a50faa597574c5270"
+      },
+      {
+        "path": "TEST-desktop-backend-sTh641/sentinel-invocations.ndjson",
+        "crc32": "4d60c26c",
+        "bytes": 180,
+        "blob": "f55e20f500187392630cdd6198edf748f311ca2b",
+        "sha256": "b73cef9015c8a1577c44ab27bec7f3e29312ed3458f526b76cd95ba93b69d323"
+      },
+      {
+        "path": "TEST-desktop-backend-sTh641/ui-emulated-codex-login-cancelled.png",
+        "crc32": "d19c7ff2",
+        "bytes": 121426,
+        "blob": "df607633242a6bb50b80e56a2cca7d9cf43a11b5",
+        "sha256": "d363428138095f7d1a68c7a3b0a684243933f25ec593619fd415049c66896efe"
+      },
+      {
+        "path": "TEST-desktop-backend-sTh641/ui-seed-receipt.json",
+        "crc32": "6bb0c7e5",
+        "bytes": 2037,
+        "blob": "702b0181500feed5068557887bf365740f28a1d3",
+        "sha256": "4ebf76bad0a43b666b8e293b6f45ec1eeeac5f00af84626b7632da391f97afbf"
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-lfOoDO/linux-child-exec/linux-child-exec",
+        "crc32": "ed0ca14b",
+        "bytes": 790608,
+        "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-lfOoDO/linux-child-exec/manifest.json",
+        "crc32": "e06f2443",
+        "bytes": 2408,
+        "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+      },
+      {
+        "path": "host-emulated-emulated-codex-login-ui.log",
+        "crc32": "bee39052",
+        "bytes": 225,
+        "blob": "5b23c15514726adda166be628ced48998b0d397c",
+        "sha256": "d12e73e2679e7ecd70e4f9247db093caa5d55d5b64cc48020ad3d1609d8f5a5a"
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "crc32": "6963874a",
+        "bytes": 1803,
+        "blob": "17a6664b2f1eb2a56894cd808f5a8d93df7ffa38",
+        "sha256": "06fc9c4d53ffdf65c04d58a171a4fd3bcb94e7c7b78148017eba8e55d235f9b0"
+      },
+      {
+        "path": "host-emulated-linux-child-exec-selection.json",
+        "crc32": "87498847",
+        "bytes": 271,
+        "blob": "4615545a0df074324941ae3c066d6be387fc07e7",
+        "sha256": "d6e78d9cce7eaa71977a4b31825a86cc27cec61a3349d6342eb389883a885cf0"
+      },
+      {
+        "path": "host-emulated-summary.json",
+        "crc32": "8c05e74f",
+        "bytes": 598,
+        "blob": "af80202690801e8a742db376d29d05e5087333e6",
+        "sha256": "41010c5d4b32d4e45292d8c51a0f446bf71dd14c660a4d43bbb0a4e210ab5a90"
+      }
+    ]
+  },
+  "officialJoin": {
+    "artifact": {
+      "id": 14192695442,
+      "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-codex-login",
+      "size_in_bytes": 681033,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192695442",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192695442/zip",
+      "expired": false,
+      "created_at": "2026-11-16T02:12:24Z",
+      "expires_at": "2026-11-30T02:12:23Z",
+      "updated_at": "2026-11-16T02:12:24Z",
+      "digest": "sha256:9532212509d360d901efadd0cc306cb882df5c90673098e0391e83c9dffddd67",
+      "workflow_run": {
+        "id": 43780997237,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+      }
+    },
+    "terminalJob": {
+      "id": 133017916174,
+      "name": "Offline Host Desktop (linux-x64, codex-login)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 43780997237,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Verify original checkout and runner tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Prepare private Linux display",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Install frozen workspace and Electron",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Build existing Desktop prerequisites and verify admission",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Verify original Runtime and Team conversation contracts",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9
+        },
+        {
+          "name": "Verify complete workspace types and original typed lint scopes",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10
+        },
+        {
+          "name": "Capture package-manager and Host inputs without vendor executables",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Capture original controlled Linux process input without a provider",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12
+        },
+        {
+          "name": "Exercise ordinary Team controls and renderer reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13
+        },
+        {
+          "name": "Exercise ordinary Taskboard controls and persistence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Exercise original Skills and cross-Team controls",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15
+        },
+        {
+          "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16
+        },
+        {
+          "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17
+        },
+        {
+          "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19
+        },
+        {
+          "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20
+        },
+        {
+          "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21
+        },
+        {
+          "name": "Exercise original Review after a cold Host and app restart",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22
+        },
+        {
+          "name": "Exercise saved next-launch selection while the original Team remains live",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 23
+        },
+        {
+          "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 24
+        },
+        {
+          "name": "Exercise stock Codex Update while the original Team retains its captured source",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 25
+        },
+        {
+          "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 26
+        },
+        {
+          "name": "Prepare exact OpenCode V2 Bun and engine graph",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 27
+        },
+        {
+          "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 28
+        },
+        {
+          "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 29
+        },
+        {
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30
+        },
+        {
+          "name": "Preserve original Desktop evidence, including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 60
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 61
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 62
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 63
+        }
+      ]
+    },
+    "originalCheckoutLine": {
+      "line": 141,
+      "text": "2026-11-16T02:09:32.7232681Z 0660c748f88675063e3051fb0f8b2022e8f6f056"
+    },
+    "uploadIdSizeDigestExact": true,
+    "apiHeadBinding": "Official artifact workflow_run plus receipt and original checkout; absent fields are not inferred."
+  },
+  "sourceVerification": {
+    "sourceReportedClean": true,
+    "beforeAfterOrderedEqual": true,
+    "eachPinCount": 1757,
+    "all1757GitBytesFreshlyRead": true,
+    "gitBytes": 20308016,
+    "orderedTableSha256": "7ea0d2b4074eaab92703709af2c95d7cebe50b59f8593f265956c329b1346fa4",
+    "retainedBasis": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    "freshSelected15": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-codex-login-ui-proof.ts",
+        "bytes": 14384,
+        "blob": "b108d88b37bc679fa50bdef8e20df99947cc6954",
+        "sha256": "f99140283a8755025c45a47b00eaf093f66df77e1780102918962feeac8e2607",
+        "lines": 250
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-codex-login-fixture.ts",
+        "bytes": 10133,
+        "blob": "dbd13c262830c78bb22891e7f3de5ea780bea91e",
+        "sha256": "0ea42177065753ae7f131bbc3997fa108a6cc4e9851e1da0be8a002c9104691c",
+        "lines": 154
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-codex-login-fixture.ts",
+        "bytes": 1442,
+        "blob": "5d988c5e2e0f98472a171fcae06a4dbd9f715444",
+        "sha256": "c0a02c6af2f9ff24c32614019b3b46be2ec7f4124969d4bb3039846d803e5f86",
+        "lines": 22
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-fixture.ts",
+        "bytes": 9606,
+        "blob": "444632e731eeaf8d6cd652dd9e42309e10952d8e",
+        "sha256": "18744741dbd4c6cd2b5ecbc0374198f9f0920b59fbe14e5b55c4537cff64017d",
+        "lines": 147
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+        "bytes": 33737,
+        "blob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587",
+        "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+        "lines": 770
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 25052,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+        "lines": 456
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "bytes": 49613,
+        "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "lines": 787
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 54778,
+        "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "lines": 791
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/codex-metadata-peer.ts",
+        "bytes": 7782,
+        "blob": "a8fd151a5c3b39fec6ac2f1238941202a394bf05",
+        "sha256": "9861f8c37a75ba4606538913e989119334b674d55e4c2188965ab1a546310c8d",
+        "lines": 182
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/codex-login.test.ts",
+        "bytes": 14709,
+        "blob": "03c8bded4e1a3d2670284ace804bc1203778e43e",
+        "sha256": "3767ee2bd85b33c19d8cda399c7ee17ec9601e0974834ae054537aa44fa601e8",
+        "lines": 376
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+        "bytes": 7965,
+        "blob": "d3068dcabf3ea7334a252967b43931f8751f7d58",
+        "sha256": "58bb413b06a3d442f1916cba3d7afcf0e44679f679810459409a53881900f1da",
+        "lines": 212
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/identity.ts",
+        "bytes": 709,
+        "blob": "d4e5631330f08ccc4138353f6e2b5f49f7cac01f",
+        "sha256": "a795125fbf639552833eb3730d971b9de16437ed3507be303a5b42d541ba8bb7",
+        "lines": 19
+      },
+      {
+        "path": "src/main/utils/testChildProcessTrace.ts",
+        "bytes": 9633,
+        "blob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+        "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb",
+        "lines": 185
+      },
+      {
+        "path": "packages/legacy-agent-host/native/linux-child-exec.c",
+        "bytes": 1674,
+        "blob": "5f094bf61ae831f4b84339eaabb29d6f46c06a2e",
+        "sha256": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+        "lines": 42
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "lines": 1312
+      }
+    ],
+    "additionalDispatcherAndInitialReadSources": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-ui.ts",
+        "bytes": 22331,
+        "blob": "974279d277e8f9dbac84cf0c41e5978ffad2914d",
+        "sha256": "3416d9cfb5e9320bda70f94e5ebab3f1aa7a16bcc6cc44320c96256392a898a9"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-codex-account-proof.ts",
+        "bytes": 5888,
+        "blob": "ba94c287aa46bd750a960d519be70b3d1a5e60aa",
+        "sha256": "7097975d00b9834473cf71f89689c984fb0d5854e7b335fe98978badf9765d65"
+      }
+    ]
+  },
+  "originalLog": {
+    "file": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/job-133017916174.log",
+      "bytes": 182370,
+      "blob": "bd05f6df850e0297619f254753f07db65009dffe",
+      "sha256": "9c5dab9f821af249b5d7515dc08091ae360afa40b3f622ff3f1fb30cb56fe172"
+    },
+    "lineCount": 1778,
+    "allBytesRead": true,
+    "prerequisites": {
+      "nodeVersion": "24.21.0",
+      "counts": {
+        "tests": [
+          115,
+          7,
+          11
+        ],
+        "pass": [
+          115,
+          7,
+          11
+        ],
+        "fail": [
+          0,
+          0,
+          0
+        ],
+        "cancelled": [
+          0,
+          0,
+          0
+        ],
+        "skipped": [
+          0,
+          0,
+          0
+        ],
+        "duration_ms": [
+          8162.347526,
+          158.513656,
+          14455.998453
+        ]
+      },
+      "originalCommands": [
+        {
+          "line": 667,
+          "text": "2026-11-16T02:10:56.1839018Z \u001b[36;1mnode --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts\u001b[0m"
+        },
+        {
+          "line": 668,
+          "text": "2026-11-16T02:10:56.1840950Z \u001b[36;1mnode --test test/scripts/installDependenciesWithRetry.test.mjs\u001b[0m"
+        },
+        {
+          "line": 913,
+          "text": "2026-11-16T02:11:11.1806633Z \u001b[36;1mnode --test --test-concurrency=1 packages/legacy-agent-host/tests/codex-login.test.ts\u001b[0m"
+        }
+      ],
+      "rawSummaryRows": [
+        {
+          "line": 810,
+          "text": "2026-11-16T02:11:08.7165138Z ℹ tests 115"
+        },
+        {
+          "line": 812,
+          "text": "2026-11-16T02:11:08.7165533Z ℹ pass 115"
+        },
+        {
+          "line": 813,
+          "text": "2026-11-16T02:11:08.7165711Z ℹ fail 0"
+        },
+        {
+          "line": 814,
+          "text": "2026-11-16T02:11:08.7165892Z ℹ cancelled 0"
+        },
+        {
+          "line": 815,
+          "text": "2026-11-16T02:11:08.7166085Z ℹ skipped 0"
+        },
+        {
+          "line": 817,
+          "text": "2026-11-16T02:11:08.7166365Z ℹ duration_ms 8162.347526"
+        },
+        {
+          "line": 825,
+          "text": "2026-11-16T02:11:08.8986236Z ℹ tests 7"
+        },
+        {
+          "line": 827,
+          "text": "2026-11-16T02:11:08.8986654Z ℹ pass 7"
+        },
+        {
+          "line": 828,
+          "text": "2026-11-16T02:11:08.8987420Z ℹ fail 0"
+        },
+        {
+          "line": 829,
+          "text": "2026-11-16T02:11:08.8987607Z ℹ cancelled 0"
+        },
+        {
+          "line": 830,
+          "text": "2026-11-16T02:11:08.8987798Z ℹ skipped 0"
+        },
+        {
+          "line": 832,
+          "text": "2026-11-16T02:11:08.8988193Z ℹ duration_ms 158.513656"
+        },
+        {
+          "line": 949,
+          "text": "2026-11-16T02:11:25.6671578Z ℹ tests 11"
+        },
+        {
+          "line": 951,
+          "text": "2026-11-16T02:11:25.6672421Z ℹ pass 11"
+        },
+        {
+          "line": 952,
+          "text": "2026-11-16T02:11:25.6672597Z ℹ fail 0"
+        },
+        {
+          "line": 953,
+          "text": "2026-11-16T02:11:25.6672778Z ℹ cancelled 0"
+        },
+        {
+          "line": 954,
+          "text": "2026-11-16T02:11:25.6672965Z ℹ skipped 0"
+        },
+        {
+          "line": 956,
+          "text": "2026-11-16T02:11:25.6673358Z ℹ duration_ms 14455.998453"
+        }
+      ],
+      "originalTeamPrivacyNotRunInThisLane": true
+    },
+    "summaryFile": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/host-emulated-summary.json",
+      "bytes": 598,
+      "blob": "af80202690801e8a742db376d29d05e5087333e6",
+      "sha256": "41010c5d4b32d4e45292d8c51a0f446bf71dd14c660a4d43bbb0a4e210ab5a90"
+    },
+    "summary": {
+      "status": "PASS",
+      "scope": "selected lane only",
+      "lane": "codex-login",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "completed": [
+        {
+          "mode": "emulated-codex-login-ui",
+          "receipt": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/desktop-backend-receipt.json",
+          "screenshots": [
+            "d363428138095f7d1a68c7a3b0a684243933f25ec593619fd415049c66896efe"
+          ]
+        }
+      ],
+      "nativeProviders": "not executed",
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "visualReview": "original screenshots retained for independent inspection"
+    },
+    "modeStdout": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/host-emulated-emulated-codex-login-ui.log",
+      "bytes": 225,
+      "blob": "5b23c15514726adda166be628ced48998b0d397c",
+      "sha256": "d12e73e2679e7ecd70e4f9247db093caa5d55d5b64cc48020ad3d1609d8f5a5a"
+    },
+    "stdoutEveryLineJoined": true,
+    "TeamPrivacyAndFullTypesTypedLintStepsSkipped": [
+      9,
+      10
+    ]
+  },
+  "inputs": {
+    "receipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/desktop-backend-receipt.json",
+      "bytes": 679585,
+      "blob": "cbd7707f1eca512b93b46fcde93875da5f6b9612",
+      "sha256": "f4e24f24c8cad3600639961c982b5ddc7c6da69cdf144f9bb74a99a5922ffc43"
+    },
+    "receiptPins": {
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+      "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+      "pnpmStubSha256": "0ea2614d5acb547242516046e48cea801dd66d9d7280028adbd0ef4175efd597",
+      "profileSha256": "ad902343f04f5f97296cf92f271d577c055e726c6207765de8b237ff5378a268",
+      "descriptorSha256": "93f3b5196b0e41f4b40c9bd66c9040737cfbf6b0dfdc1532a0924551a1982b09",
+      "sentinelSha256": "2ebe61678438ed405b98487c8cbdbf2b4371d6dfe5e9773285ab364fbf58caaf",
+      "shellProbeSha256": "addbf8c17133174f943e778f7865a5983fc11d3db256fac86b2238e96ed26607",
+      "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+      "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+    },
+    "profile": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/host-profile.json",
+      "bytes": 2310,
+      "blob": "7bebc2163372b6f2932bf2f39385bb060f24d098",
+      "sha256": "ad902343f04f5f97296cf92f271d577c055e726c6207765de8b237ff5378a268"
+    },
+    "descriptor": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/desktop-descriptor.json",
+      "bytes": 2487,
+      "blob": "acd44237b7fe1162c7a17818f9d91d844d7f0a1b",
+      "sha256": "93f3b5196b0e41f4b40c9bd66c9040737cfbf6b0dfdc1532a0924551a1982b09"
+    },
+    "selectedManagement": {
+      "provider": "codex",
+      "protocolRevision": "0.162.0",
+      "profileId": "TEST-emulated-codex-login",
+      "configRevision": "TEST-emulated-codex-login-config",
+      "accountBinding": "TEST-no-vendor-account",
+      "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace",
+      "executable": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/TEST-codex-login-management/bin/TEST-codex-login.ts",
+        "sha256": "ed59379f7969bd670ae20af48e4960ef5f1d91e07937314ad24be8c2b527baf6"
+      },
+      "timeoutMs": 10000,
+      "environment": {
+        "HOME": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/TEST-codex-login-management/home",
+        "CODEX_HOME": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/TEST-codex-login-management/codex",
+        "TMPDIR": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/TEST-codex-login-management/tmp",
+        "XDG_CONFIG_HOME": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/TEST-codex-login-management/config",
+        "XDG_DATA_HOME": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/TEST-codex-login-management/data",
+        "XDG_CACHE_HOME": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/TEST-codex-login-management/cache",
+        "PATH": "/opt/hostedtoolcache/node/24.21.0/x64/bin:/usr/bin:/bin",
+        "SHELL": "/bin/sh",
+        "TEST_LOGIN": "desktop-pending"
+      }
+    },
+    "runtimeAbsent": true,
+    "originalInputFile": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/host-emulated-inputs.json",
+      "bytes": 1803,
+      "blob": "17a6664b2f1eb2a56894cd808f5a8d93df7ffa38",
+      "sha256": "06fc9c4d53ffdf65c04d58a171a4fd3bcb94e7c7b78148017eba8e55d235f9b0"
+    },
+    "linuxChildExecManifest": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-emulated-ui-inputs-lfOoDO/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    "linuxChildExecBinary": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-emulated-ui-inputs-lfOoDO/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    "linuxInputPostCleanupVerified": true,
+    "compiledBundleRecords": [
+      {
+        "path": "main/chunks/index-D9GX0Q6a.cjs",
+        "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+      },
+      {
+        "path": "main/chunks/index-yaJFGvjB.cjs",
+        "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+      },
+      {
+        "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+        "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+      },
+      {
+        "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+        "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+      },
+      {
+        "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+        "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+      },
+      {
+        "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+        "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+      },
+      {
+        "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+        "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+      },
+      {
+        "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+        "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+      },
+      {
+        "path": "main/index.cjs",
+        "sha256": "c451aecd5463c127c7e72bc238a802912304a21eafb255acb547f38e8851b771"
+      },
+      {
+        "path": "main/internal-storage-worker.cjs",
+        "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+      },
+      {
+        "path": "main/task-change-worker.cjs",
+        "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+      },
+      {
+        "path": "main/team-data-worker.cjs",
+        "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+      },
+      {
+        "path": "main/team-fs-worker.cjs",
+        "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+      },
+      {
+        "path": "preload/index.js",
+        "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+      }
+    ],
+    "compiledRecordCount": 14,
+    "compiledPayloadNotArchivedOrRebuilt": true
+  },
+  "generatedSourceHashChecks": {
+    "peerSource": {
+      "path": "packages/legacy-agent-host/tests/fixtures/codex-metadata-peer.ts",
+      "bytes": 7782,
+      "blob": "a8fd151a5c3b39fec6ac2f1238941202a394bf05",
+      "sha256": "9861f8c37a75ba4606538913e989119334b674d55e4c2188965ab1a546310c8d"
+    },
+    "peerReconstruction": {
+      "bytes": 7864,
+      "blob": "d736196f844d67bdbd794856f0bb10b34a50387c",
+      "sha256": "ed59379f7969bd670ae20af48e4960ef5f1d91e07937314ad24be8c2b527baf6"
+    },
+    "openerReconstruction": {
+      "bytes": 572,
+      "blob": "b7e9051bf07f0bd93b39719ef9ecfb2a2994848f",
+      "sha256": "96809bbac18adff476b6a2b1700d14ae425750a6c78a9c9ec3ade13e9d9b8a31"
+    },
+    "capturedHeaderNode": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+    "bothMatchFixturePins": true,
+    "originalGeneratedExecutablesArchived": false,
+    "derivedBytesNotExecuted": true
+  },
+  "originalUi": {
+    "initialAccount": {
+      "managedAccount": null,
+      "appServerState": "healthy"
+    },
+    "proof": {
+      "status": "PASS",
+      "steps": [
+        {
+          "action": "mouseMoved",
+          "label": "hover open existing More menu",
+          "selector": "button[aria-label=\"More actions\"]",
+          "target": {
+            "x": 1384,
+            "y": 51.5,
+            "text": "",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open existing More menu",
+          "selector": "button[aria-label=\"More actions\"]",
+          "target": {
+            "x": 1384,
+            "y": 51.5,
+            "text": "",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open existing Settings",
+          "selector": "button",
+          "target": {
+            "x": 1272,
+            "y": 124.5,
+            "text": "Settings",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open existing Settings",
+          "selector": "button",
+          "expectedText": "Settings",
+          "target": {
+            "x": 1272,
+            "y": 124.5,
+            "text": "Settings",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open existing Providers settings",
+          "selector": "[data-testid=\"settings-nav-providers\"]",
+          "target": {
+            "x": 95.5,
+            "y": 222,
+            "text": "Providers",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open existing Providers settings",
+          "selector": "[data-testid=\"settings-nav-providers\"]",
+          "target": {
+            "x": 95.5,
+            "y": 222,
+            "text": "Providers",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open original Codex settings dialog",
+          "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-codex\"]",
+          "target": {
+            "x": 1005.9296875,
+            "y": 876.25,
+            "text": "Manage",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original Codex settings dialog",
+          "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-codex\"]",
+          "target": {
+            "x": 1005.9296875,
+            "y": 876.25,
+            "text": "Manage",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover start one original browser login",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 1066.9765625,
+            "y": 810.5,
+            "text": "Connect ChatGPT",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "start one original browser login",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Connect ChatGPT",
+          "target": {
+            "x": 1066.9765625,
+            "y": 810.5,
+            "text": "Connect ChatGPT",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover copy original private login link/code",
+          "selector": "[role=\"dialog\"] button[title=\"Copy ChatGPT login link\"]",
+          "target": {
+            "x": 897.6640625,
+            "y": 810.5,
+            "text": "Copy link",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "copy original private login link/code",
+          "selector": "[role=\"dialog\"] button[title=\"Copy ChatGPT login link\"]",
+          "target": {
+            "x": 897.6640625,
+            "y": 810.5,
+            "text": "Copy link",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open original login through TEST OS opener",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 999.4921875,
+            "y": 810.5,
+            "text": "Open login",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original login through TEST OS opener",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Open login",
+          "target": {
+            "x": 999.4921875,
+            "y": 810.5,
+            "text": "Open login",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open original Codex settings dialog",
+          "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-codex\"]",
+          "target": {
+            "x": 1005.9296875,
+            "y": 876.25,
+            "text": "Manage",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original Codex settings dialog",
+          "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-codex\"]",
+          "target": {
+            "x": 1005.9296875,
+            "y": 876.25,
+            "text": "Manage",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseWheel",
+          "label": "show original Cancel login action",
+          "selector": "[role=\"dialog\"] button",
+          "deltaY": 370.5
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover cancel original browser login",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 825.9765625,
+            "y": 544.5,
+            "text": "Cancel login",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "cancel original browser login",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Cancel login",
+          "target": {
+            "x": 825.9765625,
+            "y": 544.5,
+            "text": "Cancel login",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover start one original device_code login",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 932.6015625,
+            "y": 504.5,
+            "text": "Use code",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "start one original device_code login",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Use code",
+          "target": {
+            "x": 932.6015625,
+            "y": 504.5,
+            "text": "Use code",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover copy original private login link/code",
+          "selector": "[role=\"dialog\"] button[title=\"Copy ChatGPT login link and code\"]",
+          "target": {
+            "x": 825.078125,
+            "y": 504.5,
+            "text": "Copy link + code",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "copy original private login link/code",
+          "selector": "[role=\"dialog\"] button[title=\"Copy ChatGPT login link and code\"]",
+          "target": {
+            "x": 825.078125,
+            "y": 504.5,
+            "text": "Copy link + code",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open original login through TEST OS opener",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 1081.1171875,
+            "y": 504.5,
+            "text": "Open login",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original login through TEST OS opener",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Open login",
+          "target": {
+            "x": 1081.1171875,
+            "y": 504.5,
+            "text": "Open login",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open original Codex settings dialog",
+          "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-codex\"]",
+          "target": {
+            "x": 1005.9296875,
+            "y": 876.25,
+            "text": "Manage",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original Codex settings dialog",
+          "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-codex\"]",
+          "target": {
+            "x": 1005.9296875,
+            "y": 876.25,
+            "text": "Manage",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseWheel",
+          "label": "show original Cancel login action",
+          "selector": "[role=\"dialog\"] button",
+          "deltaY": 370.5
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover cancel original device_code login",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 851.5859375,
+            "y": 544.5,
+            "text": "Cancel login",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "cancel original device_code login",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Cancel login",
+          "target": {
+            "x": 851.5859375,
+            "y": 544.5,
+            "text": "Cancel login",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        }
+      ],
+      "cases": [
+        {
+          "mode": "browser",
+          "status": "PASS",
+          "nativeStatus": "pending",
+          "copyAcknowledged": true,
+          "externalOpenDispatched": true,
+          "reopenPreservedOriginal": true,
+          "cancelledOriginal": true,
+          "privateFieldsCleared": true
+        },
+        {
+          "mode": "device_code",
+          "status": "PASS",
+          "nativeStatus": "pending",
+          "copyAcknowledged": true,
+          "externalOpenDispatched": true,
+          "reopenPreservedOriginal": true,
+          "cancelledOriginal": true,
+          "privateFieldsCleared": true
+        }
+      ],
+      "execution": "finite-protocol-peer",
+      "protocolRevision": "0.162.0",
+      "vendorExecutable": false,
+      "platform": "linux",
+      "architecture": "x64",
+      "externalOpen": "Actual Electron dispatch to a private TEST OS opener; only URL digest retained",
+      "vendorCompletion": "Not attempted; requires a dedicated authorized TEST account",
+      "input": {
+        "clicks": 14,
+        "allClicksTrusted": true
+      },
+      "fixturePins": {
+        "kind": "codex-login",
+        "peerSha256": "ed59379f7969bd670ae20af48e4960ef5f1d91e07937314ad24be8c2b527baf6",
+        "sourceSha256": "9861f8c37a75ba4606538913e989119334b674d55e4c2188965ab1a546310c8d",
+        "openerSha256": "96809bbac18adff476b6a2b1700d14ae425750a6c78a9c9ec3ade13e9d9b8a31",
+        "protocolRevision": "0.162.0",
+        "vendorExecutable": false,
+        "runtimeConfigured": false,
+        "managementConfigured": true
+      },
+      "finalScreenshot": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/ui-emulated-codex-login-cancelled.png",
+        "sha256": "d363428138095f7d1a68c7a3b0a684243933f25ec593619fd415049c66896efe"
+      },
+      "visualReview": "original signed-out screenshot retained for independent inspection"
+    },
+    "recordedSteps": 30,
+    "originalRecordedClicks": 14,
+    "bothOriginalStartsAndCancellationsExactlyOne": true,
+    "twoCopyAcknowledgementsOnly": true,
+    "clipboardContentsIndependentlyRead": false,
+    "actualTestOpenerDispatches": 2,
+    "presentationReopenOriginalValuesRetainedBySourceAssertions": true,
+    "pendingPrivateRepliesAndJournalsSeparatelyArchived": false,
+    "vendorCompletionAttempted": false
+  },
+  "protocol": {
+    "wireFile": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/TEST-codex-login-management/home/TEST-wire.ndjson",
+      "bytes": 7697,
+      "blob": "0238d2f565a228545739f0e3addd650b8a80b0f8",
+      "sha256": "177eedf643c8496a859dea279652033f243f5bece29b807fa46bb6309c5db437"
+    },
+    "wireRows": [
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5436
+      },
+      {
+        "method": "initialized",
+        "pid": 5436
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 5436
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 5436
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5447
+      },
+      {
+        "method": "initialized",
+        "pid": 5447
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 5447
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 5447
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5513
+      },
+      {
+        "method": "initialized",
+        "pid": 5513
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 5513
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 5513
+      },
+      {
+        "method": "model/list",
+        "params": {
+          "cursor": null,
+          "limit": 100,
+          "includeHidden": true
+        },
+        "pid": 5513
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5612
+      },
+      {
+        "method": "initialized",
+        "pid": 5612
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 5612
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 5612
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5623
+      },
+      {
+        "method": "initialized",
+        "pid": 5623
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 5623
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 5623
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-login",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5655
+      },
+      {
+        "method": "initialized",
+        "pid": 5655
+      },
+      {
+        "method": "account/login/start",
+        "params": {
+          "type": "chatgpt"
+        },
+        "pid": 5655
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5673
+      },
+      {
+        "method": "initialized",
+        "pid": 5673
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 5673
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 5673
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5802
+      },
+      {
+        "method": "initialized",
+        "pid": 5802
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 5802
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 5802
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5815
+      },
+      {
+        "method": "initialized",
+        "pid": 5815
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 5815
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 5815
+      },
+      {
+        "method": "account/login/cancel",
+        "params": {
+          "loginId": "TEST-native-login-5655"
+        },
+        "pid": 5655
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5870
+      },
+      {
+        "method": "initialized",
+        "pid": 5870
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 5870
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 5870
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5878
+      },
+      {
+        "method": "initialized",
+        "pid": 5878
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 5878
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 5878
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5885
+      },
+      {
+        "method": "initialized",
+        "pid": 5885
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 5885
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 5885
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5892
+      },
+      {
+        "method": "initialized",
+        "pid": 5892
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 5892
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 5892
+      },
+      {
+        "method": "model/list",
+        "params": {
+          "cursor": null,
+          "limit": 100,
+          "includeHidden": true
+        },
+        "pid": 5892
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-login",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 5939
+      },
+      {
+        "method": "initialized",
+        "pid": 5939
+      },
+      {
+        "method": "account/login/start",
+        "params": {
+          "type": "chatgptDeviceCode"
+        },
+        "pid": 5939
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 6075
+      },
+      {
+        "method": "initialized",
+        "pid": 6075
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 6075
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 6075
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 6088
+      },
+      {
+        "method": "initialized",
+        "pid": 6088
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 6088
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 6088
+      },
+      {
+        "method": "account/login/cancel",
+        "params": {
+          "loginId": "TEST-native-login-5939"
+        },
+        "pid": 5939
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 6143
+      },
+      {
+        "method": "initialized",
+        "pid": 6143
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 6143
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 6143
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 6152
+      },
+      {
+        "method": "initialized",
+        "pid": 6152
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 6152
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 6152
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 6159
+      },
+      {
+        "method": "initialized",
+        "pid": 6159
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 6159
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 6159
+      },
+      {
+        "method": "initialize",
+        "params": {
+          "clientInfo": {
+            "name": "agent-teams-host-metadata",
+            "version": "1"
+          },
+          "capabilities": {
+            "experimentalApi": false
+          }
+        },
+        "pid": 6166
+      },
+      {
+        "method": "initialized",
+        "pid": 6166
+      },
+      {
+        "method": "account/read",
+        "params": {
+          "refreshToken": false
+        },
+        "pid": 6166
+      },
+      {
+        "method": "config/read",
+        "params": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-sTh641/workspace"
+        },
+        "pid": 6166
+      },
+      {
+        "method": "model/list",
+        "params": {
+          "cursor": null,
+          "limit": 100,
+          "includeHidden": true
+        },
+        "pid": 6166
+      }
+    ],
+    "methodCounts": {
+      "initialize": 20,
+      "initialized": 20,
+      "account/read": 18,
+      "config/read": 18,
+      "model/list": 3,
+      "account/login/start": 2,
+      "account/login/cancel": 2
+    },
+    "launchFile": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/TEST-codex-login-management/home/TEST-login-processes.ndjson",
+      "bytes": 1140,
+      "blob": "9faffbb9608c2c747393a8fa40a3f749d3ecbb65",
+      "sha256": "de19d68a7c6620909cdd2bd726bb40aa6a3bce56d03e4c0ccfce243a51388141"
+    },
+    "launchRows": [
+      {
+        "pid": 5436,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5447,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5513,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5612,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5623,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5655,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5673,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5802,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5815,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5870,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5878,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5885,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5892,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 5939,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 6075,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 6088,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 6143,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 6152,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 6159,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      },
+      {
+        "pid": 6166,
+        "args": [
+          "app-server",
+          "--listen",
+          "stdio://"
+        ]
+      }
+    ],
+    "allWirePidsJoinDistinct20Launches": true,
+    "originalStarts": [
+      {
+        "method": "account/login/start",
+        "params": {
+          "type": "chatgpt"
+        },
+        "pid": 5655
+      },
+      {
+        "method": "account/login/start",
+        "params": {
+          "type": "chatgptDeviceCode"
+        },
+        "pid": 5939
+      }
+    ],
+    "originalCancels": [
+      {
+        "method": "account/login/cancel",
+        "params": {
+          "loginId": "TEST-native-login-5655"
+        },
+        "pid": 5655
+      },
+      {
+        "method": "account/login/cancel",
+        "params": {
+          "loginId": "TEST-native-login-5939"
+        },
+        "pid": 5939
+      }
+    ],
+    "exactPidAndLoginIdCancellationJoins": true,
+    "metadataModelListReads": 3,
+    "threadTurnGenerationRequests": 0,
+    "logoutRequests": 0,
+    "journals": [
+      {
+        "file": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/hoststore/management-commands/5a4872e4d387c6cd77de666d34120af689a86a7fe4945672f56e394bb3cf1bd3.json",
+          "bytes": 743,
+          "blob": "a3f3b573c6f68244fae746cd04817b9c9761710f",
+          "sha256": "eb905182be053c7f1e6c16dd33104221ee823fb7413695fece19e8de4dfaf35c"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "codex-auth-1e2bdc8e-232c-45bb-b04a-2c4b69c92381",
+          "profileId": "TEST-emulated-codex-login",
+          "configRevision": "TEST-emulated-codex-login-config",
+          "providerId": "codex",
+          "fingerprint": "9e6a1351f8a2fbb85d56939daec201363730d619855fcea7e512bd6d0baad6d3",
+          "selectionDigest": "f12f9b73b4f838cabd00b74cd69698ecdf7a3fa9564063c06410d616e342a5f3",
+          "resourceId": "ce6c211172dedc25d10d79f8778c8b8352049b6d566a45174dcba9f21c84623f",
+          "resourceHeld": false,
+          "kind": "oauth",
+          "methodIndex": 0,
+          "phase": "cancelled",
+          "completionMethod": "auto",
+          "sequence": 4,
+          "expiresAt": 1794795734008,
+          "reason": "cancelled",
+          "digest": "431e5877bce4ef4f13c051bf41783c51a1405ff21aeb7fac1da074300936605b"
+        },
+        "bodyAndFilenameDigestsIndependentlyVerified": true
+      },
+      {
+        "file": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/hoststore/management-commands/e9fa00ad2ea5aa4a697a0e984990c29aa2cff45ceb179d31a1f91e780762a326.json",
+          "bytes": 743,
+          "blob": "e430f4e31a667b33b77fae9deca06a2b3991ede2",
+          "sha256": "d70206875e6a2c58537ac4e2a58d4a1fb0a3b1922f1f8d9a50faa597574c5270"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "codex-auth-5a5eefb9-ff6f-4c75-ba33-019563653305",
+          "profileId": "TEST-emulated-codex-login",
+          "configRevision": "TEST-emulated-codex-login-config",
+          "providerId": "codex",
+          "fingerprint": "817bc4409cd9c7ea86c2a837e3261257e15105ea2aeed444e129056a73cc7304",
+          "selectionDigest": "f12f9b73b4f838cabd00b74cd69698ecdf7a3fa9564063c06410d616e342a5f3",
+          "resourceId": "ce6c211172dedc25d10d79f8778c8b8352049b6d566a45174dcba9f21c84623f",
+          "resourceHeld": false,
+          "kind": "oauth",
+          "methodIndex": 1,
+          "phase": "cancelled",
+          "completionMethod": "auto",
+          "sequence": 4,
+          "expiresAt": 1794795738364,
+          "reason": "cancelled",
+          "digest": "171bde75a9858346723e75be1a5c7bcae97b08fd883713a438af2672502d9ceb"
+        },
+        "bodyAndFilenameDigestsIndependentlyVerified": true
+      }
+    ],
+    "openerFile": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/external-open.jsonl",
+      "bytes": 156,
+      "blob": "05961e38952ccb852a75f3e757a66cf552683600",
+      "sha256": "c9bfde977c7fcac68ec3d1458f335f74f8f1640231ffaf87bbce5c8130cd2dad"
+    },
+    "openerRows": [
+      {
+        "sha256": "255e8a01f9e9fa06a545f55f3a66b76fc8e6d0bdd2cbf078c5f0df82b5dd26c6"
+      },
+      {
+        "sha256": "0ade5510d37f7dd4dacb7c41280e034a9a463042dcd1aab315af7c917b82b2a6"
+      }
+    ],
+    "sourceFixedUrlDigestsMatch": true,
+    "rawPrivateUrlsNotIncludedInReview": true,
+    "knownCanaryAbsence": {
+      "inspectedFiles": [
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/desktop-backend-receipt.json",
+          "bytes": 679585,
+          "blob": "cbd7707f1eca512b93b46fcde93875da5f6b9612",
+          "sha256": "f4e24f24c8cad3600639961c982b5ddc7c6da69cdf144f9bb74a99a5922ffc43"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/TEST-codex-login-management/home/TEST-wire.ndjson",
+          "bytes": 7697,
+          "blob": "0238d2f565a228545739f0e3addd650b8a80b0f8",
+          "sha256": "177eedf643c8496a859dea279652033f243f5bece29b807fa46bb6309c5db437"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/external-open.jsonl",
+          "bytes": 156,
+          "blob": "05961e38952ccb852a75f3e757a66cf552683600",
+          "sha256": "c9bfde977c7fcac68ec3d1458f335f74f8f1640231ffaf87bbce5c8130cd2dad"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/job-133017916174.log",
+          "bytes": 182370,
+          "blob": "bd05f6df850e0297619f254753f07db65009dffe",
+          "sha256": "9c5dab9f821af249b5d7515dc08091ae360afa40b3f622ff3f1fb30cb56fe172"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/hoststore/management-commands/5a4872e4d387c6cd77de666d34120af689a86a7fe4945672f56e394bb3cf1bd3.json",
+          "bytes": 743,
+          "blob": "a3f3b573c6f68244fae746cd04817b9c9761710f",
+          "sha256": "eb905182be053c7f1e6c16dd33104221ee823fb7413695fece19e8de4dfaf35c"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/hoststore/management-commands/e9fa00ad2ea5aa4a697a0e984990c29aa2cff45ceb179d31a1f91e780762a326.json",
+          "bytes": 743,
+          "blob": "e430f4e31a667b33b77fae9deca06a2b3991ede2",
+          "sha256": "d70206875e6a2c58537ac4e2a58d4a1fb0a3b1922f1f8d9a50faa597574c5270"
+        }
+      ],
+      "knownSourceValueCount": 4,
+      "sourceValueSha256": [
+        "255e8a01f9e9fa06a545f55f3a66b76fc8e6d0bdd2cbf078c5f0df82b5dd26c6",
+        "0ade5510d37f7dd4dacb7c41280e034a9a463042dcd1aab315af7c917b82b2a6",
+        "50cdaf8c9d441a933c727536674387112e90d745f97c77fe62340a6fb63b9edd",
+        "e65d643c81bf6eda2fe1fbf81c06c3090e7066bb0fd7521ab7b66797b41c0c61"
+      ],
+      "allAbsent": true,
+      "universalSecretOrClipboardGuarantee": false
+    }
+  },
+  "visual": {
+    "image": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/ui-emulated-codex-login-cancelled.png",
+      "bytes": 121426,
+      "blob": "df607633242a6bb50b80e56a2cca7d9cf43a11b5",
+      "sha256": "d363428138095f7d1a68c7a3b0a684243933f25ec593619fd415049c66896efe"
+    },
+    "actuallyViewedIndividually": true,
+    "observation": "Original Provider Settings: ChatGPT Not connected, App-server healthy, Use code and Connect ChatGPT controls, no pending private controls, API key not configured and account-required warning. Background Loading models remains. This is signed-out finite transport, not login completion/readiness/all-idle."
+  },
+  "cleanup": {
+    "app": {
+      "pid": 4632,
+      "processGroup": 4632,
+      "identity": "Mon Nov 16 02:11:26 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-lfOoDO/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+      "invocation": [
+        "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "/home/runner/work/_temp/TEST-emulated-ui-inputs-lfOoDO/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222",
+        "--noSandbox"
+      ]
+    },
+    "hostChild": {
+      "pid": 4963,
+      "ppid": 4751,
+      "pgid": 4632,
+      "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "observedBeforeShutdown": true
+    },
+    "quitRequested": true,
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [
+      {
+        "pid": 4705,
+        "ppid": 1,
+        "pgid": 4632
+      }
+    ],
+    "originalExitedGroup": {
+      "settled": true,
+      "reason": "original-natural-exit-and-fresh-absence",
+      "initialMembers": [
+        {
+          "pid": 4705,
+          "ppid": 1,
+          "pgid": 4632
+        }
+      ],
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "capturedDescendantsAbsent": true,
+      "appExitCode": 0,
+      "appSignalCode": null
+    },
+    "final": {
+      "processGroup": 4632,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "passiveTraceFile": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/extracted/TEST-desktop-backend-sTh641/desktop-app.log",
+      "bytes": 13622,
+      "blob": "93affcda7acc181ef2786ce48d31eda43b09379e",
+      "sha256": "d80cb4aed0f1dfb47f081fa637bde6865d9a3ab63ae6d18004555b324b19b379"
+    },
+    "passiveTraceRows": [
+      {
+        "line": 63,
+        "row": {
+          "mainPid": 4751,
+          "event": "trace-active",
+          "limit": 256,
+          "childLimit": 64,
+          "coverage": "node-async-and-unix-process-table-only"
+        }
+      },
+      {
+        "line": 76,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-spawn",
+          "pid": 4860,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "ps",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "15544",
+            "parentPid": 4751,
+            "processGroupId": 4632
+          },
+          "atomic": false,
+          "observedAtMs": 1794795107430
+        }
+      },
+      {
+        "line": 77,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-exit",
+          "pid": 4860,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794795107461
+        }
+      },
+      {
+        "line": 78,
+        "row": {
+          "mainPid": 4751,
+          "event": "sync-result",
+          "requestedCommand": "unix-process-table",
+          "pid": 4865,
+          "status": 0,
+          "signal": null,
+          "observedBirth": null,
+          "atomic": false,
+          "observedAtMs": 1794795107599
+        }
+      },
+      {
+        "line": 79,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-spawn",
+          "pid": 4863,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "15557",
+            "parentPid": 4751,
+            "processGroupId": 4632
+          },
+          "atomic": false,
+          "observedAtMs": 1794795107607
+        }
+      },
+      {
+        "line": 80,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-exit",
+          "pid": 4863,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794795107610
+        }
+      },
+      {
+        "line": 82,
+        "row": {
+          "mainPid": 4751,
+          "event": "sync-result",
+          "requestedCommand": "unix-process-table",
+          "pid": 4885,
+          "status": 0,
+          "signal": null,
+          "observedBirth": null,
+          "atomic": false,
+          "observedAtMs": 1794795107690
+        }
+      },
+      {
+        "line": 83,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-spawn",
+          "pid": 4883,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "15569",
+            "parentPid": 4751,
+            "processGroupId": 4632
+          },
+          "atomic": false,
+          "observedAtMs": 1794795107694
+        }
+      },
+      {
+        "line": 86,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-exit",
+          "pid": 4883,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794795108493
+        }
+      },
+      {
+        "line": 87,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-spawn",
+          "pid": 4961,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "15700",
+            "parentPid": 4751,
+            "processGroupId": 4632
+          },
+          "atomic": false,
+          "observedAtMs": 1794795108981
+        }
+      },
+      {
+        "line": 88,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-exit",
+          "pid": 4961,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794795108986
+        }
+      },
+      {
+        "line": 89,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-spawn",
+          "pid": 4963,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "15702",
+            "parentPid": 4751,
+            "processGroupId": 4632
+          },
+          "atomic": false,
+          "observedAtMs": 1794795108998
+        }
+      },
+      {
+        "line": 96,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-spawn",
+          "pid": 5222,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "ps",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "16801",
+            "parentPid": 4751,
+            "processGroupId": 4632
+          },
+          "atomic": false,
+          "observedAtMs": 1794795119995
+        }
+      },
+      {
+        "line": 97,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-exit",
+          "pid": 5222,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794795120016
+        }
+      },
+      {
+        "line": 105,
+        "row": {
+          "mainPid": 4751,
+          "event": "sync-result",
+          "requestedCommand": "unix-process-table",
+          "pid": 5527,
+          "status": 0,
+          "signal": null,
+          "observedBirth": null,
+          "atomic": false,
+          "observedAtMs": 1794795131445
+        }
+      },
+      {
+        "line": 106,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-spawn",
+          "pid": 5520,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "codex",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "17943",
+            "parentPid": 4751,
+            "processGroupId": 4632
+          },
+          "atomic": false,
+          "observedAtMs": 1794795131449
+        }
+      },
+      {
+        "line": 107,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-exit",
+          "pid": 5520,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794795131467
+        }
+      },
+      {
+        "line": 119,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-exit",
+          "pid": 4963,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794795142594
+        }
+      },
+      {
+        "line": 121,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-spawn",
+          "pid": 6212,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "ps",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "19063",
+            "parentPid": 4751,
+            "processGroupId": 4632
+          },
+          "atomic": false,
+          "observedAtMs": 1794795142609
+        }
+      },
+      {
+        "line": 122,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-exit",
+          "pid": 6212,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794795142616
+        }
+      },
+      {
+        "line": 123,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-spawn",
+          "pid": 6214,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "ps",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "19065",
+            "parentPid": 4751,
+            "processGroupId": 4632
+          },
+          "atomic": false,
+          "observedAtMs": 1794795142624
+        }
+      },
+      {
+        "line": 124,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-exit",
+          "pid": 6214,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794795142632
+        }
+      },
+      {
+        "line": 125,
+        "row": {
+          "mainPid": 4751,
+          "event": "trace-summary",
+          "rows": 21,
+          "droppedObservations": 0,
+          "observedChildren": 9,
+          "unobservedChildren": 0,
+          "observationFailures": 0,
+          "limited": false,
+          "coverage": "node-async-and-unix-process-table-only"
+        }
+      }
+    ],
+    "hostCallbacks": [
+      {
+        "line": 89,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-spawn",
+          "pid": 4963,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "15702",
+            "parentPid": 4751,
+            "processGroupId": 4632
+          },
+          "atomic": false,
+          "observedAtMs": 1794795108998
+        }
+      },
+      {
+        "line": 119,
+        "row": {
+          "mainPid": 4751,
+          "event": "async-exit",
+          "pid": 4963,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794795142594
+        }
+      }
+    ],
+    "operationalRows": 21,
+    "observedMainChildren": 9,
+    "originalPeerCleanup": {
+      "originalPeerPids": [
+        5436,
+        5447,
+        5513,
+        5612,
+        5623,
+        5655,
+        5673,
+        5802,
+        5815,
+        5870,
+        5878,
+        5885,
+        5892,
+        5939,
+        6075,
+        6088,
+        6143,
+        6152,
+        6159,
+        6166
+      ],
+      "observedDirectChildPids": [],
+      "launchPids": [
+        5436,
+        5447,
+        5513,
+        5612,
+        5623,
+        5655,
+        5673,
+        5802,
+        5815,
+        5870,
+        5878,
+        5885,
+        5892,
+        5939,
+        6075,
+        6088,
+        6143,
+        6152,
+        6159,
+        6166
+      ],
+      "remaining": [],
+      "absent": true,
+      "launchLogSha256": "de19d68a7c6620909cdd2bd726bb40aa6a3bce56d03e4c0ccfce243a51388141",
+      "wireLogSha256": "177eedf643c8496a859dea279652033f243f5bece29b807fa46bb6309c5db437",
+      "externalOpenLogSha256": "c9bfde977c7fcac68ec3d1458f335f74f8f1640231ffaf87bbce5c8130cd2dad",
+      "externalOpenCount": 2,
+      "protocol": {
+        "browserStarts": 1,
+        "deviceStarts": 1,
+        "cancellations": 2,
+        "originalLoginIdsCancelled": true,
+        "accountReads": 18,
+        "logout": 0,
+        "sessionOrModelRequests": 0,
+        "accountAbsent": true
+      },
+      "fixturePins": {
+        "kind": "codex-login",
+        "peerSha256": "ed59379f7969bd670ae20af48e4960ef5f1d91e07937314ad24be8c2b527baf6",
+        "sourceSha256": "9861f8c37a75ba4606538913e989119334b674d55e4c2188965ab1a546310c8d",
+        "openerSha256": "96809bbac18adff476b6a2b1700d14ae425750a6c78a9c9ec3ade13e9d9b8a31",
+        "protocolRevision": "0.162.0",
+        "vendorExecutable": false,
+        "runtimeConfigured": false,
+        "managementConfigured": true
+      }
+    },
+    "noPeerPidsInMainTrace": true,
+    "peerNaturalExitStatusesRetained": false,
+    "peerBirthOrExitCallbacksRetained": false,
+    "accountAbsentScope": "Original guarded cleanup assertion; no authenticated account file bytes archived or synthesized.",
+    "finalSentinelCensus": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        },
+        {
+          "executable": "codex",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": 2,
+      "postQuitOrCleanupInvocations": [],
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    }
+  },
+  "sourceClaimJoins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-codex-login-ui-proof.ts",
+      "ranges": [
+        "14-58",
+        "60-128",
+        "129-162"
+      ],
+      "finding": "Original Settings inputs, one browser and one device case; private pending values checked in memory; Copy acknowledgement only; private TEST opener; Escape/reopen unchanged authorization/count; one Cancel and cancelled/released/signed-out checks; no real vendor completion."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-codex-login-fixture.ts",
+      "ranges": [
+        "18-94",
+        "96-154"
+      ],
+      "finding": "Finite signed-out management-only profile and exact app-server args; bounded retained wire/launch/opener joins; all20 numeric PIDs absent, not per-peer exit status."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-management-ui.ts",
+      "ranges": [
+        "21-46"
+      ],
+      "finding": "Explicit finite-protocol-peer execution selected, post-UI fixture verification and original final screenshot."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-codex-account-proof.ts",
+      "ranges": [
+        "9-34"
+      ],
+      "finding": "Read-only original readiness barrier prior to auth mutation; initial account/public app-server projection."
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/codex-metadata-peer.ts",
+      "ranges": [
+        "5-7",
+        "31-57",
+        "67-108",
+        "152-182"
+      ],
+      "finding": "Desktop-pending exact admission; fixed TEST URL/code and original login ID; only management methods; no authenticated completion under desktop branch; EOF exit exists in source but no per-peer actual exit row is invented."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-codex-login-fixture.ts",
+      "ranges": [
+        "13-22"
+      ],
+      "finding": "Original Linux TEST opener validates HTTPS auth host and records only URL digest; no personal browser."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+      "ranges": [
+        "80-86",
+        "155-157",
+        "186-193"
+      ],
+      "finding": "Filename uses canonical commandId digest; body digest verified independently."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/identity.ts",
+      "ranges": [
+        "3-19"
+      ],
+      "finding": "Recursive key-sorted JSON SHA256, reproduced without project execution."
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "ranges": [
+        "361-370",
+        "919-949"
+      ],
+      "finding": "Original full11-case command with test-concurrency1; original finite lane checks all listed proof/cancellation/cleanup boundaries."
+    }
+  ],
+  "qualificationLimits": [
+    "Original finite protocol revision0.162.0 peer only, vendorExecutable:false. No real Codex binary/account/browser credential reuse/provider inference/native tool qualification; nativeStatus and other historical native names are not native qualification.",
+    "Two explicit starts, copy acknowledgments, TEST OS opener dispatches, dialog reopens and cancellations are source-bound UI observations. Clipboard contents are not independently read back; private authorization URL/code equality is an original in-process assertion, not a retained secret value.",
+    "Two original opener digest rows independently match the fixed source-only TEST URLs; no personal browser is opened. Known TEST URL/code strings are absent from inspected public receipts/journals/wire/opener/job text; this is not a generic unknown-secret guarantee.",
+    "Final public journals are cancelled/released, not successful authentication; no account file was present according to original cleanup. No authenticated-account bytes or successful vendor completion are retained.",
+    "Twenty distinct finite app-server PID rows are absent after cleanup, but observedDirectChildPids is empty and peer exit/birth callbacks are not archived. No all-natural-exit or native custody proof follows.",
+    "App0/null and fresh originalExitedGroup/Host/descendant absence are separate from passive Main original-child Host4963 callback0/null. Neither is an atomic executable/native certificate.",
+    "Final actual PNG shows Not connected, App-server healthy, API-key notconfigured and an account-required warning; background Loading models remains. No all-provider-idle/readiness or successful login claim.",
+    "Common1757 source census is reused by exact ordered equality;15selected paths freshly read. Peer/opener generated bytes are source-reconstructed for hash agreement only, not independently recovered runtime files;14compiled hash records have no separate compiled payload/rebuild here.",
+    "Original0660 lane PASS does not qualify608efb Team/privacyGREEN, vendor authorization, allDesktop/release/merge acceptance.",
+    "Approval concerns old M0660 only. No N608efb Team/privacy GREEN, vendor authentication completion, personal browser, Runtime/native tool execution, installed-payload qualification or release/merge readiness transfer.",
+    "The final image provides no clipboard bytes or full-provider idle/readiness evidence. Intermediate pending private values are supported by original source assertions and receipt outcome, not separately archived snapshots.",
+    "Fourteen recorded trusted clicks and30 UI journal rows are not a count of every DOM/CDP observation; Escape dispatches are source-visible but not separate step rows.",
+    "Main passive Host exit0/null and numeric absence of20 finite peer PIDs have different scopes. No all-peer natural exit, birth, atomic custody or stronger account-absence proof is invented."
+  ],
+  "findings": [],
+  "requestedCorrections": [],
+  "execution": {
+    "projectExecutions": 0,
+    "sourceRefMutations": 0,
+    "ciPollsDownloadsActions": 0,
+    "activities": "Retained original bytes/ZIP/JSON/source hashes and immutable Git reads; one original PNG viewed; new independent scratch report only."
+  }
+}

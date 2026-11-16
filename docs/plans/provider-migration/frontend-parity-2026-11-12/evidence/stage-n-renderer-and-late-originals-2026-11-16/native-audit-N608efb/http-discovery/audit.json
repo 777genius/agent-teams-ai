@@ -1,0 +1,1088 @@
+{
+  "kind": "Original N608 published OpenCode2.0.21 HTTP discovery author evidence audit",
+  "reviewedAtUtc": "2026-11-16T04:27:38.650044+00:00",
+  "author": "/root/native_failures",
+  "independentReviewPending": true,
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234721,
+  "jobId": 133062438856,
+  "conclusion": "success",
+  "originalRun": {
+    "id": 43795234721,
+    "name": "OpenCode V2 Stage1 static preflight (TEST only)",
+    "node_id": "WFR_kwLORVTEtM8AAAAKMmY_oQ",
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+    "display_title": "fix: complete Host frontend parity with emulated provider checks",
+    "run_number": 735,
+    "event": "pull_request",
+    "status": "queued",
+    "conclusion": null,
+    "workflow_id": 408464117,
+    "check_suite_id": 118563136946,
+    "check_suite_node_id": "CS_kwDORVTEtM8AAAAbmunlsg",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234721",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43795234721",
+    "pull_requests": [
+      {
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1192",
+        "id": 5299966773,
+        "number": 1192,
+        "head": {
+          "ref": "fix/frontend-parity-completion-20261113",
+          "sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        },
+        "base": {
+          "ref": "feat/provider-host-frontend-parity-20261112",
+          "sha": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        }
+      }
+    ],
+    "created_at": "2026-11-16T02:57:27Z",
+    "updated_at": "2026-11-16T02:57:27Z",
+    "actor": {
+      "login": "777genius",
+      "id": 13103045,
+      "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/777genius",
+      "html_url": "https://github.com/777genius",
+      "followers_url": "https://api.github.com/users/777genius/followers",
+      "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+      "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+      "organizations_url": "https://api.github.com/users/777genius/orgs",
+      "repos_url": "https://api.github.com/users/777genius/repos",
+      "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/777genius/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "run_attempt": 1,
+    "referenced_workflows": [],
+    "run_started_at": "2026-11-16T02:57:27Z",
+    "triggering_actor": {
+      "login": "777genius",
+      "id": 13103045,
+      "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/777genius",
+      "html_url": "https://github.com/777genius",
+      "followers_url": "https://api.github.com/users/777genius/followers",
+      "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+      "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+      "organizations_url": "https://api.github.com/users/777genius/orgs",
+      "repos_url": "https://api.github.com/users/777genius/repos",
+      "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/777genius/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234721/jobs",
+    "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234721/logs",
+    "check_suite_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-suites/118563136946",
+    "artifacts_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234721/artifacts",
+    "cancel_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234721/cancel",
+    "rerun_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234721/rerun",
+    "previous_attempt_url": null,
+    "workflow_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/workflows/408464117",
+    "head_commit": {
+      "id": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "tree_id": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+      "message": "docs(migration): retain post-helper original CI evidence and publication readbacks",
+      "timestamp": "2026-11-16T02:49:35Z",
+      "author": {
+        "name": "Илия",
+        "email": "iliyazelenkog@gmail.com"
+      },
+      "committer": {
+        "name": "Илия",
+        "email": "iliyazelenkog@gmail.com"
+      }
+    },
+    "repository": {
+      "id": 1163183284,
+      "node_id": "R_kgDORVTEtA",
+      "name": "agent-teams-ai",
+      "full_name": "777genius/agent-teams-ai",
+      "private": false,
+      "owner": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/777genius/agent-teams-ai",
+      "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+      "fork": false,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+      "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+      "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+      "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+      "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+      "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+      "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+      "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+      "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+      "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+      "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+      "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+      "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+      "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+      "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments"
+    },
+    "head_repository": {
+      "id": 1163183284,
+      "node_id": "R_kgDORVTEtA",
+      "name": "agent-teams-ai",
+      "full_name": "777genius/agent-teams-ai",
+      "private": false,
+      "owner": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/777genius/agent-teams-ai",
+      "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+      "fork": false,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+      "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+      "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+      "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+      "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+      "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+      "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+      "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+      "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+      "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+      "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+      "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+      "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+      "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+      "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments"
+    }
+  },
+  "terminalJob": {
+    "id": 133062438856,
+    "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43795234721,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Require immutable PR source HEAD",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Install exact private Stage1 Session SPI dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Build isolated Stage1 V2 Session SPI for TEST-only HTTP proof",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Check isolated durable-HTTP TEST harness syntax",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Check TEST shell-flag permission split diagnostic (no tool execution)",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Negative SDK setup cleanup and HOLD receipt (no worker launch)",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Install official pinned SDK without scripts in TEST-owned npm prefix",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Negative valid-SDK post-copy cleanup cannot touch shared package prefix",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12
+      },
+      {
+        "name": "Negative owned-worker cleanup on parent SIGINT and SIGTERM",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13
+      },
+      {
+        "name": "Probe actual published server HTTP durable-log and cold restart",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14
+      },
+      {
+        "name": "Require exact-HEAD TEST receipt (never a Host/model certificate)",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Preserve TEST-only receipt on success or safe failure",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 32
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 33
+      }
+    ]
+  },
+  "officialArtifact": {
+    "id": 14197046657,
+    "name": "opencode-v2-published-http-persist-ubuntu",
+    "size_in_bytes": 874,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14197046657",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14197046657/zip",
+    "expired": false,
+    "created_at": "2026-11-16T04:08:55Z",
+    "expires_at": "2026-11-23T04:08:54Z",
+    "updated_at": "2026-11-16T04:08:55Z",
+    "digest": "sha256:56495f2b66647e2e9bfdfb538260e7b700086842c803427ee566d1e1d294b2ef",
+    "workflow_run": {
+      "id": 43795234721,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+    }
+  },
+  "originals": [
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/job-133062438856.log",
+      "bytes": 74401,
+      "blob": "5da07bc32f31201dd69b2719f6a1e84ed7e30895",
+      "sha256": "77b98faad35766a9d7d2cd018fe625c2b35018ae6ff6259c5a14a8ff56247fa5"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/httpLog-original-response.json",
+      "bytes": 76191,
+      "blob": "4a41e3363705112e9da434f6f64ae284f6208167",
+      "sha256": "e66b23b06b23324aa2d35e051368d0a0eeb9294b989cea92b17ffff6e587f0e5"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/artifact-14197046657.zip",
+      "bytes": 874,
+      "blob": "2f0e418c73873c15659dcc3138f0d9868d426821",
+      "sha256": "56495f2b66647e2e9bfdfb538260e7b700086842c803427ee566d1e1d294b2ef"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/archive-14197046657-retention.json",
+      "bytes": 1473,
+      "blob": "9bd2bcd9b43ff1008b209b088fb04c84844dd189",
+      "sha256": "00dd6f87ba89605f51c7f5804be5da5071a4861b9fa3b1c02b0085a82557a90d"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/v2Artifacts-original-response.json",
+      "bytes": 5853,
+      "blob": "53550ed4522464e3ccf84d45a643b22540e93e9b",
+      "sha256": "dc45d647ab7bc278680061e2bedcb6d6b94fdcc2e24fffa1ee37cb13e2efd6e0"
+    },
+    {
+      "path": "ci-n-608efb/v2-jobs-0413.json",
+      "bytes": 46992,
+      "blob": "edffef5ea961b05e9abacff05c45fca2d9ef87ae",
+      "sha256": "3d6ac715cec8575e1d8a4c1390e8a19ff9a598f053603982bbe580415ff896d2"
+    },
+    {
+      "path": "ci-n-608efb/v2-original-run-0258.json",
+      "bytes": 30144,
+      "blob": "8087402aa25d3eb6d5a4a72d1771cb7843366b76",
+      "sha256": "2cd2b012a3155fb0a798f2b8badb7c6a033dd17407ddb71433fd979a149975c1"
+    }
+  ],
+  "originalMcpUtf8EqualsFullRawLog": true,
+  "fullLogLines": 860,
+  "zip": {
+    "identity": {
+      "path": "native-audit-N608efb/new-terminal-0413/artifact-14197046657.zip",
+      "bytes": 874,
+      "blob": "2f0e418c73873c15659dcc3138f0d9868d426821",
+      "sha256": "56495f2b66647e2e9bfdfb538260e7b700086842c803427ee566d1e1d294b2ef"
+    },
+    "safeUniqueNonsymlinkPaths": true,
+    "allCrcValid": true,
+    "extractedBytesExact": true,
+    "members": [
+      {
+        "name": "opencode-v2-http-persist.json",
+        "crc32": "d8845e20",
+        "bytes": 1851,
+        "blob": "cbd01bbc6aa7bf374cbde0be593190c4cb7a0ce7",
+        "sha256": "76d2b3758a5fc5d713ca0c5783184f26bc44f2d850f3546018d8a5275d4f1397"
+      }
+    ]
+  },
+  "receipt": {
+    "kind": "TEST_V2_HTTP_DURABLE_DISCOVERY",
+    "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "version": "2.0.21",
+    "qualified": false,
+    "packagedElectronQualified": false,
+    "modelTurnProven": false,
+    "processCustodyQualified": false,
+    "steps": [
+      "TEST_published_server_real_authenticated_HTTP_ready",
+      "TEST_no_unauthenticated_HTTP_access",
+      "TEST_native_shell_flag_permission_split_not_tool_enforcement",
+      "TEST_native_unauthenticated_mutations_rejected",
+      "TEST_published_native_permission_resolver_and_nonreplay",
+      "TEST_real_pending_permission_exists_before_cold_restart",
+      "TEST_official_HTTP_session_created_event_persisted",
+      "TEST_cold_native_permission_not_replayed_or_accepted",
+      "TEST_native_persisted_always_vs_deny_survives_cold_restart",
+      "TEST_durable_HTTP_session_identity_survives_cold_restart_no_prompt",
+      "TEST_real_published_HTTP_Stage1_SPI_ready_no_model_turn",
+      "TEST_Stage1_SPI_readiness_recheck_and_owned_cleanup_no_replay"
+    ],
+    "cleanup": true,
+    "nativeUnauthenticatedDeleteRejected": true,
+    "nativeSessionPermissionOrderReadbackProven": true,
+    "nativeShellFlagPermissionSplitObserved": true,
+    "nativeUnauthenticatedPermissionGrantRejected": true,
+    "nativePermissionResolverProven": true,
+    "nativePermissionReplyRejectNoReplayProven": true,
+    "nativeSavedAlwaysOverridesAskProven": true,
+    "nativeExplicitDenyBeatsSavedAlwaysProven": true,
+    "nativeSavedGrantRemainsProjectScopedAfterRestartProven": true,
+    "nativeFreshSessionSavedGrantSurvivesColdRestartProven": true,
+    "nativeSavedGrantSurvivesColdRestartProven": true,
+    "nativeStalePermissionAfterRestartRejected": true,
+    "nativeStaleGrantAfterRestartRejected": true,
+    "durableHTTPEvents": 1,
+    "nativeModelReadback": "captured",
+    "hostAdmissionPhase": "spi-opened",
+    "hostSpiReadinessProven": true
+  },
+  "selectedSourceAudit": {
+    "path": "native-audit-N608efb/http-discovery/source-audit.json",
+    "bytes": 5831,
+    "blob": "9fd9ec021600d3192b7c9bf0ab9620c1516e2a13",
+    "sha256": "d9c71bad8de37cea3d9eeaa827d5c7c490039238050e34c921bef87acb7240c1"
+  },
+  "sourceBoundSemantics": [
+    {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "lines": "12-34,36-106",
+      "finding": "Linux x64 TEST owner imports published ServerProcess under captured Node, isolated per-run home/config/data/temp and loopback authenticated HTTP; models.fetch=false, project config false, watchers disabled. Both SDK and server package names/versions2.0.21 are asserted. Worker source is copied into the disposable namespace; shared npm prefix is read-only linked, not overwritten on cleanup."
+    },
+    {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "lines": "108-174,202-240",
+      "finding": "Original worker spawn is detached; source captures /proc start ticks with pid=PGID=session, hashes current Node executable and matches authenticated /api/info pid/version. Original signal guard checks retained start identity, and stop waits for both PID and PGID absence with no signal replay. These are TEST-local checks; receipt intentionally retains processCustodyQualified=false."
+    },
+    {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "lines": "241-248,250-697",
+      "finding": "Completed original checks cover one session.created durable event and its exact in-memory fingerprint/sequence after a distinct-PID cold restart; unauthorized DELETE/grant no-effect, ordered resolver rules, ask/reject/nonreplay, saved always versus explicit deny, fresh-session/project scope after restart, and separate stale reject/once/always requests. No model prompt/tool execution is required or qualified."
+    },
+    {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "lines": "699-842",
+      "finding": "The original private Stage1 Session SPI is opened over the actual HTTP server. It requires captured model readback, one initial host-context PUT and three instruction reads, readiness recheck, confirmed driver close and provider cleanup, and physical absence of second worker PID/PGID. These exact assertions precede the final step; their transient PID/start/hash values are not retained in the compact receipt."
+    },
+    {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "lines": "145-174,843-862",
+      "finding": "Existing protected finalizer shares cleanup across interruption/normal paths, retains safe first failure and removes the owned root only after confirmed process stop. Receipt cleanup=true, all twelve steps and absent failure passed the final original workflow verifier."
+    },
+    {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "lines": "22-135",
+      "finding": "Actual SIGINT/SIGTERM published-HTTP cases require original readiness handshake, signal only their owned parent, exit130/143 with null signal, exact safe interruption receipt, qualified=false, cleanup=true, removed namespace and worker-group ESRCH; native ELF cases were skipped because their prefix was not configured. Only test PASS lines are retained, not each negative receipt/handshake file."
+    }
+  ],
+  "sourceLineProof": [
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 25,
+      "text": "    models: { fetch: false },"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 26,
+      "text": "    config: { directory: process.env.XDG_CONFIG_HOME, project: false },"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 69,
+      "text": "    if (sdk.name !== '@opencode/sdk' || sdk.version !== '2.0.21' ||"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 70,
+      "text": "        server.name !== '@opencode/server' || server.version !== '2.0.21')"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 127,
+      "text": "      const result=signalCapturedNativeGroup(pid,startTicks,{"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 135,
+      "text": "      if (!present(pid)&&!present(-pid)) {if (child?.pid === pid) child = undefined;return true;}"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 165,
+      "text": "    receipt.failure ??= 'TEST_interrupted_' + signal;"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 170,
+      "text": "      process.exit(signal === 'SIGINT' ? 130 : 143);"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 208,
+      "text": "    child=spawn(process.execPath,[worker,'--worker'],{"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 211,
+      "text": "    startTicks=child.pid?startIdentity(child.pid):undefined;"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 215,
+      "text": "    if (hash(readFileSync('/proc/'+child.pid+'/exe'))!==expected)"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 220,
+      "text": "        if(info.status===200&&info.data?.pid===child.pid&&info.data?.version==='2.0.21') {"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 246,
+      "text": "    if(outcome.eventCount!==1||events[0]?.type!=='session.created')"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 751,
+      "text": "      if(signal.aborted||startIdentity(secondPid)!==startTicks||"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 803,
+      "text": "        if(signal.aborted||++instructionWrites!==1||"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 814,
+      "text": "        // Read-only current native GET; never resend the initial PUT."
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 819,
+      "text": "        // Read-only physical check. Never repeat the stop signal after an"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 821,
+      "text": "        return !present(secondPid)&&!present(-secondPid);"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 834,
+      "text": "       instructionReads!==3)"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 839,
+      "text": "    if(closed.cleanup!=='confirmed'||!await provider.cleanup()||"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 840,
+      "text": "       present(secondPid)||present(-secondPid))"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 852,
+      "text": "      await cleanupOwnedRoot();"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 860,
+      "text": "  if(receipt.failure)throw Error(receipt.failure);"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "line": 861,
+      "text": "  if(!receipt.cleanup)throw Error('TEST_worker_cleanup_unknown');"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "line": 24,
+      "text": "    timeout: 60_000,skip:!process.env[harness.prefix],"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "line": 55,
+      "text": "      assert.ok(existsSync(marker), 'the real server must be ready before interruption');"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "line": 63,
+      "text": "      assert.equal(parent.kill(signalName), true, 'signal only the owned TEST parent');"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "line": 77,
+      "text": "      assert.equal(signal, null);"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "line": 78,
+      "text": "      assert.equal(code, exitCode);"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "line": 81,
+      "text": "      assert.equal(receipt.qualified, false);"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "line": 83,
+      "text": "      assert.equal(receipt.cleanup, true);"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "line": 84,
+      "text": "      assert.deepEqual(readdirSync(temp), [], 'owned temporary root was not removed');"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "line": 87,
+      "text": "      catch (error) { if (error?.code !== 'ESRCH') throw error; }"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "line": 121,
+      "text": "            assert.throws(() => process.kill(-ready.pid, 0), {code:'ESRCH'},"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "line": 214,
+      "text": "          ref: ${{ github.event.pull_request.head.sha }}"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "line": 206,
+      "text": "    timeout-minutes: 12"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "line": 226,
+      "text": "          node-version: 24.21.0"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "line": 277,
+      "text": "               r.kind!=='TEST_V2_HTTP_DURABLE_DISCOVERY' || r.qualified!==false ||"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "line": 278,
+      "text": "               r.packagedElectronQualified!==false || r.modelTurnProven!==false ||"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "line": 279,
+      "text": "               r.processCustodyQualified!==false || r.cleanup!==true ||"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "line": 294,
+      "text": "               r.failure !== undefined) process.exit(1);"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "line": 311,
+      "text": "            if(!Array.isArray(r.steps) || r.steps.length!==requiredSteps.length ||"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "line": 312,
+      "text": "               r.steps.some((step,index)=>step!==requiredSteps[index])) process.exit(1);"
+    }
+  ],
+  "originalRuntimeAndCommands": {
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "npm": "11.19.0",
+    "installationProfile": "node-ci",
+    "testCommands": [
+      "node --test packages/legacy-agent-host/tests/opencode-v2-shell-flag-policy-probe.test.mjs",
+      "node --test packages/legacy-agent-host/tests/opencode-v2-http-setup-negative.test.mjs",
+      "node --test packages/legacy-agent-host/tests/opencode-v2-http-setup-negative.test.mjs",
+      "node --test packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs"
+    ],
+    "fourReporterBlocks": {
+      "tests": [
+        6,
+        6,
+        6,
+        4
+      ],
+      "pass": [
+        6,
+        5,
+        6,
+        2
+      ],
+      "fail": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "cancelled": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "skipped": [
+        0,
+        1,
+        0,
+        2
+      ]
+    },
+    "durationsMs": [
+      56.53047,
+      436.465084,
+      457.222428,
+      4207.460438
+    ],
+    "totals": {
+      "tests": 22,
+      "pass": 19,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 3
+    },
+    "all22CaseExecutions": [
+      {
+        "line": 634,
+        "status": "pass",
+        "name": "native decision split is never a tool-execution certificate",
+        "durationMs": 1.67576,
+        "suffix": ""
+      },
+      {
+        "line": 635,
+        "status": "pass",
+        "name": "foreign native workspace fails before permission evaluation and sends zero DELETEs",
+        "durationMs": 1.253762,
+        "suffix": ""
+      },
+      {
+        "line": 636,
+        "status": "pass",
+        "name": "external ALLOW fails closed with exactly one cleanup",
+        "durationMs": 0.295096,
+        "suffix": ""
+      },
+      {
+        "line": 637,
+        "status": "pass",
+        "name": "shell ASK fails before external request with exactly one cleanup",
+        "durationMs": 0.239551,
+        "suffix": ""
+      },
+      {
+        "line": 638,
+        "status": "pass",
+        "name": "foreign session at pre-cleanup attestation blocks DELETE",
+        "durationMs": 0.289327,
+        "suffix": ""
+      },
+      {
+        "line": 639,
+        "status": "pass",
+        "name": "unreadable pre-cleanup attestation blocks DELETE",
+        "durationMs": 0.3315,
+        "suffix": ""
+      },
+      {
+        "line": 658,
+        "status": "pass",
+        "name": "published package snapshot detects nested mutation even with unchanged directory entries",
+        "durationMs": 33.241268,
+        "suffix": ""
+      },
+      {
+        "line": 659,
+        "status": "pass",
+        "name": "failed published V2 SDK setup emits HOLD receipt and cleans only its TEST root",
+        "durationMs": 39.187977,
+        "suffix": ""
+      },
+      {
+        "line": 660,
+        "status": "pass",
+        "name": "opencode-v2-published-http-persist.mjs records namespace allocation failure before any process exists",
+        "durationMs": 38.335048,
+        "suffix": ""
+      },
+      {
+        "line": 661,
+        "status": "pass",
+        "name": "opencode-v2-native-instructions.mjs records namespace allocation failure before any process exists",
+        "durationMs": 231.657543,
+        "suffix": ""
+      },
+      {
+        "line": 662,
+        "status": "pass",
+        "name": "receipt IO failure preserves the first sanitized setup error and removes its namespace",
+        "durationMs": 38.186179,
+        "suffix": ""
+      },
+      {
+        "line": 663,
+        "status": "skipped",
+        "name": "valid published SDK post-copy failure cannot modify its shared prefix",
+        "durationMs": 0.118548,
+        "suffix": "# SKIP"
+      },
+      {
+        "line": 711,
+        "status": "pass",
+        "name": "published package snapshot detects nested mutation even with unchanged directory entries",
+        "durationMs": 2.272626,
+        "suffix": ""
+      },
+      {
+        "line": 712,
+        "status": "pass",
+        "name": "failed published V2 SDK setup emits HOLD receipt and cleans only its TEST root",
+        "durationMs": 38.424093,
+        "suffix": ""
+      },
+      {
+        "line": 713,
+        "status": "pass",
+        "name": "opencode-v2-published-http-persist.mjs records namespace allocation failure before any process exists",
+        "durationMs": 37.134654,
+        "suffix": ""
+      },
+      {
+        "line": 714,
+        "status": "pass",
+        "name": "opencode-v2-native-instructions.mjs records namespace allocation failure before any process exists",
+        "durationMs": 223.759485,
+        "suffix": ""
+      },
+      {
+        "line": 715,
+        "status": "pass",
+        "name": "receipt IO failure preserves the first sanitized setup error and removes its namespace",
+        "durationMs": 40.321027,
+        "suffix": ""
+      },
+      {
+        "line": 716,
+        "status": "pass",
+        "name": "valid published SDK post-copy failure cannot modify its shared prefix",
+        "durationMs": 56.403288,
+        "suffix": ""
+      },
+      {
+        "line": 736,
+        "status": "pass",
+        "name": "SIGINT reaps the owned published HTTP server and emits a HOLD receipt",
+        "durationMs": 2124.492055,
+        "suffix": ""
+      },
+      {
+        "line": 737,
+        "status": "pass",
+        "name": "SIGTERM reaps the owned published HTTP server and emits a HOLD receipt",
+        "durationMs": 1913.617691,
+        "suffix": ""
+      },
+      {
+        "line": 738,
+        "status": "skipped",
+        "name": "SIGINT reaps the owned native ELF server and emits a HOLD receipt",
+        "durationMs": 0.304058,
+        "suffix": "# SKIP"
+      },
+      {
+        "line": 739,
+        "status": "skipped",
+        "name": "SIGTERM reaps the owned native ELF server and emits a HOLD receipt",
+        "durationMs": 0.084057,
+        "suffix": "# SKIP"
+      }
+    ],
+    "originalCompilerRows": [
+      {
+        "line": 614,
+        "text": "2026-11-16T04:08:11.0548009Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+      },
+      {
+        "line": 615,
+        "text": "2026-11-16T04:08:11.3753374Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+      }
+    ],
+    "publishedSdk": "2.0.21",
+    "sdkInstallIgnoreScripts": true,
+    "engineWarningRows": [
+      {
+        "line": 685,
+        "text": "2026-11-16T04:08:37.4582426Z npm warn EBADENGINE Unsupported engine {"
+      },
+      {
+        "line": 686,
+        "text": "2026-11-16T04:08:37.4583051Z npm warn EBADENGINE   package: '@opentui/core@0.5.14',"
+      },
+      {
+        "line": 687,
+        "text": "2026-11-16T04:08:37.4583699Z npm warn EBADENGINE   required: { bun: '>=1.3.0', node: '>=26.4.0' },"
+      },
+      {
+        "line": 688,
+        "text": "2026-11-16T04:08:37.4584360Z npm warn EBADENGINE   current: { node: 'v24.21.0', npm: '11.19.0' }"
+      },
+      {
+        "line": 689,
+        "text": "2026-11-16T04:08:37.4584823Z npm warn EBADENGINE }"
+      }
+    ],
+    "mainAndFinalVerifierPassed": true,
+    "twelveOrderedReceiptSteps": [
+      "TEST_published_server_real_authenticated_HTTP_ready",
+      "TEST_no_unauthenticated_HTTP_access",
+      "TEST_native_shell_flag_permission_split_not_tool_enforcement",
+      "TEST_native_unauthenticated_mutations_rejected",
+      "TEST_published_native_permission_resolver_and_nonreplay",
+      "TEST_real_pending_permission_exists_before_cold_restart",
+      "TEST_official_HTTP_session_created_event_persisted",
+      "TEST_cold_native_permission_not_replayed_or_accepted",
+      "TEST_native_persisted_always_vs_deny_survives_cold_restart",
+      "TEST_durable_HTTP_session_identity_survives_cold_restart_no_prompt",
+      "TEST_real_published_HTTP_Stage1_SPI_ready_no_model_turn",
+      "TEST_Stage1_SPI_readiness_recheck_and_owned_cleanup_no_replay"
+    ]
+  },
+  "qualificationLimits": [
+    "All four receipt qualification flags remain false: qualified, packagedElectronQualified, modelTurnProven and processCustodyQualified.",
+    "The compact one-member archive contains no raw worker PID/start-tick/group observations, raw HTTP/session/event bodies, copied package trees/lockfile, compiled Host outputs or interrupted-case receipts. The passing original source assertions are the scope; no independent physical replay or dependency-byte census is claimed.",
+    "Nineteen passes and three skips count four prescribed command executions, including the same six-case setup file twice. The valid-prefix setup skip passes in its second original command; the two native-ELF interruption cases remain skipped here.",
+    "The npm engine warning for @opentui/core@0.5.14 requiring Node>=26.4.0 under actual24.21.0 is retained. This completed HTTP route does not establish all-package/runtime compatibility.",
+    "Team177/stderr24, full types/lint, native Process, embedded V2.1.4, Desktop, P08/P09, real Claude/Codex and release qualification are separate. No result transfers from historical M merely because selected sources are byte-identical.",
+    "The reviewer only read original retained APIs/log/ZIP/Git sources and generated scratch evidence. No project/test/compiler/lint/install/provider/native command, signal, source/ref or CI mutation was performed."
+  ],
+  "reader": {
+    "path": "native-audit-N608efb/http-discovery/build_readonly_audit.py",
+    "bytes": 16647,
+    "blob": "5922e20b24ae0f9338af289accf6b14619911d38",
+    "sha256": "b3493b6ac5f672d231d6c315f8825d2cba3873f47672893143a2a1d388a446aa"
+  }
+}

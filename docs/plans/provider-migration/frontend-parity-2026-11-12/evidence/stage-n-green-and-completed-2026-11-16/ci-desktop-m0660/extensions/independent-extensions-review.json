@@ -1,0 +1,2938 @@
+{
+  "schemaVersion": 1,
+  "result": "APPROVE",
+  "reviewer": "migration_scope",
+  "reviewedAtUtc": "2026-11-16T03:39:20.077942+00:00",
+  "independentRawReadbackExact": true,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "sourceTree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "runId": 43780997237,
+  "jobId": 133017916048,
+  "artifactId": 14191450696,
+  "scope": "Original M0660 finite Extensions UI/configuration evidence only. Read-only R2; no project/provider/native/CI execution, source/ref mutation, replay or repair.",
+  "authorIdentities": {
+    "audit.json": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/audit.json",
+      "bytes": 91749,
+      "blob": "a6aaf8ed99aa79536fc7564ab8dad04d244bab26",
+      "sha256": "56937427bad17f21fe1af526079e679a914067eb09cf60f7a5ac01876d4ae2b2"
+    },
+    "checkpoint-extensions.json": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/checkpoint-extensions.json",
+      "bytes": 2804,
+      "blob": "0d485b4e83a87c92c99b917e005da4d5636c6329",
+      "sha256": "68636bb21d7400e17330c3b8260bebb09ae431a2e682b9db962707c27fca1534"
+    },
+    "Plan29-extensions-appendix.md": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/Plan29-extensions-appendix.md",
+      "bytes": 9117,
+      "blob": "bc5b7e00d228218d127e54dc26d80532beacfca6",
+      "sha256": "ed485eda8fceadc71d219551efb76a35dda5e8a94c14fcce2ce7b03e07e34c08"
+    }
+  },
+  "payloadClosure": {
+    "count": 8,
+    "bytes": 2065923,
+    "allDeclaredIdentitiesExact": true,
+    "payloads": [
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/job-133017916048.log",
+        "bytes": 180648,
+        "blob": "51221a516d3a1dd1545aa2d72d00ad274be073f0",
+        "sha256": "92ada3e490d78ea2d823125093cbd97bf02b636fa7393c4814b3bb81c95681e9"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/artifact-14191450696.zip",
+        "bytes": 962884,
+        "blob": "0ceda93965afb70b088e14d7cb6d18e8e2bb3aaf",
+        "sha256": "0e39ceea999d4c2f560eeeb7eaa24a5e8f876d5dee82aa95c03ca1c7552b6d4c"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/archive-audit.json",
+        "bytes": 6329,
+        "blob": "36e54cc49e30e6d537997cb50caed0766d24738c",
+        "sha256": "30823da3ada61a089e32f26bf9cdb6762c9ef92be36e860fbe085ae43a581e7a"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/audit.json",
+        "bytes": 91749,
+        "blob": "a6aaf8ed99aa79536fc7564ab8dad04d244bab26",
+        "sha256": "56937427bad17f21fe1af526079e679a914067eb09cf60f7a5ac01876d4ae2b2"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/Plan29-extensions-appendix.md",
+        "bytes": 9117,
+        "blob": "bc5b7e00d228218d127e54dc26d80532beacfca6",
+        "sha256": "ed485eda8fceadc71d219551efb76a35dda5e8a94c14fcce2ce7b03e07e34c08"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0215.json",
+        "bytes": 19753,
+        "blob": "699d3f9f470c9aba779664f159cefac43cbc4861",
+        "sha256": "f434f1a38fce2695c3e828119cd6424c0a986afbf95406a147c2eadfca87416e"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0300.json",
+        "bytes": 212142,
+        "blob": "aaa9e447920ba1d0e4ae3797169058bc2df43a72",
+        "sha256": "2056635c64f9372a98d560f3ceb63a025fbd92de2bef0eaa5a6a72e8f8dd4f80"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+        "bytes": 583301,
+        "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+        "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+      }
+    ]
+  },
+  "officialSourceAndJobJoin": {
+    "artifact": {
+      "id": 14191450696,
+      "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-extensions",
+      "size_in_bytes": 962884,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191450696",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191450696/zip",
+      "expired": false,
+      "created_at": "2026-11-16T01:43:21Z",
+      "expires_at": "2026-11-30T01:43:20Z",
+      "updated_at": "2026-11-16T01:43:21Z",
+      "digest": "sha256:0e39ceea999d4c2f560eeeb7eaa24a5e8f876d5dee82aa95c03ca1c7552b6d4c",
+      "workflow_run": {
+        "id": 43780997237,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+      }
+    },
+    "terminalJob": {
+      "id": 133017916048,
+      "name": "Offline Host Desktop (linux-x64, extensions)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 43780997237,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Verify original checkout and runner tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Prepare private Linux display",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Install frozen workspace and Electron",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Build existing Desktop prerequisites and verify admission",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Verify original Runtime and Team conversation contracts",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9
+        },
+        {
+          "name": "Verify complete workspace types and original typed lint scopes",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10
+        },
+        {
+          "name": "Capture package-manager and Host inputs without vendor executables",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Capture original controlled Linux process input without a provider",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12
+        },
+        {
+          "name": "Exercise ordinary Team controls and renderer reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13
+        },
+        {
+          "name": "Exercise ordinary Taskboard controls and persistence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Exercise original Skills and cross-Team controls",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15
+        },
+        {
+          "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16
+        },
+        {
+          "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18
+        },
+        {
+          "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19
+        },
+        {
+          "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20
+        },
+        {
+          "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21
+        },
+        {
+          "name": "Exercise original Review after a cold Host and app restart",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22
+        },
+        {
+          "name": "Exercise saved next-launch selection while the original Team remains live",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 23
+        },
+        {
+          "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 24
+        },
+        {
+          "name": "Exercise stock Codex Update while the original Team retains its captured source",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 25
+        },
+        {
+          "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 26
+        },
+        {
+          "name": "Prepare exact OpenCode V2 Bun and engine graph",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 27
+        },
+        {
+          "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 28
+        },
+        {
+          "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 29
+        },
+        {
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30
+        },
+        {
+          "name": "Preserve original Desktop evidence, including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 60
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 61
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 62
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 63
+        }
+      ]
+    },
+    "rawLog": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/job-133017916048.log",
+      "bytes": 180648,
+      "blob": "51221a516d3a1dd1545aa2d72d00ad274be073f0",
+      "sha256": "92ada3e490d78ea2d823125093cbd97bf02b636fa7393c4814b3bb81c95681e9"
+    },
+    "logLines": 1759,
+    "checkout": {
+      "line": 141,
+      "text": "2026-11-16T01:40:22.0821134Z 0660c748f88675063e3051fb0f8b2022e8f6f056"
+    },
+    "upload": [
+      {
+        "line": 1727,
+        "text": "2026-11-16T01:43:20.4053464Z With the provided path, there will be 21 files uploaded"
+      },
+      {
+        "line": 1732,
+        "text": "2026-11-16T01:43:20.9483655Z Uploaded bytes 962884"
+      },
+      {
+        "line": 1734,
+        "text": "2026-11-16T01:43:20.9787375Z SHA256 digest of uploaded artifact zip is 0e39ceea999d4c2f560eeeb7eaa24a5e8f876d5dee82aa95c03ca1c7552b6d4c"
+      },
+      {
+        "line": 1736,
+        "text": "2026-11-16T01:43:21.4481961Z Artifact host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-extensions.zip successfully finalized. Artifact ID 14191450696"
+      },
+      {
+        "line": 1737,
+        "text": "2026-11-16T01:43:21.4482948Z Artifact host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-extensions has been successfully uploaded! Final size is 962884 bytes. Artifact ID is 14191450696"
+      }
+    ],
+    "receiptReportedSource": {
+      "head": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "dirty": false
+    },
+    "noNewApiPoll": true
+  },
+  "archive": {
+    "identity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/artifact-14191450696.zip",
+      "bytes": 962884,
+      "blob": "0ceda93965afb70b088e14d7cb6d18e8e2bb3aaf",
+      "sha256": "0e39ceea999d4c2f560eeeb7eaa24a5e8f876d5dee82aa95c03ca1c7552b6d4c"
+    },
+    "members": 21,
+    "uncompressedBytes": 1946570,
+    "allCrcSafeUniqueNoSymlinks": true,
+    "allExtractedBytesAndAuthorEntriesExact": true,
+    "entries": [
+      {
+        "path": "TEST-desktop-backend-MqsL1W/TEST-peer-claude-scope/effects.ndjson",
+        "crc32": "48b39cb8",
+        "bytes": 3855,
+        "blob": "c039a14825ddaa91d263abfb8e20c3b212e955a9",
+        "sha256": "69bb9cd7f63d1dbea1819223d4ee22472508bd56446dafb7d3052a43844aae72"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/desktop-backend-receipt.json",
+        "crc32": "1b693389",
+        "bytes": 703597,
+        "blob": "35d322eae4d43a0f68c079fca29e4180387de2c5",
+        "sha256": "8e59450f9214b0ccb3f1c962130fac9549bd50e41ed6b25054b6b3f0a01605a8"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/desktop-app.log",
+        "crc32": "df4c0d49",
+        "bytes": 20651,
+        "blob": "0614e2d4d0cfd8ef2f90d674dbfba63312731b15",
+        "sha256": "1782b830e9def55461f4b708e902e38bccf7b9443518f474f5e9d0592703e9db"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/desktop-descriptor.json",
+        "crc32": "f2462fe1",
+        "bytes": 2641,
+        "blob": "c3cb25d482989a51af4c9646d54ca9198dc967de",
+        "sha256": "0f91c5b1875ed1a81c644e77a7a41e40eb48b4728192b85badc5f75ac6e434c1"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/host-profile.json",
+        "crc32": "122bea5a",
+        "bytes": 7790,
+        "blob": "3b1e120f2c004ed2ecf8307d433bebdfde8cebc9",
+        "sha256": "11e94ef4cafa529e1749c5af1f7a3285c04a4121a008a42daebbf0688a06021e"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/hoststore/management-commands/32a45e49585c4f42848ba9d3f7f6f300e197c2007a5d166c2902fddbbbd07d82.json",
+        "crc32": "23e3447c",
+        "bytes": 881,
+        "blob": "8792001478e5d53da6bf4b2f4ee524b1846bc6ba",
+        "sha256": "22dc5a79122912690fd4c3bab43032d95af75936abc03caa22a3abe925cd41dc"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/hoststore/management-commands/476f8eca82a0c5f4f75ed1d08dc15e2669ebcf7d6fcc8ec1a9f1f77e1148fa72.json",
+        "crc32": "5f45c5a8",
+        "bytes": 882,
+        "blob": "1b77fe2e54c56d5422929b3843b697e3477cc2ea",
+        "sha256": "b47d4f19cdb38569e543d534082e8fc60c1534a9fc34032d71041cfea40d7f3c"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/hoststore/management-commands/6cd3efc14123e4c93fe4813eeef4506cf5ec11e9469fb6bfa9fd403e2df4a701.json",
+        "crc32": "7c152a05",
+        "bytes": 884,
+        "blob": "06d8338970db7b47271d90f85aee6c45d66935d1",
+        "sha256": "47458a55fea88b5409d48627abe4a84361f65f2dd6e371babbc40b4dca3bd607"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/hoststore/management-commands/e121eb281f684111eacc848bed31ce83e228db54898e549dcba90d732fc9fdd7.json",
+        "crc32": "21244303",
+        "bytes": 881,
+        "blob": "419082856980ba72d330583776a2b6bd993e34c0",
+        "sha256": "ec91a25016edf25dd2b67fc48f83c2c37e0e5eb8c4ecb836dcce63c7321483e5"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/native-extensions-mcp-installed.png",
+        "crc32": "dec90ad3",
+        "bytes": 179589,
+        "blob": "44094791deea8cf2f0f761cfc35198c0881624f0",
+        "sha256": "e177d3e8a0c5e65ae3d47e1524133dc817287dd90bf17b5670a16d093c446d94"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/native-extensions-plugin-installed.png",
+        "crc32": "5dba1a9e",
+        "bytes": 117777,
+        "blob": "8d9b86cb87423b84ca8c9a6bd4537190e9f0ea84",
+        "sha256": "ce2f81fb1a290c40b848e5ae281a4556d0b5c7293020da764b14e7656a455f27"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/native-extensions-plugin-uninstalled.png",
+        "crc32": "086f5a6f",
+        "bytes": 106427,
+        "blob": "806e7bedcf4bb9156044412b4f2d39ca4c116234",
+        "sha256": "7a72521b4475524cbb1c7df959425c37a8748b4bf39dec79c937887ff2ed816b"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/native-extensions-selection.json",
+        "crc32": "2a4b56e3",
+        "bytes": 2221,
+        "blob": "73bc4f9a5a7b688e6f3c3ba4a857b681fce36400",
+        "sha256": "795a90727f561faf6576f74629b35950c4be77ba8346340ce40d78ca4f15e18f"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/sentinel-invocations.ndjson",
+        "crc32": "9fc3bdb4",
+        "bytes": 96,
+        "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+        "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+      },
+      {
+        "path": "TEST-desktop-backend-MqsL1W/ui-seed-receipt.json",
+        "crc32": "41245c90",
+        "bytes": 2335,
+        "blob": "0d975a0ba7b1b33d6e231311cbad6e04e2f53a00",
+        "sha256": "c59dd6636dfd347b7310bbaea3f670ec7215f393e5cd650b4759d32c804bd2a4"
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-4is4lG/linux-child-exec/linux-child-exec",
+        "crc32": "ed0ca14b",
+        "bytes": 790608,
+        "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-4is4lG/linux-child-exec/manifest.json",
+        "crc32": "e06f2443",
+        "bytes": 2408,
+        "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+      },
+      {
+        "path": "host-emulated-emulated-extensions-ui.log",
+        "crc32": "174c0b7f",
+        "bytes": 225,
+        "blob": "7cd9686b2cf9f9e526e55ee5769fa3920246befc",
+        "sha256": "9bf5e7691d015040cd0f08f1d4b4b975c476736247b1b00247bb0f3ef0f45a03"
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "crc32": "b0d2ec15",
+        "bytes": 1803,
+        "blob": "2329bfbabd8e49906d7dc9c0e6ffb4b5111f0915",
+        "sha256": "152337a30d11d0f4c09efe22d88e390f9e7c5b0c8f38e6b14e0ff8542cf0647a"
+      },
+      {
+        "path": "host-emulated-linux-child-exec-selection.json",
+        "crc32": "51b8e7a3",
+        "bytes": 271,
+        "blob": "6838f94340f241cc087659a111a7716e034ec87c",
+        "sha256": "81bf39acce37e26f386d6262303ce827ac9ca1570cad930f853c053deab6322b"
+      },
+      {
+        "path": "host-emulated-summary.json",
+        "crc32": "c971ba21",
+        "bytes": 748,
+        "blob": "7b27e30b1688b02741ec2453482ec96235f1823b",
+        "sha256": "74b68a80c80c6bc5c9523de3aae61c79f26b8c9d9823b7d2d22102e4db5e1bda"
+      }
+    ]
+  },
+  "sourceReview": {
+    "fullFreshGitBeforeAfterCount": 1757,
+    "uniquePaths": 1757,
+    "orderedBeforeAfterEqual": true,
+    "freshGitBytesTotal": 20308016,
+    "allRecordedSha256AndGitBlobExact": true,
+    "orderedIdentityTableSha256": "7ea0d2b4074eaab92703709af2c95d7cebe50b59f8593f265956c329b1346fa4",
+    "identityTableEncoding": "Compact UTF8 JSON of ordered objects with keys path,bytes,blob,sha256",
+    "basis": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    "basisEveryOrderedRowEqualsFreshGit": true,
+    "freshSelectedSources": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-extensions-ui-smoke.ts",
+        "bytes": 22684,
+        "blob": "be330619d1a4b7eabd8837b311ff6aba3c479278",
+        "sha256": "808802cc0db27d5dfb2fae9f84e2fa96d9d45f1d7d9c1eb102893986f373aa24",
+        "lines": 465
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-extensions-fixture.ts",
+        "bytes": 8992,
+        "blob": "c559f808c9e7796850994c654c210b8748874c35",
+        "sha256": "d858f203905cbb04d8833c05a87c13d330d8fa40d835db280d7392c8ce2003c2",
+        "lines": 217
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-extensions-fixture.ts",
+        "bytes": 1965,
+        "blob": "6e64fc07a75bda0f7d54b9e1a743df9935fe059b",
+        "sha256": "c82ad2dace7746b442cbdbecc7114a15d02423525617cb14626d955a4c1f3fd2",
+        "lines": 28
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-claude-settings-fixture.ts",
+        "bytes": 5663,
+        "blob": "5f18c861f297cbf62b9acaceba615079d0b77d0d",
+        "sha256": "0370ef4c293ffc173d5952cc04671459022dfff2782b5c915209c6d93195c7b6",
+        "lines": 92
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "bytes": 22082,
+        "blob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd",
+        "lines": 281
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 25052,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+        "lines": 456
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "bytes": 49613,
+        "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "lines": 787
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 54778,
+        "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "lines": 791
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeExtensionsPeer.mjs",
+        "bytes": 6007,
+        "blob": "4e62106b1b006180fda4eb7ac325ff35bb0a8f7d",
+        "sha256": "00f6e0e374bbbe53e04e617d84ec894c38bad066c7f2d8bb4f5733ab8d152f28",
+        "lines": 102
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "bytes": 32221,
+        "blob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+        "lines": 463
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts",
+        "bytes": 2154,
+        "blob": "329a0d3b3c35f5c6736bd214c3ed9717248c1d7d",
+        "sha256": "e21bfb7f4b548ad37d6f07d2cc8e9b61407822b11cb8c0e5051a68e34b1b382d",
+        "lines": 39
+      },
+      {
+        "path": "packages/legacy-agent-host/src/extensions/captureNativeClaudeFile.ts",
+        "bytes": 1692,
+        "blob": "1757985fc206af3235ea9003c2aa567ff3595ba6",
+        "sha256": "83992a439f20c3c2092a16137d640fb02654fedb8b38adbaf4fdcdff553a0768",
+        "lines": 50
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+        "bytes": 7965,
+        "blob": "d3068dcabf3ea7334a252967b43931f8751f7d58",
+        "sha256": "58bb413b06a3d442f1916cba3d7afcf0e44679f679810459409a53881900f1da",
+        "lines": 212
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/identity.ts",
+        "bytes": 709,
+        "blob": "d4e5631330f08ccc4138353f6e2b5f49f7cac01f",
+        "sha256": "a795125fbf639552833eb3730d971b9de16437ed3507be303a5b42d541ba8bb7",
+        "lines": 19
+      },
+      {
+        "path": "src/main/utils/testChildProcessTrace.ts",
+        "bytes": 9633,
+        "blob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+        "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb",
+        "lines": 185
+      },
+      {
+        "path": "packages/legacy-agent-host/native/linux-child-exec.c",
+        "bytes": 1674,
+        "blob": "5f094bf61ae831f4b84339eaabb29d6f46c06a2e",
+        "sha256": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+        "lines": 42
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "lines": 1312
+      }
+    ],
+    "workflowSeparatelyReadOutsideCommon1757": true,
+    "sourceEqualityTransfersNoBusinessResult": true
+  },
+  "originalPrerequisites": {
+    "nodeVersion": "24.21.0",
+    "reporterBlocks": {
+      "tests": [
+        115,
+        7
+      ],
+      "pass": [
+        115,
+        7
+      ],
+      "fail": [
+        0,
+        0
+      ],
+      "cancelled": [
+        0,
+        0
+      ],
+      "skipped": [
+        0,
+        0
+      ],
+      "duration_ms": [
+        8696.45444,
+        201.847389
+      ]
+    },
+    "originalCommands": [
+      {
+        "line": 668,
+        "text": "2026-11-16T01:41:44.0885326Z \u001b[36;1mnode --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts\u001b[0m"
+      },
+      {
+        "line": 669,
+        "text": "2026-11-16T01:41:44.0886610Z \u001b[36;1mnode --test test/scripts/installDependenciesWithRetry.test.mjs\u001b[0m"
+      }
+    ],
+    "rawSummaryRows": [
+      {
+        "line": 811,
+        "text": "2026-11-16T01:41:57.9434111Z ℹ tests 115"
+      },
+      {
+        "line": 813,
+        "text": "2026-11-16T01:41:57.9434650Z ℹ pass 115"
+      },
+      {
+        "line": 814,
+        "text": "2026-11-16T01:41:57.9434866Z ℹ fail 0"
+      },
+      {
+        "line": 815,
+        "text": "2026-11-16T01:41:57.9435066Z ℹ cancelled 0"
+      },
+      {
+        "line": 816,
+        "text": "2026-11-16T01:41:57.9435273Z ℹ skipped 0"
+      },
+      {
+        "line": 818,
+        "text": "2026-11-16T01:41:57.9435711Z ℹ duration_ms 8696.45444"
+      },
+      {
+        "line": 826,
+        "text": "2026-11-16T01:41:58.1724900Z ℹ tests 7"
+      },
+      {
+        "line": 828,
+        "text": "2026-11-16T01:41:58.1725583Z ℹ pass 7"
+      },
+      {
+        "line": 829,
+        "text": "2026-11-16T01:41:58.1725844Z ℹ fail 0"
+      },
+      {
+        "line": 830,
+        "text": "2026-11-16T01:41:58.1726096Z ℹ cancelled 0"
+      },
+      {
+        "line": 831,
+        "text": "2026-11-16T01:41:58.1726374Z ℹ skipped 0"
+      },
+      {
+        "line": 833,
+        "text": "2026-11-16T01:41:58.1726873Z ℹ duration_ms 201.847389"
+      }
+    ],
+    "skippedTeamPrivacyAndFullTypesSteps": [
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      }
+    ],
+    "flowStep": {
+      "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 17
+    },
+    "finalVerifierStep": {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 30
+    },
+    "perModeRaw": {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/host-emulated-emulated-extensions-ui.log",
+        "bytes": 225,
+        "blob": "7cd9686b2cf9f9e526e55ee5769fa3920246befc",
+        "sha256": "9bf5e7691d015040cd0f08f1d4b4b975c476736247b1b00247bb0f3ef0f45a03"
+      },
+      "records": [
+        {
+          "phase": "prepared",
+          "receipt": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/desktop-backend-receipt.json"
+        },
+        {
+          "status": "PASS",
+          "receipt": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/desktop-backend-receipt.json"
+        }
+      ]
+    },
+    "selectedLaneSummary": {
+      "status": "PASS",
+      "scope": "selected lane only",
+      "lane": "extensions",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "completed": [
+        {
+          "mode": "emulated-extensions-ui",
+          "receipt": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/desktop-backend-receipt.json",
+          "screenshots": [
+            "ce2f81fb1a290c40b848e5ae281a4556d0b5c7293020da764b14e7656a455f27",
+            "7a72521b4475524cbb1c7df959425c37a8748b4bf39dec79c937887ff2ed816b",
+            "e177d3e8a0c5e65ae3d47e1524133dc817287dd90bf17b5670a16d093c446d94"
+          ]
+        }
+      ],
+      "nativeProviders": "not executed",
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "visualReview": "original screenshots retained for independent inspection"
+    }
+  },
+  "capturedVenue": {
+    "receipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/desktop-backend-receipt.json",
+      "bytes": 703597,
+      "blob": "35d322eae4d43a0f68c079fca29e4180387de2c5",
+      "sha256": "8e59450f9214b0ccb3f1c962130fac9549bd50e41ed6b25054b6b3f0a01605a8"
+    },
+    "inputsIdentity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/host-emulated-inputs.json",
+      "bytes": 1803,
+      "blob": "2329bfbabd8e49906d7dc9c0e6ffb4b5111f0915",
+      "sha256": "152337a30d11d0f4c09efe22d88e390f9e7c5b0c8f38e6b14e0ff8542cf0647a"
+    },
+    "inputs": {
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "linux",
+      "architecture": "x64",
+      "nativeProviders": "forbidden",
+      "values": {
+        "LEGACY_DESKTOP_BACKEND_GO": "1",
+        "LEGACY_DESKTOP_EMULATED_ONLY": "1",
+        "LEGACY_DESKTOP_COREPACK_HOME": "/home/runner/work/_temp/TEST-emulated-ui-inputs-4is4lG/cache",
+        "LEGACY_DESKTOP_NODE_SHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "LEGACY_DESKTOP_HOST_ENTRY_SHA256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "LEGACY_DESKTOP_PNPM_PATH": "/home/runner/work/_temp/TEST-emulated-ui-inputs-4is4lG/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "LEGACY_DESKTOP_PNPM_SHA256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+        "LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+        "LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+        "LEGACY_LINUX_CHILD_EXEC_MANIFEST": "/home/runner/work/_temp/TEST-emulated-ui-inputs-4is4lG/linux-child-exec/manifest.json",
+        "LEGACY_LINUX_CHILD_EXEC_SHA256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+      },
+      "linuxChildExec": {
+        "manifestPath": "/home/runner/work/_temp/TEST-emulated-ui-inputs-4is4lG/linux-child-exec/manifest.json",
+        "manifestSha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+        "binarySha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+      },
+      "processLauncher": {
+        "manifestSha256": "942a64272a8f86959e2bf08f3e28eea353c8642be369dbfa4e3a5ac428dfbfe3",
+        "binarySha256": "2a8c086c5e454bf902def4803bf2d855717bd7f3162f51aaeca58b1a4581ae7a"
+      }
+    },
+    "receiptPins": {
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+      "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+      "pnpmStubSha256": "31da8d42d6eaa613b84f193e19d4300df4e77af5aee17454c7463798ae10ebb5",
+      "profileSha256": "11e94ef4cafa529e1749c5af1f7a3285c04a4121a008a42daebbf0688a06021e",
+      "descriptorSha256": "0f91c5b1875ed1a81c644e77a7a41e40eb48b4728192b85badc5f75ac6e434c1",
+      "sentinelSha256": "f5c545be0c65790681078a2570b0dffd156bcc00b301e9f07cb281c3c87e3b65",
+      "shellProbeSha256": "b994040e0b8f0d78f2c99eb5d8f7f9718abd92ddbc819ac2831fee9c76d13baf",
+      "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+      "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+    },
+    "profileIdentity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/host-profile.json",
+      "bytes": 7790,
+      "blob": "3b1e120f2c004ed2ecf8307d433bebdfde8cebc9",
+      "sha256": "11e94ef4cafa529e1749c5af1f7a3285c04a4121a008a42daebbf0688a06021e"
+    },
+    "descriptorIdentity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/desktop-descriptor.json",
+      "bytes": 2641,
+      "blob": "c3cb25d482989a51af4c9646d54ca9198dc967de",
+      "sha256": "0f91c5b1875ed1a81c644e77a7a41e40eb48b4728192b85badc5f75ac6e434c1"
+    },
+    "profileDescriptorPinsExact": true,
+    "selectionIdentity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/native-extensions-selection.json",
+      "bytes": 2221,
+      "blob": "73bc4f9a5a7b688e6f3c3ba4a857b681fce36400",
+      "sha256": "795a90727f561faf6576f74629b35950c4be77ba8346340ce40d78ca4f15e18f"
+    },
+    "selection": {
+      "profile": {
+        "cwd": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/workspace",
+        "environment": {
+          "HOME": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/TEST-peer-claude-scope/home",
+          "TMPDIR": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/TEST-peer-claude-scope/tmp",
+          "CLAUDE_CONFIG_DIR": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/TEST-peer-claude-scope/config",
+          "XDG_CONFIG_HOME": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/TEST-peer-claude-scope/config",
+          "XDG_DATA_HOME": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/TEST-peer-claude-scope/data",
+          "XDG_CACHE_HOME": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/TEST-peer-claude-scope/cache",
+          "PATH": "/opt/hostedtoolcache/node/24.21.0/x64/bin:/usr/bin:/bin",
+          "SHELL": "/bin/sh",
+          "TEST_EMULATED_DESKTOP_PROVIDER": "1",
+          "TEST_PEER_SCENARIO": "desktop-ui-v1",
+          "TEST_PEER_PROVIDER": "claude",
+          "TEST_PEER_ROLE": "management",
+          "TEST_DESKTOP_PEER_ROOT": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/TEST-peer-claude-scope",
+          "TEST_PEER_EFFECTS": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/TEST-peer-claude-scope/effects.ndjson",
+          "TEST_DESKTOP_PEER_WORKSPACE": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/workspace",
+          "TEST_DESKTOP_SETTINGS": "extensions",
+          "ANTHROPIC_API_KEY": "TEST-LOCALHOST-ONLY",
+          "ANTHROPIC_BASE_URL": "http://127.0.0.1:9"
+        },
+        "executable": {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/bin/TEST-claude-extensions-peer",
+          "sha256": "a5364ad99afe43e7217b6e43faa607d28ac02cad48ad3a1323bb08c7fdc65135"
+        },
+        "provider": "claude",
+        "sdkRevision": "0.3.305",
+        "modelProbeTimeoutMs": 30000,
+        "profileId": "TEST-emulated-claude-management",
+        "accountBinding": "TEST-no-vendor-account",
+        "configRevision": "TEST-emulated-claude-management",
+        "configNamespace": "custom-directory",
+        "settingSources": [
+          "user",
+          "project",
+          "local"
+        ],
+        "timeoutMs": 15000
+      },
+      "setup": [],
+      "plugin": "frontend-design@claude-plugins-official",
+      "nativeConfig": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/TEST-peer-claude-scope/config/.claude.json",
+      "neighborPath": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/TEST-extension-neighbor/.claude.json",
+      "neighborSha256": "08d4b2a1ce07fc7e8dbcbcf4515fd950d8d0af07df2e85fb8cce0e6f982b8e1b",
+      "execution": "finite-protocol-peer"
+    },
+    "selectionProfileExactlyArchivedManagementProfile": true,
+    "fixturePins": {
+      "executable": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/bin/TEST-claude-extensions-peer",
+        "sha256": "a5364ad99afe43e7217b6e43faa607d28ac02cad48ad3a1323bb08c7fdc65135"
+      },
+      "sources": [
+        {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeExtensionsPeer.mjs",
+          "sha256": "00f6e0e374bbbe53e04e617d84ec894c38bad066c7f2d8bb4f5733ab8d152f28"
+        },
+        {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+        },
+        {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts",
+          "sha256": "e21bfb7f4b548ad37d6f07d2cc8e9b61407822b11cb8c0e5051a68e34b1b382d"
+        }
+      ],
+      "provider": "claude",
+      "protocolRevision": "sdk-0.3.305",
+      "runtimeConfigured": true,
+      "managementConfigured": true,
+      "vendorsAllowed": false
+    },
+    "linuxChildExec": {
+      "manifest": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-emulated-ui-inputs-4is4lG/linux-child-exec/manifest.json",
+        "bytes": 2408,
+        "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+      },
+      "binary": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-emulated-ui-inputs-4is4lG/linux-child-exec/linux-child-exec",
+        "bytes": 790608,
+        "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+      },
+      "sourceMatchesFreshGit": true,
+      "originalInputAndAfterCleanupJoin": true,
+      "executedByReviewer": false
+    },
+    "compiledBundleHashesAfterStartup": [
+      {
+        "path": "main/chunks/index-D9GX0Q6a.cjs",
+        "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+      },
+      {
+        "path": "main/chunks/index-yaJFGvjB.cjs",
+        "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+      },
+      {
+        "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+        "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+      },
+      {
+        "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+        "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+      },
+      {
+        "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+        "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+      },
+      {
+        "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+        "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+      },
+      {
+        "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+        "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+      },
+      {
+        "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+        "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+      },
+      {
+        "path": "main/index.cjs",
+        "sha256": "c451aecd5463c127c7e72bc238a802912304a21eafb255acb547f38e8851b771"
+      },
+      {
+        "path": "main/internal-storage-worker.cjs",
+        "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+      },
+      {
+        "path": "main/task-change-worker.cjs",
+        "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+      },
+      {
+        "path": "main/team-data-worker.cjs",
+        "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+      },
+      {
+        "path": "main/team-fs-worker.cjs",
+        "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+      },
+      {
+        "path": "preload/index.js",
+        "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+      }
+    ],
+    "bundleProvenance": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild",
+    "compiledBytesNotArchivedHere": true,
+    "noRebuildOrCompleteInstalledPayloadProof": true
+  },
+  "fourMutations": {
+    "journals": [
+      {
+        "identity": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/hoststore/management-commands/32a45e49585c4f42848ba9d3f7f6f300e197c2007a5d166c2902fddbbbd07d82.json",
+          "bytes": 881,
+          "blob": "8792001478e5d53da6bf4b2f4ee524b1846bc6ba",
+          "sha256": "22dc5a79122912690fd4c3bab43032d95af75936abc03caa22a3abe925cd41dc"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "6bc6c015-b1ab-41f3-857e-198b8ecc755e",
+          "profileId": "TEST-emulated-claude-management",
+          "configRevision": "TEST-emulated-claude-management",
+          "providerId": "anthropic",
+          "fingerprint": "40193e620b95f143c9f31c44664d611f9f180e8cfc6d971d3df33aab0e041cad",
+          "selectionDigest": "4a5ae26dc9dff9b22f09c07eeec9af1535bb81f57119effeeade46cff459699a",
+          "resourceId": "170ba1b3384ab22a3c3f3a041e740c35f6ac765afcbe26c873e44dc000363687",
+          "resourceHeld": false,
+          "kind": "extension.mutation",
+          "action": "mcp.install",
+          "scope": "global",
+          "targetId": "cb12269c8f3d7c6f03a80d1f71711d32c310bac575bfc701c7ffa785e13d2d24",
+          "intentDigest": "027f71f674de9f66e40cd6ec43eb698ffc2ea8e1f63c7d22d0d4f9b9fdd25303",
+          "phase": "completed",
+          "finishedAtMs": 1794793389367,
+          "digest": "ea4b1bd8e54a245660e91152d49caa6fbfb94c8855c83e3d368a6b5ab426efa3"
+        },
+        "bodyDigestExact": true,
+        "commandFilenameExact": true
+      },
+      {
+        "identity": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/hoststore/management-commands/476f8eca82a0c5f4f75ed1d08dc15e2669ebcf7d6fcc8ec1a9f1f77e1148fa72.json",
+          "bytes": 882,
+          "blob": "1b77fe2e54c56d5422929b3843b697e3477cc2ea",
+          "sha256": "b47d4f19cdb38569e543d534082e8fc60c1534a9fc34032d71041cfea40d7f3c"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "796f878e-c4b7-4969-b53e-26e521461c30",
+          "profileId": "TEST-emulated-claude-management",
+          "configRevision": "TEST-emulated-claude-management",
+          "providerId": "anthropic",
+          "fingerprint": "2eca1ded08a2d245db007f4f6caaa3a0bc652ea7a22f62fb92fa43d5b7b9e705",
+          "selectionDigest": "4a5ae26dc9dff9b22f09c07eeec9af1535bb81f57119effeeade46cff459699a",
+          "resourceId": "170ba1b3384ab22a3c3f3a041e740c35f6ac765afcbe26c873e44dc000363687",
+          "resourceHeld": false,
+          "kind": "extension.mutation",
+          "action": "plugin.install",
+          "scope": "user",
+          "targetId": "400f203e6fcf47790201988a7219582058e81aab2834fa873f3c78e87603b4ab",
+          "intentDigest": "d4dd0db88536b45ffee3655dcb9ec48b2a02bb85c62cb41c4066a6e5acddb9d3",
+          "phase": "completed",
+          "finishedAtMs": 1794793378957,
+          "digest": "2aa6bea9c23ef9bc79c080450df55a08e3186017563e4efb46a762a4b8dcaa75"
+        },
+        "bodyDigestExact": true,
+        "commandFilenameExact": true
+      },
+      {
+        "identity": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/hoststore/management-commands/6cd3efc14123e4c93fe4813eeef4506cf5ec11e9469fb6bfa9fd403e2df4a701.json",
+          "bytes": 884,
+          "blob": "06d8338970db7b47271d90f85aee6c45d66935d1",
+          "sha256": "47458a55fea88b5409d48627abe4a84361f65f2dd6e371babbc40b4dca3bd607"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "2309ba53-ceb5-41fa-9acc-0e6837f2f55f",
+          "profileId": "TEST-emulated-claude-management",
+          "configRevision": "TEST-emulated-claude-management",
+          "providerId": "anthropic",
+          "fingerprint": "9db1e6bb027236cff04114ccfb86839736b3a4d8e6e6225bcaa5337dfe60ffc0",
+          "selectionDigest": "4a5ae26dc9dff9b22f09c07eeec9af1535bb81f57119effeeade46cff459699a",
+          "resourceId": "170ba1b3384ab22a3c3f3a041e740c35f6ac765afcbe26c873e44dc000363687",
+          "resourceHeld": false,
+          "kind": "extension.mutation",
+          "action": "plugin.uninstall",
+          "scope": "user",
+          "targetId": "400f203e6fcf47790201988a7219582058e81aab2834fa873f3c78e87603b4ab",
+          "intentDigest": "5b0d4cfa63c04b6215397dcabd54521e4c51662682026818aedcd8bc9458435b",
+          "phase": "completed",
+          "finishedAtMs": 1794793382006,
+          "digest": "5f88dcef12011cd20bdd8f6692c0edc487f14f92a9c677070a0c619408e9b797"
+        },
+        "bodyDigestExact": true,
+        "commandFilenameExact": true
+      },
+      {
+        "identity": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/hoststore/management-commands/e121eb281f684111eacc848bed31ce83e228db54898e549dcba90d732fc9fdd7.json",
+          "bytes": 881,
+          "blob": "419082856980ba72d330583776a2b6bd993e34c0",
+          "sha256": "ec91a25016edf25dd2b67fc48f83c2c37e0e5eb8c4ecb836dcce63c7321483e5"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "abd64599-a0c7-4eef-9f5d-647780efd5a7",
+          "profileId": "TEST-emulated-claude-management",
+          "configRevision": "TEST-emulated-claude-management",
+          "providerId": "anthropic",
+          "fingerprint": "b0456f92475b63fe17a690b3aa82d9d3ab641aca8d4c7d228e9683844aefee08",
+          "selectionDigest": "4a5ae26dc9dff9b22f09c07eeec9af1535bb81f57119effeeade46cff459699a",
+          "resourceId": "170ba1b3384ab22a3c3f3a041e740c35f6ac765afcbe26c873e44dc000363687",
+          "resourceHeld": false,
+          "kind": "extension.mutation",
+          "action": "mcp.uninstall",
+          "scope": "user",
+          "targetId": "8740fa3411871d48daf38bf5a2302e5ac3677547cd2bf41e0f97a1a1657f65d7",
+          "intentDigest": "765758ede2edf37a15ae457c7a10e3132650dfb4bcc7b0b8bf17e4827360a611",
+          "phase": "completed",
+          "finishedAtMs": 1794793392379,
+          "digest": "26dfb9f528d95733a1c762bc2efcc441d1001e5cf5e4c12b9047e26146b60d15"
+        },
+        "bodyDigestExact": true,
+        "commandFilenameExact": true
+      }
+    ],
+    "allCanonicalBodyDigestsAndCommandIdFilenameDigestsExact": true,
+    "completedOriginalCommandIds": [
+      "6bc6c015-b1ab-41f3-857e-198b8ecc755e",
+      "796f878e-c4b7-4969-b53e-26e521461c30",
+      "2309ba53-ceb5-41fa-9acc-0e6837f2f55f",
+      "abd64599-a0c7-4eef-9f5d-647780efd5a7"
+    ],
+    "completedReleased": true,
+    "commonSelectionAndResourceIdentity": true,
+    "rawMutationRows": [
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5458,
+        "event": "extension-command",
+        "command": [
+          "plugin",
+          "install",
+          "-s",
+          "user",
+          "frontend-design@claude-plugins-official"
+        ],
+        "installedSha256": "e8c9653f4197084c1c5fcd0777950797e7df3efd9e9f80bc603a8c9a5fc1ae28",
+        "settingsSha256": "deaf8ded9e14e460ad431e676bcb753c047014d6eb7e0233843684c401f63526"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5577,
+        "event": "extension-command",
+        "command": [
+          "plugin",
+          "uninstall",
+          "-s",
+          "user",
+          "frontend-design@claude-plugins-official"
+        ],
+        "installedSha256": "da491ca9d4edf03a7cde8c9c1786b6ad2ebcff7e4b50393c0c919b4ce800ac25",
+        "settingsSha256": "1eeddae26444bc9a209837fcb36789beb17d0e41c591f4fdf0161a39c074a57e"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5919,
+        "event": "extension-command",
+        "command": [
+          "mcp",
+          "add",
+          "-s",
+          "user",
+          "-t",
+          "http",
+          "test-native-extension-config-only",
+          "http://127.0.0.1:9/TEST-native-extension-config-only"
+        ],
+        "configSha256": "309206ae8fb4eb2e508cdf7c594e445a9adc95f76cee8473c161cb89b5754e10"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6088,
+        "event": "extension-command",
+        "command": [
+          "mcp",
+          "remove",
+          "-s",
+          "user",
+          "test-native-extension-config-only"
+        ],
+        "configSha256": "691f62624936af38f0e6b2ac6c8b43162a23696696f62d5037d9eb2b43bd73c5"
+      }
+    ],
+    "exactOriginalCommandSequence": [
+      [
+        "plugin",
+        "install",
+        "-s",
+        "user",
+        "frontend-design@claude-plugins-official"
+      ],
+      [
+        "plugin",
+        "uninstall",
+        "-s",
+        "user",
+        "frontend-design@claude-plugins-official"
+      ],
+      [
+        "mcp",
+        "add",
+        "-s",
+        "user",
+        "-t",
+        "http",
+        "test-native-extension-config-only",
+        "http://127.0.0.1:9/TEST-native-extension-config-only"
+      ],
+      [
+        "mcp",
+        "remove",
+        "-s",
+        "user",
+        "test-native-extension-config-only"
+      ]
+    ],
+    "scopeLimit": "MCP install journal scope global and uninstall/user are preserved; both raw CLI mutations use user. No second-workspace experiment inferred.",
+    "privateBytesLimit": "Selected settings, installed metadata, native config and neighbor files are not separately archived. Original source filesystem assertions and raw effect hashes support the bounded claim; missing bytes are not reconstructed."
+  },
+  "pluginInventoryRead": {
+    "originalProof": {
+      "command": [
+        "plugin",
+        "list"
+      ],
+      "executable": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/bin/TEST-claude-extensions-peer",
+        "sha256": "a5364ad99afe43e7217b6e43faa607d28ac02cad48ad3a1323bb08c7fdc65135"
+      },
+      "pid": 5525,
+      "parentPid": 4244,
+      "app": {
+        "pid": 4278,
+        "ppid": 4244,
+        "pgid": 4278
+      },
+      "exitCode": 0,
+      "signal": null,
+      "outputSha256": "fe23308c61b442602297c09723e9c26bfb1260f603dbcd53fb06ff6b60ec0023"
+    },
+    "matchingRawRows": [
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5525,
+        "event": "launch",
+        "parentPid": 4244,
+        "command": [
+          "plugin",
+          "list"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5525,
+        "event": "extension-read",
+        "command": [
+          "plugin",
+          "list"
+        ]
+      }
+    ],
+    "expectedLiteralStdoutSha256": "fe23308c61b442602297c09723e9c26bfb1260f603dbcd53fb06ff6b60ec0023",
+    "expectedLiteralStdoutByteCount": 68,
+    "sourceExactOutputHashMatched": true,
+    "stdoutNotSeparateArchiveMember": true,
+    "separateDriverOwnedChild": true,
+    "sourceGuard": "Original app4278 parent4244/group4278, captured executable realpath/hash before and hash after, explicit subprocess status0/null; not a Host-owned mutation-child exit certificate."
+  },
+  "ui": {
+    "proof": {
+      "scope": "Existing Settings Advanced → Extensions; original Plugin and MCP mutations through the captured finite CLI protocol peer",
+      "excluded": [
+        "vendor inference",
+        "new disable controls",
+        "real user projects/config",
+        "UI lost-ACK transport injection",
+        "second actual workspace context",
+        "live MCP registry catalog/search qualification",
+        "vendor CLI qualification",
+        "plugin download or execution",
+        "live MCP server connection"
+      ],
+      "nativeSetup": [],
+      "nativeExecutableSha256": "a5364ad99afe43e7217b6e43faa607d28ac02cad48ad3a1323bb08c7fdc65135",
+      "publicNetwork": [
+        "original Main official plugin catalog resolution; no vendor model or native CLI"
+      ],
+      "steps": [
+        {
+          "action": "mouseMoved",
+          "label": "hover open existing More menu",
+          "selector": "button[aria-label=\"More actions\"]",
+          "target": {
+            "x": 1384,
+            "y": 51.5,
+            "text": "",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open existing More menu",
+          "selector": "button[aria-label=\"More actions\"]",
+          "target": {
+            "x": 1384,
+            "y": 51.5,
+            "text": "",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open existing Settings",
+          "selector": "button",
+          "target": {
+            "x": 1272,
+            "y": 124.5,
+            "text": "Settings",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open existing Settings",
+          "selector": "button",
+          "expectedText": "Settings",
+          "target": {
+            "x": 1272,
+            "y": 124.5,
+            "text": "Settings",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open existing Advanced settings",
+          "selector": "button",
+          "target": {
+            "x": 95.5,
+            "y": 362,
+            "text": "Advanced",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open existing Advanced settings",
+          "selector": "button",
+          "expectedText": "Advanced",
+          "target": {
+            "x": 95.5,
+            "y": 362,
+            "text": "Advanced",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open Extensions from Settings",
+          "selector": "button",
+          "target": {
+            "x": 917.6484375,
+            "y": 289,
+            "text": "Extensions",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open Extensions from Settings",
+          "selector": "button",
+          "expectedText": "Extensions",
+          "target": {
+            "x": 917.6484375,
+            "y": 289,
+            "text": "Extensions",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open original Plugins tab",
+          "selector": "[role=\"tab\"]",
+          "target": {
+            "x": 80.9609375,
+            "y": 459.5,
+            "text": "Plugins",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original Plugins tab",
+          "selector": "[role=\"tab\"]",
+          "expectedText": "Plugins",
+          "target": {
+            "x": 80.9609375,
+            "y": 459.5,
+            "text": "Plugins",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover focus original input input[placeholder=\"Search plugins...\"]",
+          "selector": "input[placeholder=\"Search plugins...\"]",
+          "target": {
+            "x": 402.9765625,
+            "y": 576,
+            "text": "",
+            "tag": "INPUT"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "focus original input input[placeholder=\"Search plugins...\"]",
+          "selector": "input[placeholder=\"Search plugins...\"]",
+          "target": {
+            "x": 402.9765625,
+            "y": 576,
+            "text": "",
+            "tag": "INPUT"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseWheel",
+          "label": "open official frontend-design plugin card",
+          "selector": ".plugins-grid > [role=\"button\"]:nth-child(1)",
+          "deltaY": 539.25
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open official frontend-design plugin card",
+          "selector": ".plugins-grid > [role=\"button\"]:nth-child(1)",
+          "target": {
+            "x": 197,
+            "y": 785.25,
+            "text": "Officialfrontend-designdevelopmentSkillCreate distinctive, production-grade frontend interfaces with high design quality. Generates creative, polished code that avoids generic AI aesthetics.AnthropicInstall",
+            "tag": "DIV"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open official frontend-design plugin card",
+          "selector": ".plugins-grid > [role=\"button\"]:nth-child(1)",
+          "target": {
+            "x": 197,
+            "y": 785.25,
+            "text": "Officialfrontend-designdevelopmentSkillCreate distinctive, production-grade frontend interfaces with high design quality. Generates creative, polished code that avoids generic AI aesthetics.AnthropicInstall",
+            "tag": "DIV"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover native plugin install once",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 959.7109375,
+            "y": 505,
+            "text": "Install",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "native plugin install once",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Install",
+          "target": {
+            "x": 959.7109375,
+            "y": 505,
+            "text": "Install",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover native plugin uninstall once",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 936.1484375,
+            "y": 515,
+            "text": "Uninstall",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "native plugin uninstall once",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Uninstall",
+          "target": {
+            "x": 936.1484375,
+            "y": 515,
+            "text": "Uninstall",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover close original Plugin detail",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 1009,
+            "y": 252,
+            "text": "Close",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "close original Plugin detail",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Close",
+          "target": {
+            "x": 1009,
+            "y": 252,
+            "text": "Close",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open original MCP Servers tab",
+          "selector": "[role=\"tab\"]",
+          "target": {
+            "x": 209.4140625,
+            "y": 219,
+            "text": "MCP Servers",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original MCP Servers tab",
+          "selector": "[role=\"tab\"]",
+          "expectedText": "MCP Servers",
+          "target": {
+            "x": 209.4140625,
+            "y": 219,
+            "text": "MCP Servers",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open original Add Custom dialog",
+          "selector": "button",
+          "target": {
+            "x": 1026.984375,
+            "y": 457,
+            "text": "Add Custom",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original Add Custom dialog",
+          "selector": "button",
+          "expectedText": "Add Custom",
+          "target": {
+            "x": 1026.984375,
+            "y": 457,
+            "text": "Add Custom",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover focus original input #custom-name",
+          "selector": "#custom-name",
+          "target": {
+            "x": 700,
+            "y": 290,
+            "text": "",
+            "tag": "INPUT"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "focus original input #custom-name",
+          "selector": "#custom-name",
+          "target": {
+            "x": 700,
+            "y": 290,
+            "text": "",
+            "tag": "INPUT"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover original HTTP transport choice",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 608.6015625,
+            "y": 368,
+            "text": "HTTP / SSE",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "original HTTP transport choice",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "HTTP / SSE",
+          "target": {
+            "x": 608.6015625,
+            "y": 368,
+            "text": "HTTP / SSE",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover focus original input #custom-url",
+          "selector": "#custom-url",
+          "target": {
+            "x": 700,
+            "y": 428,
+            "text": "",
+            "tag": "INPUT"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "focus original input #custom-url",
+          "selector": "#custom-url",
+          "target": {
+            "x": 700,
+            "y": 428,
+            "text": "",
+            "tag": "INPUT"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover native MCP install once",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 903.3203125,
+            "y": 712,
+            "text": "Install",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "native MCP install once",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Install",
+          "target": {
+            "x": 903.3203125,
+            "y": 712,
+            "text": "Install",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover run original MCP diagnostic control",
+          "selector": "button",
+          "target": {
+            "x": 1006.3125,
+            "y": 525,
+            "text": "Check Status",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "run original MCP diagnostic control",
+          "selector": "button",
+          "expectedText": "Check Status",
+          "target": {
+            "x": 1006.3125,
+            "y": 525,
+            "text": "Check Status",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseWheel",
+          "label": "open existing detail for exact TEST metadata and native installed MCP",
+          "selector": ".mcp-servers-grid > [role=\"button\"]:nth-child(12)",
+          "deltaY": 600
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open existing detail for exact TEST metadata and native installed MCP",
+          "selector": ".mcp-servers-grid > [role=\"button\"]:nth-child(12)",
+          "target": {
+            "x": 913,
+            "y": 724,
+            "text": "test-native-extension-config-onlyInstalled globallyFailedTEST metadata only; not a public registry entry or connectivity proofhttp:http://127.0.0.1:9/TEST-native-extension-config-onlyManage",
+            "tag": "DIV"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "open existing detail for exact TEST metadata and native installed MCP",
+          "selector": ".mcp-servers-grid > [role=\"button\"]:nth-child(12)",
+          "target": {
+            "x": 913,
+            "y": 724,
+            "text": "test-native-extension-config-onlyInstalled globallyFailedTEST metadata only; not a public registry entry or connectivity proofhttp:http://127.0.0.1:9/TEST-native-extension-config-onlyManage",
+            "tag": "DIV"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover native MCP uninstall once",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 936.1484375,
+            "y": 704,
+            "text": "Uninstall",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "native MCP uninstall once",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Uninstall",
+          "target": {
+            "x": 936.1484375,
+            "y": 704,
+            "text": "Uninstall",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover close original MCP detail",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 1009,
+            "y": 205,
+            "text": "Close",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "close original MCP detail",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Close",
+          "target": {
+            "x": 1009,
+            "y": 205,
+            "text": "Close",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        }
+      ],
+      "execution": "finite-protocol-peer",
+      "screenshots": [
+        "native-extensions-plugin-installed.png",
+        "native-extensions-plugin-uninstalled.png",
+        "native-extensions-mcp-installed.png"
+      ],
+      "screenshotHashes": {
+        "native-extensions-plugin-installed.png": "ce2f81fb1a290c40b848e5ae281a4556d0b5c7293020da764b14e7656a455f27",
+        "native-extensions-plugin-uninstalled.png": "7a72521b4475524cbb1c7df959425c37a8748b4bf39dec79c937887ff2ed816b",
+        "native-extensions-mcp-installed.png": "e177d3e8a0c5e65ae3d47e1524133dc817287dd90bf17b5670a16d093c446d94"
+      },
+      "preCatalogRead": {
+        "storePresent": true,
+        "contextSwitching": false,
+        "pluginLoading": false,
+        "pluginError": false,
+        "pluginErrorText": null,
+        "pluginCount": 317,
+        "expectedPlugin": true,
+        "pluginNames": [
+          {
+            "id": "42crunch-api-security-testing@claude-plugins-official",
+            "name": "42crunch-api-security-testing"
+          },
+          {
+            "id": "adobe-for-creativity@claude-plugins-official",
+            "name": "adobe-for-creativity"
+          },
+          {
+            "id": "agent-sdk-dev@claude-plugins-official",
+            "name": "agent-sdk-dev"
+          },
+          {
+            "id": "agentforce-adlc@claude-plugins-official",
+            "name": "agentforce-adlc"
+          },
+          {
+            "id": "ai-plugins@claude-plugins-official",
+            "name": "ai-plugins"
+          },
+          {
+            "id": "aikido@claude-plugins-official",
+            "name": "aikido"
+          },
+          {
+            "id": "airtable@claude-plugins-official",
+            "name": "airtable"
+          },
+          {
+            "id": "airwallex-agentos@claude-plugins-official",
+            "name": "airwallex-agentos"
+          },
+          {
+            "id": "aiven@claude-plugins-official",
+            "name": "aiven"
+          },
+          {
+            "id": "alloydb@claude-plugins-official",
+            "name": "alloydb"
+          },
+          {
+            "id": "alloydb-omni@claude-plugins-official",
+            "name": "alloydb-omni"
+          },
+          {
+            "id": "altimate-code@claude-plugins-official",
+            "name": "altimate-code"
+          },
+          {
+            "id": "amazon-location-service@claude-plugins-official",
+            "name": "amazon-location-service"
+          },
+          {
+            "id": "amd-skills@claude-plugins-official",
+            "name": "amd-skills"
+          },
+          {
+            "id": "amplitude@claude-plugins-official",
+            "name": "amplitude"
+          },
+          {
+            "id": "apollo@claude-plugins-official",
+            "name": "apollo"
+          }
+        ],
+        "pluginQuery": "",
+        "checkedFilterCount": 0,
+        "mcpQuery": null,
+        "cliLoading": false,
+        "anthropicLoading": false,
+        "installed": true,
+        "flavor": "agent_teams_orchestrator",
+        "authenticated": true,
+        "pluginCapability": "supported",
+        "pluginCardNames": [
+          "42crunch-api-security-testing",
+          "adobe-for-creativity",
+          "agent-sdk-dev",
+          "agentforce-adlc",
+          "ai-plugins",
+          "aikido",
+          "airtable",
+          "airwallex-agentos",
+          "aiven",
+          "alloydb",
+          "alloydb-omni",
+          "altimate-code",
+          "amazon-location-service",
+          "amd-skills",
+          "amplitude",
+          "apollo"
+        ],
+        "mcpCardNames": []
+      },
+      "catalogHydration": {
+        "storePresent": true,
+        "contextSwitching": false,
+        "pluginLoading": false,
+        "pluginError": false,
+        "pluginErrorText": null,
+        "pluginCount": 317,
+        "expectedPlugin": true,
+        "pluginNames": [
+          {
+            "id": "42crunch-api-security-testing@claude-plugins-official",
+            "name": "42crunch-api-security-testing"
+          },
+          {
+            "id": "adobe-for-creativity@claude-plugins-official",
+            "name": "adobe-for-creativity"
+          },
+          {
+            "id": "agent-sdk-dev@claude-plugins-official",
+            "name": "agent-sdk-dev"
+          },
+          {
+            "id": "agentforce-adlc@claude-plugins-official",
+            "name": "agentforce-adlc"
+          },
+          {
+            "id": "ai-plugins@claude-plugins-official",
+            "name": "ai-plugins"
+          },
+          {
+            "id": "aikido@claude-plugins-official",
+            "name": "aikido"
+          },
+          {
+            "id": "airtable@claude-plugins-official",
+            "name": "airtable"
+          },
+          {
+            "id": "airwallex-agentos@claude-plugins-official",
+            "name": "airwallex-agentos"
+          },
+          {
+            "id": "aiven@claude-plugins-official",
+            "name": "aiven"
+          },
+          {
+            "id": "alloydb@claude-plugins-official",
+            "name": "alloydb"
+          },
+          {
+            "id": "alloydb-omni@claude-plugins-official",
+            "name": "alloydb-omni"
+          },
+          {
+            "id": "altimate-code@claude-plugins-official",
+            "name": "altimate-code"
+          },
+          {
+            "id": "amazon-location-service@claude-plugins-official",
+            "name": "amazon-location-service"
+          },
+          {
+            "id": "amd-skills@claude-plugins-official",
+            "name": "amd-skills"
+          },
+          {
+            "id": "amplitude@claude-plugins-official",
+            "name": "amplitude"
+          },
+          {
+            "id": "apollo@claude-plugins-official",
+            "name": "apollo"
+          }
+        ],
+        "pluginQuery": "",
+        "checkedFilterCount": 0,
+        "mcpQuery": null,
+        "cliLoading": false,
+        "anthropicLoading": false,
+        "installed": true,
+        "flavor": "agent_teams_orchestrator",
+        "authenticated": true,
+        "pluginCapability": "supported",
+        "pluginCardNames": [
+          "42crunch-api-security-testing",
+          "adobe-for-creativity",
+          "agent-sdk-dev",
+          "agentforce-adlc",
+          "ai-plugins",
+          "aikido",
+          "airtable",
+          "airwallex-agentos",
+          "aiven",
+          "alloydb",
+          "alloydb-omni",
+          "altimate-code",
+          "amazon-location-service",
+          "amd-skills",
+          "amplitude",
+          "apollo"
+        ],
+        "mcpCardNames": []
+      },
+      "publicPluginCatalog": {
+        "pluginId": "frontend-design@claude-plugins-official",
+        "qualifiedName": "frontend-design@claude-plugins-official",
+        "source": "official",
+        "version": null
+      },
+      "installReadiness": {
+        "storePresent": true,
+        "contextSwitching": false,
+        "pluginLoading": false,
+        "pluginError": false,
+        "pluginErrorText": null,
+        "pluginCount": 317,
+        "expectedPlugin": true,
+        "pluginNames": [
+          {
+            "id": "42crunch-api-security-testing@claude-plugins-official",
+            "name": "42crunch-api-security-testing"
+          },
+          {
+            "id": "adobe-for-creativity@claude-plugins-official",
+            "name": "adobe-for-creativity"
+          },
+          {
+            "id": "agent-sdk-dev@claude-plugins-official",
+            "name": "agent-sdk-dev"
+          },
+          {
+            "id": "agentforce-adlc@claude-plugins-official",
+            "name": "agentforce-adlc"
+          },
+          {
+            "id": "ai-plugins@claude-plugins-official",
+            "name": "ai-plugins"
+          },
+          {
+            "id": "aikido@claude-plugins-official",
+            "name": "aikido"
+          },
+          {
+            "id": "airtable@claude-plugins-official",
+            "name": "airtable"
+          },
+          {
+            "id": "airwallex-agentos@claude-plugins-official",
+            "name": "airwallex-agentos"
+          },
+          {
+            "id": "aiven@claude-plugins-official",
+            "name": "aiven"
+          },
+          {
+            "id": "alloydb@claude-plugins-official",
+            "name": "alloydb"
+          },
+          {
+            "id": "alloydb-omni@claude-plugins-official",
+            "name": "alloydb-omni"
+          },
+          {
+            "id": "altimate-code@claude-plugins-official",
+            "name": "altimate-code"
+          },
+          {
+            "id": "amazon-location-service@claude-plugins-official",
+            "name": "amazon-location-service"
+          },
+          {
+            "id": "amd-skills@claude-plugins-official",
+            "name": "amd-skills"
+          },
+          {
+            "id": "amplitude@claude-plugins-official",
+            "name": "amplitude"
+          },
+          {
+            "id": "apollo@claude-plugins-official",
+            "name": "apollo"
+          }
+        ],
+        "pluginQuery": "frontend-design",
+        "checkedFilterCount": 0,
+        "mcpQuery": null,
+        "cliLoading": false,
+        "anthropicLoading": false,
+        "installed": true,
+        "flavor": "agent_teams_orchestrator",
+        "authenticated": true,
+        "pluginCapability": "supported",
+        "pluginCardNames": [
+          "frontend-design"
+        ],
+        "mcpCardNames": []
+      },
+      "pluginPendingDisabled": true,
+      "finitePluginInventoryRead": {
+        "command": [
+          "plugin",
+          "list"
+        ],
+        "executable": {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/bin/TEST-claude-extensions-peer",
+          "sha256": "a5364ad99afe43e7217b6e43faa607d28ac02cad48ad3a1323bb08c7fdc65135"
+        },
+        "pid": 5525,
+        "parentPid": 4244,
+        "app": {
+          "pid": 4278,
+          "ppid": 4244,
+          "pgid": 4278
+        },
+        "exitCode": 0,
+        "signal": null,
+        "outputSha256": "fe23308c61b442602297c09723e9c26bfb1260f603dbcd53fb06ff6b60ec0023"
+      },
+      "nativePluginListObserved": true,
+      "nativeMcpConfigSha256": "309206ae8fb4eb2e508cdf7c594e445a9adc95f76cee8473c161cb89b5754e10",
+      "mcpMetadataFixture": {
+        "id": "test.local/native-extension-config-only",
+        "name": "test-native-extension-config-only",
+        "synthetic": true,
+        "sourceField": "schema-required display value only",
+        "claim": "catalog metadata only; native state and operation outcomes untouched"
+      },
+      "nativeMcpInventory": [
+        {
+          "name": "test-native-extension-config-only",
+          "scope": "user",
+          "targetKey": "http:http://127.0.0.1:9/TEST-native-extension-config-only"
+        },
+        {
+          "name": "test-native-extension-config-only",
+          "scope": "user",
+          "targetKey": "http:http://127.0.0.1:9/TEST-native-extension-config-only"
+        }
+      ],
+      "pendingObservations": [
+        {
+          "text": "Installing...",
+          "disabled": true,
+          "timeMs": 34498
+        },
+        {
+          "text": "Removing...",
+          "disabled": true,
+          "timeMs": 37572
+        },
+        {
+          "text": "Installing...",
+          "disabled": true,
+          "timeMs": 44974
+        },
+        {
+          "text": "Installing...",
+          "disabled": true,
+          "timeMs": 45089
+        },
+        {
+          "text": "Installing...",
+          "disabled": true,
+          "timeMs": 45171
+        },
+        {
+          "text": "Removing...",
+          "disabled": true,
+          "timeMs": 47986
+        },
+        {
+          "text": "Removing...",
+          "disabled": true,
+          "timeMs": 48101
+        }
+      ],
+      "completedOriginalCommandIds": [
+        "6bc6c015-b1ab-41f3-857e-198b8ecc755e",
+        "796f878e-c4b7-4969-b53e-26e521461c30",
+        "2309ba53-ceb5-41fa-9acc-0e6837f2f55f",
+        "abd64599-a0c7-4eef-9f5d-647780efd5a7"
+      ],
+      "reloadObserved": true,
+      "neighborUnchanged": true,
+      "status": "PASS",
+      "finalReadState": {
+        "storePresent": true,
+        "contextSwitching": false,
+        "pluginLoading": false,
+        "pluginError": false,
+        "pluginErrorText": null,
+        "pluginCount": 0,
+        "expectedPlugin": false,
+        "pluginNames": [],
+        "pluginQuery": null,
+        "checkedFilterCount": 0,
+        "mcpQuery": null,
+        "cliLoading": false,
+        "anthropicLoading": false,
+        "installed": true,
+        "flavor": "agent_teams_orchestrator",
+        "authenticated": false,
+        "pluginCapability": "unsupported",
+        "pluginCardNames": [],
+        "mcpCardNames": []
+      },
+      "fixturePins": {
+        "executable": {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-MqsL1W/bin/TEST-claude-extensions-peer",
+          "sha256": "a5364ad99afe43e7217b6e43faa607d28ac02cad48ad3a1323bb08c7fdc65135"
+        },
+        "sources": [
+          {
+            "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeExtensionsPeer.mjs",
+            "sha256": "00f6e0e374bbbe53e04e617d84ec894c38bad066c7f2d8bb4f5733ab8d152f28"
+          },
+          {
+            "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+            "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+          },
+          {
+            "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts",
+            "sha256": "e21bfb7f4b548ad37d6f07d2cc8e9b61407822b11cb8c0e5051a68e34b1b382d"
+          }
+        ],
+        "provider": "claude",
+        "protocolRevision": "sdk-0.3.305",
+        "runtimeConfigured": true,
+        "managementConfigured": true,
+        "vendorsAllowed": false
+      }
+    },
+    "stepCount": 42,
+    "actionCounts": {
+      "mouseMoved": 20,
+      "mouseClick": 20,
+      "mouseWheel": 2
+    },
+    "stepLedgerLimit": "42 rows reflect the original controls step journal; direct key/text CDP calls, page reload and all passive reads are not counted as42 total operations.",
+    "allThreeScreenshotsActuallyViewed": true,
+    "images": [
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/native-extensions-plugin-installed.png",
+        "bytes": 117777,
+        "blob": "8d9b86cb87423b84ca8c9a6bd4537190e9f0ea84",
+        "sha256": "ce2f81fb1a290c40b848e5ae281a4556d0b5c7293020da764b14e7656a455f27",
+        "actuallyViewedByIndependentReviewer": true,
+        "observation": "Actually viewed: frontend-design detail displays Official, Installed globally, User(global) and Uninstall; background simultaneously displays Plugins unsupported and MCP read-only. This is not a synchronized all-provider readiness observation."
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/native-extensions-plugin-uninstalled.png",
+        "bytes": 106427,
+        "blob": "806e7bedcf4bb9156044412b4f2d39ca4c116234",
+        "sha256": "7a72521b4475524cbb1c7df959425c37a8748b4bf39dec79c937887ff2ed816b",
+        "actuallyViewedByIndependentReviewer": true,
+        "observation": "Actually viewed: filtered frontend-design card offers Install and has no installed badge; background still Plugins unsupported/MCP read-only. No permanent state or cause is inferred."
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/native-extensions-mcp-installed.png",
+        "bytes": 179589,
+        "blob": "44094791deea8cf2f0f761cfc35198c0881624f0",
+        "sha256": "e177d3e8a0c5e65ae3d47e1524133dc817287dd90bf17b5670a16d093c446d94",
+        "actuallyViewedByIndependentReviewer": true,
+        "observation": "Actually viewed: TEST-only MCP detail displays Installed globally, Runtime Status Failed, localhost:9 target, User(legacy), Uninstall and explicit non-registry/non-connectivity description. Official is the synthetic schema value, not registry provenance."
+      }
+    ],
+    "pendingDisabledObservationCount": 7,
+    "pendingTimeLimit": "Rounded original page performance.now samples, not total wait durations or a complete count of read iterations.",
+    "oneSyntheticMcpMetadataSetup": true,
+    "metadataDoesNotSeedInstalledInventoryDiagnosticsCapabilitiesOrJournals": true,
+    "duplicateInventoryTuplesFromConcatenatedOriginalArrays": true,
+    "configOnlyMcpFailedIsIntentional": true,
+    "initialCapabilityFinalCapabilityDistinct": "Initial supported/authenticated and final authenticated:false/unsupported/pluginCount0 are different retained reads. PNG background Plugins unsupported/MCP read-only is preserved; no cause, permanent lapse or final readiness claim.",
+    "noFinalPostReloadScreenshot": true
+  },
+  "cleanup": {
+    "effectsIdentity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/TEST-peer-claude-scope/effects.ndjson",
+      "bytes": 3855,
+      "blob": "c039a14825ddaa91d263abfb8e20c3b212e955a9",
+      "sha256": "69bb9cd7f63d1dbea1819223d4ee22472508bd56446dafb7d3052a43844aae72"
+    },
+    "allRawEffects": [
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5152,
+        "event": "launch",
+        "parentPid": 4599,
+        "sessionId": "934d0bec-420f-4a4d-9e66-0f29977c3ea8",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5152,
+        "event": "started",
+        "sessionId": "934d0bec-420f-4a4d-9e66-0f29977c3ea8",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5152,
+        "event": "initialized",
+        "sessionId": "934d0bec-420f-4a4d-9e66-0f29977c3ea8",
+        "restored": false,
+        "commands": [
+          "compact",
+          "usage",
+          "code-review",
+          "test-desktop-skill"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5223,
+        "parentPid": 4599,
+        "event": "launch",
+        "command": [
+          "auth",
+          "status",
+          "--json"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5223,
+        "parentPid": 4599,
+        "event": "auth-status",
+        "command": [
+          "auth",
+          "status",
+          "--json"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5458,
+        "event": "launch",
+        "parentPid": 4599,
+        "command": [
+          "plugin",
+          "install",
+          "-s",
+          "user",
+          "frontend-design@claude-plugins-official"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5458,
+        "event": "extension-command",
+        "command": [
+          "plugin",
+          "install",
+          "-s",
+          "user",
+          "frontend-design@claude-plugins-official"
+        ],
+        "installedSha256": "e8c9653f4197084c1c5fcd0777950797e7df3efd9e9f80bc603a8c9a5fc1ae28",
+        "settingsSha256": "deaf8ded9e14e460ad431e676bcb753c047014d6eb7e0233843684c401f63526"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5525,
+        "event": "launch",
+        "parentPid": 4244,
+        "command": [
+          "plugin",
+          "list"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5525,
+        "event": "extension-read",
+        "command": [
+          "plugin",
+          "list"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5577,
+        "event": "launch",
+        "parentPid": 4599,
+        "command": [
+          "plugin",
+          "uninstall",
+          "-s",
+          "user",
+          "frontend-design@claude-plugins-official"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5577,
+        "event": "extension-command",
+        "command": [
+          "plugin",
+          "uninstall",
+          "-s",
+          "user",
+          "frontend-design@claude-plugins-official"
+        ],
+        "installedSha256": "da491ca9d4edf03a7cde8c9c1786b6ad2ebcff7e4b50393c0c919b4ce800ac25",
+        "settingsSha256": "1eeddae26444bc9a209837fcb36789beb17d0e41c591f4fdf0161a39c074a57e"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5717,
+        "event": "launch",
+        "parentPid": 4599,
+        "command": [
+          "mcp",
+          "list"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5717,
+        "event": "extension-read",
+        "command": [
+          "mcp",
+          "list"
+        ],
+        "status": "absent"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5919,
+        "event": "launch",
+        "parentPid": 4599,
+        "command": [
+          "mcp",
+          "add",
+          "-s",
+          "user",
+          "-t",
+          "http",
+          "test-native-extension-config-only",
+          "http://127.0.0.1:9/TEST-native-extension-config-only"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5919,
+        "event": "extension-command",
+        "command": [
+          "mcp",
+          "add",
+          "-s",
+          "user",
+          "-t",
+          "http",
+          "test-native-extension-config-only",
+          "http://127.0.0.1:9/TEST-native-extension-config-only"
+        ],
+        "configSha256": "309206ae8fb4eb2e508cdf7c594e445a9adc95f76cee8473c161cb89b5754e10"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5927,
+        "event": "launch",
+        "parentPid": 4599,
+        "command": [
+          "mcp",
+          "list"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5927,
+        "event": "extension-read",
+        "command": [
+          "mcp",
+          "list"
+        ],
+        "status": "failed"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5978,
+        "event": "launch",
+        "parentPid": 4599,
+        "command": [
+          "mcp",
+          "list"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5978,
+        "event": "extension-read",
+        "command": [
+          "mcp",
+          "list"
+        ],
+        "status": "failed"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6088,
+        "event": "launch",
+        "parentPid": 4599,
+        "command": [
+          "mcp",
+          "remove",
+          "-s",
+          "user",
+          "test-native-extension-config-only"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6088,
+        "event": "extension-command",
+        "command": [
+          "mcp",
+          "remove",
+          "-s",
+          "user",
+          "test-native-extension-config-only"
+        ],
+        "configSha256": "691f62624936af38f0e6b2ac6c8b43162a23696696f62d5037d9eb2b43bd73c5"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6096,
+        "event": "launch",
+        "parentPid": 4599,
+        "command": [
+          "mcp",
+          "list"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6096,
+        "event": "extension-read",
+        "command": [
+          "mcp",
+          "list"
+        ],
+        "status": "absent"
+      }
+    ],
+    "exactRawReceiptEquality": true,
+    "eventCounts": {
+      "launch": 11,
+      "started": 1,
+      "initialized": 1,
+      "auth-status": 1,
+      "extension-command": 4,
+      "extension-read": 5
+    },
+    "allLaunchesManagement": true,
+    "readsInOriginalOrder": [
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5525,
+        "event": "extension-read",
+        "command": [
+          "plugin",
+          "list"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5717,
+        "event": "extension-read",
+        "command": [
+          "mcp",
+          "list"
+        ],
+        "status": "absent"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5927,
+        "event": "extension-read",
+        "command": [
+          "mcp",
+          "list"
+        ],
+        "status": "failed"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5978,
+        "event": "extension-read",
+        "command": [
+          "mcp",
+          "list"
+        ],
+        "status": "failed"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6096,
+        "event": "extension-read",
+        "command": [
+          "mcp",
+          "list"
+        ],
+        "status": "absent"
+      }
+    ],
+    "inputTerminalFailureAndPeerExitCodeRows": 0,
+    "peerPidAbsence": {
+      "originalPeerPids": [
+        5152,
+        5223,
+        5458,
+        5525,
+        5577,
+        5717,
+        5919,
+        5927,
+        5978,
+        6088,
+        6096
+      ],
+      "remaining": [],
+      "absent": true,
+      "count": 11
+    },
+    "explicitPeerExitOnly": "driver plugin-list5525 status0/signalnull in finitePluginInventoryRead; all other peer exit codes unavailable",
+    "app": {
+      "pid": 4278,
+      "processGroup": 4278,
+      "identity": "Mon Nov 16 01:42:02 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-4is4lG/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+      "invocation": [
+        "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "/home/runner/work/_temp/TEST-emulated-ui-inputs-4is4lG/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222",
+        "--noSandbox"
+      ]
+    },
+    "hostChild": {
+      "pid": 4599,
+      "ppid": 4402,
+      "pgid": 4278,
+      "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "observedBeforeShutdown": true
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [
+      {
+        "pid": 4352,
+        "ppid": 1,
+        "pgid": 4278
+      }
+    ],
+    "originalExitedGroup": {
+      "settled": true,
+      "reason": "original-natural-exit-and-fresh-absence",
+      "initialMembers": [
+        {
+          "pid": 4352,
+          "ppid": 1,
+          "pgid": 4278
+        }
+      ],
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "capturedDescendantsAbsent": true,
+      "appExitCode": 0,
+      "appSignalCode": null
+    },
+    "literalCleanup": {
+      "processGroup": 4278,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "passiveOriginalHost": {
+      "appLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/desktop-app.log",
+        "bytes": 20651,
+        "blob": "0614e2d4d0cfd8ef2f90d674dbfba63312731b15",
+        "sha256": "1782b830e9def55461f4b708e902e38bccf7b9443518f474f5e9d0592703e9db"
+      },
+      "rows": [
+        {
+          "line": 89,
+          "row": {
+            "mainPid": 4402,
+            "event": "async-spawn",
+            "pid": 4599,
+            "requestedCommand": "linux-child-exec",
+            "linuxChildExecTarget": "node",
+            "versionOnly": false,
+            "observedBirth": {
+              "startTicks": "15867",
+              "parentPid": 4402,
+              "processGroupId": 4278
+            },
+            "atomic": false,
+            "observedAtMs": 1794793346760
+          }
+        },
+        {
+          "line": 188,
+          "row": {
+            "mainPid": 4402,
+            "event": "async-exit",
+            "pid": 4599,
+            "status": 0,
+            "signal": null,
+            "observedAtMs": 1794793398850
+          }
+        }
+      ],
+      "summary": {
+        "line": 194,
+        "row": {
+          "mainPid": 4402,
+          "event": "trace-summary",
+          "rows": 18,
+          "droppedObservations": 0,
+          "observedChildren": 8,
+          "unobservedChildren": 0,
+          "observationFailures": 0,
+          "limited": false,
+          "coverage": "node-async-and-unix-process-table-only"
+        }
+      },
+      "allTraceRecordsIncludingActiveAndSummary": 20,
+      "nonAtomicBirth": true,
+      "distinctFromLiteralUnexposedHostExitCodeField": true
+    },
+    "sentinelIdentity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/extracted/TEST-desktop-backend-MqsL1W/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    "finalSentinelCensus": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": 1,
+      "postQuitOrCleanupInvocations": [],
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    }
+  },
+  "sourceClaimJoins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-extensions-ui-smoke.ts",
+      "lines": "28-98,99-147,154-193,194-298,305-465",
+      "meaning": "Complete actual helper read: finite override/no native setup, original controls/state reads, one mutation each, separate driver plugin list, private config readback, one metadata insertion, failed diagnostics, reload/removal/neighbor/four-record assertions and independent finalReadState."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-extensions-fixture.ts",
+      "lines": "1-28",
+      "meaning": "Finite settings fixture, captured management profile, one neighbor setup, actual private global-file choice, finite selection serialization."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-extensions-fixture.ts",
+      "lines": "1-217",
+      "meaning": "Constants/shared selection shape; native marketplace path distinguished from unexecuted native setup. Finite selection.setup is empty."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-claude-settings-fixture.ts",
+      "lines": "13-26,29-92",
+      "meaning": "Captured three-source extensions wrapper selects auth, plugin/MCP or finite SDK metadata peer; profile/descriptor republished before startup."
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeExtensionsPeer.mjs",
+      "lines": "1-102",
+      "meaning": "Entire closed finite protocol read: exact argv, guarded private config writes, no replay, original plugin list, intentionally failed MCP diagnostics, no vendor/plugin code execution."
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "lines": "1-62,91-118,321-351,443-463",
+      "meaning": "Actual metadata management role and initialized row; Runtime/MCP/model branches are not inferred from generic fixture name. No input/terminal rows retained in this run."
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts",
+      "lines": "1-39",
+      "meaning": "Finite auth-status only; closed TEST localhost config and management launch/auth-status rows."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/extensions/captureNativeClaudeFile.ts",
+      "lines": "1-50",
+      "meaning": "Private global-file selection from captured profile; no ambient-path inference."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+      "lines": "1-212",
+      "meaning": "Full original store source read, protected file/directory identity, canonical body digest, command filename, ordinary64KiB bound and atomic publication; artifact does not independently reconstruct original inode metadata."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/identity.ts",
+      "lines": "1-19",
+      "meaning": "Canonical JSON digests reproduced over retained data only."
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "lines": "607-650,832-858,1135-1160",
+      "meaning": "Original final verifier distinguishes driver inventory parent, requires four completed/released mutation journals and exact raw argv, failed MCP read, removal/neighbor/screenshot identities."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "lines": "272-280",
+      "meaning": "Retained original peer PIDs derive from launch ledger and observed peers; final absence census provides no individual exit statuses."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "lines": "384-508",
+      "meaning": "Original App exit and group/descendant fresh-absence observations distinguish initial orphan membership."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "lines": "610-734",
+      "meaning": "Original Quit/cleanup handling preserves status and incomplete evidence paths without replay."
+    },
+    {
+      "path": "src/main/utils/testChildProcessTrace.ts",
+      "lines": "66-148",
+      "meaning": "Bounded passive Main child trace; observed birth non-atomic and original exit callback distinct from native custody."
+    }
+  ],
+  "qualificationLimits": [
+    "Original finite CLI protocol only; public Main catalog metadata resolution is admitted, but no vendor/native CLI, plugin download/execution or live MCP server connection is qualified. Historical native field names are not native qualification.",
+    "Four original mutations are durable completed/released journals with raw matching finite commands. Private settings/installed/nativeConfig/neighbor files are not archive members; original filesystem assertions and effect hashes are retained without audit-time reconstruction of their missing bytes.",
+    "A separate original driver-owned finite plugin-list child5525 returned0/null and its output hash matches the source-exact expected text; stdout is not separately archived. Other peer exit codes are unavailable;11PIDs are absent, not all-natural-exit certified.",
+    "MCP is the fixed localhost:9 config-only target. The finite CLI explicitly emits Failed to connect. TEST catalog metadata is seeded once only for presentation; installed inventory/diagnostics/receipt state is not seeded. Two identical inventory tuples come from concatenated original arrays, not proof of two installed servers.",
+    "Initial provider authenticated/supported and observed pending-disabled controls are distinct from screenshot background Plugins:unsupported/MCP:read-only and final post-reload authenticated:false/pluginCapability:unsupported/pluginCount0. No continuous all-idle readiness, permanent latch or cause follows.",
+    "MCP install journal records scopeglobal, uninstall/user; actual finite argv for both uses user. These exact source representations are preserved, not renamed into a second workspace test or broader scope proof.",
+    "Original app0/null/fresh group/Host/descendant absence and separate passive Main Host4599 callback0/null are distinct. No new native custody/atomic-executable certificate is claimed.",
+    "Common1757 source census reused by exact ordered equality;17selected paths freshly read from Git. Fourteen compiled hashes retained without compiled archive/rebuild or complete installed-payload census.",
+    "Original0660 lane PASS does not qualify608efb privacy GREEN, native extension consumption, all Desktop modes, release or merge readiness.",
+    "The independent reviewer freshly read all1757 original Git source bodies and all17 selected leaves, including workflow outside the common census. Prior source equality alone does not transfer a business result.",
+    "The UI step journal is not a complete total of CDP calls/actions; its42rows,7bounded passive button samples and exact mutation/read ledger are reported separately.",
+    "The underlying original disk observation helper uses its existing window; no unretained per-read completion timing or strict post-read cutoff guarantee is added here.",
+    "No source608efb/current177/24 privacy GREEN, native extension consumption, plugin code execution, live MCP connection, other Desktop/platform lane, full migration or release qualification follows."
+  ],
+  "findings": [],
+  "artifactCorrectionRequired": false,
+  "authorOriginalsUnchanged": true,
+  "auditOperations": "Retained raw/API/log/ZIP/PNG and immutable Git reads; pure Python byte/digest/data validation and exclusive scratch report creation. No project execution, installed-module invocation, provider/native execution, CI polling/replay or source/ref mutation."
+}

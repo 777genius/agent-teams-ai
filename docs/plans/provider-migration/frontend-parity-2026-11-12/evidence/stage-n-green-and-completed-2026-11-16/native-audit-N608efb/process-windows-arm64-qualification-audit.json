@@ -1,0 +1,1363 @@
+{
+  "schema": "original-native-receipt-audit/v1",
+  "reviewer": "/root/native_failures",
+  "source": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "sourceAssertionsRead": [
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 30399,
+      "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+      "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "bytes": 22330,
+      "blob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+      "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "bytes": 20067,
+      "blob": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+      "sha256": "3da229429f0dfa6c53449078a1b8125715130be2165986f2d4cc1fab31a53951"
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "bytes": 7271,
+      "blob": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+      "sha256": "ec0665d1f6289492ea103bce13821c2a06847a2599396c8b47de21dde4e4f2a4"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 56556,
+      "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+      "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+    }
+  ],
+  "sourcePinAudit": {
+    "path": "process-source-pin-audit-arm64.json",
+    "bytes": 36208,
+    "blob": "bd6f02f36bec244fa4f9af0a6ddc200d72704472",
+    "sha256": "109ae274c0085042f2f47cbdc19b8ba0aa61e31d655a0c8b5e7b86545851cd15"
+  },
+  "jobs": [
+    {
+      "artifact": 14194558632,
+      "job": 133062440000,
+      "platform": "win32-arm64",
+      "rawJob": {
+        "path": "process-win32-arm64/job-133062440000.log",
+        "bytes": 450975,
+        "blob": "8cca1336af0ca8e4f7075597eced808ffcad363a",
+        "sha256": "77cfe0f157d407abf397de0315f831617716ac33e884e553879e1e0d276363f6"
+      },
+      "scope": {
+        "path": "process-win32-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+        "bytes": 138029,
+        "blob": "fb70bf8aad6fa1c53ac2018e1638938ef83a5bf7",
+        "sha256": "012e32883dc5f3d813f48307783df87807d211ed9d1f2d8627dfe8d8040e4f44"
+      },
+      "scopeFields": {
+        "kind": "TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE",
+        "status": "PASS",
+        "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+        "platform": "win32-arm64",
+        "nodeVersion": "v24.21.0",
+        "controlledContracts": true,
+        "retainedMainTransport": true,
+        "posixProcessGroups": false,
+        "nativeProviderRuntimeQualified": false,
+        "darwinNativeRegistrationQualified": false,
+        "posixExecutableAdmissionQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      },
+      "prerequisites": {
+        "Node": {
+          "tests": 167,
+          "pass": 164,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 3
+        },
+        "protocolFiles": 3,
+        "protocolPass": 53,
+        "retainedMainFiles": 8,
+        "retainedMainPass": 81,
+        "totalPass": 298,
+        "originalSkips": 3
+      },
+      "native": [
+        {
+          "log": {
+            "path": "process-win32-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+            "bytes": 89128,
+            "blob": "18cead7f64b990bb7e855029c9e9e36e545455f9",
+            "sha256": "049e90e56357808f8fec5d32d196dc307203c98fcae678752b402a3b9199de52"
+          },
+          "versions": {
+            "node": "24.21.0",
+            "electron": null,
+            "modules": "137"
+          },
+          "results": [
+            "tree",
+            "root-first-tail-held-pipe",
+            "blocked-output-independent-stop",
+            "breakaway-denied",
+            "pre-resume-cancel-first-nonce",
+            "facade-private-stdin-after-native-owner-tail-exit",
+            "facade-pre-resume-cancel-no-private-input",
+            "captured-provider-native-argv-env-cwd-and-stop",
+            "captured-root-first-original-descendants-and-neighbor",
+            "TEST-only-debug-service-prebirth-nested-job-feasibility",
+            "TEST-only-scoped-stop-pending-create-isolation",
+            "TEST-only-wow64-root-child-startup-and-application-exceptions",
+            "birth-failure-unknown-first-nonce",
+            "owner-eof",
+            "accounting-failure-latched-unknown-distinct-reconciliation",
+            "post-launch-pending-read-genuine-prepared",
+            "released-ack-eof-exit-zero",
+            "watcher-lock-contention-released-ack-exit-zero",
+            "failure-winner-after-complete-ack-exit-74",
+            "broker-crash",
+            "wrong-generation",
+            "malformed",
+            "truncated",
+            "lost-prepared-no-resume-first-nonce",
+            "sentinel-isolation"
+          ],
+          "completePhaseCount": 31,
+          "pendingCreate": {
+            "rootExited": false,
+            "activeProcesses": 0,
+            "queryError": 0,
+            "dispatchError": 0,
+            "stopReplied": false
+          },
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "helperCount": 64,
+          "allClosedEndedEmptyNoError": true,
+          "nonzeroOrSignalledHelpers": [
+            {
+              "slot": 0,
+              "scenario": "sentinel",
+              "exit": {
+                "code": null,
+                "signal": "SIGTERM"
+              },
+              "cleanupRequested": true
+            },
+            {
+              "slot": 48,
+              "scenario": "terminal-race",
+              "exit": {
+                "code": 74,
+                "signal": null
+              },
+              "cleanupRequested": false
+            },
+            {
+              "slot": 50,
+              "scenario": "owner-eof",
+              "exit": {
+                "code": 70,
+                "signal": null
+              },
+              "cleanupRequested": false
+            },
+            {
+              "slot": 52,
+              "scenario": "broker-crash",
+              "exit": {
+                "code": null,
+                "signal": "SIGTERM"
+              },
+              "cleanupRequested": true
+            },
+            {
+              "slot": 54,
+              "scenario": "wrong-generation",
+              "exit": {
+                "code": 75,
+                "signal": null
+              },
+              "cleanupRequested": false
+            },
+            {
+              "slot": 56,
+              "scenario": "lost-prepared",
+              "exit": {
+                "code": 70,
+                "signal": null
+              },
+              "cleanupRequested": false
+            },
+            {
+              "slot": 58,
+              "scenario": "malformed",
+              "exit": {
+                "code": 75,
+                "signal": null
+              },
+              "cleanupRequested": false
+            },
+            {
+              "slot": 60,
+              "scenario": "truncated",
+              "exit": {
+                "code": 75,
+                "signal": null
+              },
+              "cleanupRequested": false
+            }
+          ],
+          "retainedCapabilities": [
+            {
+              "slot": 0,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 1,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 2,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 3,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 4,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 5,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 6,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 7,
+              "diagnostics": {
+                "cause": {
+                  "name": "native-failed",
+                  "phase": "prepare",
+                  "writeCompleted": true
+                },
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 70,
+                  "signal": null
+                },
+                "nativeExitCategory": "owner-eof",
+                "nativeCancelUndrained": false,
+                "nativeFailure": {
+                  "creation": "contained-suspended",
+                  "code": 31
+                }
+              }
+            },
+            {
+              "slot": 8,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            }
+          ]
+        },
+        {
+          "log": {
+            "path": "process-win32-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+            "bytes": 89152,
+            "blob": "cf4963c0484985558920e8f66eca6193695aca22",
+            "sha256": "c12b3b563fda15d78e33830490390151c793d2e0f3d95ba00010ab85bea56dc3"
+          },
+          "versions": {
+            "node": "24.22.1",
+            "electron": "44.10.1",
+            "modules": "149"
+          },
+          "results": [
+            "tree",
+            "root-first-tail-held-pipe",
+            "blocked-output-independent-stop",
+            "breakaway-denied",
+            "pre-resume-cancel-first-nonce",
+            "facade-private-stdin-after-native-owner-tail-exit",
+            "facade-pre-resume-cancel-no-private-input",
+            "captured-provider-native-argv-env-cwd-and-stop",
+            "captured-root-first-original-descendants-and-neighbor",
+            "TEST-only-debug-service-prebirth-nested-job-feasibility",
+            "TEST-only-scoped-stop-pending-create-isolation",
+            "TEST-only-wow64-root-child-startup-and-application-exceptions",
+            "birth-failure-unknown-first-nonce",
+            "owner-eof",
+            "accounting-failure-latched-unknown-distinct-reconciliation",
+            "post-launch-pending-read-genuine-prepared",
+            "released-ack-eof-exit-zero",
+            "watcher-lock-contention-released-ack-exit-zero",
+            "failure-winner-after-complete-ack-exit-74",
+            "broker-crash",
+            "wrong-generation",
+            "malformed",
+            "truncated",
+            "lost-prepared-no-resume-first-nonce",
+            "sentinel-isolation"
+          ],
+          "completePhaseCount": 31,
+          "pendingCreate": {
+            "rootExited": false,
+            "activeProcesses": 0,
+            "queryError": 0,
+            "dispatchError": 0,
+            "stopReplied": false
+          },
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "helperCount": 64,
+          "allClosedEndedEmptyNoError": true,
+          "nonzeroOrSignalledHelpers": [
+            {
+              "slot": 0,
+              "scenario": "sentinel",
+              "exit": {
+                "code": null,
+                "signal": "SIGTERM"
+              },
+              "cleanupRequested": true
+            },
+            {
+              "slot": 48,
+              "scenario": "terminal-race",
+              "exit": {
+                "code": 74,
+                "signal": null
+              },
+              "cleanupRequested": false
+            },
+            {
+              "slot": 50,
+              "scenario": "owner-eof",
+              "exit": {
+                "code": 70,
+                "signal": null
+              },
+              "cleanupRequested": false
+            },
+            {
+              "slot": 52,
+              "scenario": "broker-crash",
+              "exit": {
+                "code": null,
+                "signal": "SIGTERM"
+              },
+              "cleanupRequested": true
+            },
+            {
+              "slot": 54,
+              "scenario": "wrong-generation",
+              "exit": {
+                "code": 75,
+                "signal": null
+              },
+              "cleanupRequested": false
+            },
+            {
+              "slot": 56,
+              "scenario": "lost-prepared",
+              "exit": {
+                "code": 70,
+                "signal": null
+              },
+              "cleanupRequested": false
+            },
+            {
+              "slot": 58,
+              "scenario": "malformed",
+              "exit": {
+                "code": 75,
+                "signal": null
+              },
+              "cleanupRequested": false
+            },
+            {
+              "slot": 60,
+              "scenario": "truncated",
+              "exit": {
+                "code": 75,
+                "signal": null
+              },
+              "cleanupRequested": false
+            }
+          ],
+          "retainedCapabilities": [
+            {
+              "slot": 0,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 1,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 2,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 3,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 4,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 5,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 6,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 7,
+              "diagnostics": {
+                "cause": {
+                  "name": "native-failed",
+                  "phase": "prepare",
+                  "writeCompleted": true
+                },
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 70,
+                  "signal": null
+                },
+                "nativeExitCategory": "owner-eof",
+                "nativeCancelUndrained": false,
+                "nativeFailure": {
+                  "creation": "contained-suspended",
+                  "code": 31
+                }
+              }
+            },
+            {
+              "slot": 8,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "providers": [
+        {
+          "provider": "codex",
+          "status": "PASS",
+          "stage": "complete",
+          "cleanup": true,
+          "realProviderExecuted": false,
+          "desktopQualified": false,
+          "releaseQualified": false,
+          "versions": {
+            "A": "0.162.0",
+            "B": "0.162.0"
+          },
+          "foreignScopeGrantRefusedBeforeAllocation": true,
+          "management": {
+            "source": {
+              "sourceId": "f31e9ba2bda55f5deccceb8b91ebacfb503a6c87c2d38bfbeab88d7e1c07d4e5",
+              "revision": "01e016d94b9d9d5f9499397c3c4920042abb1dd1c3369639ec1fdfc4d20947d1"
+            },
+            "metadataRead": true,
+            "modelProbeCompleted": true,
+            "modelProbeReplayAllocated": false,
+            "modelProbeInputs": 1,
+            "metadataHostRetained": false
+          },
+          "standalone": {
+            "phase": "completed",
+            "source": {
+              "sourceId": "f31e9ba2bda55f5deccceb8b91ebacfb503a6c87c2d38bfbeab88d7e1c07d4e5",
+              "revision": "01e016d94b9d9d5f9499397c3c4920042abb1dd1c3369639ec1fdfc4d20947d1"
+            },
+            "inputDigest": "733b9243fe58abe74165a9a2f5d1db373347bcf2b820375d6f195a8cbaddf040",
+            "limits": null,
+            "ephemeral": true,
+            "replayAllocated": false
+          },
+          "lastStandaloneCompletion": {
+            "source": {
+              "sourceId": "f31e9ba2bda55f5deccceb8b91ebacfb503a6c87c2d38bfbeab88d7e1c07d4e5",
+              "revision": "01e016d94b9d9d5f9499397c3c4920042abb1dd1c3369639ec1fdfc4d20947d1"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 152,
+            "elapsedMs": 18636.334099999993,
+            "lastRunRead": {
+              "phase": "completed",
+              "cleanup": "confirmed",
+              "exitCode": 0
+            }
+          },
+          "lastLaunchReadiness": {
+            "source": {
+              "sourceId": "f31e9ba2bda55f5deccceb8b91ebacfb503a6c87c2d38bfbeab88d7e1c07d4e5",
+              "revision": "01e016d94b9d9d5f9499397c3c4920042abb1dd1c3369639ec1fdfc4d20947d1"
+            },
+            "image": "B",
+            "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+            "readCount": 112,
+            "elapsedMs": 17581.428099999997,
+            "lastRuntimeRead": {
+              "viewDigest": "322d611415d1de09975bb832e4f366a34c8a315a2594c0d6f7e9444463a1c6a9",
+              "memberId": "alice-id",
+              "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+              "phase": "allocated",
+              "sealed": false,
+              "custody": "owned",
+              "nativeReady": true,
+              "attached": true
+            }
+          },
+          "cold": {
+            "currentB": true,
+            "retainedA": true,
+            "lookup": true,
+            "physicalReplayAllocations": 0,
+            "sourcePublishPendingAdmission": {
+              "admitted": 1,
+              "revoked": 1
+            },
+            "originalInputsReplayed": false,
+            "sdkPeerCheckpointRestored": false
+          },
+          "receipt": {
+            "path": "process-win32-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+            "bytes": 60455,
+            "blob": "8ed68b3427369a2755f9042d03cfd2b77730cf7c",
+            "sha256": "9379c0bda51faa522d58f24f04dd779ae5b06ebde3bf93c60b416df0c9acc911"
+          },
+          "epochs": [
+            {
+              "mainEpoch": "bbcb40d4-d1d7-488d-bc33-db45f5cf1a8d",
+              "pending": {
+                "admitted": 2,
+                "revoked": 2
+              },
+              "jobCount": 25,
+              "serviceOperations": 0,
+              "allFiveCustodyFieldsTrue": true,
+              "originalRoots": [
+                {
+                  "pid": 4992,
+                  "birth": "01dd75784184988b"
+                },
+                {
+                  "pid": 1492,
+                  "birth": "01dd757843b7144a"
+                },
+                {
+                  "pid": 10656,
+                  "birth": "01dd757846320269"
+                },
+                {
+                  "pid": 5464,
+                  "birth": "01dd757847f5afcb"
+                },
+                {
+                  "pid": 8864,
+                  "birth": "01dd757849c46ad9"
+                },
+                {
+                  "pid": 2748,
+                  "birth": "01dd75784c11d409"
+                },
+                {
+                  "pid": 7556,
+                  "birth": "01dd75784df42c43"
+                },
+                {
+                  "pid": 3160,
+                  "birth": "01dd7578504e4ad4"
+                },
+                {
+                  "pid": 2528,
+                  "birth": "01dd757853692ff0"
+                },
+                {
+                  "pid": 2340,
+                  "birth": "01dd757854e1cff1"
+                },
+                {
+                  "pid": 10348,
+                  "birth": "01dd75785643d5e3"
+                },
+                {
+                  "pid": 6016,
+                  "birth": "01dd7578588a3959"
+                },
+                {
+                  "pid": 7716,
+                  "birth": "01dd75785b041067"
+                },
+                {
+                  "pid": 2396,
+                  "birth": "01dd75785cde1e80"
+                },
+                {
+                  "pid": 8188,
+                  "birth": "01dd75785ece7bc8"
+                },
+                {
+                  "pid": 9568,
+                  "birth": "01dd7578612bf2a9"
+                },
+                {
+                  "pid": 7748,
+                  "birth": "01dd7578631a25fd"
+                },
+                {
+                  "pid": 7300,
+                  "birth": "01dd757865ce1ea4"
+                },
+                {
+                  "pid": 10648,
+                  "birth": "01dd7578693cbd81"
+                },
+                {
+                  "pid": 3124,
+                  "birth": "01dd75786af1cb60"
+                },
+                {
+                  "pid": 7444,
+                  "birth": "01dd75786c5b3da1"
+                },
+                {
+                  "pid": 10544,
+                  "birth": "01dd75786de0078b"
+                },
+                {
+                  "pid": 4080,
+                  "birth": "01dd75786f8271fd"
+                },
+                {
+                  "pid": 7460,
+                  "birth": "01dd7578713157e9"
+                },
+                {
+                  "pid": 9704,
+                  "birth": "01dd757872dd5515"
+                }
+              ]
+            },
+            {
+              "mainEpoch": "4d69855c-99d1-4f4c-b9be-e93cdb3debe9",
+              "pending": {
+                "admitted": 1,
+                "revoked": 1
+              },
+              "jobCount": 0,
+              "serviceOperations": 0,
+              "allFiveCustodyFieldsTrue": true,
+              "originalRoots": []
+            }
+          ],
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "lastStandaloneCompletionFieldPresent": true
+        },
+        {
+          "provider": "claude",
+          "status": "PASS",
+          "stage": "complete",
+          "cleanup": true,
+          "realProviderExecuted": false,
+          "desktopQualified": false,
+          "releaseQualified": false,
+          "versions": {
+            "A": "2.1.34",
+            "B": "2.1.34"
+          },
+          "foreignScopeGrantRefusedBeforeAllocation": true,
+          "management": {
+            "source": {
+              "sourceId": "680f47d750a02cfb1e4543502a1d55f8d48b5aee95ca1118590c4ccce56fe6fb",
+              "revision": "a0560bf1f663e46abbc0f91a9d1b1bd3e0e63b7ec0ceed1a28dbe36a7e1dcd7f"
+            },
+            "metadataRead": true,
+            "modelProbeCompleted": true,
+            "modelProbeReplayAllocated": false,
+            "modelProbeInputs": 1,
+            "metadataHostRetained": false
+          },
+          "standalone": {
+            "phase": "completed",
+            "source": {
+              "sourceId": "680f47d750a02cfb1e4543502a1d55f8d48b5aee95ca1118590c4ccce56fe6fb",
+              "revision": "a0560bf1f663e46abbc0f91a9d1b1bd3e0e63b7ec0ceed1a28dbe36a7e1dcd7f"
+            },
+            "inputDigest": "8c34a758de911b4b89fbc8194566ebcd47d2bb28b05ab3c0ea818d9253e9f59d",
+            "limits": {
+              "maxTurns": 6,
+              "maxBudgetUsd": 0.25
+            },
+            "ephemeral": true,
+            "replayAllocated": false
+          },
+          "lastStandaloneCompletion": {
+            "source": {
+              "sourceId": "680f47d750a02cfb1e4543502a1d55f8d48b5aee95ca1118590c4ccce56fe6fb",
+              "revision": "a0560bf1f663e46abbc0f91a9d1b1bd3e0e63b7ec0ceed1a28dbe36a7e1dcd7f"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 21,
+            "elapsedMs": 1870.8134000000027,
+            "lastRunRead": {
+              "phase": "completed",
+              "cleanup": "confirmed",
+              "exitCode": 0
+            }
+          },
+          "lastLaunchReadiness": {
+            "source": {
+              "sourceId": "680f47d750a02cfb1e4543502a1d55f8d48b5aee95ca1118590c4ccce56fe6fb",
+              "revision": "a0560bf1f663e46abbc0f91a9d1b1bd3e0e63b7ec0ceed1a28dbe36a7e1dcd7f"
+            },
+            "image": "B",
+            "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+            "readCount": 17,
+            "elapsedMs": 4162.726699999999,
+            "lastRuntimeRead": {
+              "viewDigest": "e9c711bebe8d482154970603455182c2f6ea79e5fe18e55d8428109bec781af6",
+              "memberId": "alice-id",
+              "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+              "phase": "allocated",
+              "sealed": false,
+              "custody": "owned",
+              "nativeReady": true,
+              "attached": true
+            }
+          },
+          "cold": {
+            "currentB": true,
+            "retainedA": true,
+            "lookup": true,
+            "physicalReplayAllocations": 0,
+            "sourcePublishPendingAdmission": {
+              "admitted": 1,
+              "revoked": 1
+            },
+            "originalInputsReplayed": false,
+            "sdkPeerCheckpointRestored": true,
+            "originalNativeSessionRetained": true,
+            "restoredGeneration": "restore-ee52bb0c2e7807049d9763769c8868c94c781721c2115e8afc6e929da6b3e63f",
+            "newInputId": "107b87df-0269-5588-87c2-0b779b08d451",
+            "source": {
+              "sourceId": "680f47d750a02cfb1e4543502a1d55f8d48b5aee95ca1118590c4ccce56fe6fb",
+              "revision": "2cf2af8747c2a6ee30abed8b5301aa93e868d225284bc5c5a536dfb67cb92a62"
+            }
+          },
+          "receipt": {
+            "path": "process-win32-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude-receipt.json",
+            "bytes": 27740,
+            "blob": "a53bf5a1a7e5c7dfe9463dbbfe99504b8cf487d3",
+            "sha256": "b4228441cb8afac52a170b44d7b47a8342fc8d2057de1077068fd0a363f62138"
+          },
+          "epochs": [
+            {
+              "mainEpoch": "0b40c142-9d89-429c-9fb3-14623cf83e6e",
+              "pending": {
+                "admitted": 2,
+                "revoked": 2
+              },
+              "jobCount": 8,
+              "serviceOperations": 0,
+              "allFiveCustodyFieldsTrue": true,
+              "originalRoots": [
+                {
+                  "pid": 7436,
+                  "birth": "01dd75787c510969"
+                },
+                {
+                  "pid": 7224,
+                  "birth": "01dd75787ddf773d"
+                },
+                {
+                  "pid": 3156,
+                  "birth": "01dd757880bf49a4"
+                },
+                {
+                  "pid": 876,
+                  "birth": "01dd7578811c99fc"
+                },
+                {
+                  "pid": 4088,
+                  "birth": "01dd7578819b7381"
+                },
+                {
+                  "pid": 3024,
+                  "birth": "01dd75788234400a"
+                },
+                {
+                  "pid": 10108,
+                  "birth": "01dd757883eafed8"
+                },
+                {
+                  "pid": 10344,
+                  "birth": "01dd75788774b09e"
+                }
+              ]
+            },
+            {
+              "mainEpoch": "37e88a20-b32c-4ece-974d-fad2273ddc76",
+              "pending": {
+                "admitted": 1,
+                "revoked": 1
+              },
+              "jobCount": 1,
+              "serviceOperations": 0,
+              "allFiveCustodyFieldsTrue": true,
+              "originalRoots": [
+                {
+                  "pid": 10620,
+                  "birth": "01dd75788b9e296c"
+                }
+              ]
+            }
+          ],
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "lastStandaloneCompletionFieldPresent": true
+        },
+        {
+          "provider": "opencode",
+          "status": "PASS",
+          "stage": "complete",
+          "cleanup": true,
+          "realProviderExecuted": false,
+          "desktopQualified": false,
+          "releaseQualified": false,
+          "versions": {
+            "A": "1.19.4",
+            "B": "1.19.4"
+          },
+          "foreignScopeGrantRefusedBeforeAllocation": true,
+          "management": {
+            "source": {
+              "sourceId": "ebae422515d3dd7386df7f895d89cbe9d8c6b6a3a805db45f5d7a1d28f4f3939",
+              "revision": "1158d4ae2d7c1cc22e89f67caed2313264d3f82e3fa78a1c685de52b67a9a9e5"
+            },
+            "metadataRead": true,
+            "modelProbeCompleted": true,
+            "modelProbeReplayAllocated": false,
+            "modelProbeInputs": 1,
+            "metadataHostRetained": true
+          },
+          "standalone": {
+            "supported": false,
+            "reason": "Original scheduledRunProfile rejects OpenCode"
+          },
+          "lastStandaloneCompletion": null,
+          "lastLaunchReadiness": {
+            "source": {
+              "sourceId": "ebae422515d3dd7386df7f895d89cbe9d8c6b6a3a805db45f5d7a1d28f4f3939",
+              "revision": "1158d4ae2d7c1cc22e89f67caed2313264d3f82e3fa78a1c685de52b67a9a9e5"
+            },
+            "image": "B",
+            "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+            "readCount": 15,
+            "elapsedMs": 36078.6024,
+            "lastRuntimeRead": {
+              "viewDigest": "b511010e8e3f029298d97c17493cf8e1ef1803d003f90c2eaea9a76f8931d929",
+              "memberId": "alice-id",
+              "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+              "phase": "allocated",
+              "sealed": false,
+              "custody": "owned",
+              "nativeReady": true,
+              "attached": true
+            }
+          },
+          "cold": {
+            "currentB": true,
+            "retainedA": true,
+            "lookup": true,
+            "physicalReplayAllocations": 0,
+            "sourcePublishPendingAdmission": {
+              "admitted": 1,
+              "revoked": 1
+            },
+            "originalInputsReplayed": false,
+            "sdkPeerCheckpointRestored": false
+          },
+          "receipt": {
+            "path": "process-win32-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+            "bytes": 26033,
+            "blob": "0f33e9148999541dbc2cf730bdcfdf5d6504fb16",
+            "sha256": "30d230cda2d65da9158025ade672e6b4581f02c65cc72c2ab11c98585ba6c25b"
+          },
+          "epochs": [
+            {
+              "mainEpoch": "98aebb10-1817-415d-9d04-978e3fee6603",
+              "pending": {
+                "admitted": 2,
+                "revoked": 2
+              },
+              "jobCount": 7,
+              "serviceOperations": 0,
+              "allFiveCustodyFieldsTrue": true,
+              "originalRoots": [
+                {
+                  "pid": 7044,
+                  "birth": "01dd7578945d7f65"
+                },
+                {
+                  "pid": 1404,
+                  "birth": "01dd7578962c92a2"
+                },
+                {
+                  "pid": 8868,
+                  "birth": "01dd7578a0b34150"
+                },
+                {
+                  "pid": 9948,
+                  "birth": "01dd7578b0284e90"
+                },
+                {
+                  "pid": 2792,
+                  "birth": "01dd7578b09ac2f7"
+                },
+                {
+                  "pid": 2276,
+                  "birth": "01dd7578b25fe1bc"
+                },
+                {
+                  "pid": 4664,
+                  "birth": "01dd7578bcbbbe71"
+                }
+              ]
+            },
+            {
+              "mainEpoch": "eb5eb0df-fd20-404f-b146-daf9ec2a7a47",
+              "pending": {
+                "admitted": 1,
+                "revoked": 1
+              },
+              "jobCount": 0,
+              "serviceOperations": 0,
+              "allFiveCustodyFieldsTrue": true,
+              "originalRoots": []
+            }
+          ],
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "lastStandaloneCompletionFieldPresent": false
+        }
+      ],
+      "finiteWrapperProviders": {
+        "receipt": {
+          "path": "process-win32-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+          "bytes": 2908,
+          "blob": "ccc5a1c0eaedecc6db8983311ca47980d76a0403",
+          "sha256": "83a6340bf997d6e62b3b759d5b0b9fc35c8bd77257daadb1c03737abaa731f86"
+        },
+        "wrappers": [
+          "npm-node",
+          "generated-bun",
+          "opaque-cmd",
+          "positional-bat",
+          "npm-native"
+        ],
+        "providers": [
+          {
+            "provider": "codex",
+            "wrapper": "npm-node",
+            "pins": {
+              "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+              "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+              "wrapper": "d43e0701ac8436be9ce28b2832791e08fd7fa02585422c75fadb531ed6cd564f",
+              "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+              "source": "b5066f3c31cfb632dbf2614f85cb872638f242a7835c14f35ded44bb43c2a7bf"
+            },
+            "counts": {
+              "allocate": 1,
+              "prepare": 1,
+              "resume": 1,
+              "stop": 1,
+              "release": 1,
+              "serviceCapture": 2,
+              "serviceStop": 2,
+              "serviceSettle": 2
+            },
+            "nativeReady": true,
+            "inputCompleted": true,
+            "registeredServices": 2,
+            "scopedStops": 2,
+            "neighborSurvivedPrimary": true,
+            "providerSurvivedScopedStops": true,
+            "cleanup": true
+          },
+          {
+            "provider": "opencode",
+            "wrapper": "opaque-cmd",
+            "pins": {
+              "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+              "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+              "wrapper": "cb47ac0c670cc03cf1f40edb052ba855553525dffd7f8429e1a00bdca78c641d",
+              "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+              "source": "b606ba5611b63dc6a4f54b2835f24f59e21fc5d1e0569a58caf2635190de58bd"
+            },
+            "counts": {
+              "allocate": 1,
+              "prepare": 1,
+              "resume": 1,
+              "stop": 1,
+              "release": 1,
+              "serviceCapture": 2,
+              "serviceStop": 2,
+              "serviceSettle": 2
+            },
+            "nativeReady": true,
+            "inputCompleted": true,
+            "registeredServices": 2,
+            "scopedStops": 2,
+            "neighborSurvivedPrimary": true,
+            "providerSurvivedScopedStops": true,
+            "cleanup": true
+          }
+        ],
+        "controller": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        }
+      },
+      "officialJob": {
+        "id": 133062440000,
+        "run_id": 43795234913,
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Select the pinned package manager with bundled Corepack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Bind exact source and actual process tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Install frozen workspace without Desktop postinstall",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Build existing controller and Host",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Verify process contracts and retained Main Host transport",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Verify original POSIX Node and shell lifecycle fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 10
+          },
+          {
+            "name": "Prepare pinned Electron for native process fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Verify Linux Node exec descriptor closure under both original parents",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Build original Windows product broker and C++ fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Qualify original Windows Job and control under Host Node",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Qualify original Windows Job and control under Electron Node",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Qualify original codex source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          },
+          {
+            "name": "Qualify original claude source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 20
+          },
+          {
+            "name": "Qualify original opencode source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 21
+          },
+          {
+            "name": "Require completed original platform receipts and unchanged source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 22
+          },
+          {
+            "name": "Preserve original process evidence including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 44
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 45
+          },
+          {
+            "name": "Post Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 46
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 47
+          }
+        ]
+      },
+      "archive": {
+        "path": "process-win32-arm64/artifact-14194558632.zip",
+        "bytes": 72294,
+        "blob": "02a0765eca19742afc372fab80456b7b4b3eebb4",
+        "sha256": "c63bcdc4d931ddad1788bf8b7daa7c0a25d1c8d1d4e1305ab03b2ab33518bfdc"
+      },
+      "archiveAudit": {
+        "path": "process-win32-arm64/archive-audit.json",
+        "bytes": 5525,
+        "blob": "85a0cbf513a25d64931187ee6b6fe5205072d7c4",
+        "sha256": "a27e1e8ca382f7fa9bcc7bfeab0a7801178513ca82ce7df558eb37b02f0097b4"
+      },
+      "officialArtifact": {
+        "id": 14194558632,
+        "name": "host-process-fixtures-win32-arm64-608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+        "size_in_bytes": 72294,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14194558632",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14194558632/zip",
+        "expired": false,
+        "created_at": "2026-11-16T03:16:05Z",
+        "expires_at": "2026-11-30T03:16:04Z",
+        "updated_at": "2026-11-16T03:16:05Z",
+        "digest": "sha256:c63bcdc4d931ddad1788bf8b7daa7c0a25d1c8d1d4e1305ab03b2ab33518bfdc",
+        "workflow_run": {
+          "id": 43795234913,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+        }
+      }
+    }
+  ],
+  "qualification": "The original source608efb N Windows ARM64 Process finite TEST acceptance only; no real vendor, P08, P09, Desktop, release or any other-source qualification.",
+  "limits": [
+    "Current pending-CREATE operands do not recover historical missing rootExited/ACK values.",
+    "25 named native results differ from31 complete internal phase rows.",
+    "Natural zero, negative-case codes and deliberate SIGTERM remain separate in all64 helper records.",
+    "Receipt source pins14unique/38occurrences matched exactGit; six built-output path hashes are original receipt observations, without independent rebuild/full output closure or any other-architecture claim.",
+    "Zero-job cold epochs alone are not no-replay proof; original cold/source-generation assertions and retained admitted/revoked counts are preserved.",
+    "Current readiness/standalone timing and changed TEST policy do not qualify old15-second runs.",
+    "No repository tests, compiler, provider/native process or CI action executed for this read-only artifact audit."
+  ]
+}

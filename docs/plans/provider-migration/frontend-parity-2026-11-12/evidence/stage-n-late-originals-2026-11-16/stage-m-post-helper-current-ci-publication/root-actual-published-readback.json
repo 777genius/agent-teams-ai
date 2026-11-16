@@ -1,0 +1,1724 @@
+{
+  "schema": "root-actual-published-M-post-helper-docs-readback/v1",
+  "reviewedAtUTC": "2026-11-16T02:54:33.691413+00:00",
+  "verdict": "APPROVE exact actual published docs and one-helper source chain; source execution remains unqualified",
+  "publishedCommit": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "soleParent": "6ff83bb45af88f660d8b124e7467664ad2ddd590",
+  "tree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "manifest": {
+    "bytes": 125910,
+    "blob": "ab5294c34a04d1472ae62212178e7e842fabeb8b",
+    "sha256": "be52b17e83a391cec528082ef6b8c097392962653a15bb670b5ce28187a143eb"
+  },
+  "ordinaryPublicationReceipt": {
+    "bytes": 143859,
+    "blob": "d35a3188dfeedfcfbe980d9735ff4591259790d1",
+    "sha256": "7ef5b7d6ce1f7ce93c968aa7e034a2d64eb44f59fbd8b6d1d32fcc6499fda375"
+  },
+  "precedingExactReviews": {
+    "independent-byte-tree-foundation.json": {
+      "bytes": 112495,
+      "blob": "6fbffa3c965a696cdf601dc2d6b9a3b0697f21f9",
+      "sha256": "34ba194fadb9670401c6a5bbb7662a8ccebfdb377528dd0eddeb09d1b12acf6d"
+    },
+    "independent-assembly-review.json": {
+      "bytes": 34110,
+      "blob": "7aac6d11e67f289dc63c651ca44b19efc8fd911f",
+      "sha256": "6dc9c043ce8c7ca9a0c934fa37b75b131f0604aac44f6c06b5703a27674136b7"
+    },
+    "root-remote-tree-review.json": {
+      "bytes": 632,
+      "blob": "cc7287f13cf6c3bdfe13ec643ae8e7660da6ab76",
+      "sha256": "c0c1a517d6de057e7f2c2ea40aafec2d9ed384b3e49d793861f65b14bd7ce9ba"
+    }
+  },
+  "all91ActualGitPayloads": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/job-133017915059.log",
+      "mode": "100644",
+      "bytes": 114635,
+      "blob": "a72ded1fdd1fad34911b158465b050cbb92aa86d",
+      "sha256": "ee1abaa66c84763bb194e4861f5548a6f8efb1f343a8d83446decbba2ec636f6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/original-job-log-response.json",
+      "mode": "100644",
+      "bytes": 116598,
+      "blob": "eff9b573f6fe735d041c51fd074175a08e745ea7",
+      "sha256": "5b71e679524d1e22c09e1e83f6f8e37631709b9065eb09b411a7705768e41eda"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/official-artifacts-response.json",
+      "mode": "100644",
+      "bytes": 6437,
+      "blob": "45df4e90dc67aeab76a22d1c84918f97e7814aac",
+      "sha256": "a9abc977f8317787a5541ec06aed0bcf1171ba913ddcd145aa9cfa6ef96f0260"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/artifact-14192610672.zip",
+      "mode": "100644",
+      "bytes": 4000,
+      "blob": "196950086facc7b3839ebfe2715e56d556633a38",
+      "sha256": "a40813439aae30d3e2042aa9b7b20e141a88e85de3f7748fc6a13c9b3c47bc53"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/archive-audit.json",
+      "mode": "100644",
+      "bytes": 10169,
+      "blob": "109aff4387ad75904c225dec78413b52b207c385",
+      "sha256": "f9524bcce01e7797d355256376d1a01f1231e7d2c139b29e018d463877208c25"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/source-and-command-audit.json",
+      "mode": "100644",
+      "bytes": 12463,
+      "blob": "a1881138200a09c6f9045b3d966808794e61ac21",
+      "sha256": "4c4147fb7dede7ce64db5290d9337ec6b837ee249f41fb2f31fa14ea13e959b1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/audit.json",
+      "mode": "100644",
+      "bytes": 44928,
+      "blob": "27afc1f8fdef94387a4fc4829fc4269ea36269f2",
+      "sha256": "d1017c87d321939140c7769bed9c5f90a4de379ecda3d80a55b1067f5ee86c41"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/Plan29-static-linux-appendix.md",
+      "mode": "100644",
+      "bytes": 5026,
+      "blob": "6a5af5ad567a8a3da47efaf88f3a492f26e69192",
+      "sha256": "fee24b4598ded10717836954da75dcab3733b68896441d975967fc9a203423be"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/v2-jobs-api-0220.json",
+      "mode": "100644",
+      "bytes": 42282,
+      "blob": "84caaf65ccc159ab08402d0448ef2cf7bb0812bb",
+      "sha256": "97444dffba6eed20a7ac527c5414a640ec78236228a98652ea062fe244b12c0d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/checkpoint-static-linux.json",
+      "mode": "100644",
+      "bytes": 13162,
+      "blob": "72934b09e045717ea627441b3b990a4535198cbb",
+      "sha256": "ffe6cd2c1b87be554dea5289bd4cc253e501c56f72e3c7034d368b887a3bb7d7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/root-independent-review.json",
+      "mode": "100644",
+      "bytes": 30308,
+      "blob": "a6fc47aa9030d9ee7c338e6d7368df0f744ebe95",
+      "sha256": "e0055f4480852a761394bd213ae8e37c2adc8989d0f041cfe84e2d498ff78f93"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/job-133017916023.log",
+      "mode": "100644",
+      "bytes": 181311,
+      "blob": "f71a175d26edb1726336519590e1928043abb163",
+      "sha256": "c9892d877a242e037ce3963494d30b6b2451f0c8d0db9a73b9abcceae5c1f155"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/artifact-14191567899.zip",
+      "mode": "100644",
+      "bytes": 1646654,
+      "blob": "82e24692ea7234b89389500601bd46b18bbfcb10",
+      "sha256": "c43ec6168b096d4b6520e73f20be2411d693603497997c2428976e7ee48f46be"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/archive-audit.json",
+      "mode": "100644",
+      "bytes": 13103,
+      "blob": "ee3127f57621a28f416510aef2eecc7ec37e87d1",
+      "sha256": "93a6f78543aab272237213622427b702160eb5237cb595f74d3dda4c6ff24df5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/desktop-backend-receipt.json",
+      "mode": "100644",
+      "bytes": 1012298,
+      "blob": "574f8dbc0679d75a45d498ff71e1d874c4fdbb50",
+      "sha256": "daa2d1405c791f8a41aac1b3e3fbac6e72f398ffe909c95dd4b24b2a93b5b82a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-effects.json",
+      "mode": "100644",
+      "bytes": 27680,
+      "blob": "b6a815ae16f8653105ee107088de5a906be91fb3",
+      "sha256": "8ea157ade6688d6c38cfe32fbc28506d8ddee1da85b0b05889fd177c359c44a6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/audit.json",
+      "mode": "100644",
+      "bytes": 70873,
+      "blob": "0a1d56e3e05a10a8f63041bb995c68e99a609502",
+      "sha256": "eedf19eff5470d6983fb10db123ab5f08332cea6116e2309461d5784dc10f7d3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/Plan29-collaboration-appendix.md",
+      "mode": "100644",
+      "bytes": 6870,
+      "blob": "b5f801fd7e5e7f7b93258c2f313e33ce0c04acac",
+      "sha256": "f956e6d08569d115bc56c3cd9a845241d702a577ed3514a236734047f1811910"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/official-artifacts-0203.json",
+      "mode": "100644",
+      "bytes": 15080,
+      "blob": "4a9b4ebd7f7a1410184b5d5df605e574984c67a5",
+      "sha256": "a0ab504afd23015acb2d8677eb0a7be34ee6deb5ce6e9b7a2497f97605a46e49"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/full-api-jobs-0203.json",
+      "mode": "100644",
+      "bytes": 184637,
+      "blob": "6e46a30c12b354171499b3d07089b1801d32eab7",
+      "sha256": "487fba5cb804d01f5d6cf2c8a82f338535c4c23eb7a98c02d0564791bc7c6bc9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-claude-scope/effects.ndjson",
+      "mode": "100644",
+      "bytes": 7015,
+      "blob": "894b3cb61af228a3bb6a1f1a0702ea942b5e8ad5",
+      "sha256": "db810f03d55d91fdf7be95bf450c3cbe42ce5c62db912ef228ca001ba2507e6a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-codex-scope/effects.ndjson",
+      "mode": "100644",
+      "bytes": 7265,
+      "blob": "7913d4b8220ca0dac76b04f8caad51887346990f",
+      "sha256": "52a0143f0abce35e362089e820e586e5501e903afbdee33392ba05ae72f12b69"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-opencode-scope/effects.ndjson",
+      "mode": "100644",
+      "bytes": 6546,
+      "blob": "aa842473bff516f87cdada2cac9af68546da1de8",
+      "sha256": "d4c24add6e7f9da58eb205e1bcda47d11afaa97598305d189a5522486f537488"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/audit-v2.json",
+      "mode": "100644",
+      "bytes": 73798,
+      "blob": "d6e726a6673d46a4dbfc8106f56721acb1df09f3",
+      "sha256": "fa322b541395d38e7a90d3de4aa7065de2ee65da3ccab2a7aec82fb444798fbc"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/Plan29-collaboration-appendix-v2.md",
+      "mode": "100644",
+      "bytes": 7705,
+      "blob": "5dea81733d0c100ca894488b29baaa8ad613715d",
+      "sha256": "14f41e30a8bf088e96869335595a2d6803ac121518cc4bffdc699877d60e842a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/checkpoint-collaboration-v2.json",
+      "mode": "100644",
+      "bytes": 19121,
+      "blob": "46c9f31e147404d415dee1c3afa21fc51ca5299f",
+      "sha256": "e031634990c0b4bd3bd36aceb0bbdc0d96d954591b10231033fdee1a792a4af2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/independent-collaboration-review.json",
+      "mode": "100644",
+      "bytes": 93512,
+      "blob": "1b7b9e011f6fd192cd3d386cfebc79b26ec18ab5",
+      "sha256": "3a61c943a70f6b50d2a31656515be0e379a9d1008734298c1c270bb70352ee17"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/job-133017916047.log",
+      "mode": "100644",
+      "bytes": 188846,
+      "blob": "08a9bde4944bd24376ceaf09a87444231936be39",
+      "sha256": "b88ecff84df20b1f0526fca453965b746c8f2ac1398991887974ba989ca6c23c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/artifact-14192410704.zip",
+      "mode": "100644",
+      "bytes": 1436127,
+      "blob": "0525b930a2e5fd5cd3d05c701ac3925c0288972f",
+      "sha256": "49a1f1d6408374dcbd48db0483e8c9e02b07d3d5ff803032291b85f270ebcb50"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/archive-audit.json",
+      "mode": "100644",
+      "bytes": 6093,
+      "blob": "bce68655c00f21159b04f8ad74b535a629912de1",
+      "sha256": "075055c8a92ed9704b3072a7fc8680a022ba3567472c36af5bd076bb382ea350"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/official-artifacts-0215.json",
+      "mode": "100644",
+      "bytes": 19753,
+      "blob": "699d3f9f470c9aba779664f159cefac43cbc4861",
+      "sha256": "f434f1a38fce2695c3e828119cd6424c0a986afbf95406a147c2eadfca87416e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/full-api-jobs-0215.json",
+      "mode": "100644",
+      "bytes": 210786,
+      "blob": "ce23677db2bb7bd7b13466fc141f8354a709932b",
+      "sha256": "5970c06c49581ee9d93fc68b749d63df855689aaacd8878ef870853ebbb0b860"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/audit.json",
+      "mode": "100644",
+      "bytes": 169543,
+      "blob": "f3cf04d5c7e16ddb485c897df02c0fe759f10417",
+      "sha256": "4d6390338bc261608cb364ebec744cddd0391ff0179bcbb65e2a6a84a0ce29b1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/Plan29-cross-team-failure-appendix.md",
+      "mode": "100644",
+      "bytes": 6359,
+      "blob": "afbca9fed68bc56e5014d0c9cfffc86b09227752",
+      "sha256": "f7f2743ea93ce4edb787c693b2846271237ab7d19981dc22935a33b1fa266c72"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/checkpoint-cross-team.json",
+      "mode": "100644",
+      "bytes": 9607,
+      "blob": "2bb04315249dd9c3f3e7d0111ac46c0069e07b23",
+      "sha256": "278730aa2bd765a43a330ac54d63fc5bf4f0f578ce37fe0be7b5a157811a2214"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/independent-cross-review.json",
+      "mode": "100644",
+      "bytes": 83435,
+      "blob": "b3c17e7b936f11061f786af153eac9a610a7fe16",
+      "sha256": "5930e741d4c882344b6c4dd29f1c39ca913fc1170e048310f17a625babe6dc0c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/job-133017916005.log",
+      "mode": "100644",
+      "bytes": 180808,
+      "blob": "21cddcf6a8bceac1f187c2557365770d5c4fc166",
+      "sha256": "610fd24b9209ba3687b84d865e8b3c79b9d1541ee997e153cfbe76c0052ad93e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/artifact-14191310178.zip",
+      "mode": "100644",
+      "bytes": 1614938,
+      "blob": "0db3b255f2507e77caa6445ee7f2f9fee399aed6",
+      "sha256": "48a8740d05e2154e61daf7983f7e73404bf2d25eef1318a5a7a3df885b0e29b9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/archive-audit.json",
+      "mode": "100644",
+      "bytes": 7202,
+      "blob": "c154d376a25277c58a1f4183a70177c8a65907d9",
+      "sha256": "deae775e150ea5e3138c9174753a613f0e81c096c1760368382a8aaae17777cd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/audit.json",
+      "mode": "100644",
+      "bytes": 408306,
+      "blob": "37c190e87bb8ec05359bc00d5727f9a2bc2f713b",
+      "sha256": "3b069c56696048e4e3055736bce0a06da32325367ea727151425a29e5addca80"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/Plan29-taskboard-appendix.md",
+      "mode": "100644",
+      "bytes": 6699,
+      "blob": "d6fcba1cd32bd8f8eb7fcca7dbb664488fc4b6a6",
+      "sha256": "3b29d6801762b3b9ffefb25258c88022dea944fb559ffda3e371c54de6a64fd9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/checkpoint-taskboard.json",
+      "mode": "100644",
+      "bytes": 10755,
+      "blob": "5ea5b8536ac6dae74615037f86c1667aef3cbe5a",
+      "sha256": "1ec00c3b3adab30eaa43c3acbcc56afaad869249630d3f0b671985ad31ad3b6d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/independent-taskboard-review.json",
+      "mode": "100644",
+      "bytes": 116804,
+      "blob": "bdfa82938601f497a43f67c3a1e3c5ddc16055e1",
+      "sha256": "56c80b5ee9bc49635858e4a247742fcd246093dd50e0d3e31d100eaa8936a305"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/job-133017916035.log",
+      "mode": "100644",
+      "bytes": 108881,
+      "blob": "6af62654e11a977fd92b2c835ddcb35f60dcdbb1",
+      "sha256": "20cefcab96008865b435d59eb37923b2ae7e7b16eafe44e7f6d335123e4e7fee"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/artifact-14191785424.zip",
+      "mode": "100644",
+      "bytes": 1011648,
+      "blob": "7ab6151c0f069b5efbc06e55eb6906ef126a4bbb",
+      "sha256": "da6292a773eb4e7af1a410d730457bec318c35e15c92518b92f0e770d386b9dd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/archive-audit.json",
+      "mode": "100644",
+      "bytes": 10267,
+      "blob": "c262d1a35093b9f05916e6fb66c2033f7d04cc34",
+      "sha256": "e177ec4cf78c09ea7c800cd18187d7a169641f444253d2b0d00d070bcf9c9d1b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/desktop-backend-receipt.json",
+      "mode": "100644",
+      "bytes": 731095,
+      "blob": "dd5d95ca4b7baf611d21b9eda4a424c2d2aaa1aa",
+      "sha256": "4c3649898de49bb965d9e6a2c4028c7ca84c1cae96da55c50beb5c881de29597"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/source-pin-audit.json",
+      "mode": "100644",
+      "bytes": 3952,
+      "blob": "c16e0d2aed256d193f444f1b200b4954f84da66c",
+      "sha256": "519809764fa42830bf3288210d0e21e1f1542d18e6b2d292daac29b6543f6167"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/audit.json",
+      "mode": "100644",
+      "bytes": 68126,
+      "blob": "bc37513941f528e5cb21d7999706f6a249ee88b6",
+      "sha256": "5f4b4e6df677ffc95952ab1ce8da6f00ae7d93813eae7fb06c4123581c5ab02a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/Plan29-v2-management-appendix.md",
+      "mode": "100644",
+      "bytes": 6798,
+      "blob": "bbbbcba4d99893bd4b08bdf0b27aebc4b60c7b4f",
+      "sha256": "1f41e3822955bc756fcc318f7bdcb3f42c03619f4988133bdd3616044c9a8f25"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/checkpoint-v2-management.json",
+      "mode": "100644",
+      "bytes": 14149,
+      "blob": "b852ef2ad40a43464ff4fe0d38158bfce485251a",
+      "sha256": "36f0469fb32ed9e227036129ae6c894eede148aef72ca82667accd1c3e8dcb8e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/root-independent-review.json",
+      "mode": "100644",
+      "bytes": 104750,
+      "blob": "1f73c76773446679700b924eec2d2f08b3cba1ec",
+      "sha256": "43edea04521185f3d2d408a418f7ec0543f4aa9262082b1ce9925c2e02154214"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/job-133040244339.log",
+      "mode": "100644",
+      "bytes": 312815,
+      "blob": "54d03abce960911fabeea18886c7d307591245ef",
+      "sha256": "88401bfac2583e744b54b65d39593cb773e4de2c7b54bce90dbdea1d90d7d1fc"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/artifact-14192765823.zip",
+      "mode": "100644",
+      "bytes": 625025,
+      "blob": "ed207c9bf138be138427abcd2f93066716e439b0",
+      "sha256": "d84e424a053851aaab9c98e58fd3d2683632e8ad068b950bce926003cdd5f076"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/archive-audit.json",
+      "mode": "100644",
+      "bytes": 2456,
+      "blob": "1e1abb1589aaf3f421b2cd1fe61711a7de1679f9",
+      "sha256": "921e66ee396cb714990b981e052a5976fc6dd79cc8629d8e007bbcab219e43d1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/official-packaged-artifacts-0220.json",
+      "mode": "100644",
+      "bytes": 2023,
+      "blob": "14cbc8c0c56d232877a0934b966fdcf5b651904a",
+      "sha256": "da68a3637c026dcc031780492f60517efb0fadf6042cd79539a867c9a1ca7487"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/full-api-jobs-0225.json",
+      "mode": "100644",
+      "bytes": 210964,
+      "blob": "73e6774f138b77b61aff42522ccf9e8065b1762f",
+      "sha256": "d51bd60401a56507c6cd36408e6c60fc62cf736a39405a61fda9df11e383d7a5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/ui-phase-source-review.json",
+      "mode": "100644",
+      "bytes": 12686,
+      "blob": "a5c6bcbffe16d2d699375e335be0a194704131c6",
+      "sha256": "eae7757371d43db93f86630ac88ccd92b2cabac5b568e29dbd928810981479f9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/independent-byte-foundation.json",
+      "mode": "100644",
+      "bytes": 14546,
+      "blob": "b51d14161c6cdb98c66e3f366fa489f2e0021e2c",
+      "sha256": "7ac302384de38eba0574e94cbcd5de3505f6b68bd40bffc3c9b7519d4ede643e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/independent-source-pin-audit.json",
+      "mode": "100644",
+      "bytes": 769896,
+      "blob": "1e24dc0aff1b7092325864003d72238b99581210",
+      "sha256": "3f97c11cd8e162e9e23881b9276429c37822941fe6c665fb99ae2138ae259510"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/independent-custody-source-review.json",
+      "mode": "100644",
+      "bytes": 55527,
+      "blob": "88f73005c5f578ee64a15ebcdeba744f4f5113e8",
+      "sha256": "1db9d0a8fdb39dd65042f83aaff03d592dd1764782c9c650e883053c0fb8eaea"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/audit.json",
+      "mode": "100644",
+      "bytes": 96592,
+      "blob": "9e2d1e930560a228b4ab0a096074211851c2af32",
+      "sha256": "36eab371f0da48573bcc2d08b932488e43ef0aa90daaaeaba655bc8ca5981def"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/Plan29-packaged-win-x64-failure-appendix.md",
+      "mode": "100644",
+      "bytes": 7512,
+      "blob": "3b74ee93b197787c77e7368cf12e057566b08412",
+      "sha256": "d15ad75cd0c0ca37811aee2c2db2df8b47320f5e0d9a4a0f6a9dbcde740f0f8b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/checkpoint-packaged-win-x64.json",
+      "mode": "100644",
+      "bytes": 7603,
+      "blob": "5c94b5b2b064cb6ebf5de200d9c46a4ba21b06ef",
+      "sha256": "d57ea27d7354bb13f4546225596ec1031625512a57ed03fbef077f6b48466cd8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/checkpoint-collaboration.json",
+      "mode": "100644",
+      "bytes": 17754,
+      "blob": "4ec69591887fb6a2c4783986726e159f0233d675",
+      "sha256": "76a0d6663e9492d9b4b797f83fd32241a470c8e83df0e9ebbc3bbd4762ec0be6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/root-canonical-packet-review.json",
+      "mode": "100644",
+      "bytes": 8364,
+      "blob": "93cd5ce0c84231fbaff49fa2e16376cba8246704",
+      "sha256": "63eb08e65a121c9abeb26272b15935eed659cca4215336771c000daee80b777e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/host-source-M0660-git-audit.json",
+      "mode": "100644",
+      "bytes": 163123,
+      "blob": "c6f687fc66ecfbd5ab750c1fa657af628e2329e7",
+      "sha256": "05d5046c29097f54d9fb6c48bb8ab4236240a883d5ebfda4854269c5779a2893"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-publication/upload-manifest.json",
+      "mode": "100644",
+      "bytes": 110785,
+      "blob": "c524fe4c68895cd5770026486e12fbba5ccb19c3",
+      "sha256": "c3dd18869abc701ff0d200b7b987da02b31db21ea6e9e4d7912b1c4a5b814784"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-publication/blob-upload-receipts.json",
+      "mode": "100644",
+      "bytes": 42619,
+      "blob": "1df4c12068beb341edda864f94683099536cb060",
+      "sha256": "688d60e7c6b866785355a4710c05ece9935f82e498ef66b3e0dc53b7b4671cc6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-publication/root-remote-tree-review.json",
+      "mode": "100644",
+      "bytes": 1138,
+      "blob": "e6667877b760728d100e3c198619455d22bda112",
+      "sha256": "2f53f7b52ef5106c601c0be89b94633fe5cd791115922e004ded99b245da4a08"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-publication/published-commit-and-normal-push-receipt.json",
+      "mode": "100644",
+      "bytes": 137527,
+      "blob": "07c5b971e5f9c375ff2b964b65ae720c65d0f631",
+      "sha256": "712587ac5271d0821304dac28a1a79a7d6d9c77cd91d7b41a1d21a3e1cd54068"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-publication/root-actual-published-readback.json",
+      "mode": "100644",
+      "bytes": 49704,
+      "blob": "30d4ebc862e9f6bd6b3d9f963315628819c95140",
+      "sha256": "c48942dfe41010e3986b20a044355a67882d1398b017b39968fb186703e599f0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-independent-assembly-review.json",
+      "mode": "100644",
+      "bytes": 27660,
+      "blob": "0322d46e4939c70bb4929eafe66fcf8c34dfd8be",
+      "sha256": "ef9f22f6b4b4448205199606146fe44c76c5fcb7da23e405aaff5ad4fb3a9d51"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-independent-byte-review.json",
+      "mode": "100644",
+      "bytes": 147591,
+      "blob": "1e16f9da887c0c7782bf73d2e03c0665088c69ce",
+      "sha256": "aa8b39015bfdbe34591cc117346053ea5612dec4f5a21b3532faf9681ece095f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-independent-route-review.json",
+      "mode": "100644",
+      "bytes": 2716,
+      "blob": "e45dac2401cc76c41cbe6e3434d63b047e80439e",
+      "sha256": "1e81be89abd9e5e1d6d526af1522a5a0eb8f39a89c92dc502cac8ae2dcbe5834"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-independent-published-readback.json",
+      "mode": "100644",
+      "bytes": 89110,
+      "blob": "db7828fe7c3a2d1d68cffcdb2ef7e81505fa284d",
+      "sha256": "09fd6cd013d8d547be765c5baaf639380d0e045480d6f44473ccc911e8f8441f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-privacy-helper-publication/source-manifest.json",
+      "mode": "100644",
+      "bytes": 5152,
+      "blob": "24f809ac0c85de68bb2023783f356be6b42b991f",
+      "sha256": "15ce758c1bcebb9cdbd99dd34431c986ecc85347bc1eddc7772cf7f6a0f4be67"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-privacy-helper-publication/root-remote-tree-review.json",
+      "mode": "100644",
+      "bytes": 1098,
+      "blob": "c6e94c27f1c6929ce3b4ffcbce979bb9e36b5497",
+      "sha256": "e84cf7e5f43a4ffedcc0ac5cea35b8321c303bc49e2f1532864668e6aa9aa81e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-privacy-helper-publication/published-commit-and-normal-push-receipt.json",
+      "mode": "100644",
+      "bytes": 142870,
+      "blob": "b2a3db2aa182fde8e7f51f089ac6002e130cd7be",
+      "sha256": "58673e1bf7c2db11cfa24c2b4c84e919a0084f720e4aad2e1c37a2b29b0de298"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-privacy-helper-publication/root-actual-published-readback.json",
+      "mode": "100644",
+      "bytes": 5176,
+      "blob": "b05ae14bd5a56d6e77e955c82efb305a8f6d41af",
+      "sha256": "7f785b15accc250e94bb47086845bf41db39731eb753c48d69c92534d97ed37d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-privacy-helper-independent-prospective-review.json",
+      "mode": "100644",
+      "bytes": 6854,
+      "blob": "6153b1514d022af447cded5c1440ab53db26af78",
+      "sha256": "c126258e3177ca520e75f62caecea15525d233a7167c26a7d0412aab44a1d5d3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-privacy-helper-independent-published-source-review.json",
+      "mode": "100644",
+      "bytes": 54882,
+      "blob": "076e783719f83734b7f6155773046b7b0e417a57",
+      "sha256": "fc9bf7e0f48363485f2ed5754938292250573433af41d1e9fe3062924ef024a9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/full-api-jobs-0237.json",
+      "mode": "100644",
+      "bytes": 211160,
+      "blob": "8d9c02e05176a2c9c7a22b735cf27581e109f0b3",
+      "sha256": "e63491d7399d6a3dd111937771310970f4aa805c22164c7c2c85f5fd85ce5b98"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/v2-jobs-api-0231.json",
+      "mode": "100644",
+      "bytes": 45617,
+      "blob": "c8060bc34b944637c34c33ce6a6014e66e90f520",
+      "sha256": "81659cc8e7fd44a50b4db8ab5e49c888808b31324eb80bbe673fda39392b2d55"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-m-0660/general-9e-edited-jobs-023946.json",
+      "mode": "100644",
+      "bytes": 21984,
+      "blob": "5b5fad6eef05e9a1cf5b7ebd3ded9177184b7c66",
+      "sha256": "4db2ed352f74d91b5439de860e9be5c74592fcb0840d9d947dd2e1291f363993"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-post-helper-current-ci-publication/preparation-followup.json",
+      "mode": "100644",
+      "bytes": 593,
+      "blob": "9f8b8be60fc895c96096032a2d19ab7f77eb646a",
+      "sha256": "daee194fefc02cc8ffbaddd12c069cd9e4b2fce9f9ee82dd442ea243bed374e5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-post-helper-current-ci-publication/preparation-pr1192.json",
+      "mode": "100644",
+      "bytes": 67142,
+      "blob": "8bc70da07640baeda8ff9da34b8f22574572450a",
+      "sha256": "21e56bf018e7ca5f64a4e2d8398752c24b84c16b7cf60daecf35733d38d5c9ff"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-post-helper-current-ci-publication/preparation-followup-open-prs.json",
+      "mode": "100644",
+      "bytes": 64,
+      "blob": "b3a83ab52ed45bc87dd2b8583b12b2ca94097089",
+      "sha256": "4d33a2c984b38735bc4f8a34fc4ab0661eec3d20f44adee5c7b2b0a6d8419961"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-post-helper-current-ci-publication/Plan29-M-post-helper-currentness.md",
+      "mode": "100644",
+      "bytes": 9502,
+      "blob": "ed4a07b18a6d8f1c60fb0fcb07d9122962b8b45f",
+      "sha256": "5082dd37ffac2e124206992cc5bfca432292e2ec9b6c01d71accb53025872bd4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "bytes": 1463115,
+      "blob": "ca171cbe7936f2e19214c0d61be34db671b54a1c",
+      "sha256": "6ef10ec0e904b3b72fe76fbebe96eb79952b52181775086f910459c10bfbf405"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/inventory.json",
+      "mode": "100644",
+      "bytes": 171287,
+      "blob": "78b948daf474d48e8b8dc188c7b5ca98867bde5c",
+      "sha256": "23eed6c3eb743075076c1d920af853222d6067787c131baca90a8f759d6cddd7"
+    }
+  ],
+  "payloadBytes": 15431435,
+  "leafCount": 10334,
+  "unchangedParentLeaves": 10243,
+  "modifiedPaths": 1,
+  "newPaths": 90,
+  "nonDocumentationLeaves": 8798,
+  "nonDocumentationMapSHA256": "d3ed00695b2d09d3bcd38d41830ddde5670908c858a600bae03c757dc00bc397",
+  "allNonDocumentationBytesAndModesEqual6ff": true,
+  "sourceChangesSince0660": [
+    "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts"
+  ],
+  "retainedInheritedIdenticalPayloads": [
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d",
+      "actualGitBytesEqualParentAndRetainedOriginal": true
+    },
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/currentness/ci-m-0660/general-M-jobs-020513.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-jobs-023946.json",
+      "bytes": 5355,
+      "blob": "575efa05b7bee1342ff6c0f726a001e4c6fedfa7",
+      "sha256": "f6e67468999ebd897d6c40925871ed829657ee444dc5bfc8c21f2cece0b39a0f",
+      "actualGitBytesEqualParentAndRetainedOriginal": true
+    }
+  ],
+  "actualGitOfficialArchives": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/artifact-14192610672.zip",
+      "bytes": 4000,
+      "blob": "196950086facc7b3839ebfe2715e56d556633a38",
+      "sha256": "a40813439aae30d3e2042aa9b7b20e141a88e85de3f7748fc6a13c9b3c47bc53",
+      "members": [
+        {
+          "name": "native-v1-1.19.4.json",
+          "crc32": 1756238950,
+          "bytes": 4479,
+          "blob": "098ee2bc1a4d3546edb10df1371a5eb72d23ab05",
+          "sha256": "6742fc5b78b37853629d8b7ac9802f73dde45e28177aba5bf6a917c8a3fa14f8"
+        },
+        {
+          "name": "native-v1-1.19.5.json",
+          "crc32": 3488580313,
+          "bytes": 1723,
+          "blob": "594aff6794552296829c98ba9e3bd506347fb5fa",
+          "sha256": "2a3c2274cd9368d40f9c14acbbdcc50208a01cc3f9700f6b64a4406dddfa510e"
+        },
+        {
+          "name": "native-v1-latest.json",
+          "crc32": 3488580313,
+          "bytes": 1723,
+          "blob": "594aff6794552296829c98ba9e3bd506347fb5fa",
+          "sha256": "2a3c2274cd9368d40f9c14acbbdcc50208a01cc3f9700f6b64a4406dddfa510e"
+        }
+      ]
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/artifact-14191567899.zip",
+      "bytes": 1646654,
+      "blob": "82e24692ea7234b89389500601bd46b18bbfcb10",
+      "sha256": "c43ec6168b096d4b6520e73f20be2411d693603497997c2428976e7ee48f46be",
+      "members": [
+        {
+          "name": "TEST-desktop-backend-mL97kT/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/06964c8f-336d-4acb-a6c7-8df5e8f73e8b.jsonl",
+          "crc32": 3188400858,
+          "bytes": 6055,
+          "blob": "ad94a9703e3b68ab72341d4d3510b7b307ba9d55",
+          "sha256": "43fa2492a3923d54c5b7f3a75e67da04d320be2a14d4a887ca949c8f1c68a63a"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/TEST-peer-claude-scope/effects.ndjson",
+          "crc32": 1371922671,
+          "bytes": 7015,
+          "blob": "894b3cb61af228a3bb6a1f1a0702ea942b5e8ad5",
+          "sha256": "db810f03d55d91fdf7be95bf450c3cbe42ce5c62db912ef228ca001ba2507e6a"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/TEST-peer-codex-scope/effects.ndjson",
+          "crc32": 2302569800,
+          "bytes": 7265,
+          "blob": "7913d4b8220ca0dac76b04f8caad51887346990f",
+          "sha256": "52a0143f0abce35e362089e820e586e5501e903afbdee33392ba05ae72f12b69"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/TEST-peer-opencode-scope/effects.ndjson",
+          "crc32": 1582642610,
+          "bytes": 6546,
+          "blob": "aa842473bff516f87cdada2cac9af68546da1de8",
+          "sha256": "d4c24add6e7f9da58eb205e1bcda47d11afaa97598305d189a5522486f537488"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/desktop-app.log",
+          "crc32": 1394001599,
+          "bytes": 32323,
+          "blob": "8017a34e1cc382ed9d08753ce74867d06f00e2c2",
+          "sha256": "4493ab10ea95568cbf291a9745e1b4bada860bab19901418ce3e131aa45d94d9"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/desktop-backend-receipt.json",
+          "crc32": 2201270903,
+          "bytes": 1012298,
+          "blob": "574f8dbc0679d75a45d498ff71e1d874c4fdbb50",
+          "sha256": "daa2d1405c791f8a41aac1b3e3fbac6e72f398ffe909c95dd4b24b2a93b5b82a"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/desktop-descriptor.json",
+          "crc32": 2360711687,
+          "bytes": 3885,
+          "blob": "b681e07119d4c441573626a3b47a4e4e7772d2fe",
+          "sha256": "0b312c437a699442cf71db9a048b4543c49427089a3923abe71fb1658de0eec1"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/home/Downloads/TEST-native-chat.txt",
+          "crc32": 3933552565,
+          "bytes": 40,
+          "blob": "24474d0f8059dcf4bb5a180e883687d2913a25cc",
+          "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/host-profile.json",
+          "crc32": 1148537984,
+          "bytes": 20027,
+          "blob": "70d9780f233ce5cf693014f648683dd041a9555c",
+          "sha256": "e1a44b871d1afe20994c965dd60705f125f24161ef7887fdc7b083abd354e157"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/management-commands/3f76ff3a4ae2fe3db24fc1d577a2d7966f533a5f6e8b48683475469af8e5135b.json",
+          "crc32": 4128792781,
+          "bytes": 904,
+          "blob": "912002f66f185b2682f06bb7f22c27c3121746b1",
+          "sha256": "ec97157e215265bc32b7046b214b02c6cbb73b7a4d4f46d366454f554b7ba59e"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/management-commands/71122803dadd7cbb7bf872c000692d296ca770667a83fdede3a58365c9a9e2a3.json",
+          "crc32": 28318247,
+          "bytes": 5826,
+          "blob": "b0badddb29eaf066ef28d5df83cf632092bd1177",
+          "sha256": "9a698fb87643c3136870716dea8a006cacb6c2d927d3ab3fe116412e7d598329"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/management-commands/77999557b985a49272d1cc7e3ff12298e87d42f07d001b6167a32276ab82fd8f.json",
+          "crc32": 638856723,
+          "bytes": 5826,
+          "blob": "62c52c018e7d3c58c2559b2dfb853b03fb316434",
+          "sha256": "6963b270285b9ae5a0d5f13e38d481bf8a2dfabf0ea8f3dc6eadaf12804ed5b8"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/management-commands/d0b663d60aae8ca23181c4d5a203b5332e505a92a2fa61eb98d22322bdbead26.json",
+          "crc32": 879784765,
+          "bytes": 956,
+          "blob": "35a8527c3d4ea1a3c4fee20a78f30c37da7c12a9",
+          "sha256": "bc4114576d9bf2f07b8076718915cfe7c048ba4183804ab4af7fc1cf50bb7c3a"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/runtime-checkpoints/cp1-1e8dd3557302ce7c4df15a629eaa5761b580acf570bf9887722607c85bab9068.json",
+          "crc32": 3984857202,
+          "bytes": 2030,
+          "blob": "8d9fb5bb90ddd967fcc647178705d5009fa69eef",
+          "sha256": "b9ab47429d619adbc290c24814782dc90ac95e30a44c009676a2602cf5ffabc1"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/runtime-checkpoints/cp1-8d13aac3084ac8262ffdd5235ef51e714d4f350b3fcc6b992a63132899ac7ecf.json",
+          "crc32": 2743271338,
+          "bytes": 1780,
+          "blob": "ebf0f69ac05a478c33e9d5dff9cab9daa32d4307",
+          "sha256": "de5d676756372b2513b2fde17cb71362c28a4eb473efbc03b4fd52ce6def90c0"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/runtime-checkpoints/cp1-a16ea3d040da3546f7d397f5a065e65d4ee8ad982ce2c1762d17253d5a1895a6.json",
+          "crc32": 2719095043,
+          "bytes": 2220,
+          "blob": "4fcf58815d10cf34897ffcb36b9b16841e4c7d35",
+          "sha256": "320ac8dd1f87e16a6aa29021c0680868e716121b453bbfc0fae952f1a26cc45e"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/runtime-checkpoints/cp1-e45b48793e74fd76a558f2709fcd2a1f81d13d9d7e74898dc6402e4e54662f22.json",
+          "crc32": 917413872,
+          "bytes": 2242,
+          "blob": "78cc2569ad5f957f68e9989c283bf271d6a09240",
+          "sha256": "9565a1d11cad1f0638db2ac9bfd59509941c67ef54481aa4ac79137b0a51977f"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/group-chat-reactions.json",
+          "crc32": 1103550298,
+          "bytes": 1251,
+          "blob": "bd86b4461b49185b2833dd5f4204416d7ab371bf",
+          "sha256": "48f74723a6e31832c1447e37c79a4b24137156513a1c74ce8735201f8319c1c6"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/group-chats.json",
+          "crc32": 1867274749,
+          "bytes": 361,
+          "blob": "d132f401aa7df9fb7dec471cfb797a031bbe0c21",
+          "sha256": "3a4f78da6e4a97cac2fb972c9277b1b6fd256f5f5b7c46ff15c567356211ea26"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+          "crc32": 3864203416,
+          "bytes": 2545,
+          "blob": "1e30f6bead0dcadf31c725652aa310b6ffa900d8",
+          "sha256": "520945d0a1dc5bcefda6149e53c305588367829a0dd4c7aeacd512286464c623"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/inboxes/bob.json",
+          "crc32": 2704266441,
+          "bytes": 1004,
+          "blob": "1d2f7926bcf9ddda031346c86970f4922fa16023",
+          "sha256": "3cdd881d35f942f8b1f4a8dfda3bea6726c25811970f5d4b0daa0a28a9147e70"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/inboxes/carol.json",
+          "crc32": 3798709182,
+          "bytes": 1439,
+          "blob": "3946a6745cd2f55bb5089b6f98515f1557977003",
+          "sha256": "f31a66df49992a81d7e72703203e9c33cec6a55b39a78eaf6164903a1961c51e"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/inboxes/user.json",
+          "crc32": 1953785816,
+          "bytes": 2653,
+          "blob": "4c7f4fa4a39f93f3ed462a08e8c395fb6c9d5780",
+          "sha256": "467a6e07b3d818689add5da649a29094bf4932bd4b486a26bd68a6e98a43eb02"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/native-chat-attachment-inputs/TEST-native-chat.png",
+          "crc32": 4269671476,
+          "bytes": 71,
+          "blob": "8d79cc731a6bbfd43247473d7ef6d2c0e9519994",
+          "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/native-chat-attachment-inputs/TEST-native-chat.prepared.png",
+          "crc32": 1122149609,
+          "bytes": 90,
+          "blob": "2b125a946b4ac2a055673d204de647b43fd73cf2",
+          "sha256": "43d614f0bc1b36ec2da1effa16b34498a3a62922caff5fd38238990423c50d49"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/sentinel-invocations.ndjson",
+          "crc32": 2680405428,
+          "bytes": 96,
+          "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+          "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/native-chat-attachment-inputs/TEST-native-chat.txt",
+          "crc32": 3933552565,
+          "bytes": 40,
+          "blob": "24474d0f8059dcf4bb5a180e883687d2913a25cc",
+          "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-attachments.png",
+          "crc32": 2836330153,
+          "bytes": 126473,
+          "blob": "93648e34416793e839a4587bfc0580c5d2ecb56d",
+          "sha256": "662ca3f71f6b15aac207af1be4587ed12ed0cfd512817119ac6b6d8ed2d36bea"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-direct.png",
+          "crc32": 2042865421,
+          "bytes": 113790,
+          "blob": "5b8e33396798283ae315613cafe21cc825a75312",
+          "sha256": "a6350dd1e9a741751380fbf78fe91f8b5538b84f88a84d267addeebb83c45863"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-effects.json",
+          "crc32": 259353780,
+          "bytes": 27680,
+          "blob": "b6a815ae16f8653105ee107088de5a906be91fb3",
+          "sha256": "8ea157ade6688d6c38cfe32fbc28506d8ddee1da85b0b05889fd177c359c44a6"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-group.png",
+          "crc32": 1395994867,
+          "bytes": 112220,
+          "blob": "d9e5e0138a96ed09e91b8b48dfbbabac683a1c8d",
+          "sha256": "595abf15371e643a2f4e1f435757c2d42d02546840cd9d233fbf51afd879fb3f"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-launch.png",
+          "crc32": 1399600284,
+          "bytes": 107832,
+          "blob": "daedfbe11c77933f3c43daf49ffd3666e9eb517f",
+          "sha256": "846c3c1bc1f53548559a6099988f54d61d433e9254d32ceb638863fc5d5498d3"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-member-logs.png",
+          "crc32": 3447358833,
+          "bytes": 168193,
+          "blob": "dfdfe9c34c5f2f6c77c7c341f6720512ee646574",
+          "sha256": "f7cb036459d5fd1e432d1448c0492c53a567cc9d2976bec35cd3c99acf4228e8"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-reloaded.png",
+          "crc32": 2341020029,
+          "bytes": 113653,
+          "blob": "8106fffd94eb199d52f223c6623dd6d2b19c70a3",
+          "sha256": "f629e6e8d439391aff6a4ecdc155b46e52b10ca2c02dc12803f5c47c8a10e491"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-restored.png",
+          "crc32": 2908718173,
+          "bytes": 156228,
+          "blob": "a2aa09a09706da25d48bee61ccf31b2eaa786ca8",
+          "sha256": "c59f9d00660fee933cb0c470027dd8c7a4b716e3db8a67c4674407d21db231c7"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-stopped.png",
+          "crc32": 3199575784,
+          "bytes": 151461,
+          "blob": "2db965066919cd558884953f04fab5a468e5a37a",
+          "sha256": "0bf1b7142e0c9114add3d63a52b9ee6b850ec46a35d48ed80e40a4417ce34cbc"
+        },
+        {
+          "name": "TEST-desktop-backend-mL97kT/ui-seed-receipt.json",
+          "crc32": 975951394,
+          "bytes": 2685,
+          "blob": "ac015a708a0be36f5d637bda15c6a8a1baa0c26d",
+          "sha256": "b28476d60da25dadc5b1d565f644fb743dd923c7132ea7b5d77cd5ae61145008"
+        },
+        {
+          "name": "TEST-emulated-ui-inputs-J9ojCG/linux-child-exec/linux-child-exec",
+          "crc32": 3977027915,
+          "bytes": 790608,
+          "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+          "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+        },
+        {
+          "name": "TEST-emulated-ui-inputs-J9ojCG/linux-child-exec/manifest.json",
+          "crc32": 3765380163,
+          "bytes": 2408,
+          "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+          "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+        },
+        {
+          "name": "host-emulated-emulated-collaboration-ui.log",
+          "crc32": 1937898700,
+          "bytes": 225,
+          "blob": "1cd294a12379826cd10b872f2fd0c7eb69b8d47f",
+          "sha256": "6be7cd071f9d3da2a199c30c4250b3fd4a449d808fd028634f8765eb26b0023d"
+        },
+        {
+          "name": "host-emulated-linux-child-exec-selection.json",
+          "crc32": 713444338,
+          "bytes": 271,
+          "blob": "eceac80eedc549cbd81927dda591ba58386f9049",
+          "sha256": "e6dc29ecefb4d7200712f83a1f062b9095a2a7cfafcfa0aa953686025343dd1d"
+        },
+        {
+          "name": "host-emulated-inputs.json",
+          "crc32": 3525914398,
+          "bytes": 1803,
+          "blob": "c52a4beb66028b4c8255af3fe7c59f6f2000df4a",
+          "sha256": "de4b6e5c73cee230eba5cc8aa9e77e4832850fc791d24f570702e30a6d116b43"
+        },
+        {
+          "name": "host-emulated-summary.json",
+          "crc32": 2209670401,
+          "bytes": 1058,
+          "blob": "b57a41da562a608dee2f8b8f3891c871f97c109d",
+          "sha256": "052ea15b9754101b086e75d52846b2fcc0f8454a80c1bf11049369383df559a3"
+        }
+      ]
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/artifact-14192410704.zip",
+      "bytes": 1436127,
+      "blob": "0525b930a2e5fd5cd3d05c701ac3925c0288972f",
+      "sha256": "49a1f1d6408374dcbd48db0483e8c9e02b07d3d5ff803032291b85f270ebcb50",
+      "members": [
+        {
+          "name": "TEST-desktop-backend-wUzd4r/desktop-app.log",
+          "crc32": 2334162966,
+          "bytes": 22811,
+          "blob": "291e797d7e35a2e27b7333918b382a07d5d70d43",
+          "sha256": "e6cfdb0721eb408cf48158e736978904bd5c21d7569ed8d467ff475b9cbd1480"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/desktop-descriptor.json",
+          "crc32": 730299372,
+          "bytes": 2993,
+          "blob": "80b16fe93a9abcd70b548461885367a54c69d842",
+          "sha256": "f978341f27daae95117761325230dd59dabd1f303849d552e1117a939bb855e0"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/desktop-backend-receipt.json",
+          "crc32": 58208775,
+          "bytes": 905927,
+          "blob": "feb446be328b0befa1f06f2a692126886f09d7e0",
+          "sha256": "a5559c472af67b90541a598c75d94e97345db0eff84cced30c7ea34ab4f11f54"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/host-profile.json",
+          "crc32": 2133044718,
+          "bytes": 2618,
+          "blob": "2342d53b42d99fce33399e306c54102a98872716",
+          "sha256": "9a24587d026643acb1ebe64ebff50531cec39350f5df3b794fcc55934ad327b4"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/hoststore/teams/test-desktop-backend/group-chats.json",
+          "crc32": 1634834813,
+          "bytes": 340,
+          "blob": "5e3e4ecaab6badfdb48a590217d421c8054b8b02",
+          "sha256": "f174510346f0d16652fbed767cecae1f8f0fd732752f76fa205c46e7ded57bf2"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+          "crc32": 2571605805,
+          "bytes": 1295,
+          "blob": "56185db3785ed078abdc45ce312de8c7330dd390",
+          "sha256": "f0f219db40ab8993d38a7b1dd0635dd078566e815c5593bf10430f255fb0ca5c"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/sentinel-invocations.ndjson",
+          "crc32": 2680405428,
+          "bytes": 96,
+          "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+          "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/ui-failure.png",
+          "crc32": 561859687,
+          "bytes": 126006,
+          "blob": "79dde3482a0588f28131950edc35ff4a77a53334",
+          "sha256": "a5b8955581d0ab2ee8396abbafbd97d91d5d3577a5b188eadc8be9ca8f5f4e8c"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/ui-group-seed-receipt.json",
+          "crc32": 2783178025,
+          "bytes": 593,
+          "blob": "133738a6787d3f1c3df61536335b4a792ad8233e",
+          "sha256": "29461f100115e9a6ecde9829a9f8606075caad08d639c9cc19c99cff8c7ab1aa"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/ui-seed-receipt.json",
+          "crc32": 165813575,
+          "bytes": 2197,
+          "blob": "f38854ebb50a3a02b1998698b2cb555fff11722c",
+          "sha256": "922a7d4c62e3f70abadc584f502885db3aaebc44a9a3378dd45cb4cb4c09db25"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/ui-task-board-assigned-blocked.png",
+          "crc32": 1495866368,
+          "bytes": 109479,
+          "blob": "0247671b13f403ce67873b8deb6198596d0e3140",
+          "sha256": "cb503c3031ab0601410de197b3121d5e95881e820c818960223d55cfb122bfe4"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/ui-task-board-attachment-added.png",
+          "crc32": 3585617173,
+          "bytes": 127508,
+          "blob": "c1aede06ae1448188496d006a0cd1377f782d717",
+          "sha256": "786b8ee3f90963bc6988badbd16ccacd2a9544996a24c8ee69e04a4161460c4e"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/ui-task-board-blocked-start.png",
+          "crc32": 623214808,
+          "bytes": 145382,
+          "blob": "38d00b762753eb9d422bcdf661f1024b4b470974",
+          "sha256": "028ab933ae449b8db05b158877f48f5f1841cc5388086e1b5da015ce9da61994"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/ui-task-board-initial.png",
+          "crc32": 3944521990,
+          "bytes": 108012,
+          "blob": "f19b237c80062fe231a0657888e8342f44f8eadf",
+          "sha256": "4600b6d53245608af52cc36de92eca2fedc4f24ca30063b3e0a21824bb65c0d8"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/ui-task-board-reloaded.png",
+          "crc32": 2382774568,
+          "bytes": 124111,
+          "blob": "e6e3bb65bf898c7b5e8993c5eb68a752ed9959bc",
+          "sha256": "d9d424a8bb27dfc67abf8eaa480339058acfc2d1254bd31502aee3f3c30edd61"
+        },
+        {
+          "name": "TEST-desktop-backend-wUzd4r/ui-task-board-reordered.png",
+          "crc32": 836542952,
+          "bytes": 145329,
+          "blob": "7c61277231be9180f3aecd3834bfb7df190e197e",
+          "sha256": "ed510a4b0426361fc25c85c50cd50eed2c62e6c6c03495ae0c8d0ce54291caf0"
+        },
+        {
+          "name": "TEST-emulated-ui-inputs-ZHrOkm/linux-child-exec/linux-child-exec",
+          "crc32": 3977027915,
+          "bytes": 790608,
+          "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+          "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+        },
+        {
+          "name": "TEST-emulated-ui-inputs-ZHrOkm/linux-child-exec/manifest.json",
+          "crc32": 3823006952,
+          "bytes": 2406,
+          "blob": "9d295189c6e88a7f57193e79097621d00f21c395",
+          "sha256": "4ef7cd76c1a549d6fef41c4dc7561b5433547278d59b0c2907affe2be9a646f1"
+        },
+        {
+          "name": "host-emulated-inputs.json",
+          "crc32": 1732484437,
+          "bytes": 1803,
+          "blob": "2248a139ec132f4931eb15dbe2c142be631ff42a",
+          "sha256": "245b3907e2d04c2f2bac94d3d39737e17b9c0be62f1af1861594762a63369410"
+        },
+        {
+          "name": "host-emulated-linux-child-exec-selection.json",
+          "crc32": 2999205830,
+          "bytes": 271,
+          "blob": "bcf3cd4be0a93af7d12780d6ee26dea1c3b7b3fa",
+          "sha256": "5492b9346f26384f4bbf209504f8eac703ba95c1379f3aea3915edd327f450f7"
+        },
+        {
+          "name": "host-emulated-task-board-cross-team-ui.log",
+          "crc32": 1291309460,
+          "bytes": 7054,
+          "blob": "0626009229a3f113eb711abf2e282505de666228",
+          "sha256": "2cd40519dfbb73ae86a759c4d94c52e17f022bf5404ca8b90142efe5955857a2"
+        }
+      ]
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/artifact-14191310178.zip",
+      "bytes": 1614938,
+      "blob": "0db3b255f2507e77caa6445ee7f2f9fee399aed6",
+      "sha256": "48a8740d05e2154e61daf7983f7e73404bf2d25eef1318a5a7a3df885b0e29b9",
+      "members": [
+        {
+          "name": "TEST-desktop-backend-okmuEL/desktop-app.log",
+          "crc32": 548714429,
+          "bytes": 26064,
+          "blob": "2657d81aae53ed5fdb21f108c09eca33571f1080",
+          "sha256": "04033e8b71444adc00fe1fa0639e3466124d5022bf3bd037bb959c6a1916dc5a"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/desktop-backend-receipt.json",
+          "crc32": 1510665171,
+          "bytes": 1048507,
+          "blob": "cc3170d8ab394394130596bcd3bb837cffcfbd7f",
+          "sha256": "9d25d1d40258faf16700809d392840a77d778d9ca817e9c3ce5aedba06de64a9"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/desktop-descriptor.json",
+          "crc32": 4136636732,
+          "bytes": 1950,
+          "blob": "b41e5d607da46a75f0435f5a3c7075d7563ba057",
+          "sha256": "52dff43d41d5d3513d6435edd963feb432a241dd863334f297f7638cdbe72698"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/host-profile.json",
+          "crc32": 2860197169,
+          "bytes": 1154,
+          "blob": "1c044f28e1f5c3544bc7de91b2ed9b5a2f0b71a6",
+          "sha256": "f16be98c0573f5262e97b242fd85482f9df18b4a47d03eb4163a6b90ab35a7de"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/hoststore/teams/test-desktop-backend/group-chats.json",
+          "crc32": 3773103244,
+          "bytes": 340,
+          "blob": "89c278259684aef89ec04af064fee1ec66a0d733",
+          "sha256": "fb8ea5c5c7870224e3e7ea3cc8deee095fd8f82208e6f12dc0557192d80280e9"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+          "crc32": 1897723259,
+          "bytes": 1891,
+          "blob": "a6b2a575ece4fe17fb5a5e5917d19575bf8b538f",
+          "sha256": "8cb3cba3955bcc3b6c15a762d0296a6109c82d29e795ddcf4f0ef1a7941d925e"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/sentinel-invocations.ndjson",
+          "crc32": 2680405428,
+          "bytes": 96,
+          "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+          "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/ui-group-seed-receipt.json",
+          "crc32": 1426390645,
+          "bytes": 593,
+          "blob": "8bf67f1034191f9730be59689a7d668ef4698f55",
+          "sha256": "1e245ecbf3bb3ad2a86d363010eb45e185921b49d54d0a365729d8ee1217217c"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/ui-seed-receipt.json",
+          "crc32": 2233427617,
+          "bytes": 2197,
+          "blob": "e7c4f6dd18a5e554a7810bd509e6956806a8902d",
+          "sha256": "b3e9cbe07048aa585b1e33ba511d8584cd7064e34e8a50168b1c4eb26565403f"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/ui-task-board-assigned-blocked.png",
+          "crc32": 2598217084,
+          "bytes": 100941,
+          "blob": "c5824875b13b9aaa3506e526c31d15016b0868f5",
+          "sha256": "a7f0d76295658c15889ec83c29b006a5120fedd72a079c238c6f656f816dc374"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/ui-task-board-attachment-added.png",
+          "crc32": 3971527048,
+          "bytes": 118491,
+          "blob": "5f7e604edd345067a8acb95c5df0889f7411e555",
+          "sha256": "dbeb33088f51c6c1a7db2d5655845663d5c0d584f02da2beb603a2ce6477f9cd"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/ui-task-board-attachment-removed.png",
+          "crc32": 2003304808,
+          "bytes": 107598,
+          "blob": "07c1c1918de611b7350b407fb33ae40366bc6101",
+          "sha256": "768736707f4946f198a364d984c713628a28631d5dd4c008ef7b4ddd30c944aa"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/ui-task-board-attachments-reloaded.png",
+          "crc32": 401099997,
+          "bytes": 106087,
+          "blob": "195722d526c7467ea3bfa1ba18c400f3d33973b5",
+          "sha256": "f9f1bcb3e68aec10bc5acc51de60f208d718e4ce0270f1814b938ba420d06d15"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/ui-task-board-blocked-start.png",
+          "crc32": 2666238198,
+          "bytes": 121855,
+          "blob": "4ee2214bd992f62e3f1cc4edcb5e4040e6f68e10",
+          "sha256": "2743701c8a5dfe31b32e83be35609da28f0002b0c6e33edb133eadea981b4720"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/ui-task-board-reloaded.png",
+          "crc32": 549349493,
+          "bytes": 113832,
+          "blob": "3d8f25516fe4025f499ccc13c54e8a84c77ac698",
+          "sha256": "772ab26098661de9095f0128a2b4130f6b8426f0cff541f9c70c9345be6514ab"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/ui-task-board-initial.png",
+          "crc32": 3394509938,
+          "bytes": 97359,
+          "blob": "6cdff3474629a4bcc0f053461936702e9c73fefa",
+          "sha256": "603e11c2e561b50095c4d77bd8510d32161e7271df1a0f28d2f49abcf4ca2cfa"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/ui-task-board-reordered.png",
+          "crc32": 3088484309,
+          "bytes": 121771,
+          "blob": "de9a742888e347bd188d24d6855c11d58533e2bb",
+          "sha256": "7509dd38efea7aa6bbfda470f00e51f25ddd623932bad403b75bf8a2bdac1a3c"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/ui-task-notification-quick-actions.png",
+          "crc32": 10793364,
+          "bytes": 81032,
+          "blob": "dd9e132de49712b3df67527064d198287fc67d74",
+          "sha256": "d462b9dd92b181ea1c9b5b4f64320574b8c75e992c41652aa25ed2bb5b6ca486"
+        },
+        {
+          "name": "TEST-desktop-backend-okmuEL/ui-task-trash-original-row.png",
+          "crc32": 1804365962,
+          "bytes": 99797,
+          "blob": "ecf7d166b068fa3b22cf101ba8cb58cf0c227e3b",
+          "sha256": "30912c143112fd675a756d00ad9ad76d1c41a385c556c2771625d0367b7a2fb5"
+        },
+        {
+          "name": "TEST-emulated-ui-inputs-Bt7RAM/linux-child-exec/linux-child-exec",
+          "crc32": 3977027915,
+          "bytes": 790608,
+          "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+          "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+        },
+        {
+          "name": "TEST-emulated-ui-inputs-Bt7RAM/linux-child-exec/manifest.json",
+          "crc32": 3765380163,
+          "bytes": 2408,
+          "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+          "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+        },
+        {
+          "name": "host-emulated-inputs.json",
+          "crc32": 3094117952,
+          "bytes": 1803,
+          "blob": "6da9fd2b8b4b482c80faebdf3a61bcf2a1af2054",
+          "sha256": "cde960c14550724469c7e3ab16dea640e5a36d3d4b9001522742c576cf16d226"
+        },
+        {
+          "name": "host-emulated-linux-child-exec-selection.json",
+          "crc32": 1400843021,
+          "bytes": 271,
+          "blob": "ed5d622ae6cd60c2cf0d373485f7e2b72a79f253",
+          "sha256": "00deeb114544fa51b1088b91e0774a09fe09ac883058582f615c77dd47ddd450"
+        },
+        {
+          "name": "host-emulated-summary.json",
+          "crc32": 4194316440,
+          "bytes": 890,
+          "blob": "1ba67e7c97366ae3d19c5aa583bed31be27fe096",
+          "sha256": "0cef8e9c1540683f8bcc601a4f9536856dd43b8b39ce71e0686d2da334856bbf"
+        },
+        {
+          "name": "host-emulated-task-board-ui.log",
+          "crc32": 3889128328,
+          "bytes": 225,
+          "blob": "9dba66729f232b6d5468fce7687e8cc094ea0768",
+          "sha256": "732f9046004918d96b61600342cbcfb3a3b16f504bf49d65641cfe72a2d1b483"
+        }
+      ]
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/artifact-14191785424.zip",
+      "bytes": 1011648,
+      "blob": "7ab6151c0f069b5efbc06e55eb6906ef126a4bbb",
+      "sha256": "da6292a773eb4e7af1a410d730457bec318c35e15c92518b92f0e770d386b9dd",
+      "members": [
+        {
+          "name": "TEST-desktop-backend-n3BzGv/desktop-backend-app.log",
+          "crc32": 1354228183,
+          "bytes": 17085,
+          "blob": "ce8e66caae91321f6700229bd9282e0fb621b71c",
+          "sha256": "32a3d425b56a30cd41831ab873cb1c50925c66114099412029fb7c385c680894"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/desktop-backend-receipt.json",
+          "crc32": 1601919421,
+          "bytes": 731095,
+          "blob": "dd5d95ca4b7baf611d21b9eda4a424c2d2aaa1aa",
+          "sha256": "4c3649898de49bb965d9e6a2c4028c7ca84c1cae96da55c50beb5c881de29597"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/desktop-descriptor.json",
+          "crc32": 474561741,
+          "bytes": 3319,
+          "blob": "0b89da22053866bdf180e20055ca69cda7ff93b5",
+          "sha256": "0fd1d101a1865e985b2a103c06d9ddd00edf4f8668e235a2bb556607874b8db0"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/host-profile.json",
+          "crc32": 3666912515,
+          "bytes": 5011,
+          "blob": "c2b01db7876ac5cb5deabfd466616fd737dc426d",
+          "sha256": "8a0d8fa0a506537f3fa17e5af2837083ba20c831d90d45f80bc035049232337b"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/188e0ca5fd5ac6bd40621401e97426d2d75714c80d3d432625a309a1e1e85d64.json",
+          "crc32": 3646054582,
+          "bytes": 3216,
+          "blob": "81ea8f961a2a35d4994c853c3c983adc4c12d3cb",
+          "sha256": "d100d06600cf0d99321f523be9869b7873d7f7a6287ce9d314e8c8498d43ea1d"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/1d35e62d9afcabecc54d23fa0d8726b6a463eb8fadc083b96538c3a3bf9fe588.json",
+          "crc32": 382815073,
+          "bytes": 1345,
+          "blob": "c52ef4bd67798a0a7922acbcf379fa96f07a8b87",
+          "sha256": "395166a162509f4a7b334ace7e5fa7ccd4378a5894518d603b0c5d552bb8ae47"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/1de194a9d4da7f88ee8245ac0d5b14e66f3bd566fee7c36bb6ac8be515c742ff.json",
+          "crc32": 1520450544,
+          "bytes": 3237,
+          "blob": "e92e78bb1c54319dca56e5d97bb30a666d03b24d",
+          "sha256": "dc23b93c0a59aa5adc121a0d1430625a454c95e3c89d0ea320f769777ed435fe"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/387897222be465245b1c621d8d19acf6e588fbb4e1d93bc935a661698d658204.json",
+          "crc32": 1010679237,
+          "bytes": 3267,
+          "blob": "06c60e0167ae4b3e61033230e9576e7aaca928d3",
+          "sha256": "b580291f0f938814861bffdac169d289e6721d389382d15503b35d4492a3b721"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/3cd72e9eaa496e1f367f941f2d64fd0004e465564ef0169092a4ee4150ed6224.json",
+          "crc32": 4215007609,
+          "bytes": 804,
+          "blob": "e772ea607a549cfa49f96864fb92470083716a3e",
+          "sha256": "b8a79dad29218077c76698c7796fe806f7f390030b41333d25cde9c011e0ad64"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/6a4dab2969f303ee469161138fd59a8cbe0ad4612db624fca09b630c947469b4.json",
+          "crc32": 2403790036,
+          "bytes": 2811,
+          "blob": "e0caa70161861ff71ab6f11e48b6481953f3c10c",
+          "sha256": "cc479068d1df26ff2ce4cd38f0cc34f204d5882cea1ab8d3bfda4de7a429dc7e"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/853e7960b1786cf1a8a4a68cbc1fe8958340e3bdc5318e58820801653ded1eb0.json",
+          "crc32": 1831016054,
+          "bytes": 1370,
+          "blob": "640a1cc869a70c54bcb40cedea4091016fd6e244",
+          "sha256": "782fbbf1483593b956df798e92166baf5e6c1580a0f6975b035537066f57e477"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/8cbb340f020c2b09eff4ee2fe40abad7660d2063efeb47472b6d5731372e6247.json",
+          "crc32": 688190354,
+          "bytes": 2832,
+          "blob": "9c399413559f31210c974116ebe616b7da8ade4d",
+          "sha256": "1dda6fe0df5f8b07a7957f9c0663f54c592b35ff94572938b79bf0fc5af38347"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/9b9a22aa18c7f67ac028ff52d6e44425572f6ba884466dabc00cd260faac8242.json",
+          "crc32": 2880061755,
+          "bytes": 812,
+          "blob": "e4eace80488be69d8df414ae0832f75cd475aabe",
+          "sha256": "8d18193f44f329b58969459814d5ee99fcb268fe6a6a6c344d13fe30e0bf9f5f"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/ab7a4405139097711a68735e0a40e2d1c7123aaebe2d1f199105ca978ab22b01.json",
+          "crc32": 885521884,
+          "bytes": 812,
+          "blob": "530d56a8d06cae03557b502e373e6298263d2c3f",
+          "sha256": "448419e4a0a32300920e4a586117c1eb0abafd6d0587ae0e3f05c455a95100ea"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/d19d0f344ea662f18302754d3e5f55551ccabe017a11bfbe08924ea075b9f475.json",
+          "crc32": 1196972219,
+          "bytes": 3245,
+          "blob": "327171cb9071bbb3874bab7cf43082be64c21155",
+          "sha256": "47d64609aea6fa4d3fb254511e2bd6fb2554cee2d547f299f8744d9d591a3326"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/ded973d826635e14459c6e5b1aa95404545536f25ba4d4fbdb241683663cbd0e.json",
+          "crc32": 1012086762,
+          "bytes": 3237,
+          "blob": "e32ca45c31706133a35a67055d832e07676b2f3c",
+          "sha256": "052614beb90a8fb6a05bc2a1116e4d5fe2eb043b4c1f3ddd8f018e421297162b"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/hoststore/runtime-sources/index.json",
+          "crc32": 2137669522,
+          "bytes": 15919,
+          "blob": "c2ea7f7ddf6daa99741b04459e08b494fccb9c39",
+          "sha256": "bc51bb3119df7d80aeeabcc54ca6289df9c46da0c5c11a40fbf4cc089d6dcc82"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/preferences/global/global-runtime-preferences.json",
+          "crc32": 3737437109,
+          "bytes": 142,
+          "blob": "e25d1b2d66ad660821605f4a0ec1712029972629",
+          "sha256": "cac5d9be2ad49793b423ac2e4b18eb9f6991083f4faa92d227ce14bbb0a1ab14"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/preferences/workspace/agent-teams-runtime-preferences.json",
+          "crc32": 388163690,
+          "bytes": 123,
+          "blob": "ec2ab78f62f443285d02373e7840796a47e05eba",
+          "sha256": "2994a15037107281f14c901bba5999e42d1d31541c690f7a8410eee4ce8846cf"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/sentinel-invocations.ndjson",
+          "crc32": 3859750865,
+          "bytes": 686,
+          "blob": "11f58ef0fcba4ace4844ef7b6e5163b9443facf8",
+          "sha256": "22f07046b2d6f9156c8345612fe82234eb4057899a9424d22ebad0a36d56e2fd"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/ui-v2-management-connected.png",
+          "crc32": 506396332,
+          "bytes": 104089,
+          "blob": "424513eea137744e58f872018302b493c1a99799",
+          "sha256": "0332e54ff70eef0d81c8de9f6722334906ef5352910d46a67aaa3f7ca5e3f5df"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/ui-seed-receipt.json",
+          "crc32": 4204485972,
+          "bytes": 2037,
+          "blob": "f0b55e1af7f9cec351aee138c032155e7361de46",
+          "sha256": "bfaa0c1957d444e35a77989db2db8bb251bd1fea694958e709d80f16bbb0102f"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/ui-v2-management-inherited.png",
+          "crc32": 1022984515,
+          "bytes": 73947,
+          "blob": "f8ab5ead3bc11ecb2ea0e08c8f0468d199eaa441",
+          "sha256": "3f26be4db8199a5155583c0218e040d20c65c9f6e9c4003c8d872079061ac037"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/ui-v2-management-project-override.png",
+          "crc32": 1986121070,
+          "bytes": 75402,
+          "blob": "76da20056b91199f4901730d50faf87c33c2e6d7",
+          "sha256": "637a6dc16bb24455ff910f8b77e328d025ce4acd1a651ad6c85d523f47c88051"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/ui-v2-management-rejected-key.png",
+          "crc32": 1504860918,
+          "bytes": 123027,
+          "blob": "61076f8cd1b956d93fc8f5988f75a015b147108d",
+          "sha256": "748b96fcc1e445fef56e45541e9f44569df7a66f2e70132641bc14da37a48241"
+        },
+        {
+          "name": "TEST-desktop-backend-n3BzGv/ui-v2-management-reloaded.png",
+          "crc32": 2327551160,
+          "bytes": 74122,
+          "blob": "f76380d956d70f6e229268281c93a7c16becf980",
+          "sha256": "215c56f2683536753acf51d3439c2c4d4f64284844727846b511556407f0637c"
+        },
+        {
+          "name": "TEST-emulated-ui-inputs-pgAW7E/linux-child-exec/linux-child-exec",
+          "crc32": 3977027915,
+          "bytes": 790608,
+          "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+          "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+        },
+        {
+          "name": "TEST-emulated-ui-inputs-pgAW7E/linux-child-exec/manifest.json",
+          "crc32": 3765380163,
+          "bytes": 2408,
+          "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+          "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+        },
+        {
+          "name": "host-emulated-inputs.json",
+          "crc32": 2567926932,
+          "bytes": 1838,
+          "blob": "5321c3f48b31288bf55516b0631bf2cdb751c390",
+          "sha256": "1c431709442542e47919c59e8dd136c0a4e79d432fa26cdf7e5e040702609ccc"
+        },
+        {
+          "name": "host-emulated-linux-child-exec-selection.json",
+          "crc32": 2590660736,
+          "bytes": 271,
+          "blob": "a449a9594c55faf43761c4532b752e6633732abe",
+          "sha256": "c3892ff622df5b2101290d4475e0c9e78db31a8cb10c529b1cf71f90ab0829cb"
+        },
+        {
+          "name": "host-emulated-opencode-v2-inputs.json",
+          "crc32": 2132706922,
+          "bytes": 783,
+          "blob": "fe2c55107e7b754335c1d8834843478fb18f2b87",
+          "sha256": "65e44d0af912fc29331080ef6a38c5558e74751995c9ab1e797b391be35d077a"
+        },
+        {
+          "name": "host-emulated-opencode-v2-management-ui-verified.json",
+          "crc32": 2119959067,
+          "bytes": 402,
+          "blob": "b0b9b79ed0ed54521ee8a8515fe8c731fcbb0f04",
+          "sha256": "1f7cd378a6018a5a2c204592c629931443ad4c4a071767dd97ceeee70956777f"
+        },
+        {
+          "name": "host-emulated-opencode-v2-management-ui.log",
+          "crc32": 3411955451,
+          "bytes": 260,
+          "blob": "52f4be9bba1bb43e32a91803a120f0b17a0a2d6c",
+          "sha256": "6c50b8b9b27724261a41ea41ee1351fa73d51fc91b75dfdb89c3e53ce2c54246"
+        }
+      ]
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/artifact-14192765823.zip",
+      "bytes": 625025,
+      "blob": "ed207c9bf138be138427abcd2f93066716e439b0",
+      "sha256": "d84e424a053851aaab9c98e58fd3d2683632e8ad068b950bce926003cdd5f076",
+      "members": [
+        {
+          "name": "_temp/opencode-v2-packaged-native.json",
+          "crc32": 1599304611,
+          "bytes": 5382,
+          "blob": "bd0f1dc8bd060e5d88cf74b34127a5f51837abd5",
+          "sha256": "bdb5ca3216b29b614a987a8c0916a8c4847b2b83c5441302f366883e7161f079"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+          "crc32": 3692396498,
+          "bytes": 1154517,
+          "blob": "c938cf81f8141b52f080b44e670e98ba8f789b06",
+          "sha256": "3962998118a070023cc160e39e7c8cb88d9b72feebe97438ee79f7be8f171288"
+        },
+        {
+          "name": "_temp/opencode-v2-packaged-inputs.json",
+          "crc32": 776297642,
+          "bytes": 780,
+          "blob": "28ad81eada9b2576778a1f8dca4328da068fc117",
+          "sha256": "aff88b8d6fa750b9caa673e6b79570ec8fe33b3ec77f1ffd6dac469c94579aef"
+        },
+        {
+          "name": "_temp/opencode-v2-packaged.json",
+          "crc32": 3374053041,
+          "bytes": 1186,
+          "blob": "cdfde45c5485f9a340d175672686e3b462e860d1",
+          "sha256": "fdaa0c94021a8f0035e517750eb052bd4cea168eaf777dc2777214e25d2ca38a"
+        },
+        {
+          "name": "_temp/windows-same-main-process-ui.app.log",
+          "crc32": 972608666,
+          "bytes": 4766,
+          "blob": "8bd0f24b93c92901da992c19b0cd59b152178e3d",
+          "sha256": "68281bffce158378af8edbc15f166a6b6b9efb1ae1a01f13d15417d89fd14e0f"
+        },
+        {
+          "name": "_temp/windows-same-main-process-ui.before-crash.png",
+          "crc32": 76066779,
+          "bytes": 79896,
+          "blob": "1c16d610142abf298c038fba12d9ef1553f039b9",
+          "sha256": "347f6b6883726b0ccaebfb5c181cdeea0c85005cf7ec957360a61dc551404221"
+        },
+        {
+          "name": "_temp/windows-same-main-process-ui.controller.log",
+          "crc32": 1537412655,
+          "bytes": 42469,
+          "blob": "4472e4302c6dc7a54684fbedc42785915ecfc0c4",
+          "sha256": "b76513cb574dd577b0e2d382760ef5b95494ad9212aab210365149c141c73c3c"
+        },
+        {
+          "name": "_temp/windows-same-main-process-ui.json",
+          "crc32": 2981824534,
+          "bytes": 750601,
+          "blob": "13f00f66b65073fe972abd96c78f464d73023f2b",
+          "sha256": "b7201be98fe33679e7e6a5c8ee3366e942bde08a32090d39344a911cd342d2ae"
+        }
+      ]
+    }
+  ],
+  "wholeOfficialArchives": 6,
+  "recoverableMembers": 133,
+  "plan29": {
+    "bytes": 1463115,
+    "blob": "ca171cbe7936f2e19214c0d61be34db671b54a1c",
+    "sha256": "6ef10ec0e904b3b72fe76fbebe96eb79952b52181775086f910459c10bfbf405",
+    "prefix": {
+      "bytes": 1413500,
+      "blob": "509a2c0456d2163531cf225d07a559b367cd8342",
+      "sha256": "826e9174f453c4ae96edb07bfe5c13e1d5417567861a00e0ce6d3d111344a48f"
+    },
+    "exactAppendices": 6,
+    "exactCurrentnessBridge": 1,
+    "allPrefixAndOffsetsAndBytesVerified": true
+  },
+  "linearOrdinaryFastForwardChainFromPrimary": [
+    "85355e11fcd08ffe87f96be5003675305458a354",
+    "9ead131e41ba806ce3ab47d3ad28feacc5fbd911",
+    "6ff83bb45af88f660d8b124e7467664ad2ddd590",
+    "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+  ],
+  "freshPRState": {
+    "number": 1192,
+    "state": "open",
+    "draft": true,
+    "merged": false,
+    "head": "fix/frontend-parity-completion-20261113",
+    "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "base": "feat/provider-host-frontend-parity-20261112",
+    "base_sha": "def734338f13bcc3209e78079a0cedbc48f05a5b"
+  },
+  "localDetached0660Clean": true,
+  "privacyOriginalGREENObserved": false,
+  "projectExecutionPerformed": false,
+  "ciMutationsPerformed": false,
+  "limits": [
+    "This closes the actual published documentation byte/tree gate; independent actual-published R2 and fresh primary/ref guards precede primary fast-forward.",
+    "All existing failure, skip, cleanup, native custody, P08/P09 and current-source qualification boundaries remain.",
+    "The documented 02:37/02:31/02:39 currentness cut is historical and is not rewritten by later terminal observations."
+  ]
+}

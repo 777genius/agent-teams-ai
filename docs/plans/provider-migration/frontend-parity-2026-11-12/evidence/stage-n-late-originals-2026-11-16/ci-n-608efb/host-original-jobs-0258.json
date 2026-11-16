@@ -1,0 +1,216 @@
+{
+  "observedAt": "2026-11-16 02:58:21 UTC",
+  "kind": "host",
+  "runId": 43795234483,
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "jobs": [
+        {
+          "id": 133062441284,
+          "name": "Offline Host Desktop (linux-x64, cross-team)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441445,
+          "name": "Offline frontend tests (2/4)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441473,
+          "name": "Offline frontend tests (1/4)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441494,
+          "name": "Offline Host Desktop (linux-x64, team)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441496,
+          "name": "Offline Host Desktop (linux-x64, taskboard)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441513,
+          "name": "Offline Host Desktop (linux-x64, collaboration)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441515,
+          "name": "Offline Host Desktop (linux-x64, claude)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441546,
+          "name": "Offline Host Desktop (darwin-arm64, installer)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441547,
+          "name": "Offline Host Desktop (linux-x64, extensions)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441554,
+          "name": "Offline Host Desktop (linux-x64, codex)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441557,
+          "name": "Offline Host Desktop (linux-x64, import)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441565,
+          "name": "Offline Host Desktop (linux-x64, opencode)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441591,
+          "name": "Offline Host Desktop (linux-x64, management)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441600,
+          "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441602,
+          "name": "Offline Host Desktop (linux-x64, codex-login)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441628,
+          "name": "Offline Host Desktop (linux-x64, processes)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441639,
+          "name": "Offline Host Desktop (linux-x64, selection)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441646,
+          "name": "Offline Host Desktop (linux-x64, skills)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441650,
+          "name": "Offline frontend tests (3/4)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441661,
+          "name": "Offline Host Desktop (linux-x64, review)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441679,
+          "name": "Offline frontend tests (4/4)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062441738,
+          "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234483,
+          "logs_url": null,
+          "steps": null
+        }
+      ]
+    },
+    "isError": false
+  }
+}

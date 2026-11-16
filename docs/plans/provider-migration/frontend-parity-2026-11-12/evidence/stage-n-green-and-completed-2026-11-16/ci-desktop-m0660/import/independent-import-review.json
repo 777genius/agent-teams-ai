@@ -1,0 +1,3357 @@
+{
+  "schemaVersion": 1,
+  "result": "APPROVE",
+  "reviewer": "migration_scope",
+  "reviewedAtUtc": "2026-11-16T03:34:21.123758+00:00",
+  "independentRawReadbackExact": true,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "sourceTree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "runId": 43780997237,
+  "jobId": 133017916024,
+  "artifactId": 14191550438,
+  "scope": "Original M0660 finite saved-archive Import actual evidence only. Read-only R2; no project/provider/native/CI execution, source/ref mutation, replay or repair.",
+  "authorIdentities": {
+    "audit.json": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/audit.json",
+      "bytes": 178959,
+      "blob": "b354438fb8d355c0d46d4c9e690b7c4ca7e4ae38",
+      "sha256": "f1698243fed424b078cc64fe28dd8301a6b68c8b60af5d01c35c88e8958a9e1b"
+    },
+    "checkpoint-import.json": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/checkpoint-import.json",
+      "bytes": 2813,
+      "blob": "6d5b3c2b0d88a8a6dc1b8e35c9572921a36d4389",
+      "sha256": "3e4b5412760ef5977a2feb03431562c7f6deafc39ce1a805891c6dd4241106ae"
+    },
+    "Plan29-import-saved-archive-appendix.md": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/Plan29-import-saved-archive-appendix.md",
+      "bytes": 9968,
+      "blob": "f3bde48b5bf6aa3a61047d99248bbb04f732119e",
+      "sha256": "0b303b84e5063639ad9b1ef21da3eed0c3ab35e7feeaadd44365767b6fdbf58c"
+    }
+  },
+  "payloadClosure": {
+    "count": 8,
+    "bytes": 2352287,
+    "allDeclaredIdentitiesExact": true,
+    "payloads": [
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/job-133017916024.log",
+        "bytes": 180591,
+        "blob": "7991c92e54c59f17b45fc4f6625a74750cea28f3",
+        "sha256": "022efe1904ad093b63305f4f1e967349f12ad4316df27bd5c39d40c09bbeefb9"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/artifact-14191550438.zip",
+        "bytes": 1158210,
+        "blob": "788cb549cc3b6c3ea12cb12dcd9494e62aa616c5",
+        "sha256": "81ea66ec213c9e75c88ebde84ed82705108bdb826ef56770d4249e83e0c77fd5"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/archive-audit.json",
+        "bytes": 9363,
+        "blob": "e4bd0d1d89e7594d4fa03f2199f0669a270c21d7",
+        "sha256": "ebb9bcc2951285b741b35df1048a60441077fc3c6a18b74fe20969e09f6a0d1d"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/audit.json",
+        "bytes": 178959,
+        "blob": "b354438fb8d355c0d46d4c9e690b7c4ca7e4ae38",
+        "sha256": "f1698243fed424b078cc64fe28dd8301a6b68c8b60af5d01c35c88e8958a9e1b"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/Plan29-import-saved-archive-appendix.md",
+        "bytes": 9968,
+        "blob": "f3bde48b5bf6aa3a61047d99248bbb04f732119e",
+        "sha256": "0b303b84e5063639ad9b1ef21da3eed0c3ab35e7feeaadd44365767b6fdbf58c"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0215.json",
+        "bytes": 19753,
+        "blob": "699d3f9f470c9aba779664f159cefac43cbc4861",
+        "sha256": "f434f1a38fce2695c3e828119cd6424c0a986afbf95406a147c2eadfca87416e"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0300.json",
+        "bytes": 212142,
+        "blob": "aaa9e447920ba1d0e4ae3797169058bc2df43a72",
+        "sha256": "2056635c64f9372a98d560f3ceb63a025fbd92de2bef0eaa5a6a72e8f8dd4f80"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+        "bytes": 583301,
+        "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+        "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+      }
+    ]
+  },
+  "officialSourceAndJobJoin": {
+    "artifact": {
+      "id": 14191550438,
+      "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-import",
+      "size_in_bytes": 1158210,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191550438",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191550438/zip",
+      "expired": false,
+      "created_at": "2026-11-16T01:44:25Z",
+      "expires_at": "2026-11-30T01:44:25Z",
+      "updated_at": "2026-11-16T01:44:25Z",
+      "digest": "sha256:81ea66ec213c9e75c88ebde84ed82705108bdb826ef56770d4249e83e0c77fd5",
+      "workflow_run": {
+        "id": 43780997237,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+      }
+    },
+    "terminalJob": {
+      "id": 133017916024,
+      "name": "Offline Host Desktop (linux-x64, import)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 43780997237,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Verify original checkout and runner tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Prepare private Linux display",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Install frozen workspace and Electron",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Build existing Desktop prerequisites and verify admission",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Verify original Runtime and Team conversation contracts",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9
+        },
+        {
+          "name": "Verify complete workspace types and original typed lint scopes",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10
+        },
+        {
+          "name": "Capture package-manager and Host inputs without vendor executables",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Capture original controlled Linux process input without a provider",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12
+        },
+        {
+          "name": "Exercise ordinary Team controls and renderer reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13
+        },
+        {
+          "name": "Exercise ordinary Taskboard controls and persistence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Exercise original Skills and cross-Team controls",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15
+        },
+        {
+          "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16
+        },
+        {
+          "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18
+        },
+        {
+          "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19
+        },
+        {
+          "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20
+        },
+        {
+          "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21
+        },
+        {
+          "name": "Exercise original Review after a cold Host and app restart",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22
+        },
+        {
+          "name": "Exercise saved next-launch selection while the original Team remains live",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 23
+        },
+        {
+          "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 24
+        },
+        {
+          "name": "Exercise stock Codex Update while the original Team retains its captured source",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 25
+        },
+        {
+          "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 26
+        },
+        {
+          "name": "Prepare exact OpenCode V2 Bun and engine graph",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 27
+        },
+        {
+          "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 28
+        },
+        {
+          "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 29
+        },
+        {
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30
+        },
+        {
+          "name": "Preserve original Desktop evidence, including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 60
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 61
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 62
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 63
+        }
+      ]
+    },
+    "rawLog": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/job-133017916024.log",
+      "bytes": 180591,
+      "blob": "7991c92e54c59f17b45fc4f6625a74750cea28f3",
+      "sha256": "022efe1904ad093b63305f4f1e967349f12ad4316df27bd5c39d40c09bbeefb9"
+    },
+    "logLines": 1759,
+    "checkout": {
+      "line": 141,
+      "text": "2026-11-16T01:40:43.3221087Z 0660c748f88675063e3051fb0f8b2022e8f6f056"
+    },
+    "upload": [
+      {
+        "line": 1727,
+        "text": "2026-11-16T01:44:25.0707988Z With the provided path, there will be 31 files uploaded"
+      },
+      {
+        "line": 1732,
+        "text": "2026-11-16T01:44:25.4150410Z Uploaded bytes 1158210"
+      },
+      {
+        "line": 1734,
+        "text": "2026-11-16T01:44:25.4291680Z SHA256 digest of uploaded artifact zip is 81ea66ec213c9e75c88ebde84ed82705108bdb826ef56770d4249e83e0c77fd5"
+      },
+      {
+        "line": 1736,
+        "text": "2026-11-16T01:44:25.7472147Z Artifact host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-import.zip successfully finalized. Artifact ID 14191550438"
+      },
+      {
+        "line": 1737,
+        "text": "2026-11-16T01:44:25.7473900Z Artifact host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-import has been successfully uploaded! Final size is 1158210 bytes. Artifact ID is 14191550438"
+      }
+    ],
+    "receiptReportedSource": {
+      "head": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "dirty": false
+    },
+    "noNewApiPoll": true
+  },
+  "archive": {
+    "identity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/artifact-14191550438.zip",
+      "bytes": 1158210,
+      "blob": "788cb549cc3b6c3ea12cb12dcd9494e62aa616c5",
+      "sha256": "81ea66ec213c9e75c88ebde84ed82705108bdb826ef56770d4249e83e0c77fd5"
+    },
+    "members": 31,
+    "uncompressedBytes": 2223798,
+    "allCrcSafeUniqueNoSymlinks": true,
+    "allExtractedBytesAndAuthorEntriesExact": true,
+    "entries": [
+      {
+        "path": "TEST-desktop-backend-cKokC4/TEST-peer-claude-scope/effects.ndjson",
+        "crc32": "a5ca22b7",
+        "bytes": 6512,
+        "blob": "b470548ffb4fb978dd094300a0024b819e4b2c3d",
+        "sha256": "b1966512d2b404b7bc1b252acf345169397dc7d841b1bddb95921108f4cfd030"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/claude/tasks/test-stopped-legacy/TEST-legacy-task-a.json",
+        "crc32": "ae4a3fec",
+        "bytes": 2946,
+        "blob": "bfa23ab0f34f85f116c1ea1a35d982797e80929e",
+        "sha256": "9c3432b236699e595b9be01295a5f4debd25d28676de9f06688ac03eb1d89207"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/claude/tasks/test-stopped-legacy/TEST-legacy-task-b.json",
+        "crc32": "d1b09b7e",
+        "bytes": 275,
+        "blob": "b027ff500e62cbbf77799e4f1cab9e517f24b456",
+        "sha256": "8f98381b570d70ebf4d7106265457d68fef0eba8c556e74695a914313ad85db2"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/claude/teams/test-stopped-legacy/members.meta.json",
+        "crc32": "6f56e80f",
+        "bytes": 401,
+        "blob": "ac64086cebc4a408a864be466200a0024a737e9b",
+        "sha256": "4d152072317c20f63bb57a0f3e21e59e1d4b568bf7cd06320348aa955c66ffed"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/claude/teams/test-stopped-legacy/team.meta.json",
+        "crc32": "f313685e",
+        "bytes": 503,
+        "blob": "5cb4548e5c842d485415486cacbc8490706e963d",
+        "sha256": "d489c5ef39fc3cbdaef128f3db7829c286301d4cebb6ef3d77745263c229d46f"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/desktop-app.log",
+        "crc32": "240eb668",
+        "bytes": 26162,
+        "blob": "8bbff1e358de69ccdc6eb04a8fe89a6bdd8d933f",
+        "sha256": "b76de91a7240cf9eefd8954b7a48ac6b6edee02c7ec3ed698281213cc8ca3ce4"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/desktop-backend-receipt.json",
+        "crc32": "a52525b3",
+        "bytes": 779290,
+        "blob": "f576ba6ca9740a9a8bf8fb24762acbc5705f5531",
+        "sha256": "ca8a06dc49748166ce56fc6c333f19558effeebb76fca532888952ba269416ac"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/desktop-descriptor.json",
+        "crc32": "4c05c325",
+        "bytes": 2688,
+        "blob": "5f977f0a6b9398f7f4a93d1bbe8bec18a92cc854",
+        "sha256": "ea141433ecf40c213ae9de23c9c898c6b3926afd922858a026e647473da7909b"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/home/Downloads/source-original.txt",
+        "crc32": "25f1574c",
+        "bytes": 44,
+        "blob": "3e6dc92bc40f9fe0218fc03625d321c189c9d2ce",
+        "sha256": "9cead239aa70dc3908cf22064703f55ef6c62ba70d43702b18bbdca8801750f3"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/host-profile.json",
+        "crc32": "83125d46",
+        "bytes": 7802,
+        "blob": "c1f4f60e7499b71537068644adc8f7398fdb5128",
+        "sha256": "34a99270e97bf374d22274dd107cc93a54e67f19c4fd6c8f3eea7a19de26bb96"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/hoststore/management-commands/7777b777071c89d403260b2c770a10046ec12d9a28f39b29f2b7817155a30676.json",
+        "crc32": "70e7db65",
+        "bytes": 969,
+        "blob": "5f38ddbdcb2cd5324a241052f7e9be74839ed534",
+        "sha256": "d80ecbd25edb8f7a4f37f451e028d90d51c4dc7c87582459cb040e17e41ce685"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/hoststore/management-commands/aa5c94047f3379d4e7cc268dbc3750c12e6be929b61d1a2f5ca47fe76b8fd191.json",
+        "crc32": "b1d8a5f6",
+        "bytes": 969,
+        "blob": "4e661f51389ae957d2c2af156b7d8dcfb693d8e6",
+        "sha256": "5fcd9780bc194c23966f847c48514e0a4e2ebc04ed59a2c2c0c88812a54f8996"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/hoststore/tasks/test-stopped-legacy/TEST-legacy-task-a.json",
+        "crc32": "2133435b",
+        "bytes": 2762,
+        "blob": "48b51ed2dd63098c81e9585b24edaa0db6584246",
+        "sha256": "650273a58468db211e91f9e9dde11353dc639a0a83c82f5910c5b591a84d4c30"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/hoststore/tasks/test-stopped-legacy/TEST-legacy-task-b.json",
+        "crc32": "bc0e41be",
+        "bytes": 226,
+        "blob": "d83ece1c05f1e53d8cf16c2155760254abc75566",
+        "sha256": "1a05b312ef4b7b431d89fce136affb655a4af84615e51172d5adbd548513eaa2"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/sentinel-invocations.ndjson",
+        "crc32": "9fc3bdb4",
+        "bytes": 96,
+        "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+        "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/stopped-import-ui-seed.json",
+        "crc32": "95d7f3ef",
+        "bytes": 4034,
+        "blob": "1b2ceb664f221264972733d2bdf2e3d29656f7df",
+        "sha256": "1fafbdd7e15b45dd9dd1fbd1f9d4a393f4a13262a2b6690fe1bbdab1414b73d1"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/ui-import-source-attachment-kanban.png",
+        "crc32": "eb989579",
+        "bytes": 127398,
+        "blob": "15498149a8c7fc5be7f2ae71e58f721ee1443d2e",
+        "sha256": "f483c0cbb4784d6f4f9ac4824c37d699c3d356d1099eebab23010010e597e3ab"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/ui-import-source-attachment-lightbox.png",
+        "crc32": "4f6a1a98",
+        "bytes": 101319,
+        "blob": "00014f1e09f329658c57fc1a5104e7b727e54f81",
+        "sha256": "e48ee8d2b25898ab37a67af2a75db7e8a5607f875582cc8ccdfee1219c40e0a9"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/ui-import-source-attachment-task-detail.png",
+        "crc32": "e236d973",
+        "bytes": 113483,
+        "blob": "3af631835a13c8695a2e812f04c4b9f0e528f0cf",
+        "sha256": "3c3ee69fd0add21d32c28d0a8db66f7f00049460819c59842f38d82e96bb0d2c"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/ui-original-stopped-import-dialog.png",
+        "crc32": "9e984a0a",
+        "bytes": 123621,
+        "blob": "5f88ac41dbf03221a6cf38b04aeb32f9694e7656",
+        "sha256": "0a05c1df3ab554fb1ac26f84a8411bc48597436585249bd1da2c0a828170cd5f"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/ui-original-stopped-import-reloaded.png",
+        "crc32": "62db3a89",
+        "bytes": 123605,
+        "blob": "2693c8f8edf4303c42761e945a41a3a59bed4b46",
+        "sha256": "7563ef93590d250e7f73250ad933a5ba2e09085837379a8f642ba2aa1be59cbf"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/ui-seed-receipt.json",
+        "crc32": "b5667370",
+        "bytes": 2335,
+        "blob": "79e036c5923349d31df279a9676c520d8bcb8d06",
+        "sha256": "fd19d26f2ce42a547deffbeb3c78d4b0be65873724669f0c1b344113a282f07b"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/userData/data/attachments/test-stopped-legacy/TEST-legacy-source-message/TEST-source-image--source-original.png",
+        "crc32": "fe7e0434",
+        "bytes": 71,
+        "blob": "8d79cc731a6bbfd43247473d7ef6d2c0e9519994",
+        "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/userData/data/attachments/test-stopped-legacy/TEST-legacy-source-message/TEST-source-file--source-original.txt",
+        "crc32": "25f1574c",
+        "bytes": 44,
+        "blob": "3e6dc92bc40f9fe0218fc03625d321c189c9d2ce",
+        "sha256": "9cead239aa70dc3908cf22064703f55ef6c62ba70d43702b18bbdca8801750f3"
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-IKX8UW/linux-child-exec/linux-child-exec",
+        "crc32": "ed0ca14b",
+        "bytes": 790608,
+        "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+      },
+      {
+        "path": "TEST-desktop-backend-cKokC4/userData/data/task-attachments/test-stopped-legacy/TEST-legacy-task-a/TEST-task-blob--saved-note.txt",
+        "crc32": "b4a11bee",
+        "bytes": 36,
+        "blob": "440117c49430f33a38e49db16da321673de724a2",
+        "sha256": "186805c9a2e1c1386e0ec589c688e01919e55929f876664d0ac755f17b5841cf"
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-IKX8UW/linux-child-exec/manifest.json",
+        "crc32": "e06f2443",
+        "bytes": 2408,
+        "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+      },
+      {
+        "path": "host-emulated-emulated-import-ui.log",
+        "crc32": "dc841de1",
+        "bytes": 225,
+        "blob": "aef46077e5fb018f56136d1971921c5952e2e7cf",
+        "sha256": "8a8bab1840267a69bd070b5b5be5c09c86d15b1d1c55f51bca3bfdd6591b7359"
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "crc32": "4a622702",
+        "bytes": 1803,
+        "blob": "bf4fd4ccad1c1602f12fa10d2119b392dad87df3",
+        "sha256": "990401c9d64d9ad708dbb3d63939a10db7d891204eeca2e45e71d809c69ee7cf"
+      },
+      {
+        "path": "host-emulated-linux-child-exec-selection.json",
+        "crc32": "849d0016",
+        "bytes": 271,
+        "blob": "917ae7931d6005391f55f09cc1edce0a71fa00c2",
+        "sha256": "cbe6feb08250633647e85df2edd620765619b66bb842246039395a13c3975a58"
+      },
+      {
+        "path": "host-emulated-summary.json",
+        "crc32": "55ee8a28",
+        "bytes": 892,
+        "blob": "cacf511ad3e2133dc9d70a546ad6c4039844e24e",
+        "sha256": "93dc29771bdf638c96667c0630a4f4806c9125decb7d1366b763deb875ddf3da"
+      }
+    ]
+  },
+  "sourceReview": {
+    "fullFreshGitBeforeAfterCount": 1757,
+    "uniquePaths": 1757,
+    "orderedBeforeAfterEqual": true,
+    "freshGitBytesTotal": 20308016,
+    "allRecordedSha256AndGitBlobExact": true,
+    "orderedIdentityTableSha256": "7ea0d2b4074eaab92703709af2c95d7cebe50b59f8593f265956c329b1346fa4",
+    "identityTableEncoding": "Compact UTF8 JSON of ordered objects with keys path,bytes,blob,sha256",
+    "basis": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    "basisEveryOrderedRowEqualsFreshGit": true,
+    "freshSelectedSources": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-import-ui.ts",
+        "bytes": 5233,
+        "blob": "9d1c622aceac77992031f8d485e599ae178ed330",
+        "sha256": "7c52626bc69292c68bb9ee2a6cacbe97deb78195136a879a9a1777abd1841feb",
+        "lines": 86
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-stopped-import-ui-smoke.ts",
+        "bytes": 29836,
+        "blob": "d417307665cb533dbcc2bfc4321d31b097d8472b",
+        "sha256": "5bc2bf5eaf158ad479e407c80e19623def9e9de4cbaec85635ba85b641b31309",
+        "lines": 644
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-stopped-import-attachments-ui.ts",
+        "bytes": 14341,
+        "blob": "d9796236155df9b5b87c66de6997323635673cea",
+        "sha256": "7f7c7cfd2f9d666b17d21b88d4fb20e8dfab0182470f9367036a9bb7228703e3",
+        "lines": 303
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-stopped-import-fixture.ts",
+        "bytes": 20472,
+        "blob": "b69f6132475fd33ab6d9c6d6b7d7ff4acf97e881",
+        "sha256": "0f4ddb414df8631074a00c982ba876ce54c5f17eca4d55fa0846bb1c7b025275",
+        "lines": 525
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-claude-settings-fixture.ts",
+        "bytes": 5663,
+        "blob": "5f18c861f297cbf62b9acaceba615079d0b77d0d",
+        "sha256": "0370ef4c293ffc173d5952cc04671459022dfff2782b5c915209c6d93195c7b6",
+        "lines": 92
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "bytes": 22082,
+        "blob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd",
+        "lines": 281
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "bytes": 49613,
+        "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "lines": 787
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 54778,
+        "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "lines": 791
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 25052,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+        "lines": 456
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeSavedImportPeer.mjs",
+        "bytes": 8779,
+        "blob": "2afe7d59194aeb8e0fbe85dd7a3f3dc0f61480c0",
+        "sha256": "cbc968693fd081c7434e6eacd508e50f7775ed669d9ff9cfd493b20465990bb7",
+        "lines": 143
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts",
+        "bytes": 2154,
+        "blob": "329a0d3b3c35f5c6736bd214c3ed9717248c1d7d",
+        "sha256": "e21bfb7f4b548ad37d6f07d2cc8e9b61407822b11cb8c0e5051a68e34b1b382d",
+        "lines": 39
+      },
+      {
+        "path": "packages/legacy-agent-host/src/stopped-team-import/FileStoppedTeamImport.ts",
+        "bytes": 29412,
+        "blob": "593c28bc90ce1b82cea0a60d4f1a034bb77ca924",
+        "sha256": "d47db19e18cc4e42851468b511fa0f299a82ab87cc24b473e6da4bd06e2043a1",
+        "lines": 771
+      },
+      {
+        "path": "packages/legacy-agent-host/src/stopped-team-import/snapshot.ts",
+        "bytes": 18220,
+        "blob": "3bfbfd2c6c83f8f7ffb81f526a8207047c89d9e3",
+        "sha256": "a760d8b0b73409b29fd9e5ca9c3203223b2ca8df3809b82a08753b63c71cf244",
+        "lines": 537
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/identity.ts",
+        "bytes": 1648,
+        "blob": "a86e937f6874b0f2bb51fb727e4d526784846486",
+        "sha256": "b7028fb9b3ccbe7442f65a79ede17c7e84c67cd8fcff8532117a5f8482c47d14",
+        "lines": 39
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/identity.ts",
+        "bytes": 709,
+        "blob": "d4e5631330f08ccc4138353f6e2b5f49f7cac01f",
+        "sha256": "a795125fbf639552833eb3730d971b9de16437ed3507be303a5b42d541ba8bb7",
+        "lines": 19
+      },
+      {
+        "path": "src/main/utils/testChildProcessTrace.ts",
+        "bytes": 9633,
+        "blob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+        "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb",
+        "lines": 185
+      },
+      {
+        "path": "packages/legacy-agent-host/native/linux-child-exec.c",
+        "bytes": 1674,
+        "blob": "5f094bf61ae831f4b84339eaabb29d6f46c06a2e",
+        "sha256": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+        "lines": 42
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "lines": 1312
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-import-fixture.ts",
+        "bytes": 1134,
+        "blob": "b3760353a51fab7ad6acd04d805640a613165726",
+        "sha256": "93badefbcd027087cb987591b995768a39b3b2bbcc5ba78143074d37eb3b349d",
+        "lines": 17,
+        "additionalIndependentRead": true
+      }
+    ],
+    "workflowIsSeparatelyReadOutsideCommon1757": true,
+    "sourceEqualityTransfersNoBusinessResult": true
+  },
+  "originalPrerequisites": {
+    "nodeVersion": "24.21.0",
+    "reporterBlocks": {
+      "tests": [
+        115,
+        7
+      ],
+      "pass": [
+        115,
+        7
+      ],
+      "fail": [
+        0,
+        0
+      ],
+      "cancelled": [
+        0,
+        0
+      ],
+      "skipped": [
+        0,
+        0
+      ],
+      "duration_ms": [
+        9101.691946,
+        206.505645
+      ]
+    },
+    "originalCommands": [
+      {
+        "line": 668,
+        "text": "2026-11-16T01:42:19.5911714Z \u001b[36;1mnode --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts\u001b[0m"
+      },
+      {
+        "line": 669,
+        "text": "2026-11-16T01:42:19.5913836Z \u001b[36;1mnode --test test/scripts/installDependenciesWithRetry.test.mjs\u001b[0m"
+      }
+    ],
+    "rawSummaryRows": [
+      {
+        "line": 811,
+        "text": "2026-11-16T01:42:34.4595772Z ℹ tests 115"
+      },
+      {
+        "line": 813,
+        "text": "2026-11-16T01:42:34.4600758Z ℹ pass 115"
+      },
+      {
+        "line": 814,
+        "text": "2026-11-16T01:42:34.4601069Z ℹ fail 0"
+      },
+      {
+        "line": 815,
+        "text": "2026-11-16T01:42:34.4601339Z ℹ cancelled 0"
+      },
+      {
+        "line": 816,
+        "text": "2026-11-16T01:42:34.4601626Z ℹ skipped 0"
+      },
+      {
+        "line": 818,
+        "text": "2026-11-16T01:42:34.4602245Z ℹ duration_ms 9101.691946"
+      },
+      {
+        "line": 826,
+        "text": "2026-11-16T01:42:34.6959968Z ℹ tests 7"
+      },
+      {
+        "line": 828,
+        "text": "2026-11-16T01:42:34.6960507Z ℹ pass 7"
+      },
+      {
+        "line": 829,
+        "text": "2026-11-16T01:42:34.6961858Z ℹ fail 0"
+      },
+      {
+        "line": 830,
+        "text": "2026-11-16T01:42:34.6962221Z ℹ cancelled 0"
+      },
+      {
+        "line": 831,
+        "text": "2026-11-16T01:42:34.6962588Z ℹ skipped 0"
+      },
+      {
+        "line": 833,
+        "text": "2026-11-16T01:42:34.6963389Z ℹ duration_ms 206.505645"
+      }
+    ],
+    "skippedTeamPrivacyAndFullTypesSteps": [
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      }
+    ],
+    "flowStep": {
+      "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 17
+    },
+    "finalVerifierStep": {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 30
+    },
+    "perModeRaw": {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/host-emulated-emulated-import-ui.log",
+        "bytes": 225,
+        "blob": "aef46077e5fb018f56136d1971921c5952e2e7cf",
+        "sha256": "8a8bab1840267a69bd070b5b5be5c09c86d15b1d1c55f51bca3bfdd6591b7359"
+      },
+      "records": [
+        {
+          "phase": "prepared",
+          "receipt": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/desktop-backend-receipt.json"
+        },
+        {
+          "status": "PASS",
+          "receipt": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/desktop-backend-receipt.json"
+        }
+      ]
+    },
+    "selectedLaneSummary": {
+      "status": "PASS",
+      "scope": "selected lane only",
+      "lane": "import",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "completed": [
+        {
+          "mode": "emulated-import-ui",
+          "receipt": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/desktop-backend-receipt.json",
+          "screenshots": [
+            "0a05c1df3ab554fb1ac26f84a8411bc48597436585249bd1da2c0a828170cd5f",
+            "7563ef93590d250e7f73250ad933a5ba2e09085837379a8f642ba2aa1be59cbf",
+            "f483c0cbb4784d6f4f9ac4824c37d699c3d356d1099eebab23010010e597e3ab",
+            "e48ee8d2b25898ab37a67af2a75db7e8a5607f875582cc8ccdfee1219c40e0a9",
+            "3c3ee69fd0add21d32c28d0a8db66f7f00049460819c59842f38d82e96bb0d2c"
+          ]
+        }
+      ],
+      "nativeProviders": "not executed",
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "visualReview": "original screenshots retained for independent inspection"
+    }
+  },
+  "capturedVenue": {
+    "receipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/desktop-backend-receipt.json",
+      "bytes": 779290,
+      "blob": "f576ba6ca9740a9a8bf8fb24762acbc5705f5531",
+      "sha256": "ca8a06dc49748166ce56fc6c333f19558effeebb76fca532888952ba269416ac"
+    },
+    "inputsIdentity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/host-emulated-inputs.json",
+      "bytes": 1803,
+      "blob": "bf4fd4ccad1c1602f12fa10d2119b392dad87df3",
+      "sha256": "990401c9d64d9ad708dbb3d63939a10db7d891204eeca2e45e71d809c69ee7cf"
+    },
+    "inputs": {
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "linux",
+      "architecture": "x64",
+      "nativeProviders": "forbidden",
+      "values": {
+        "LEGACY_DESKTOP_BACKEND_GO": "1",
+        "LEGACY_DESKTOP_EMULATED_ONLY": "1",
+        "LEGACY_DESKTOP_COREPACK_HOME": "/home/runner/work/_temp/TEST-emulated-ui-inputs-IKX8UW/cache",
+        "LEGACY_DESKTOP_NODE_SHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "LEGACY_DESKTOP_HOST_ENTRY_SHA256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "LEGACY_DESKTOP_PNPM_PATH": "/home/runner/work/_temp/TEST-emulated-ui-inputs-IKX8UW/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "LEGACY_DESKTOP_PNPM_SHA256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+        "LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+        "LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+        "LEGACY_LINUX_CHILD_EXEC_MANIFEST": "/home/runner/work/_temp/TEST-emulated-ui-inputs-IKX8UW/linux-child-exec/manifest.json",
+        "LEGACY_LINUX_CHILD_EXEC_SHA256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+      },
+      "linuxChildExec": {
+        "manifestPath": "/home/runner/work/_temp/TEST-emulated-ui-inputs-IKX8UW/linux-child-exec/manifest.json",
+        "manifestSha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+        "binarySha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+      },
+      "processLauncher": {
+        "manifestSha256": "942a64272a8f86959e2bf08f3e28eea353c8642be369dbfa4e3a5ac428dfbfe3",
+        "binarySha256": "2a8c086c5e454bf902def4803bf2d855717bd7f3162f51aaeca58b1a4581ae7a"
+      }
+    },
+    "receiptPins": {
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+      "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+      "pnpmStubSha256": "1f9d82093d411df47ec1acccddd178e7c1f8e1f66053a030f20e97158f4c5fbc",
+      "profileSha256": "34a99270e97bf374d22274dd107cc93a54e67f19c4fd6c8f3eea7a19de26bb96",
+      "descriptorSha256": "ea141433ecf40c213ae9de23c9c898c6b3926afd922858a026e647473da7909b",
+      "sentinelSha256": "4474eafa80d7b72e28bc782c2d028e7256396465ca80e96ee0b0b5675605c38c",
+      "shellProbeSha256": "fab1b5db6085fbae958770a4f00e6fc0f0275a4088c19405fe5f25c16653ded0",
+      "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+      "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+    },
+    "profileIdentity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/host-profile.json",
+      "bytes": 7802,
+      "blob": "c1f4f60e7499b71537068644adc8f7398fdb5128",
+      "sha256": "34a99270e97bf374d22274dd107cc93a54e67f19c4fd6c8f3eea7a19de26bb96"
+    },
+    "descriptorIdentity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/desktop-descriptor.json",
+      "bytes": 2688,
+      "blob": "5f977f0a6b9398f7f4a93d1bbe8bec18a92cc854",
+      "sha256": "ea141433ecf40c213ae9de23c9c898c6b3926afd922858a026e647473da7909b"
+    },
+    "profileAndDescriptorPinsExact": true,
+    "fixturePins": {
+      "executable": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/bin/TEST-claude-saved-import-peer",
+        "sha256": "e8d8d1cd607bea6881650a4706a3d9b693e3f6b077a4a4e501d30100560d870e"
+      },
+      "sources": [
+        {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeSavedImportPeer.mjs",
+          "sha256": "cbc968693fd081c7434e6eacd508e50f7775ed669d9ff9cfd493b20465990bb7"
+        },
+        {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts",
+          "sha256": "e21bfb7f4b548ad37d6f07d2cc8e9b61407822b11cb8c0e5051a68e34b1b382d"
+        }
+      ],
+      "provider": "claude",
+      "protocolRevision": "sdk-0.3.305",
+      "runtimeConfigured": true,
+      "managementConfigured": true,
+      "vendorsAllowed": false
+    },
+    "linuxChildExec": {
+      "manifest": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-emulated-ui-inputs-IKX8UW/linux-child-exec/manifest.json",
+        "bytes": 2408,
+        "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+      },
+      "binary": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-emulated-ui-inputs-IKX8UW/linux-child-exec/linux-child-exec",
+        "bytes": 790608,
+        "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+      },
+      "sourceMatchesFreshGit": true,
+      "originalInputAndAfterCleanupJoin": true,
+      "executedByReviewer": false
+    },
+    "compiledBundleHashesAfterStartup": [
+      {
+        "path": "main/chunks/index-D9GX0Q6a.cjs",
+        "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+      },
+      {
+        "path": "main/chunks/index-yaJFGvjB.cjs",
+        "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+      },
+      {
+        "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+        "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+      },
+      {
+        "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+        "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+      },
+      {
+        "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+        "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+      },
+      {
+        "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+        "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+      },
+      {
+        "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+        "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+      },
+      {
+        "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+        "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+      },
+      {
+        "path": "main/index.cjs",
+        "sha256": "c451aecd5463c127c7e72bc238a802912304a21eafb255acb547f38e8851b771"
+      },
+      {
+        "path": "main/internal-storage-worker.cjs",
+        "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+      },
+      {
+        "path": "main/task-change-worker.cjs",
+        "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+      },
+      {
+        "path": "main/team-data-worker.cjs",
+        "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+      },
+      {
+        "path": "main/team-fs-worker.cjs",
+        "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+      },
+      {
+        "path": "preload/index.js",
+        "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+      }
+    ],
+    "bundleProvenance": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild",
+    "compiledBytesNotArchivedHere": true,
+    "noRebuildOrFullInstalledPayloadProof": true
+  },
+  "import": {
+    "sourceKind": "legacy-format-test-archive",
+    "execution": "finite-protocol-peer",
+    "commandId": "stopped-import-1c23441b1ac2a81c909cfa9fd10440afadfc7cb3ae707313144c67ee2da8ee93",
+    "phase": "published",
+    "request": {
+      "contextId": "local",
+      "sourceId": "c128151811585013eebe210ac9bb23ad5fbf2286e3e351e5dedd39bba72e54ed",
+      "snapshotDigest": "154f9a35df1011f1395619aab426ea70e51829ccc71441076d5bc867236545a8",
+      "teamName": "test-stopped-legacy"
+    },
+    "identityOperands": [
+      "TEST-desktop-owner-TEST-desktop-backend-cKokC4",
+      "TEST-desktop-profile-TEST-desktop-backend-cKokC4",
+      "TEST-human",
+      "stopped-import-1c23441b1ac2a81c909cfa9fd10440afadfc7cb3ae707313144c67ee2da8ee93",
+      "154f9a35df1011f1395619aab426ea70e51829ccc71441076d5bc867236545a8"
+    ],
+    "snapshotHeader": {
+      "sourceOwnerId": "2d3ed067928078637015171d3741d4817fe6046b7ea499200742e7ea78282813",
+      "sourceId": "c128151811585013eebe210ac9bb23ad5fbf2286e3e351e5dedd39bba72e54ed",
+      "sourceTeamName": "test-stopped-legacy",
+      "sourceRevision": "420c2c165c54058e92293727eb6a0488941d34edac7f5d34c6b5b0f6bac2b67c",
+      "sourceKind": "saved-draft",
+      "savedSettings": {
+        "cwd": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/workspace",
+        "displayName": "TEST never-launched legacy saved Team",
+        "description": "TEST configured data without native launch history",
+        "prompt": "TEST imported saved prompt; never submit this prompt",
+        "providerId": "anthropic",
+        "model": "claude-sonnet-4-6",
+        "effort": "low",
+        "fastMode": "off",
+        "syncModelsWithLead": false,
+        "limitContext": true,
+        "skipPermissions": false
+      },
+      "members": [
+        {
+          "memberId": "team-lead",
+          "name": "team-lead",
+          "role": "lead",
+          "settings": {
+            "cwd": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/workspace",
+            "providerId": "anthropic",
+            "model": "claude-sonnet-4-6",
+            "effort": "low",
+            "fastMode": "off"
+          }
+        },
+        {
+          "memberId": "alice",
+          "name": "alice",
+          "role": "member",
+          "settings": {
+            "role": "TEST developer",
+            "workflow": "TEST saved member workflow",
+            "providerId": "anthropic",
+            "providerBackendId": "cli-sdk",
+            "model": "claude-sonnet-4-6",
+            "effort": "low",
+            "fastMode": "off"
+          }
+        }
+      ],
+      "obligations": {
+        "launch": "released",
+        "bootstrap": "released",
+        "lane": "released",
+        "session": "released",
+        "stop": "released",
+        "command": "released",
+        "delivery": "released",
+        "custody": "released",
+        "background": "released"
+      },
+      "gaps": [
+        {
+          "category": "history",
+          "resourceId": "root",
+          "reason": "already-missing"
+        },
+        {
+          "category": "evidence",
+          "resourceId": "root",
+          "reason": "already-missing"
+        }
+      ]
+    },
+    "snapshotDigest": "154f9a35df1011f1395619aab426ea70e51829ccc71441076d5bc867236545a8",
+    "canonicalSnapshotDigestExact": true,
+    "intentFingerprint": "b7600d68f25db60126e09f46bcc066dd075a8d003c5ad3b9a6f2b20e0f476109",
+    "canonicalIntentFingerprintExact": true,
+    "sourceBefore": [
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/claude/tasks/test-stopped-legacy/TEST-legacy-task-a.json",
+        "sha256": "9c3432b236699e595b9be01295a5f4debd25d28676de9f06688ac03eb1d89207",
+        "sizeBytes": 2946
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/claude/tasks/test-stopped-legacy/TEST-legacy-task-b.json",
+        "sha256": "8f98381b570d70ebf4d7106265457d68fef0eba8c556e74695a914313ad85db2",
+        "sizeBytes": 275
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/claude/teams/test-stopped-legacy/members.meta.json",
+        "sha256": "4d152072317c20f63bb57a0f3e21e59e1d4b568bf7cd06320348aa955c66ffed",
+        "sizeBytes": 401
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/claude/teams/test-stopped-legacy/team.meta.json",
+        "sha256": "d489c5ef39fc3cbdaef128f3db7829c286301d4cebb6ef3d77745263c229d46f",
+        "sizeBytes": 503
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/userData/data/attachments/test-stopped-legacy/TEST-legacy-source-message/TEST-source-file--source-original.txt",
+        "sha256": "9cead239aa70dc3908cf22064703f55ef6c62ba70d43702b18bbdca8801750f3",
+        "sizeBytes": 44
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/userData/data/attachments/test-stopped-legacy/TEST-legacy-source-message/TEST-source-image--source-original.png",
+        "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+        "sizeBytes": 71
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/userData/data/task-attachments/test-stopped-legacy/TEST-legacy-task-a/TEST-task-blob--saved-note.txt",
+        "sha256": "186805c9a2e1c1386e0ec589c688e01919e55929f876664d0ac755f17b5841cf",
+        "sizeBytes": 36
+      }
+    ],
+    "sourceAfterEqualsBefore": true,
+    "snapshot7SourceBodiesEqualSeparateArchiveFiles": true,
+    "sourceFiles": [
+      {
+        "category": "team",
+        "snapshotPath": "members.meta.json",
+        "disposition": "archive",
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/claude/teams/test-stopped-legacy/members.meta.json",
+        "bytes": 401,
+        "blob": "ac64086cebc4a408a864be466200a0024a737e9b",
+        "sha256": "4d152072317c20f63bb57a0f3e21e59e1d4b568bf7cd06320348aa955c66ffed"
+      },
+      {
+        "category": "team",
+        "snapshotPath": "team.meta.json",
+        "disposition": "archive",
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/claude/teams/test-stopped-legacy/team.meta.json",
+        "bytes": 503,
+        "blob": "5cb4548e5c842d485415486cacbc8490706e963d",
+        "sha256": "d489c5ef39fc3cbdaef128f3db7829c286301d4cebb6ef3d77745263c229d46f"
+      },
+      {
+        "category": "tasks",
+        "snapshotPath": "TEST-legacy-task-a.json",
+        "disposition": "product",
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/claude/tasks/test-stopped-legacy/TEST-legacy-task-a.json",
+        "bytes": 2946,
+        "blob": "bfa23ab0f34f85f116c1ea1a35d982797e80929e",
+        "sha256": "9c3432b236699e595b9be01295a5f4debd25d28676de9f06688ac03eb1d89207"
+      },
+      {
+        "category": "tasks",
+        "snapshotPath": "TEST-legacy-task-b.json",
+        "disposition": "product",
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/claude/tasks/test-stopped-legacy/TEST-legacy-task-b.json",
+        "bytes": 275,
+        "blob": "b027ff500e62cbbf77799e4f1cab9e517f24b456",
+        "sha256": "8f98381b570d70ebf4d7106265457d68fef0eba8c556e74695a914313ad85db2"
+      },
+      {
+        "category": "attachments",
+        "snapshotPath": "TEST-legacy-source-message/TEST-source-file--source-original.txt",
+        "disposition": "product",
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/userData/data/attachments/test-stopped-legacy/TEST-legacy-source-message/TEST-source-file--source-original.txt",
+        "bytes": 44,
+        "blob": "3e6dc92bc40f9fe0218fc03625d321c189c9d2ce",
+        "sha256": "9cead239aa70dc3908cf22064703f55ef6c62ba70d43702b18bbdca8801750f3"
+      },
+      {
+        "category": "attachments",
+        "snapshotPath": "TEST-legacy-source-message/TEST-source-image--source-original.png",
+        "disposition": "product",
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/userData/data/attachments/test-stopped-legacy/TEST-legacy-source-message/TEST-source-image--source-original.png",
+        "bytes": 71,
+        "blob": "8d79cc731a6bbfd43247473d7ef6d2c0e9519994",
+        "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+      },
+      {
+        "category": "task-attachments",
+        "snapshotPath": "TEST-legacy-task-a/TEST-task-blob--saved-note.txt",
+        "disposition": "product",
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/userData/data/task-attachments/test-stopped-legacy/TEST-legacy-task-a/TEST-task-blob--saved-note.txt",
+        "bytes": 36,
+        "blob": "440117c49430f33a38e49db16da321673de724a2",
+        "sha256": "186805c9a2e1c1386e0ec589c688e01919e55929f876664d0ac755f17b5841cf"
+      }
+    ],
+    "embedded8ProductBodies": [
+      {
+        "destinationPath": "teams/test-stopped-legacy/.host-owner/import/archive/team/members.meta.json",
+        "bytes": 401,
+        "blob": "ac64086cebc4a408a864be466200a0024a737e9b",
+        "sha256": "4d152072317c20f63bb57a0f3e21e59e1d4b568bf7cd06320348aa955c66ffed",
+        "separateArchivedDestinationFile": false
+      },
+      {
+        "destinationPath": "teams/test-stopped-legacy/.host-owner/import/archive/team/team.meta.json",
+        "bytes": 503,
+        "blob": "5cb4548e5c842d485415486cacbc8490706e963d",
+        "sha256": "d489c5ef39fc3cbdaef128f3db7829c286301d4cebb6ef3d77745263c229d46f",
+        "separateArchivedDestinationFile": false
+      },
+      {
+        "destinationPath": "tasks/test-stopped-legacy/TEST-legacy-task-a.json",
+        "bytes": 2762,
+        "blob": "48b51ed2dd63098c81e9585b24edaa0db6584246",
+        "sha256": "650273a58468db211e91f9e9dde11353dc639a0a83c82f5910c5b591a84d4c30",
+        "separateArchivedDestinationFile": true,
+        "archivedBytesExact": true,
+        "archivedIdentity": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/hoststore/tasks/test-stopped-legacy/TEST-legacy-task-a.json",
+          "bytes": 2762,
+          "blob": "48b51ed2dd63098c81e9585b24edaa0db6584246",
+          "sha256": "650273a58468db211e91f9e9dde11353dc639a0a83c82f5910c5b591a84d4c30"
+        }
+      },
+      {
+        "destinationPath": "tasks/test-stopped-legacy/TEST-legacy-task-b.json",
+        "bytes": 226,
+        "blob": "d83ece1c05f1e53d8cf16c2155760254abc75566",
+        "sha256": "1a05b312ef4b7b431d89fce136affb655a4af84615e51172d5adbd548513eaa2",
+        "separateArchivedDestinationFile": true,
+        "archivedBytesExact": true,
+        "archivedIdentity": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/hoststore/tasks/test-stopped-legacy/TEST-legacy-task-b.json",
+          "bytes": 226,
+          "blob": "d83ece1c05f1e53d8cf16c2155760254abc75566",
+          "sha256": "1a05b312ef4b7b431d89fce136affb655a4af84615e51172d5adbd548513eaa2"
+        }
+      },
+      {
+        "destinationPath": "teams/test-stopped-legacy/.host-owner/import/blobs/attachments/TEST-legacy-source-message/TEST-source-file--source-original.txt",
+        "bytes": 44,
+        "blob": "3e6dc92bc40f9fe0218fc03625d321c189c9d2ce",
+        "sha256": "9cead239aa70dc3908cf22064703f55ef6c62ba70d43702b18bbdca8801750f3",
+        "separateArchivedDestinationFile": false
+      },
+      {
+        "destinationPath": "teams/test-stopped-legacy/.host-owner/import/blobs/attachments/TEST-legacy-source-message/TEST-source-image--source-original.png",
+        "bytes": 71,
+        "blob": "8d79cc731a6bbfd43247473d7ef6d2c0e9519994",
+        "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+        "separateArchivedDestinationFile": false
+      },
+      {
+        "destinationPath": "teams/test-stopped-legacy/.host-owner/import/blobs/task-attachments/TEST-legacy-task-a/TEST-task-blob--saved-note.txt",
+        "bytes": 36,
+        "blob": "440117c49430f33a38e49db16da321673de724a2",
+        "sha256": "186805c9a2e1c1386e0ec589c688e01919e55929f876664d0ac755f17b5841cf",
+        "separateArchivedDestinationFile": false
+      },
+      {
+        "destinationPath": "teams/test-stopped-legacy/.host-owner/import/source.json",
+        "bytes": 5080,
+        "blob": "d5f20e3e29067dcbc69f8b56a2c696747792d7db",
+        "sha256": "3f860f76ee15ba358bf4a610f753482d499b7170009e370083bb0a802d4a3f4d",
+        "separateArchivedDestinationFile": false,
+        "embeddedOriginEqualsReceipt": true
+      }
+    ],
+    "separateDestinationTaskFileCount": 2,
+    "bothDestinationTaskBytesExact": true,
+    "embeddedOriginEqualsReceipt": true,
+    "lookup": {
+      "ok": true,
+      "selection": "host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3"
+    },
+    "dialogTarget": {
+      "teamName": "host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3",
+      "mode": "launch",
+      "cwd": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/workspace",
+      "members": [
+        "team-lead",
+        "alice"
+      ]
+    },
+    "sameOriginalImportAfterReload": true,
+    "runtimeSessions": [],
+    "noLaunchSubmit": true,
+    "missingIndependentDestinations": "Import registry/owner state and six other product destinations are not separately archived. They are not reconstructed or promoted from embedded bytes."
+  },
+  "finiteModelProbes": {
+    "completedRecords": [
+      {
+        "identity": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/hoststore/management-commands/7777b777071c89d403260b2c770a10046ec12d9a28f39b29f2b7817155a30676.json",
+          "bytes": 969,
+          "blob": "5f38ddbdcb2cd5324a241052f7e9be74839ed534",
+          "sha256": "d80ecbd25edb8f7a4f37f451e028d90d51c4dc7c87582459cb040e17e41ce685"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "team-preflight-2968d182c836517c409a752d54f25b5c626bce4d1550d5bd03125b2141293e0b",
+          "profileId": "team-probe-a73d73532a0c372d81a01bf2d8b00fb3d06dea394db2bcbb83d6cf9a9338ad21",
+          "configRevision": "team-probe-a73d73532a0c372d81a01bf2d8b00fb3d06dea394db2bcbb83d6cf9a9338ad21",
+          "providerId": "anthropic",
+          "fingerprint": "27ed03f259fc9eda52d41b95db487778add283a211d6214c3f75f165aa752aac",
+          "selectionDigest": "9ffceedc694314b5670127a04e583637d497d7e279092874bee3fc5c329372d2",
+          "resourceId": "80ba954eeef92e1f8208646bb20c6da95175c1546b09d478c015bc14cf68a589",
+          "resourceHeld": false,
+          "kind": "model.probe",
+          "modelId": "claude-sonnet-4-6",
+          "effort": "low",
+          "modelContext": "model-default",
+          "context": "76efdc56297a24aa8dece4fdb05c69b4958617d2d888a77e5a39fa012ec4df7a",
+          "phase": "completed",
+          "expiresAt": 1794793517928,
+          "ok": true,
+          "digest": "45ef105cd844766d2d7687f6efa01534492bea363530a6c4e119d51ee7f7c610"
+        },
+        "bodyDigestExact": true,
+        "commandFilenameExact": true
+      },
+      {
+        "identity": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/hoststore/management-commands/aa5c94047f3379d4e7cc268dbc3750c12e6be929b61d1a2f5ca47fe76b8fd191.json",
+          "bytes": 969,
+          "blob": "4e661f51389ae957d2c2af156b7d8dcfb693d8e6",
+          "sha256": "5fcd9780bc194c23966f847c48514e0a4e2ebc04ed59a2c2c0c88812a54f8996"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "team-preflight-6c7eb0479513e0ea1949c7cbcb3795b45309edf9f6ba7b46a15bc8e04e1bd6a3",
+          "profileId": "team-probe-55039070a588f2cb15f7661c636f553137e84feb94ea23607576b131975540a4",
+          "configRevision": "team-probe-55039070a588f2cb15f7661c636f553137e84feb94ea23607576b131975540a4",
+          "providerId": "anthropic",
+          "fingerprint": "edc41920be661e5e6ab57066c2fdcbe963008e970bc0440c3a5988d74cafc16e",
+          "selectionDigest": "04abfba7948731af39bdf4b28295ba9fc22088f5bb0a241ec79f227f028b6ea6",
+          "resourceId": "80ba954eeef92e1f8208646bb20c6da95175c1546b09d478c015bc14cf68a589",
+          "resourceHeld": false,
+          "kind": "model.probe",
+          "modelId": "claude-sonnet-4-6",
+          "effort": "low",
+          "modelContext": "model-default",
+          "context": "969f3c680ebe4756e593ed7d5b85a28dff3eccb45f267cd8c593e24c0d22441e",
+          "phase": "completed",
+          "expiresAt": 1794793516198,
+          "ok": true,
+          "digest": "03d3b696b779d4c652a1b74848a4a10a2b884de0c089e49281863d96aa92e4b9"
+        },
+        "bodyDigestExact": true,
+        "commandFilenameExact": true
+      }
+    ],
+    "recordBodyDigestAndCommandFilenameExact": true,
+    "exactInputs": [
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5694,
+        "event": "input",
+        "inputId": "27a3a923-24b4-437c-bbff-da61180cf24e",
+        "sessionId": "0192ff26-20eb-44e6-8968-347eaea6babb",
+        "marker": "TEST_MODEL_PROBE",
+        "requestedModel": "claude-sonnet-4-6",
+        "requestedEffort": "low",
+        "text": "Reply only OK. Do not use tools, access files or run commands."
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5749,
+        "event": "input",
+        "inputId": "c566244b-6c18-4873-9c95-0af0c69e7040",
+        "sessionId": "919abe8e-8ccc-466d-ae74-9010faa95018",
+        "marker": "TEST_MODEL_PROBE",
+        "requestedModel": "claude-sonnet-4-6",
+        "requestedEffort": "low",
+        "text": "Reply only OK. Do not use tools, access files or run commands."
+      }
+    ],
+    "exactMatchingPidInputSessionTerminalCount": 2,
+    "matchingTerminalOutcome": "succeeded/OK",
+    "managementInputCount": 0,
+    "preflightObservations": [
+      {
+        "receipts": [
+          {
+            "schemaVersion": 1,
+            "commandId": "team-preflight-2968d182c836517c409a752d54f25b5c626bce4d1550d5bd03125b2141293e0b",
+            "profileId": "team-probe-a73d73532a0c372d81a01bf2d8b00fb3d06dea394db2bcbb83d6cf9a9338ad21",
+            "configRevision": "team-probe-a73d73532a0c372d81a01bf2d8b00fb3d06dea394db2bcbb83d6cf9a9338ad21",
+            "providerId": "anthropic",
+            "fingerprint": "27ed03f259fc9eda52d41b95db487778add283a211d6214c3f75f165aa752aac",
+            "selectionDigest": "9ffceedc694314b5670127a04e583637d497d7e279092874bee3fc5c329372d2",
+            "resourceId": "80ba954eeef92e1f8208646bb20c6da95175c1546b09d478c015bc14cf68a589",
+            "resourceHeld": false,
+            "kind": "model.probe",
+            "modelId": "claude-sonnet-4-6",
+            "effort": "low",
+            "modelContext": "model-default",
+            "context": "76efdc56297a24aa8dece4fdb05c69b4958617d2d888a77e5a39fa012ec4df7a",
+            "phase": "completed",
+            "expiresAt": 1794793517928,
+            "ok": true,
+            "digest": "45ef105cd844766d2d7687f6efa01534492bea363530a6c4e119d51ee7f7c610"
+          },
+          {
+            "schemaVersion": 1,
+            "commandId": "team-preflight-6c7eb0479513e0ea1949c7cbcb3795b45309edf9f6ba7b46a15bc8e04e1bd6a3",
+            "profileId": "team-probe-55039070a588f2cb15f7661c636f553137e84feb94ea23607576b131975540a4",
+            "configRevision": "team-probe-55039070a588f2cb15f7661c636f553137e84feb94ea23607576b131975540a4",
+            "providerId": "anthropic",
+            "fingerprint": "edc41920be661e5e6ab57066c2fdcbe963008e970bc0440c3a5988d74cafc16e",
+            "selectionDigest": "04abfba7948731af39bdf4b28295ba9fc22088f5bb0a241ec79f227f028b6ea6",
+            "resourceId": "80ba954eeef92e1f8208646bb20c6da95175c1546b09d478c015bc14cf68a589",
+            "resourceHeld": false,
+            "kind": "model.probe",
+            "modelId": "claude-sonnet-4-6",
+            "effort": "low",
+            "modelContext": "model-default",
+            "context": "969f3c680ebe4756e593ed7d5b85a28dff3eccb45f267cd8c593e24c0d22441e",
+            "phase": "completed",
+            "expiresAt": 1794793516198,
+            "ok": true,
+            "digest": "03d3b696b779d4c652a1b74848a4a10a2b884de0c089e49281863d96aa92e4b9"
+          }
+        ],
+        "observedExactProbeRequests": 2,
+        "dialogText": "Close\nLaunch Team\n\nStart team host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3 using its configured agent runtimes.\n\nLaunch mode\nFresh Launch\n\nNo original launch checkpoint exists. Use Fresh Launch.\n\nProject\nFrom project list\nCustom path\nBrowse\nOptional launch settings\nOptional\n\nKeep the launch flow focused on the project path and only expand this when you want extra control.\n\nFast mode (optional)\nDefault (Off)\nFast\nOff\n\nFast mode is not supported by this Anthropic runtime.\n\nMembers\nlead\nTeam Lead\nSonnet 4.6\nSync model with teammates\n\nNext launch will use Anthropic · Sonnet 4.6 · Low instead of Anthropic · Default.\n\nCustom role...\nSonnet 4.6\nWorktree\nChecked: use a separate Git worktree, created on launch if needed. Existing worktrees keep their current branch. Unchecked: use the shared project workspace; the old worktree is kept.\nChecked: use a separate Git worktree, created on launch if needed. Existing worktrees keep their current branch. Unchecked: use the shared project workspace; the old worktree is kept.\nEdit teammate workflow\nMCP inherit: Control this member's MCP inheritance policy\nPrompt for team lead (optional)\nTip: Use @ for members/files and # for tasks\nAuto-approve all tools\n\nManual mode: you'll approve or deny each tool call in real time.\n\nTeam relaunch starts a fresh lead session. Durable team state, task board, and member configuration are rehydrated into the launch prompt.\n\nAdvanced\nSELECTED PROVIDERS\nAnthropic\nNeeds attention\nAll selected providers are ready.\nAnthropic (Anthropic API): Selected model checks - 1 verified\n\nSelected member accounts and model options were checked through the captured Host. No team member sessions were started.\n\nSonnet 4.6 - Selected model verified\n\nFirst launch will trust this project\nProject hooks and MCP servers may run when the team starts.\n\nLaunch team"
+      },
+      {
+        "receipts": [
+          {
+            "schemaVersion": 1,
+            "commandId": "team-preflight-2968d182c836517c409a752d54f25b5c626bce4d1550d5bd03125b2141293e0b",
+            "profileId": "team-probe-a73d73532a0c372d81a01bf2d8b00fb3d06dea394db2bcbb83d6cf9a9338ad21",
+            "configRevision": "team-probe-a73d73532a0c372d81a01bf2d8b00fb3d06dea394db2bcbb83d6cf9a9338ad21",
+            "providerId": "anthropic",
+            "fingerprint": "27ed03f259fc9eda52d41b95db487778add283a211d6214c3f75f165aa752aac",
+            "selectionDigest": "9ffceedc694314b5670127a04e583637d497d7e279092874bee3fc5c329372d2",
+            "resourceId": "80ba954eeef92e1f8208646bb20c6da95175c1546b09d478c015bc14cf68a589",
+            "resourceHeld": false,
+            "kind": "model.probe",
+            "modelId": "claude-sonnet-4-6",
+            "effort": "low",
+            "modelContext": "model-default",
+            "context": "76efdc56297a24aa8dece4fdb05c69b4958617d2d888a77e5a39fa012ec4df7a",
+            "phase": "completed",
+            "expiresAt": 1794793517928,
+            "ok": true,
+            "digest": "45ef105cd844766d2d7687f6efa01534492bea363530a6c4e119d51ee7f7c610"
+          },
+          {
+            "schemaVersion": 1,
+            "commandId": "team-preflight-6c7eb0479513e0ea1949c7cbcb3795b45309edf9f6ba7b46a15bc8e04e1bd6a3",
+            "profileId": "team-probe-55039070a588f2cb15f7661c636f553137e84feb94ea23607576b131975540a4",
+            "configRevision": "team-probe-55039070a588f2cb15f7661c636f553137e84feb94ea23607576b131975540a4",
+            "providerId": "anthropic",
+            "fingerprint": "edc41920be661e5e6ab57066c2fdcbe963008e970bc0440c3a5988d74cafc16e",
+            "selectionDigest": "04abfba7948731af39bdf4b28295ba9fc22088f5bb0a241ec79f227f028b6ea6",
+            "resourceId": "80ba954eeef92e1f8208646bb20c6da95175c1546b09d478c015bc14cf68a589",
+            "resourceHeld": false,
+            "kind": "model.probe",
+            "modelId": "claude-sonnet-4-6",
+            "effort": "low",
+            "modelContext": "model-default",
+            "context": "969f3c680ebe4756e593ed7d5b85a28dff3eccb45f267cd8c593e24c0d22441e",
+            "phase": "completed",
+            "expiresAt": 1794793516198,
+            "ok": true,
+            "digest": "03d3b696b779d4c652a1b74848a4a10a2b884de0c089e49281863d96aa92e4b9"
+          }
+        ],
+        "observedExactProbeRequests": 2,
+        "dialogText": "Close\nLaunch Team\n\nStart team host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3 using its configured agent runtimes.\n\nLaunch mode\nFresh Launch\n\nNo original launch checkpoint exists. Use Fresh Launch.\n\nProject\nFrom project list\nCustom path\nBrowse\nOptional launch settings\nOptional\n\nKeep the launch flow focused on the project path and only expand this when you want extra control.\n\nFast mode (optional)\nDefault (Off)\nFast\nOff\n\nFast mode is not supported by this Anthropic runtime.\n\nMembers\nlead\nTeam Lead\nSonnet 4.6\nSync model with teammates\n\nNext launch will use Anthropic · Sonnet 4.6 · Low instead of Anthropic · Default.\n\nCustom role...\nSonnet 4.6\nWorktree\nChecked: use a separate Git worktree, created on launch if needed. Existing worktrees keep their current branch. Unchecked: use the shared project workspace; the old worktree is kept.\nChecked: use a separate Git worktree, created on launch if needed. Existing worktrees keep their current branch. Unchecked: use the shared project workspace; the old worktree is kept.\nEdit teammate workflow\nMCP inherit: Control this member's MCP inheritance policy\nPrompt for team lead (optional)\nTip: Use @ for members/files and # for tasks\nAuto-approve all tools\n\nManual mode: you'll approve or deny each tool call in real time.\n\nTeam relaunch starts a fresh lead session. Durable team state, task board, and member configuration are rehydrated into the launch prompt.\n\nAdvanced\nSELECTED PROVIDERS\nAnthropic\nNeeds attention\nAll selected providers are ready.\nAnthropic (Anthropic API): Selected model checks - 1 verified\n\nSelected member accounts and model options were checked through the captured Host. No team member sessions were started.\n\nSonnet 4.6 - Selected model verified\n\nFirst launch will trust this project\nProject hooks and MCP servers may run when the team starts.\n\nLaunch team"
+      }
+    ],
+    "dialogMixedReadinessTextPreserved": true,
+    "boundary": "Finite configured management and model-probe Runtime children do not imply imported Team Runtime allocation, saved prompt submission or vendor/native execution."
+  },
+  "ui": {
+    "stepCount": 72,
+    "actionCounts": {
+      "mouseMoved": 34,
+      "mouseClick": 36,
+      "Page.reload": 1,
+      "key": 1
+    },
+    "steps": [
+      {
+        "monotonicMs": 59223,
+        "action": "mouseMoved",
+        "label": "hover open original menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 59656,
+        "action": "mouseClick",
+        "label": "open original menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 59766,
+        "action": "mouseMoved",
+        "label": "hover open original Teams list",
+        "selector": "button",
+        "target": {
+          "x": 1272,
+          "y": 92.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 60207,
+        "action": "mouseClick",
+        "label": "open original Teams list",
+        "selector": "button",
+        "expectedText": "Teams",
+        "target": {
+          "x": 1272,
+          "y": 92.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 60770,
+        "action": "mouseClick",
+        "label": "original legacy Team card",
+        "target": {
+          "x": 193.328125,
+          "y": 266.25
+        }
+      },
+      {
+        "monotonicMs": 65227,
+        "action": "mouseMoved",
+        "label": "hover original stopped Detail Launch once",
+        "selector": "button",
+        "target": {
+          "x": 522.65625,
+          "y": 496,
+          "text": "Launch",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 65703,
+        "action": "mouseClick",
+        "label": "original stopped Detail Launch once",
+        "selector": "button",
+        "expectedText": "Launch",
+        "target": {
+          "x": 522.65625,
+          "y": 496,
+          "text": "Launch",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 67202,
+        "action": "mouseMoved",
+        "label": "hover expand saved optional settings",
+        "selector": "[role=\"dialog\"] button[aria-controls=\"_r_1k_\"]",
+        "target": {
+          "x": 700,
+          "y": 506.75,
+          "text": "Optional launch settingsOptional•Lead prompt•Anthropic•Sonnet 4.6•+4",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 67651,
+        "action": "mouseClick",
+        "label": "expand saved optional settings",
+        "selector": "[role=\"dialog\"] button[aria-controls=\"_r_1k_\"]",
+        "target": {
+          "x": 700,
+          "y": 506.75,
+          "text": "Optional launch settingsOptional•Lead prompt•Anthropic•Sonnet 4.6•+4",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 72101,
+        "action": "mouseMoved",
+        "label": "hover close original Launch dialog without Submit",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 1079,
+          "y": 72,
+          "text": "Close",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 72512,
+        "action": "mouseClick",
+        "label": "close original Launch dialog without Submit",
+        "selector": "[role=\"dialog\"] button",
+        "expectedText": "Close",
+        "target": {
+          "x": 1079,
+          "y": 72,
+          "text": "Close",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 72595,
+        "action": "Page.reload",
+        "ignoreCache": false
+      },
+      {
+        "monotonicMs": 79536,
+        "action": "mouseMoved",
+        "label": "hover open original menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 80151,
+        "action": "mouseClick",
+        "label": "open original menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 80255,
+        "action": "mouseMoved",
+        "label": "hover open original Teams list",
+        "selector": "button",
+        "target": {
+          "x": 1272,
+          "y": 92.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 80685,
+        "action": "mouseClick",
+        "label": "open original Teams list",
+        "selector": "button",
+        "expectedText": "Teams",
+        "target": {
+          "x": 1272,
+          "y": 92.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 81181,
+        "action": "mouseClick",
+        "label": "original legacy Team card",
+        "target": {
+          "x": 193.328125,
+          "y": 266.25
+        }
+      },
+      {
+        "monotonicMs": 82760,
+        "action": "mouseMoved",
+        "label": "hover original stopped Detail Launch once",
+        "selector": "button",
+        "target": {
+          "x": 522.65625,
+          "y": 496,
+          "text": "Launch",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 83314,
+        "action": "mouseClick",
+        "label": "original stopped Detail Launch once",
+        "selector": "button",
+        "expectedText": "Launch",
+        "target": {
+          "x": 522.65625,
+          "y": 496,
+          "text": "Launch",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 84224,
+        "action": "mouseMoved",
+        "label": "hover expand saved optional settings",
+        "selector": "[role=\"dialog\"] button[aria-controls=\"_r_1l_\"]",
+        "target": {
+          "x": 700,
+          "y": 506.75,
+          "text": "Optional launch settingsOptional•Lead prompt•Anthropic•Sonnet 4.6•+4",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 84669,
+        "action": "mouseClick",
+        "label": "expand saved optional settings",
+        "selector": "[role=\"dialog\"] button[aria-controls=\"_r_1l_\"]",
+        "target": {
+          "x": 700,
+          "y": 506.75,
+          "text": "Optional launch settingsOptional•Lead prompt•Anthropic•Sonnet 4.6•+4",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 85841,
+        "action": "mouseMoved",
+        "label": "hover close original Launch dialog without Submit",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 1079,
+          "y": 72,
+          "text": "Close",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 86253,
+        "action": "mouseClick",
+        "label": "close original Launch dialog without Submit",
+        "selector": "[role=\"dialog\"] button",
+        "expectedText": "Close",
+        "target": {
+          "x": 1079,
+          "y": 72,
+          "text": "Close",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 86428,
+        "action": "mouseMoved",
+        "label": "hover open original menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 86838,
+        "action": "mouseClick",
+        "label": "open original menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 86935,
+        "action": "mouseMoved",
+        "label": "hover open original Teams list",
+        "selector": "button",
+        "target": {
+          "x": 1272,
+          "y": 92.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 87353,
+        "action": "mouseClick",
+        "label": "open original Teams list",
+        "selector": "button",
+        "expectedText": "Teams",
+        "target": {
+          "x": 1272,
+          "y": 92.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 87595,
+        "action": "mouseMoved",
+        "label": "hover open original canonical imported Team card once",
+        "selector": ".team-row-zebra-card[data-team-name=\"host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3\"]",
+        "target": {
+          "x": 559.9921875,
+          "y": 266.25,
+          "text": "TEST never-launched legacy saved TeamOfflineTEST configured data without native launch historyteam-leadleadalicemember1/21 pending1 completedworkspace",
+          "tag": "DIV"
+        }
+      },
+      {
+        "monotonicMs": 88023,
+        "action": "mouseClick",
+        "label": "open original canonical imported Team card once",
+        "selector": ".team-row-zebra-card[data-team-name=\"host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3\"]",
+        "target": {
+          "x": 559.9921875,
+          "y": 266.25,
+          "text": "TEST never-launched legacy saved TeamOfflineTEST configured data without native launch historyteam-leadleadalicemember1/21 pending1 completedworkspace",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 88989,
+        "action": "mouseMoved",
+        "label": "hover open original source image lightbox once",
+        "selector": ".kanban-task-card[data-task-id=\"TEST-legacy-task-a\"] button[data-attachment-source=\"source-message\"][aria-label=\"source-original.png\"]",
+        "target": {
+          "x": 471.5,
+          "y": 676.21875,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 89422,
+        "action": "mouseClick",
+        "label": "open original source image lightbox once",
+        "selector": ".kanban-task-card[data-task-id=\"TEST-legacy-task-a\"] button[data-attachment-source=\"source-message\"][aria-label=\"source-original.png\"]",
+        "target": {
+          "x": 471.5,
+          "y": 676.21875,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 89917,
+        "action": "key",
+        "key": "Escape",
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 90335,
+        "action": "mouseMoved",
+        "label": "hover open original imported Task detail once",
+        "selector": ".kanban-task-card[data-task-id=\"TEST-legacy-task-a\"] h5",
+        "target": {
+          "x": 471.5,
+          "y": 581,
+          "text": "TEST imported legacy Task with original comment and attachment",
+          "tag": "H5"
+        }
+      },
+      {
+        "monotonicMs": 90754,
+        "action": "mouseClick",
+        "label": "open original imported Task detail once",
+        "selector": ".kanban-task-card[data-task-id=\"TEST-legacy-task-a\"] h5",
+        "expectedText": "TEST imported legacy Task with original comment and attachment",
+        "target": {
+          "x": 471.5,
+          "y": 581,
+          "text": "TEST imported legacy Task with original comment and attachment",
+          "tag": "H5"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 91552,
+        "action": "mouseMoved",
+        "label": "hover download original source bytes once without native picker",
+        "selector": "[role=\"dialog\"] button[aria-label=\"Download source-original.txt\"]",
+        "target": {
+          "x": 415,
+          "y": 428.25,
+          "text": "source-original.txt",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 91979,
+        "action": "mouseClick",
+        "label": "download original source bytes once without native picker",
+        "selector": "[role=\"dialog\"] button[aria-label=\"Download source-original.txt\"]",
+        "target": {
+          "x": 415,
+          "y": 428.25,
+          "text": "source-original.txt",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 92276,
+        "action": "mouseMoved",
+        "label": "hover close original Task detail once",
+        "selector": "[role=\"dialog\"] > button",
+        "target": {
+          "x": 1111,
+          "y": 72,
+          "text": "Close",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 92704,
+        "action": "mouseClick",
+        "label": "close original Task detail once",
+        "selector": "[role=\"dialog\"] > button",
+        "expectedText": "Close",
+        "target": {
+          "x": 1111,
+          "y": 72,
+          "text": "Close",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 92923,
+        "action": "mouseMoved",
+        "label": "hover open original menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 93340,
+        "action": "mouseClick",
+        "label": "open original menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 93445,
+        "action": "mouseMoved",
+        "label": "hover open original Teams list",
+        "selector": "button",
+        "target": {
+          "x": 1272,
+          "y": 92.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 93903,
+        "action": "mouseClick",
+        "label": "open original Teams list",
+        "selector": "button",
+        "expectedText": "Teams",
+        "target": {
+          "x": 1272,
+          "y": 92.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 94197,
+        "action": "mouseMoved",
+        "label": "hover open captured imported TaskRef Team",
+        "selector": ".team-row-zebra-card[data-team-name=\"host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3\"]",
+        "target": {
+          "x": 559.9921875,
+          "y": 266.25,
+          "text": "TEST never-launched legacy saved TeamOfflineTEST configured data without native launch historyteam-leadleadalicemember1/21 pending1 completedworkspace",
+          "tag": "DIV"
+        }
+      },
+      {
+        "monotonicMs": 94607,
+        "action": "mouseClick",
+        "label": "open captured imported TaskRef Team",
+        "selector": ".team-row-zebra-card[data-team-name=\"host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3\"]",
+        "target": {
+          "x": 559.9921875,
+          "y": 266.25,
+          "text": "TEST never-launched legacy saved TeamOfflineTEST configured data without native launch historyteam-leadleadalicemember1/21 pending1 completedworkspace",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 94875,
+        "action": "mouseMoved",
+        "label": "hover open original imported Task description",
+        "selector": ".kanban-task-card[data-task-id=\"TEST-legacy-task-a\"] h5",
+        "target": {
+          "x": 471.5,
+          "y": 581,
+          "text": "TEST imported legacy Task with original comment and attachment",
+          "tag": "H5"
+        }
+      },
+      {
+        "monotonicMs": 95291,
+        "action": "mouseClick",
+        "label": "open original imported Task description",
+        "selector": ".kanban-task-card[data-task-id=\"TEST-legacy-task-a\"] h5",
+        "target": {
+          "x": 471.5,
+          "y": 581,
+          "text": "TEST imported legacy Task with original comment and attachment",
+          "tag": "H5"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 95709,
+        "action": "mouseMoved",
+        "label": "hover navigate original destination TaskRef once",
+        "selector": "[role=\"dialog\"] p:has(a[href^=\"task://TEST-external-task?\"]) a[href^=\"task://TEST-legacy-task-b?\"]",
+        "target": {
+          "x": 357.2734375,
+          "y": 292,
+          "text": "#18",
+          "tag": "A"
+        }
+      },
+      {
+        "monotonicMs": 96139,
+        "action": "mouseClick",
+        "label": "navigate original destination TaskRef once",
+        "selector": "[role=\"dialog\"] p:has(a[href^=\"task://TEST-external-task?\"]) a[href^=\"task://TEST-legacy-task-b?\"]",
+        "target": {
+          "x": 357.2734375,
+          "y": 292,
+          "text": "#18",
+          "tag": "A"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 96406,
+        "action": "mouseMoved",
+        "label": "hover open original menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 96910,
+        "action": "mouseClick",
+        "label": "open original menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 97011,
+        "action": "mouseMoved",
+        "label": "hover open original Teams list",
+        "selector": "button",
+        "target": {
+          "x": 1272,
+          "y": 92.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 97444,
+        "action": "mouseClick",
+        "label": "open original Teams list",
+        "selector": "button",
+        "expectedText": "Teams",
+        "target": {
+          "x": 1272,
+          "y": 92.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 97740,
+        "action": "mouseMoved",
+        "label": "hover open captured imported TaskRef Team",
+        "selector": ".team-row-zebra-card[data-team-name=\"host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3\"]",
+        "target": {
+          "x": 559.9921875,
+          "y": 266.25,
+          "text": "TEST never-launched legacy saved TeamOfflineTEST configured data without native launch historyteam-leadleadalicemember1/21 pending1 completedworkspace",
+          "tag": "DIV"
+        }
+      },
+      {
+        "monotonicMs": 98178,
+        "action": "mouseClick",
+        "label": "open captured imported TaskRef Team",
+        "selector": ".team-row-zebra-card[data-team-name=\"host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3\"]",
+        "target": {
+          "x": 559.9921875,
+          "y": 266.25,
+          "text": "TEST never-launched legacy saved TeamOfflineTEST configured data without native launch historyteam-leadleadalicemember1/21 pending1 completedworkspace",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 98443,
+        "action": "mouseMoved",
+        "label": "hover open original imported Task description",
+        "selector": ".kanban-task-card[data-task-id=\"TEST-legacy-task-a\"] h5",
+        "target": {
+          "x": 471.5,
+          "y": 440,
+          "text": "TEST imported legacy Task with original comment and attachment",
+          "tag": "H5"
+        }
+      },
+      {
+        "monotonicMs": 98907,
+        "action": "mouseClick",
+        "label": "open original imported Task description",
+        "selector": ".kanban-task-card[data-task-id=\"TEST-legacy-task-a\"] h5",
+        "target": {
+          "x": 471.5,
+          "y": 440,
+          "text": "TEST imported legacy Task with original comment and attachment",
+          "tag": "H5"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 99331,
+        "action": "mouseMoved",
+        "label": "hover navigate original archive TaskRef once",
+        "selector": "[role=\"dialog\"] p:has(a[href^=\"task://TEST-external-task?\"]) a[href^=\"task://TEST-external-task?\"]",
+        "target": {
+          "x": 442.1171875,
+          "y": 292,
+          "text": "#99",
+          "tag": "A"
+        }
+      },
+      {
+        "monotonicMs": 99770,
+        "action": "mouseClick",
+        "label": "navigate original archive TaskRef once",
+        "selector": "[role=\"dialog\"] p:has(a[href^=\"task://TEST-external-task?\"]) a[href^=\"task://TEST-external-task?\"]",
+        "target": {
+          "x": 442.1171875,
+          "y": 292,
+          "text": "#99",
+          "tag": "A"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 100347,
+        "action": "mouseMoved",
+        "label": "hover close captured source-owner Task tab",
+        "selector": "[role=\"tab\"][aria-selected=\"true\"] button[aria-label=\"Close tab\"]",
+        "target": {
+          "x": 984.234375,
+          "y": 53.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 100764,
+        "action": "mouseClick",
+        "label": "close captured source-owner Task tab",
+        "selector": "[role=\"tab\"][aria-selected=\"true\"] button[aria-label=\"Close tab\"]",
+        "target": {
+          "x": 984.234375,
+          "y": 53.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 101105,
+        "action": "mouseMoved",
+        "label": "hover open original menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 101526,
+        "action": "mouseClick",
+        "label": "open original menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 101623,
+        "action": "mouseMoved",
+        "label": "hover open original Teams list",
+        "selector": "button",
+        "target": {
+          "x": 1272,
+          "y": 92.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 102063,
+        "action": "mouseClick",
+        "label": "open original Teams list",
+        "selector": "button",
+        "expectedText": "Teams",
+        "target": {
+          "x": 1272,
+          "y": 92.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 102363,
+        "action": "mouseMoved",
+        "label": "hover open captured imported TaskRef Team",
+        "selector": ".team-row-zebra-card[data-team-name=\"host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3\"]",
+        "target": {
+          "x": 559.9921875,
+          "y": 266.25,
+          "text": "TEST never-launched legacy saved TeamOfflineTEST configured data without native launch historyteam-leadleadalicemember1/21 pending1 completedworkspace",
+          "tag": "DIV"
+        }
+      },
+      {
+        "monotonicMs": 102807,
+        "action": "mouseClick",
+        "label": "open captured imported TaskRef Team",
+        "selector": ".team-row-zebra-card[data-team-name=\"host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3\"]",
+        "target": {
+          "x": 559.9921875,
+          "y": 266.25,
+          "text": "TEST never-launched legacy saved TeamOfflineTEST configured data without native launch historyteam-leadleadalicemember1/21 pending1 completedworkspace",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 103079,
+        "action": "mouseMoved",
+        "label": "hover open original imported Task description",
+        "selector": ".kanban-task-card[data-task-id=\"TEST-legacy-task-a\"] h5",
+        "target": {
+          "x": 471.5,
+          "y": 440,
+          "text": "TEST imported legacy Task with original comment and attachment",
+          "tag": "H5"
+        }
+      },
+      {
+        "monotonicMs": 103538,
+        "action": "mouseClick",
+        "label": "open original imported Task description",
+        "selector": ".kanban-task-card[data-task-id=\"TEST-legacy-task-a\"] h5",
+        "target": {
+          "x": 471.5,
+          "y": 440,
+          "text": "TEST imported legacy Task with original comment and attachment",
+          "tag": "H5"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 103958,
+        "action": "mouseMoved",
+        "label": "hover navigate original gap TaskRef once",
+        "selector": "[role=\"dialog\"] p:has(a[href^=\"task://TEST-external-task?\"]) a[href^=\"task://TEST-missing-task?\"]",
+        "target": {
+          "x": 528.5,
+          "y": 292,
+          "text": "#100",
+          "tag": "A"
+        }
+      },
+      {
+        "monotonicMs": 104453,
+        "action": "mouseClick",
+        "label": "navigate original gap TaskRef once",
+        "selector": "[role=\"dialog\"] p:has(a[href^=\"task://TEST-external-task?\"]) a[href^=\"task://TEST-missing-task?\"]",
+        "target": {
+          "x": 528.5,
+          "y": 292,
+          "text": "#100",
+          "tag": "A"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 104713,
+        "action": "mouseMoved",
+        "label": "hover close captured source-owner Task tab",
+        "selector": "[role=\"tab\"][aria-selected=\"true\"] button[aria-label=\"Close tab\"]",
+        "target": {
+          "x": 984.234375,
+          "y": 53.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 105150,
+        "action": "mouseClick",
+        "label": "close captured source-owner Task tab",
+        "selector": "[role=\"tab\"][aria-selected=\"true\"] button[aria-label=\"Close tab\"]",
+        "target": {
+          "x": 984.234375,
+          "y": 53.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      }
+    ],
+    "originalPageReloadCount": 1,
+    "attachments": {
+      "status": "PASS",
+      "scope": "Original canonical imported Team Kanban → source thumbnail/lightbox → Task detail source thumbnail and bounded bytes/download; no Launch Submit",
+      "screenshots": [
+        {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/ui-import-source-attachment-kanban.png",
+          "sha256": "f483c0cbb4784d6f4f9ac4824c37d699c3d356d1099eebab23010010e597e3ab"
+        },
+        {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/ui-import-source-attachment-lightbox.png",
+          "sha256": "e48ee8d2b25898ab37a67af2a75db7e8a5607f875582cc8ccdfee1219c40e0a9"
+        },
+        {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/ui-import-source-attachment-task-detail.png",
+          "sha256": "3c3ee69fd0add21d32c28d0a8db66f7f00049460819c59842f38d82e96bb0d2c"
+        }
+      ],
+      "sourceBinding": {
+        "selection": "host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3",
+        "handleId": "e56ca2cb-73e2-5c25-82ff-44b4b554bff3",
+        "taskId": "TEST-legacy-task-a",
+        "reference": "im1:TEST-legacy-task-a:082304d712a14762c0bfe5f1630b0a3dc548a24bd9fe7984d043bd147734d85a",
+        "snapshotSource": {
+          "text": "TEST existing imported source-message context",
+          "from": "user",
+          "timestamp": "2026-10-23T00:00:00.000Z",
+          "source": "user_sent",
+          "attachments": [
+            {
+              "id": "TEST-source-image",
+              "filename": "source-original.png",
+              "mimeType": "image/png",
+              "size": 71
+            },
+            {
+              "id": "TEST-source-file",
+              "filename": "source-original.txt",
+              "mimeType": "text/plain",
+              "size": 44
+            }
+          ]
+        }
+      },
+      "kanbanOwner": {
+        "teamName": "host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3",
+        "taskId": "TEST-legacy-task-a",
+        "reference": "im1:TEST-legacy-task-a:082304d712a14762c0bfe5f1630b0a3dc548a24bd9fe7984d043bd147734d85a"
+      },
+      "metadataRead": {
+        "ok": true,
+        "value": [
+          {
+            "id": "TEST-source-image",
+            "filename": "source-original.png",
+            "mimeType": "image/png",
+            "size": 71
+          },
+          {
+            "id": "TEST-source-file",
+            "filename": "source-original.txt",
+            "mimeType": "text/plain",
+            "size": 44
+          }
+        ]
+      },
+      "kanbanThumbnail": {
+        "width": 2,
+        "height": 1,
+        "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+      },
+      "lightboxImage": {
+        "width": 2,
+        "height": 1,
+        "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+      },
+      "taskDetailOwner": {
+        "teamName": "host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3",
+        "taskId": "TEST-legacy-task-a",
+        "reference": "im1:TEST-legacy-task-a:082304d712a14762c0bfe5f1630b0a3dc548a24bd9fe7984d043bd147734d85a"
+      },
+      "taskDetailThumbnail": {
+        "width": 2,
+        "height": 1,
+        "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+      },
+      "ownerReadRequests": [
+        {
+          "commandId": "c257ffc7-417b-4a1d-b907-3af72212f34c",
+          "offset": 0,
+          "elapsedMs": 7,
+          "ok": true,
+          "code": null,
+          "outcome": null
+        }
+      ],
+      "ownerReadBytes": {
+        "sha256": "9cead239aa70dc3908cf22064703f55ef6c62ba70d43702b18bbdca8801750f3",
+        "size": 44,
+        "reference": "im1:TEST-legacy-task-a:082304d712a14762c0bfe5f1630b0a3dc548a24bd9fe7984d043bd147734d85a"
+      },
+      "downloadPolicy": {
+        "method": "Page.setDownloadBehavior",
+        "behavior": "allow",
+        "downloadPath": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/home/Downloads",
+        "rendererBrowserContextId": "5B7E735F8723A39E4D047AB7ECB336B0",
+        "acknowledged": true,
+        "scope": "captured TEST renderer context via current Page target"
+      },
+      "downloadAttempt": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/home/Downloads/source-original.txt",
+        "startedAtMs": 1794793449331,
+        "clickAcknowledgedAtMs": 1794793449849,
+        "deadlineAtMs": 1794793494849,
+        "budgetMs": 45000
+      },
+      "download": {
+        "status": "PASS",
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-cKokC4/home/Downloads/source-original.txt",
+        "size": 44,
+        "sha256": "9cead239aa70dc3908cf22064703f55ef6c62ba70d43702b18bbdca8801750f3",
+        "nativePicker": false,
+        "target": "original TEST-home Downloads"
+      }
+    },
+    "sourceText": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/userData/data/attachments/test-stopped-legacy/TEST-legacy-source-message/TEST-source-file--source-original.txt",
+      "bytes": 44,
+      "blob": "3e6dc92bc40f9fe0218fc03625d321c189c9d2ce",
+      "sha256": "9cead239aa70dc3908cf22064703f55ef6c62ba70d43702b18bbdca8801750f3"
+    },
+    "download": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/home/Downloads/source-original.txt",
+      "bytes": 44,
+      "blob": "3e6dc92bc40f9fe0218fc03625d321c189c9d2ce",
+      "sha256": "9cead239aa70dc3908cf22064703f55ef6c62ba70d43702b18bbdca8801750f3"
+    },
+    "download44BytesExact": true,
+    "sourceImage": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/userData/data/attachments/test-stopped-legacy/TEST-legacy-source-message/TEST-source-image--source-original.png",
+      "bytes": 71,
+      "blob": "8d79cc731a6bbfd43247473d7ef6d2c0e9519994",
+      "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+    },
+    "allThreeOriginalImages2x1Exact": true,
+    "downloadTimeQualification": "Original one click and45s window only; no retained download completion time or independent post-read deadline guarantee is invented. Native picker false.",
+    "taskReferences": [
+      {
+        "kind": "destination",
+        "requestedTaskId": "TEST-legacy-task-b",
+        "teamName": "host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3",
+        "taskId": "TEST-legacy-task-b",
+        "reference": null
+      },
+      {
+        "kind": "archive",
+        "requestedTaskId": "TEST-external-task",
+        "teamName": "host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3:source-archive:legacy-archive%3A6b43f63918fed49d54a2dcc33312000c4b0b0b06c20eee2438ecd2e46f30cf93",
+        "taskId": null,
+        "identity": {
+          "contextId": "local",
+          "teamName": "host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3:source-archive:legacy-archive%3A6b43f63918fed49d54a2dcc33312000c4b0b0b06c20eee2438ecd2e46f30cf93",
+          "taskId": "TEST-external-task"
+        },
+        "tabId": "116ce3ad-a043-4fe3-be68-6edf1f220b8d",
+        "ownerSurfaceId": "116ce3ad-a043-4fe3-be68-6edf1f220b8d",
+        "phase": "unavailable",
+        "outcome": "unavailable at captured source owner"
+      },
+      {
+        "kind": "gap",
+        "requestedTaskId": "TEST-missing-task",
+        "teamName": "host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3:source-gap:legacy-gap%3A09616c6bb6929caf3a619eda430fcee33a6b9bbea1930c8154a0b9574f521838",
+        "taskId": null,
+        "identity": {
+          "contextId": "local",
+          "teamName": "host-team:e56ca2cb-73e2-5c25-82ff-44b4b554bff3:source-gap:legacy-gap%3A09616c6bb6929caf3a619eda430fcee33a6b9bbea1930c8154a0b9574f521838",
+          "taskId": "TEST-missing-task"
+        },
+        "tabId": "c05c3390-3ff3-44c9-a901-94e363bfe16e",
+        "ownerSurfaceId": "c05c3390-3ff3-44c9-a901-94e363bfe16e",
+        "phase": "unavailable",
+        "outcome": "unavailable at captured source owner"
+      }
+    ],
+    "actualArchiveAndGapBothUnavailable": true,
+    "noCurrentOwnerFallbackOrExternalRecoveryClaim": true
+  },
+  "images": {
+    "pngMembers": 6,
+    "actuallyViewedUiImages": 5,
+    "tinySourceImageHashOnly": true,
+    "viewed": [
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/ui-original-stopped-import-dialog.png",
+        "bytes": 123621,
+        "blob": "5f88ac41dbf03221a6cf38b04aeb32f9694e7656",
+        "sha256": "0a05c1df3ab554fb1ac26f84a8411bc48597436585249bd1da2c0a828170cd5f",
+        "actuallyViewedByIndependentReviewer": true,
+        "observation": "Viewed canonical Host Launch dialog: Fresh Launch/no checkpoint, TEST workspace, Fast off, Sonnet4.6/lead/Alice and saved role/prompt. Footer is below frame; no Submit shown."
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/ui-original-stopped-import-reloaded.png",
+        "bytes": 123605,
+        "blob": "2693c8f8edf4303c42761e945a41a3a59bed4b46",
+        "sha256": "7563ef93590d250e7f73250ad933a5ba2e09085837379a8f642ba2aa1be59cbf",
+        "actuallyViewedByIndependentReviewer": true,
+        "observation": "Viewed configured Launch dialog after original real reload. Same-import/new timeOrigin proof is source/receipt based, not inferred from screenshot similarity."
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/ui-import-source-attachment-kanban.png",
+        "bytes": 127398,
+        "blob": "15498149a8c7fc5be7f2ae71e58f721ee1443d2e",
+        "sha256": "f483c0cbb4784d6f4f9ac4824c37d699c3d356d1099eebab23010010e597e3ab",
+        "actuallyViewedByIndependentReviewer": true,
+        "observation": "Viewed Offline/Launch Team, offline members, imported Task17 and red/green source image. No Team launch shown."
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/ui-import-source-attachment-lightbox.png",
+        "bytes": 101319,
+        "blob": "00014f1e09f329658c57fc1a5104e7b727e54f81",
+        "sha256": "e48ee8d2b25898ab37a67af2a75db7e8a5607f875582cc8ccdfee1219c40e0a9",
+        "actuallyViewedByIndependentReviewer": true,
+        "observation": "Viewed lightbox controls and tiny central image; exact2x1 dimensions and bytes are the original data-image proof, not screenshot resolution."
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/ui-import-source-attachment-task-detail.png",
+        "bytes": 113483,
+        "blob": "3af631835a13c8695a2e812f04c4b9f0e528f0cf",
+        "sha256": "3c3ee69fd0add21d32c28d0a8db66f7f00049460819c59842f38d82e96bb0d2c",
+        "actuallyViewedByIndependentReviewer": true,
+        "observation": "Viewed Task17 pending/Alice, internal18/external99/missing100 links and three attachment tiles. Subsequent owner-bound negative routes come from the original receipt/source."
+      }
+    ]
+  },
+  "cleanup": {
+    "effectsIdentity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/TEST-peer-claude-scope/effects.ndjson",
+      "bytes": 6512,
+      "blob": "b470548ffb4fb978dd094300a0024b819e4b2c3d",
+      "sha256": "b1966512d2b404b7bc1b252acf345169397dc7d841b1bddb95921108f4cfd030"
+    },
+    "allRawEffects": [
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5415,
+        "event": "argv",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--tools=",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode=dontAsk",
+          "--no-session-persistence",
+          "--settings",
+          "{\"disableAllHooks\":true}"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5415,
+        "event": "launch",
+        "parentPid": 4687,
+        "sessionId": "2206c157-0b27-49d1-acdd-4812955c51b7",
+        "requestedModel": null,
+        "requestedEffort": null
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5415,
+        "event": "initialized",
+        "sessionId": "2206c157-0b27-49d1-acdd-4812955c51b7",
+        "requestedModel": null,
+        "requestedEffort": null
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5463,
+        "parentPid": 4687,
+        "event": "launch",
+        "command": [
+          "auth",
+          "status",
+          "--json"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5463,
+        "parentPid": 4687,
+        "event": "auth-status",
+        "command": [
+          "auth",
+          "status",
+          "--json"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5592,
+        "event": "argv",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--tools=",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode=dontAsk",
+          "--no-session-persistence",
+          "--settings",
+          "{\"disableAllHooks\":true}"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5592,
+        "event": "launch",
+        "parentPid": 4687,
+        "sessionId": "47e42282-5e17-46b4-ba32-441ed96b98e1",
+        "requestedModel": null,
+        "requestedEffort": null
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5592,
+        "event": "initialized",
+        "sessionId": "47e42282-5e17-46b4-ba32-441ed96b98e1",
+        "requestedModel": null,
+        "requestedEffort": null
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5682,
+        "parentPid": 4687,
+        "event": "launch",
+        "command": [
+          "auth",
+          "status",
+          "--json"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5682,
+        "parentPid": 4687,
+        "event": "auth-status",
+        "command": [
+          "auth",
+          "status",
+          "--json"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5694,
+        "event": "argv",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--effort=low",
+          "--max-turns=1",
+          "--model=claude-sonnet-4-6",
+          "--permission-prompt-tool=stdio",
+          "--tools=",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode=dontAsk",
+          "--session-id=0192ff26-20eb-44e6-8968-347eaea6babb",
+          "--no-session-persistence",
+          "--settings",
+          "{\"disableAllHooks\":true}"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5694,
+        "event": "launch",
+        "parentPid": 4687,
+        "sessionId": "0192ff26-20eb-44e6-8968-347eaea6babb",
+        "requestedModel": "claude-sonnet-4-6",
+        "requestedEffort": "low"
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5694,
+        "event": "initialized",
+        "sessionId": "0192ff26-20eb-44e6-8968-347eaea6babb",
+        "requestedModel": "claude-sonnet-4-6",
+        "requestedEffort": "low"
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5694,
+        "event": "input",
+        "inputId": "27a3a923-24b4-437c-bbff-da61180cf24e",
+        "sessionId": "0192ff26-20eb-44e6-8968-347eaea6babb",
+        "marker": "TEST_MODEL_PROBE",
+        "requestedModel": "claude-sonnet-4-6",
+        "requestedEffort": "low",
+        "text": "Reply only OK. Do not use tools, access files or run commands."
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5694,
+        "event": "terminal",
+        "inputId": "27a3a923-24b4-437c-bbff-da61180cf24e",
+        "sessionId": "0192ff26-20eb-44e6-8968-347eaea6babb",
+        "marker": "TEST_MODEL_PROBE",
+        "outcome": "succeeded",
+        "text": "OK"
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5749,
+        "event": "argv",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--effort=low",
+          "--max-turns=1",
+          "--model=claude-sonnet-4-6",
+          "--permission-prompt-tool=stdio",
+          "--tools=",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode=dontAsk",
+          "--session-id=919abe8e-8ccc-466d-ae74-9010faa95018",
+          "--no-session-persistence",
+          "--settings",
+          "{\"disableAllHooks\":true}"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5749,
+        "event": "launch",
+        "parentPid": 4687,
+        "sessionId": "919abe8e-8ccc-466d-ae74-9010faa95018",
+        "requestedModel": "claude-sonnet-4-6",
+        "requestedEffort": "low"
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5749,
+        "event": "initialized",
+        "sessionId": "919abe8e-8ccc-466d-ae74-9010faa95018",
+        "requestedModel": "claude-sonnet-4-6",
+        "requestedEffort": "low"
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5749,
+        "event": "input",
+        "inputId": "c566244b-6c18-4873-9c95-0af0c69e7040",
+        "sessionId": "919abe8e-8ccc-466d-ae74-9010faa95018",
+        "marker": "TEST_MODEL_PROBE",
+        "requestedModel": "claude-sonnet-4-6",
+        "requestedEffort": "low",
+        "text": "Reply only OK. Do not use tools, access files or run commands."
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5749,
+        "event": "terminal",
+        "inputId": "c566244b-6c18-4873-9c95-0af0c69e7040",
+        "sessionId": "919abe8e-8ccc-466d-ae74-9010faa95018",
+        "marker": "TEST_MODEL_PROBE",
+        "outcome": "succeeded",
+        "text": "OK"
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5974,
+        "event": "argv",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--tools=",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode=dontAsk",
+          "--no-session-persistence",
+          "--settings",
+          "{\"disableAllHooks\":true}"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5974,
+        "event": "launch",
+        "parentPid": 4687,
+        "sessionId": "3bc485ee-7c4b-452c-b1f3-f782262051c3",
+        "requestedModel": null,
+        "requestedEffort": null
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5974,
+        "event": "initialized",
+        "sessionId": "3bc485ee-7c4b-452c-b1f3-f782262051c3",
+        "requestedModel": null,
+        "requestedEffort": null
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6016,
+        "parentPid": 4687,
+        "event": "launch",
+        "command": [
+          "auth",
+          "status",
+          "--json"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6016,
+        "parentPid": 4687,
+        "event": "auth-status",
+        "command": [
+          "auth",
+          "status",
+          "--json"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6066,
+        "event": "argv",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--tools=",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode=dontAsk",
+          "--no-session-persistence",
+          "--settings",
+          "{\"disableAllHooks\":true}"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6066,
+        "event": "launch",
+        "parentPid": 4687,
+        "sessionId": "7349633f-659e-4f46-8e13-e78f4a8a9708",
+        "requestedModel": null,
+        "requestedEffort": null
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6066,
+        "event": "initialized",
+        "sessionId": "7349633f-659e-4f46-8e13-e78f4a8a9708",
+        "requestedModel": null,
+        "requestedEffort": null
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6160,
+        "parentPid": 4687,
+        "event": "launch",
+        "command": [
+          "auth",
+          "status",
+          "--json"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 6160,
+        "parentPid": 4687,
+        "event": "auth-status",
+        "command": [
+          "auth",
+          "status",
+          "--json"
+        ]
+      }
+    ],
+    "exactRawReceiptEquality": true,
+    "eventCounts": {
+      "argv": 6,
+      "launch": 10,
+      "initialized": 6,
+      "auth-status": 4,
+      "input": 2,
+      "terminal": 2
+    },
+    "launchRoleCounts": {
+      "management": 8,
+      "runtime": 2
+    },
+    "peerPidAbsence": {
+      "originalPeerPids": [
+        5415,
+        5463,
+        5592,
+        5682,
+        5694,
+        5749,
+        5974,
+        6016,
+        6066,
+        6160
+      ],
+      "remaining": [],
+      "absent": true,
+      "exitCodeRows": 0
+    },
+    "app": {
+      "pid": 4372,
+      "processGroup": 4372,
+      "identity": "Mon Nov 16 01:42:39 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-IKX8UW/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+      "invocation": [
+        "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "/home/runner/work/_temp/TEST-emulated-ui-inputs-IKX8UW/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222",
+        "--noSandbox"
+      ]
+    },
+    "hostChild": {
+      "pid": 4687,
+      "ppid": 4496,
+      "pgid": 4372,
+      "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "observedBeforeShutdown": true
+    },
+    "hostChildAfterImport": {
+      "pid": 4687,
+      "ppid": 4496,
+      "pgid": 4372,
+      "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "observedBeforeShutdown": true
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [
+      {
+        "pid": 4446,
+        "ppid": 1,
+        "pgid": 4372
+      }
+    ],
+    "originalExitedGroup": {
+      "settled": true,
+      "reason": "original-natural-exit-and-fresh-absence",
+      "initialMembers": [
+        {
+          "pid": 4446,
+          "ppid": 1,
+          "pgid": 4372
+        }
+      ],
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "capturedDescendantsAbsent": true,
+      "appExitCode": 0,
+      "appSignalCode": null
+    },
+    "literalCleanup": {
+      "processGroup": 4372,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "passiveOriginalHost": {
+      "appLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/desktop-app.log",
+        "bytes": 26162,
+        "blob": "8bbff1e358de69ccdc6eb04a8fe89a6bdd8d933f",
+        "sha256": "b76de91a7240cf9eefd8954b7a48ac6b6edee02c7ec3ed698281213cc8ca3ce4"
+      },
+      "rows": [
+        {
+          "line": 89,
+          "row": {
+            "mainPid": 4496,
+            "event": "async-spawn",
+            "pid": 4687,
+            "requestedCommand": "linux-child-exec",
+            "linuxChildExecTarget": "node",
+            "versionOnly": false,
+            "observedBirth": {
+              "startTicks": "29083",
+              "parentPid": 4496,
+              "processGroupId": 4372
+            },
+            "atomic": false,
+            "observedAtMs": 1794793386112
+          }
+        },
+        {
+          "line": 214,
+          "row": {
+            "mainPid": 4496,
+            "event": "async-exit",
+            "pid": 4687,
+            "status": 0,
+            "signal": null,
+            "observedAtMs": 1794793463477
+          }
+        }
+      ],
+      "summary": {
+        "line": 223,
+        "row": {
+          "mainPid": 4496,
+          "event": "trace-summary",
+          "rows": 34,
+          "droppedObservations": 0,
+          "observedChildren": 16,
+          "unobservedChildren": 0,
+          "observationFailures": 0,
+          "limited": false,
+          "coverage": "node-async-and-unix-process-table-only"
+        }
+      },
+      "allTraceRecordsIncludingActiveAndSummary": 36,
+      "nonAtomicBirth": true,
+      "distinctFromLiteralUnexposedHostExitCodeField": true
+    },
+    "sentinelIdentity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/extracted/TEST-desktop-backend-cKokC4/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    "finalSentinelCensus": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": 1,
+      "postQuitOrCleanupInvocations": [],
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    }
+  },
+  "sourceClaimJoins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-import-fixture.ts",
+      "lines": "7-16",
+      "meaning": "Synthetic saved archive configured without priorRun; original import owner authority."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-claude-settings-fixture.ts",
+      "lines": "13-26,29-70",
+      "meaning": "Two pinned finite peer sources and closed role/env wrapper. Runtime configuration supports the finite probes, not Team launch."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-stopped-import-ui-smoke.ts",
+      "lines": "89-95,299-460,482-615",
+      "meaning": "Finite branch excludes native continuation; canonical import and real reload; original TaskRef owner routes/source equality/no Runtime-session/no Submit assertions."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-stopped-import-attachments-ui.ts",
+      "lines": "103-122,144-167,196-289",
+      "meaning": "Actual image bytes/dimensions, owner/ref-bounded read, original Page context, one download click and retained hash."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/stopped-team-import/FileStoppedTeamImport.ts",
+      "lines": "187-216,350-374",
+      "meaning": "Canonical request/command/identity fingerprint, retained planned product bodies."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/stopped-team-import/snapshot.ts",
+      "lines": "423-436",
+      "meaning": "Digest covers canonical snapshot excluding the digest property."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/team/identity.ts",
+      "lines": "1-39",
+      "meaning": "Stable recursive key-sorted JSON digest reproduced solely over retained data."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/identity.ts",
+      "lines": "1-19",
+      "meaning": "Completed journal canonical body digest and JSON-string command filename digest."
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeSavedImportPeer.mjs",
+      "lines": "9-66,81-143",
+      "meaning": "Finite metadata and one closed no-tools input per selected Runtime peer, exact session/input identity and OK terminal."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "lines": "272-280",
+      "meaning": "Peer PID absence observation after original Host custody stopping, not retained peer exit-code proof."
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "lines": "607-650,859-898",
+      "meaning": "Original verifier checks fixture/birth/byte pins, no Team runtime-sessions/outbox, original source import, model probes/download and exact source-owner TaskRef outcomes."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "lines": "384-508",
+      "meaning": "Original exit/group observer distinguishes initial orphan membership from fresh absence."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "lines": "610-734",
+      "meaning": "Original Quit and cleanup observations and incomplete-on-missing-cleanup behavior remain separate."
+    },
+    {
+      "path": "src/main/utils/testChildProcessTrace.ts",
+      "lines": "66-148",
+      "meaning": "Bounded passive child trace; observed birth non-atomic, child exit callback distinct from native custody."
+    }
+  ],
+  "qualificationLimits": [
+    "Finite legacy-format TEST archive only. Previously launched/cold Claude or OpenCode import remains HOLD/M16; no genuine old-frontend archive producer, native-session adoption, native/vendor inference, Team Launch Submit, full Stage1 or release qualification.",
+    "Runtime and management are configured for finite metadata/model probes. The original Team Runtime capture list is empty; the two no-tools model-probe children and their OK terminal events are not a Team launch or saved prompt submission.",
+    "Seven source files are separately archived and unchanged. All eight planned product file bodies are retained inside the import intent and hash-checked, but only two destination Task files are separate archive members. Import registry, owner state and six other destination files are not independently re-read after the run.",
+    "Canonical snapshot digest, intent fingerprint, original source bytes, embedded origin and Task bytes are checked. These do not supply missing source filesystem inode/ancestry snapshots, native custody, or an audit-time replay of the import.",
+    "The two preflight records are completed/released for exact finite selected models. Retained dialog text includes both Anthropic Needs attention and All selected providers are ready; no broader provider-readiness assertion follows.",
+    "Original attachment bytes are2x1/71-byte PNG and44-byte text. The lightbox screenshot is a tiny centre point; decode correctness comes from the original data-image byte/dimension checks. Download had one click and the original45s window, not a native picker.",
+    "Archive and gap TaskRefs both returned unavailable at their captured source owners. No successful external Task recovery, fallback to current owner, or distinct missing result is claimed.",
+    "Ten finite peer PIDs are recorded absent with no retained peer exit-code events. Original app0/null/fresh group and Host absence and the separate passive Main Host4687 callback0/null are distinct observations, not an atomic native custody certificate.",
+    "The common1757source census is reused only by exact ordered equality with the prior verified Git census, with18fresh selected source reads here. Fourteen compiled hashes are retained but compiled files/complete installed payload are not archived here; no independent rebuild.",
+    "This original0660 PASS does not qualify new608efb privacy GREEN, other lanes/providers, packaged/native campaigns or merge/release readiness.",
+    "This independent review additionally re-read all1757Git source bodies rather than transferring prior business acceptance. The separately pinned workflow is outside that common census.",
+    "The45s download description records the original policy, not an independently retained completion timestamp or post-read clock guarantee.",
+    "No source608efb/new privacy177/24 qualification, M16/native import closure, provider/native sessions, packaged qualification or overall completion is inferred."
+  ],
+  "findings": [],
+  "artifactCorrectionRequired": false,
+  "authorOriginalsUnchanged": true,
+  "auditOperations": "Retained raw/API/log/ZIP/PNG and immutable Git reads, pure Python byte/digest/data validation and exclusive scratch report creation. No project execution, installed-module invocation, provider/native execution, CI polling/replay or source/ref mutation."
+}

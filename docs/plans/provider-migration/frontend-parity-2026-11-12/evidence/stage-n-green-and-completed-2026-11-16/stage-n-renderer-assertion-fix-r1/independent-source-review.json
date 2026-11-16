@@ -1,0 +1,240 @@
+{
+  "schema": "independent-N-renderer-one-token-assertion-fix-R2/v1",
+  "reviewer": "migration_scope",
+  "createdAt": "2026-11-16T04:06:20.068398+00:00",
+  "result": "APPROVE",
+  "prospectiveSourceOnly": true,
+  "proposal": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-renderer-assertion-fix-r1/proposal.json",
+    "bytes": 6750,
+    "blob": "8ec9d75f40874056eb6fb565b6ded643ca4d23b4",
+    "sha256": "50ededbf744963ebc63256723d9e1463c435af059521485691f70d25bff851b9"
+  },
+  "preimage": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-renderer-assertion-fix-r1/preimage.ts",
+    "bytes": 8708,
+    "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+    "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954"
+  },
+  "candidate": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-renderer-assertion-fix-r1/candidate.ts",
+    "bytes": 8707,
+    "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+    "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10"
+  },
+  "patch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-renderer-assertion-fix-r1/candidate.patch",
+    "bytes": 324,
+    "blob": "3704dccb26289ee1e814e27ead70d3ed1ef7618e",
+    "sha256": "ab4703c7a3b29e8d2400f720854020d81fff3ab01d2ca91d5d730b2be9b9d67a"
+  },
+  "base": {
+    "sourceBase": "dee9448e2c8771bed2f4e403259446b1d3b4d4e0",
+    "sourceBaseTree": "3cbed68d3c8e45b2ebd88e25deb3837dcf20414c",
+    "originalCISource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "originalCITree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+    "file": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+    "preimageExactAtBothHeads": true,
+    "baseVsOriginalOnlyDocs": true,
+    "baseVsOriginalDocumentationChanges": 130,
+    "worktreeTargetStillExactPreimage": true,
+    "workingTreeStatus": ""
+  },
+  "exactDiff": {
+    "files": 1,
+    "deletedBytes": 1,
+    "insertedBytes": 0,
+    "removedASCII": "!",
+    "zeroBasedByteOffset": 6669,
+    "line": 201,
+    "linesBefore": 264,
+    "linesAfter": 264,
+    "lineBefore": "          [previousRunId!]: teamName,",
+    "lineAfter": "          [previousRunId]: teamName,",
+    "allOther263LinesExact": true,
+    "forwardByteDeletionExact": true,
+    "inverseByteInsertionExact": true,
+    "entireUnifiedPatchReconstructedExactly": true,
+    "retainedCallbackLines": [
+      {
+        "line": 192,
+        "text": "        prev.ignoredRuntimeRunIds[runId!] === teamName ||"
+      },
+      {
+        "line": 193,
+        "text": "        prev.ignoredProvisioningRunIds?.[runId!] === teamName"
+      }
+    ],
+    "noConfigTestWorkflowDependencyOrOracleChanges": true
+  },
+  "sourceControlFlow": {
+    "readFullPreimageAndCandidate": true,
+    "declaration": {
+      "line": 181,
+      "text": "  const previousRunId = prev.currentRuntimeRunIdByTeam[teamName];"
+    },
+    "aliasGuard": [
+      {
+        "line": 183,
+        "text": "  const hostRevision ="
+      },
+      {
+        "line": 184,
+        "text": "    typeof previousRunId === 'string' &&"
+      },
+      {
+        "line": 185,
+        "text": "    typeof snapshot.runId === 'string' &&"
+      },
+      {
+        "line": 186,
+        "text": "    isSameHostLaunchRevision(teamName, previousRunId, snapshot.runId);"
+      }
+    ],
+    "branchAndKey": [
+      {
+        "line": 197,
+        "text": "  const retired = hostRevision"
+      },
+      {
+        "line": 198,
+        "text": "    ? {"
+      },
+      {
+        "line": 199,
+        "text": "        ignoredRuntimeRunIds: {"
+      },
+      {
+        "line": 200,
+        "text": "          ...prev.ignoredRuntimeRunIds,"
+      },
+      {
+        "line": 201,
+        "text": "          [previousRunId!]: teamName,"
+      },
+      {
+        "line": 202,
+        "text": "        },"
+      },
+      {
+        "line": 203,
+        "text": "      }"
+      },
+      {
+        "line": 204,
+        "text": "    : {};"
+      }
+    ],
+    "reasoning": [
+      "previousRunId is a local const read before hostRevision; its declared source map permits string or null. hostRevision is a local const whose true condition explicitly includes typeof previousRunId === string.",
+      "The computed key is inside the true arm of hostRevision ? {...} : {}. That same lexical branch therefore already has the string refinement. Neither the const value nor the guard changes before this computed key.",
+      "The original type-aware lint reports that this exact assertion does not change the expression type. Removing its one postfix token preserves the property-key value, spread order, ignored-run retirement, currentness checks and revision/adoption guards.",
+      "Non-null assertion syntax contributes no runtime operation. This is a static language/source claim; no emitted JavaScript or fresh compiler result was produced by the reviewer.",
+      "The .some callback has its own runId parameter. Both assertions there are retained verbatim; approval does not generalize alias narrowing into the callback or remove additional assertions."
+    ]
+  },
+  "privacyPrerequisite": {
+    "independentRootReport": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/independent-team-privacy-green-review.json",
+      "bytes": 59866,
+      "blob": "d4fb9c542b8404a0e7fedb386f019aac08da79dc",
+      "sha256": "e6f1cb5bc292e4ca4d7e37b0e3a5c1afbb4b916424467ea28f03e338f3bdd9db"
+    },
+    "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "runId": 43795234483,
+    "jobId": 133062441494,
+    "attempt": 1,
+    "event": "pull_request",
+    "originalRaw": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/job-133062441494.log",
+      "bytes": 2205340,
+      "blob": "c5446ac9cf26e5515cf8c2b2c9f0df55f8e43795",
+      "sha256": "52b2fd9b7d2f66475e7e1818b91d3b3ca0f90636e8dee0fb1527279f68021fdd"
+    },
+    "originalMcpResponse": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/original-job-log-response.json",
+      "bytes": 2221302,
+      "blob": "cc9ef5825d11764ba1849705815a8b408aa75be0",
+      "sha256": "c1d612ec191ea3bbc403bd38e9346d9823274a81043baf7f89aa87da2014b5c8"
+    },
+    "fullMcpContentUTF8EqualOriginalRaw": true,
+    "exactTenFileCommand": "node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+    "originalRawCommandBlockLines": {
+      "start": 828,
+      "nextStepStarts": 1036
+    },
+    "all177PassedNamesIndependentlyMatchedRootReport": true,
+    "all24StderrNamesPresentOnceIn177": true,
+    "counts": {
+      "tests": 177,
+      "suites": 0,
+      "pass": 177,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "durationMs": 62694.474306
+    },
+    "freshGitReviewOfAllRootSelectedSourceLeaves": 18,
+    "originalHelperAndTenFilesBoundToThoseCurrentSourceBytes": true,
+    "step9": {
+      "name": "Verify original Runtime and Team conversation contracts",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 9
+    },
+    "scope": "Original prescribed complete Team command only; independently matched against full raw log. This R2 does not relabel the later overall job failure as a complete Team job PASS."
+  },
+  "actualRendererRED": {
+    "step10": {
+      "name": "Verify complete workspace types and original typed lint scopes",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 10
+    },
+    "sourceLeaf": {
+      "bytes": 8708,
+      "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+      "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954"
+    },
+    "error": {
+      "originalLine": 13040,
+      "text": "##[error]  201:12  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion"
+    },
+    "summary": {
+      "errors": 1,
+      "warnings": 1416,
+      "problems": 1417
+    },
+    "precedingScopes": {
+      "fastLint": {
+        "errors": 0,
+        "warnings": 5
+      },
+      "workspaceTypes": "SUCCESS inferred from original bash set-e sequential control flow and subsequently executed typed main/renderer lint; exact workspace command expansion retained in full raw.",
+      "dedicatedBackendTypes": "SUCCESS inferred from original bash set-e and reached subsequent main lint, not just the echoed command.",
+      "typedMainLint": {
+        "errors": 0,
+        "warnings": 3338
+      }
+    },
+    "unreachedScopes": [
+      "typed features lint",
+      "MCP lint"
+    ],
+    "classification": "Actual original current-source lint failure; no manufactured RED or copied implementation test."
+  },
+  "validationAndPublication": {
+    "sourceApplicationNowObserved": false,
+    "newSourceGREENObserved": false,
+    "requires": "Preserve the established docs-first R1 publication/readback protocol, fresh exact-parent/source leaf guard and separate resulting-source publication readback. Then the existing original CI full types/typed renderer path must establish GREEN on the new exact source.",
+    "noLocalProjectExecutionOrFallback": true,
+    "noNewWorkflowOperandsOrDispatch": true,
+    "noUnnecessaryNewTest": true,
+    "noReadyMainMergeReleaseAuthorization": true,
+    "qualifiedScope": "Exact one-byte candidate is approved for the existing staged publication protocol, not a claim of already-observed resulting-source type/lint acceptance."
+  },
+  "findings": [],
+  "projectExecutionPerformed": false,
+  "sourceRefCIMutationPerformed": false
+}
