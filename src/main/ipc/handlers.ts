@@ -17,6 +17,7 @@
 import { createLogger } from '@shared/utils/logger';
 import { app, ipcMain } from 'electron';
 
+import { createTeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import {
   captureDesktopSkills,
   registerDesktopAgentBackend,
@@ -81,7 +82,6 @@ import {
   registerSubagentHandlers,
   removeSubagentHandlers,
 } from './subagents';
-import { createTeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import { initializeTeamHandlers, registerTeamHandlers, removeTeamHandlers } from './teams';
 import { registerTelemetryHandlers, removeTelemetryHandlers } from './telemetry';
 import {
