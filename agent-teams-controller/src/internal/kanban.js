@@ -88,7 +88,7 @@ function clearKanban(context, taskId, options) {
       return state;
     }
     const transition = options && typeof options.transition === 'string' ? options.transition : 'direct';
-    const allowedInternalTransitions = new Set(['request_changes', 'rollback', 'status_reset', 'delete', 'restore']);
+    const allowedInternalTransitions = new Set(['request_changes', 'review_complete', 'rollback', 'status_reset', 'delete', 'restore']);
     const reviewState = getEffectiveReviewState(context, task);
     if (transition === 'direct' && reviewState !== 'none') {
       throw new Error(

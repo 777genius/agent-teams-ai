@@ -154,6 +154,10 @@ function approveReview(context, taskId, flags) {
   return review.approveReview(context, taskId, flags);
 }
 
+function completeReview(context, taskId, flags) {
+  return review.completeReview(context, taskId, flags);
+}
+
 function requestChanges(context, taskId, flags) {
   return review.requestChanges(context, taskId, flags);
 }
@@ -166,6 +170,7 @@ module.exports = {
   attachCommentFile,
   attachTaskFile,
   clearKanban,
+  completeReview,
   completeTask,
   createTask,
   getKanbanState,

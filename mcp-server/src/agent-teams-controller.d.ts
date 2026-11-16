@@ -148,6 +148,7 @@ declare module 'agent-teams-controller' {
   export interface ControllerReviewWriteApi {
     requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
     approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    completeReview(taskId: string, flags?: Record<string, unknown>): unknown;
     requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
     startReview(taskId: string, flags?: Record<string, unknown>): unknown;
   }
@@ -157,6 +158,7 @@ declare module 'agent-teams-controller' {
     requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
     /** @deprecated Internal review lifecycle write. Use controller.taskBoard.approveReview. */
     approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    completeReview(taskId: string, flags?: Record<string, unknown>): unknown;
     /** @deprecated Internal review lifecycle write. Use controller.taskBoard.requestChanges. */
     requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
     /** @deprecated Internal review lifecycle write. Use controller.taskBoard.startReview. */
