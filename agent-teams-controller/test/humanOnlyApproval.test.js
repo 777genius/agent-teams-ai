@@ -242,6 +242,27 @@ describe('human-only review approval', () => {
     }
   });
 
+  it('does not notify dependents again when a reviewed Done task is accepted by a human', () => {
+    const blocker = board.createTask({ subject: 'Reviewed blocker', owner: 'bob' });
+    const dependent = board.createTask({
+      subject: 'Depends on reviewed blocker', owner: 'bob', blockedBy: [blocker.id],
+    });
+    board.completeTask(blocker.id, 'bob');
+    board.setHumanOnlyApproval(true);
+    board.requestReview(blocker.id, { from: 'alice', reviewer: 'alice' });
+    const reviewId = events(blocker.id, 'review_requested').at(-1).id;
+    board.completeReview(blocker.id, { from: 'alice', expectedReviewRequestId: reviewId });
+    const beforeComments = board.getTask(dependent.id).comments.length;
+    const inboxPath = path.join(dir, 'teams', 'fixture', 'inboxes', 'bob.json');
+    const beforeInbox = fs.existsSync(inboxPath)
+      ? JSON.parse(fs.readFileSync(inboxPath, 'utf8')).length
+      : 0;
+    expect(beforeComments).toBeGreaterThan(0);
+    board.approveAsHuman(blocker.id);
+    expect(board.getTask(dependent.id).comments).toHaveLength(beforeComments);
+    expect(JSON.parse(fs.readFileSync(inboxPath, 'utf8'))).toHaveLength(beforeInbox);
+  });
+
   it('preserves settings through kanban writes and fails closed for corrupt stored policy', () => {
     board.addReviewer('alice');
     board.setHumanOnlyApproval(true);

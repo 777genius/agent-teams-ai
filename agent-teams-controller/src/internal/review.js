@@ -616,9 +616,15 @@ function approveAsHuman(context, taskId) {
       return current;
     });
     kanbanStore.setKanbanColumn(context.paths, context.teamName, task.id, 'approved');
-    return { task: tasks.getTask(context, task.id), alreadyApproved: false };
+    return {
+      task: tasks.getTask(context, task.id),
+      alreadyApproved: false,
+      // A reviewed Done task already released and notified dependents during
+      // review_complete. Final human acceptance does not unblock them twice.
+      releasesDependencies: prevReviewState === 'review' || prevReviewState === 'needsFix',
+    };
   });
-  if (!result.alreadyApproved) {
+  if (!result.alreadyApproved && result.releasesDependencies) {
     try {
       tasks.notifyUnblockedOwners(context, result.task, {
         reviewCycleId: [...(result.task.historyEvents || [])].reverse()
