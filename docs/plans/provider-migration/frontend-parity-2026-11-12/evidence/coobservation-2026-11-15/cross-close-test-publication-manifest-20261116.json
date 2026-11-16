@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "kind": "Cross Close test-first source publication; no runtime or producer result",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "exactParent": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+  "exactParentTree": "21ea9ec18febadf981f16ee455a7ad6fcf65ed5c",
+  "parentLeaves": 11684,
+  "expectedLeaves": 11690,
+  "sourceDelta": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "preimage": {
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      "postimage": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "prefixBytes": 136700,
+      "entirePrefixExact": true,
+      "addedSuffix": {
+        "bytes": 18723,
+        "sha256": "6ec52af0d302c23841ff811436c0fb774379b2b6d639e2f476de5b4c71b13546",
+        "gitBlob": "59ab4f281b044c45db8d1a53de064c0a14b3e2dd"
+      }
+    }
+  ],
+  "otherNonDocUnchanged": 8797,
+  "workflowLeavesUnchanged": 42,
+  "changedEntriesExcludingManifest": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-r1-independent-publication-readback-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34",
+      "bytes": 24775,
+      "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-guard-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7fed0e34689f80f55dc49161afb13d939b680ee7",
+      "bytes": 35700,
+      "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-parity-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b55e84be7a38ecf556003cfc531773436b041884",
+      "bytes": 98112,
+      "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-append-v1-unselected-20261116.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "89231746806bda01275c2e644c6f4c1a2b5f4093",
+      "bytes": 17740,
+      "sha256": "df5dce2e9f5bee54544f9412aae258224a43c9791cc57d3acabaa6919da26cf4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-reviewed-outcome-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d96c2ab50639168cca3f7673ef219c3f1a16b701",
+      "bytes": 4332,
+      "sha256": "f004dad9be5904649c25c78d890e621e609d399f1c827a4d5c88566639deb853"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e242e3062cb5af2619ac08651f726223c9791be4",
+      "bytes": 2509658,
+      "sha256": "b12a7d687314793d2b7c35c2dad1013a141b1a535106d39214435283c6cf0c4e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2e70b0164e85d725da97fa910e71328ac986706b",
+      "bytes": 27620,
+      "sha256": "c25887a6dd485a19a36878f6473ad513feb451128e6497b95695171c4f90fc36"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9806e132c92d759d559a33bbb4ad03747bcdfed6",
+      "bytes": 44509,
+      "sha256": "4dfb8e423e46ae65b523c515f3a94bf5c812e452024dfa72d1e340c750ff59b2"
+    }
+  ],
+  "appendOnlyPlan": {
+    "preimage": {
+      "bytes": 2507525,
+      "sha256": "703e6bbf1d3f08e2612d55a0b10558b889de6c3c5fb22a06b240b08ed2ae84b7",
+      "gitBlob": "12302bf2f1fdceb44c3259165d1d01b1372acb13"
+    },
+    "postimage": {
+      "bytes": 2509658,
+      "sha256": "b12a7d687314793d2b7c35c2dad1013a141b1a535106d39214435283c6cf0c4e",
+      "gitBlob": "e242e3062cb5af2619ac08651f726223c9791be4"
+    },
+    "addedBytes": 2133
+  },
+  "appendOnlyStatus": {
+    "preimage": {
+      "bytes": 26693,
+      "sha256": "98a94bb43a0e47497c11e3ff0492bd03c59fc3d700833a775ab7294f6f6a073c",
+      "gitBlob": "6c5da89ebce00f1811e3c4d5f7d0dda78044644d"
+    },
+    "postimage": {
+      "bytes": 27620,
+      "sha256": "c25887a6dd485a19a36878f6473ad513feb451128e6497b95695171c4f90fc36",
+      "gitBlob": "2e70b0164e85d725da97fa910e71328ac986706b"
+    }
+  },
+  "qualification": "Static test-only source acceptance. No actual133 result, historical four-pixel cause, GUI/platform/native or full E2E qualification.",
+  "requiresCompleteActualReadback": true,
+  "localApplicationOrExecutionAuthorizedByThisCheckpointAlone": false
+}

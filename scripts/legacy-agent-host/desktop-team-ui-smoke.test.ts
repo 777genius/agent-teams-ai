@@ -2236,3 +2236,316 @@ test('actual openChat forwards ' + expectedReply + ' for ' + memberName, async (
     { method: 'click', args: [selector, 'open original lead conversation', undefined, expectedReply] },
   ], 'one original scroll and one original click carrying the expected reply as data');
 });
+
+
+type CrossCloseGeometry = {
+  centerY: number; width: number; height: number; count: number; text: string;
+  disabled: boolean; secondDisabled: boolean; covered: boolean; noHit: boolean;
+  descendantHit: boolean; foreignClose: boolean;
+};
+
+function crossCloseFixture(t?: import('node:test').TestContext) {
+  const identity = { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' };
+  const captured = { contextId: identity.contextId, surfaceId: 'TEST-original-surface' };
+  const key = JSON.stringify([identity.contextId, identity.teamName, identity.taskId]);
+  const scope = { contextId: identity.contextId, teamName: identity.teamName, contextEpoch: 1, teamStateEpoch: 1 };
+  const controller = {
+    identity, surfaceId: captured.surfaceId, isOwner: true, canSubmit: true,
+    canEditNow: () => true, canResolveClarification: false, attachmentError: null,
+    session: { ownerSurfaceId: captured.surfaceId, ownerRevision: 1, commentText: '',
+      partRevisions: { commentText: 0, pendingAttachments: 0 }, submitPending: false,
+      submitError: null, pendingAttachments: [], pendingAttachmentPreparationIds: [] },
+  };
+  const detail = { identity: { ...identity }, phase: 'ready', loading: false, refreshPending: false,
+    error: null as unknown, deletionIntent: null as unknown,
+    full: { id: identity.taskId, owner: 'alice', status: 'pending',
+      needsClarification: undefined as unknown, deletedAt: undefined as unknown } };
+  const storedSession = { ...controller.session };
+  const state = { activeContextId: identity.contextId, selectedTeamName: identity.teamName,
+    isContextSwitching: false, taskDetailById: { [key]: detail },
+    taskDetailSessionById: { [key]: storedSession } as Record<string, typeof storedSession> };
+  const work = { refreshPending: false, teamUnavailable: false };
+  const geometry: CrossCloseGeometry = { centerY: 171.125, width: 40, height: 24, count: 1,
+    text: 'Close', disabled: false, secondDisabled: false, covered: false, noHit: false,
+    descendantHit: false, foreignClose: false };
+  const root = { return: null, stateNode: {} as { current: unknown } }; root.stateNode.current = root;
+  const dialogFiber = { return: root, memoizedProps: { open: true, teamName: identity.teamName,
+    task: { id: identity.taskId }, sessionController: controller } };
+  const trigger = { disabled: false, expanded: 'false', textContent: 'alice', tagName: 'BUTTON',
+    getAttribute: (name: string) => name === 'aria-expanded' ? trigger.expanded : null,
+    getBoundingClientRect: () => ({ x: 10, y: 10, width: 50, height: 20 }),
+    matches: () => trigger.disabled, contains: () => false };
+  const triggers = [trigger], descendant = {};
+  const closeButton = {
+    get textContent() { return geometry.text; }, tagName: 'BUTTON',
+    get disabled() { return geometry.disabled; },
+    getBoundingClientRect: () => ({ x: 1101, y: geometry.centerY - geometry.height / 2,
+      width: geometry.width, height: geometry.height }),
+    matches(selector: string) { assert.equal(selector, ':disabled'); return geometry.disabled; },
+    contains: (node: unknown) => node === descendant,
+    getAttribute: () => null,
+  };
+  const duplicate = { ...closeButton, textContent: 'Close',
+    get disabled() { return geometry.secondDisabled; },
+    matches(selector: string) { assert.equal(selector, ':disabled'); return geometry.secondDisabled; },
+    contains: () => false };
+  const foreignButton = { ...closeButton, textContent: 'Close', disabled: false,
+    getBoundingClientRect: () => ({ x: 1400, y: 100, width: 40, height: 24 }),
+    matches(selector: string) { assert.equal(selector, ':disabled'); return false; },
+    contains: () => false };
+  const ownButtons = () => [...triggers, ...Array.from({ length: geometry.count },
+    (_, index) => index === 0 ? closeButton : duplicate)];
+  const dialog = {
+    __reactFiber$TEST: dialogFiber, getClientRects: () => [1],
+    querySelectorAll(selector: string): unknown[] {
+      if (selector === 'textarea') return [input];
+      if (selector === 'button[role="combobox"]') return triggers;
+      assert.equal(selector, 'button'); return ownButtons();
+    },
+  };
+  const foreignDialog = { getClientRects: () => [1],
+    querySelectorAll: () => geometry.foreignClose ? [foreignButton] : [] };
+  const input = { id: 'TEST-original-comment', disabled: false, getClientRects: () => [1],
+    closest(selector: string) { assert.equal(selector, '[role="dialog"]'); return dialog; },
+    __reactFiber$TEST: { return: dialogFiber, memoizedProps: { controller, contextId: identity.contextId,
+      teamName: identity.teamName, taskId: identity.taskId, surfaceId: captured.surfaceId } } };
+  const document = {
+    getElementById(id: string) { assert.equal(id, input.id); return input; },
+    querySelectorAll(selector: string): unknown[] {
+      if (selector === '[role="dialog"]') return [dialog, foreignDialog];
+      if (selector === 'textarea') return [input];
+      assert.equal(selector, '[role="dialog"] button');
+      return [...ownButtons(), ...(geometry.foreignClose ? [foreignButton] : [])];
+    },
+    elementFromPoint() {
+      if (geometry.noHit) return null;
+      if (geometry.covered) return {};
+      if (geometry.foreignClose && geometry.count === 0) return foreignButton;
+      return geometry.descendantHit ? descendant : closeButton;
+    },
+  };
+  let now = 0, owned = 0, reads = 0, front = 0;
+  let ownedHook: (check: number) => void = () => undefined;
+  const waits: number[] = [], imports: string[] = [], expressions: string[] = [];
+  const events: Record<string, unknown>[] = [];
+  if (t) {
+    t.mock.method(Date, 'now', () => now);
+    t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+      assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);
+      return 1 as unknown as NodeJS.Timeout;
+    });
+  }
+  const evaluate = async (expression: string) => {
+    reads++; expressions.push(expression);
+    return runInNewContext(expression.replaceAll('await import(', 'await __testImport('), {
+      window: { __agentTeamsDevStore: { getState: () => state } }, document,
+      innerWidth: 2000, innerHeight: 1000, getComputedStyle: () => ({ pointerEvents: 'auto' }),
+      async __testImport(path: string) {
+        imports.push(path);
+        if (path === '/store/slices/teamSlice.ts')
+          return { isTeamDataRefreshPending(team: string, getState: unknown) {
+            assert.equal(team, identity.teamName); assert.equal(typeof getState, 'function');
+            return work.refreshPending;
+          } };
+        assert.equal(path, '/store/team/taskDetailReadAuthority.ts');
+        return {
+          captureTaskDetailReadScope(teamName: string, contextId: string) {
+            assert.deepEqual({ teamName, contextId }, { teamName: identity.teamName, contextId: captured.contextId });
+            return { ...scope };
+          },
+          isTaskDetailTeamUnavailable(observed: unknown, team: string, observedScope: unknown) {
+            assert.equal(observed, state); assert.equal(team, identity.teamName);
+            assert.deepEqual(observedScope, scope); return work.teamUnavailable;
+          },
+        };
+      },
+    }) as Promise<Record<string, unknown> | null>;
+  };
+  const ui = createDesktopUiControls({ evaluate,
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
+      if (method === 'Page.bringToFront') front++; else events.push({ ...params });
+      return {};
+    },
+  }, { assertOwnedRenderer() { ownedHook(++owned); }, step() {} });
+  return { identity, captured, key, controller, detail, storedSession, state, work, geometry,
+    trigger, triggers, ui, events, expressions, imports, waits,
+    setOwnedHook(callback: (check: number) => void) { ownedHook = callback; },
+    counts: () => ({ now, owned, reads, front }),
+    evaluateTarget: () => {
+      const expression = Reflect.apply(desktopTaskBoardAssignmentReadyExpression, undefined,
+        ['TEST-owner', identity.taskId, captured, 'clarification-cleared']) as string;
+      assert.equal(expression.match(/await import\(/g)?.length, 2, 'only the two original readonly imports');
+      return evaluate(expression);
+    },
+  };
+}
+
+async function runActualCrossClose(f: ReturnType<typeof crossCloseFixture>) {
+  const source = await readFile(new URL('./desktop-task-board-ui-smoke.ts', import.meta.url), 'utf8');
+  const first = '  proof.clarificationReceipt = await receiptFor(';
+  const last = '  await ui.waitRead(' + String.fromCharCode(96) +
+    '!document.querySelector(\'[role="dialog"]\')' + String.fromCharCode(96) + ', \'Task detail closed\');';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const receiptBegin = source.indexOf(first), receiptEnd = source.indexOf('\n  );\n', receiptBegin);
+  const end = source.indexOf(last, receiptBegin);
+  assert.ok(receiptEnd > receiptBegin && end > receiptEnd);
+  const actual = source.slice(receiptEnd + '\n  );\n'.length, end).trim();
+  assert.ok(actual.length > 20 && actual.length < 512);
+  const call = /^await ([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?)\(([\s\S]*)\);$/.exec(actual);
+  assert.ok(call, 'exactly one awaited original Close call');
+  assert.match(call[2]!, /^(?:\s+|[A-Za-z_$][\w$]*|[.,{}]|'(?:[^'\\\r\n]|\\.)*'|"(?:[^"\\\r\n]|\\.)*")*$/,
+    'only literal strings, names, property reads and a captured-identity object; no nested or extra statement');
+  const helpers = await import('./desktop-task-comment-input-target.ts');
+  const imports = [...source.matchAll(/import\s*\{([^{}]*)\}\s*from\s*(['"])\.\/desktop-task-comment-input-target\.ts\2\s*;/g)];
+  assert.equal(imports.length, 1, 'one actual named helper import block');
+  const bindings: Record<string, unknown> = {};
+  for (const name of imports[0]![1]!.split(',').map(value => value.trim()).filter(Boolean)) {
+    assert.match(name, /^[A-Za-z_$][\w$]*$/, 'unsupported import binding');
+    assert.ok(!Object.hasOwn(bindings, name), 'duplicate import binding');
+    assert.ok(Object.hasOwn(helpers, name), 'unknown actual helper export');
+    const value = Reflect.get(helpers, name);
+    assert.equal(typeof value, 'function'); bindings[name] = value;
+  }
+  assert.ok(call[1] === 'ui.click' || Object.hasOwn(bindings, call[1]!), 'direct helper must be actually imported');
+  await runInNewContext('(async () => { ' + actual + ' })()', {
+    ...bindings, ui: f.ui, options: { handleId: 'TEST-owner' }, taskId: f.identity.taskId,
+    contextId: f.captured.contextId, surfaceId: f.captured.surfaceId,
+  });
+}
+
+test('original Cross Close target admits the ready cleared Task when canResolveClarification is false', async () => {
+  const f = crossCloseFixture();
+  const point = await f.evaluateTarget();
+  assert.ok(point);
+  assert.deepEqual([point.x, point.y, point.tag, point.text], [1121, 171.125, 'BUTTON', 'Close']);
+  assert.equal(f.controller.canResolveClarification, false);
+  assert.deepEqual(f.events, []);
+  assert.deepEqual(f.imports, ['/store/slices/teamSlice.ts', '/store/team/taskDetailReadAuthority.ts']);
+});
+
+for (const [label, change] of [
+  ['retained user clarification', f => { f.detail.full.needsClarification = 'user'; }],
+  ['retained external clarification', f => { f.detail.full.needsClarification = 'external'; }],
+  ['null clarification', f => { f.detail.full.needsClarification = null; }],
+  ['full-detail refreshPending', f => { f.detail.refreshPending = true; }],
+  ['full-detail loading', f => { f.detail.loading = true; }],
+  ['current detail error', f => { f.detail.error = 'TEST detail error'; }],
+  ['current deletionIntent', f => { f.detail.deletionIntent = { pending: true }; }],
+  ['full Task deletedAt', f => { f.detail.full.deletedAt = '2026-11-16T00:00:00.000Z'; }],
+  ['full Task deleted status', f => { f.detail.full.status = 'deleted'; }],
+  ['non-ready full-detail phase', f => { f.detail.phase = 'loading'; }],
+  ['foreign full Task ID', f => { f.detail.full.id = 'TEST-foreign-task'; }],
+  ['foreign detail identity', f => { f.detail.identity.taskId = 'TEST-foreign-task'; }],
+  ['changed active context', f => { f.state.activeContextId = 'TEST-foreign-context'; }],
+  ['different selected Team', f => { f.state.selectedTeamName = 'host-team:TEST-foreign'; }],
+  ['rebound controller surface', f => { f.controller.surfaceId = 'TEST-foreign-surface'; }],
+  ['missing stored session', f => { delete f.state.taskDetailSessionById[f.key]; }],
+  ['different stored session owner surface', f => { f.storedSession.ownerSurfaceId = 'TEST-foreign-surface'; }],
+  ['changed stored owner revision', f => { f.storedSession.ownerRevision++; }],
+  ['current canEditNow false', f => { f.controller.canEditNow = () => false; }],
+  ['non-owning controller', f => { f.controller.isOwner = false; }],
+  ['scoped Team refresh', f => { f.work.refreshPending = true; }],
+  ['unavailable accepted Team metadata', f => { f.work.teamUnavailable = true; }],
+  ['disabled assignment control', f => { f.trigger.disabled = true; }],
+  ['expanded assignment control', f => { f.trigger.expanded = 'true'; }],
+  ['another assignee', f => { f.trigger.textContent = 'bob'; }],
+  ['missing assignment control', f => { f.triggers.length = 0; }],
+  ['duplicate assignment controls', f => { f.triggers.push({ ...f.trigger }); }],
+] satisfies readonly (readonly [string, (f: ReturnType<typeof crossCloseFixture>) => void])[])
+test('original Cross Close target refuses ' + label, async () => {
+  const f = crossCloseFixture(); change(f);
+  assert.equal(await f.evaluateTarget(), null);
+  assert.deepEqual(f.events, [], 'readiness observation never performs an input action');
+});
+
+test('actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates', async t => {
+  for (const descendantHit of [false, true]) {
+    t.mock.restoreAll();
+    const f = crossCloseFixture(t);
+    f.geometry.descendantHit = descendantHit; f.geometry.centerY = 167.125;
+    f.detail.full.needsClarification = 'user'; f.detail.loading = true; f.work.refreshPending = true;
+    f.setOwnedHook(check => {
+      if (check === 6) {
+        f.detail.full.needsClarification = undefined; f.detail.loading = false;
+        f.work.refreshPending = false; f.geometry.centerY = 171.125;
+      }
+    });
+    await runActualCrossClose(f);
+    assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),
+      [['mouseMoved', 1121, 171.125], ['mousePressed', 1121, 171.125], ['mouseReleased', 1121, 171.125]]);
+    assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, front: 1 });
+    assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));
+    assert.ok(f.expressions.every(value => value === f.expressions[0]), 'one complete predicate in every phase');
+  }
+});
+
+function assertCrossCloseNoInputDeadline(f: ReturnType<typeof crossCloseFixture>) {
+  assert.deepEqual(f.events, []);
+  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'one unchanged first-read predicate');
+}
+
+test('actual original Cross Close retains the first-read deadline while renderer readiness is pending', async t => {
+  const f = crossCloseFixture(t); f.detail.refreshPending = true;
+  await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+  assertCrossCloseNoInputDeadline(f);
+});
+
+test('actual original Cross Close cannot use a foreign dialog or an absent ineligible own control', async t => {
+  for (const invalid of [
+    { count: 0, foreignClose: true }, { count: 0 }, { text: 'Close another task' },
+    { width: 0 }, { height: 0 },
+  ] satisfies Partial<CrossCloseGeometry>[]) {
+    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);
+    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+    assertCrossCloseNoInputDeadline(f);
+  }
+});
+
+test('actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing', async t => {
+  for (const invalid of [
+    { count: 2 }, { count: 2, secondDisabled: true }, { count: 2, descendantHit: true },
+  ] satisfies Partial<CrossCloseGeometry>[]) {
+    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);
+    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+    assertCrossCloseNoInputDeadline(f);
+  }
+});
+
+test('actual original Cross Close refuses disabled covered and absent-hit controls', async t => {
+  for (const invalid of [
+    { disabled: true }, { covered: true }, { noHit: true },
+  ] satisfies Partial<CrossCloseGeometry>[]) {
+    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);
+    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+    assertCrossCloseNoInputDeadline(f);
+  }
+});
+
+test('actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates', async t => {
+  const f = crossCloseFixture(t);
+  f.setOwnedHook(check => { if (check === 6) f.detail.refreshPending = true; });
+  await assert.rejects(runActualCrossClose(f));
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, front: 1 });
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'the final direct read rechecks readiness');
+});
+
+test('actual original Cross Close preserves final renderer ownership refusal without a press', async t => {
+  const refusal = new Error('TEST original renderer ownership lost');
+  const f = crossCloseFixture(t);
+  f.setOwnedHook(check => { if (check === 6) throw refusal; });
+  await assert.rejects(runActualCrossClose(f), error => { assert.equal(error, refusal); return true; });
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 4, front: 1 });
+});
+
+test('actual original Cross Close preserves final exact geometry refusal without replay', async t => {
+  const f = crossCloseFixture(t);
+  f.setOwnedHook(check => { if (check === 6) f.geometry.centerY = 175.125; });
+  await assert.rejects(runActualCrossClose(f), /Original UI target moved after ownership check/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, front: 1 });
+});

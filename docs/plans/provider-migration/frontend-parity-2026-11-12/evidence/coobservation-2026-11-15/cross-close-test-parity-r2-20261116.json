@@ -1,0 +1,1950 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-Cross-Close-test-only-R2-and-complete-static133-case-ledger",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/parity_audit",
+  "reviewDateUtc": "2026-11-16",
+  "accepted": true,
+  "verdict": "ACCEPTED TEST SOURCE ONLY; all runtime outcomes below are predictions until actual admitted execution",
+  "parentNotifiedBeforeBareRetention": true,
+  "publishedR1": {
+    "identity": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "myFullScopeReview": {
+      "bytes": 25572,
+      "sha256": "3dfdcd0350342a8adf141f072509c4d5f999fb259fa164e2db3fa1c2478c0fd1",
+      "gitBlob": "7fa731637982b2629b35df2378bab0a5bfbbcc3e"
+    },
+    "publication": {
+      "commit": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+      "tree": "21ea9ec18febadf981f16ee455a7ad6fcf65ed5c",
+      "soleParent": "3db7943ae2b70232e926474e09fac20b609d10c8",
+      "rootAdmissionAt": "2026-11-16 16:14:49 UTC",
+      "independentPublicationRecord": {
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34",
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1"
+      },
+      "attribution": "Actual publication/readback prerequisite reported by root with the independent pr_graph record, before all Cross postimages. This test review does not claim a separate fresh ref/commit/tree readback by parity_audit."
+    }
+  },
+  "testPath": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+  "candidate": {
+    "bytes": 155423,
+    "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+    "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+  },
+  "exactPriorPrefix": {
+    "bytes": 136700,
+    "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+    "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+    "bytesPreserved": 136700,
+    "completePrefixEqual": true,
+    "oldImportsBodiesNamesAndOrderUnchanged": true,
+    "actualPrior97GreenRaw": {
+      "bytes": 9861,
+      "sha256": "f7d1a1a3c88a0993e7c8c638944182ed632d19862b2143f5f8d9b053cdbc9f50",
+      "gitBlob": "30a91e061f29b7605c1ab8e3d90b4b910626154c"
+    },
+    "actualPrior97GreenReview": "1f1ef935177c9453bdf330ae14b0e3b319a45311",
+    "actualPrior97FinalClosure": "17e26030335deb4d9d1b70d902f7f0d7b62deefa"
+  },
+  "append": {
+    "identity": {
+      "bytes": 18723,
+      "sha256": "6ec52af0d302c23841ff811436c0fb774379b2b6d639e2f476de5b4c71b13546",
+      "gitBlob": "59ab4f281b044c45db8d1a53de064c0a14b3e2dd"
+    },
+    "physicalLines": 313,
+    "wholePhysicalLines": 2551,
+    "maxWholeBytes180000": 180000,
+    "wholeBytes155423": 155423,
+    "withinPublishedByteCap": true,
+    "content": "\n\ntype CrossCloseGeometry = {\n  centerY: number; width: number; height: number; count: number; text: string;\n  disabled: boolean; secondDisabled: boolean; covered: boolean; noHit: boolean;\n  descendantHit: boolean; foreignClose: boolean;\n};\n\nfunction crossCloseFixture(t?: import('node:test').TestContext) {\n  const identity = { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' };\n  const captured = { contextId: identity.contextId, surfaceId: 'TEST-original-surface' };\n  const key = JSON.stringify([identity.contextId, identity.teamName, identity.taskId]);\n  const scope = { contextId: identity.contextId, teamName: identity.teamName, contextEpoch: 1, teamStateEpoch: 1 };\n  const controller = {\n    identity, surfaceId: captured.surfaceId, isOwner: true, canSubmit: true,\n    canEditNow: () => true, canResolveClarification: false, attachmentError: null,\n    session: { ownerSurfaceId: captured.surfaceId, ownerRevision: 1, commentText: '',\n      partRevisions: { commentText: 0, pendingAttachments: 0 }, submitPending: false,\n      submitError: null, pendingAttachments: [], pendingAttachmentPreparationIds: [] },\n  };\n  const detail = { identity: { ...identity }, phase: 'ready', loading: false, refreshPending: false,\n    error: null as unknown, deletionIntent: null as unknown,\n    full: { id: identity.taskId, owner: 'alice', status: 'pending',\n      needsClarification: undefined as unknown, deletedAt: undefined as unknown } };\n  const storedSession = { ...controller.session };\n  const state = { activeContextId: identity.contextId, selectedTeamName: identity.teamName,\n    isContextSwitching: false, taskDetailById: { [key]: detail },\n    taskDetailSessionById: { [key]: storedSession } as Record<string, typeof storedSession> };\n  const work = { refreshPending: false, teamUnavailable: false };\n  const geometry: CrossCloseGeometry = { centerY: 171.125, width: 40, height: 24, count: 1,\n    text: 'Close', disabled: false, secondDisabled: false, covered: false, noHit: false,\n    descendantHit: false, foreignClose: false };\n  const root = { return: null, stateNode: {} as { current: unknown } }; root.stateNode.current = root;\n  const dialogFiber = { return: root, memoizedProps: { open: true, teamName: identity.teamName,\n    task: { id: identity.taskId }, sessionController: controller } };\n  const trigger = { disabled: false, expanded: 'false', textContent: 'alice', tagName: 'BUTTON',\n    getAttribute: (name: string) => name === 'aria-expanded' ? trigger.expanded : null,\n    getBoundingClientRect: () => ({ x: 10, y: 10, width: 50, height: 20 }),\n    matches: () => trigger.disabled, contains: () => false };\n  const triggers = [trigger], descendant = {};\n  const closeButton = {\n    get textContent() { return geometry.text; }, tagName: 'BUTTON',\n    get disabled() { return geometry.disabled; },\n    getBoundingClientRect: () => ({ x: 1101, y: geometry.centerY - geometry.height / 2,\n      width: geometry.width, height: geometry.height }),\n    matches(selector: string) { assert.equal(selector, ':disabled'); return geometry.disabled; },\n    contains: (node: unknown) => node === descendant,\n    getAttribute: () => null,\n  };\n  const duplicate = { ...closeButton, textContent: 'Close',\n    get disabled() { return geometry.secondDisabled; },\n    matches(selector: string) { assert.equal(selector, ':disabled'); return geometry.secondDisabled; },\n    contains: () => false };\n  const foreignButton = { ...closeButton, textContent: 'Close', disabled: false,\n    getBoundingClientRect: () => ({ x: 1400, y: 100, width: 40, height: 24 }),\n    matches(selector: string) { assert.equal(selector, ':disabled'); return false; },\n    contains: () => false };\n  const ownButtons = () => [...triggers, ...Array.from({ length: geometry.count },\n    (_, index) => index === 0 ? closeButton : duplicate)];\n  const dialog = {\n    __reactFiber$TEST: dialogFiber, getClientRects: () => [1],\n    querySelectorAll(selector: string): unknown[] {\n      if (selector === 'textarea') return [input];\n      if (selector === 'button[role=\"combobox\"]') return triggers;\n      assert.equal(selector, 'button'); return ownButtons();\n    },\n  };\n  const foreignDialog = { getClientRects: () => [1],\n    querySelectorAll: () => geometry.foreignClose ? [foreignButton] : [] };\n  const input = { id: 'TEST-original-comment', disabled: false, getClientRects: () => [1],\n    closest(selector: string) { assert.equal(selector, '[role=\"dialog\"]'); return dialog; },\n    __reactFiber$TEST: { return: dialogFiber, memoizedProps: { controller, contextId: identity.contextId,\n      teamName: identity.teamName, taskId: identity.taskId, surfaceId: captured.surfaceId } } };\n  const document = {\n    getElementById(id: string) { assert.equal(id, input.id); return input; },\n    querySelectorAll(selector: string): unknown[] {\n      if (selector === '[role=\"dialog\"]') return [dialog, foreignDialog];\n      if (selector === 'textarea') return [input];\n      assert.equal(selector, '[role=\"dialog\"] button');\n      return [...ownButtons(), ...(geometry.foreignClose ? [foreignButton] : [])];\n    },\n    elementFromPoint() {\n      if (geometry.noHit) return null;\n      if (geometry.covered) return {};\n      if (geometry.foreignClose && geometry.count === 0) return foreignButton;\n      return geometry.descendantHit ? descendant : closeButton;\n    },\n  };\n  let now = 0, owned = 0, reads = 0, front = 0;\n  let ownedHook: (check: number) => void = () => undefined;\n  const waits: number[] = [], imports: string[] = [], expressions: string[] = [];\n  const events: Record<string, unknown>[] = [];\n  if (t) {\n    t.mock.method(Date, 'now', () => now);\n    t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {\n      assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);\n      return 1 as unknown as NodeJS.Timeout;\n    });\n  }\n  const evaluate = async (expression: string) => {\n    reads++; expressions.push(expression);\n    return runInNewContext(expression.replaceAll('await import(', 'await __testImport('), {\n      window: { __agentTeamsDevStore: { getState: () => state } }, document,\n      innerWidth: 2000, innerHeight: 1000, getComputedStyle: () => ({ pointerEvents: 'auto' }),\n      async __testImport(path: string) {\n        imports.push(path);\n        if (path === '/store/slices/teamSlice.ts')\n          return { isTeamDataRefreshPending(team: string, getState: unknown) {\n            assert.equal(team, identity.teamName); assert.equal(typeof getState, 'function');\n            return work.refreshPending;\n          } };\n        assert.equal(path, '/store/team/taskDetailReadAuthority.ts');\n        return {\n          captureTaskDetailReadScope(teamName: string, contextId: string) {\n            assert.deepEqual({ teamName, contextId }, { teamName: identity.teamName, contextId: captured.contextId });\n            return { ...scope };\n          },\n          isTaskDetailTeamUnavailable(observed: unknown, team: string, observedScope: unknown) {\n            assert.equal(observed, state); assert.equal(team, identity.teamName);\n            assert.deepEqual(observedScope, scope); return work.teamUnavailable;\n          },\n        };\n      },\n    }) as Promise<Record<string, unknown> | null>;\n  };\n  const ui = createDesktopUiControls({ evaluate,\n    async send(method: string, params: Record<string, unknown> = {}) {\n      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');\n      if (method === 'Page.bringToFront') front++; else events.push({ ...params });\n      return {};\n    },\n  }, { assertOwnedRenderer() { ownedHook(++owned); }, step() {} });\n  return { identity, captured, key, controller, detail, storedSession, state, work, geometry,\n    trigger, triggers, ui, events, expressions, imports, waits,\n    setOwnedHook(callback: (check: number) => void) { ownedHook = callback; },\n    counts: () => ({ now, owned, reads, front }),\n    evaluateTarget: () => {\n      const expression = Reflect.apply(desktopTaskBoardAssignmentReadyExpression, undefined,\n        ['TEST-owner', identity.taskId, captured, 'clarification-cleared']) as string;\n      assert.equal(expression.match(/await import\\(/g)?.length, 2, 'only the two original readonly imports');\n      return evaluate(expression);\n    },\n  };\n}\n\nasync function runActualCrossClose(f: ReturnType<typeof crossCloseFixture>) {\n  const source = await readFile(new URL('./desktop-task-board-ui-smoke.ts', import.meta.url), 'utf8');\n  const first = '  proof.clarificationReceipt = await receiptFor(';\n  const last = '  await ui.waitRead(' + String.fromCharCode(96) +\n    '!document.querySelector(\\'[role=\"dialog\"]\\')' + String.fromCharCode(96) + ', \\'Task detail closed\\');';\n  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);\n  const receiptBegin = source.indexOf(first), receiptEnd = source.indexOf('\\n  );\\n', receiptBegin);\n  const end = source.indexOf(last, receiptBegin);\n  assert.ok(receiptEnd > receiptBegin && end > receiptEnd);\n  const actual = source.slice(receiptEnd + '\\n  );\\n'.length, end).trim();\n  assert.ok(actual.length > 20 && actual.length < 512);\n  const call = /^await ([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)?)\\(([\\s\\S]*)\\);$/.exec(actual);\n  assert.ok(call, 'exactly one awaited original Close call');\n  assert.match(call[2]!, /^(?:\\s+|[A-Za-z_$][\\w$]*|[.,{}]|'(?:[^'\\\\\\r\\n]|\\\\.)*'|\"(?:[^\"\\\\\\r\\n]|\\\\.)*\")*$/,\n    'only literal strings, names, property reads and a captured-identity object; no nested or extra statement');\n  const helpers = await import('./desktop-task-comment-input-target.ts');\n  const imports = [...source.matchAll(/import\\s*\\{([^{}]*)\\}\\s*from\\s*(['\"])\\.\\/desktop-task-comment-input-target\\.ts\\2\\s*;/g)];\n  assert.equal(imports.length, 1, 'one actual named helper import block');\n  const bindings: Record<string, unknown> = {};\n  for (const name of imports[0]![1]!.split(',').map(value => value.trim()).filter(Boolean)) {\n    assert.match(name, /^[A-Za-z_$][\\w$]*$/, 'unsupported import binding');\n    assert.ok(!Object.hasOwn(bindings, name), 'duplicate import binding');\n    assert.ok(Object.hasOwn(helpers, name), 'unknown actual helper export');\n    const value = Reflect.get(helpers, name);\n    assert.equal(typeof value, 'function'); bindings[name] = value;\n  }\n  assert.ok(call[1] === 'ui.click' || Object.hasOwn(bindings, call[1]!), 'direct helper must be actually imported');\n  await runInNewContext('(async () => { ' + actual + ' })()', {\n    ...bindings, ui: f.ui, options: { handleId: 'TEST-owner' }, taskId: f.identity.taskId,\n    contextId: f.captured.contextId, surfaceId: f.captured.surfaceId,\n  });\n}\n\ntest('original Cross Close target admits the ready cleared Task when canResolveClarification is false', async () => {\n  const f = crossCloseFixture();\n  const point = await f.evaluateTarget();\n  assert.ok(point);\n  assert.deepEqual([point.x, point.y, point.tag, point.text], [1121, 171.125, 'BUTTON', 'Close']);\n  assert.equal(f.controller.canResolveClarification, false);\n  assert.deepEqual(f.events, []);\n  assert.deepEqual(f.imports, ['/store/slices/teamSlice.ts', '/store/team/taskDetailReadAuthority.ts']);\n});\n\nfor (const [label, change] of [\n  ['retained user clarification', f => { f.detail.full.needsClarification = 'user'; }],\n  ['retained external clarification', f => { f.detail.full.needsClarification = 'external'; }],\n  ['null clarification', f => { f.detail.full.needsClarification = null; }],\n  ['full-detail refreshPending', f => { f.detail.refreshPending = true; }],\n  ['full-detail loading', f => { f.detail.loading = true; }],\n  ['current detail error', f => { f.detail.error = 'TEST detail error'; }],\n  ['current deletionIntent', f => { f.detail.deletionIntent = { pending: true }; }],\n  ['full Task deletedAt', f => { f.detail.full.deletedAt = '2026-11-16T00:00:00.000Z'; }],\n  ['full Task deleted status', f => { f.detail.full.status = 'deleted'; }],\n  ['non-ready full-detail phase', f => { f.detail.phase = 'loading'; }],\n  ['foreign full Task ID', f => { f.detail.full.id = 'TEST-foreign-task'; }],\n  ['foreign detail identity', f => { f.detail.identity.taskId = 'TEST-foreign-task'; }],\n  ['changed active context', f => { f.state.activeContextId = 'TEST-foreign-context'; }],\n  ['different selected Team', f => { f.state.selectedTeamName = 'host-team:TEST-foreign'; }],\n  ['rebound controller surface', f => { f.controller.surfaceId = 'TEST-foreign-surface'; }],\n  ['missing stored session', f => { delete f.state.taskDetailSessionById[f.key]; }],\n  ['different stored session owner surface', f => { f.storedSession.ownerSurfaceId = 'TEST-foreign-surface'; }],\n  ['changed stored owner revision', f => { f.storedSession.ownerRevision++; }],\n  ['current canEditNow false', f => { f.controller.canEditNow = () => false; }],\n  ['non-owning controller', f => { f.controller.isOwner = false; }],\n  ['scoped Team refresh', f => { f.work.refreshPending = true; }],\n  ['unavailable accepted Team metadata', f => { f.work.teamUnavailable = true; }],\n  ['disabled assignment control', f => { f.trigger.disabled = true; }],\n  ['expanded assignment control', f => { f.trigger.expanded = 'true'; }],\n  ['another assignee', f => { f.trigger.textContent = 'bob'; }],\n  ['missing assignment control', f => { f.triggers.length = 0; }],\n  ['duplicate assignment controls', f => { f.triggers.push({ ...f.trigger }); }],\n] satisfies readonly (readonly [string, (f: ReturnType<typeof crossCloseFixture>) => void])[])\ntest('original Cross Close target refuses ' + label, async () => {\n  const f = crossCloseFixture(); change(f);\n  assert.equal(await f.evaluateTarget(), null);\n  assert.deepEqual(f.events, [], 'readiness observation never performs an input action');\n});\n\ntest('actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates', async t => {\n  for (const descendantHit of [false, true]) {\n    t.mock.restoreAll();\n    const f = crossCloseFixture(t);\n    f.geometry.descendantHit = descendantHit; f.geometry.centerY = 167.125;\n    f.detail.full.needsClarification = 'user'; f.detail.loading = true; f.work.refreshPending = true;\n    f.setOwnedHook(check => {\n      if (check === 6) {\n        f.detail.full.needsClarification = undefined; f.detail.loading = false;\n        f.work.refreshPending = false; f.geometry.centerY = 171.125;\n      }\n    });\n    await runActualCrossClose(f);\n    assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),\n      [['mouseMoved', 1121, 171.125], ['mousePressed', 1121, 171.125], ['mouseReleased', 1121, 171.125]]);\n    assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, front: 1 });\n    assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));\n    assert.ok(f.expressions.every(value => value === f.expressions[0]), 'one complete predicate in every phase');\n  }\n});\n\nfunction assertCrossCloseNoInputDeadline(f: ReturnType<typeof crossCloseFixture>) {\n  assert.deepEqual(f.events, []);\n  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, front: 1 });\n  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));\n  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'one unchanged first-read predicate');\n}\n\ntest('actual original Cross Close retains the first-read deadline while renderer readiness is pending', async t => {\n  const f = crossCloseFixture(t); f.detail.refreshPending = true;\n  await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);\n  assertCrossCloseNoInputDeadline(f);\n});\n\ntest('actual original Cross Close cannot use a foreign dialog or an absent ineligible own control', async t => {\n  for (const invalid of [\n    { count: 0, foreignClose: true }, { count: 0 }, { text: 'Close another task' },\n    { width: 0 }, { height: 0 },\n  ] satisfies Partial<CrossCloseGeometry>[]) {\n    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);\n    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);\n    assertCrossCloseNoInputDeadline(f);\n  }\n});\n\ntest('actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing', async t => {\n  for (const invalid of [\n    { count: 2 }, { count: 2, secondDisabled: true }, { count: 2, descendantHit: true },\n  ] satisfies Partial<CrossCloseGeometry>[]) {\n    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);\n    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);\n    assertCrossCloseNoInputDeadline(f);\n  }\n});\n\ntest('actual original Cross Close refuses disabled covered and absent-hit controls', async t => {\n  for (const invalid of [\n    { disabled: true }, { covered: true }, { noHit: true },\n  ] satisfies Partial<CrossCloseGeometry>[]) {\n    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);\n    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);\n    assertCrossCloseNoInputDeadline(f);\n  }\n});\n\ntest('actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates', async t => {\n  const f = crossCloseFixture(t);\n  f.setOwnedHook(check => { if (check === 6) f.detail.refreshPending = true; });\n  await assert.rejects(runActualCrossClose(f));\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);\n  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, front: 1 });\n  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'the final direct read rechecks readiness');\n});\n\ntest('actual original Cross Close preserves final renderer ownership refusal without a press', async t => {\n  const refusal = new Error('TEST original renderer ownership lost');\n  const f = crossCloseFixture(t);\n  f.setOwnedHook(check => { if (check === 6) throw refusal; });\n  await assert.rejects(runActualCrossClose(f), error => { assert.equal(error, refusal); return true; });\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);\n  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 4, front: 1 });\n});\n\ntest('actual original Cross Close preserves final exact geometry refusal without replay', async t => {\n  const f = crossCloseFixture(t);\n  f.setOwnedHook(check => { if (check === 6) f.geometry.centerY = 175.125; });\n  await assert.rejects(runActualCrossClose(f), /Original UI target moved after ownership check/);\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);\n  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, front: 1 });\n});\n"
+  },
+  "supersededCandidate": {
+    "identity": {
+      "bytes": 154440,
+      "sha256": "9ff80882a5e406936747aad822b37d40fc4a16a4ba1b6c74c9f0b40f2c88b193",
+      "gitBlob": "ae805e506b69fca544fa6ba38b57bb483c6c10a8"
+    },
+    "selected": false,
+    "executed": false,
+    "neededCorrections": [
+      "Four timeout regexes must include actual UI read timed out.",
+      "Bind only actual named helper imports from the actual driver source, and require a direct helper call to be imported.",
+      "Narrow source extraction to the single call and exclude nested call/extra-statement punctuation outside string operands."
+    ]
+  },
+  "exactRevision": {
+    "old": {
+      "bytes": 154440,
+      "sha256": "9ff80882a5e406936747aad822b37d40fc4a16a4ba1b6c74c9f0b40f2c88b193",
+      "gitBlob": "ae805e506b69fca544fa6ba38b57bb483c6c10a8"
+    },
+    "revised": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "wholeInverseExact": true,
+    "changes": [
+      {
+        "kind": "actual helper binding and single-call source seam",
+        "oldFull": "async function runActualCrossClose(f: ReturnType<typeof crossCloseFixture>) {\n  const source = await readFile(new URL('./desktop-task-board-ui-smoke.ts', import.meta.url), 'utf8');\n  const first = '  proof.clarificationReceipt = await receiptFor(';\n  const last = '  await ui.waitRead(' + String.fromCharCode(96) +\n    '!document.querySelector(\\'[role=\"dialog\"]\\')' + String.fromCharCode(96) + ', \\'Task detail closed\\');';\n  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);\n  const receiptBegin = source.indexOf(first), receiptEnd = source.indexOf('\\n  );\\n', receiptBegin);\n  const end = source.indexOf(last, receiptBegin);\n  assert.ok(receiptEnd > receiptBegin && end > receiptEnd);\n  const actual = source.slice(receiptEnd + '\\n  );\\n'.length, end).trim();\n  assert.ok(actual.length > 20 && actual.length < 512);\n  assert.match(actual, /^await [A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)?\\([\\s\\S]*\\);$/);\n  assert.equal(actual.split('await ').length, 2, 'exactly the original Close action statement');\n  const helpers = await import('./desktop-task-comment-input-target.ts');\n  await runInNewContext('(async () => { ' + actual + ' })()', {\n    ...helpers, ui: f.ui, options: { handleId: 'TEST-owner' }, taskId: f.identity.taskId,\n    contextId: f.captured.contextId, surfaceId: f.captured.surfaceId,\n  });\n}\n",
+        "newFull": "async function runActualCrossClose(f: ReturnType<typeof crossCloseFixture>) {\n  const source = await readFile(new URL('./desktop-task-board-ui-smoke.ts', import.meta.url), 'utf8');\n  const first = '  proof.clarificationReceipt = await receiptFor(';\n  const last = '  await ui.waitRead(' + String.fromCharCode(96) +\n    '!document.querySelector(\\'[role=\"dialog\"]\\')' + String.fromCharCode(96) + ', \\'Task detail closed\\');';\n  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);\n  const receiptBegin = source.indexOf(first), receiptEnd = source.indexOf('\\n  );\\n', receiptBegin);\n  const end = source.indexOf(last, receiptBegin);\n  assert.ok(receiptEnd > receiptBegin && end > receiptEnd);\n  const actual = source.slice(receiptEnd + '\\n  );\\n'.length, end).trim();\n  assert.ok(actual.length > 20 && actual.length < 512);\n  const call = /^await ([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)?)\\(([\\s\\S]*)\\);$/.exec(actual);\n  assert.ok(call, 'exactly one awaited original Close call');\n  assert.match(call[2]!, /^(?:\\s+|[A-Za-z_$][\\w$]*|[.,{}]|'(?:[^'\\\\\\r\\n]|\\\\.)*'|\"(?:[^\"\\\\\\r\\n]|\\\\.)*\")*$/,\n    'only literal strings, names, property reads and a captured-identity object; no nested or extra statement');\n  const helpers = await import('./desktop-task-comment-input-target.ts');\n  const imports = [...source.matchAll(/import\\s*\\{([^{}]*)\\}\\s*from\\s*(['\"])\\.\\/desktop-task-comment-input-target\\.ts\\2\\s*;/g)];\n  assert.equal(imports.length, 1, 'one actual named helper import block');\n  const bindings: Record<string, unknown> = {};\n  for (const name of imports[0]![1]!.split(',').map(value => value.trim()).filter(Boolean)) {\n    assert.match(name, /^[A-Za-z_$][\\w$]*$/, 'unsupported import binding');\n    assert.ok(!Object.hasOwn(bindings, name), 'duplicate import binding');\n    assert.ok(Object.hasOwn(helpers, name), 'unknown actual helper export');\n    const value = Reflect.get(helpers, name);\n    assert.equal(typeof value, 'function'); bindings[name] = value;\n  }\n  assert.ok(call[1] === 'ui.click' || Object.hasOwn(bindings, call[1]!), 'direct helper must be actually imported');\n  await runInNewContext('(async () => { ' + actual + ' })()', {\n    ...bindings, ui: f.ui, options: { handleId: 'TEST-owner' }, taskId: f.identity.taskId,\n    contextId: f.captured.contextId, surfaceId: f.captured.surfaceId,\n  });\n}\n"
+      },
+      {
+        "kind": "actual unchanged waitRead timeout spelling",
+        "old": "/UI (?:condition timed out|target read failed)/",
+        "new": "/UI (?:read timed out|target read failed)/",
+        "occurrences": 4
+      }
+    ],
+    "currentSourceStatement": "await ui.click('[role=\"dialog\"] button', 'close original Task detail', 'Close');",
+    "actualNamedImports": [
+      "desktopTaskBoardAssignmentReadyExpression",
+      "desktopTaskCommentInputExpression"
+    ],
+    "allCurrentImportsMatchActualFunctionExports": true,
+    "currentGenericStatementAdmittedWithoutAnyNewExport": true,
+    "caseNamesAndMultiplicityUnchanged": true,
+    "physicalLines": 2551,
+    "suffixPhysicalLines": 313
+  },
+  "currentUnchangedSourcePins": {
+    "helper": {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "bytes": 6433,
+      "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+      "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+    },
+    "driver": {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+    },
+    "controls": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    "selection": {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+    },
+    "selectionScope": "No Selection change or new Selection import is introduced by this append."
+  },
+  "harnessReview": {
+    "actualSourceStatement": "await ui.click('[role=\"dialog\"] button', 'close original Task detail', 'Close');",
+    "strictUniqueBoundaries": [
+      "proof.clarificationReceipt = await receiptFor(",
+      "await ui.waitRead(`!document.querySelector('[role=\"dialog\"]')`, 'Task detail closed');"
+    ],
+    "originalGenericStatementExecutableBeforeAnyProducer": true,
+    "namedHelperImports": [
+      "desktopTaskBoardAssignmentReadyExpression",
+      "desktopTaskCommentInputExpression"
+    ],
+    "currentImportsAreActualFunctionExports": true,
+    "onlyActualNamedExportsBound": true,
+    "aliasesUnknownNamesDuplicatesAndNonfunctionsRefused": true,
+    "directHelperCallMustBeAnActualNamedBinding": true,
+    "noCopiedProspectiveProducerOrFallback": true,
+    "statementScope": "Known actual source is one awaited ui.click statement. The amended lexical operand whitelist excludes nested call parentheses and extra statement delimiters outside strings. This is a source-frozen test seam reviewed against exact source, not a general-purpose untrusted-JavaScript parser.",
+    "readOnlyBrowserImports": [
+      "/store/slices/teamSlice.ts",
+      "/store/team/taskDetailReadAuthority.ts"
+    ],
+    "browserImportFixture": "Only the two literal readonly facade paths return finite captured state. Unknown paths fail. Generated expressions come from actual helper exports; the fixture supplies DOM/React/store facts rather than a copied readiness predicate.",
+    "reactAndStore": "One current root with stateNode.current=root, exact context/host-team/task/surface identities, rendered controller and copied stored session row. Foreign dialog has no matching current React controller. Each negative changes only its selected bounded fact.",
+    "dom": "Own buttons are scoped to the own dialog. Foreign-only fixture gives the old global selector an actionable foreign button, exposing the intended missing ownership restriction. Duplicate controls remain positive-size/exact-text even when only one is enabled or hit; descendants use the same button.contains(hit) relation.",
+    "vmAndTypes": "No target source was evaluated by this reviewer. Static inspection found no new module/import/setup prerequisite: helper exists, Reflect.apply can pass the new stage to its current function before a typed stage union changes, current named exports exist, and the original generic driver statement executes with actual controls. The explicit unknown[] querySelectorAll result and unknown root.current break recursive fixture inference. Added type/satisfies syntax is erasable; no compiler PASS is claimed.",
+    "noNewChildOrNetworkOrProviderEntryInAppend": true,
+    "oldSixFiniteProcessExecPathChildrenUnchanged": true
+  },
+  "clockAndEffects": {
+    "mocks": "node:test scoped Date.now and setTimeout only; each delay must equal100ms, virtual clock advances100 and queueMicrotask completes it. restoreAll separates table variants; node:test scope restores at test completion.",
+    "fullCommandClock": "The real captured Node command retains its own180-second supervisor budget, unaffected by these in-process virtual clocks.",
+    "negativeFirstRead": {
+      "now": 30000,
+      "owned": 300,
+      "reads": 300,
+      "front": 1,
+      "waitCount": 300,
+      "waitMsEach": 100,
+      "hover": 0,
+      "press": 0,
+      "release": 0
+    },
+    "requiredFixedPositive": {
+      "now": 700,
+      "owned": 12,
+      "reads": 10,
+      "front": 1,
+      "waitCount": 7,
+      "waitMsEach": 100,
+      "events": [
+        [
+          "mouseMoved",
+          1121,
+          171.125
+        ],
+        [
+          "mousePressed",
+          1121,
+          171.125
+        ],
+        [
+          "mouseReleased",
+          1121,
+          171.125
+        ]
+      ]
+    },
+    "finalReadinessRevocation": {
+      "now": 200,
+      "owned": 6,
+      "reads": 5,
+      "front": 1,
+      "events": [
+        [
+          "mouseMoved",
+          1121,
+          171.125
+        ]
+      ],
+      "noPressOrReplay": true
+    },
+    "finalOwnerRefusal": {
+      "now": 200,
+      "owned": 6,
+      "reads": 4,
+      "front": 1,
+      "identicalThrownError": true,
+      "events": [
+        [
+          "mouseMoved",
+          1121,
+          171.125
+        ]
+      ]
+    },
+    "finalGeometryRefusal": {
+      "now": 200,
+      "owned": 6,
+      "reads": 5,
+      "front": 1,
+      "originalError": "Original UI target moved after ownership check",
+      "events": [
+        [
+          "mouseMoved",
+          1121,
+          171.125
+        ]
+      ],
+      "noReplay": true
+    },
+    "exactSameCompleteExpressionAtAllDriverReadsAsserted": true,
+    "originalControlsAndAllOriginalDeadlinesUnchanged": true
+  },
+  "staticCensus": {
+    "cases": 133,
+    "old": 97,
+    "newReadiness": 28,
+    "newDriver": 8,
+    "expectedPass": 118,
+    "expectedFail": 15,
+    "failureOrdinals": [
+      98,
+      99,
+      100,
+      101,
+      104,
+      105,
+      106,
+      107,
+      114,
+      115,
+      116,
+      126,
+      127,
+      128,
+      131
+    ],
+    "actualExecutionPerformed": false,
+    "targetVariants": {
+      "registeredCases": 4,
+      "variants": 13,
+      "baselineReached": 8,
+      "baselineUnreached": 5
+    }
+  },
+  "completeCaseLedger": [
+    {
+      "ordinal": 1,
+      "name": "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+      "definitionLine": 63,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 1
+    },
+    {
+      "ordinal": 2,
+      "name": "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+      "definitionLine": 79,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 2
+    },
+    {
+      "ordinal": 3,
+      "name": "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+      "definitionLine": 124,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 3
+    },
+    {
+      "ordinal": 4,
+      "name": "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+      "definitionLine": 139,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 4
+    },
+    {
+      "ordinal": 5,
+      "name": "isolated shell fixture emits the actual framed environment and refuses shell effects",
+      "definitionLine": 149,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 5
+    },
+    {
+      "ordinal": 6,
+      "name": "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+      "definitionLine": 337,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 6
+    },
+    {
+      "ordinal": 7,
+      "name": "Task attachment comment waits for its original focused owner after one click before inserting text",
+      "definitionLine": 372,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 7
+    },
+    {
+      "ordinal": 8,
+      "name": "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+      "definitionLine": 546,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 8
+    },
+    {
+      "ordinal": 9,
+      "name": "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+      "definitionLine": 583,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 9
+    },
+    {
+      "ordinal": 10,
+      "name": "original desktop click waits for stable target geometry, without repeating input",
+      "definitionLine": 613,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 10
+    },
+    {
+      "ordinal": 11,
+      "name": "original Task hover waits through layout and unavailability before its one physical move",
+      "definitionLine": 641,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 11
+    },
+    {
+      "ordinal": 12,
+      "name": "original desktop click refuses a constantly moving target before dispatch",
+      "definitionLine": 667,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 12
+    },
+    {
+      "ordinal": 13,
+      "name": "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+      "definitionLine": 685,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 13
+    },
+    {
+      "ordinal": 14,
+      "name": "login failure facts retain only bounded original attempts and confirmed milestones",
+      "definitionLine": 715,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 14
+    },
+    {
+      "ordinal": 15,
+      "name": "finite readiness failure summaries keep only bounded states and never private snapshot data",
+      "definitionLine": 770,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 15
+    },
+    {
+      "ordinal": 16,
+      "name": "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+      "definitionLine": 808,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 16
+    },
+    {
+      "ordinal": 17,
+      "name": "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+      "definitionLine": 896,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 17
+    },
+    {
+      "ordinal": 18,
+      "name": "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+      "definitionLine": 952,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 18
+    },
+    {
+      "ordinal": 19,
+      "name": "installer CDP and cleanup projection retains only exact finite observations",
+      "definitionLine": 985,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 19
+    },
+    {
+      "ordinal": 20,
+      "name": "Selection target summaries retain the exact original phase and six closed facts",
+      "definitionLine": 1038,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 20
+    },
+    {
+      "ordinal": 21,
+      "name": "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+      "definitionLine": 1073,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 21
+    },
+    {
+      "ordinal": 22,
+      "name": "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+      "definitionLine": 1102,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 22
+    },
+    {
+      "ordinal": 23,
+      "name": "original desktop click refuses a target unavailable during the final ownership check",
+      "definitionLine": 1198,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 23
+    },
+    {
+      "ordinal": 24,
+      "name": "original desktop click refuses a target moved during the final ownership check",
+      "definitionLine": 1198,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 24
+    },
+    {
+      "ordinal": 25,
+      "name": "original default scroll preserves a disabled control before its readiness wait",
+      "definitionLine": 1228,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 25
+    },
+    {
+      "ordinal": 26,
+      "name": "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+      "definitionLine": 1228,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 26
+    },
+    {
+      "ordinal": 27,
+      "name": "original desktop click rechecks owner after its pending final target read",
+      "definitionLine": 1280,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 27
+    },
+    {
+      "ordinal": 28,
+      "name": "original desktop click rechecks cutoff after its pending final target read",
+      "definitionLine": 1280,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 28
+    },
+    {
+      "ordinal": 29,
+      "name": "original clarification lookup admits its retained read without completing the assignment prerequisite",
+      "definitionLine": 1324,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 29
+    },
+    {
+      "ordinal": 30,
+      "name": "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+      "definitionLine": 1347,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 30
+    },
+    {
+      "ordinal": 31,
+      "name": "original owner availability admits three captured A Teams through its actual first DOM read",
+      "definitionLine": 1464,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 31
+    },
+    {
+      "ordinal": 32,
+      "name": "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+      "definitionLine": 1480,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 32
+    },
+    {
+      "ordinal": 33,
+      "name": "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+      "definitionLine": 1494,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 33
+    },
+    {
+      "ordinal": 34,
+      "name": "original owner availability refuses invalid captured discovery before navigation",
+      "definitionLine": 1541,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 34
+    },
+    {
+      "ordinal": 35,
+      "name": "owner availability admits every captured A Team through the actual first observation",
+      "definitionLine": 1610,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 35
+    },
+    {
+      "ordinal": 36,
+      "name": "owner availability refuses healthy B in unavailable A rows",
+      "definitionLine": 1628,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 36
+    },
+    {
+      "ordinal": 37,
+      "name": "owner availability refuses captured foreign owner in unavailable A rows",
+      "definitionLine": 1628,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 37
+    },
+    {
+      "ordinal": 38,
+      "name": "owner availability refuses unknown Team in unavailable A rows",
+      "definitionLine": 1628,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 38
+    },
+    {
+      "ordinal": 39,
+      "name": "owner availability refuses malformed Team in unavailable A rows",
+      "definitionLine": 1628,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 39
+    },
+    {
+      "ordinal": 40,
+      "name": "owner availability refuses missing selected A before original navigation",
+      "definitionLine": 1638,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 40
+    },
+    {
+      "ordinal": 41,
+      "name": "owner availability refuses non-string A handle before original navigation",
+      "definitionLine": 1638,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 41
+    },
+    {
+      "ordinal": 42,
+      "name": "owner availability refuses empty A handle before original navigation",
+      "definitionLine": 1638,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 42
+    },
+    {
+      "ordinal": 43,
+      "name": "owner availability refuses duplicate A handle before original navigation",
+      "definitionLine": 1638,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 43
+    },
+    {
+      "ordinal": 44,
+      "name": "owner availability refuses over-bound capture before original navigation",
+      "definitionLine": 1638,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 44
+    },
+    {
+      "ordinal": 45,
+      "name": "passive input keeps its actual Team target and three separate original navigation samples",
+      "definitionLine": 1722,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 45
+    },
+    {
+      "ordinal": 46,
+      "name": "passive navigation preserves non-card events, the original ring bounds and null or non-Team state",
+      "definitionLine": 1747,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 46
+    },
+    {
+      "ordinal": 47,
+      "name": "passive navigation refuses malformed target and store facts without losing original callbacks",
+      "definitionLine": 1767,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 47
+    },
+    {
+      "ordinal": 48,
+      "name": "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure",
+      "definitionLine": 1813,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 48
+    },
+    {
+      "ordinal": 49,
+      "name": "passive navigation uses only the callable store own method and ignores unrelated card surfaces",
+      "definitionLine": 1835,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 49
+    },
+    {
+      "ordinal": 50,
+      "name": "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+      "definitionLine": 1853,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 50
+    },
+    {
+      "ordinal": 51,
+      "name": "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority",
+      "definitionLine": 1866,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 51
+    },
+    {
+      "ordinal": 52,
+      "name": "every present provider implementation digest must be valid and both recognized fields must agree",
+      "definitionLine": 1890,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 52
+    },
+    {
+      "ordinal": 53,
+      "name": "provider receipt shape, package selection and original file or JSON errors remain strict",
+      "definitionLine": 1916,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 53
+    },
+    {
+      "ordinal": 54,
+      "name": "saved Launch uses three stable actual DOM samples before its original settings action",
+      "definitionLine": 2042,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 54
+    },
+    {
+      "ordinal": 55,
+      "name": "saved Launch resets exact geometry when the original button shifts by a quarter pixel",
+      "definitionLine": 2047,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 55
+    },
+    {
+      "ordinal": 56,
+      "name": "saved Launch restarts its three samples after changed identity",
+      "definitionLine": 2060,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 56
+    },
+    {
+      "ordinal": 57,
+      "name": "saved Launch restarts its three samples after changed expanded state",
+      "definitionLine": 2060,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 57
+    },
+    {
+      "ordinal": 58,
+      "name": "saved Launch restarts its three samples after changed horizontal position",
+      "definitionLine": 2060,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 58
+    },
+    {
+      "ordinal": 59,
+      "name": "saved Launch restarts its three samples after changed width",
+      "definitionLine": 2060,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 59
+    },
+    {
+      "ordinal": 60,
+      "name": "saved Launch restarts its three samples after changed height",
+      "definitionLine": 2060,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 60
+    },
+    {
+      "ordinal": 61,
+      "name": "saved Launch resets its original readiness after absent target",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 61
+    },
+    {
+      "ordinal": 62,
+      "name": "saved Launch resets its original readiness after ambiguous target",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 62
+    },
+    {
+      "ordinal": 63,
+      "name": "saved Launch resets its original readiness after wrong model",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 63
+    },
+    {
+      "ordinal": 64,
+      "name": "saved Launch resets its original readiness after absent identity",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 64
+    },
+    {
+      "ordinal": 65,
+      "name": "saved Launch resets its original readiness after empty identity",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 65
+    },
+    {
+      "ordinal": 66,
+      "name": "saved Launch resets its original readiness after invalid expansion",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 66
+    },
+    {
+      "ordinal": 67,
+      "name": "saved Launch resets its original readiness after missing owning dialog",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 67
+    },
+    {
+      "ordinal": 68,
+      "name": "saved Launch resets its original readiness after nonfinite x",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 68
+    },
+    {
+      "ordinal": 69,
+      "name": "saved Launch resets its original readiness after nonfinite y",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 69
+    },
+    {
+      "ordinal": 70,
+      "name": "saved Launch resets its original readiness after zero width",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 70
+    },
+    {
+      "ordinal": 71,
+      "name": "saved Launch resets its original readiness after negative height",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 71
+    },
+    {
+      "ordinal": 72,
+      "name": "saved Launch resets its original readiness after running own animation",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 72
+    },
+    {
+      "ordinal": 73,
+      "name": "saved Launch resets its original readiness after paused own animation",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 73
+    },
+    {
+      "ordinal": 74,
+      "name": "saved Launch resets its original readiness after pending own animation",
+      "definitionLine": 2077,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 74
+    },
+    {
+      "ordinal": 75,
+      "name": "saved Launch allows finished own animation without inspecting descendant spinners or model status",
+      "definitionLine": 2083,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 75
+    },
+    {
+      "ordinal": 76,
+      "name": "saved Launch allows idle own animation without inspecting descendant spinners or model status",
+      "definitionLine": 2083,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 76
+    },
+    {
+      "ordinal": 77,
+      "name": "saved Launch exhausts its one original deadline with no matching model and no settings action",
+      "definitionLine": 2092,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 77
+    },
+    {
+      "ordinal": 78,
+      "name": "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action",
+      "definitionLine": 2092,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 78
+    },
+    {
+      "ordinal": 79,
+      "name": "original conversation waits for its own reply before one click at the hydrated coordinates",
+      "definitionLine": 2146,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 79
+    },
+    {
+      "ordinal": 80,
+      "name": "default conversation click retains its original final geometry refusal without a preview predicate",
+      "definitionLine": 2158,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 80
+    },
+    {
+      "ordinal": 81,
+      "name": "original conversation refuses body-only reply within its unchanged first read deadline",
+      "definitionLine": 2173,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 81
+    },
+    {
+      "ordinal": 82,
+      "name": "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+      "definitionLine": 2173,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 82
+    },
+    {
+      "ordinal": 83,
+      "name": "original conversation refuses different required reply within its unchanged first read deadline",
+      "definitionLine": 2173,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 83
+    },
+    {
+      "ordinal": 84,
+      "name": "original conversation refuses empty preview within its unchanged first read deadline",
+      "definitionLine": 2173,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 84
+    },
+    {
+      "ordinal": 85,
+      "name": "original conversation refuses missing target within its unchanged first read deadline",
+      "definitionLine": 2173,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 85
+    },
+    {
+      "ordinal": 86,
+      "name": "original conversation refuses zero-size target within its unchanged first read deadline",
+      "definitionLine": 2173,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 86
+    },
+    {
+      "ordinal": 87,
+      "name": "original conversation refuses disabled target within its unchanged first read deadline",
+      "definitionLine": 2173,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 87
+    },
+    {
+      "ordinal": 88,
+      "name": "original conversation refuses covered target within its unchanged first read deadline",
+      "definitionLine": 2173,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 88
+    },
+    {
+      "ordinal": 89,
+      "name": "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+      "definitionLine": 2173,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 89
+    },
+    {
+      "ordinal": 90,
+      "name": "original conversation serializes its required preview as literal data",
+      "definitionLine": 2182,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 90
+    },
+    {
+      "ordinal": 91,
+      "name": "original conversation rereads a revoked preview at unchanged final coordinates before input",
+      "definitionLine": 2189,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 91
+    },
+    {
+      "ordinal": 92,
+      "name": "original conversation still refuses final owner despite a ready preview",
+      "definitionLine": 2200,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 92
+    },
+    {
+      "ordinal": 93,
+      "name": "original conversation still refuses final movement despite a ready preview",
+      "definitionLine": 2200,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 93
+    },
+    {
+      "ordinal": 94,
+      "name": "actual openChat forwards TEST boot ready for alice",
+      "definitionLine": 2219,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 94
+    },
+    {
+      "ordinal": 95,
+      "name": "actual openChat forwards TEST stream partial for alice",
+      "definitionLine": 2219,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 95
+    },
+    {
+      "ordinal": 96,
+      "name": "actual openChat forwards TEST boot ready for team-lead",
+      "definitionLine": 2219,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 96
+    },
+    {
+      "ordinal": 97,
+      "name": "actual openChat forwards TEST stream partial for team-lead",
+      "definitionLine": 2219,
+      "group": "preserved97",
+      "predictedBaseline": "PASS",
+      "priorActualGreenStatus": "PASS",
+      "priorActualGreenRawLine": 97
+    },
+    {
+      "ordinal": 98,
+      "name": "original Cross Close target admits the ready cleared Task when canResolveClarification is false",
+      "group": "new-readiness",
+      "predictedBaseline": "FAIL",
+      "basis": "Current fourth-argument unknown stage falls through to the default expression and returns an owner object, not the required Close point.",
+      "predictedFailure": "Expected [1121,171.125,'BUTTON','Close']; actual extracted owner coordinates/tag/text are undefined.",
+      "downstream": "canResolveClarification/events/import-list assertions are after the first coordinate assertion.",
+      "definitionLine": 2417,
+      "resultAssertionLine": 2421
+    },
+    {
+      "ordinal": 99,
+      "name": "original Cross Close target refuses retained user clarification",
+      "group": "new-readiness",
+      "predictedBaseline": "FAIL",
+      "basis": "Current unknown-stage/default expression does not require needsClarification to be absent; returns the original owner.",
+      "downstream": "The no-event assertion follows the expected-null assertion.",
+      "mutationDefinitionLine": 2428,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 100,
+      "name": "original Cross Close target refuses retained external clarification",
+      "group": "new-readiness",
+      "predictedBaseline": "FAIL",
+      "basis": "Current unknown-stage/default expression does not require needsClarification to be absent; returns the original owner.",
+      "downstream": "The no-event assertion follows the expected-null assertion.",
+      "mutationDefinitionLine": 2429,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 101,
+      "name": "original Cross Close target refuses null clarification",
+      "group": "new-readiness",
+      "predictedBaseline": "FAIL",
+      "basis": "Current unknown-stage/default expression does not require needsClarification to be undefined; returns the original owner.",
+      "downstream": "The no-event assertion follows the expected-null assertion.",
+      "mutationDefinitionLine": 2430,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 102,
+      "name": "original Cross Close target refuses full-detail refreshPending",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2431,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 103,
+      "name": "original Cross Close target refuses full-detail loading",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2432,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 104,
+      "name": "original Cross Close target refuses current detail error",
+      "group": "new-readiness",
+      "predictedBaseline": "FAIL",
+      "basis": "Current default expression does not reject the detail.error field.",
+      "downstream": "The no-event assertion follows the expected-null assertion.",
+      "mutationDefinitionLine": 2433,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 105,
+      "name": "original Cross Close target refuses current deletionIntent",
+      "group": "new-readiness",
+      "predictedBaseline": "FAIL",
+      "basis": "Current default expression does not reject detail.deletionIntent.",
+      "downstream": "The no-event assertion follows the expected-null assertion.",
+      "mutationDefinitionLine": 2434,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 106,
+      "name": "original Cross Close target refuses full Task deletedAt",
+      "group": "new-readiness",
+      "predictedBaseline": "FAIL",
+      "basis": "Current default expression does not reject detail.full.deletedAt.",
+      "downstream": "The no-event assertion follows the expected-null assertion.",
+      "mutationDefinitionLine": 2435,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 107,
+      "name": "original Cross Close target refuses full Task deleted status",
+      "group": "new-readiness",
+      "predictedBaseline": "FAIL",
+      "basis": "Current default expression does not reject deleted status.",
+      "downstream": "The no-event assertion follows the expected-null assertion.",
+      "mutationDefinitionLine": 2436,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 108,
+      "name": "original Cross Close target refuses non-ready full-detail phase",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2437,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 109,
+      "name": "original Cross Close target refuses foreign full Task ID",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2438,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 110,
+      "name": "original Cross Close target refuses foreign detail identity",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2439,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 111,
+      "name": "original Cross Close target refuses changed active context",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2440,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 112,
+      "name": "original Cross Close target refuses different selected Team",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2441,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 113,
+      "name": "original Cross Close target refuses rebound controller surface",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2442,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 114,
+      "name": "original Cross Close target refuses missing stored session",
+      "group": "new-readiness",
+      "predictedBaseline": "FAIL",
+      "basis": "Current default expression does not join the stored taskDetailSessionById row.",
+      "downstream": "The no-event assertion follows the expected-null assertion.",
+      "mutationDefinitionLine": 2443,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 115,
+      "name": "original Cross Close target refuses different stored session owner surface",
+      "group": "new-readiness",
+      "predictedBaseline": "FAIL",
+      "basis": "Current default expression does not join the stored session owner surface.",
+      "downstream": "The no-event assertion follows the expected-null assertion.",
+      "mutationDefinitionLine": 2444,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 116,
+      "name": "original Cross Close target refuses changed stored owner revision",
+      "group": "new-readiness",
+      "predictedBaseline": "FAIL",
+      "basis": "Current default expression does not join the stored session owner revision.",
+      "downstream": "The no-event assertion follows the expected-null assertion.",
+      "mutationDefinitionLine": 2445,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 117,
+      "name": "original Cross Close target refuses current canEditNow false",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2446,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 118,
+      "name": "original Cross Close target refuses non-owning controller",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2447,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 119,
+      "name": "original Cross Close target refuses scoped Team refresh",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2448,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 120,
+      "name": "original Cross Close target refuses unavailable accepted Team metadata",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2449,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 121,
+      "name": "original Cross Close target refuses disabled assignment control",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2450,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 122,
+      "name": "original Cross Close target refuses expanded assignment control",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2451,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 123,
+      "name": "original Cross Close target refuses another assignee",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2452,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 124,
+      "name": "original Cross Close target refuses missing assignment control",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2453,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 125,
+      "name": "original Cross Close target refuses duplicate assignment controls",
+      "group": "new-readiness",
+      "predictedBaseline": "PASS",
+      "basis": "The current owner/detail/read-authority/assignment guard already refuses this finite change.",
+      "downstream": "Both expected-null and no-event assertions are reachable.",
+      "mutationDefinitionLine": 2454,
+      "definitionLine": 2456,
+      "resultAssertionLine": 2458
+    },
+    {
+      "ordinal": 126,
+      "name": "actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates",
+      "group": "new-actual-driver",
+      "predictedBaseline": "FAIL",
+      "basis": "The generic Close ignores readiness and hovers at167.125, then check6 changes geometry to171.125 before the unchanged final exact-position assertion.",
+      "downstream": "Direct-hit first subcase fails at the original moved-target assertion; descendant-hit second subcase and post-click count assertions are not reached.",
+      "definitionLine": 2462,
+      "resultAssertionLine": 2474
+    },
+    {
+      "ordinal": 127,
+      "name": "actual original Cross Close retains the first-read deadline while renderer readiness is pending",
+      "group": "new-actual-driver",
+      "predictedBaseline": "FAIL",
+      "basis": "The generic Close ignores detail.refreshPending and completes one pair; assert.rejects reports missing expected rejection.",
+      "downstream": "No-input/300-read assertions are not reached.",
+      "definitionLine": 2490,
+      "resultAssertionLine": 2492
+    },
+    {
+      "ordinal": 128,
+      "name": "actual original Cross Close cannot use a foreign dialog or an absent ineligible own control",
+      "group": "new-actual-driver",
+      "predictedBaseline": "FAIL",
+      "basis": "The generic global Close selects the only foreign-dialog button and completes a pair.",
+      "downstream": "The first foreign-only subcase fails expected rejection; absent own, wrong text, zero width and zero height subcases remain unreached.",
+      "definitionLine": 2496,
+      "resultAssertionLine": 2502
+    },
+    {
+      "ordinal": 129,
+      "name": "actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing",
+      "group": "new-actual-driver",
+      "predictedBaseline": "PASS",
+      "basis": "Current generic target rejects both eligible buttons before disabled or hit narrowing.",
+      "downstream": "All three duplicate variants and their no-input/300-read assertions are reachable.",
+      "definitionLine": 2507,
+      "resultAssertionLine": 2512
+    },
+    {
+      "ordinal": 130,
+      "name": "actual original Cross Close refuses disabled covered and absent-hit controls",
+      "group": "new-actual-driver",
+      "predictedBaseline": "PASS",
+      "basis": "Current generic target rejects disabled, covered-center and absent-hit controls.",
+      "downstream": "All three finite variants and their no-input/300-read assertions are reachable.",
+      "definitionLine": 2517,
+      "resultAssertionLine": 2522
+    },
+    {
+      "ordinal": 131,
+      "name": "actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates",
+      "group": "new-actual-driver",
+      "predictedBaseline": "FAIL",
+      "basis": "The generic Close ignores final same-Task refreshPending revocation and completes a pair.",
+      "downstream": "The expected rejection fails before no-press/count assertions.",
+      "definitionLine": 2527,
+      "resultAssertionLine": 2530
+    },
+    {
+      "ordinal": 132,
+      "name": "actual original Cross Close preserves final renderer ownership refusal without a press",
+      "group": "new-actual-driver",
+      "predictedBaseline": "PASS",
+      "basis": "Original assertOwnedRenderer check6 throws the identical supplied error before the final evaluate or press.",
+      "downstream": "Exact error identity, hover-only and now200/owned6/reads4/front1 are reachable.",
+      "definitionLine": 2536,
+      "resultAssertionLine": 2540
+    },
+    {
+      "ordinal": 133,
+      "name": "actual original Cross Close preserves final exact geometry refusal without replay",
+      "group": "new-actual-driver",
+      "predictedBaseline": "PASS",
+      "basis": "Original final exact geometry assertion refuses the check6 center change.",
+      "downstream": "Exact original error, hover-only and now200/owned6/reads5/front1 are reachable.",
+      "definitionLine": 2545,
+      "resultAssertionLine": 2548
+    }
+  ],
+  "predictedFailureSites": [
+    {
+      "ordinal": 98,
+      "name": "original Cross Close target admits the ready cleared Task when canResolveClarification is false",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2421
+      },
+      "producerSite": {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+      },
+      "basis": "Current fourth-argument unknown stage falls through to the default expression and returns an owner object, not the required Close point.",
+      "downstream": "canResolveClarification/events/import-list assertions are after the first coordinate assertion."
+    },
+    {
+      "ordinal": 99,
+      "name": "original Cross Close target refuses retained user clarification",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2458
+      },
+      "producerSite": {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+      },
+      "basis": "Current unknown-stage/default expression does not require needsClarification to be absent; returns the original owner.",
+      "downstream": "The no-event assertion follows the expected-null assertion."
+    },
+    {
+      "ordinal": 100,
+      "name": "original Cross Close target refuses retained external clarification",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2458
+      },
+      "producerSite": {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+      },
+      "basis": "Current unknown-stage/default expression does not require needsClarification to be absent; returns the original owner.",
+      "downstream": "The no-event assertion follows the expected-null assertion."
+    },
+    {
+      "ordinal": 101,
+      "name": "original Cross Close target refuses null clarification",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2458
+      },
+      "producerSite": {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+      },
+      "basis": "Current unknown-stage/default expression does not require needsClarification to be undefined; returns the original owner.",
+      "downstream": "The no-event assertion follows the expected-null assertion."
+    },
+    {
+      "ordinal": 104,
+      "name": "original Cross Close target refuses current detail error",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2458
+      },
+      "producerSite": {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+      },
+      "basis": "Current default expression does not reject the detail.error field.",
+      "downstream": "The no-event assertion follows the expected-null assertion."
+    },
+    {
+      "ordinal": 105,
+      "name": "original Cross Close target refuses current deletionIntent",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2458
+      },
+      "producerSite": {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+      },
+      "basis": "Current default expression does not reject detail.deletionIntent.",
+      "downstream": "The no-event assertion follows the expected-null assertion."
+    },
+    {
+      "ordinal": 106,
+      "name": "original Cross Close target refuses full Task deletedAt",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2458
+      },
+      "producerSite": {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+      },
+      "basis": "Current default expression does not reject detail.full.deletedAt.",
+      "downstream": "The no-event assertion follows the expected-null assertion."
+    },
+    {
+      "ordinal": 107,
+      "name": "original Cross Close target refuses full Task deleted status",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2458
+      },
+      "producerSite": {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+      },
+      "basis": "Current default expression does not reject deleted status.",
+      "downstream": "The no-event assertion follows the expected-null assertion."
+    },
+    {
+      "ordinal": 114,
+      "name": "original Cross Close target refuses missing stored session",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2458
+      },
+      "producerSite": {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+      },
+      "basis": "Current default expression does not join the stored taskDetailSessionById row.",
+      "downstream": "The no-event assertion follows the expected-null assertion."
+    },
+    {
+      "ordinal": 115,
+      "name": "original Cross Close target refuses different stored session owner surface",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2458
+      },
+      "producerSite": {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+      },
+      "basis": "Current default expression does not join the stored session owner surface.",
+      "downstream": "The no-event assertion follows the expected-null assertion."
+    },
+    {
+      "ordinal": 116,
+      "name": "original Cross Close target refuses changed stored owner revision",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2458
+      },
+      "producerSite": {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+      },
+      "basis": "Current default expression does not join the stored session owner revision.",
+      "downstream": "The no-event assertion follows the expected-null assertion."
+    },
+    {
+      "ordinal": 126,
+      "name": "actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2474
+      },
+      "producerSite": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "blob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "line": 326,
+        "assertion": "Original UI target moved after ownership check"
+      },
+      "basis": "The generic Close ignores readiness and hovers at167.125, then check6 changes geometry to171.125 before the unchanged final exact-position assertion.",
+      "downstream": "Direct-hit first subcase fails at the original moved-target assertion; descendant-hit second subcase and post-click count assertions are not reached."
+    },
+    {
+      "ordinal": 127,
+      "name": "actual original Cross Close retains the first-read deadline while renderer readiness is pending",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2492
+      },
+      "producerSite": {
+        "kind": "Missing expected rejection after the original generic Close completes"
+      },
+      "basis": "The generic Close ignores detail.refreshPending and completes one pair; assert.rejects reports missing expected rejection.",
+      "downstream": "No-input/300-read assertions are not reached."
+    },
+    {
+      "ordinal": 128,
+      "name": "actual original Cross Close cannot use a foreign dialog or an absent ineligible own control",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2502
+      },
+      "producerSite": {
+        "kind": "Missing expected rejection after the original generic Close completes"
+      },
+      "basis": "The generic global Close selects the only foreign-dialog button and completes a pair.",
+      "downstream": "The first foreign-only subcase fails expected rejection; absent own, wrong text, zero width and zero height subcases remain unreached."
+    },
+    {
+      "ordinal": 131,
+      "name": "actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates",
+      "testAssertion": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "line": 2530
+      },
+      "producerSite": {
+        "kind": "Missing expected rejection after the original generic Close completes"
+      },
+      "basis": "The generic Close ignores final same-Task refreshPending revocation and completes a pair.",
+      "downstream": "The expected rejection fails before no-press/count assertions."
+    }
+  ],
+  "targetVariantReachability": [
+    {
+      "registration": 126,
+      "sequence": 1,
+      "name": "positive direct center hit",
+      "facts": {
+        "descendantHit": false
+      },
+      "baseline": "REACHED; semantic failure at original final geometry assertion",
+      "greenRequired": "one hover and one press/release pair at1121,171.125"
+    },
+    {
+      "registration": 126,
+      "sequence": 2,
+      "name": "positive contained descendant hit",
+      "facts": {
+        "descendantHit": true
+      },
+      "baseline": "UNREACHED after first positive subcase failure",
+      "greenRequired": "same one-pair admission through contains(hit)"
+    },
+    {
+      "registration": 128,
+      "sequence": 1,
+      "name": "foreign dialog only",
+      "facts": {
+        "count": 0,
+        "foreignClose": true
+      },
+      "baseline": "REACHED; original global target clicks foreign Close and fails expected rejection",
+      "greenRequired": "no input;300reads/300waits/30000ms"
+    },
+    {
+      "registration": 128,
+      "sequence": 2,
+      "name": "own Close absent",
+      "facts": {
+        "count": 0
+      },
+      "baseline": "UNREACHED after first foreign subcase failure",
+      "greenRequired": "no input;300reads/300waits/30000ms"
+    },
+    {
+      "registration": 128,
+      "sequence": 3,
+      "name": "own Close text not exact",
+      "facts": {
+        "text": "Close another task"
+      },
+      "baseline": "UNREACHED after first foreign subcase failure",
+      "greenRequired": "no input;300reads/300waits/30000ms"
+    },
+    {
+      "registration": 128,
+      "sequence": 4,
+      "name": "own Close zero width",
+      "facts": {
+        "width": 0
+      },
+      "baseline": "UNREACHED after first foreign subcase failure",
+      "greenRequired": "no input;300reads/300waits/30000ms"
+    },
+    {
+      "registration": 128,
+      "sequence": 5,
+      "name": "own Close zero height",
+      "facts": {
+        "height": 0
+      },
+      "baseline": "UNREACHED after first foreign subcase failure",
+      "greenRequired": "no input;300reads/300waits/30000ms"
+    },
+    {
+      "registration": 129,
+      "sequence": 1,
+      "name": "two eligible exact-text controls",
+      "facts": {
+        "count": 2
+      },
+      "baseline": "REACHED; preservation PASS",
+      "greenRequired": "singleton refusal before disabled/hit narrowing"
+    },
+    {
+      "registration": 129,
+      "sequence": 2,
+      "name": "two controls with only one enabled",
+      "facts": {
+        "count": 2,
+        "secondDisabled": true
+      },
+      "baseline": "REACHED; preservation PASS",
+      "greenRequired": "same cardinality-first refusal"
+    },
+    {
+      "registration": 129,
+      "sequence": 3,
+      "name": "two controls with only one center-hit candidate",
+      "facts": {
+        "count": 2,
+        "descendantHit": true
+      },
+      "baseline": "REACHED; preservation PASS",
+      "greenRequired": "same cardinality-first refusal;duplicate does not contain descendant"
+    },
+    {
+      "registration": 130,
+      "sequence": 1,
+      "name": "native disabled own Close",
+      "facts": {
+        "disabled": true
+      },
+      "baseline": "REACHED; preservation PASS",
+      "greenRequired": "no input;300reads/300waits/30000ms"
+    },
+    {
+      "registration": 130,
+      "sequence": 2,
+      "name": "covered center",
+      "facts": {
+        "covered": true
+      },
+      "baseline": "REACHED; preservation PASS",
+      "greenRequired": "no input;300reads/300waits/30000ms"
+    },
+    {
+      "registration": 130,
+      "sequence": 3,
+      "name": "absent center hit",
+      "facts": {
+        "noHit": true
+      },
+      "baseline": "REACHED; preservation PASS",
+      "greenRequired": "no input;300reads/300waits/30000ms"
+    }
+  ],
+  "redAndGreenBoundaries": {
+    "noActual133Execution": true,
+    "predictedOnly": {
+      "total": 133,
+      "pass": 118,
+      "fail": 15,
+      "skip": 0,
+      "cancel": 0,
+      "todo": 0
+    },
+    "newReadiness": {
+      "registered": 28,
+      "predictedPass": 17,
+      "predictedFail": 11
+    },
+    "newDriver": {
+      "registered": 8,
+      "predictedPass": 4,
+      "predictedFail": 4
+    },
+    "targetVariants": {
+      "registrations": 4,
+      "variants": 13,
+      "predictedReachedInBaseline": 8,
+      "predictedUnreachedInBaseline": 5
+    },
+    "redAdmission": "One actual whole133 test-first run must preserve all97 old PASS and show only independently reviewed semantic failures. Full raw/case order/failure sites and unreached assertions, complete runtime-input/lifetime/cleanup evidence and separately observed outer0 require independent acceptance. Setup/import/extraction/timeout/killed/skip/cancel/todo failures do not qualify.",
+    "producerGate": "No producer is authored or selected by this review. Actual independently accepted semantic RED precedes producer authorship/R2/publication/readback.",
+    "greenRequirement": "Same unchanged whole133 file must actually pass all133 after exact admitted producers; full actual evidence and outer0 remain separate gates.",
+    "laterGuards": "Only the published conditional three-guard package after accepted GREEN; this test review adds no attempt or command."
+  },
+  "qualifications": [
+    "All source/data manipulations in this review are pure immutable-text analysis and authorized bare evidence retention. No target VM/test/Node/compiler/real provider/CLI/shell/runtime was invoked.",
+    "The prior97 actual GREEN is historical evidence for the exact preserved prefix. It does not replace the required complete133 RED or establish133 PASS.",
+    "Subcase counts do not inflate registrations. Five target variants and several downstream assertions are predicted to remain unreached after semantic baseline failures; full coverage of those requires actual GREEN.",
+    "Actual tree composition, runner/binding review, publication and complete published readback remain separate before root’s admitted execution.",
+    "No production/helper/driver/control/Selection change, dependency/install/build/typecheck/source/ref/PR/CI mutation is selected here.",
+    "Canonical typing/build and fresh GUI/native/platform qualification remain open outside this finite test-only acceptance."
+  ],
+  "auditErrors": []
+}

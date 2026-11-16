@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "kind": "Cross Close reviewed test-first source only; no runtime result",
+  "repository": "777genius/agent-teams-ai",
+  "exactParent": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+  "publishedR1": {
+    "bytes": 23142,
+    "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+    "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+  },
+  "r1ActualReadback": {
+    "bytes": 24775,
+    "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+    "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+  },
+  "postimageAuthorshipGate": "2026-11-16 16:14:49 UTC",
+  "source": {
+    "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "preimage": {
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+    },
+    "postimage": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "prefixBytes": 136700,
+    "entirePrefixExact": true,
+    "addedSuffix": {
+      "bytes": 18723,
+      "sha256": "6ec52af0d302c23841ff811436c0fb774379b2b6d639e2f476de5b4c71b13546",
+      "gitBlob": "59ab4f281b044c45db8d1a53de064c0a14b3e2dd"
+    }
+  },
+  "independentR2": {
+    "guard": {
+      "bytes": 35700,
+      "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+      "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+    },
+    "parity": {
+      "bytes": 98112,
+      "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+      "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+    },
+    "rootAccepted": true
+  },
+  "supersededTest": {
+    "whole": {
+      "bytes": 154440,
+      "sha256": "9ff80882a5e406936747aad822b37d40fc4a16a4ba1b6c74c9f0b40f2c88b193",
+      "gitBlob": "ae805e506b69fca544fa6ba38b57bb483c6c10a8"
+    },
+    "suffix": {
+      "bytes": 17740,
+      "sha256": "df5dce2e9f5bee54544f9412aae258224a43c9791cc57d3acabaa6919da26cf4",
+      "gitBlob": "89231746806bda01275c2e644c6f4c1a2b5f4093"
+    },
+    "selectedOrExecuted": false,
+    "correctedFindings": [
+      "Match original UI read timed out refusal",
+      "Bind only actual driver named imports",
+      "Reject nested or additional action statements"
+    ]
+  },
+  "census": {
+    "preserved": 97,
+    "addedReadiness": 28,
+    "addedDriver": 8,
+    "whole": 133,
+    "targetSubcases": 13
+  },
+  "unexecutedPrediction": {
+    "pass": 118,
+    "semanticFail": 15,
+    "failingOrdinals": [
+      98,
+      99,
+      100,
+      101,
+      104,
+      105,
+      106,
+      107,
+      114,
+      115,
+      116,
+      126,
+      127,
+      128,
+      131
+    ],
+    "targetVariantsReached": 8,
+    "targetVariantsUnreached": 5
+  },
+  "preserved": {
+    "otherSourceLeaves": 8797,
+    "workflowLeaves": 42,
+    "conversationControls": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+    "conversationSelection": "cf93da72a198dac636658e512093eef7828b5927",
+    "crossHelper": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+    "crossDriver": "3f1ce46fce847a861850ef874017f84227c62b0c",
+    "productionCap": 800,
+    "baselineExceptions": 141,
+    "productionSourceCount": 5020
+  },
+  "currentState": {
+    "sourceLocallyApplied": false,
+    "newTestExecutions": 0,
+    "producerPostimagesAuthored": 0,
+    "runnerCandidateAuthoredButUnselected": true,
+    "exactRunnerAndFinalBindingR2Pending": true
+  },
+  "nextGate": "Complete actual test-source publication readback; exact runner/final binding independent R2 and published full readback; metadata-only test materialization with runtime inputs UNINSPECTED; full current-input preflight and single whole133 RED. Independent complete actual semantic RED/input/lifetime/outer0 acceptance precedes any Cross producer authorship.",
+  "remainingOpen": [
+    "Windows Process15s",
+    "Windows Packaged10s",
+    "strictDarwinP09",
+    "laterP11/genuineM16",
+    "new-head reconciliation",
+    "canonical typecheck/build",
+    "actual fresh GUI/platform acceptance",
+    "whole E2E completion"
+  ],
+  "qualification": "Static test-only source acceptance. No actual133 result, historical four-pixel cause, GUI/platform/native or full E2E qualification."
+}

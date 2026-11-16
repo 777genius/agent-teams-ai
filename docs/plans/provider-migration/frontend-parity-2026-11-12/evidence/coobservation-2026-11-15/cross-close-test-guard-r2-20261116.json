@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-Cross-Close-TEST-only-exact-R2-authority-currentness-mock-lifetime-review",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/guard_review",
+  "reviewedAtUtc": "2026-11-16T16:29:39.684Z",
+  "accepted": true,
+  "parentAcceptanceSentBeforeBareRetention": true,
+  "reviewedCandidate": {
+    "bytes": 155423,
+    "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+    "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+  },
+  "sourcePath": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+  "sourceScope": "TEST-only append. No helper/driver producer postimage is reviewed or authorized by this record. Actual133 RED and all source/input/lifetime/outer-exit gates still precede any producer.",
+  "r1": {
+    "identity": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "independentR1Review": {
+      "bytes": 33350,
+      "sha256": "3635b74953344c3085ea3313f81f6a5cb60103dfa58e0aa84096240d227b0197",
+      "gitBlob": "bacd76155f9d45ce40e2f77ead26ff58769712ee"
+    },
+    "rootReportedAuthoringGate": {
+      "publicationPrefix": "a4f5",
+      "acceptedAtUtc": "2026-11-16T16:14:49Z",
+      "scope": "Parent reports complete root+independent actual publication readback before this test candidate was authored. This test R2 does not replace that separately retained publication record."
+    }
+  },
+  "priorHeldCandidate": {
+    "identity": {
+      "bytes": 154440,
+      "sha256": "9ff80882a5e406936747aad822b37d40fc4a16a4ba1b6c74c9f0b40f2c88b193",
+      "gitBlob": "ae805e506b69fca544fa6ba38b57bb483c6c10a8"
+    },
+    "append": {
+      "bytes": 17740,
+      "sha256": "df5dce2e9f5bee54544f9412aae258224a43c9791cc57d3acabaa6919da26cf4",
+      "gitBlob": "89231746806bda01275c2e644c6f4c1a2b5f4093"
+    },
+    "selectedOrExecuted": false,
+    "findings": [
+      {
+        "kind": "timeout-oracle",
+        "actual": "UI read timed out",
+        "candidate": "UI (?:condition timed out|target read failed)",
+        "sites": 4
+      },
+      {
+        "kind": "import-wiring",
+        "detail": "All helper exports injected rather than exact source-declared names; missing real driver import could be hidden."
+      },
+      {
+        "kind": "statement-cardinality",
+        "detail": "Greedy call regex plus one-await check permits appended non-awaited statement; require one exact call statement."
+      }
+    ],
+    "disposition": "Held unmaterialized; superseded by0aec after test-only corrections."
+  },
+  "exactByteDelta": {
+    "originalPrefix": {
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+    },
+    "entire136700BytePrefixUnchanged": true,
+    "addedSuffix": {
+      "bytes": 18723,
+      "sha256": "6ec52af0d302c23841ff811436c0fb774379b2b6d639e2f476de5b4c71b13546",
+      "gitBlob": "59ab4f281b044c45db8d1a53de064c0a14b3e2dd"
+    },
+    "suffixCompleteBody": "\n\ntype CrossCloseGeometry = {\n  centerY: number; width: number; height: number; count: number; text: string;\n  disabled: boolean; secondDisabled: boolean; covered: boolean; noHit: boolean;\n  descendantHit: boolean; foreignClose: boolean;\n};\n\nfunction crossCloseFixture(t?: import('node:test').TestContext) {\n  const identity = { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' };\n  const captured = { contextId: identity.contextId, surfaceId: 'TEST-original-surface' };\n  const key = JSON.stringify([identity.contextId, identity.teamName, identity.taskId]);\n  const scope = { contextId: identity.contextId, teamName: identity.teamName, contextEpoch: 1, teamStateEpoch: 1 };\n  const controller = {\n    identity, surfaceId: captured.surfaceId, isOwner: true, canSubmit: true,\n    canEditNow: () => true, canResolveClarification: false, attachmentError: null,\n    session: { ownerSurfaceId: captured.surfaceId, ownerRevision: 1, commentText: '',\n      partRevisions: { commentText: 0, pendingAttachments: 0 }, submitPending: false,\n      submitError: null, pendingAttachments: [], pendingAttachmentPreparationIds: [] },\n  };\n  const detail = { identity: { ...identity }, phase: 'ready', loading: false, refreshPending: false,\n    error: null as unknown, deletionIntent: null as unknown,\n    full: { id: identity.taskId, owner: 'alice', status: 'pending',\n      needsClarification: undefined as unknown, deletedAt: undefined as unknown } };\n  const storedSession = { ...controller.session };\n  const state = { activeContextId: identity.contextId, selectedTeamName: identity.teamName,\n    isContextSwitching: false, taskDetailById: { [key]: detail },\n    taskDetailSessionById: { [key]: storedSession } as Record<string, typeof storedSession> };\n  const work = { refreshPending: false, teamUnavailable: false };\n  const geometry: CrossCloseGeometry = { centerY: 171.125, width: 40, height: 24, count: 1,\n    text: 'Close', disabled: false, secondDisabled: false, covered: false, noHit: false,\n    descendantHit: false, foreignClose: false };\n  const root = { return: null, stateNode: {} as { current: unknown } }; root.stateNode.current = root;\n  const dialogFiber = { return: root, memoizedProps: { open: true, teamName: identity.teamName,\n    task: { id: identity.taskId }, sessionController: controller } };\n  const trigger = { disabled: false, expanded: 'false', textContent: 'alice', tagName: 'BUTTON',\n    getAttribute: (name: string) => name === 'aria-expanded' ? trigger.expanded : null,\n    getBoundingClientRect: () => ({ x: 10, y: 10, width: 50, height: 20 }),\n    matches: () => trigger.disabled, contains: () => false };\n  const triggers = [trigger], descendant = {};\n  const closeButton = {\n    get textContent() { return geometry.text; }, tagName: 'BUTTON',\n    get disabled() { return geometry.disabled; },\n    getBoundingClientRect: () => ({ x: 1101, y: geometry.centerY - geometry.height / 2,\n      width: geometry.width, height: geometry.height }),\n    matches(selector: string) { assert.equal(selector, ':disabled'); return geometry.disabled; },\n    contains: (node: unknown) => node === descendant,\n    getAttribute: () => null,\n  };\n  const duplicate = { ...closeButton, textContent: 'Close',\n    get disabled() { return geometry.secondDisabled; },\n    matches(selector: string) { assert.equal(selector, ':disabled'); return geometry.secondDisabled; },\n    contains: () => false };\n  const foreignButton = { ...closeButton, textContent: 'Close', disabled: false,\n    getBoundingClientRect: () => ({ x: 1400, y: 100, width: 40, height: 24 }),\n    matches(selector: string) { assert.equal(selector, ':disabled'); return false; },\n    contains: () => false };\n  const ownButtons = () => [...triggers, ...Array.from({ length: geometry.count },\n    (_, index) => index === 0 ? closeButton : duplicate)];\n  const dialog = {\n    __reactFiber$TEST: dialogFiber, getClientRects: () => [1],\n    querySelectorAll(selector: string): unknown[] {\n      if (selector === 'textarea') return [input];\n      if (selector === 'button[role=\"combobox\"]') return triggers;\n      assert.equal(selector, 'button'); return ownButtons();\n    },\n  };\n  const foreignDialog = { getClientRects: () => [1],\n    querySelectorAll: () => geometry.foreignClose ? [foreignButton] : [] };\n  const input = { id: 'TEST-original-comment', disabled: false, getClientRects: () => [1],\n    closest(selector: string) { assert.equal(selector, '[role=\"dialog\"]'); return dialog; },\n    __reactFiber$TEST: { return: dialogFiber, memoizedProps: { controller, contextId: identity.contextId,\n      teamName: identity.teamName, taskId: identity.taskId, surfaceId: captured.surfaceId } } };\n  const document = {\n    getElementById(id: string) { assert.equal(id, input.id); return input; },\n    querySelectorAll(selector: string): unknown[] {\n      if (selector === '[role=\"dialog\"]') return [dialog, foreignDialog];\n      if (selector === 'textarea') return [input];\n      assert.equal(selector, '[role=\"dialog\"] button');\n      return [...ownButtons(), ...(geometry.foreignClose ? [foreignButton] : [])];\n    },\n    elementFromPoint() {\n      if (geometry.noHit) return null;\n      if (geometry.covered) return {};\n      if (geometry.foreignClose && geometry.count === 0) return foreignButton;\n      return geometry.descendantHit ? descendant : closeButton;\n    },\n  };\n  let now = 0, owned = 0, reads = 0, front = 0;\n  let ownedHook: (check: number) => void = () => undefined;\n  const waits: number[] = [], imports: string[] = [], expressions: string[] = [];\n  const events: Record<string, unknown>[] = [];\n  if (t) {\n    t.mock.method(Date, 'now', () => now);\n    t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {\n      assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);\n      return 1 as unknown as NodeJS.Timeout;\n    });\n  }\n  const evaluate = async (expression: string) => {\n    reads++; expressions.push(expression);\n    return runInNewContext(expression.replaceAll('await import(', 'await __testImport('), {\n      window: { __agentTeamsDevStore: { getState: () => state } }, document,\n      innerWidth: 2000, innerHeight: 1000, getComputedStyle: () => ({ pointerEvents: 'auto' }),\n      async __testImport(path: string) {\n        imports.push(path);\n        if (path === '/store/slices/teamSlice.ts')\n          return { isTeamDataRefreshPending(team: string, getState: unknown) {\n            assert.equal(team, identity.teamName); assert.equal(typeof getState, 'function');\n            return work.refreshPending;\n          } };\n        assert.equal(path, '/store/team/taskDetailReadAuthority.ts');\n        return {\n          captureTaskDetailReadScope(teamName: string, contextId: string) {\n            assert.deepEqual({ teamName, contextId }, { teamName: identity.teamName, contextId: captured.contextId });\n            return { ...scope };\n          },\n          isTaskDetailTeamUnavailable(observed: unknown, team: string, observedScope: unknown) {\n            assert.equal(observed, state); assert.equal(team, identity.teamName);\n            assert.deepEqual(observedScope, scope); return work.teamUnavailable;\n          },\n        };\n      },\n    }) as Promise<Record<string, unknown> | null>;\n  };\n  const ui = createDesktopUiControls({ evaluate,\n    async send(method: string, params: Record<string, unknown> = {}) {\n      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');\n      if (method === 'Page.bringToFront') front++; else events.push({ ...params });\n      return {};\n    },\n  }, { assertOwnedRenderer() { ownedHook(++owned); }, step() {} });\n  return { identity, captured, key, controller, detail, storedSession, state, work, geometry,\n    trigger, triggers, ui, events, expressions, imports, waits,\n    setOwnedHook(callback: (check: number) => void) { ownedHook = callback; },\n    counts: () => ({ now, owned, reads, front }),\n    evaluateTarget: () => {\n      const expression = Reflect.apply(desktopTaskBoardAssignmentReadyExpression, undefined,\n        ['TEST-owner', identity.taskId, captured, 'clarification-cleared']) as string;\n      assert.equal(expression.match(/await import\\(/g)?.length, 2, 'only the two original readonly imports');\n      return evaluate(expression);\n    },\n  };\n}\n\nasync function runActualCrossClose(f: ReturnType<typeof crossCloseFixture>) {\n  const source = await readFile(new URL('./desktop-task-board-ui-smoke.ts', import.meta.url), 'utf8');\n  const first = '  proof.clarificationReceipt = await receiptFor(';\n  const last = '  await ui.waitRead(' + String.fromCharCode(96) +\n    '!document.querySelector(\\'[role=\"dialog\"]\\')' + String.fromCharCode(96) + ', \\'Task detail closed\\');';\n  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);\n  const receiptBegin = source.indexOf(first), receiptEnd = source.indexOf('\\n  );\\n', receiptBegin);\n  const end = source.indexOf(last, receiptBegin);\n  assert.ok(receiptEnd > receiptBegin && end > receiptEnd);\n  const actual = source.slice(receiptEnd + '\\n  );\\n'.length, end).trim();\n  assert.ok(actual.length > 20 && actual.length < 512);\n  const call = /^await ([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)?)\\(([\\s\\S]*)\\);$/.exec(actual);\n  assert.ok(call, 'exactly one awaited original Close call');\n  assert.match(call[2]!, /^(?:\\s+|[A-Za-z_$][\\w$]*|[.,{}]|'(?:[^'\\\\\\r\\n]|\\\\.)*'|\"(?:[^\"\\\\\\r\\n]|\\\\.)*\")*$/,\n    'only literal strings, names, property reads and a captured-identity object; no nested or extra statement');\n  const helpers = await import('./desktop-task-comment-input-target.ts');\n  const imports = [...source.matchAll(/import\\s*\\{([^{}]*)\\}\\s*from\\s*(['\"])\\.\\/desktop-task-comment-input-target\\.ts\\2\\s*;/g)];\n  assert.equal(imports.length, 1, 'one actual named helper import block');\n  const bindings: Record<string, unknown> = {};\n  for (const name of imports[0]![1]!.split(',').map(value => value.trim()).filter(Boolean)) {\n    assert.match(name, /^[A-Za-z_$][\\w$]*$/, 'unsupported import binding');\n    assert.ok(!Object.hasOwn(bindings, name), 'duplicate import binding');\n    assert.ok(Object.hasOwn(helpers, name), 'unknown actual helper export');\n    const value = Reflect.get(helpers, name);\n    assert.equal(typeof value, 'function'); bindings[name] = value;\n  }\n  assert.ok(call[1] === 'ui.click' || Object.hasOwn(bindings, call[1]!), 'direct helper must be actually imported');\n  await runInNewContext('(async () => { ' + actual + ' })()', {\n    ...bindings, ui: f.ui, options: { handleId: 'TEST-owner' }, taskId: f.identity.taskId,\n    contextId: f.captured.contextId, surfaceId: f.captured.surfaceId,\n  });\n}\n\ntest('original Cross Close target admits the ready cleared Task when canResolveClarification is false', async () => {\n  const f = crossCloseFixture();\n  const point = await f.evaluateTarget();\n  assert.ok(point);\n  assert.deepEqual([point.x, point.y, point.tag, point.text], [1121, 171.125, 'BUTTON', 'Close']);\n  assert.equal(f.controller.canResolveClarification, false);\n  assert.deepEqual(f.events, []);\n  assert.deepEqual(f.imports, ['/store/slices/teamSlice.ts', '/store/team/taskDetailReadAuthority.ts']);\n});\n\nfor (const [label, change] of [\n  ['retained user clarification', f => { f.detail.full.needsClarification = 'user'; }],\n  ['retained external clarification', f => { f.detail.full.needsClarification = 'external'; }],\n  ['null clarification', f => { f.detail.full.needsClarification = null; }],\n  ['full-detail refreshPending', f => { f.detail.refreshPending = true; }],\n  ['full-detail loading', f => { f.detail.loading = true; }],\n  ['current detail error', f => { f.detail.error = 'TEST detail error'; }],\n  ['current deletionIntent', f => { f.detail.deletionIntent = { pending: true }; }],\n  ['full Task deletedAt', f => { f.detail.full.deletedAt = '2026-11-16T00:00:00.000Z'; }],\n  ['full Task deleted status', f => { f.detail.full.status = 'deleted'; }],\n  ['non-ready full-detail phase', f => { f.detail.phase = 'loading'; }],\n  ['foreign full Task ID', f => { f.detail.full.id = 'TEST-foreign-task'; }],\n  ['foreign detail identity', f => { f.detail.identity.taskId = 'TEST-foreign-task'; }],\n  ['changed active context', f => { f.state.activeContextId = 'TEST-foreign-context'; }],\n  ['different selected Team', f => { f.state.selectedTeamName = 'host-team:TEST-foreign'; }],\n  ['rebound controller surface', f => { f.controller.surfaceId = 'TEST-foreign-surface'; }],\n  ['missing stored session', f => { delete f.state.taskDetailSessionById[f.key]; }],\n  ['different stored session owner surface', f => { f.storedSession.ownerSurfaceId = 'TEST-foreign-surface'; }],\n  ['changed stored owner revision', f => { f.storedSession.ownerRevision++; }],\n  ['current canEditNow false', f => { f.controller.canEditNow = () => false; }],\n  ['non-owning controller', f => { f.controller.isOwner = false; }],\n  ['scoped Team refresh', f => { f.work.refreshPending = true; }],\n  ['unavailable accepted Team metadata', f => { f.work.teamUnavailable = true; }],\n  ['disabled assignment control', f => { f.trigger.disabled = true; }],\n  ['expanded assignment control', f => { f.trigger.expanded = 'true'; }],\n  ['another assignee', f => { f.trigger.textContent = 'bob'; }],\n  ['missing assignment control', f => { f.triggers.length = 0; }],\n  ['duplicate assignment controls', f => { f.triggers.push({ ...f.trigger }); }],\n] satisfies readonly (readonly [string, (f: ReturnType<typeof crossCloseFixture>) => void])[])\ntest('original Cross Close target refuses ' + label, async () => {\n  const f = crossCloseFixture(); change(f);\n  assert.equal(await f.evaluateTarget(), null);\n  assert.deepEqual(f.events, [], 'readiness observation never performs an input action');\n});\n\ntest('actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates', async t => {\n  for (const descendantHit of [false, true]) {\n    t.mock.restoreAll();\n    const f = crossCloseFixture(t);\n    f.geometry.descendantHit = descendantHit; f.geometry.centerY = 167.125;\n    f.detail.full.needsClarification = 'user'; f.detail.loading = true; f.work.refreshPending = true;\n    f.setOwnedHook(check => {\n      if (check === 6) {\n        f.detail.full.needsClarification = undefined; f.detail.loading = false;\n        f.work.refreshPending = false; f.geometry.centerY = 171.125;\n      }\n    });\n    await runActualCrossClose(f);\n    assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),\n      [['mouseMoved', 1121, 171.125], ['mousePressed', 1121, 171.125], ['mouseReleased', 1121, 171.125]]);\n    assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, front: 1 });\n    assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));\n    assert.ok(f.expressions.every(value => value === f.expressions[0]), 'one complete predicate in every phase');\n  }\n});\n\nfunction assertCrossCloseNoInputDeadline(f: ReturnType<typeof crossCloseFixture>) {\n  assert.deepEqual(f.events, []);\n  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, front: 1 });\n  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));\n  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'one unchanged first-read predicate');\n}\n\ntest('actual original Cross Close retains the first-read deadline while renderer readiness is pending', async t => {\n  const f = crossCloseFixture(t); f.detail.refreshPending = true;\n  await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);\n  assertCrossCloseNoInputDeadline(f);\n});\n\ntest('actual original Cross Close cannot use a foreign dialog or an absent ineligible own control', async t => {\n  for (const invalid of [\n    { count: 0, foreignClose: true }, { count: 0 }, { text: 'Close another task' },\n    { width: 0 }, { height: 0 },\n  ] satisfies Partial<CrossCloseGeometry>[]) {\n    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);\n    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);\n    assertCrossCloseNoInputDeadline(f);\n  }\n});\n\ntest('actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing', async t => {\n  for (const invalid of [\n    { count: 2 }, { count: 2, secondDisabled: true }, { count: 2, descendantHit: true },\n  ] satisfies Partial<CrossCloseGeometry>[]) {\n    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);\n    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);\n    assertCrossCloseNoInputDeadline(f);\n  }\n});\n\ntest('actual original Cross Close refuses disabled covered and absent-hit controls', async t => {\n  for (const invalid of [\n    { disabled: true }, { covered: true }, { noHit: true },\n  ] satisfies Partial<CrossCloseGeometry>[]) {\n    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);\n    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);\n    assertCrossCloseNoInputDeadline(f);\n  }\n});\n\ntest('actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates', async t => {\n  const f = crossCloseFixture(t);\n  f.setOwnedHook(check => { if (check === 6) f.detail.refreshPending = true; });\n  await assert.rejects(runActualCrossClose(f));\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);\n  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, front: 1 });\n  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'the final direct read rechecks readiness');\n});\n\ntest('actual original Cross Close preserves final renderer ownership refusal without a press', async t => {\n  const refusal = new Error('TEST original renderer ownership lost');\n  const f = crossCloseFixture(t);\n  f.setOwnedHook(check => { if (check === 6) throw refusal; });\n  await assert.rejects(runActualCrossClose(f), error => { assert.equal(error, refusal); return true; });\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);\n  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 4, front: 1 });\n});\n\ntest('actual original Cross Close preserves final exact geometry refusal without replay', async t => {\n  const f = crossCloseFixture(t);\n  f.setOwnedHook(check => { if (check === 6) f.geometry.centerY = 175.125; });\n  await assert.rejects(runActualCrossClose(f), /Original UI target moved after ownership check/);\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);\n  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, front: 1 });\n});\n",
+    "wholePriorAe805ReconstructedByInverse": true,
+    "changedBlocks": {
+      "actualDriverExtractor": {
+        "old": {
+          "bytes": 1347,
+          "sha256": "f47a85ede5f4f47748a22e4b5087ab2793ce42fb63ed34af419e1632b08f9602",
+          "gitBlob": "c607c63eb8bc82341f29e9887ea166bfb4d76b14"
+        },
+        "new": {
+          "bytes": 2350,
+          "sha256": "5012192275c44ee8c5ee2f73e84b711f5f52d7d93adc1aaa71fbfba9154813b1",
+          "gitBlob": "8b54c54b18690d5d1cbc77ae7bdd986eb72e5a78"
+        }
+      },
+      "timeoutRegexReplacements": 4
+    },
+    "bytesBelow180000Cap": true,
+    "old97CasesNamesOrderAndImportsUntouched": true
+  },
+  "actualSourceBinding": {
+    "helperPreimage": {
+      "bytes": 6433,
+      "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+      "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+    },
+    "driverPreimage": {
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+    },
+    "controlsUnchanged": {
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    "currentActualStatement": "await ui.click('[role=\"dialog\"] button', 'close original Task detail', 'Close');",
+    "currentActualStatementIdentity": {
+      "bytes": 80,
+      "sha256": "5f00be05c3746c1a0516d732ff247e06af73704e6745f2c3c08c0922fb95cbdb",
+      "gitBlob": "fd0ea5d34b657e9368c332736e8f924e3dbfcfd1"
+    },
+    "currentDriverCallee": "ui.click",
+    "currentDriverNamedHelpers": [
+      "desktopTaskBoardAssignmentReadyExpression",
+      "desktopTaskCommentInputExpression"
+    ],
+    "currentHelperFunctionExports": [
+      "desktopTaskCommentInputExpression",
+      "desktopTaskBoardAssignmentReadyExpression"
+    ],
+    "checks": [
+      "The clarificationReceipt and closed-dialog boundary strings are each unique in the complete actual3f1 driver. Statement extraction is bounded and currently yields the exact80-byte original generic ui.click call.",
+      "The current generic ui.click is explicitly admitted before any new helper exists, so RED does not depend on a prospective export.",
+      "Exactly one actual named import block from desktop-task-comment-input-target.ts supplies VM bindings. Unsupported aliases/syntax, duplicates, absent exports and nonfunction bindings are rejected.",
+      "A future direct helper callee must be one of those actual source-imported bindings. Merely exporting a helper can no longer hide an omitted real driver import.",
+      "Only one awaited call is admitted; the argument token grammar excludes outside-string parentheses, semicolons, assignments, arrow syntax and extra statement delimiters. Known original literal arguments and a future shorthand captured-identity object are representable.",
+      "No prospective predicate implementation or fallback helper is synthesized by the fixture. Evaluation uses actual helper exports, actual createDesktopUiControls and the exact source-extracted action."
+    ],
+    "futurePostimageObligation": "This is a deliberately narrow harness for the approved actual call shape, not a general JavaScript sandbox. Future producer R2 must still verify its exact permitted call/import edit, unchanged controls and no new side effects/imports."
+  },
+  "registeredCensus": {
+    "preserved": 97,
+    "newReadiness": 28,
+    "newDriver": 8,
+    "total": 133,
+    "readinessBreakdown": "One ready-cleared positive plus27 explicitly enumerated state/authority/assignment-control refusals.",
+    "targetSubcases": {
+      "registeredCountUnchanged": 36,
+      "subcasesDoNotInflateCaseCount": true,
+      "actualDriverForeignDialogCase": [
+        "only a foreign dialog has Close",
+        "own dialog has no Close",
+        "own text is not exact trimmed Close",
+        "own Close has zero width",
+        "own Close has zero height"
+      ],
+      "actualDriverDuplicateCase": [
+        "two eligible same-dialog Close buttons",
+        "two positive-size exact-text Close buttons with only one natively enabled",
+        "two positive-size exact-text Close buttons with only one center-hit candidate"
+      ],
+      "actualDriverDisabledCase": [
+        "native disabled Close",
+        "covered center",
+        "absent center hit"
+      ],
+      "actualDriverPositiveCase": [
+        "center hit is the button itself",
+        "center hit is a descendant contained by that same button"
+      ],
+      "oracle": "All refusal subcases execute the actual helper/actual source-extracted driver statement against bounded DOM/store facts. Assert zero hover/press/release, original300 reads and100ms waits to the first30000ms cutoff when admission remains unavailable. Singleton decision precedes disabled/hit narrowing. Each positive variant preserves exactly one hover and one press/release pair at the accepted own target coordinates, original final reread and e.contains(hit) semantics. Do not recreate the producer predicate in fixture code."
+    },
+    "finiteNegativeTargetVariants": 11,
+    "positiveTargetVariants": 2,
+    "subcaseLoopsDoNotInflateRegisteredCount": true
+  },
+  "authorityAndCurrentnessReview": [
+    "Current React-root/controller discovery is exercised with an actual textarea/dialog chain, exact Task/team/context and captured surface. Rebound or nonowning controller observations are rejected through the actual source expression.",
+    "The live state, stored session and controller session are distinct objects. Missing session, foreign owner surface and changed owner revision therefore exercise the intended additional currentness guards rather than merely changing a shared alias.",
+    "Full detail identity/id/phase/loading/refresh/error/deletion and clarification states are separately varied. canResolveClarification remains false in the valid cleared case and is not used as a sufficient readiness oracle.",
+    "The two original browser import paths are the only runtime module substitutions. Each unknown path is rejected; current Team/state/scope arguments are checked by finite readonly fixture functions.",
+    "Exact positive-size/text candidate cardinality, disabled/covered/null-hit and foreign-dialog cases exercise the proposed new expression directly through the actual driver. Duplicate variants retain two eligible text/size candidates even when only one is enabled or hit-tested.",
+    "Positive driver observations delay the state change until original ownership check6, shift167.125→171.125, then require one hover/press/release at the hydrated coordinates. No stale pair or repeated effect can satisfy the expected event sequence.",
+    "Revocation at unchanged final coordinates must throw before any press; exact owner-refusal identity and original final geometry message/counts are independently asserted.",
+    "The full expression must be identical through every observed read/settling/final phase; no earlier readiness result can be substituted for the final direct read."
+  ],
+  "mockAndRuntimeReview": {
+    "oldProcessExecPathChildren": 6,
+    "newChildExecutionSites": 0,
+    "newProviderNativeOrGuiEntryPoints": 0,
+    "sourceImports": "The old import block remains byte-identical. The append only reuses node:test typing, existing vm/readFile/test primitives and the already audited task-comment helper module; no new third-party or provider import is selected.",
+    "clockMocks": "Date.now and global setTimeout mocks are test-context scoped. Every fake timer requires100ms, records it, advances only the fixture clock and queues the awaited continuation as a microtask. Multi-variant tests restore mocks before creating each next fixture, and node:test restores context mocks on completion/failure.",
+    "timerLifetime": "No real timer or new process is introduced by the appended fixtures. Awaited UI actions complete or reject before assertions; no detached asynchronous helper/task is authored.",
+    "realSupervisorClock": "The external Python/captured Node180-second command clock is unaffected by JavaScript fixture Date/setTimeout mocks. Actual execution evidence remains mandatory.",
+    "deadlineAssertions": "Persistent first-read refusal requires300 reads,300 exact100ms waits,30000 virtual ms, one bring-to-front, no hover/press/release and one unchanged predicate.",
+    "fixedTimeoutOracle": "All four new timeout regexes now accept the actual unchanged `UI read timed out` or original bounded `UI target read failed` paths. The invented `condition timed out` alternative was removed.",
+    "privacy": "Fixture data is TEST-only. No private project, credential, real provider or external UI/session is read or launched by the appended cases."
+  },
+  "unexecutedRedPrediction": {
+    "status": "Static prediction only, no actual test run claimed.",
+    "total133ExpectedPass": 118,
+    "total133ExpectedSemanticFail": 15,
+    "preserved97ExpectedPass": 97,
+    "newReadinessExpectedPass": 17,
+    "newReadinessExpectedFail": 11,
+    "newDriverExpectedPass": 4,
+    "newDriverExpectedFail": 4,
+    "expandedTargetVariantsTotal": 13,
+    "expectedReachedAtBaseline": 8,
+    "expectedUnreachedAtBaseline": 5,
+    "qualification": "Parity owns the complete expected name/order/failure-site ledger. The old helper defaults the unknown stage to its original readiness behavior and the old actual generic Close remains executable. Expected missing-admission/wiring failures are semantic, not missing-export/setup failures. Any actual divergence, unexpected setup/import failure, skip/cancel/todo or timeout must stop producer admission."
+  },
+  "remainingGates": [
+    "Complete exact runner and binding R2; no acceptance of an unseen runner is implied.",
+    "Publish the selected test/runner/binding documentary/source checkpoint and obtain complete actual readback before local materialization/execution.",
+    "Perform the approved source-and-supervisor-metadata-only test application, with runtime inputs explicitly UNINSPECTED at that phase.",
+    "Before the sole133 RED primary, independently rehash the full current runtime source/dependency/compiled/provider/tool/config/cache inputs.",
+    "Accept complete actual133 semantic RED plus full lifetime/cleanup and separately observed outer exit0 before authoring either producer.",
+    "Producer R2/publication/readback, source application, unchanged test GREEN and original validation package remain future gates."
+  ],
+  "scopeLimits": [
+    "No actual133 test result, canonical typecheck/build, GUI, native/provider/auth or overall E2E qualification follows from this static TEST R2.",
+    "Original completed97 evidence and its three guards are unchanged. New future Cross attempts remain unused at this review snapshot.",
+    "Parent is sole source/runner author and executor; this reviewer performed immutable body reads and pure string/hash comparisons only.",
+    "The former ae805 candidate was held for concrete harness errors; its presence as a bare Git object is not selection or execution evidence."
+  ],
+  "reviewerActions": {
+    "sourceTestRunnerPostimages": 0,
+    "localMaterialization": 0,
+    "runtime": 0,
+    "ciRefMutations": 0,
+    "bareReviewRetention": true
+  },
+  "audit": {
+    "wholePriorCandidateInverseExact": true,
+    "priorHeld": {
+      "bytes": 154440,
+      "sha256": "9ff80882a5e406936747aad822b37d40fc4a16a4ba1b6c74c9f0b40f2c88b193",
+      "gitBlob": "ae805e506b69fca544fa6ba38b57bb483c6c10a8"
+    },
+    "current": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "unchangedPrefix": true,
+    "onlyChangedBlocks": {
+      "actualDriverExtractor": {
+        "old": {
+          "bytes": 1347,
+          "sha256": "f47a85ede5f4f47748a22e4b5087ab2793ce42fb63ed34af419e1632b08f9602",
+          "gitBlob": "c607c63eb8bc82341f29e9887ea166bfb4d76b14"
+        },
+        "new": {
+          "bytes": 2350,
+          "sha256": "5012192275c44ee8c5ee2f73e84b711f5f52d7d93adc1aaa71fbfba9154813b1",
+          "gitBlob": "8b54c54b18690d5d1cbc77ae7bdd986eb72e5a78"
+        }
+      },
+      "timeoutRegexReplacements": 4
+    },
+    "currentDriverStatement": "await ui.click('[role=\"dialog\"] button', 'close original Task detail', 'Close');",
+    "currentDriverStatementIdentity": {
+      "bytes": 80,
+      "sha256": "5f00be05c3746c1a0516d732ff247e06af73704e6745f2c3c08c0922fb95cbdb",
+      "gitBlob": "fd0ea5d34b657e9368c332736e8f924e3dbfcfd1"
+    },
+    "currentDriverCallee": "ui.click",
+    "currentDriverNamedHelpers": [
+      "desktopTaskBoardAssignmentReadyExpression",
+      "desktopTaskCommentInputExpression"
+    ],
+    "currentHelperExports": [
+      "desktopTaskCommentInputExpression",
+      "desktopTaskBoardAssignmentReadyExpression"
+    ],
+    "currentStatementAndImportGrammarAdmitted": true,
+    "prefixIdentity": {
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+    },
+    "newSuffix": {
+      "bytes": 18723,
+      "sha256": "6ec52af0d302c23841ff811436c0fb774379b2b6d639e2f476de5b4c71b13546",
+      "gitBlob": "59ab4f281b044c45db8d1a53de064c0a14b3e2dd"
+    },
+    "newFileBelowCap": true,
+    "newChildProcessOrNetworkTokenSites": 0,
+    "errors": []
+  },
+  "errors": []
+}

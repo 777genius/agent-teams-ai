@@ -980,5 +980,50 @@
       "bytes": 3470288,
       "allRehashed": true
     }
+  },
+  "currentCrossCloseStage": {
+    "stage": "test-only-R2-published-runtime-pending",
+    "outcome": {
+      "bytes": 4332,
+      "sha256": "f004dad9be5904649c25c78d890e621e609d399f1c827a4d5c88566639deb853",
+      "gitBlob": "d96c2ab50639168cca3f7673ef219c3f1a16b701",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-reviewed-outcome-20261116.json"
+    },
+    "r1ActualReadback": {
+      "bytes": 24775,
+      "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+      "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+    },
+    "test": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "guard": {
+      "bytes": 35700,
+      "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+      "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+    },
+    "parity": {
+      "bytes": 98112,
+      "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+      "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+    },
+    "census": {
+      "preserved": 97,
+      "addedReadiness": 28,
+      "addedDriver": 8,
+      "whole": 133,
+      "targetSubcases": 13
+    },
+    "actualNewExecutions": 0,
+    "producerAuthored": false,
+    "attemptsRemaining": {
+      "materializeTest": 1,
+      "red": 1,
+      "materializeProducer": 1,
+      "green": 1,
+      "validationPackage": 1
+    }
   }
 }
