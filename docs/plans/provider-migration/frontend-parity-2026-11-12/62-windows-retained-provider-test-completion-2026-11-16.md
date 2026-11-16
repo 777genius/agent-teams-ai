@@ -98,3 +98,40 @@ Source review/компиляция не квалифицируют Windows behav
 ## Source-bound audit note
 
 Исходный P08 blob `fb05c432887dd9db5dedab8d0e24544cf3ac842d` содержит §§16/16.8/17. Donor0099 имеет helper `09971225cc43125424e72bc6ffcf267d52d5d99a`, Gate `f90ac7253d33ed46ef563e8e77403e56ab2d25e8`, Scenario `fce5ce7418b8ff4581fcadf0fc47e6118917af49`, Codex model `02c6f7cff1655272888047a637ea9286585688a0`, V1 model `f49a5b22f1cb58c7a23e560061019b5fa8fd0940`, vendor inputs `c46fe3a59d8676cbc921171f5683da03c0247f36`, workflow `ea58acfd0f9bc17578376ff2863b030b5f4bf3dd` и historical low-level config `ffa71d12592f0449f7000cf0d43f75db6e05c5a4`. Сравнение этих полных bytes с current preimages выявило и явно исключило откат текущих deadline checks Gate `d7a56276`, configured V1 preparation/shared reply и более новых compiler exclusions. Current c930 archive/public exports/census и current ordinary management receipt/target/initial contracts проверены чтением исходников и вычислением hashes; ни compiler, ни provider, ни native action не исполнялись. Root публикует selected plan после independent prospective review; только затем допустим inert source cut, новый source R2 и обычный CAS/readback, без переноса чужих/старых PASS на будущий head.
+
+## Prospective R1: закрыть scoped fast-lint для шести TS-путей Plan62
+
+**Статус: инертное предложение, source не выбран и послеобраз workflow не создан.** Предлагается дописать это уточнение в существующий Plan62, сохранив весь его текущий prefix `74c8b4dadac0d444a2649a7dd165740af064eae8` (27 385 B). P10 и остальные планы этот cut не меняет. Основание — опубликованный source `8bc0cb3fe93455ae57277f140e0dec6969197e80` и его documentary child `946488197cf45a9012e84c7a45b402c4eef17a90`, tree `d669477c83ca4b332e1e2b86487a150ca61697ab` / 11 139 leaves. Это immutable binding, не новая проверка текущего ref; перед публикацией root сохраняет все последующие изменения и делает обычный fresh guard.
+
+### Проблема и единственное изменение
+
+Шесть изменённых TypeScript-файлов Plan62 отсутствуют в действующем перечислении `pnpm lint:fast:files --` в Host Team lane. Проверки типов и native source review не заменяют этот вызов. Предлагается изменить только `.github/workflows/host-emulated-acceptance.yml`, сохранив его полный preimage `458a88ff6b3b197282f9144951aeb79074cc8d5b`, 141 809 B / 1 767 строк, SHA256 `e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88`.
+
+В существующем шаге `Verify complete workspace types and original typed lint scopes` (`if: matrix.lane == 'team'`, исходные строки 135–277) сохранить все 132 уникальных операнда и их порядок. После последнего старого `test/renderer/components/cli/CliStatusVisibility.test.ts` добавить продолжение строки и ровно следующие шесть операндов в указанном порядке, до прежнего `pnpm typecheck:workspace`:
+
+1. `tools/owned-process-broker/nativeVendorInputs.ts`
+2. `tools/owned-process-broker/nativeRetainedHostGate.ts`
+3. `tools/owned-process-broker/nativeRetainedServiceScenario.ts`
+4. `tools/owned-process-broker/nativeRetainedProviderFixture.ts`
+5. `packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts`
+6. `packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts`
+
+Итоговое перечисление должно содержать 138 различных путей. SHA256 исходного списка из 132 путей, один путь на строку с конечным LF: `a5d659eaf4b9b0a26f6b09683eb7cb5554e2b0b51cd013030937e6772277f697`. Полный список и SHA256 точного исходного command block сохранены в сопровождающем `scope.json`. Допустимое изменение — только continuation последней старой строки и шесть новых operand lines; все прочие bytes workflow сохраняются. Послеобраз, его hash и применённый patch этим предложением не заявляются.
+
+### Действующая конфигурация и типизация
+
+`package.json` `f80ec83172d0aec0dec8a8ab055426b4fca4a1f7` определяет `lint:fast:files` как `eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content`. Это **fast, non-type-aware lint**, хотя enclosing step также содержит отдельные typed-lint команды. В `eslint.fast.config.js` `8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb` все шесть путей попадают в `**/*.{ts,tsx,mts}`, `projectService: false`, и не попадают в global ignores. Полный импортируемый `eslint.gateway-boundaries.mts` `4975b20df1353a9687fd479ab043beb025e967ba` задаёт только `src/**` scopes и к этим шести путям не применяется. Существующий `fast-imports` также не включает эти tools/legacy-host fixture paths; дополнительных import-sort или type-aware правил cut не выбирает.
+
+Типизация сохраняется в уже действующих projects:
+
+- `nativeVendorInputs.ts` включён в `tools/owned-process-broker/tsconfig.json` `2d0a94f85c2d23232f9ce1a7375e7765f552ebb9` через `*.ts`.
+- Gate и Scenario прямо включены в неизменный `tsconfig.retained-host.json` `905f1a1489f3b37d651a9984169b0321c9915a15`; Scenario импортирует новый helper, а helper — оба finite model owner. Helper остаётся исключён из low-level project и достигается через retained project.
+- Оба model-файла прямо включены в Host `tsconfig.test.json` `65edbd94041b7d9a986480badd6802b1dd0a8837` через `tests/**/*.ts`, с исходными strict options base `9fad9f8a73e1cfffd382c0ba76f2945e5c361531`. Этот project уже вызывается посредством `typecheck:workspace` и package `typecheck:test`.
+
+Действующий Process workflow `93606e49aedfe84b6452aee487efdf2055f45524` уже содержит оригинальные Host/test/low-level/retained compiler invocations. Host и Process same-repository PR predicates не исключают Draft. Это source proof маршрута, не заявление о выполнении будущего head. Ни compiler command, ни type project, ни ESLint config/rule менять не требуется; root-wide typecheck отдельно не выдаётся за прямое покрытие всех tools-файлов.
+
+### Сохранность, цена и проверка
+
+Сохраняются прежний Host job/Team predicate, Node24.21, job45min, все original full8/full10/five-harness commands, workspace/type checks, последующие typed `lint:ci:files` scopes, MCP lint, остальные lanes, uploads и source rosters. Все шесть TS source bodies, Plan62 eight-path implementation, Sentry workflow/activation boundary, controller120s/job30min и остальные native/cleanup clocks неизменны. Новых jobs, steps, matrix entries, timers, helper/module, native/vendor actions или дополнительного обязательного CI/RED-цикла нет. Natural source limits не повышаются: меняется только YAML, текущий максимум этих шести TS-файлов — 794 строки.
+
+Дополнительная работа — проверка шести файлов тем же ESLint process при необходимости обработки по существующему content cache; точное elapsed time и PASS неизвестны. Перед применением будущего source root получает независимую exact afterimage/diff проверку: исходные 132 пути равны целому prefix, новые шесть совпадают с перечнем, обратное удаление только этих additions восстанавливает полный `458a88ff` preimage. Результат квалифицируется обычным original resulting-source CI. Новая lint-ошибка требует конкретного разбора; правила, paths или assertions не ослабляются ради PASS. Данное source/config чтение не выполняло lint/compiler/test/native и не закрывает W01 runtime qualification либо отдельные W05/W07.

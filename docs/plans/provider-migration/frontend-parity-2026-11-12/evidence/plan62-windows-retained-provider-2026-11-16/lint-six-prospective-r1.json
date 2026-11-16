@@ -1,0 +1,410 @@
+{
+  "kind": "INERT_PLAN62_SIX_SCOPED_FAST_LINT_R1_ONLY",
+  "status": "AUTHOR_PROPOSAL_NO_SOURCE_AFTERIMAGE_NO_SELECTION",
+  "binding": {
+    "commit": "946488197cf45a9012e84c7a45b402c4eef17a90",
+    "tree": "d669477c83ca4b332e1e2b86487a150ca61697ab",
+    "leafCount": 11139,
+    "sourceCommit": "8bc0cb3fe93455ae57277f140e0dec6969197e80",
+    "mapReference": "/tmp/migration-evidence-20261116/root/incoming-9464-whole-tree-verification.json",
+    "freshRefObservation": false,
+    "freshRootLeaseRequiredBeforePublication": true
+  },
+  "documentaryProposal": {
+    "appendTo": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/62-windows-retained-provider-test-completion-2026-11-16.md",
+      "gitBlob": "74c8b4dadac0d444a2649a7dd165740af064eae8",
+      "bytes": 27385,
+      "sha256": "767505513a51a092d8dca560c65cf0aa9acd019c63b2c07b475256cc0fb338ae",
+      "lines": 100,
+      "localReference": "/tmp/migration-evidence-20261116/root/plan62-incoming-and-packaged75cf-initial-readback.json"
+    },
+    "preserveWholePrefix": true,
+    "p10Changed": false,
+    "newCanonicalDocumentPathRequired": false
+  },
+  "sourceScope": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b",
+      "bytes": 141809,
+      "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88",
+      "lines": 1767,
+      "localReference": "/tmp/migration-evidence-20261116/root/incoming-ca7-actual-workflow-readback.json"
+    }
+  ],
+  "sourceFilesWhoseLintAdmissionIsAdded": [
+    {
+      "path": "tools/owned-process-broker/nativeVendorInputs.ts",
+      "gitBlob": "c46fe3a59d8676cbc921171f5683da03c0247f36",
+      "bytes": 11979,
+      "sha256": "fe74eda0b65b286e862e7b72362117616174dd0f19d3da682a0cac541fe85a91",
+      "lines": 201,
+      "localReference": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/tools/owned-process-broker/nativeVendorInputs.ts"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "gitBlob": "8cd7d429d668d533cd448bc14ce556c7adf5073f",
+      "bytes": 27977,
+      "sha256": "3913d14da42b0848763ee89ab99030a57803ad8797ecb42a7cd8200c8dda4429",
+      "lines": 642,
+      "localReference": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/tools/owned-process-broker/nativeRetainedHostGate.ts"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "gitBlob": "fce5ce7418b8ff4581fcadf0fc47e6118917af49",
+      "bytes": 36616,
+      "sha256": "865c5baf02f113b4e46a3b12b812bd970bac3295678f05e1e199c5ce27436640",
+      "lines": 541,
+      "localReference": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/tools/owned-process-broker/nativeRetainedServiceScenario.ts"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "gitBlob": "09971225cc43125424e72bc6ffcf267d52d5d99a",
+      "bytes": 38878,
+      "sha256": "87ca146d9835de136c88439f7721900c2a78fcba610b1f9ec16b9ae583a91435",
+      "lines": 531,
+      "localReference": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/tools/owned-process-broker/nativeRetainedProviderFixture.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "gitBlob": "02c6f7cff1655272888047a637ea9286585688a0",
+      "bytes": 32330,
+      "sha256": "8b81665d2633d639b6450aba0a2c57a68a996e2ec36351a977bccace8b9cb708",
+      "lines": 769,
+      "localReference": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "gitBlob": "3953930cdb3aa2a1879fc65cc3d38586829ffdf0",
+      "bytes": 40896,
+      "sha256": "23acd95539e17610a6e2df3862f935f01790a92c7390f3e0f1c0ddbf46d6a1a2",
+      "lines": 794,
+      "localReference": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts"
+    }
+  ],
+  "command": {
+    "packageScript": "lint:fast:files",
+    "resolvedScript": "eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content",
+    "kind": "SCOPED_NON_TYPE_AWARE_FAST_LINT",
+    "enclosingStep": "Verify complete workspace types and original typed lint scopes",
+    "stepIf": "matrix.lane == 'team'",
+    "originalLineRange": [
+      139,
+      271
+    ],
+    "originalOperandCount": 132,
+    "originalOperands": [
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+      "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-boot-chat.ts",
+      "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+      "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+      "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+      "src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts",
+      "src/features/agent-backend/renderer/createHostTeamChanges.ts",
+      "src/features/agent-backend/renderer/createHostTeamProvisioning.ts",
+      "src/features/agent-backend/renderer/index.ts",
+      "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "src/renderer/store/slices/teamSlice.ts",
+      "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+      "test/features/agent-backend/hostMemberSpawnStatuses.test.ts",
+      "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "test/renderer/store/teamRuntimeRunAdoption.test.ts",
+      "test/renderer/store/teamSlice.test.ts",
+      "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+      "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+      "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+      "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "src/features/agent-backend/contracts/operations.ts",
+      "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+      "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+      "src/renderer/components/team/ClaudeLogsPanel.tsx",
+      "src/renderer/components/team/ClaudeLogsSection.tsx",
+      "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+      "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "src/shared/types/teamActivity.ts",
+      "src/shared/utils/diagnosticsRedaction.ts",
+      "src/shared/utils/redactDiagnosticAssignments.ts",
+      "src/shared/utils/runtimeDiagnosticText.ts",
+      "test/features/agent-backend/hostTaskActivity.test.ts",
+      "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+      "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "scripts/e2e/teams-create-page-desktop.mjs",
+      "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+      "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "tools/owned-process-broker/nativeGate.ts",
+      "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "packages/legacy-agent-host/src/adapters/providers/nativeLaunchEnvironment.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeManagementHost.ts",
+      "packages/legacy-agent-host/src/owned-process/index.ts",
+      "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+      "tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "test/renderer/hooks/useMentionDetection.test.ts",
+      "src/renderer/components/team/useTeamProvisioningPresentation.ts",
+      "test/renderer/components/team/TeamProvisioningBanner.test.ts",
+      "test/features/runtime-provider-management/capturedManagementClient.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts",
+      "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+      "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "test/renderer/components/cli/CliStatusVisibility.test.ts"
+    ],
+    "originalOperandSerialization": "UTF-8; one path per line; final LF",
+    "originalOperandSha256": "a5d659eaf4b9b0a26f6b09683eb7cb5554e2b0b51cd013030937e6772277f697",
+    "originalExactBlockSha256": "172b2fde22b49676c3856b0d60c9da088f93e4bd3caaecddd20a2e4beec21b68",
+    "oldLastOperand": "test/renderer/components/cli/CliStatusVisibility.test.ts",
+    "appendOperands": [
+      "tools/owned-process-broker/nativeVendorInputs.ts",
+      "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts"
+    ],
+    "prospectiveOperandCount": 138,
+    "prospectiveAllUnique": true,
+    "mutationRule": "Append six operand lines after original last operand; add only its continuation backslash. All other original workflow bytes and all 132 operand positions must be preserved.",
+    "afterimageCreated": false,
+    "afterimageHash": null,
+    "sourcePatchCreated": false,
+    "prospectiveLineCountIfExactlyApplied": 1773,
+    "lineCountIsPredictionNotAfterimageMeasurement": true
+  },
+  "configurationFindings": {
+    "allSixMatchFastTypescriptGlob": true,
+    "projectService": false,
+    "allSixOutsideDirectGlobalIgnores": true,
+    "importedGatewayRulesOnlySrc": true,
+    "gatewayAppliesToSix": false,
+    "fastImportsAppliesToSix": false,
+    "newConfigRuleOrCompilerRequired": false,
+    "noConcreteConfigAdmissionBlocker": true,
+    "actualLintPass": null
+  },
+  "typeCoverage": [
+    {
+      "paths": [
+        "tools/owned-process-broker/nativeVendorInputs.ts"
+      ],
+      "project": "tools/owned-process-broker/tsconfig.json",
+      "reason": "Direct *.ts include; not excluded; original Process compiler step remains."
+    },
+    {
+      "paths": [
+        "tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+        "tools/owned-process-broker/nativeRetainedProviderFixture.ts"
+      ],
+      "project": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "reason": "Gate and Scenario direct include; Scenario imports helper at original current line22; original Process retained compiler remains."
+    },
+    {
+      "paths": [
+        "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+        "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts"
+      ],
+      "project": "packages/legacy-agent-host/tsconfig.test.json",
+      "reason": "Direct tests/**/*.ts include; original Host workspace package typecheck:test and original Process project compiler remain; helper imports both models at14–15."
+    }
+  ],
+  "referencePins": [
+    {
+      "path": "eslint.fast.config.js",
+      "gitBlob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "bytes": 7268,
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88",
+      "lines": 258,
+      "localReference": "/tmp/migration-evidence-20261116/frontend/fast-feedback-types-inert-proposal/reference/eslint.fast.config.js"
+    },
+    {
+      "path": "package.json",
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "lines": 580,
+      "localReference": "/tmp/migration-evidence-20261116/frontend/fast-feedback-types-inert-proposal/reference/package.json"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "gitBlob": "72bcb2ef993c43e8f5199b090ee3df8440d758b9",
+      "bytes": 12353,
+      "sha256": "16989c4b4c3a601bc8f106ca25495fb521268d6e3f4f14f773522cdca1d8b7d1",
+      "lines": 304,
+      "localReference": "/tmp/migration-evidence-20261116/native/provider-c930-native-qualification/app-delta/after/packages/legacy-agent-host/package.json"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "gitBlob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "bytes": 174,
+      "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+      "lines": 9,
+      "localReference": "/tmp/migration-evidence-20261116/native/current-consumer-regions-proposal/reference/packages/legacy-agent-host/tsconfig.test.json"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "gitBlob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "bytes": 456,
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+      "lines": 19,
+      "localReference": "/tmp/migration-evidence-20261116/native/current-consumer-regions-proposal/reference/packages/legacy-agent-host/tsconfig.json"
+    },
+    {
+      "path": "tsconfig.json",
+      "gitBlob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "bytes": 1235,
+      "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+      "lines": 40,
+      "localReference": "/tmp/migration-evidence-20261116/frontend/fast-feedback-types-inert-proposal/reference/tsconfig.json"
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "gitBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "bytes": 646,
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306",
+      "lines": 20,
+      "localReference": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/tsconfig.legacy-agent-host-scripts.json"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "gitBlob": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9",
+      "bytes": 593,
+      "sha256": "d503beb57a0e2e41d81c89a73349acbecd1f7e1c958b3d732db4500bd532fb21",
+      "lines": 6,
+      "localReference": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/tools/owned-process-broker/tsconfig.json"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "bytes": 393,
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+      "lines": 6,
+      "localReference": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/current-c5d-source/tools/owned-process-broker/tsconfig.retained-host.json"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524",
+      "bytes": 32370,
+      "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e",
+      "lines": 419,
+      "localReference": "/tmp/migration-evidence-20261116/native/a07-direct-i386-source-review/after/.github/workflows/host-process-acceptance.yml"
+    },
+    {
+      "path": "AGENTS.md",
+      "gitBlob": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+      "bytes": 8999,
+      "sha256": "9a8bc5d8906292ca6949a3e7c9b969d72061aba020d8064c7e799351084fd8a7",
+      "lines": 93,
+      "localReference": "/tmp/migration-evidence-20261116/migration-scope/a07-plan42-scope-review/reference/AGENTS-0c8a4a63.md"
+    },
+    {
+      "path": "eslint.gateway-boundaries.mts",
+      "gitBlob": "4975b20df1353a9687fd479ab043beb025e967ba",
+      "bytes": 3786,
+      "sha256": "0c68ab55ac206b45d8d01a75cd2877fbda9352955df1a687ff17b58cba3171e4",
+      "lines": 151,
+      "localReference": "/tmp/migration-evidence-20261116/root/plan62-lint-gateway-source-readback.json"
+    }
+  ],
+  "preservation": {
+    "original132OperandPrefix": true,
+    "allOtherWorkflowBytes": true,
+    "sixTsBodies": true,
+    "allOriginalCommandsStepsJobsMatrixClocksRostersRules": true,
+    "noMandatoryExtraCiOrRedRound": true,
+    "noGenuineVendorExecutionAuthority": true,
+    "noW01RuntimePassOrW05W07Selection": true
+  },
+  "cost": {
+    "addedLintFileOperands": 6,
+    "newProcessOrCommand": 0,
+    "newNativeActions": 0,
+    "newTimerOrTimeout": 0,
+    "elapsedUnknown": true,
+    "contentCachePreserved": true
+  },
+  "reviewLimits": [
+    "Data-only source/config review, not ESLint/TypeScript/YAML execution.",
+    "No source afterimage, canonical edit, commit, ref change, API call or CI poll performed for this proposal.",
+    "Full exact source-afterimage/inverse review remains for the later root-authored source cut; this document cannot certify bytes that do not exist.",
+    "Resulting-source original CI remains the actual validation; source-only approval cannot transfer old PASS."
+  ]
+}

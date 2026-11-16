@@ -1,0 +1,118 @@
+{
+  "kind": "PLAN62_LINT_SIX_PROSPECTIVE_R2",
+  "reviewer": "root",
+  "r1Author": "migration_scope",
+  "verdict": "APPROVE_BOUNDED_PLAN_PUBLICATION_SOURCE_NOT_APPLIED",
+  "baseCommit": "b627469aaa75b9e551e8183bd352c049fd4a5bfc",
+  "baseTree": "ede315fd8f8d7af6d838850a57525d41b518fb8e",
+  "r1Appendix": {
+    "sha": "e29241eedf098ec5938ccf99b6817b7b77563e09",
+    "bytes": 7993,
+    "sha256": "be5ab06a3425d7a6b42f5751b072842853e07a854a859a9d80eb54fafab6a1c2"
+  },
+  "r1Scope": {
+    "sha": "3ac8d67960b89016b1cf5050af8282c7dacbdf47",
+    "bytes": 22504,
+    "sha256": "44e0d76b013523cfc42c9578e7eedca261fdf9ef1a7c4d68f696d5e1814841a7"
+  },
+  "planBefore": {
+    "sha": "74c8b4dadac0d444a2649a7dd165740af064eae8",
+    "bytes": 27385,
+    "sha256": "767505513a51a092d8dca560c65cf0aa9acd019c63b2c07b475256cc0fb338ae"
+  },
+  "planAfter": {
+    "sha": "52564dd9f7396877485512517e7fcc4337be66c5",
+    "bytes": 35379,
+    "sha256": "0cfb843b31a050dbd38e7955c1deaba77d857a94f39b8bf0b35721596daaa701"
+  },
+  "checks": [
+    "Read the complete authored prospective R1 and all 410 lines of scope.json.",
+    "Independently read the fast ESLint and imported gateway configurations, existing type projects and actual compiler routes; all twelve reference bodies rehash to current tree leaves.",
+    "All six TS bodies rehash to their published Plan62 leaves. No source body is selected for modification.",
+    "Reconstructed original command block matches its exact SHA256; 132 unique operands retain their complete ordered prefix; the six proposed operands are distinct and currently absent.",
+    "This is fast non-type-aware lint (projectService false), with independent unchanged existing type checking.",
+    "The sole prospective source mutation is the last existing operand continuation plus exactly six appended path lines. All other workflow bytes, jobs, predicates, commands, rosters, clocks, native activation and assertions remain.",
+    "Plan62 old27385-byte body is the complete unchanged prefix. P10 is untouched.",
+    "Incoming b627 four commits and fourteen documentary leaves plus one CDP-source-roster addition are preserved in the full 11153-leaf base."
+  ],
+  "limits": [
+    "No workflow afterimage exists or is certified by this review.",
+    "Actual published-R1 independent readback/R2 precedes source preparation; exact afterimage and inverse review precede source application.",
+    "No project/compiler/lint/native execution and no old-head PASS transfer. Original resulting-source CI remains validation.",
+    "No primary ref change, release, Stage2 or W05/W07 selection."
+  ],
+  "referenceBodies": [
+    {
+      "path": "eslint.fast.config.js",
+      "sha": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "bytes": 7268,
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+    },
+    {
+      "path": "package.json",
+      "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "sha": "72bcb2ef993c43e8f5199b090ee3df8440d758b9",
+      "bytes": 12353,
+      "sha256": "16989c4b4c3a601bc8f106ca25495fb521268d6e3f4f14f773522cdca1d8b7d1"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "sha": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "bytes": 174,
+      "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "sha": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "bytes": 456,
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "bytes": 1235,
+      "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a"
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "bytes": 646,
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "sha": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9",
+      "bytes": 593,
+      "sha256": "d503beb57a0e2e41d81c89a73349acbecd1f7e1c958b3d732db4500bd532fb21"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "sha": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "bytes": 393,
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "sha": "93606e49aedfe84b6452aee487efdf2055f45524",
+      "bytes": 32370,
+      "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+      "bytes": 8999,
+      "sha256": "9a8bc5d8906292ca6949a3e7c9b969d72061aba020d8064c7e799351084fd8a7"
+    },
+    {
+      "path": "eslint.gateway-boundaries.mts",
+      "sha": "4975b20df1353a9687fd479ab043beb025e967ba",
+      "bytes": 3786,
+      "sha256": "0c68ab55ac206b45d8d01a75cd2877fbda9352955df1a687ff17b58cba3171e4"
+    }
+  ]
+}
