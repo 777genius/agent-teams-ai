@@ -45,7 +45,6 @@ export interface TeamMember {
 }
 
 export type TeamMemberMcpScope = 'user' | 'project' | 'local';
-
 export type TeamMemberMcpMode = 'inheritLead' | 'inheritScopes' | 'strictAllowlist' | 'appOnly';
 
 export interface TeamMemberMcpPolicy {
@@ -131,7 +130,6 @@ export interface TeamSummary {
 
 export type TeamTaskStatus = 'pending' | 'in_progress' | 'completed' | 'deleted';
 export type TeamReviewState = 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved';
-
 export interface TaskWorkInterval {
   /** ISO timestamp when task entered in_progress */
   startedAt: string;
@@ -189,7 +187,6 @@ export interface TaskReviewChangesRequestedEvent extends TaskHistoryEventBase {
   to: 'needsFix';
   note?: string;
 }
-
 export interface TaskReviewApprovedEvent extends TaskHistoryEventBase {
   type: 'review_approved';
   from: TeamReviewState;
@@ -259,7 +256,6 @@ export interface SourceMessageSnapshot {
   /** IDs classified as generic file references in the original message. */
   fileReferenceIds?: string[];
 }
-
 export type InboxMessageKind =
   | 'default'
   | 'slash_command'
@@ -420,7 +416,6 @@ export interface ToolCallMeta {
   /** Optional runtime tool_use identifier when available. */
   toolUseId?: string;
 }
-
 export type ToolActivitySource = 'runtime' | 'member_log' | 'inbox';
 export type ToolActivityState = 'running' | 'complete' | 'error';
 
@@ -665,7 +660,6 @@ export interface QueuedUserMessageSummary {
   timestamp: string;
   summary?: string;
 }
-
 export interface QueuedUserMessagesSnapshot {
   member: string;
   messages: QueuedUserMessageSummary[];
@@ -707,7 +701,6 @@ export interface KanbanTaskState {
   errorDescription?: string;
   movedAt: string;
 }
-
 export interface KanbanState {
   teamName: string;
   reviewers: string[];
@@ -875,7 +868,6 @@ export type TeamProviderBackendId =
   | 'opencode-cli';
 export type ProviderBillingMode = 'api' | 'subscription' | 'free' | 'unknown';
 export type TeamFastMode = 'inherit' | 'on' | 'off';
-
 export interface ProviderModelLaunchIdentity {
   providerId: TeamProviderId;
   providerBackendId: TeamProviderBackendId | null;
@@ -964,7 +956,6 @@ export interface LeadActivitySnapshot {
   state: LeadActivityState;
   runId: string | null;
 }
-
 export interface LeadContextUsage {
   /** Prompt-side tokens currently occupying the context window. */
   promptInputTokens: number | null;
@@ -1021,7 +1012,6 @@ export interface OpenCodeAppManagedBootstrapCandidate {
 export type OpenCodeBootstrapEvidenceSource = 'runtime_bootstrap_checkin' | 'app_managed_bootstrap';
 
 export type OpenCodeBootstrapMode = 'model_tool_checkin' | 'app_managed_context';
-
 export interface PersistedTeamLaunchMemberState {
   name: string;
   providerId?: TeamProviderId;
@@ -1118,7 +1108,6 @@ export interface RetryFailedOpenCodeSecondaryLanesResult {
 export type MemberSpawnLivenessSource = 'heartbeat' | 'process';
 
 export type TeamAgentRuntimeBackendType = 'lead' | 'tmux' | 'iterm2' | 'in-process' | 'process';
-
 export type TeamAgentRuntimeLivenessKind =
   | 'confirmed_bootstrap'
   | 'runtime_process'
@@ -1207,7 +1196,6 @@ export interface TeamAgentRuntimeSnapshot {
   fastMode?: TeamFastMode;
   members: Record<string, TeamAgentRuntimeEntry>;
 }
-
 export interface TeamChangeEvent {
   management?: TeamManagementCommittedChange;
   type:
@@ -1346,7 +1334,6 @@ export type TeamWorktreeGitBlockReason =
   | 'missing_head'
   | 'git_unavailable'
   | 'git_error';
-
 export interface TeamWorktreeGitStatus {
   projectPath: string;
   isGitRepo: boolean;
@@ -1450,7 +1437,6 @@ export interface TeamProvisioningSupportDiagnostic {
   copyText: string;
   createdAt: string;
 }
-
 export interface TeamProvisioningPrepareResult {
   ready: boolean;
   message: string;
@@ -1548,7 +1534,6 @@ export interface GlobalTask extends TeamTaskWithKanban {
   /** True when the parent team has been soft-deleted. */
   teamDeleted?: boolean;
 }
-
 export interface MemberSubagentSummary {
   subagentId: string;
   sessionId: string;
@@ -1600,7 +1585,6 @@ export type MemberLogSummary =
   | MemberSubagentLogSummary
   | MemberLeadSessionLogSummary
   | MemberSessionLogSummary;
-
 export interface FileLineStats {
   added: number;
   removed: number;
@@ -1712,7 +1696,6 @@ export interface CrossTeamTargetMember {
   role?: string;
   color?: string;
 }
-
 export interface CrossTeamTarget {
   teamName: string;
   displayName: string;

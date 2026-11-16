@@ -127,7 +127,6 @@ function crashRepairCloseIso(startedAt: string, member?: PersistedTeamLaunchMemb
   const boundedCloseMs = Math.max(safeStartedAtMs, Math.min(Date.now(), closeMs));
   return toIso(boundedCloseMs);
 }
-
 function crashRepairIntervalCloseIso(
   interval: { startedAt?: unknown; completedAt?: unknown } | null | undefined,
   member?: PersistedTeamLaunchMemberState
@@ -623,7 +622,6 @@ export class TeamTaskActivityIntervalService {
       }
       return null;
     }
-
     const parts: string[] = [];
     for (const fileName of entries) {
       try {

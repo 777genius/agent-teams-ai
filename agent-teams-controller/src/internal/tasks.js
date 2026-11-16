@@ -114,7 +114,6 @@ function maybeNotifyPreviousOwnerOnReassignment(context, previousTask, updatedTa
         warnNonCritical(`[tasks] reassignment notification failed for task ${updatedTask.id}`, error);
     }
 }
-
 function buildTaskRef(context, task) {
     return {
         taskId: task.id,
@@ -319,7 +318,6 @@ function assertTaskCreationCommandScope(context, input) {
         throw new Error('Task creation command conflict: scope does not match team');
     }
 }
-
 function getTask(context, taskId) {
     return taskStore.readTask(context.paths, taskId, { includeDeleted: true });
 }
@@ -557,7 +555,6 @@ function notifyLeadWhenBoardCompleted(context, completedTask) {
     // in review or waiting for a fix is not finished, even though the task
     // itself already carries the completed status.
     if (tasks.some((task) => task && isTaskOpen(task))) return;
-
     const leadName = runtimeHelpers.inferLeadName(context.paths);
     if (!leadName) return;
     // The owner of the last task is already looking at this board event.
@@ -747,7 +744,6 @@ function addTaskCommentWithOptions(context, taskId, flags, options = {}) {
         comment: result.comment,
     };
 }
-
 function addTaskComment(context, taskId, flags) {
     return addTaskCommentWithOptions(context, taskId, flags);
 }
@@ -1032,7 +1028,6 @@ async function memberBriefing(context, memberName, options = {}) {
                 normalizeMemberName(entry.registeredBy) === normalizeMemberName(requestedMemberName)
             ) :
         [];
-
     const taskQueue = await taskBriefing(context, requestedMemberName);
     const completionNotifyExample = messagingProtocol.buildLeadMessageExample({
         teamName: context.teamName,

@@ -300,7 +300,6 @@ const TaskDetailDialogHost = memo(
         setSelectedIdentity(null);
       }
     }, [contextId, selectedIdentity, teamName]);
-
     const registeredIdentity =
       selectedIdentity?.contextId === contextId && selectedIdentity.teamName === teamName
         ? selectedIdentity
@@ -581,7 +580,6 @@ interface LeadLoadBridgeProps {
 const EMPTY_MESSAGES_PANEL_TASKS: TeamTaskWithKanban[] = [];
 const TEAM_HEADER_NAV_ACTION_CLASS =
   'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md border border-[var(--color-border-emphasis)] bg-transparent px-2.5 text-[11px] font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]';
-
 function buildMessagesPanelTasksSignature(tasks: readonly TeamTaskWithKanban[]): string {
   return JSON.stringify(
     tasks.map((task) => [
@@ -809,7 +807,6 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
 
     const stats = leadSessionContextStats.get(targetAiGroupId);
     const injections = stats?.accumulatedInjections ?? [];
-
     let lastUsage: UsageLike | null = null;
     let lastModelName: string | undefined;
     const targetItem = leadConversation.items.find(
@@ -1376,7 +1373,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       state.setActiveTab(existingUsageTab.id);
       return;
     }
-
     state.openTab({
       type: 'token-usage',
       label: 'Usage',
@@ -1762,7 +1758,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       return;
     }
     interactiveTeamRef.current = teamName;
-
     void (async () => {
       try {
         const headResult = await refreshTeamMessagesHead(teamName);
@@ -2049,7 +2044,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     if (memberRosterHydrationRetryRef.current === memberRosterHydrationRetryKey) {
       return;
     }
-
     const timer = window.setTimeout(() => {
       const state = useStore.getState();
       if (state.selectedTeamName !== teamName) {
@@ -2344,7 +2338,6 @@ export const TeamDetailView = memo(function TeamDetailView({
         : pendingTeamSectionFocus.section === 'tasks'
           ? 'kanban'
           : pendingTeamSectionFocus.section;
-
     if (sectionId === 'overview') {
       const revealOverview = (): void =>
         contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2662,7 +2655,6 @@ export const TeamDetailView = memo(function TeamDetailView({
           // best-effort
         }
       }
-
       closeCreateTaskDialog();
     } finally {
       setCreatingTask(false);

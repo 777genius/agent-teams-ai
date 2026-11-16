@@ -579,7 +579,6 @@ function looksLikeJsonPayload(value: string): boolean {
   const trimmed = value.trim();
   return trimmed.startsWith('{') || trimmed.startsWith('[');
 }
-
 function parseJsonLikeString(value: string): unknown {
   const trimmed = value.trim();
   if (!looksLikeJsonPayload(trimmed)) {
@@ -1786,7 +1785,6 @@ export class BoardTaskLogStreamService {
     };
     return locator.getGeneration?.(teamName) ?? 0;
   }
-
   private async getStreamLayout(teamName: string, taskId: string): Promise<StreamLayout> {
     const cacheKey = this.buildLayoutCacheKey(teamName, taskId);
     const generation = this.getTranscriptDiscoveryGeneration(teamName);

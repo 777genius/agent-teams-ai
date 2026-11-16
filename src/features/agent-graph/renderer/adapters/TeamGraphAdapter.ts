@@ -415,7 +415,6 @@ export class TeamGraphAdapter {
     const parsed = Date.parse(timestamp);
     return Number.isFinite(parsed) && parsed < cutoffMs;
   }
-
   static #getRuntimeLabel(
     providerId: ResolvedTeamMember['providerId'],
     model: ResolvedTeamMember['model'],
@@ -1299,7 +1298,6 @@ export class TeamGraphAdapter {
       this.#seenCommentCounts.set(task.id, currentCount);
     }
   }
-
   static #ensureTaskCommentEdges(
     data: TeamGraphData,
     teamName: string,

@@ -215,7 +215,6 @@ export function extractBootstrapFailureReason(text: string): string | null {
   if (!looksLikeBootstrapFailure) return null;
   return trimmed.slice(0, 280);
 }
-
 export function isBootstrapInstructionPrompt(text: string): boolean {
   const normalized = text.replace(/\s+/g, ' ').trim().toLowerCase();
   if (!normalized.startsWith('you are bootstrapping into team ')) {
@@ -894,7 +893,6 @@ Constraints:
 - When messaging "user" (the human): write plain human language. If a task needs a status update, do it yourself via the board MCP tools; never ask the user to run a command.${soloConstraint}
 
 ${teamCtlOps}
-
 ${actionModeProtocol}
 
 Communication protocol (CRITICAL — you are running headless, no one sees your text output):

@@ -6,9 +6,6 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
-import {
-  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger,
-} from '@renderer/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useResizableColumns } from '@renderer/hooks/useResizableColumns';
 import { cn } from '@renderer/lib/utils';
@@ -22,11 +19,11 @@ import {
   PlayCircle,
   Plus,
   ShieldCheck,
-  Settings2,
   Trash2,
 } from 'lucide-react';
 
 import { TaskTableView } from './table/TaskTableView';
+import { KanbanApprovedSettingsMenu } from './KanbanApprovedSettingsMenu';
 import { KANBAN_COLUMN_CONTROL_INSET_CLASS, KanbanColumn } from './KanbanColumn';
 import { KanbanFilterPopover } from './KanbanFilterPopover';
 import {
@@ -352,50 +349,12 @@ export const KanbanBoard = memo(function KanbanBoard({
   const [visibleTaskLimitsByColumn, setVisibleTaskLimitsByColumn] = useState<
     Partial<Record<KanbanColumnId, number>>
   >({});
-  const [approvalPolicyPending, setApprovalPolicyPending] = useState(false);
-  const approvalSettingsAccessory = useMemo(() => {
-    if (!onHumanOnlyApprovalChange) return null;
-    return (
-      <DropdownMenu>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-label={t('kanban.approvalSettings.title')}
-                data-testid="kanban-approved-settings"
-                className="kanban-grid-no-drag h-6 w-6 p-0 text-[var(--color-text-muted)]"
-                disabled={approvalPolicyPending}
-                onPointerDown={(event) => event.stopPropagation()}
-              >
-                <Settings2 size={13} />
-              </Button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent side="top">{t('kanban.approvalSettings.title')}</TooltipContent>
-        </Tooltip>
-        <DropdownMenuContent align="end">
-          <DropdownMenuCheckboxItem
-            checked={kanbanState.humanOnlyApproval === true}
-            disabled={approvalPolicyPending}
-            onSelect={(event) => event.preventDefault()}
-            onCheckedChange={(checked) => {
-              setApprovalPolicyPending(true);
-              void onHumanOnlyApprovalChange(checked === true)
-                .catch(() => {
-                  // Store reports the failure; the controlled checkbox stays persisted.
-                })
-                .finally(() => setApprovalPolicyPending(false));
-            }}
-          >
-            {t('kanban.approvalSettings.onlyHumans')}
-          </DropdownMenuCheckboxItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  }, [approvalPolicyPending, kanbanState.humanOnlyApproval, onHumanOnlyApprovalChange, t]);
+  const approvalSettingsAccessory = onHumanOnlyApprovalChange ? (
+    <KanbanApprovedSettingsMenu
+      enabled={kanbanState.humanOnlyApproval === true}
+      onChange={onHumanOnlyApprovalChange}
+    />
+  ) : null;
   const hasReviewers = kanbanState.reviewers.length > 0;
   const enableTaskSorting =
     viewMode === 'columns' && !!onColumnOrderChange && sort.field === 'manual';
