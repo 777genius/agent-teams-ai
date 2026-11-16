@@ -5,9 +5,16 @@
 
 namespace owned_service {
 using FailureReporter=void (*)(Stage,DWORD,const DEBUG_EVENT&) noexcept;
+#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+using TestRootBreakpointObserver=void (*)(const EXCEPTION_DEBUG_INFO&,bool) noexcept;
+#endif
 /** Called on the same existing admission thread that invoked CreateProcessW. */
 inline bool runDebugLoop(DWORD rootPid,HANDLE root,HANDLE outer,
-  std::unique_lock<std::timed_mutex>& stateLock,Scopes& scopes,FailureReporter reporter=nullptr) {
+  std::unique_lock<std::timed_mutex>& stateLock,Scopes& scopes,FailureReporter reporter=nullptr
+#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+  ,TestRootBreakpointObserver rootObserver=nullptr
+#endif
+) {
   const auto failure=[reporter](Stage stage,DWORD error,const DEBUG_EVENT& event=DEBUG_EVENT{}) noexcept {
     if(reporter) reporter(stage,error,event);
   };
@@ -64,6 +71,9 @@ inline bool runDebugLoop(DWORD rootPid,HANDLE root,HANDLE outer,
           if(rootState==WAIT_FAILED) throw GetLastError();
           if(event.dwProcessId==rootPid&&rootState==WAIT_TIMEOUT) {
             initial=rootStartup.accept(event.u.Exception);
+#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+            if(rootObserver&&rootStartup.wow64) rootObserver(event.u.Exception,initial);
+#endif
           } else initial=scopes.firstBreakpoint(event.dwProcessId,event.u.Exception);
         }
         if(!initial) continuation=DBG_EXCEPTION_NOT_HANDLED;

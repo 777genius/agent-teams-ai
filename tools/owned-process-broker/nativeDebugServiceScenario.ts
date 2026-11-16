@@ -14,8 +14,8 @@ import { createFixtureOutputCollector } from './nativeGateOutput';
 import type { Frame } from '@agent-teams/legacy-agent-host/owned-process';
 import type { GateContext } from './nativeGateContext';
 
-function readI386ChildObservations(bytes: Buffer) {
-  assert.ok(bytes.length > 0 && bytes.length <= 512 && bytes.length % 32 === 0, 'Bounded complete I386 child trace');
+function readI386Observations(bytes: Buffer) {
+  assert.ok(bytes.length > 0 && bytes.length <= 512 && bytes.length % 32 === 0, 'Bounded complete I386 trace');
   const rows = Array.from({ length: bytes.length / 32 }, (_, index) => {
     const offset = index * 32;
     assert.equal(bytes.readUInt32LE(offset), 1, 'Overflow or unknown observation cannot qualify');
@@ -30,9 +30,9 @@ function readI386ChildObservations(bytes: Buffer) {
   return rows;
 }
 
-function qualifyI386ChildObservations(rows: ReturnType<typeof readI386ChildObservations>, child: { pid: number; birth: string }) {
-  const selected = rows.filter(row => row.pid === child.pid && row.birth === child.birth);
-  assert.equal(selected.length, 4, 'One exact retained child has two startup and two late exception observations');
+function qualifyI386Observations(rows: ReturnType<typeof readI386Observations>, target: { pid: number; birth: string }) {
+  const selected = rows.filter(row => row.pid === target.pid && row.birth === target.birth);
+  assert.equal(selected.length, 4, 'One exact retained target has two startup and two late exception observations');
   assert.deepEqual(selected.slice(0, 2).map(row => [row.code, row.firstChance, row.handled]),
     [[0x80000003, 1, 1], [0x4000001f, 1, 1]], 'Actual original I386 startup order');
   assert.deepEqual(selected.slice(2).map(row => [row.firstChance, row.handled]), [[1, 0], [1, 0]],
@@ -40,16 +40,23 @@ function qualifyI386ChildObservations(rows: ReturnType<typeof readI386ChildObser
   return rows;
 }
 
+function qualifyI386RootObservations(rows: ReturnType<typeof readI386Observations>, root: { pid: number; birth: string }) {
+  assert.equal(rows.length, 4, 'The finite direct root creates no child; all four observations belong to its exact identity');
+  return qualifyI386Observations(rows, root);
+}
+
 /** Unstaged TEST binary only. A valid provider receipt is never minted from these scoped facts. */
 export async function nativeDebugServiceScenario(context: GateContext, debugBroker: string,
-  mode: 'pre-resume-cancel' | 'service-pair' | 'service-first' | 'service-race' | 'wow64-root', sentinel: ChildProcess): Promise<void> {
+  mode: 'pre-resume-cancel' | 'service-pair' | 'service-first' | 'service-race' | 'wow64-root' | 'i386-root', sentinel: ChildProcess): Promise<void> {
   const { events, owner, marker, spec, fixture, track, phase } = context;
   const identity = owner(), start = marker();
   const admissionBarrier = `${start.path}.admission`;
   const wow64Path = join(dirname(start.path), 'TEST-wow64-command.utf16');
-  const selectedI386 = mode === 'service-pair' ? process.env.HOST_PROCESS_NATIVE_I386_FIXTURE : undefined;
+  const selectedI386 = mode === 'service-pair' || mode === 'i386-root' ? process.env.HOST_PROCESS_NATIVE_I386_FIXTURE : undefined;
   const i386Fixture = selectedI386 === undefined ? undefined : realpathSync.native(selectedI386);
   let i386Sha256: string | undefined, i386Child: { pid: number; birth: string } | undefined;
+  let i386Root: { pid: number; birth: string } | undefined;
+  if (mode === 'i386-root') assert.ok(i386Fixture, 'Direct I386 root requires the existing selected same-source TEST image');
   if (i386Fixture !== undefined) {
     assert.equal(basename(i386Fixture), 'owned-process-fixture-i386.exe', 'The same-source TEST target has one fixed name');
     assert.equal(dirname(i386Fixture), dirname(realpathSync.native(fixture)), 'Only the same build directory supplies the TEST I386 image');
@@ -60,7 +67,8 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
     assert.ok(offset <= bytes.length - 24 && bytes.toString('ascii', offset, offset + 4) === 'PE\0\0' && bytes.readUInt16LE(offset + 4) === 0x014c);
     i386Sha256 = createHash('sha256').update(bytes).digest('hex');
   }
-  const i386TracePath = i386Fixture === undefined ? undefined : `${start.path}.i386-child-events`;
+  const i386TracePath = i386Fixture === undefined ? undefined
+    : `${start.path}.${mode === 'i386-root' ? 'i386-root-events' : 'i386-child-events'}`;
   if (mode === 'service-pair') assert.equal(existsSync(wow64Path), false,
     'The original child scenario publishes a fresh native path in this controller sandbox');
   const diagnosticPath = `${start.path}.debug-failure`;
@@ -75,7 +83,8 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
           OWNED_PROCESS_TEST_ADMISSION_BARRIER: admissionBarrier,
           OWNED_PROCESS_TEST_ADMISSION_NONCE: start.nonce,
         } } : mode === 'wow64-root' ? { env: { ...process.env, OWNED_PROCESS_TEST_I386_ROOT: '1' } } :
-          i386TracePath === undefined ? {} : { env: { ...process.env, OWNED_PROCESS_TEST_I386_EVENTS: '1' } }),
+          mode === 'i386-root' ? { env: { ...process.env, OWNED_PROCESS_TEST_I386_ROOT: '1', OWNED_PROCESS_TEST_I386_EVENTS: '1' } } :
+            i386TracePath === undefined ? {} : { env: { ...process.env, OWNED_PROCESS_TEST_I386_EVENTS: '1' } }),
       });
     } finally { try { closeSync(diagnosticFd); } finally { if (i386TraceFd !== undefined) closeSync(i386TraceFd); } }
   })();
@@ -92,18 +101,28 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
         event: bytes.readUInt32LE(8), pid: bytes.readUInt32LE(12),
       } }));
     }
-    let i386Observations: ReturnType<typeof readI386ChildObservations> | undefined;
+    let i386Observations: ReturnType<typeof readI386Observations> | undefined;
     if (i386TracePath !== undefined) {
-      try { i386Observations = readI386ChildObservations(readFileSync(i386TracePath)); } catch { /* Unknown cannot qualify. */ }
-      try { console.log(JSON.stringify({ nativeI386ChildObservation: i386Observations === undefined
-        ? { status: 'unknown' } : { status: 'observed', fixtureSha256: i386Sha256, child: i386Child ?? null,
-          observations: i386Observations, directI386RootLateHandler: 'unqualified' } })); } catch { /* Preserve the original exit/refusal. */ }
+      try { i386Observations = readI386Observations(readFileSync(i386TracePath)); } catch { /* Unknown cannot qualify. */ }
+      try {
+        if (mode === 'i386-root') console.log(JSON.stringify({ nativeI386RootObservation: i386Observations === undefined
+          ? { status: 'unknown' } : { status: 'observed', fixtureSha256: i386Sha256, root: i386Root ?? null,
+            observations: i386Observations } }));
+        else console.log(JSON.stringify({ nativeI386ChildObservation: i386Observations === undefined
+          ? { status: 'unknown' } : { status: 'observed', fixtureSha256: i386Sha256, child: i386Child ?? null,
+            observations: i386Observations, directI386RootLateHandler: 'unqualified' } }));
+      } catch { /* Preserve the original exit/refusal. */ }
     }
     assert.equal(code, 0, 'TEST debug broker must not die before completing its native gate');
     assert.equal(bytes.length, 0, 'Success cannot mask a native debug failure');
     if (i386TracePath !== undefined) {
-      assert.ok(i386Child && i386Fixture && i386Sha256 && i386Observations, 'Actual I386 child completion and observations must precede broker cleanup');
-      qualifyI386ChildObservations(i386Observations, i386Child);
+      if (mode === 'i386-root') {
+        assert.ok(i386Root && i386Fixture && i386Sha256 && i386Observations, 'Actual prepared I386 root and observations must precede broker cleanup');
+        qualifyI386RootObservations(i386Observations, i386Root);
+      } else {
+        assert.ok(i386Child && i386Fixture && i386Sha256 && i386Observations, 'Actual I386 child completion and observations must precede broker cleanup');
+        qualifyI386Observations(i386Observations, i386Child);
+      }
       assert.equal(createHash('sha256').update(readFileSync(i386Fixture)).digest('hex'), i386Sha256);
     }
   }));
@@ -150,8 +169,13 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
   }));
   stderr.resume();
   let launch = spec(mode === 'pre-resume-cancel' ? 'tree' : mode, start);
-  if (i386Fixture !== undefined)
+  if (mode === 'service-pair' && i386Fixture !== undefined)
     launch = { ...launch, environment: [...launch.environment, `OWNED_PROCESS_TEST_I386_FIXTURE=${i386Fixture}`] };
+  if (mode === 'i386-root') {
+    assert.ok(i386Fixture);
+    launch = { ...launch, executable: i386Fixture,
+      commandLine: `"${i386Fixture}" application-breakpoints-root "${start.path}" ${start.nonce}` };
+  }
   if (mode === 'wow64-root') {
     assert.ok(existsSync(wow64Path), 'The preceding completed child scenario must publish its verified I386 path');
     const bytes = readFileSync(wow64Path);
@@ -165,19 +189,22 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
   assert.equal(prepared.payload.length, 12);
   const rootPid = prepared.payload.readUInt32LE(0);
   const rootBirth = prepared.payload.readBigUInt64LE(4).toString(16).padStart(16, '0');
+  if (mode === 'i386-root') i386Root = { pid: rootPid, birth: rootBirth };
   phase('capture-root');
   const root = await capturedQueryableWitness(fixture, rootPid, rootBirth, track, events, 'query-wait-gated');
   assert.equal(existsSync(start.path), false, 'DEBUG+CREATE_SUSPENDED target has no pre-resume effect');
   const whole = Buffer.alloc(5);
   whole.writeUInt32LE(10000); whole[4] = 1;
   let neighborWitness: Awaited<ReturnType<typeof capturedQueryableWitness>> | undefined;
-  if (mode === 'wow64-root') {
+  if (mode === 'wow64-root' || mode === 'i386-root') {
     phase('resume');
     await request(Op.resume, Op.resumed, Buffer.alloc(0));
     phase('root-exit');
     await waitFor(() => readRootExit() !== undefined, 5000, events);
     assert.equal(readRootExit()!.payload.readUInt32LE(0), 0, 'Verified I386 original root survives both loader startup events');
     assert.equal(await root.observe(), 'absent', 'The exact original x86 root HANDLE signals natural exit');
+    if (mode === 'i386-root') assert.equal(readFileSync(start.path, 'ascii'), start.nonce,
+      'The same direct I386 root writes its exact first-user-effect nonce after Resume');
   } else if (mode !== 'pre-resume-cancel') {
     phase('resume');
     await request(Op.resume, Op.resumed, Buffer.alloc(0));
@@ -362,7 +389,7 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
     stdin.write('TEST provider remains functional\n');
     await waitFor(() => text.includes('{"providerAlive":true}'), 3000, events);
   }
-  if (mode !== 'wow64-root')
+  if (mode !== 'wow64-root' && mode !== 'i386-root')
     assert.equal(readRootExit(), undefined, 'Service replies cannot publish an exit for the surviving provider');
   phase('stop');
   const stopped = await request(Op.stop, Op.stopped, whole);

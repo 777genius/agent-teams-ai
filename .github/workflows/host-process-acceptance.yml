@@ -320,6 +320,7 @@ jobs:
               assert.equal(gates[0].platform, 'win32'); assert.equal(gates[0].arch, process.arch);
               assert.ok(gates[0].results.includes('captured-provider-native-argv-env-cwd-and-stop'));
               assert.ok(gates[0].results.includes('TEST-only-debug-service-prebirth-nested-job-feasibility'));
+              assert.ok(gates[0].results.includes('TEST-only-direct-I386-root-startup-and-late-application-exceptions'));
               assert.deepEqual(controllers[0], { gateController: 'drained', rootExitCode: 0, activeProcesses: 0 });
               native.push({ log: name, scope: 'original Windows Job, control and C++ fixture',
                 scenarios: gates[0].results, cleanup: controllers[0] });

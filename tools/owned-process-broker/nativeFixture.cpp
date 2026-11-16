@@ -139,7 +139,8 @@ int wmain(int argc,wchar_t** argv) {
     mode=mode.substr(7);
     if(mode!=L"tree"&&mode!=L"branch"&&mode!=L"leaf"&&mode!=L"sentinel"&&mode!=L"wait-gated"&&mode!=L"query-wait-gated") return 52;
   }
-  if(mode==L"tree"||mode==L"root-first"||mode==L"root-first-gated"||mode==L"service-pair"||mode==L"service-first"||mode==L"service-race"||mode==L"race-child"||mode==L"flood"||mode==L"breakaway"||mode==L"stdio"||mode==L"selection") {
+  if(mode==L"tree"||mode==L"root-first"||mode==L"root-first-gated"||mode==L"service-pair"||mode==L"service-first"||mode==L"service-race"||mode==L"race-child"||mode==L"flood"||mode==L"breakaway"||mode==L"stdio"||mode==L"selection"||
+    mode==L"application-breakpoints-root") {
     // The target-only first observable effect precedes child creation/output/scenario work.
     if((mode==L"selection"?argc!=7:argc!=4)||wcslen(argv[3])!=36) return 31;
     HANDLE marker=CreateFileW(argv[2],GENERIC_WRITE,0,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
@@ -185,7 +186,7 @@ int wmain(int argc,wchar_t** argv) {
     return result==WAIT_OBJECT_0?0:25;
   }
   if(mode==L"exit-fast") return 0;
-  if(mode==L"application-breakpoints")
+  if(mode==L"application-breakpoints"||mode==L"application-breakpoints-root")
     return applicationBreakpoint(EXCEPTION_BREAKPOINT)&&applicationBreakpoint(0x4000001f)?0:61;
   if(mode==L"source-sentinel") {
     // Only the source gate holds this original pipe inside its existing 120s outer Job.

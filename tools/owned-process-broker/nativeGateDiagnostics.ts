@@ -20,6 +20,7 @@ type GateScenario =
   | 'debug-service-root-first'
   | 'debug-service-admission-race'
   | 'debug-service-wow64-root'
+  | 'debug-service-i386-root'
   | 'tree'
   | 'root-first'
   | 'flood'
@@ -125,7 +126,7 @@ export function createNativeGateDiagnostics(
     })),
   });
   const observeHelper = (child: ChildProcess, role: HelperRole): void => {
-    assert.ok(helperFacts.size < 64, 'Bounded fixture helper inventory');
+    assert.ok(helperFacts.size < 66, 'Bounded fixture helper inventory');
     const facts: HelperFacts = {
       slot: helperFacts.size,
       role,

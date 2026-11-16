@@ -16,21 +16,29 @@ inline std::wstring admissionPath;
 inline char admissionNonce[37]{};
 inline bool admissionUsed=false, admissionCompleted=false;
 inline ULONGLONG admissionDeadline=0;
-// Optional TEST-only child observations: 15 records and one reserved overflow record.
+// Optional TEST-only I386 observations: 15 records and one reserved overflow record.
 // The existing admission thread copies already retained identity and decisions only.
 inline DWORD breakpointRows[16][8]{};
 inline std::atomic<DWORD> breakpointCount{0};
 inline HANDLE breakpointOutput=nullptr;
-inline void observeBreakpoint(const owned_service::Scope& child,const EXCEPTION_DEBUG_INFO& event,bool accepted) noexcept {
+inline DWORD breakpointRootPid=0;
+inline uint64_t breakpointRootBirth=0;
+inline void observeBreakpoint(DWORD pid,uint64_t birth,const EXCEPTION_DEBUG_INFO& event,bool accepted) noexcept {
   const DWORD index=breakpointCount.load(std::memory_order_relaxed);
   if(!breakpointOutput||index>=16) return;
   auto& row=breakpointRows[index];
   row[0]=index==15?2:1; row[1]=index+1;
   if(row[0]==1) {
-    row[2]=child.pid; row[3]=static_cast<DWORD>(child.birth); row[4]=static_cast<DWORD>(child.birth>>32);
+    row[2]=pid; row[3]=static_cast<DWORD>(birth); row[4]=static_cast<DWORD>(birth>>32);
     row[5]=event.ExceptionRecord.ExceptionCode; row[6]=event.dwFirstChance; row[7]=accepted?1:0;
   }
   breakpointCount.store(index+1,std::memory_order_release);
+}
+inline void observeChildBreakpoint(const owned_service::Scope& child,const EXCEPTION_DEBUG_INFO& event,bool accepted) noexcept {
+  observeBreakpoint(child.pid,child.birth,event,accepted);
+}
+inline void observeRootBreakpoint(const EXCEPTION_DEBUG_INFO& event,bool accepted) noexcept {
+  observeBreakpoint(breakpointRootPid,breakpointRootBirth,event,accepted);
 }
 inline void configureBreakpointObservations() {
   wchar_t expected[2]{};
@@ -40,7 +48,7 @@ inline void configureBreakpointObservations() {
   breakpointOutput=reinterpret_cast<HANDLE>(_get_osfhandle(5));
   if(breakpointOutput==INVALID_HANDLE_VALUE||GetFileType(breakpointOutput)!=FILE_TYPE_DISK)
     throw DWORD{ERROR_INVALID_HANDLE};
-  scopes.setTestBreakpointObserver(observeBreakpoint);
+  scopes.setTestBreakpointObserver(observeChildBreakpoint);
 }
 inline bool flushBreakpointObservations() noexcept {
   const DWORD count=breakpointCount.load(std::memory_order_acquire);
@@ -150,9 +158,16 @@ inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::tim
     USHORT machine=IMAGE_FILE_MACHINE_UNKNOWN;
     if(!query(root,&machine,nullptr)) throw GetLastError();
     if(length!=1||expected[0]!=L'1'||machine!=IMAGE_FILE_MACHINE_I386) throw DWORD{ERROR_INVALID_DATA};
+    if(breakpointOutput) {
+      // Capture once under the original state lock, before the debug loop releases it.
+      breakpointRootPid=rootPid;
+      breakpointRootBirth=owned_service::birthOf(root);
+      if(!breakpointRootPid||!breakpointRootBirth) throw DWORD{ERROR_INVALID_DATA};
+    }
   }
   scopes.setTestAdmissionBarriers(admissionBarrier,admittedBarrier);
-  const bool result=owned_service::runDebugLoop(rootPid,root,outer,stateLock,scopes,failure);
+  const bool result=owned_service::runDebugLoop(rootPid,root,outer,stateLock,scopes,failure,
+    breakpointRootBirth?observeRootBreakpoint:nullptr);
   if(result&&!admissionPath.empty()&&!admissionCompleted) {
     failure(Stage::Registry,ERROR_INVALID_DATA); return false;
   }

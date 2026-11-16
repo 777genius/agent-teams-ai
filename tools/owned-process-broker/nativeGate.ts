@@ -465,6 +465,9 @@ export async function runNativeGate(
     await runScenario('debug-service-cancel', () => nativeDebugServiceScenario(context, debugServiceBroker, 'pre-resume-cancel', sentinel));
     await runScenario('debug-service', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-pair', sentinel));
     await runScenario('debug-service-wow64-root', () => nativeDebugServiceScenario(context, debugServiceBroker, 'wow64-root', sentinel));
+    const includeI386Root = process.env.HOST_PROCESS_NATIVE_I386_FIXTURE !== undefined;
+    if (includeI386Root)
+      await runScenario('debug-service-i386-root', () => nativeDebugServiceScenario(context, debugServiceBroker, 'i386-root', sentinel));
     await runScenario('debug-service-root-first', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-first', sentinel));
     await runScenario('debug-service-admission-race', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-race', sentinel));
     for (const mode of ['tree', 'root-first'] as const)
@@ -517,6 +520,7 @@ export async function runNativeGate(
           'TEST-only-debug-service-prebirth-nested-job-feasibility',
           'TEST-only-scoped-stop-pending-create-isolation',
           'TEST-only-wow64-root-child-startup-and-application-exceptions',
+          ...(includeI386Root ? ['TEST-only-direct-I386-root-startup-and-late-application-exceptions'] : []),
           'birth-failure-unknown-first-nonce',
           'owner-eof',
           'accounting-failure-latched-unknown-distinct-reconciliation',
