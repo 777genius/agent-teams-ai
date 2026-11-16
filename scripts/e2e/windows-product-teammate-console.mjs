@@ -332,38 +332,25 @@ async function run() {
     () => client.evaluate('window.__winProductLaunch?.done ? window.__winProductLaunch : null'));
   if (launch.error) throw new Error('Product team launch failed: ' + launch.error);
   launched = true;
-  const runtime = await wait('real teammate process observed through native IPC', async () => {
-    const snap = await api(`window.electronAPI.teams.getTeamAgentRuntime(${literal(teamName)})`);
-    const member = snap?.members?.alice, pid = member?.runtimePid ?? member?.pid;
-    if (!member?.alive || !Number.isSafeInteger(pid) || pid <= 0) return false;
-    const observed = await getProcess(pid);
-    if (!observed?.command?.includes(teamName)) return false;
-    originalMember = observed;
-    return snap;
-  }, 180_000);
-
-  // Initial provisioning uses deterministic spawn. The changed Windows-only
-  // spawn option belongs to app-managed live-roster attachment as well as
-  // manual restart. Attach a NEW teammate through ordinary product IPC: a
-  // restarted existing member would be refused while its PID is unverified.
-  // Never downgrade the production PID safety guard to pass this test.
+  // Initial provisioning uses deterministic spawn. For this E2E the live
+  // roster mutation must be dispatched while the original lead-run is active.
+  // Start its real IPC before the separate OS PID census of Alice, which may
+  // take seconds on a heavily loaded Windows runner. No safety gate is skipped.
   phase = 'app-managed-teammate-attach';
-  initialMember = originalMember;
-  // The product IPC treats an inactive team as a config-only add. Verify the
-  // same runtime liveness gate before expecting a genuine member spawn event.
   teamAliveBeforeAttach = await api(`window.electronAPI.teams.processAlive(${literal(teamName)})`);
   if (!teamAliveBeforeAttach) {
-    // Fail closed, but retain just enough original process/runtime facts to
-    // distinguish an exited lead from a stale runtime projection on Windows.
     const snapshot = await api(
       `window.electronAPI.teams.getTeamAgentRuntime(${literal(teamName)})`
     ).catch(error => ({ error: String(error) }));
+    const alicePid = snapshot?.members?.alice?.runtimePid ??
+      snapshot?.members?.alice?.pid ?? null;
+    const alice = Number.isSafeInteger(alicePid) && alicePid > 0
+      ? await getProcess(alicePid) : null;
     attachLivenessDiagnostics = {
-      initialAlicePid: initialMember.pid,
-      initialAliceStillAlive: await ownedStillAlive(initialMember),
+      initialAlicePid: alicePid,
+      initialAliceStillAlive: alice !== null,
       runtimeRunId: snapshot?.runId ?? null,
-      aliceRuntimePid: snapshot?.members?.alice?.runtimePid ??
-        snapshot?.members?.alice?.pid ?? null,
+      aliceRuntimePid: alicePid,
       aliceRuntimeAlive: snapshot?.members?.alice?.alive ?? null,
       runtimeSnapshotError: snapshot?.error ?? null,
     };
@@ -383,6 +370,15 @@ async function run() {
       error => window.__winProductAttach={done:true,error:String(error)}
     ); return true;
   })()`);
+  // The ordinary product mutation has now been invoked. Independently prove
+  // the original Alice native PID before accepting Bob's different PID/event.
+  initialMember = await wait('original Alice teammate process observed through native IPC', async () => {
+    const snap = await api(`window.electronAPI.teams.getTeamAgentRuntime(${literal(teamName)})`);
+    const member = snap?.members?.alice, pid = member?.runtimePid ?? member?.pid;
+    if (!member?.alive || !Number.isSafeInteger(pid) || pid <= 0) return false;
+    const observed = await getProcess(pid);
+    return observed?.command?.includes(teamName) ? observed : false;
+  }, 180_000);
   const attachResult = await wait('original app-managed member attachment IPC', () =>
     client.evaluate('window.__winProductAttach?.done ? window.__winProductAttach : null'),
     180_000);
@@ -601,7 +597,7 @@ try {
     : [];
   await writeFile(receiptPath, JSON.stringify({
     schemaVersion: 1, success: false, phase, error: String(error),
-    realProductTeammateLaunch: Boolean(originalMember),
+    realProductTeammateLaunch: Boolean(originalMember || initialMember),
     appManagedRosterAttachConfirmed,
     teamAliveBeforeAttach,
     attachLivenessDiagnostics,
