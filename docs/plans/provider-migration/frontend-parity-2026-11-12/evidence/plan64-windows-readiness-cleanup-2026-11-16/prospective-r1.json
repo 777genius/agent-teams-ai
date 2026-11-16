@@ -1,0 +1,162 @@
+{
+  "kind": "ROOT_PROSPECTIVE_PLAN64_SELECTION_R1",
+  "baseCommit": "b0cdd1759ad9e591a5f88528b65c3b1407c1d92e",
+  "baseTree": "88e3d740345148c44522846d5533038e0bde0849",
+  "stagingBranch": "fix/frontend-parity-e2e-bounds-20261116",
+  "primaryRetained": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "plan": {
+    "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/64-windows-readiness-cleanup-2026-11-16.md",
+    "bytes": 10586,
+    "physicalLines": 51,
+    "gitBlob": "0289cb5a2f9836bb1b941bbc2adfb03efe8b9859",
+    "sha256": "a454bcc85f27a7358586eed9b22716e202d3cf84eef1d06d60b7cd7f35104553"
+  },
+  "writablePreimages": [
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/before/tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 59461,
+      "physicalLines": 800,
+      "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+      "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/before/packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "bytes": 48528,
+      "physicalLines": 783,
+      "gitBlob": "3de70853104e4c49685d870fc4977458f529bfea",
+      "sha256": "7a7419587a39e8f7473aea264903e0bb02bee694a79a5a3bfe2151953cf2b95c"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/before/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "bytes": 95108,
+      "physicalLines": 1743,
+      "gitBlob": "11b498579f2fb8a6e54afb7ac2f49438c959a213",
+      "sha256": "6879d6912ffafaa978ffd9fa8894bf7847f394587807bfbda0cd899de14394ad"
+    }
+  ],
+  "selection": {
+    "privateBracket": "Omit only early nativeCurrent at176 for exact existing private V1 bracket; retain final205, origin pre/post, target, consumer final authority and expiry. Non-bracket current path unchanged. No cache/await/weak facet.",
+    "cleanup": "Existing prewait conjunction activation becomes job.resumed OR existing failure!==undefined; all root/witness/Stop/drain/release/originalWait0 and retained primary failure unchanged; successful path still requires resumed.",
+    "existingTest": "Only existing successfulAuthorityCalls30\u219226 and partialcallbacks12\u219210 plus accurate existing assertion messages. Keep actual mutation/refusal/nonconsumption and derived timing/counter guards unchanged."
+  },
+  "evidenceRead": "Root full29963B actualx64failure,11599B cleanupfinding and44480B residualcostfinding read; all12 source bodies in residualfinding joined exactb0cdd leaves. Root prior complete production/source gates reused by whole-body equality; changed function and savedtest1490-1710 contexts read. All10 readonly references copied and hash-joined, not claimed wholly re-reviewed.",
+  "sourceAfterimages": 0,
+  "localProjectExecution": 0,
+  "remainingGates": [
+    "Independent prospective R2 after full residual finding",
+    "Actual published documentary R2 before sourceafterimages",
+    "Exact3source frozen R1/R2",
+    "Ordinary sourceCAS +fullactualreadback/R2",
+    "Preserved usefulCI and resulting original tests/platformreceipts"
+  ],
+  "readOnlyReferences": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/reference/packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts",
+      "writable": false,
+      "bytes": 17385,
+      "physicalLines": 386,
+      "gitBlob": "7e377e0b51ea453e90f4f2dde5c9bb782c983c99",
+      "sha256": "4e8f91bf7231f41a9cdc80ec40fc36d75bf41ef2573ec432967f039e05c5f2c7"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/reference/packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+      "writable": false,
+      "bytes": 10369,
+      "physicalLines": 261,
+      "gitBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1",
+      "sha256": "8d01aa3189e83512c25b1b5f2a5fc3f0a427da7be979291127179914489b9cc8"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/profile.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/reference/packages/legacy-agent-host/src/management/profile.ts",
+      "writable": false,
+      "bytes": 5699,
+      "physicalLines": 129,
+      "gitBlob": "ccefb500c16a228e03b7a1e4a47e04897fbca4f1",
+      "sha256": "e4c99575480163cb5077d0768cc2a612f9f00bead9b228f3e9d56c0e2399896c"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/reference/packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "writable": false,
+      "bytes": 30721,
+      "physicalLines": 600,
+      "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+      "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/reference/packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+      "writable": false,
+      "bytes": 7965,
+      "physicalLines": 212,
+      "gitBlob": "d3068dcabf3ea7334a252967b43931f8751f7d58",
+      "sha256": "58bb413b06a3d442f1916cba3d7afcf0e44679f679810459409a53881900f1da"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/identity.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/reference/packages/legacy-agent-host/src/management/identity.ts",
+      "writable": false,
+      "bytes": 709,
+      "physicalLines": 19,
+      "gitBlob": "d4e5631330f08ccc4138353f6e2b5f49f7cac01f",
+      "sha256": "a795125fbf639552833eb3730d971b9de16437ed3507be303a5b42d541ba8bb7"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/reference/packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "writable": false,
+      "bytes": 11488,
+      "physicalLines": 303,
+      "gitBlob": "6efd49158d9f3ab93d916fdb562fa61b2f8aa039",
+      "sha256": "7137298d7c6caa935924c175cf8d0b8d58f6c3968cb45ebe3c01e66a7b1e89f9"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeReadinessOrigin.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/reference/packages/legacy-agent-host/src/adapters/providers/OpenCodeReadinessOrigin.ts",
+      "writable": false,
+      "bytes": 15156,
+      "physicalLines": 289,
+      "gitBlob": "57c68f58a158bc4c6e9f0ea93c349b7abf8daeaa",
+      "sha256": "4a69730c64df215c36666ee529af93067baaf8e369caee333e688b343c71b8e6"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/reference/packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+      "writable": false,
+      "bytes": 56481,
+      "physicalLines": 860,
+      "gitBlob": "15f4280f68324f89fb95b87e2cf745b8de9fd763",
+      "sha256": "d32e4b95ad8b97e0a3b3f1d327def1c2a4d0b5ebb014767c88eeed62cd254683"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/reference/.github/workflows/host-emulated-acceptance.yml",
+      "writable": false,
+      "bytes": 141880,
+      "physicalLines": 1768,
+      "gitBlob": "af1abdb8c2309b4122d50ba9bdfa745a896344de",
+      "sha256": "7e2add679b6b13ed9cc08cc57575e835c3a93a62f52ede4a352571f614ca2134"
+    }
+  ],
+  "residualFinding": {
+    "path": "/tmp/e2e-original-artifacts/reviews/75-windows-x64-process-r2/prospective-residual-cost-finding.json",
+    "bytes": 44480,
+    "physicalLines": 1333,
+    "gitBlob": "29f25ce4cbc299522406d15648a3928ab0dce333",
+    "sha256": "bd6a8678fd06c0a8c2917aee39669c9be82fcac6ddd76111df229ffa66ccbf23",
+    "rootRead": "FULL untruncated compact JSON, all sections"
+  },
+  "workflow": {
+    "unchangedBlob": "af1abdb8c2309b4122d50ba9bdfa745a896344de",
+    "fastLintOperands": 133,
+    "allThreeSelectedPathsAlreadyPresentExactlyOnce": true,
+    "modificationRequired": false
+  },
+  "status": "Selected exact3path prospective plan for independent review; no source afterimages"
+}
