@@ -1,0 +1,455 @@
+{
+  "all64BodiesExact": true,
+  "auditBytes": 76902,
+  "auditSHA256": "adde2fbab5c8f78a2d4f237640ee6f0ef4b4f0a77e5b0523eb48bf6f8a5529a7",
+  "rows": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+      "blob": "a93ff6ba1e5656523668694bca24910a468aebc7",
+      "lines": 2633
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+      "blob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "lines": 1248
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+      "blob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49",
+      "lines": 304
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "bytes": 9039,
+      "sha256": "5a7e5ab19c9f486c21e518c117c2637e0125b38f7ef2850ee6e1295bbad2123d",
+      "blob": "a2158e62d439c0ee0b29ffd28df64cf848cee99f",
+      "lines": 196
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "bytes": 11592,
+      "sha256": "b5c6b9e8924c4eb897f14c2ac4a355e6d505f515fe811c86667144bba4e362f9",
+      "blob": "2fe449639596cdb07bf5ef39d8040c65d9d6538c",
+      "lines": 294
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "bytes": 3589,
+      "sha256": "bb9963c1a45be8e59ff9b257b1d560d6355ddcdc4bc7665b27e7e378fed61ab9",
+      "blob": "1fc098d27f67825b7cf48318329d1a809e41e1f4",
+      "lines": 62
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 7855,
+      "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37",
+      "blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+      "lines": 165
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "bytes": 25689,
+      "sha256": "895d895fb8b28e4007240389055e1b6405fc4d02093fe7eff1f95cdb51835a05",
+      "blob": "186171f456cc99a18e12f0b87c4bd508936d6243",
+      "lines": 454
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "bytes": 10051,
+      "sha256": "77cb82d6c1938b3f858b4b65484c9ab123ec6b0c8e4bab2c20793b6708f51c08",
+      "blob": "e6861511417070c9202458253a16a3ffb20216ae",
+      "lines": 166
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "bytes": 15423,
+      "sha256": "189b8a98f8708d22b1ffabc84ef235efd320a910bf7a9ee19c266846ccd3f1ac",
+      "blob": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+      "lines": 315
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "bytes": 17375,
+      "sha256": "69b605e0720613e17b20dbe82c3fa2213f8f7e075359dd451c0a975b8b732e02",
+      "blob": "13fd4d190e0a50267a295cb75cbf50320fa36d5a",
+      "lines": 297
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+      "bytes": 12110,
+      "sha256": "47f2d9a185d618e35fce54b27dec45102d4600c5184771f25758e7109fc713ab",
+      "blob": "f6243d55f628833ef797cce0afa2e1339a01e609",
+      "lines": 289
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+      "bytes": 6110,
+      "sha256": "1b9edac01901dda2f4b01eb39bc4268064163f402608d3be00d2dd63c13730c3",
+      "blob": "4a7d1e5330d4de65f95c9cd2cfc5c87e8027b773",
+      "lines": 171
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "bytes": 35008,
+      "sha256": "1d86d1616645c2c0169806777415097e1523e294322b047699294ddfac03f1e0",
+      "blob": "0f5e2258b2af33c55673aa0fdc4c660e3629e784",
+      "lines": 800
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "bytes": 5047,
+      "sha256": "ebf66eda6dfcd1cb907f6ce52ec1b4e3d3303774869e76e893063fd68302e8a3",
+      "blob": "46613a43c30311321280f11129ed02df18ef527a",
+      "lines": 74
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "bytes": 1836,
+      "sha256": "ce6281ee65275c72fc67d540bfb3fd70d902276ef0fabcefc4d471fa3df5efe2",
+      "blob": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b",
+      "lines": 50
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "bytes": 5376,
+      "sha256": "a1c2499af3048c0e656f66131ffa76540fe7493c1f3643e0486c8ffe6358d940",
+      "blob": "b82e437c1e8f04726982af5d50fc54394725f138",
+      "lines": 134
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "bytes": 2888,
+      "sha256": "6c8d7217b45893446430419d689185c0d3420183e6d003324c1f4cf5d7838c5e",
+      "blob": "49183056d50b7815bde238e758c47c13302117f3",
+      "lines": 60
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "bytes": 4476,
+      "sha256": "84fa611fad41f75be7c3cc9798572db2c3e8d488c28258fbcd37c8408d0deb6f",
+      "blob": "d6a001c625d4369147811ee4d97b9853ff1c86c1",
+      "lines": 130
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "bytes": 5840,
+      "sha256": "2c2b72f7b9bea0e7f50cf4e95512ab022dbab50c8bcc6a697320aa35c823aede",
+      "blob": "338f38de5b4ee60d5fa982aa895dd2f71fde981b",
+      "lines": 161
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+      "bytes": 557,
+      "sha256": "e235782823b292c8ec51ae467c49684a348254e4fb9e7744cab3adce5ad766e4",
+      "blob": "d0ee6a31ded14c9af572a12ecc2dee4352f4eacf",
+      "lines": 13
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "bytes": 26288,
+      "sha256": "a801ffb0e299ab25dbdd66353d7be904f471571f679008c5c21a84ac317389c7",
+      "blob": "ba90e3e6895bf7f85d7ca3de7d9608fe433fcadf",
+      "lines": 610
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "bytes": 30469,
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "blob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "lines": 757
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "bytes": 17005,
+      "sha256": "12be8f565712c09537d99ba75b63aa6e01774708ad1967c7ee2fdd964d747712",
+      "blob": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+      "lines": 366
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "bytes": 38315,
+      "sha256": "b328bdcfbbf8eb92e6b2215ee413fd0f723f3c85ac535e9d2cd470030dbf9905",
+      "blob": "414525958b459ccb9d4c20e4b185e03d71d46867",
+      "lines": 1028
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "bytes": 15811,
+      "sha256": "c06390dfcc504efdb693c1c7e3aa52375ea0916245f20461cd8be352a3a500d5",
+      "blob": "c640bd2a538f3f063b764174b71d365574925345",
+      "lines": 269
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "bytes": 47440,
+      "sha256": "5a1e781f3d910b97cb3e4bfdc8592897bce69861b6200421355ed9f047f85f89",
+      "blob": "d13aa0c846dbf97aff99786e1165aa214aab93c7",
+      "lines": 850
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "bytes": 14242,
+      "sha256": "e6f1a2d049117442bbdc26ad2c525b0f95d1080740bd5caec59a50930e0de45c",
+      "blob": "e52785444caebdc8c698d87ac122f4a13742b5cc",
+      "lines": 247
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "bytes": 33047,
+      "sha256": "e535ebe42ecbc8bb1904d9b3636985c2029c17f3c109430164fb4fe4b491dae2",
+      "blob": "011875b3a5bcab4d6f0775fdbc419157e0d48cba",
+      "lines": 564
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "bytes": 39595,
+      "sha256": "3f6833f360b93fcf9d24cedac2d9527768cc04ca8a67b52db3cf2152e816824b",
+      "blob": "aadc051d5514773ee81d76758c6bbd40c705df5e",
+      "lines": 518
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "bytes": 40907,
+      "sha256": "d383c72806dc9a36b1b26ee0bd2246276556426f31333ed1974643765ba9f90c",
+      "blob": "b19c8ff5a815a2c2034358f102e2af2cedc212e6",
+      "lines": 790
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "bytes": 9208,
+      "sha256": "ee1ba17e9fd9f52dc825c067a17038a5de36af4541ede3201621e62007614dec",
+      "blob": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+      "lines": 164
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "bytes": 60689,
+      "sha256": "a559b1b184c4f79f76fbcd99998d689cfc31158609051100c1f5cfdcc3b37c77",
+      "blob": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+      "lines": 1186
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "bytes": 215794,
+      "sha256": "f4fae2d035c68b53d15f16fee64821f8c9c2b0fe3740860fed7424712bc26d5f",
+      "blob": "26871fb59d09594beff568994b85cf6cb5a00b00",
+      "lines": 3989
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "bytes": 41863,
+      "sha256": "f3f9147184700663c24d85a2a81ff6ab54724b7883a9e6fcc9bf9c324f473ab5",
+      "blob": "dbbd17b11db24a9dc3fb989e0266101847f0a778",
+      "lines": 598
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "bytes": 14327,
+      "sha256": "56be5d699948e7142fc94bc5b0776b675683e3c16a9a68a72e9e5b148146e0c5",
+      "blob": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+      "lines": 381
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "sha256": "055c24af3466eaf5c48bb2c214f77187ebde76a60c1ad4849d551b5699464841",
+      "blob": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+      "lines": 26665
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "bytes": 6946,
+      "sha256": "581c6a5ada272bf4fd370efccf5398c63a3abd32782cf82021cfa11d94a0e1a5",
+      "blob": "a049a862742a85ba77faafea329fc221b3e500e4",
+      "lines": 169
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "bytes": 22826,
+      "sha256": "6677695937f2c532da1867df1b91afa43856229badf98035a6aa7467102d1791",
+      "blob": "797cf587243a6c6ba1cd466ed105d5bb6d81772e",
+      "lines": 446
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "bytes": 34086,
+      "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+      "blob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "lines": 377
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 69089,
+      "sha256": "a3d8fadfe7d7fc91eb848909a50a40d5d2a3af28d9a25d2e585a6e9bf9e825ca",
+      "blob": "d52680f4d848e58dee54f8a9a4beae9435c2b14c",
+      "lines": 791
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 20996,
+      "sha256": "cc5fa1a4c6a2f841145b0e4f33709fd1b2d8c405dae7151477a8a8aac5fce02e",
+      "blob": "b52876e3215910eba3a3a24756f61c289a0965f9",
+      "lines": 323
+    },
+    {
+      "path": "src/features/agent-backend/contracts/operations.ts",
+      "bytes": 17358,
+      "sha256": "29ef5c69ce683182bde2085fcbf10290f61a2eb6a3c317d2ac4572a627eff26b",
+      "blob": "788c1ff6bb4a2a737c0a8d1399ffd43e134e6a38",
+      "lines": 538
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "bytes": 20076,
+      "sha256": "b34c2c8ac933fa322792c75934a7a8675c66e6809955f4c48f7f116bc58d1d55",
+      "blob": "dbeb14ba7d4a0de1ae97662e74d2929a51f9106c",
+      "lines": 500
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+      "bytes": 11387,
+      "sha256": "fb686dd83830031ae319f646b50a9df9c5e0ab8d51e3b8914dfb9cec75dbf1db",
+      "blob": "4df980788dc6b990fcd555439c53bb4a329cef36",
+      "lines": 317
+    },
+    {
+      "path": "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+      "bytes": 6046,
+      "sha256": "216316cc70cbd609fb27a2e85823d26366d5da44009c90c844bc61abba7e2d10",
+      "blob": "8a35885a868140481e0b9d374fd3bd07f2742083",
+      "lines": 164
+    },
+    {
+      "path": "src/renderer/components/team/ClaudeLogsPanel.tsx",
+      "bytes": 8203,
+      "sha256": "053f9c4e6c8109ffd48bb745821eb59ff0b013671c1e602762bc9af420bafd53",
+      "blob": "5255eb491789a5e2fd0cf11c338934b46ac7ae7b",
+      "lines": 243
+    },
+    {
+      "path": "src/renderer/components/team/ClaudeLogsSection.tsx",
+      "bytes": 21034,
+      "sha256": "965106c5d406e60dfbfa87218d30bd73ce18452210d64576f26098f2d89964e5",
+      "blob": "06245cd010f4bdcca1ad0ed1177163c743343a3b",
+      "lines": 586
+    },
+    {
+      "path": "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "bytes": 14275,
+      "sha256": "3b0e5e8d661f1cf992d17a45e563f6348c9de33b32ee2795bfe4fe06394f2eba",
+      "blob": "b0095b83b3544988b7b6d5ba10163c93411868f5",
+      "lines": 370
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "bytes": 28174,
+      "sha256": "7b1f49b1d53e461dfb120ec95b469259d57f178c4b9baf63628f5d1c2a5b886c",
+      "blob": "9aa14dbd08d23f75c91ceb38d25ce5161fc6be37",
+      "lines": 755
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+      "bytes": 1975,
+      "sha256": "1dabc02dc7661ddedfb40d4f9e1bff941d3e953049c6bca0949a0a4c8e8f1998",
+      "blob": "65f23ad13df71b514a11a97152b3d3324f0da5c5",
+      "lines": 65
+    },
+    {
+      "path": "src/shared/types/teamActivity.ts",
+      "bytes": 4045,
+      "sha256": "c7e772c925928a4d900f0c90b02f0e7b75e60c8745e9690103a54491a7b157e0",
+      "blob": "4bd34ac1435cab2472104203c00ecc4be3889630",
+      "lines": 134
+    },
+    {
+      "path": "src/shared/utils/diagnosticsRedaction.ts",
+      "bytes": 126,
+      "sha256": "b34a34f5dece120ef8f93aa23cf63b15b35675bdd52394b0b8654117a2c580d8",
+      "blob": "2e345624c752ebac3024d579c1501dff7fe84a9e",
+      "lines": 1
+    },
+    {
+      "path": "src/shared/utils/redactDiagnosticAssignments.ts",
+      "bytes": 102,
+      "sha256": "8cfd0fa9fa6680e69c49ebabd4c8b0fd04771768677ad6ca8ec44da2d2de0e51",
+      "blob": "0a1bd348ab98e6f33af2577cad33e9f2be44e745",
+      "lines": 1
+    },
+    {
+      "path": "src/shared/utils/runtimeDiagnosticText.ts",
+      "bytes": 105,
+      "sha256": "8a60c16fdac834916afd006104e328fcb2936e1e665d86c4253f26f2fe7f491c",
+      "blob": "1410cd6d6d9accf6f3c29802884b8acd58dc0568",
+      "lines": 1
+    },
+    {
+      "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+      "bytes": 13948,
+      "sha256": "e2c6d7b0670813744d414cf226005e44cf56c608c8567600519250967181db91",
+      "blob": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+      "lines": 395
+    },
+    {
+      "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "bytes": 36912,
+      "sha256": "3c9d81c0d7e81ee8fea671a2b1b814295363213a0b79af611ee28d13ec2af265",
+      "blob": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+      "lines": 1022
+    },
+    {
+      "path": "test/features/agent-backend/tsconfig.json",
+      "bytes": 379,
+      "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79",
+      "blob": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+      "lines": 12
+    },
+    {
+      "path": "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "bytes": 38842,
+      "sha256": "e31e2296cc7db26add9b2ba0b27ac136338398f08f49b341be4861d57b6edb69",
+      "blob": "f60ad1bca4efa3af874080c6acd8cfc7a46745ac",
+      "lines": 1229
+    },
+    {
+      "path": "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "bytes": 21056,
+      "sha256": "c74aac40488ad0a971de188f35bda2d973c5c0b64612c2b40528b1f2cc4c6b73",
+      "blob": "95bfc28a93043836fc08811dc129fb34492fe0a5",
+      "lines": 586
+    },
+    {
+      "path": "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+      "bytes": 19002,
+      "sha256": "a7c536da9ad51ef4eca441d3da7fcda74bcd9589ee6aa4207fc3d10cd76d18c7",
+      "blob": "27610578158b6eb0b810e1a79e9624e8da6e53a4",
+      "lines": 480
+    },
+    {
+      "path": "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "bytes": 7490,
+      "sha256": "b5ed7faf0d728baed07f1d25f2cc5bbcc29c87987667d382df065434b861676f",
+      "blob": "a367866923405e4d584fac1145b56fe27bf37b5a",
+      "lines": 232
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "bytes": 32221,
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+      "blob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "lines": 463
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "bytes": 39026,
+      "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+      "blob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "lines": 562
+    }
+  ]
+}
