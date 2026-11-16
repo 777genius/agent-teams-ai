@@ -1,0 +1,678 @@
+✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (214.386104ms)
+✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (518.16619ms)
+✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (18.247448ms)
+✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (34.527836ms)
+✔ isolated shell fixture emits the actual framed environment and refuses shell effects (1034.398704ms)
+✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (36.093742ms)
+✔ Task attachment comment waits for its original focused owner after one click before inserting text (260.519267ms)
+✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (39.02366ms)
+✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (55.02908ms)
+✔ original desktop click waits for stable target geometry, without repeating input (310.423117ms)
+✔ original Task hover waits through layout and unavailability before its one physical move (706.342159ms)
+✔ original desktop click refuses a constantly moving target before dispatch (1569.348384ms)
+✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (317.820289ms)
+✔ login failure facts retain only bounded original attempts and confirmed milestones (10.677885ms)
+✔ finite readiness failure summaries keep only bounded states and never private snapshot data (13.070488ms)
+✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (11.042832ms)
+✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (17.426987ms)
+✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (2.275084ms)
+✔ installer CDP and cleanup projection retains only exact finite observations (6.432946ms)
+✔ Selection target summaries retain the exact original phase and six closed facts (9.663018ms)
+✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (1.783982ms)
+✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (3.514366ms)
+✔ original desktop click refuses a target unavailable during the final ownership check (220.825186ms)
+✔ original desktop click refuses a target moved during the final ownership check (219.78132ms)
+✔ original default scroll preserves a disabled control before its readiness wait (18.701625ms)
+✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (118.144588ms)
+✔ original desktop click rechecks owner after its pending final target read (209.958121ms)
+✔ original desktop click rechecks cutoff after its pending final target read (221.725338ms)
+✔ original clarification lookup admits its retained read without completing the assignment prerequisite (13.192747ms)
+✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (89.496767ms)
+✔ original owner availability admits three captured A Teams through its actual first DOM read (27.838541ms)
+✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (37.709925ms)
+✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (114.408205ms)
+✔ original owner availability refuses invalid captured discovery before navigation (1.533194ms)
+✔ owner availability admits every captured A Team through the actual first observation (1.710163ms)
+✔ owner availability refuses healthy B in unavailable A rows (0.862969ms)
+✔ owner availability refuses captured foreign owner in unavailable A rows (1.053408ms)
+✔ owner availability refuses unknown Team in unavailable A rows (0.951869ms)
+✔ owner availability refuses malformed Team in unavailable A rows (2.072647ms)
+✔ owner availability refuses missing selected A before original navigation (0.50353ms)
+✔ owner availability refuses non-string A handle before original navigation (0.406918ms)
+✔ owner availability refuses empty A handle before original navigation (0.430032ms)
+✔ owner availability refuses duplicate A handle before original navigation (0.238821ms)
+✔ owner availability refuses over-bound capture before original navigation (0.806655ms)
+✔ passive input keeps its actual Team target and three separate original navigation samples (10.079176ms)
+✔ passive navigation preserves non-card events, the original ring bounds and null or non-Team state (14.272945ms)
+✔ passive navigation refuses malformed target and store facts without losing original callbacks (162.911631ms)
+✔ passive navigation remains bounded and cannot interrupt original writes on diagnostic failure (21.828416ms)
+✔ passive navigation uses only the callable store own method and ignores unrelated card surfaces (6.512733ms)
+✔ the selected provider receipt digest matches the actual manifest-selected archive bytes (81.378554ms)
+✔ provider receipt legacy, current and equal-dual implementation digests preserve manifest authority (71.223418ms)
+✔ every present provider implementation digest must be valid and both recognized fields must agree (989.54184ms)
+✔ provider receipt shape, package selection and original file or JSON errors remain strict (150.913295ms)
+✔ saved Launch uses three stable actual DOM samples before its original settings action (36.302561ms)
+✔ saved Launch resets exact geometry when the original button shifts by a quarter pixel (5.89814ms)
+✔ saved Launch restarts its three samples after changed identity (13.803005ms)
+✔ saved Launch restarts its three samples after changed expanded state (32.081021ms)
+✔ saved Launch restarts its three samples after changed horizontal position (47.548913ms)
+✔ saved Launch restarts its three samples after changed width (28.037738ms)
+✔ saved Launch restarts its three samples after changed height (28.614942ms)
+✔ saved Launch resets its original readiness after absent target (19.406606ms)
+✔ saved Launch resets its original readiness after ambiguous target (11.252601ms)
+✔ saved Launch resets its original readiness after wrong model (11.792964ms)
+✔ saved Launch resets its original readiness after absent identity (8.437754ms)
+✔ saved Launch resets its original readiness after empty identity (18.49771ms)
+✔ saved Launch resets its original readiness after invalid expansion (31.649872ms)
+✔ saved Launch resets its original readiness after missing owning dialog (16.459432ms)
+✔ saved Launch resets its original readiness after nonfinite x (23.016134ms)
+✔ saved Launch resets its original readiness after nonfinite y (26.247462ms)
+✔ saved Launch resets its original readiness after zero width (13.920543ms)
+✔ saved Launch resets its original readiness after negative height (9.921894ms)
+✔ saved Launch resets its original readiness after running own animation (22.316063ms)
+✔ saved Launch resets its original readiness after paused own animation (15.743031ms)
+✔ saved Launch resets its original readiness after pending own animation (12.22477ms)
+✔ saved Launch allows finished own animation without inspecting descendant spinners or model status (16.727688ms)
+✔ saved Launch allows idle own animation without inspecting descendant spinners or model status (47.386405ms)
+✔ saved Launch exhausts its one original deadline with no matching model and no settings action (537.416521ms)
+✔ saved Launch exhausts its one original deadline with unsettled own dialog and no settings action (530.902023ms)
+✔ original conversation waits for its own reply before one click at the hydrated coordinates (20.237737ms)
+✔ default conversation click retains its original final geometry refusal without a preview predicate (7.344846ms)
+✔ original conversation refuses body-only reply within its unchanged first read deadline (531.004482ms)
+✔ original conversation refuses neighbor-only reply within its unchanged first read deadline (301.190435ms)
+✔ original conversation refuses different required reply within its unchanged first read deadline (373.586651ms)
+✔ original conversation refuses empty preview within its unchanged first read deadline (598.307818ms)
+✔ original conversation refuses missing target within its unchanged first read deadline (646.925297ms)
+✔ original conversation refuses zero-size target within its unchanged first read deadline (643.67116ms)
+✔ original conversation refuses disabled target within its unchanged first read deadline (257.692731ms)
+✔ original conversation refuses covered target within its unchanged first read deadline (345.022219ms)
+✔ original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline (275.574233ms)
+✔ original conversation serializes its required preview as literal data (5.096163ms)
+✔ original conversation rereads a revoked preview at unchanged final coordinates before input (4.852243ms)
+✔ original conversation still refuses final owner despite a ready preview (3.473776ms)
+✔ original conversation still refuses final movement despite a ready preview (4.064175ms)
+✔ actual openChat forwards TEST boot ready for alice (37.627558ms)
+✔ actual openChat forwards TEST stream partial for alice (10.104576ms)
+✔ actual openChat forwards TEST boot ready for team-lead (8.068992ms)
+✔ actual openChat forwards TEST stream partial for team-lead (4.479605ms)
+✖ original Cross Close target admits the ready cleared Task when canResolveClarification is false (4.10853ms)
+✖ original Cross Close target refuses retained user clarification (2.458434ms)
+✖ original Cross Close target refuses retained external clarification (1.996475ms)
+✖ original Cross Close target refuses null clarification (1.824913ms)
+✔ original Cross Close target refuses full-detail refreshPending (1.39432ms)
+✔ original Cross Close target refuses full-detail loading (2.005078ms)
+✖ original Cross Close target refuses current detail error (2.211852ms)
+✖ original Cross Close target refuses current deletionIntent (2.296597ms)
+✖ original Cross Close target refuses full Task deletedAt (2.541796ms)
+✖ original Cross Close target refuses full Task deleted status (2.0887ms)
+✔ original Cross Close target refuses non-ready full-detail phase (1.961003ms)
+✔ original Cross Close target refuses foreign full Task ID (1.60518ms)
+✔ original Cross Close target refuses foreign detail identity (1.214476ms)
+✔ original Cross Close target refuses changed active context (1.281444ms)
+✔ original Cross Close target refuses different selected Team (1.204501ms)
+✔ original Cross Close target refuses rebound controller surface (1.431434ms)
+✖ original Cross Close target refuses missing stored session (2.166135ms)
+✖ original Cross Close target refuses different stored session owner surface (1.998929ms)
+✖ original Cross Close target refuses changed stored owner revision (1.658148ms)
+✔ original Cross Close target refuses current canEditNow false (1.243859ms)
+✔ original Cross Close target refuses non-owning controller (1.161758ms)
+✔ original Cross Close target refuses scoped Team refresh (1.541627ms)
+✔ original Cross Close target refuses unavailable accepted Team metadata (1.336655ms)
+✔ original Cross Close target refuses disabled assignment control (1.878642ms)
+✔ original Cross Close target refuses expanded assignment control (48.464529ms)
+✔ original Cross Close target refuses another assignee (1.689694ms)
+✔ original Cross Close target refuses missing assignment control (1.323366ms)
+✔ original Cross Close target refuses duplicate assignment controls (1.776522ms)
+✖ actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates (29.38513ms)
+✖ actual original Cross Close retains the first-read deadline while renderer readiness is pending (7.190551ms)
+✖ actual original Cross Close cannot use a foreign dialog or an absent ineligible own control (7.988625ms)
+✔ actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing (692.519154ms)
+✔ actual original Cross Close refuses disabled covered and absent-hit controls (829.205586ms)
+✖ actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates (7.737845ms)
+✔ actual original Cross Close preserves final renderer ownership refusal without a press (6.762332ms)
+✔ actual original Cross Close preserves final exact geometry refusal without replay (7.675635ms)
+ℹ tests 133
+ℹ suites 0
+ℹ pass 118
+ℹ fail 15
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 26721.768429
+
+✖ failing tests:
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2417:1
+✖ original Cross Close target admits the ready cleared Task when canResolveClarification is false (4.10853ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   undefined,
+  +   undefined,
+  +   undefined,
+  +   undefined
+  -   1121,
+  -   171.125,
+  -   'BUTTON',
+  -   'Close'
+    ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2421:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ undefined, undefined, undefined, undefined ],
+    expected: [ 1121, 171.125, 'BUTTON', 'Close' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2456:1
+✖ original Cross Close target refuses retained user clarification (2.458434ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   attachmentError: null,
+  +   canEditNow: true,
+  +   canResolveClarification: false,
+  +   canSubmit: true,
+  +   commentText: '',
+  +   identity: {
+  +     contextId: 'TEST-context',
+  +     taskId: 'TEST-task',
+  +     teamName: 'host-team:TEST-owner'
+  +   },
+  +   inputId: 'TEST-original-comment',
+  +   ownerRevision: 1,
+  +   partRevisions: {
+  +     commentText: 0,
+  +     pendingAttachments: 0
+  +   },
+  +   pendingAttachmentCount: 0,
+  +   pendingPreparationCount: 0,
+  +   selector: '[role="dialog"] textarea[id="TEST-original-comment"]',
+  +   submitError: null,
+  +   submitPending: false,
+  +   surfaceId: 'TEST-original-surface',
+  +   taskId: 'TEST-task',
+  +   teamName: 'host-team:TEST-owner'
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2458:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { teamName: 'host-team:TEST-owner', taskId: 'TEST-task', identity: { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' }, surfaceId: 'TEST-original-surface', inputId: 'TEST-original-comment', commentText: '', submitPending: false, submitError: null, ownerRevision: 1, partRevisions: { commentText: 0, pendingAttachments: 0 }, pendingPreparationCount: 0, canSubmit: true, attachmentError: null, pendingAttachmentCount: 0, canEditNow: true, canResolveClarification: false, selector: '[role="dialog"] textarea[id="TEST-original-comment"]' },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2456:1
+✖ original Cross Close target refuses retained external clarification (1.996475ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   attachmentError: null,
+  +   canEditNow: true,
+  +   canResolveClarification: false,
+  +   canSubmit: true,
+  +   commentText: '',
+  +   identity: {
+  +     contextId: 'TEST-context',
+  +     taskId: 'TEST-task',
+  +     teamName: 'host-team:TEST-owner'
+  +   },
+  +   inputId: 'TEST-original-comment',
+  +   ownerRevision: 1,
+  +   partRevisions: {
+  +     commentText: 0,
+  +     pendingAttachments: 0
+  +   },
+  +   pendingAttachmentCount: 0,
+  +   pendingPreparationCount: 0,
+  +   selector: '[role="dialog"] textarea[id="TEST-original-comment"]',
+  +   submitError: null,
+  +   submitPending: false,
+  +   surfaceId: 'TEST-original-surface',
+  +   taskId: 'TEST-task',
+  +   teamName: 'host-team:TEST-owner'
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2458:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { teamName: 'host-team:TEST-owner', taskId: 'TEST-task', identity: { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' }, surfaceId: 'TEST-original-surface', inputId: 'TEST-original-comment', commentText: '', submitPending: false, submitError: null, ownerRevision: 1, partRevisions: { commentText: 0, pendingAttachments: 0 }, pendingPreparationCount: 0, canSubmit: true, attachmentError: null, pendingAttachmentCount: 0, canEditNow: true, canResolveClarification: false, selector: '[role="dialog"] textarea[id="TEST-original-comment"]' },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2456:1
+✖ original Cross Close target refuses null clarification (1.824913ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   attachmentError: null,
+  +   canEditNow: true,
+  +   canResolveClarification: false,
+  +   canSubmit: true,
+  +   commentText: '',
+  +   identity: {
+  +     contextId: 'TEST-context',
+  +     taskId: 'TEST-task',
+  +     teamName: 'host-team:TEST-owner'
+  +   },
+  +   inputId: 'TEST-original-comment',
+  +   ownerRevision: 1,
+  +   partRevisions: {
+  +     commentText: 0,
+  +     pendingAttachments: 0
+  +   },
+  +   pendingAttachmentCount: 0,
+  +   pendingPreparationCount: 0,
+  +   selector: '[role="dialog"] textarea[id="TEST-original-comment"]',
+  +   submitError: null,
+  +   submitPending: false,
+  +   surfaceId: 'TEST-original-surface',
+  +   taskId: 'TEST-task',
+  +   teamName: 'host-team:TEST-owner'
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2458:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { teamName: 'host-team:TEST-owner', taskId: 'TEST-task', identity: { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' }, surfaceId: 'TEST-original-surface', inputId: 'TEST-original-comment', commentText: '', submitPending: false, submitError: null, ownerRevision: 1, partRevisions: { commentText: 0, pendingAttachments: 0 }, pendingPreparationCount: 0, canSubmit: true, attachmentError: null, pendingAttachmentCount: 0, canEditNow: true, canResolveClarification: false, selector: '[role="dialog"] textarea[id="TEST-original-comment"]' },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2456:1
+✖ original Cross Close target refuses current detail error (2.211852ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   attachmentError: null,
+  +   canEditNow: true,
+  +   canResolveClarification: false,
+  +   canSubmit: true,
+  +   commentText: '',
+  +   identity: {
+  +     contextId: 'TEST-context',
+  +     taskId: 'TEST-task',
+  +     teamName: 'host-team:TEST-owner'
+  +   },
+  +   inputId: 'TEST-original-comment',
+  +   ownerRevision: 1,
+  +   partRevisions: {
+  +     commentText: 0,
+  +     pendingAttachments: 0
+  +   },
+  +   pendingAttachmentCount: 0,
+  +   pendingPreparationCount: 0,
+  +   selector: '[role="dialog"] textarea[id="TEST-original-comment"]',
+  +   submitError: null,
+  +   submitPending: false,
+  +   surfaceId: 'TEST-original-surface',
+  +   taskId: 'TEST-task',
+  +   teamName: 'host-team:TEST-owner'
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2458:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { teamName: 'host-team:TEST-owner', taskId: 'TEST-task', identity: { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' }, surfaceId: 'TEST-original-surface', inputId: 'TEST-original-comment', commentText: '', submitPending: false, submitError: null, ownerRevision: 1, partRevisions: { commentText: 0, pendingAttachments: 0 }, pendingPreparationCount: 0, canSubmit: true, attachmentError: null, pendingAttachmentCount: 0, canEditNow: true, canResolveClarification: false, selector: '[role="dialog"] textarea[id="TEST-original-comment"]' },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2456:1
+✖ original Cross Close target refuses current deletionIntent (2.296597ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   attachmentError: null,
+  +   canEditNow: true,
+  +   canResolveClarification: false,
+  +   canSubmit: true,
+  +   commentText: '',
+  +   identity: {
+  +     contextId: 'TEST-context',
+  +     taskId: 'TEST-task',
+  +     teamName: 'host-team:TEST-owner'
+  +   },
+  +   inputId: 'TEST-original-comment',
+  +   ownerRevision: 1,
+  +   partRevisions: {
+  +     commentText: 0,
+  +     pendingAttachments: 0
+  +   },
+  +   pendingAttachmentCount: 0,
+  +   pendingPreparationCount: 0,
+  +   selector: '[role="dialog"] textarea[id="TEST-original-comment"]',
+  +   submitError: null,
+  +   submitPending: false,
+  +   surfaceId: 'TEST-original-surface',
+  +   taskId: 'TEST-task',
+  +   teamName: 'host-team:TEST-owner'
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2458:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { teamName: 'host-team:TEST-owner', taskId: 'TEST-task', identity: { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' }, surfaceId: 'TEST-original-surface', inputId: 'TEST-original-comment', commentText: '', submitPending: false, submitError: null, ownerRevision: 1, partRevisions: { commentText: 0, pendingAttachments: 0 }, pendingPreparationCount: 0, canSubmit: true, attachmentError: null, pendingAttachmentCount: 0, canEditNow: true, canResolveClarification: false, selector: '[role="dialog"] textarea[id="TEST-original-comment"]' },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2456:1
+✖ original Cross Close target refuses full Task deletedAt (2.541796ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   attachmentError: null,
+  +   canEditNow: true,
+  +   canResolveClarification: false,
+  +   canSubmit: true,
+  +   commentText: '',
+  +   identity: {
+  +     contextId: 'TEST-context',
+  +     taskId: 'TEST-task',
+  +     teamName: 'host-team:TEST-owner'
+  +   },
+  +   inputId: 'TEST-original-comment',
+  +   ownerRevision: 1,
+  +   partRevisions: {
+  +     commentText: 0,
+  +     pendingAttachments: 0
+  +   },
+  +   pendingAttachmentCount: 0,
+  +   pendingPreparationCount: 0,
+  +   selector: '[role="dialog"] textarea[id="TEST-original-comment"]',
+  +   submitError: null,
+  +   submitPending: false,
+  +   surfaceId: 'TEST-original-surface',
+  +   taskId: 'TEST-task',
+  +   teamName: 'host-team:TEST-owner'
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2458:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { teamName: 'host-team:TEST-owner', taskId: 'TEST-task', identity: { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' }, surfaceId: 'TEST-original-surface', inputId: 'TEST-original-comment', commentText: '', submitPending: false, submitError: null, ownerRevision: 1, partRevisions: { commentText: 0, pendingAttachments: 0 }, pendingPreparationCount: 0, canSubmit: true, attachmentError: null, pendingAttachmentCount: 0, canEditNow: true, canResolveClarification: false, selector: '[role="dialog"] textarea[id="TEST-original-comment"]' },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2456:1
+✖ original Cross Close target refuses full Task deleted status (2.0887ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   attachmentError: null,
+  +   canEditNow: true,
+  +   canResolveClarification: false,
+  +   canSubmit: true,
+  +   commentText: '',
+  +   identity: {
+  +     contextId: 'TEST-context',
+  +     taskId: 'TEST-task',
+  +     teamName: 'host-team:TEST-owner'
+  +   },
+  +   inputId: 'TEST-original-comment',
+  +   ownerRevision: 1,
+  +   partRevisions: {
+  +     commentText: 0,
+  +     pendingAttachments: 0
+  +   },
+  +   pendingAttachmentCount: 0,
+  +   pendingPreparationCount: 0,
+  +   selector: '[role="dialog"] textarea[id="TEST-original-comment"]',
+  +   submitError: null,
+  +   submitPending: false,
+  +   surfaceId: 'TEST-original-surface',
+  +   taskId: 'TEST-task',
+  +   teamName: 'host-team:TEST-owner'
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2458:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { teamName: 'host-team:TEST-owner', taskId: 'TEST-task', identity: { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' }, surfaceId: 'TEST-original-surface', inputId: 'TEST-original-comment', commentText: '', submitPending: false, submitError: null, ownerRevision: 1, partRevisions: { commentText: 0, pendingAttachments: 0 }, pendingPreparationCount: 0, canSubmit: true, attachmentError: null, pendingAttachmentCount: 0, canEditNow: true, canResolveClarification: false, selector: '[role="dialog"] textarea[id="TEST-original-comment"]' },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2456:1
+✖ original Cross Close target refuses missing stored session (2.166135ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   attachmentError: null,
+  +   canEditNow: true,
+  +   canResolveClarification: false,
+  +   canSubmit: true,
+  +   commentText: '',
+  +   identity: {
+  +     contextId: 'TEST-context',
+  +     taskId: 'TEST-task',
+  +     teamName: 'host-team:TEST-owner'
+  +   },
+  +   inputId: 'TEST-original-comment',
+  +   ownerRevision: 1,
+  +   partRevisions: {
+  +     commentText: 0,
+  +     pendingAttachments: 0
+  +   },
+  +   pendingAttachmentCount: 0,
+  +   pendingPreparationCount: 0,
+  +   selector: '[role="dialog"] textarea[id="TEST-original-comment"]',
+  +   submitError: null,
+  +   submitPending: false,
+  +   surfaceId: 'TEST-original-surface',
+  +   taskId: 'TEST-task',
+  +   teamName: 'host-team:TEST-owner'
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2458:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { teamName: 'host-team:TEST-owner', taskId: 'TEST-task', identity: { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' }, surfaceId: 'TEST-original-surface', inputId: 'TEST-original-comment', commentText: '', submitPending: false, submitError: null, ownerRevision: 1, partRevisions: { commentText: 0, pendingAttachments: 0 }, pendingPreparationCount: 0, canSubmit: true, attachmentError: null, pendingAttachmentCount: 0, canEditNow: true, canResolveClarification: false, selector: '[role="dialog"] textarea[id="TEST-original-comment"]' },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2456:1
+✖ original Cross Close target refuses different stored session owner surface (1.998929ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   attachmentError: null,
+  +   canEditNow: true,
+  +   canResolveClarification: false,
+  +   canSubmit: true,
+  +   commentText: '',
+  +   identity: {
+  +     contextId: 'TEST-context',
+  +     taskId: 'TEST-task',
+  +     teamName: 'host-team:TEST-owner'
+  +   },
+  +   inputId: 'TEST-original-comment',
+  +   ownerRevision: 1,
+  +   partRevisions: {
+  +     commentText: 0,
+  +     pendingAttachments: 0
+  +   },
+  +   pendingAttachmentCount: 0,
+  +   pendingPreparationCount: 0,
+  +   selector: '[role="dialog"] textarea[id="TEST-original-comment"]',
+  +   submitError: null,
+  +   submitPending: false,
+  +   surfaceId: 'TEST-original-surface',
+  +   taskId: 'TEST-task',
+  +   teamName: 'host-team:TEST-owner'
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2458:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { teamName: 'host-team:TEST-owner', taskId: 'TEST-task', identity: { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' }, surfaceId: 'TEST-original-surface', inputId: 'TEST-original-comment', commentText: '', submitPending: false, submitError: null, ownerRevision: 1, partRevisions: { commentText: 0, pendingAttachments: 0 }, pendingPreparationCount: 0, canSubmit: true, attachmentError: null, pendingAttachmentCount: 0, canEditNow: true, canResolveClarification: false, selector: '[role="dialog"] textarea[id="TEST-original-comment"]' },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2456:1
+✖ original Cross Close target refuses changed stored owner revision (1.658148ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   attachmentError: null,
+  +   canEditNow: true,
+  +   canResolveClarification: false,
+  +   canSubmit: true,
+  +   commentText: '',
+  +   identity: {
+  +     contextId: 'TEST-context',
+  +     taskId: 'TEST-task',
+  +     teamName: 'host-team:TEST-owner'
+  +   },
+  +   inputId: 'TEST-original-comment',
+  +   ownerRevision: 1,
+  +   partRevisions: {
+  +     commentText: 0,
+  +     pendingAttachments: 0
+  +   },
+  +   pendingAttachmentCount: 0,
+  +   pendingPreparationCount: 0,
+  +   selector: '[role="dialog"] textarea[id="TEST-original-comment"]',
+  +   submitError: null,
+  +   submitPending: false,
+  +   surfaceId: 'TEST-original-surface',
+  +   taskId: 'TEST-task',
+  +   teamName: 'host-team:TEST-owner'
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2458:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { teamName: 'host-team:TEST-owner', taskId: 'TEST-task', identity: { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' }, surfaceId: 'TEST-original-surface', inputId: 'TEST-original-comment', commentText: '', submitPending: false, submitError: null, ownerRevision: 1, partRevisions: { commentText: 0, pendingAttachments: 0 }, pendingPreparationCount: 0, canSubmit: true, attachmentError: null, pendingAttachmentCount: 0, canEditNow: true, canResolveClarification: false, selector: '[role="dialog"] textarea[id="TEST-original-comment"]' },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2462:1
+✖ actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates (29.38513ms)
+  AssertionError [ERR_ASSERTION]: Original UI target moved after ownership check
+  + actual - expected
+  
+    [
+      1121,
+  +   171.125,
+  -   167.125,
+      'BUTTON'
+    ]
+  
+      at clickExpression (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-ui-controls.ts:326:12)
+      at async evalmachine.<anonymous>:1:16
+      at async runActualCrossClose (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2411:3)
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2474:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 1121, 171.125, 'BUTTON' ],
+    expected: [ 1121, 167.125, 'BUTTON' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2490:1
+✖ actual original Cross Close retains the first-read deadline while renderer readiness is pending (7.190551ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2492:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /UI (?:read timed out|target read failed)/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2496:1
+✖ actual original Cross Close cannot use a foreign dialog or an absent ineligible own control (7.988625ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2502:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /UI (?:read timed out|target read failed)/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2527:1
+✖ actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates (7.737845ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2530:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }

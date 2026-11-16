@@ -1,0 +1,2771 @@
+{
+  "schemaVersion": 2,
+  "kind": "READ_ONLY_INCOMING_A07_WINDOWS_ARM_PROCESS_FINAL_CLEANUP_CORRECTION",
+  "scope": "Original retained incoming a07 Process run43892535299/job133387301562. Git/source/retained evidence inspection plus pure-JS data hashes and ZIP metadata only. Root separately downloaded and checked the original existing artifact. This reviewer made no CI/artifact-network query, no native/shell/test/runtime or source/test/runner/R1/ref/PR mutation. Bare documentary reports are the only writes.",
+  "subject": {
+    "repository": "777genius/agent-teams-ai",
+    "commit": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+    "tree": "56b61eca335f951e6b53bd5c768bd586c5ec6c7b",
+    "fullTreeEntries": 12730,
+    "fullTreeBlobLeaves": 11045,
+    "truncated": false,
+    "run": 43892535299,
+    "job": 133387301562,
+    "attempt": 1,
+    "platform": "win32-arm64",
+    "nodeVersion": "24.21.0",
+    "actualJob": {
+      "id": 133387301562,
+      "run_id": 43892535299,
+      "workflow_name": "Host process fixture acceptance",
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43892535299",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORVTEtM8AAAAfDoCyug",
+      "head_sha": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133387301562",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43892535299/job/133387301562",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-11-16T15:04:57Z",
+      "started_at": "2026-11-16T15:23:06Z",
+      "completed_at": "2026-11-16T15:35:59Z",
+      "name": "Host process fixtures (win32-arm64)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-16T15:23:07Z",
+          "completed_at": "2026-11-16T15:23:10Z"
+        },
+        {
+          "name": "Enable Windows long paths",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-16T15:23:10Z",
+          "completed_at": "2026-11-16T15:23:11Z"
+        },
+        {
+          "name": "Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-16T15:23:11Z",
+          "completed_at": "2026-11-16T15:23:52Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-16T15:23:52Z",
+          "completed_at": "2026-11-16T15:24:22Z"
+        },
+        {
+          "name": "Select the pinned package manager with bundled Corepack",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-16T15:24:22Z",
+          "completed_at": "2026-11-16T15:24:32Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-16T15:24:32Z",
+          "completed_at": "2026-11-16T15:24:34Z"
+        },
+        {
+          "name": "Bind exact source and actual process tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-16T15:24:34Z",
+          "completed_at": "2026-11-16T15:24:35Z"
+        },
+        {
+          "name": "Install frozen workspace without Desktop postinstall",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-16T15:24:35Z",
+          "completed_at": "2026-11-16T15:31:24Z"
+        },
+        {
+          "name": "Build existing controller and Host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-16T15:31:24Z",
+          "completed_at": "2026-11-16T15:31:33Z"
+        },
+        {
+          "name": "Verify process contracts and retained Main Host transport",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-16T15:31:33Z",
+          "completed_at": "2026-11-16T15:33:30Z"
+        },
+        {
+          "name": "Verify original POSIX Node and shell lifecycle fixtures",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 11,
+          "started_at": "2026-11-16T15:33:30Z",
+          "completed_at": "2026-11-16T15:33:30Z"
+        },
+        {
+          "name": "Prepare pinned Electron for native process fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-11-16T15:33:30Z",
+          "completed_at": "2026-11-16T15:33:30Z"
+        },
+        {
+          "name": "Verify Linux Node exec descriptor closure under both original parents",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-11-16T15:33:30Z",
+          "completed_at": "2026-11-16T15:33:30Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-11-16T15:33:30Z",
+          "completed_at": "2026-11-16T15:33:30Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15,
+          "started_at": "2026-11-16T15:33:30Z",
+          "completed_at": "2026-11-16T15:33:30Z"
+        },
+        {
+          "name": "Build original Windows product broker and C++ fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-11-16T15:33:30Z",
+          "completed_at": "2026-11-16T15:34:20Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Host Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-11-16T15:34:20Z",
+          "completed_at": "2026-11-16T15:34:32Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Electron Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18,
+          "started_at": "2026-11-16T15:34:32Z",
+          "completed_at": "2026-11-16T15:34:44Z"
+        },
+        {
+          "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-11-16T15:34:44Z",
+          "completed_at": "2026-11-16T15:35:20Z"
+        },
+        {
+          "name": "Qualify original codex source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 20,
+          "started_at": "2026-11-16T15:35:20Z",
+          "completed_at": "2026-11-16T15:35:51Z"
+        },
+        {
+          "name": "Qualify original claude source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21,
+          "started_at": "2026-11-16T15:35:51Z",
+          "completed_at": "2026-11-16T15:35:51Z"
+        },
+        {
+          "name": "Qualify original opencode source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22,
+          "started_at": "2026-11-16T15:35:51Z",
+          "completed_at": "2026-11-16T15:35:51Z"
+        },
+        {
+          "name": "Require completed original platform receipts and unchanged source",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 23,
+          "started_at": "2026-11-16T15:35:51Z",
+          "completed_at": "2026-11-16T15:35:51Z"
+        },
+        {
+          "name": "Preserve original process evidence including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24,
+          "started_at": "2026-11-16T15:35:51Z",
+          "completed_at": "2026-11-16T15:35:52Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 46,
+          "started_at": "2026-11-16T15:35:52Z",
+          "completed_at": "2026-11-16T15:35:52Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 47,
+          "started_at": "2026-11-16T15:35:52Z",
+          "completed_at": "2026-11-16T15:35:52Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 48,
+          "started_at": "2026-11-16T15:35:52Z",
+          "completed_at": "2026-11-16T15:35:57Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 49,
+          "started_at": "2026-11-16T15:35:57Z",
+          "completed_at": "2026-11-16T15:35:57Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133387301562",
+      "labels": [
+        "windows-11-arm"
+      ],
+      "runner_id": 1000379487,
+      "runner_name": "GitHub Actions 1000379487",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  },
+  "reportParents": [
+    {
+      "role": "Retained complete incoming CI snapshot; earlier cleanup interpretation corrected below",
+      "gitBlob": "0f2963af97dcabda330e2635af90c67a4e5d9651",
+      "bytes": 4551343,
+      "sha256": "4ec9efc8301ddfbd03777bf6fdc2b69b7592116bfb27f26401495c27617f0157"
+    },
+    {
+      "role": "Retained incoming exact source-delta report, no new incoming adoption",
+      "gitBlob": "453d973fe2a7f2176c1e4c6361318786c603a34f",
+      "bytes": 218343,
+      "sha256": "ea18db311fb79ecc3fb7cbe4d85dcccaa8665a8e927ec980cf0f11a074a55503"
+    },
+    {
+      "role": "Original artifact wrapper, completely hash-joined; actual ZIP decompression/CRC by root",
+      "gitBlob": "d41b495d03866d9611b449dd159bd836189c7021",
+      "bytes": 355085,
+      "sha256": "cef51689f252ba3a097002ed5fd760f0ff970e277757dfa6d93b16f3c70db22c"
+    },
+    {
+      "role": "Actual final source receipt, completely read and hash-joined",
+      "gitBlob": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+      "bytes": 22790,
+      "sha256": "6f34d07150d904bfd7554011d8d11ac22dcb01ecf9c8553bce1a32e26b2d9f3a"
+    }
+  ],
+  "outcome": {
+    "confirmedFailure": "Codex image-A Team runtime readiness failed at the unchanged absolute15-second boundary. Last read: phase allocated, custody owned, attached true, nativeReady false;108 reads/15016.729199999998ms. The post-read deadline assertion failed. Attached is not nativeReady.",
+    "correction": "The six TEST_SOURCE_CLEANUP originalHandleAbsent:false values are pre-wait flags, not six negative physical-absence observations. Scenario prints each row at310–315, then asserts the original captured witness wait at318 and sets the flag true at319. Slot0 is already true because publish-A waited/set it at402–403.",
+    "implementationFinding": "No process-leak, native Stop, drain or release defect is demonstrated by the six stdout false flags. The final original receipt directly confirms all seven jobs' post-wait absence and Stop/drain/release. A concrete diagnostic-order ambiguity remains: stdout was emitted before its mandatory final witness wait.",
+    "qualification": "Qualified only for the original single epoch/seven jobs: final receipt records resumed/stopped/drained/released/originalHandleAbsent alltrue and nested cleanup=true; outer sentinel cleanup=true is separately present. Both top-level and source-scenario status remain INCOMPLETE at Team-A. Original15-second readiness/job failure, unreached sourceB/cold/remaining journey and skipped final verifier are preserved. This is not Windows Process whole-gate, native-platform, Desktop or release PASS.",
+    "controlFlowInference": "Before the final receipt arrived, the original readiness AssertionError supported the source-bound inference that no epoch.close/effect/pin failure replaced it with AggregateError. That inference is now corroborated by direct post-wait final cleanup fields; the direct receipt, not controlleractive0, supplies the seven-job closure.",
+    "controller": "gateController drained/rootExitCode1/activeProcesses0 means its independent outer-job drain completed while the gate root failed. Exact gateController returns104 whenever rootExitCode!=0 even without emergency. Workflow's generic nonzero controller refusal does not isolate a per-slot cleanup failure.",
+    "finalReceiptControlFlow": "Scenario finally awaited close and populated final epochs/jobs, then ProviderGate wrote the original receipt before rethrowing the readiness failure. Direct receipt3aeccb retains those post-wait values and the same source/readiness identity."
+  },
+  "exactEarlierInterpretationCorrection": {
+    "originalReport": "0f2963af97dcabda330e2635af90c67a4e5d9651",
+    "originalLocation": "observedAppResults.windowsProcessARM.cleanupRows and .limits",
+    "originalLimits": "Actual attached=true is not nativeReady. Seven captured job cleanup rows retain six originalHandleAbsent=false values; drained controller does not establish the original source cleanup contract. Newly observed I386 native scenario success cannot qualify the later failed Codex source gate or establish a performance cause.",
+    "replacementInterpretation": "Retain all seven original stdout rows literally. Slots1–6 false values are pre-wait snapshots, not physical-absence failures or leak proof. The later retrieved original receipt records allseven final absence flags true and both cleanup levels true. Keep controller drain separate and statusINCOMPLETE/readiness failure/remaining skipped steps unchanged.",
+    "rawEvidenceUnchanged": true,
+    "retrospectivePassOrSourceChange": false,
+    "directFinalEvidence": "3aeccb43654adadf90c38a06e4ffeaa650e63321"
+  },
+  "selectedRawRecords": [
+    {
+      "line": 2226,
+      "timestamp": "2026-11-16T15:35:28.0713179Z",
+      "object": {
+        "kind": "TEST_SOURCE_STAGE",
+        "provider": "codex",
+        "stage": "publish-A"
+      }
+    },
+    {
+      "line": 2227,
+      "timestamp": "2026-11-16T15:35:29.4868434Z",
+      "object": {
+        "kind": "TEST_SOURCE_PREPARATION",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 0,
+        "phase": "complete",
+        "elapsedMs": 345.6921000000002,
+        "source": null,
+        "rootCaptured": true,
+        "witnessCaptured": true
+      }
+    },
+    {
+      "line": 2228,
+      "timestamp": "2026-11-16T15:35:30.4649703Z",
+      "object": {
+        "kind": "TEST_SOURCE_STAGE",
+        "provider": "codex",
+        "stage": "Team-A"
+      }
+    },
+    {
+      "line": 2229,
+      "timestamp": "2026-11-16T15:35:32.9686090Z",
+      "object": {
+        "kind": "TEST_SOURCE_PREPARATION",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 1,
+        "phase": "complete",
+        "elapsedMs": 616.4246000000003,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true
+      }
+    },
+    {
+      "line": 2230,
+      "timestamp": "2026-11-16T15:35:36.8954605Z",
+      "object": {
+        "kind": "TEST_SOURCE_PREPARATION",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 2,
+        "phase": "complete",
+        "elapsedMs": 382.6980000000003,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true
+      }
+    },
+    {
+      "line": 2231,
+      "timestamp": "2026-11-16T15:35:39.7007086Z",
+      "object": {
+        "kind": "TEST_SOURCE_PREPARATION",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 3,
+        "phase": "complete",
+        "elapsedMs": 361.2439000000013,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true
+      }
+    },
+    {
+      "line": 2232,
+      "timestamp": "2026-11-16T15:35:42.5238228Z",
+      "object": {
+        "kind": "TEST_SOURCE_PREPARATION",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 4,
+        "phase": "complete",
+        "elapsedMs": 355.3702999999987,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true
+      }
+    },
+    {
+      "line": 2233,
+      "timestamp": "2026-11-16T15:35:46.1636736Z",
+      "object": {
+        "kind": "TEST_SOURCE_PREPARATION",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 5,
+        "phase": "complete",
+        "elapsedMs": 350.9686999999976,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true
+      }
+    },
+    {
+      "line": 2234,
+      "timestamp": "2026-11-16T15:35:49.1986582Z",
+      "object": {
+        "kind": "TEST_SOURCE_PREPARATION",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 6,
+        "phase": "complete",
+        "elapsedMs": 359.804500000002,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true
+      }
+    },
+    {
+      "line": 2235,
+      "timestamp": "2026-11-16T15:35:50.2214464Z",
+      "object": {
+        "kind": "TEST_SOURCE_READINESS",
+        "provider": "codex",
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "image": "A",
+        "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+        "readCount": 108,
+        "elapsedMs": 15016.729199999998,
+        "lastRuntimeRead": {
+          "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+          "memberId": "alice-id",
+          "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": false,
+          "attached": true
+        }
+      }
+    },
+    {
+      "line": 2236,
+      "timestamp": "2026-11-16T15:35:50.8035654Z",
+      "object": {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 0,
+        "source": null,
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 1.0769000000000233,
+            "firstStartMs": 3359.8801999999996,
+            "lastEndMs": 3360.9570999999996
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 320.2586999999994,
+            "firstStartMs": 3372.2451,
+            "lastEndMs": 3692.5037999999995
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 256.16179999999986,
+            "firstStartMs": 3977.4506,
+            "lastEndMs": 4233.6124
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 1.3027000000001863,
+            "firstStartMs": 4638.2706,
+            "lastEndMs": 4639.5733
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.3317000000006374,
+            "firstStartMs": 4643.3552,
+            "lastEndMs": 4643.686900000001
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.8880000000008295,
+            "firstStartMs": 4645.256599999999,
+            "lastEndMs": 4648.1446
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.11630000000059226,
+            "firstStartMs": 3366.2910999999995,
+            "lastEndMs": 3366.4074
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.4966000000003987,
+            "firstStartMs": 3369.0419999999995,
+            "lastEndMs": 3369.5386
+          }
+        },
+        "firstCloseEntryMs": 24451.0459
+      }
+    },
+    {
+      "line": 2237,
+      "timestamp": "2026-11-16T15:35:50.8054312Z",
+      "object": {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 1,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.30200000000149885,
+            "firstStartMs": 6238.307999999999,
+            "lastEndMs": 6238.610000000001
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 591.4524999999994,
+            "firstStartMs": 6581.963400000001,
+            "lastEndMs": 7173.4159
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 294.8063999999995,
+            "firstStartMs": 7841.3899,
+            "lastEndMs": 8136.1963
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.8976000000002387,
+            "firstStartMs": 8726.8112,
+            "lastEndMs": 8727.7088
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.08399999999892316,
+            "firstStartMs": 8728.5144,
+            "lastEndMs": 8728.598399999999
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.165999999999258,
+            "firstStartMs": 8729.0898,
+            "lastEndMs": 8731.255799999999
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.08170000000063737,
+            "firstStartMs": 6338.0401999999995,
+            "lastEndMs": 6338.1219
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.2826999999997497,
+            "firstStartMs": 6436.1949,
+            "lastEndMs": 6436.4776
+          }
+        },
+        "firstCloseEntryMs": 24451.0459
+      }
+    },
+    {
+      "line": 2238,
+      "timestamp": "2026-11-16T15:35:50.8076370Z",
+      "object": {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 2,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.23139999999875727,
+            "firstStartMs": 10647.2734,
+            "lastEndMs": 10647.504799999999
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 357.59560000000056,
+            "firstStartMs": 10744.111499999999,
+            "lastEndMs": 11101.7071
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 336.09710000000086,
+            "firstStartMs": 11457.926,
+            "lastEndMs": 11794.0231
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 1.0828000000001339,
+            "firstStartMs": 12274.027900000001,
+            "lastEndMs": 12275.110700000001
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.21789999999964493,
+            "firstStartMs": 12309.0821,
+            "lastEndMs": 12309.3
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.6831999999994878,
+            "firstStartMs": 12309.9767,
+            "lastEndMs": 12312.659899999999
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.07560000000012224,
+            "firstStartMs": 10701.0703,
+            "lastEndMs": 10701.1459
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.2616999999991094,
+            "firstStartMs": 10718.4848,
+            "lastEndMs": 10718.7465
+          }
+        },
+        "firstCloseEntryMs": 24451.0459
+      }
+    },
+    {
+      "line": 2239,
+      "timestamp": "2026-11-16T15:35:50.8100330Z",
+      "object": {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 3,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.4912999999978638,
+            "firstStartMs": 13187.678100000001,
+            "lastEndMs": 13188.169399999999
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 335.28169999999955,
+            "firstStartMs": 13570.498500000002,
+            "lastEndMs": 13905.780200000001
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 315.41100000000006,
+            "firstStartMs": 14518.5108,
+            "lastEndMs": 14833.9218
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 22.01100000000224,
+            "firstStartMs": 24644.5346,
+            "lastEndMs": 24666.5456
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.06570000000283471,
+            "firstStartMs": 24669.7129,
+            "lastEndMs": 24669.7786
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.2969000000011874,
+            "firstStartMs": 24670.2074,
+            "lastEndMs": 24672.5043
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.06610000000000582,
+            "firstStartMs": 13302.0599,
+            "lastEndMs": 13302.126
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.4492000000027474,
+            "firstStartMs": 13415.836599999999,
+            "lastEndMs": 13416.285800000001
+          }
+        },
+        "firstCloseEntryMs": 24451.0459
+      }
+    },
+    {
+      "line": 2240,
+      "timestamp": "2026-11-16T15:35:50.8132483Z",
+      "object": {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 4,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.2646999999997206,
+            "firstStartMs": 16304.5828,
+            "lastEndMs": 16304.8475
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 328.3089,
+            "firstStartMs": 16400.2022,
+            "lastEndMs": 16728.5111
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 292.47940000000017,
+            "firstStartMs": 17084.8135,
+            "lastEndMs": 17377.2929
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 1.1907000000028347,
+            "firstStartMs": 17866.5375,
+            "lastEndMs": 17867.7282
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.25860000000102445,
+            "firstStartMs": 17968.266,
+            "lastEndMs": 17968.5246
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.547600000001694,
+            "firstStartMs": 17969.481,
+            "lastEndMs": 17972.0286
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.06780000000071595,
+            "firstStartMs": 16355.835,
+            "lastEndMs": 16355.9028
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.3882999999987078,
+            "firstStartMs": 16373.5533,
+            "lastEndMs": 16373.941599999998
+          }
+        },
+        "firstCloseEntryMs": 24451.0459
+      }
+    },
+    {
+      "line": 2241,
+      "timestamp": "2026-11-16T15:35:50.8168537Z",
+      "object": {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 5,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.25940000000264263,
+            "firstStartMs": 19910.184699999998,
+            "lastEndMs": 19910.4441
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 325.28419999999824,
+            "firstStartMs": 20040.1055,
+            "lastEndMs": 20365.3897
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 312.1277000000009,
+            "firstStartMs": 20707.8586,
+            "lastEndMs": 21019.9863
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.7114000000001397,
+            "firstStartMs": 21524.3321,
+            "lastEndMs": 21525.0435
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.07969999999841093,
+            "firstStartMs": 21558.7477,
+            "lastEndMs": 21558.8274
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.39089999999851,
+            "firstStartMs": 21559.4103,
+            "lastEndMs": 21561.801199999998
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.06929999999920256,
+            "firstStartMs": 19961.1228,
+            "lastEndMs": 19961.1921
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.23110000000087894,
+            "firstStartMs": 19978.9323,
+            "lastEndMs": 19979.1634
+          }
+        },
+        "firstCloseEntryMs": 24451.0459
+      }
+    },
+    {
+      "line": 2242,
+      "timestamp": "2026-11-16T15:35:50.8188748Z",
+      "object": {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "jobSlot": 6,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.2106999999996333,
+            "firstStartMs": 22941.7493,
+            "lastEndMs": 22941.96
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 334.233400000001,
+            "firstStartMs": 23070.77,
+            "lastEndMs": 23405.0034
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 281.563900000001,
+            "firstStartMs": 23743.5612,
+            "lastEndMs": 24025.1251
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.61620000000039,
+            "firstStartMs": 24604.8204,
+            "lastEndMs": 24605.4366
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.6718999999975495,
+            "firstStartMs": 24645.8456,
+            "lastEndMs": 24646.517499999998
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.408100000000559,
+            "firstStartMs": 24647.8996,
+            "lastEndMs": 24650.3077
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.07910000000265427,
+            "firstStartMs": 22993.8873,
+            "lastEndMs": 22993.9664
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.40300000000206637,
+            "firstStartMs": 23011.7679,
+            "lastEndMs": 23012.1709
+          }
+        },
+        "firstCloseEntryMs": 24451.0459
+      }
+    },
+    {
+      "line": 2243,
+      "timestamp": "2026-11-16T15:35:51.0689771Z",
+      "object": {
+        "kind": "TEST_SOURCE_FIRST_REFUSAL",
+        "provider": "codex",
+        "diagnostic": {
+          "status": "unknown",
+          "reason": "empty"
+        }
+      }
+    }
+  ],
+  "slotTable": [
+    {
+      "jobSlot": 0,
+      "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+      "source": null,
+      "preparationLine": 2227,
+      "preparationTimestamp": "2026-11-16T15:35:29.4868434Z",
+      "preparationElapsedMs": 345.6921000000002,
+      "cleanupLine": 2236,
+      "cleanupTimestamp": "2026-11-16T15:35:50.8035654Z",
+      "allReportedCapturedResumedStoppedDrainedReleased": true,
+      "loggedOriginalHandleAbsent": true,
+      "loggedAbsenceMeaning": "Already set true by publish-A's original witness.wait() === 0 before cleanup began.",
+      "initialRoleAttribution": "Codex image-A version publication probe; source origin undefined.",
+      "firstCloseEntryMs": 24451.0459,
+      "stopFirstStartMs": 4638.2706,
+      "stopLastEndMs": 4639.5733,
+      "releaseLastEndMs": 4648.1446,
+      "stopStartedBeforeClose": true,
+      "eachCustodyOperationCallsSettledReturnedOnce": true,
+      "finalReceiptAbsence": true,
+      "finalReceiptRef": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+      "finalReceiptCapability": "76f1286a-e75d-456b-9eff-dbdaa6287742",
+      "finalReceiptRoot": {
+        "pid": 3680,
+        "birth": "01dd75e01c0a39d9"
+      },
+      "finalOrigin": null,
+      "entryStart": 0,
+      "entryEnd": 1,
+      "threadEphemeral": [],
+      "receiptJoin": {
+        "slot": 0,
+        "stdoutLine": 2236,
+        "capability": "76f1286a-e75d-456b-9eff-dbdaa6287742",
+        "root": {
+          "pid": 3680,
+          "birth": "01dd75e01c0a39d9"
+        },
+        "originKind": null,
+        "originTeamId": null,
+        "originMemberId": null,
+        "recipeIdentity": null,
+        "entryStart": 0,
+        "entryEnd": 1,
+        "threadEphemeral": [],
+        "stdoutPreWaitAbsence": true,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": null,
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      }
+    },
+    {
+      "jobSlot": 1,
+      "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+      "source": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+      },
+      "preparationLine": 2229,
+      "preparationTimestamp": "2026-11-16T15:35:32.9686090Z",
+      "preparationElapsedMs": 616.4246000000003,
+      "cleanupLine": 2237,
+      "cleanupTimestamp": "2026-11-16T15:35:50.8054312Z",
+      "allReportedCapturedResumedStoppedDrainedReleased": true,
+      "loggedOriginalHandleAbsent": false,
+      "loggedAbsenceMeaning": "Initialized false and still false when this row is printed; the mandatory wait occurs only afterward.",
+      "initialRoleAttribution": "Final origin.kind=runtime, TeamA/alice and same source recipe are directly recorded. Origin does not by itself identify the function of every individual version/probe/runtime subprocess; no cause or retry narrative is inferred.",
+      "firstCloseEntryMs": 24451.0459,
+      "stopFirstStartMs": 8726.8112,
+      "stopLastEndMs": 8727.7088,
+      "releaseLastEndMs": 8731.255799999999,
+      "stopStartedBeforeClose": true,
+      "eachCustodyOperationCallsSettledReturnedOnce": true,
+      "finalReceiptAbsence": true,
+      "finalReceiptRef": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+      "finalReceiptCapability": "7a401ffe-af3b-4a9e-94e6-b300d8bc8c06",
+      "finalReceiptRoot": {
+        "pid": 3400,
+        "birth": "01dd75e01e1d7c20"
+      },
+      "finalOrigin": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d",
+        "origin": {
+          "kind": "runtime",
+          "scope": {
+            "teamId": "TEST-source-team-A",
+            "projectId": "TEST-project",
+            "workspaceId": "TEST-workspace"
+          },
+          "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgFA4E.tmp\\TEST-desktop-backend-codex5e2400c7e6f644aeaf59ca317e1a4304\\workspace",
+          "teamId": "TEST-source-team-A",
+          "memberId": "alice-id",
+          "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66"
+        }
+      },
+      "entryStart": 1,
+      "entryEnd": 2,
+      "threadEphemeral": [],
+      "receiptJoin": {
+        "slot": 1,
+        "stdoutLine": 2237,
+        "capability": "7a401ffe-af3b-4a9e-94e6-b300d8bc8c06",
+        "root": {
+          "pid": 3400,
+          "birth": "01dd75e01e1d7c20"
+        },
+        "originKind": "runtime",
+        "originTeamId": "TEST-source-team-A",
+        "originMemberId": "alice-id",
+        "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66",
+        "entryStart": 1,
+        "entryEnd": 2,
+        "threadEphemeral": [],
+        "stdoutPreWaitAbsence": false,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      }
+    },
+    {
+      "jobSlot": 2,
+      "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+      "source": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+      },
+      "preparationLine": 2230,
+      "preparationTimestamp": "2026-11-16T15:35:36.8954605Z",
+      "preparationElapsedMs": 382.6980000000003,
+      "cleanupLine": 2238,
+      "cleanupTimestamp": "2026-11-16T15:35:50.8076370Z",
+      "allReportedCapturedResumedStoppedDrainedReleased": true,
+      "loggedOriginalHandleAbsent": false,
+      "loggedAbsenceMeaning": "Initialized false and still false when this row is printed; the mandatory wait occurs only afterward.",
+      "initialRoleAttribution": "Final origin.kind=runtime, TeamA/alice and same source recipe are directly recorded. Origin does not by itself identify the function of every individual version/probe/runtime subprocess; no cause or retry narrative is inferred.",
+      "firstCloseEntryMs": 24451.0459,
+      "stopFirstStartMs": 12274.027900000001,
+      "stopLastEndMs": 12275.110700000001,
+      "releaseLastEndMs": 12312.659899999999,
+      "stopStartedBeforeClose": true,
+      "eachCustodyOperationCallsSettledReturnedOnce": true,
+      "finalReceiptAbsence": true,
+      "finalReceiptRef": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+      "finalReceiptCapability": "f6d75555-d07e-4c19-9f67-c19f7b9fd838",
+      "finalReceiptRoot": {
+        "pid": 4992,
+        "birth": "01dd75e02074daf3"
+      },
+      "finalOrigin": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d",
+        "origin": {
+          "kind": "runtime",
+          "scope": {
+            "teamId": "TEST-source-team-A",
+            "projectId": "TEST-project",
+            "workspaceId": "TEST-workspace"
+          },
+          "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgFA4E.tmp\\TEST-desktop-backend-codex5e2400c7e6f644aeaf59ca317e1a4304\\workspace",
+          "teamId": "TEST-source-team-A",
+          "memberId": "alice-id",
+          "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66"
+        }
+      },
+      "entryStart": 2,
+      "entryEnd": 3,
+      "threadEphemeral": [],
+      "receiptJoin": {
+        "slot": 2,
+        "stdoutLine": 2238,
+        "capability": "f6d75555-d07e-4c19-9f67-c19f7b9fd838",
+        "root": {
+          "pid": 4992,
+          "birth": "01dd75e02074daf3"
+        },
+        "originKind": "runtime",
+        "originTeamId": "TEST-source-team-A",
+        "originMemberId": "alice-id",
+        "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66",
+        "entryStart": 2,
+        "entryEnd": 3,
+        "threadEphemeral": [],
+        "stdoutPreWaitAbsence": false,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      }
+    },
+    {
+      "jobSlot": 3,
+      "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+      "source": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+      },
+      "preparationLine": 2231,
+      "preparationTimestamp": "2026-11-16T15:35:39.7007086Z",
+      "preparationElapsedMs": 361.2439000000013,
+      "cleanupLine": 2239,
+      "cleanupTimestamp": "2026-11-16T15:35:50.8100330Z",
+      "allReportedCapturedResumedStoppedDrainedReleased": true,
+      "loggedOriginalHandleAbsent": false,
+      "loggedAbsenceMeaning": "Initialized false and still false when this row is printed; the mandatory wait occurs only afterward.",
+      "initialRoleAttribution": "Final origin.kind=runtime, TeamA/alice and same source recipe are directly recorded. Origin does not by itself identify the function of every individual version/probe/runtime subprocess; no cause or retry narrative is inferred.",
+      "firstCloseEntryMs": 24451.0459,
+      "stopFirstStartMs": 24644.5346,
+      "stopLastEndMs": 24666.5456,
+      "releaseLastEndMs": 24672.5043,
+      "stopStartedBeforeClose": false,
+      "eachCustodyOperationCallsSettledReturnedOnce": true,
+      "finalReceiptAbsence": true,
+      "finalReceiptRef": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+      "finalReceiptCapability": "2a18131d-2f2c-47b2-9f93-82e9046836bb",
+      "finalReceiptRoot": {
+        "pid": 3448,
+        "birth": "01dd75e0222075cc"
+      },
+      "finalOrigin": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d",
+        "origin": {
+          "kind": "runtime",
+          "scope": {
+            "teamId": "TEST-source-team-A",
+            "projectId": "TEST-project",
+            "workspaceId": "TEST-workspace"
+          },
+          "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgFA4E.tmp\\TEST-desktop-backend-codex5e2400c7e6f644aeaf59ca317e1a4304\\workspace",
+          "teamId": "TEST-source-team-A",
+          "memberId": "alice-id",
+          "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66"
+        }
+      },
+      "entryStart": 3,
+      "entryEnd": 7,
+      "threadEphemeral": [
+        false
+      ],
+      "receiptJoin": {
+        "slot": 3,
+        "stdoutLine": 2239,
+        "capability": "2a18131d-2f2c-47b2-9f93-82e9046836bb",
+        "root": {
+          "pid": 3448,
+          "birth": "01dd75e0222075cc"
+        },
+        "originKind": "runtime",
+        "originTeamId": "TEST-source-team-A",
+        "originMemberId": "alice-id",
+        "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66",
+        "entryStart": 3,
+        "entryEnd": 7,
+        "threadEphemeral": [
+          false
+        ],
+        "stdoutPreWaitAbsence": false,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      }
+    },
+    {
+      "jobSlot": 4,
+      "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+      "source": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+      },
+      "preparationLine": 2232,
+      "preparationTimestamp": "2026-11-16T15:35:42.5238228Z",
+      "preparationElapsedMs": 355.3702999999987,
+      "cleanupLine": 2240,
+      "cleanupTimestamp": "2026-11-16T15:35:50.8132483Z",
+      "allReportedCapturedResumedStoppedDrainedReleased": true,
+      "loggedOriginalHandleAbsent": false,
+      "loggedAbsenceMeaning": "Initialized false and still false when this row is printed; the mandatory wait occurs only afterward.",
+      "initialRoleAttribution": "Final origin.kind=runtime, TeamA/alice and same source recipe are directly recorded. Origin does not by itself identify the function of every individual version/probe/runtime subprocess; no cause or retry narrative is inferred.",
+      "firstCloseEntryMs": 24451.0459,
+      "stopFirstStartMs": 17866.5375,
+      "stopLastEndMs": 17867.7282,
+      "releaseLastEndMs": 17972.0286,
+      "stopStartedBeforeClose": true,
+      "eachCustodyOperationCallsSettledReturnedOnce": true,
+      "finalReceiptAbsence": true,
+      "finalReceiptRef": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+      "finalReceiptCapability": "d0ab4614-c8cc-4971-90a2-45e5d7eb8212",
+      "finalReceiptRoot": {
+        "pid": 10096,
+        "birth": "01dd75e023cf7ff5"
+      },
+      "finalOrigin": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d",
+        "origin": {
+          "kind": "runtime",
+          "scope": {
+            "teamId": "TEST-source-team-A",
+            "projectId": "TEST-project",
+            "workspaceId": "TEST-workspace"
+          },
+          "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgFA4E.tmp\\TEST-desktop-backend-codex5e2400c7e6f644aeaf59ca317e1a4304\\workspace",
+          "teamId": "TEST-source-team-A",
+          "memberId": "alice-id",
+          "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66"
+        }
+      },
+      "entryStart": 4,
+      "entryEnd": 5,
+      "threadEphemeral": [],
+      "receiptJoin": {
+        "slot": 4,
+        "stdoutLine": 2240,
+        "capability": "d0ab4614-c8cc-4971-90a2-45e5d7eb8212",
+        "root": {
+          "pid": 10096,
+          "birth": "01dd75e023cf7ff5"
+        },
+        "originKind": "runtime",
+        "originTeamId": "TEST-source-team-A",
+        "originMemberId": "alice-id",
+        "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66",
+        "entryStart": 4,
+        "entryEnd": 5,
+        "threadEphemeral": [],
+        "stdoutPreWaitAbsence": false,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      }
+    },
+    {
+      "jobSlot": 5,
+      "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+      "source": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+      },
+      "preparationLine": 2233,
+      "preparationTimestamp": "2026-11-16T15:35:46.1636736Z",
+      "preparationElapsedMs": 350.9686999999976,
+      "cleanupLine": 2241,
+      "cleanupTimestamp": "2026-11-16T15:35:50.8168537Z",
+      "allReportedCapturedResumedStoppedDrainedReleased": true,
+      "loggedOriginalHandleAbsent": false,
+      "loggedAbsenceMeaning": "Initialized false and still false when this row is printed; the mandatory wait occurs only afterward.",
+      "initialRoleAttribution": "Final origin.kind=runtime, TeamA/alice and same source recipe are directly recorded. Origin does not by itself identify the function of every individual version/probe/runtime subprocess; no cause or retry narrative is inferred.",
+      "firstCloseEntryMs": 24451.0459,
+      "stopFirstStartMs": 21524.3321,
+      "stopLastEndMs": 21525.0435,
+      "releaseLastEndMs": 21561.801199999998,
+      "stopStartedBeforeClose": true,
+      "eachCustodyOperationCallsSettledReturnedOnce": true,
+      "finalReceiptAbsence": true,
+      "finalReceiptRef": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+      "finalReceiptCapability": "68047207-ea71-4fc8-a91a-f1dbed0e6289",
+      "finalReceiptRoot": {
+        "pid": 4372,
+        "birth": "01dd75e025fa5744"
+      },
+      "finalOrigin": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d",
+        "origin": {
+          "kind": "runtime",
+          "scope": {
+            "teamId": "TEST-source-team-A",
+            "projectId": "TEST-project",
+            "workspaceId": "TEST-workspace"
+          },
+          "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgFA4E.tmp\\TEST-desktop-backend-codex5e2400c7e6f644aeaf59ca317e1a4304\\workspace",
+          "teamId": "TEST-source-team-A",
+          "memberId": "alice-id",
+          "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66"
+        }
+      },
+      "entryStart": 5,
+      "entryEnd": 6,
+      "threadEphemeral": [],
+      "receiptJoin": {
+        "slot": 5,
+        "stdoutLine": 2241,
+        "capability": "68047207-ea71-4fc8-a91a-f1dbed0e6289",
+        "root": {
+          "pid": 4372,
+          "birth": "01dd75e025fa5744"
+        },
+        "originKind": "runtime",
+        "originTeamId": "TEST-source-team-A",
+        "originMemberId": "alice-id",
+        "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66",
+        "entryStart": 5,
+        "entryEnd": 6,
+        "threadEphemeral": [],
+        "stdoutPreWaitAbsence": false,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      }
+    },
+    {
+      "jobSlot": 6,
+      "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+      "source": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+      },
+      "preparationLine": 2234,
+      "preparationTimestamp": "2026-11-16T15:35:49.1986582Z",
+      "preparationElapsedMs": 359.804500000002,
+      "cleanupLine": 2242,
+      "cleanupTimestamp": "2026-11-16T15:35:50.8188748Z",
+      "allReportedCapturedResumedStoppedDrainedReleased": true,
+      "loggedOriginalHandleAbsent": false,
+      "loggedAbsenceMeaning": "Initialized false and still false when this row is printed; the mandatory wait occurs only afterward.",
+      "initialRoleAttribution": "Final origin.kind=runtime, TeamA/alice and same source recipe are directly recorded. Origin does not by itself identify the function of every individual version/probe/runtime subprocess; no cause or retry narrative is inferred.",
+      "firstCloseEntryMs": 24451.0459,
+      "stopFirstStartMs": 24604.8204,
+      "stopLastEndMs": 24605.4366,
+      "releaseLastEndMs": 24650.3077,
+      "stopStartedBeforeClose": false,
+      "eachCustodyOperationCallsSettledReturnedOnce": true,
+      "finalReceiptAbsence": true,
+      "finalReceiptRef": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+      "finalReceiptCapability": "ee7ab860-4299-4077-96a0-7a457d1b08d5",
+      "finalReceiptRoot": {
+        "pid": 8792,
+        "birth": "01dd75e027ca2fde"
+      },
+      "finalOrigin": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d",
+        "origin": {
+          "kind": "runtime",
+          "scope": {
+            "teamId": "TEST-source-team-A",
+            "projectId": "TEST-project",
+            "workspaceId": "TEST-workspace"
+          },
+          "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgFA4E.tmp\\TEST-desktop-backend-codex5e2400c7e6f644aeaf59ca317e1a4304\\workspace",
+          "teamId": "TEST-source-team-A",
+          "memberId": "alice-id",
+          "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66"
+        }
+      },
+      "entryStart": 6,
+      "entryEnd": 7,
+      "threadEphemeral": [],
+      "receiptJoin": {
+        "slot": 6,
+        "stdoutLine": 2242,
+        "capability": "ee7ab860-4299-4077-96a0-7a457d1b08d5",
+        "root": {
+          "pid": 8792,
+          "birth": "01dd75e027ca2fde"
+        },
+        "originKind": "runtime",
+        "originTeamId": "TEST-source-team-A",
+        "originMemberId": "alice-id",
+        "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66",
+        "entryStart": 6,
+        "entryEnd": 7,
+        "threadEphemeral": [],
+        "stdoutPreWaitAbsence": false,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      }
+    }
+  ],
+  "originalErrorAndControllerPassage": {
+    "rawGitBlob": "92f4c3e3791463fba9353ad43e6eb8140134120b",
+    "firstLine": 2244,
+    "lastLine": 2271,
+    "body": "2026-11-16T15:35:51.1761789Z \u001b[31;1mnode:internal/modules/run_main:107\u001b[0m\r\n2026-11-16T15:35:51.1773517Z \u001b[31;1m    triggerUncaughtException(\u001b[0m\r\n2026-11-16T15:35:51.1783027Z \u001b[31;1m    ^\u001b[0m\r\n2026-11-16T15:35:51.1791124Z \u001b[31;1m\u001b[0m\r\n2026-11-16T15:35:51.1806224Z \u001b[31;1mAssertionError [ERR_ASSERTION]: Original source Team readiness\u001b[0m\r\n2026-11-16T15:35:51.1808936Z \u001b[31;1m    at poll (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:64:12)\u001b[0m\r\n2026-11-16T15:35:51.1816429Z \u001b[31;1m    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\u001b[0m\r\n2026-11-16T15:35:51.1825268Z \u001b[31;1m    at async launch (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:489:9)\u001b[0m\r\n2026-11-16T15:35:51.1833976Z \u001b[31;1m    at async nativeEmulatedSourceScenario (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:545:36)\u001b[0m\r\n2026-11-16T15:35:51.1842021Z \u001b[31;1m    at async main (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts:208:7)\u001b[0m\r\n2026-11-16T15:35:51.1850588Z \u001b[31;1m    at async <anonymous> (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts:231:85) {\u001b[0m\r\n2026-11-16T15:35:51.1858516Z \u001b[31;1m  generatedMessage: false,\u001b[0m\r\n2026-11-16T15:35:51.1867054Z \u001b[31;1m  code: 'ERR_ASSERTION',\u001b[0m\r\n2026-11-16T15:35:51.1875915Z \u001b[31;1m  actual: false,\u001b[0m\r\n2026-11-16T15:35:51.1886082Z \u001b[31;1m  expected: true,\u001b[0m\r\n2026-11-16T15:35:51.1894964Z \u001b[31;1m  operator: '==',\u001b[0m\r\n2026-11-16T15:35:51.1904454Z \u001b[31;1m  diff: 'simple'\u001b[0m\r\n2026-11-16T15:35:51.1913261Z \u001b[31;1m}\u001b[0m\r\n2026-11-16T15:35:51.1949877Z \u001b[31;1m\u001b[0m\r\n2026-11-16T15:35:51.1958600Z \u001b[31;1mNode.js v24.21.0\u001b[0m\r\n2026-11-16T15:35:51.1960349Z {\"gateController\":\"drained\",\"rootExitCode\":1,\"activeProcesses\":0}\r\n2026-11-16T15:35:51.2119747Z {\"kind\":\"TEST_SOURCE_CONTROLLER_EXIT\",\"provider\":\"codex\",\"exitCode\":104}\r\n2026-11-16T15:35:51.3432338Z \u001b[31;1mException: \u001b[0mC:\\a\\_temp\\566b43fd-7adf-44ef-ad31-3553ffee3e64.ps1:12\u001b[0m\r\n2026-11-16T15:35:51.3433124Z \u001b[31;1m\u001b[0m\u001b[36;1mLine |\u001b[0m\r\n2026-11-16T15:35:51.3433901Z \u001b[31;1m\u001b[0m\u001b[36;1m\u001b[36;1m  12 | \u001b[0m … de -ne 0) { \u001b[36;1mthrow 'Original codex source controller did not confirm c\u001b[0m …\u001b[0m\r\n2026-11-16T15:35:51.3435399Z \u001b[31;1m\u001b[0m\u001b[36;1m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[0m\u001b[36;1m     | \u001b[31;1m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\u001b[0m\r\n2026-11-16T15:35:51.3436232Z \u001b[31;1m\u001b[0m\u001b[36;1m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[31;1m\u001b[31;1m\u001b[36;1m     | \u001b[31;1mOriginal codex source controller did not confirm cleanup\u001b[0m\r\n2026-11-16T15:35:51.3710225Z ##[error]Process completed with exit code 1.\r"
+  },
+  "sourceChain": [
+    "Scenario observed HostCustodyOwner calls the original physical Main owner; resumed/stopped/drained/released flags are set only from their respective original results.",
+    "Every prepared job captures a witness to the original suspended root PID and birth before preparation is forwarded to Host/resume.",
+    "CapturedWindowsCustody creates the retained Main owner, which preserves original allocation and Stop receipt authority; this review does not replace any fresh source/currentness check.",
+    "HostWindowsLaunch and RetainedWindowsCustody forward owned stop/drain/release. Native Windows broker confirmedStop accepts zero job membership plus original root exit/birth with no dispatch/query error; drain and released acknowledgement remain separate.",
+    "Scenario close prints the current job flags, then performs the same original witness.wait() and requires exit0. The witness retains one previously captured HANDLE, sends one cached W, and native exit0 requires WAIT_OBJECT_0 on that handle. No PID reopen or new signal is used to prove absence.",
+    "Scenario finally collects close errors, populates final epochs/jobs after close, then retains/rethrows failure. ProviderGate writes the final source receipt before rethrow. Top-level sentinel cleanup is distinct from nested scenario cleanup.",
+    "The independent controller preserves root failure even after its own original job has zero active processes."
+  ],
+  "diagnosticBoundaries": {
+    "noPerSlotRoleGuess": "Exact origin/runtime Team/member/recipe is now retained per slot. No additional subprocess-purpose or failure-cause assignment is invented.",
+    "noCauseFromElapsedTotals": true,
+    "noReadinessTimerChange": true,
+    "noAdditionalSampleSignalWaitReplayOrFreshnessReduction": true,
+    "firstRefusal": {
+      "status": "unknown",
+      "reason": "empty"
+    },
+    "laterClaudeAndOpenCodeSteps": "skipped",
+    "originalCompletedSourceVerifier": "skipped",
+    "priorContracts": "164PASS/3SKIP/0FAIL belong to an earlier completed step and cannot qualify the failed source readiness journey.",
+    "dSelection": "Exact incoming a07 Host package72bcb2ef selects the v2-settled-fetch-c930d3c8 implementation archive and 9423 SPI archive. This is recorded source selection, not adoption into our own source, not decoded archive/runtime equivalence proof, and not real Codex/Claude execution.",
+    "sourcePeerContract": "Generated TEST-only Node peers, TEST-no-vendor-account. This actual source gate uses Codex finite TEST peer with genuine native custody; realProviderExecuted remains false by gate contract.",
+    "timingLimit": "Phase timings are original performance.now offsets from the epoch clock. They locate Stop relative to firstCloseEntry, but do not identify the source of elapsed cost, an exact provider role, or native kernel event times.",
+    "runtimeProjection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false,
+      "meaning": "Closed, explicitly non-atomic projection joined to the last runtime viewDigest. recordReady=false short-circuits the actual nativeReady expression; providerReady and ownerCurrent are null/unobserved, not negative results. It does not establish why record.nativeReady remained false."
+    }
+  },
+  "evidenceLedger": [
+    {
+      "id": "app-process-winarm-raw",
+      "kind": "complete decoded original workflow job log",
+      "bytes": 375324,
+      "sha256": "0a6d337e8bd34e0a1878ea2306f8a15def85a05b58644fe8719fd5005723f3da",
+      "gitBlob": "92f4c3e3791463fba9353ad43e6eb8140134120b"
+    },
+    {
+      "id": "app-process-jobs",
+      "kind": "complete tool-returned API JSON text",
+      "bytes": 15247,
+      "sha256": "a62e745a20819420eba19d86a790cff6e5d2eff3511dcd16141b6a409d820200",
+      "gitBlob": "d9ca34b4f3a438c03ab840d86af876041553b645"
+    },
+    {
+      "id": "app-process-artifacts",
+      "kind": "complete tool-returned API JSON text",
+      "bytes": 1600,
+      "sha256": "4c2d28755404da081033ad865af6f7213b8cf4320df92731eea6b9aac02c6573",
+      "gitBlob": "4aba1b9705a9e07f125ab26bf1c28fbdcf6211d5"
+    },
+    {
+      "id": "app-synthetic-commit",
+      "kind": "complete tool-returned API JSON text",
+      "bytes": 2653,
+      "sha256": "4307d052bd959cfc1d3c815a7b88ea05533f43b2c220d729bd056c1a3348f0f6",
+      "gitBlob": "f31b83ad600a4a5b221f47afda6c24f92a05f5c7"
+    },
+    {
+      "id": "workflow:777genius/agent-teams-ai:.github/workflows/host-process-acceptance.yml",
+      "kind": "complete immutable workflow source",
+      "bytes": 32370,
+      "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e",
+      "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524"
+    }
+  ],
+  "sourceLedger": [
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "mode": "100644",
+      "bytes": 32370,
+      "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e",
+      "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524",
+      "lineCount": 420,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/.github/workflows/host-process-acceptance.yml"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "mode": "100644",
+      "bytes": 59216,
+      "sha256": "cb5a49b85ae57c28eaf64c1385c193f5aebf9e6ed0cafa4399b4ec1b50ec8931",
+      "gitBlob": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2",
+      "lineCount": 801,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/tools/owned-process-broker/nativeEmulatedSourceScenario.ts"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "mode": "100644",
+      "bytes": 15213,
+      "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+      "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "lineCount": 232,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/tools/owned-process-broker/nativeEmulatedProviderGate.ts"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "mode": "100644",
+      "bytes": 7278,
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+      "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "lineCount": 193,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/tools/owned-process-broker/nativeGateContext.ts"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "mode": "100644",
+      "bytes": 19440,
+      "sha256": "45892c8dde062cbb34f09c5187614a1db237bbff8779edd03bf7b94f281247fc",
+      "gitBlob": "8fc74b25d5334395b455ee189e333b53ec9e4d36",
+      "lineCount": 357,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/tools/owned-process-broker/nativeFixture.cpp"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "mode": "100644",
+      "bytes": 1367,
+      "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+      "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+      "lineCount": 40,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/tools/owned-process-broker/nativeGateEvents.ts"
+    },
+    {
+      "path": "tools/owned-process-broker/gateController.cpp",
+      "mode": "100644",
+      "bytes": 5935,
+      "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+      "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+      "lineCount": 109,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/tools/owned-process-broker/gateController.cpp"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "mode": "100644",
+      "bytes": 22408,
+      "sha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+      "gitBlob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+      "lineCount": 582,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+      "mode": "100644",
+      "bytes": 20070,
+      "sha256": "cd06debca46ae13d02935268f4905b2ade7f3a5c8c4ed8a81139dde99de5c117",
+      "gitBlob": "10e1a457bb65a136128eb1db5176a4701d2fe4e2",
+      "lineCount": 523,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/windowsBroker.ts",
+      "mode": "100644",
+      "bytes": 28794,
+      "sha256": "751df6b6e8e07b717a8ade1c88b064dbe8a099e2b07ce328a9f052530dd78b79",
+      "gitBlob": "32b3315f04d91ae6da375bcca710e16948e09ad3",
+      "lineCount": 762,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/packages/legacy-agent-host/src/owned-process/windowsBroker.ts"
+    },
+    {
+      "path": "tools/owned-process-broker/broker.cpp",
+      "mode": "100644",
+      "bytes": 26160,
+      "sha256": "54d754c150a9edf5c82107ca6bbe725057b90e28dc4585533a88bc4cb0854814",
+      "gitBlob": "a4912d809aacc1fd4a949267fa0120d324b41be4",
+      "lineCount": 535,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/tools/owned-process-broker/broker.cpp"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "mode": "100644",
+      "bytes": 24869,
+      "sha256": "e8fa8caa024892b616f5e5aaf116c93a294ac82f968532ac88d9a749377ad3e2",
+      "gitBlob": "4fcd83a62f974f6710ebc641801a13c6748b396c",
+      "lineCount": 291,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/tools/owned-process-broker/nativeEmulatedSourceProfile.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "mode": "100644",
+      "bytes": 12353,
+      "sha256": "16989c4b4c3a601bc8f106ca25495fb521268d6e3f4f14f773522cdca1d8b7d1",
+      "gitBlob": "72bcb2ef993c43e8f5199b090ee3df8440d758b9",
+      "lineCount": 305,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/packages/legacy-agent-host/package.json"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "mode": "100644",
+      "bytes": 6946,
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+      "gitBlob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "lineCount": 170,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/pnpm-workspace.yaml"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+      "mode": "100644",
+      "bytes": 7213,
+      "sha256": "f12be6e141ab12b41feb394e17d5b373e6eeb6511c6425212bb9c33bf44afb72",
+      "gitBlob": "e84ee4b6e2ff4cea7d468c3173bc0851c59cdeae",
+      "lineCount": 151,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "mode": "100644",
+      "bytes": 3398,
+      "sha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+      "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+      "lineCount": 78,
+      "sourceURL": "https://github.com/777genius/agent-teams-ai/blob/a07e2d68ece77d08e152d7b0de1eb4b85d72ca06/packages/legacy-agent-host/src/composition/projectRuntimeMember.ts"
+    }
+  ],
+  "fullRelevantSourcePassages": [
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "blob": "93606e49aedfe84b6452aee487efdf2055f45524",
+      "firstLine": 246,
+      "lastLine": 260,
+      "purpose": "Exact source-gate invocation and controller-exit refusal",
+      "body": "      - name: Qualify original codex source A B with TEST peer\n        if: runner.os == 'Windows'\n        shell: pwsh\n        run: |\n          $build = $env:HOST_PROCESS_NATIVE_BUILD\n          $controller = \"$build\\Release\\owned-process-gate-controller.exe\"\n          $node = (Get-Command node.exe -ErrorAction Stop).Source\n          $runner = Join-Path $PWD 'node_modules\\tsx\\dist\\cli.mjs'\n          $tsconfig = Join-Path $PWD 'tsconfig.json'\n          $gate = Join-Path $PWD 'tools\\owned-process-broker\\nativeEmulatedProviderGate.ts'\n          $receipt = Join-Path $PWD 'process-acceptance-evidence\\windows-source-codex-receipt.json'\n          & $controller $node $runner --tsconfig $tsconfig $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$env:HOST_PROCESS_SCOPED_STAGE\\owned-process-broker.exe\" $receipt --test-source-provider codex 2>&1 | Tee-Object process-acceptance-evidence/windows-source-codex.log\n          $controllerExitCode = $LASTEXITCODE\n          [ordered]@{ kind = 'TEST_SOURCE_CONTROLLER_EXIT'; provider = 'codex'; exitCode = [int]$controllerExitCode } | ConvertTo-Json -Compress\n          if ($controllerExitCode -ne 0) { throw 'Original codex source controller did not confirm cleanup' }"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "blob": "93606e49aedfe84b6452aee487efdf2055f45524",
+      "firstLine": 292,
+      "lastLine": 313,
+      "purpose": "Original completion verifier is a subsequent step",
+      "body": "        run: |\n          set -euo pipefail\n          test \"$(git rev-parse HEAD)\" = \"$HOST_PROCESS_SOURCE_HEAD\"\n          git diff --exit-code\n          node --input-type=module <<'NODE'\n          import assert from 'node:assert/strict';\n          import { readFileSync, writeFileSync } from 'node:fs';\n          import { join } from 'node:path';\n          const directory = 'process-acceptance-evidence';\n          const rows = name => readFileSync(join(directory, name), 'utf8').split('\\n')\n            .filter(line => line.startsWith('{')).map(line => JSON.parse(line));\n          const native = [];\n          if (process.platform === 'linux') {\n            for (const name of ['linux-node24.log', 'linux-electron.log']) {\n              const completed = rows(name).filter(row => row.automaticAndWarm === true);\n              assert.equal(completed.length, 1, 'one original complete Linux invocation');\n              const receipt = completed[0];\n              assert.equal(receipt.completed, true); assert.equal(receipt.cleaned, true);\n              assert.match(receipt.binarySha256, /^[a-f0-9]{64}$/);\n              assert.match(receipt.manifestSha256, /^[a-f0-9]{64}$/);\n              native.push({ log: name, scope: 'original Linux pidfs and retained pidfd', receipt });\n            }"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "blob": "93606e49aedfe84b6452aee487efdf2055f45524",
+      "firstLine": 342,
+      "lastLine": 380,
+      "purpose": "Original source receipt acceptance requirements",
+      "body": "              assert.ok(row.counts.stop >= 1 && row.counts.stop <= 4);\n            }\n            const controllers = rows('windows-emulated-provider.log').filter(row => row.gateController);\n            assert.deepEqual(controllers, [{ gateController: 'drained', rootExitCode: 0, activeProcesses: 0 }]);\n            native.push({ log: 'windows-emulated-provider.log', scope: 'captured Windows wrappers and Main Host Codex/V1 adapters with Node peers', receipt: emulated });\n            const sourceReceipts = [\n              ['codex', 'windows-source-codex-receipt.json', 'windows-source-codex.log'],\n              ['claude', 'windows-source-claude-receipt.json', 'windows-source-claude.log'],\n              ['opencode', 'windows-source-opencode-receipt.json', 'windows-source-opencode.log'],\n            ];\n            for (const [provider, receiptFile, log] of sourceReceipts) {\n              const proof = JSON.parse(readFileSync(join(directory, receiptFile), 'utf8'));\n              assert.equal(proof.kind, 'TEST_WINDOWS_EMULATED_SOURCE_PARITY'); assert.equal(proof.provider, provider);\n              assert.equal(proof.sourceHead, process.env.HOST_PROCESS_SOURCE_HEAD);\n              assert.equal(proof.platform, 'win32-' + process.arch); assert.equal(proof.nodeVersion, 'v24.21.0');\n              assert.equal(proof.status, 'PASS'); assert.equal(proof.cleanup, true);\n              assert.equal(proof.realProviderExecuted, false); assert.equal(proof.desktopQualified, false); assert.equal(proof.releaseQualified, false);\n              assert.equal(Object.hasOwn(proof, 'providers'), false); assert.equal(Object.hasOwn(proof, 'wrappers'), false);\n              assert.equal(proof.sourceScenarios.length, 1);\n              const row = proof.sourceScenarios[0]; assert.equal(row.provider, provider);\n              assert.equal(row.status, 'PASS'); assert.equal(row.stage, 'complete'); assert.equal(row.cleanup, true);\n              assert.equal(row.realProviderExecuted, false); assert.equal(row.desktopQualified, false); assert.equal(row.releaseQualified, false);\n              assert.equal(row.foreignScopeGrantRefusedBeforeAllocation, true);\n              assert.notEqual(row.selections.A.revision, row.selections.B.revision);\n              assert.equal(row.management.metadataRead, true); assert.equal(row.management.modelProbeCompleted, true);\n              assert.equal(row.management.modelProbeInputs, 1); assert.equal(row.management.modelProbeReplayAllocated, false);\n              assert.equal(row.management.metadataHostRetained, row.provider === 'opencode');\n              assert.equal(row.teams.length, 2);\n              assert.deepEqual(row.teams.map(team => team.source.revision), [row.selections.A.revision, row.selections.B.revision]);\n              for (const field of ['currentB', 'retainedA', 'lookup']) assert.equal(row.cold[field], true);\n              assert.equal(row.cold.physicalReplayAllocations, 0); assert.equal(row.cold.originalInputsReplayed, false);\n              assert.deepEqual(row.cold.sourcePublishPendingAdmission, { admitted: 1, revoked: 1 });\n              assert.equal(row.cold.sdkPeerCheckpointRestored, row.provider === 'claude');\n              if (row.provider === 'claude') {\n                assert.equal(row.cold.originalNativeSessionRetained, true);\n                assert.equal(row.cold.source.revision, row.selections.A.revision);\n              }\n              if (row.provider === 'opencode') assert.equal(row.standalone.supported, false);\n              else {"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "blob": "93606e49aedfe84b6452aee487efdf2055f45524",
+      "firstLine": 402,
+      "lastLine": 415,
+      "purpose": "Original failure artifact preservation",
+      "body": "          NODE\n      - name: Preserve original process evidence including failures\n        if: always()\n        uses: actions/upload-artifact@v4\n        with:\n          name: host-process-fixtures-${{ matrix.platform }}-${{ github.event.pull_request.head.sha || github.sha }}\n          retention-days: 14\n          if-no-files-found: error\n          path: |\n            native-evidence/\n            process-acceptance-evidence/\n            ${{ runner.temp }}/TEST-process-node24-${{ github.run_id }}/\n            ${{ runner.temp }}/TEST-process-electron-${{ github.run_id }}/\n"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "blob": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2",
+      "firstLine": 59,
+      "lastLine": 67,
+      "purpose": "Original absolute poll budget and predicate ordering",
+      "body": "async function poll(check: () => Promise<boolean>, message: string, budget = 15000, absoluteDeadline?: number): Promise<void> {\n  const deadline = absoluteDeadline ?? performance.now() + budget;\n  for (;;) {\n    assert.ok(performance.now() < deadline, message);\n    const ready = await check();\n    assert.ok(performance.now() < deadline, message);\n    if (ready) return;\n    await delay(25);\n  }"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "blob": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2",
+      "firstLine": 187,
+      "lastLine": 248,
+      "purpose": "Same physical owner result tracking and pre-resume retained witness",
+      "body": "  const open = () => {\n    const physical = captureMainWindowsCustody(fixture.host, [grant]); assert.ok(physical);\n    const jobs: Job[] = [], pending = { admitted: 0, revoked: 0 }, counts = { service: 0 };\n    const phaseClock = performance.now();\n    let firstCloseEntryMs: number | null = null;\n    let projectionHostExit: 'confirmed' | 'unknown' | null = null;\n    let available = true, foreground = true, closed = false;\n    const observed: HostCustodyOwner = { mainEpoch: physical.mainEpoch,\n      attach(context) {\n        const original = physical.attach(context);\n        return { ...original, async handle(call) {\n          const preparation = call.operation === 'prepare'\n            ? { phase: 'owner' as 'owner' | 'witness' | 'complete', started: performance.now() } : undefined;\n          const phase = call.operation === 'allocate' || call.operation === 'prepare' ||\n            call.operation === 'resume' || call.operation === 'stop' || call.operation === 'drain' ||\n            call.operation === 'release' ? call.operation : undefined;\n          const timings = phase === 'allocate' ? custodyTimings()\n            : phase ? jobs.find(job => job.capability === call.capability)?.timings : undefined;\n          const stagingPhase = call.operation === 'launch-chunk' || call.operation === 'launch-commit'\n            ? call.operation : undefined;\n          const timing = phase ? timings?.[phase] : stagingPhase\n            ? jobs.find(job => job.capability === call.capability)?.stagingTimings[stagingPhase] : undefined;\n          const phaseStarted = timing ? performance.now() : undefined;\n          if (timing && phaseStarted !== undefined) {\n            timing.calls++; timing.firstStartMs ??= phaseStarted - phaseClock;\n          }\n          try {\n            let result: Awaited<ReturnType<typeof original.handle>>;\n            try {\n              result = await original.handle(call);\n              if (timing) timing.returned++;\n            } finally {\n              if (timing && phaseStarted !== undefined) {\n                const ended = performance.now();\n                timing.settled++; timing.totalMs += ended - phaseStarted;\n                timing.lastEndMs = ended - phaseClock;\n              }\n            }\n            if (call.operation === 'allocate') {\n              assert.ok(jobs.length < 64 && !jobs.some(value => value.capability === call.capability));\n              jobs.push({ capability: call.capability, timings: timings!, stagingTimings: stagingTimings(),\n                ...(call.runtimeSourceOrigin ? { origin: structuredClone(call.runtimeSourceOrigin) } : {}),\n                resumed: false, stopped: false, drained: false, released: false, handleAbsent: false, threadEphemeral: [], wire: '' });\n            }\n            const job = jobs.find(value => value.capability === call.capability); assert.ok(job);\n            if (result.operation === 'prepare') {\n              assert.equal(job.root, undefined); job.root = result.root;\n              if (preparation) preparation.phase = 'witness';\n              // Capture the original suspended root HANDLE before forwarding preparation to Host/resume.\n              job.witness = await capturedQueryableWitness(actor, result.root.pid, result.root.birth, track, events,\n                'query-wait-gated');\n              job.entryStart = entries().length;\n              if (preparation) preparation.phase = 'complete';\n            }\n            if (result.operation === 'resume') job.resumed = true;\n            if (result.operation === 'stop' && result.state === 'confirmed') job.stopped = true;\n            if (result.operation === 'drain' && result.state === 'complete') job.drained = true;\n            if (result.operation === 'release' && result.state === 'released') {\n              job.released = true;\n              if (job.root && job.witness && job.entryStart !== undefined && !job.handleAbsent)\n                job.entryEnd ??= entries().length;\n            }"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "blob": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2",
+      "firstLine": 301,
+      "lastLine": 325,
+      "purpose": "Cleanup log precedes per-job retained-witness wait",
+      "body": "      async close() {\n        firstCloseEntryMs ??= performance.now() - phaseClock;\n        if (closed) return;\n        const failures: unknown[] = [];\n        try { projectionHostExit = (await client.shutdown()).childExit; } catch (error) { failures.push(error); }\n        try { assert.equal(await physical.close(), true); } catch (error) { failures.push(error); }\n        available = false;\n        for (const [jobSlot, job] of jobs.entries()) {\n          try {\n            console.log(JSON.stringify({ kind: 'TEST_SOURCE_CLEANUP', provider, mainEpoch: physical.mainEpoch,\n              jobSlot, source: job.origin ? sourceRef(job.origin) : null,\n              rootCaptured: job.root !== undefined, witnessCaptured: job.witness !== undefined,\n              resumed: job.resumed, stopped: job.stopped, drained: job.drained, released: job.released,\n              originalHandleAbsent: job.handleAbsent, custodyTimings: job.timings,\n              stagingTimings: job.stagingTimings, firstCloseEntryMs }));\n            assert.ok(job.root && job.witness && job.resumed && job.stopped && job.drained && job.released,\n              'Every original physical Job retains confirmed Stop/drain/release');\n            assert.equal(await job.witness.wait(), 0);\n            job.handleAbsent = true;\n          } catch (error) { failures.push(error); }\n        }\n        assert.equal(counts.service, 0, 'Source metadata/probes/standalone do not register Team services');\n        if (failures.length) throw new AggregateError(failures, 'TEST original source epoch cleanup incomplete');\n        closed = true;\n      },"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "blob": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2",
+      "firstLine": 388,
+      "lastLine": 408,
+      "purpose": "Slot0 publish-A original version probe already waited",
+      "body": "    const publish = async (image: 'A' | 'B', previous: RuntimeSourceSummary) => {\n      const input: RuntimeSourcePublishIntent = { commandId: `TEST-publish-${image}`, expectedRevision: previous.revision,\n        nativeSelection: { sourceKind: 'app-managed', nativeCli: {\n          executable: { path: fixture.images[image].path, sha256: fixture.images[image].sha256 },\n          version: fixture.versions[image], ...(provider === 'opencode' ? { generation: 'v1' as const } : {}),\n        } } };\n      const before = first.jobs.length, beforeEntries = entries().length, pending = { ...first.pending };\n      const result = await first.sources.publish(input);\n      assert.equal(result.phase, 'published'); assert.ok(result.selection);\n      const jobs = first.jobs.slice(before), expected = image === 'B' && provider === 'claude' ? ['A', 'B'] : [image];\n      assert.equal(jobs.length, expected.length); assert.ok(quiescent(jobs));\n      assert.deepEqual(entries().slice(beforeEntries).map(value => [value.event, value.source]), expected.map(value => ['version', value]));\n      for (const [index, job] of jobs.entries()) {\n        assert.equal(job.origin, undefined); assert.equal(jobEntry(job, 'version').source, expected[index]);\n        assert.equal(await job.witness!.wait(), 0);\n        job.handleAbsent = true;\n      }\n      assert.deepEqual(first.pending, { admitted: pending.admitted + 1, revoked: pending.revoked + 1 });\n      return { input, result, source: result.selection };\n    };\n    stage('publish-A'); const a = await publish('A', captured);"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "blob": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2",
+      "firstLine": 478,
+      "lastLine": 500,
+      "purpose": "Codex source A readiness keeps original15 seconds",
+      "body": "        unwrap(await router.request(handle, { commandId, method: 'team.launch.start', payload,\n          guard, requestBudget: budget, localModelReadinessOrigin: createReadinessPreparation(origin, budget) }));\n      } else await first.rpc(team, 'team.launch.start', commandId, payload);\n      // Original readiness observation starts once after the Start acknowledgement.\n      if (provider !== 'claude') memberReadinessDeadline = performance.now() + 15000;\n      let view: Record<string, unknown> = {};\n      const readiness = { source: sourceRef(source), image, launchId, readCount: 0, elapsedMs: 0,\n        lastRuntimeRead: null as Record<string, unknown> | null };\n      evidence.lastLaunchReadiness = readiness;\n      const readinessStarted = performance.now();\n      try {\n        await poll(async () => { view = await first.rpc(team, 'runtime.read', `TEST-ready-${image}`, { memberId: 'alice-id' });\n          try { lastRuntimeViewDigest = runtimeDigest(view); } catch { lastRuntimeViewDigest = undefined; }\n          Object.assign(readiness, { readCount: readiness.readCount + 1, elapsedMs: performance.now() - readinessStarted,\n            lastRuntimeRead: { viewDigest: lastRuntimeViewDigest ?? null, memberId: view.memberId, generation: view.generation, phase: view.phase,\n              sealed: view.sealed, custody: view.custody, nativeReady: view.nativeReady, attached: view.attached,\n              ...(view.diagnostic === undefined ? {} : { diagnostic: view.diagnostic }) } });\n          return view.nativeReady === true; }, 'Original source Team readiness',\n          undefined, memberReadinessDeadline);\n      } finally {\n        console.log(JSON.stringify({ kind: 'TEST_SOURCE_READINESS', provider, ...readiness }));\n      }\n      const jobs = first.jobs.slice(before);"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "blob": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2",
+      "firstLine": 723,
+      "lastLine": 739,
+      "purpose": "Final epochs are populated after mandatory close",
+      "body": "  } catch (error) { failure = error; }\n  finally {\n    const errors: unknown[] = [];\n    for (const epoch of epochs) try { await epoch.close(); } catch (error) { errors.push(error); }\n    try { effects(); for (const pin of fixture.pins) assert.equal(fileHash(pin.path), pin.sha256); }\n    catch (error) { errors.push(error); }\n    evidence.epochs = epochs.map(epoch => ({ mainEpoch: epoch.physical.mainEpoch, pending: epoch.pending,\n      serviceOperations: epoch.counts.service, firstCloseEntryMs: epoch.firstCloseEntryMs,\n      jobs: epoch.jobs.map(job => ({ capability: job.capability, stagingTimings: job.stagingTimings,\n        origin: job.origin ?? null, root: job.root ?? null, resumed: job.resumed, stopped: job.stopped,\n        drained: job.drained, released: job.released, originalHandleAbsent: job.handleAbsent,\n        entryStart: job.entryStart ?? null, entryEnd: job.entryEnd ?? null,\n        threadEphemeral: job.threadEphemeral })) }));\n    evidence.cleanup = errors.length === 0;\n    // Original Job/HANDLE cleanup above is mandatory; these are only gate-owned observer children.\n    for (const child of observedChildren) if (child.exitCode === null && child.signalCode === null) child.kill();\n    if (errors.length) failure = new AggregateError([...(failure ? [failure] : []), ...errors], 'TEST source scenario cleanup incomplete');"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "blob": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2",
+      "firstLine": 791,
+      "lastLine": 799,
+      "purpose": "Bounded failure output cannot promote failure to PASS",
+      "body": "      evidence.firstRefusal = records.length ? { status: 'observed', observations } : { status: 'unknown', reason: 'empty' };\n    } catch { evidence.firstRefusal = { status: 'unknown', reason: 'unreadable-invalid-overflow-or-unjoined' }; }\n    if (failure) try {\n      const diagnostic = JSON.stringify({ kind: 'TEST_SOURCE_FIRST_REFUSAL', provider, diagnostic: evidence.firstRefusal });\n      console.log(Buffer.byteLength(diagnostic) <= 65536 ? diagnostic : JSON.stringify({ kind: 'TEST_SOURCE_FIRST_REFUSAL', provider, diagnostic: { status: 'unknown', reason: 'projection-limit' } }));\n    } catch { /* Preserve the original failure even if its bounded diagnostic cannot be written. */ }\n  }\n  if (failure) throw failure;\n  assert.ok(complete && evidence.cleanup === true); evidence.status = 'PASS'; evidence.stage = 'complete';"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "blob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "firstLine": 185,
+      "lastLine": 231,
+      "purpose": "Outer final receipt persistence and original failure rethrow",
+      "body": "  const [flag, sandbox] = tail.slice(sourceProvider === undefined ? 0 : 2);\n  assert.equal(process.platform, 'win32'); assert.equal(process.version, 'v24.21.0');\n  assert.match(process.env.HOST_PROCESS_SOURCE_HEAD ?? '', /^[a-f0-9]{40}$/);\n  assert.ok(wholeBroker && actor && scopedBroker && receiptPath && sandbox); assert.equal(flag, '--controller-sandbox');\n  assert.ok(resolve(sandbox).startsWith(resolve(tmpdir()) + sep) && /^opg[0-9a-f]+\\.tmp$/i.test(basename(sandbox)));\n  assert.equal(existsSync(receiptPath), false);\n  const paths = [wholeBroker, actor, scopedBroker].map(path => realpathSync(path));\n  const pins = paths.map(path => ({ path, sha256: fileHash(path) }));\n  const sentinel = spawn(paths[1]!, [sourceProvider === undefined ? 'sentinel' : 'source-sentinel'],\n    { stdio: [sourceProvider === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'], windowsHide: true });\n  const exited = new Promise<number | null>((resolveExit, reject) => { sentinel.once('exit', resolveExit); sentinel.once('error', reject); });\n  void exited.catch(() => undefined);\n  const providers: unknown[] = [], wrappers: string[] = [], sourceScenarios: Record<string, unknown>[] = [];\n  let complete = false, cleanup = false, failure: unknown;\n  try {\n    await timeout(new Promise<void>((resolveReady, reject) => { sentinel.stdout!.once('data', () => resolveReady()); sentinel.once('error', reject); }));\n    if (sourceProvider === undefined) {\n      wrappers.push(...await nativeLauncherScenarios(realpathSync(sandbox), paths[0]!, paths[1]!));\n      for (const provider of ['codex', 'opencode'] as const)\n        providers.push(await providerScenario(realpathSync(sandbox), paths[2]!, paths[1]!, provider, sentinel));\n    } else {\n      const evidence: Record<string, unknown> = {};\n      sourceScenarios.push(evidence);\n      await nativeEmulatedSourceScenario(realpathSync(sandbox), paths[2]!, paths[1]!, sourceProvider, sentinel, evidence);\n      assert.deepEqual(sourceScenarios.map(value => [value.provider, value.status, value.cleanup]),\n        [[sourceProvider, 'PASS', true]]);\n    }\n    assert.equal(sentinel.exitCode, null);\n    for (const pin of pins) assert.equal(fileHash(pin.path), pin.sha256);\n    complete = true;\n  } catch (error) { failure = error; }\n  finally {\n    if (sentinel.exitCode === null && sentinel.signalCode === null) sentinel.kill();\n    try { await timeout(exited); cleanup = true; } catch (error) { failure ??= error; }\n    writeFileSync(receiptPath, JSON.stringify({ kind: sourceProvider === undefined\n      ? 'TEST_WINDOWS_EMULATED_PROVIDER_PARITY' : 'TEST_WINDOWS_EMULATED_SOURCE_PARITY',\n      sourceHead: process.env.HOST_PROCESS_SOURCE_HEAD, platform: `${process.platform}-${process.arch}`,\n      nodeVersion: process.version, status: complete && cleanup && !failure ? 'PASS' : 'INCOMPLETE',\n      pins, ...(sourceProvider === undefined ? { wrappers, providers } : { provider: sourceProvider, sourceScenarios }),\n      cleanup, realProviderExecuted: false, desktopQualified: false,\n      releaseQualified: false }, null, 2) + '\\n', { flag: 'wx' });\n  }\n  if (failure) throw failure;\n  assert.ok(complete && cleanup);\n}\n\nif (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "blob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "firstLine": 84,
+      "lastLine": 153,
+      "purpose": "One captured HANDLE observer, finiteQ, cachedW",
+      "body": "/** TEST-only fresh zero-time observations of one HANDLE retained before provider resume. */\nexport async function capturedQueryableWitness(\n  fixture: string, pid: number, birth: string, track: (child: ChildProcess) => void,\n  events: NativeGateEvents,\n  mode: 'vendor-query-wait-gated' | 'query-wait-gated' = 'vendor-query-wait-gated'\n): Promise<{\n  process: ChildProcess;\n  observe(): Promise<'alive' | 'absent'>;\n  wait(): Promise<number | null>;\n}> {\n  const child = spawn(fixture, [mode, String(pid), birth], {\n    stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,\n  });\n  track(child);\n  let pending: { resolve(value: string): void; reject(error: Error): void } | undefined;\n  let buffer = '', queries = 0, querying = false;\n  let waiting: Promise<number | null> | undefined;\n  const failure = () => new Error('Original HANDLE witness unavailable');\n  child.stdout.on('data', events.guard((bytes: Buffer) => {\n    buffer += bytes.toString('ascii');\n    assert.ok(buffer.length <= 64, 'Bounded original witness output');\n    const end = buffer.indexOf('\\n');\n    if (end < 0) return;\n    const line = buffer.slice(0, end).replace(/\\r$/, '');\n    buffer = buffer.slice(end + 1);\n    assert.ok(pending && !buffer.length, 'Exactly one original witness reply');\n    const original = pending; pending = undefined; original.resolve(line);\n  }));\n  child.stdin.on('error', events.guard(() => { throw failure(); }));\n  const exit = new Promise<number | null>((resolveExit, reject) => {\n    child.once('exit', code => { pending?.reject(failure()); pending = undefined; resolveExit(code); });\n    child.once('error', error => { pending?.reject(failure()); pending = undefined; reject(error); });\n  });\n  void exit.catch(() => undefined);\n  const line = () => {\n    assert.equal(pending, undefined);\n    assert.equal(child.exitCode, null);\n    return new Promise<string>((resolveLine, reject) => {\n      pending = { resolve: resolveLine, reject };\n    });\n  };\n  assert.equal(await timeout(events.wait(line())), 'captured');\n  return {\n    process: child,\n    async observe() {\n      assert.ok(!querying && !waiting && queries++ < 4, 'Finite sequential original HANDLE observations');\n      querying = true;\n      try {\n        const response = line();\n        void response.catch(() => undefined);\n        await timeout(events.wait(new Promise<void>((done, reject) => {\n          child.stdin.write('Q', error => error ? reject(error) : done());\n        })));\n        const result = await timeout(events.wait(response));\n        assert.ok(result === 'alive' || result === 'absent', 'Closed original HANDLE facts only');\n        return result;\n      } finally { querying = false; }\n    },\n    wait() {\n      assert.equal(querying, false);\n      waiting ??= (async () => {\n        await timeout(events.wait(new Promise<void>((done, reject) => {\n          child.stdin.end('W', (error?: Error | null) => error ? reject(error) : done());\n        })));\n        return timeout(events.wait(exit));\n      })();\n      return waiting;\n    },\n  };\n}"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "blob": "8fc74b25d5334395b455ee189e333b53ec9e4d36",
+      "firstLine": 154,
+      "lastLine": 186,
+      "purpose": "OriginalPID+birth HANDLE capture and native wait result",
+      "body": "  if(mode==L\"wait\"||mode==L\"wait-gated\"||mode==L\"query-wait-gated\") {\n    if(mode==L\"query-wait-gated\"&&!vendorHeld) {\n      // The finite source gate uses its original outer Job, without vendor admission.\n      // Keep the ordinary 15s native wait; vendor actors retain their separate guard.\n      BOOL inJob=FALSE;\n      if(!IsProcessInJob(GetCurrentProcess(),nullptr,&inJob)||!inJob) return 54;\n    }\n    if(argc!=4) return 23;\n    DWORD pid=static_cast<DWORD>(wcstoul(argv[2],nullptr,10));\n    uint64_t expected=_wcstoui64(argv[3],nullptr,16);\n    HANDLE process=OpenProcess(SYNCHRONIZE|PROCESS_QUERY_LIMITED_INFORMATION,FALSE,pid);\n    if(!process||birth(process)!=expected) return 24;\n    std::puts(\"captured\"); std::fflush(stdout);\n    if(mode==L\"query-wait-gated\") {\n      unsigned queries=0;\n      for(;;) {\n        char command; DWORD count=0;\n        if(!ReadFile(GetStdHandle(STD_INPUT_HANDLE),&command,1,&count,nullptr)||count!=1) {\n          CloseHandle(process); return 55;\n        }\n        if(command=='W') break;\n        if(command!='Q'||++queries>4) { CloseHandle(process); return 56; }\n        // Same HANDLE captured before the provider's first resume. No PID reopen or signal.\n        const auto state=WaitForSingleObject(process,0);\n        if(state!=WAIT_TIMEOUT&&state!=WAIT_OBJECT_0) { CloseHandle(process); return 57; }\n        std::puts(state==WAIT_TIMEOUT?\"alive\":\"absent\"); std::fflush(stdout);\n      }\n    } else if(mode==L\"wait-gated\") {\n      char ack; DWORD count=0;\n      if(!ReadFile(GetStdHandle(STD_INPUT_HANDLE),&ack,1,&count,nullptr)||count!=1||ack!='1') return 47;\n    }\n    auto result=WaitForSingleObject(process,vendorHeld?INFINITE:15000); CloseHandle(process);\n    return result==WAIT_OBJECT_0?0:25;"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "blob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+      "firstLine": 1,
+      "lastLine": 40,
+      "purpose": "First callback failure remains latched through waits",
+      "body": "export interface NativeGateEvents {\n  readonly guard: <Args extends unknown[]>(\n    callback: (...args: Args) => void\n  ) => (...args: Args) => void;\n  readonly wait: <T>(operation: Promise<T>) => Promise<T>;\n}\n\n// EventEmitter does not turn a thrown listener exception into an awaited rejection.\n// Keep the first failure alive across readiness, drain and release waits so finally owns cleanup.\nexport function createNativeGateEvents(): NativeGateEvents {\n  let firstFailure: Error | undefined;\n  let rejectFailure!: (error: Error) => void;\n  const failed = new Promise<never>((_done, reject) => {\n    rejectFailure = reject;\n  });\n  void failed.catch(() => undefined); // a callback may fail between two awaited operations\n  return {\n    guard:\n      (callback) =>\n      (...args) => {\n        try {\n          callback(...args);\n        } catch (error) {\n          if (firstFailure) return;\n          firstFailure = error instanceof Error ? error : new Error('Native gate callback failed');\n          rejectFailure(firstFailure);\n        }\n      },\n    wait: async (operation) => {\n      // Observe even an already rejected operation when the event failure won first.\n      const result = Promise.race([failed, operation]);\n      if (firstFailure) {\n        void result.catch(() => undefined);\n        throw firstFailure;\n      }\n      return result;\n    },\n  };\n}\n"
+    },
+    {
+      "path": "tools/owned-process-broker/gateController.cpp",
+      "blob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+      "firstLine": 63,
+      "lastLine": 107,
+      "purpose": "Independent outer-job drain retains failed root exit",
+      "body": "  bool emergency=false, rootExited=false; DWORD code=99;\n  if(ResumeThread(process.hThread)!=1) emergency=true;\n  CloseHandle(process.hThread);\n  if(!emergency) {\n    auto result=WaitForSingleObject(process.hProcess,120000);\n    rootExited=result==WAIT_OBJECT_0;\n    if(!rootExited||!GetExitCodeProcess(process.hProcess,&code)) emergency=true;\n  }\n  // Drop original handle after retaining signaled exit witness, so accounting can decay.\n  if(rootExited) { CloseHandle(process.hProcess); process.hProcess=nullptr; }\n  auto quietDeadline=GetTickCount64()+3000;\n  while(!emergency&&!zero(job)&&GetTickCount64()<quietDeadline) Sleep(10);\n  if(!zero(job)) emergency=true;\n  if(emergency) {\n    if(!TerminateJobObject(job,99)) { CloseHandle(job); return 100; }\n    auto cleanupDeadline=GetTickCount64()+10000;\n    while(GetTickCount64()<cleanupDeadline) {\n      if(process.hProcess&&WaitForSingleObject(process.hProcess,0)==WAIT_OBJECT_0) {\n        CloseHandle(process.hProcess); process.hProcess=nullptr; rootExited=true;\n      }\n      if(!process.hProcess&&zero(job)) break;\n      Sleep(10);\n    }\n  }\n  if(process.hProcess||!rootExited||!zero(job)) { CloseHandle(job); return 101; }\n  if(!CloseHandle(job)) return 102;\n  // Destructive sandbox cleanup follows fresh zero membership plus original-root exit.\n  // GetTempPathW/GetTempFileNameW selected this fully qualified sandbox. Its Node\n  // descendants can exceed MAX_PATH; use the same root in the extended namespace.\n  std::wstring cleanupSandbox=sandbox;\n  if(sandbox.rfind(L\"\\\\\\\\?\\\\\",0)!=0&&sandbox.rfind(L\"\\\\\\\\.\\\\\",0)!=0)\n    cleanupSandbox=sandbox.rfind(L\"\\\\\\\\\",0)==0 ? L\"\\\\\\\\?\\\\UNC\\\\\"+sandbox.substr(2) : L\"\\\\\\\\?\\\\\"+sandbox;\n  std::error_code error;\n  std::filesystem::remove_all(cleanupSandbox,error);\n  if(error) {\n    const char* category=&error.category()==&std::system_category()?\"system\":\n      &error.category()==&std::generic_category()?\"generic\":\"other\";\n    std::printf(\"{\\\"gateController\\\":\\\"sandbox-cleanup-error\\\",\\\"rootExitCode\\\":%lu,\\\"emergency\\\":%s,\"\n      \"\\\"errorCode\\\":%d,\\\"category\\\":\\\"%s\\\"}\\n\",code,emergency?\"true\":\"false\",error.value(),category);\n    std::fflush(stdout);\n    return 103;\n  }\n  std::printf(\"{\\\"gateController\\\":\\\"%s\\\",\\\"rootExitCode\\\":%lu,\\\"activeProcesses\\\":0}\\n\",\n    emergency?\"emergency-fail\":\"drained\",code);\n  return !emergency&&code==0?0:104;"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "blob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+      "firstLine": 478,
+      "lastLine": 580,
+      "purpose": "Host forwards original owned Stop/drain/release receipts",
+      "body": "  stop(request: StopRequest): Promise<TreeOutcome> {\n    if (!sameOwner(request.expectedOwner, this.owner))\n      return Promise.reject(new Error('Original owner mismatch'));\n    this.sealed = true;\n    const attempt = this.attempts.get(request.attemptId);\n    if (attempt) {\n      if (\n        attempt.request.mode !== request.mode ||\n        attempt.request.deadlineMs !== request.deadlineMs\n      )\n        return Promise.reject(new Error('Original attempt mismatch'));\n      return attempt.result;\n    }\n    if (this.attempts.size >= 64) return Promise.reject(new Error('Original attempts exhausted'));\n    const result = this.stopOriginal(request);\n    this.attempts.set(request.attemptId, { request: Object.freeze({ ...request }), result });\n    return result;\n  }\n  private async stopOriginal(request: StopRequest): Promise<TreeOutcome> {\n    const unknown = (): TreeOutcome => ({\n      kind: 'unknown',\n      owner: this.owner,\n      attemptId: request.attemptId,\n      reason: 'Original Main Stop unconfirmed',\n      creation: this.dispatched ? 'uncertain' : 'known-not-created',\n      deadlineExpired: performance.now() >= request.deadlineMs,\n    });\n    if (request.mode !== 'force' || performance.now() >= request.deadlineMs) return unknown();\n    if (!this.dispatched) {\n      const receipt: TreeReceipt = Object.freeze({\n        owner: this.owner,\n        attemptId: request.attemptId,\n        coverage: 'no-local-dispatch',\n        rootExited: false,\n        proofDigest: createHash('sha256').update(this.key).update(request.attemptId).digest('hex'),\n      });\n      this.receipts.set(receipt, null);\n      return { kind: 'confirmed', receipt };\n    }\n    try {\n      const value = await this.source.request(\n        'stop', () => ({\n          operation: 'stop',\n          capability: this.key,\n          attemptRef: request.attemptId,\n          budgetMs: Math.max(\n            0,\n            Math.min(30000, Math.floor(request.deadlineMs - performance.now()))\n          ),\n        }),\n        request.deadlineMs\n      );\n      if (\n        value.operation !== 'stop' ||\n        value.state !== 'confirmed' ||\n        !value.receiptRef ||\n        !value.receipt ||\n        !sameOwner(value.receipt.owner, this.owner) ||\n        value.receipt.attemptId !== request.attemptId ||\n        performance.now() >= request.deadlineMs\n      )\n        return unknown();\n      const receipt = Object.freeze({\n        ...value.receipt,\n        owner: Object.freeze({ ...value.receipt.owner }),\n      });\n      this.receipts.set(receipt, value.receiptRef);\n      return { kind: 'confirmed', receipt };\n    } catch {\n      return unknown();\n    }\n  }\n\n  async drain(deadlineMs: number): Promise<TargetDrain> {\n    if (!this.dispatched) return { kind: 'complete' };\n    const value = await this.source.request(\n      'drain', admittedDeadline => ({\n        operation: 'drain',\n        capability: this.key,\n        // Incomplete output still needs an ACK before the original Host deadline. Leave\n        // room for that reply after queueing and the client's own timeout clamp.\n        budgetMs: Math.max(0, Math.min(3000, Math.floor(admittedDeadline - performance.now()) - DRAIN_REPLY_RESERVE_MS)),\n      }),\n      deadlineMs\n    );\n    return value.operation === 'drain' ? { kind: value.state } : unavailable();\n  }\n  async release(receipt: TreeReceipt, coverage: Coverage): Promise<void> {\n    if (\n      !this.receipts.has(receipt) ||\n      !sameOwner(receipt.owner, this.owner) ||\n      coverage !== 'job-membership'\n    )\n      unavailable();\n    const reference = this.receipts.get(receipt);\n    if (reference) {\n      const value = await this.source.request('release', () => ({\n        operation: 'release', capability: this.key, receiptRef: reference,\n      }));\n      if (value.operation !== 'release' || value.state !== 'released') unavailable();\n    }\n    this.source.retire(this);\n  }"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+      "blob": "10e1a457bb65a136128eb1db5176a4701d2fe4e2",
+      "firstLine": 411,
+      "lastLine": 452,
+      "purpose": "Main physical owner stores genuine Stop receipt and confirms drain/release",
+      "body": "      case 'stop': {\n        allocation.inputSealed = true;\n        this.dropStaging(allocation);\n        let retained = allocation.stops.get(call.attemptRef);\n        if (!retained) {\n          if (allocation.stops.size >= 64) unavailable();\n          retained = {\n            outcome: allocation.pending.stop({\n              expectedOwner: allocation.pending.owner,\n              attemptId: call.attemptRef,\n              mode: 'force',\n              deadlineMs: performance.now() + call.budgetMs,\n            }),\n          };\n          allocation.stops.set(call.attemptRef, retained);\n        }\n        const outcome = await retained.outcome;\n        if (outcome.kind !== 'confirmed') return { operation: call.operation, state: 'unknown' };\n        if (outcome.receipt.coverage === 'job-membership') allocation.wholeJobReceipt = outcome.receipt;\n        if (!retained.receiptRef) {\n          retained.receiptRef = randomUUID();\n          allocation.receipts.set(retained.receiptRef, outcome.receipt);\n        }\n        return {\n          operation: call.operation,\n          state: 'confirmed',\n          receiptRef: retained.receiptRef,\n          receipt: outcome.receipt,\n        };\n      }\n      case 'drain': {\n        const outcome = await allocation.pending.drain(performance.now() + call.budgetMs);\n        return { operation: call.operation, state: outcome.kind };\n      }\n      case 'release': {\n        const receipt = allocation.receipts.get(call.receiptRef);\n        if (!receipt) unavailable();\n        if (!allocation.released) {\n          await allocation.pending.release(receipt, 'job-membership');\n          this.retire(allocation);\n        }\n        return { operation: call.operation, state: 'released' };"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+      "blob": "10e1a457bb65a136128eb1db5176a4701d2fe4e2",
+      "firstLine": 491,
+      "lastLine": 521,
+      "purpose": "Main shutdown retains original allocated owner capabilities",
+      "body": "  close(): Promise<boolean> {\n    this.shuttingDown = true;\n    if (this.closing) return this.closing;\n    const attemptId = `main-owner-quit-${randomUUID()}`;\n    this.closing = Promise.all(\n      [...this.allocations.values()].map(async (allocation) => {\n        if (allocation.released) return true;\n        try {\n          const outcome = await allocation.pending.stop({\n            expectedOwner: allocation.pending.owner,\n            attemptId,\n            mode: 'force',\n            deadlineMs: performance.now() + 10000,\n          });\n          if (outcome.kind !== 'confirmed') return false;\n          if (outcome.receipt.coverage === 'job-membership') allocation.wholeJobReceipt = outcome.receipt;\n          await allocation.pending.drain(performance.now() + 3000);\n          await allocation.pending.release(outcome.receipt, 'job-membership');\n          this.retire(allocation);\n          return true;\n        } catch {\n          return false;\n        }\n      })\n    ).then((results) => {\n      const released = results.every(Boolean);\n      if (!released) this.closing = undefined;\n      return released;\n    });\n    return this.closing;\n  }"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/windowsBroker.ts",
+      "blob": "32b3315f04d91ae6da375bcca710e16948e09ad3",
+      "firstLine": 609,
+      "lastLine": 639,
+      "purpose": "NativeStop proof acceptance rejects incomplete root/job evidence",
+      "body": "    if (!proof || this.transportFailure || remaining(request.deadlineMs) === 0)\n      return unknown('Tree proof unavailable before deadline');\n    const noDispatch = proof.creation === 'known-not-created';\n    if (\n      proof.active !== 0 ||\n      proof.dispatchError ||\n      proof.queryError ||\n      (!noDispatch && (!proof.rootExited || !this.rootIdentity))\n    ) {\n      return unknown('Job accounting or original root witness incomplete');\n    }\n    if (\n      !noDispatch &&\n      proof.payload.readBigUInt64LE(10).toString(16).padStart(16, '0') !== this.rootIdentity!.birth\n    ) {\n      this.fail('Stop root mismatch');\n      return unknown('Root identity mismatch');\n    }\n    const receipt = Object.freeze({\n      owner: this.owner,\n      attemptId: request.attemptId,\n      coverage: noDispatch ? ('no-local-dispatch' as const) : ('job-membership' as const),\n      rootExited: proof.rootExited,\n      proofDigest: createHash('sha256')\n        .update(JSON.stringify(this.owner))\n        .update(proof.payload)\n        .update(request.attemptId)\n        .digest('hex'),\n    });\n    this.receipts.add(receipt);\n    return Object.freeze({ kind: 'confirmed', receipt });"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/windowsBroker.ts",
+      "blob": "32b3315f04d91ae6da375bcca710e16948e09ad3",
+      "firstLine": 651,
+      "lastLine": 721,
+      "purpose": "Drain and original release acknowledgement remain separate",
+      "body": "  async drain(deadlineMs: number): Promise<TargetDrain> {\n    validDeadline(deadlineMs);\n    if (!this.child) {\n      this.drainSettled = true;\n      return { kind: 'complete' };\n    }\n    if (this.streamFailed) {\n      this.drainSettled = true;\n      return { kind: 'incomplete', reason: 'Target stream failure' };\n    }\n    const streams = [this.stdout, this.stderr];\n    const result = await new Promise<TargetDrain>((resolve) => {\n      const finish = (value: TargetDrain): void => {\n        clearTimeout(timer);\n        for (const stream of streams) {\n          stream.off('end', check);\n          stream.off('error', failed);\n        }\n        resolve(value);\n      };\n      const check = (): void => {\n        if (streams.every((stream) => stream.readableEnded)) finish({ kind: 'complete' });\n      };\n      const failed = (): void => finish({ kind: 'incomplete', reason: 'Target stream failure' });\n      const timer = setTimeout(\n        () => finish({ kind: 'incomplete', reason: 'Target drain deadline' }),\n        remaining(deadlineMs)\n      );\n      for (const stream of streams) {\n        stream.on('end', check);\n        stream.on('error', failed);\n      }\n      check();\n    });\n    this.drainSettled = true;\n    return result;\n  }\n  async release(receipt: TreeReceipt, requiredCoverage: Coverage): Promise<void> {\n    if (\n      !this.receipts.has(receipt) ||\n      !sameOwner(receipt.owner, this.owner) ||\n      requiredCoverage !== this.requiredCoverage ||\n      (receipt.coverage !== requiredCoverage && receipt.coverage !== 'no-local-dispatch')\n    ) {\n      throw new Error('Receipt authority or required coverage mismatch');\n    }\n    if (this.released) return;\n    if (this.started && !this.drainSettled) throw new Error('Target drain not settled');\n    if (this.releaseOperation) return this.releaseOperation;\n    this.releaseOperation = this.performRelease();\n    return this.releaseOperation;\n  }\n  private async performRelease(): Promise<void> {\n    if (this.started) {\n      this.releaseRequested = true;\n      const deadline = performance.now() + 5000;\n      try {\n        const frame = await this.request(Op.release, Op.released, Buffer.alloc(0), deadline);\n        if (frame.payload.length) throw new Error('Invalid release acknowledgement');\n        await this.releaseConfirmation.wait(deadline);\n      } catch (error) {\n        this.releaseRequested = false;\n        this.fail('Broker release acknowledgement unavailable', 'release-unavailable');\n        throw error;\n      }\n    }\n    this.released = true;\n    this.serviceOperations?.close();\n    this.control?.end();\n    this.child?.stdin?.destroy();\n  }"
+    },
+    {
+      "path": "tools/owned-process-broker/broker.cpp",
+      "blob": "a4912d809aacc1fd4a949267fa0120d324b41be4",
+      "firstLine": 143,
+      "lastLine": 155,
+      "purpose": "Original root HANDLE watcher",
+      "body": "void observeRoot() { // state lock required; no PID-based reopening\n  if(!root||rootExited) return;\n  auto status=WaitForSingleObject(root,0);\n  if(status==WAIT_FAILED) { sealed=true; return; }\n  if(status!=WAIT_OBJECT_0) return;\n  DWORD code=0; if(!GetExitCodeProcess(root,&code)) { sealed=true; return; }\n  rootExited=true; rootCode=code;\n  CloseHandle(root); root=nullptr;\n  if(primaryThread) { CloseHandle(primaryThread); primaryThread=nullptr; }\n  if(birthKnown&&!rootPublished) {\n    rootPublished=true; std::vector<uint8_t> p;\n    wire::append(p,rootCode); wire::append(p,birth); reply(wire::RootExit,0,p);\n  }"
+    },
+    {
+      "path": "tools/owned-process-broker/broker.cpp",
+      "blob": "a4912d809aacc1fd4a949267fa0120d324b41be4",
+      "firstLine": 257,
+      "lastLine": 310,
+      "purpose": "Original native job accounting, root-exit and latched errors",
+      "body": "std::vector<uint8_t> stopFacts(DWORD active,DWORD dispatchError,DWORD queryError) {\n  std::vector<uint8_t> p; wire::append(p,static_cast<uint8_t>(creation));\n  wire::append(p,static_cast<uint8_t>(rootExited&&birthKnown));\n  wire::append(p,active); wire::append(p,rootCode); wire::append(p,birth);\n  wire::append(p,dispatchError); wire::append(p,queryError); return p;\n}\nvoid stop(wire::Frame frame) {\n  const auto budget=wire::get<uint32_t>(frame.payload.data());\n  auto deadline=GetTickCount64()+budget;\n  DWORD active=MAXDWORD,dispatchError=0,queryError=0;\n  bool dispatched=false;\n  while(GetTickCount64()<deadline) {\n    if(state.try_lock_for(std::chrono::milliseconds(5))) {\n      std::unique_lock<std::timed_mutex> lock(state,std::adopt_lock);\n      if(confirmed) { auto p=confirmedStop.payload; lock.unlock(); stopBusy=false;\n        reply(wire::Stopped,frame.id,p); return; }\n      if(!launched||admissionDone) {\n        if(creation==Never) {\n          active=0; auto p=stopFacts(active,0,0); confirmed=true;\n          confirmedStop={wire::Stopped,frame.id,generation,p}; lock.unlock(); stopBusy=false;\n          reply(wire::Stopped,frame.id,p); return;\n        }\n        observeRoot();\n        JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting{};\n        bool queried=job&&QueryInformationJobObject(job,JobObjectBasicAccountingInformation,\n          &accounting,sizeof(accounting),nullptr);\n        DWORD queryFailure=queried?0:(job?GetLastError():ERROR_INVALID_HANDLE);\n#ifdef OWNED_PROCESS_TEST_ACCOUNTING_FAILURE\n        if(accountingFailurePending.exchange(false)) { queried=false; queryFailure=ERROR_GEN_FAILURE; }\n#endif\n        if(!queried) { if(!queryError) queryError=queryFailure?queryFailure:ERROR_GEN_FAILURE; }\n        else active=accounting.ActiveProcesses; // a successful observation cannot erase this attempt's failure\n        if(active==0&&rootExited&&birthKnown) {\n          auto p=stopFacts(active,dispatchError,queryError);\n          if(!queryError&&!dispatchError) { confirmed=true; confirmedStop={wire::Stopped,frame.id,generation,p}; }\n          lock.unlock(); stopBusy=false; reply(wire::Stopped,frame.id,p); return;\n        }\n        if(job&&!dispatched&&(active!=0||queryError)) {\n          if(!TerminateJobObject(job,1)) dispatchError=GetLastError();\n          dispatched=true; // API failure remains latched unknown for this attempt\n        }\n      }\n    }\n    Sleep(5);\n  }\n  // Never wait indefinitely on a CreateProcess call holding the state lock.\n  if(state.try_lock()) {\n    auto p=stopFacts(active,dispatchError,queryError?queryError:WAIT_TIMEOUT);\n    state.unlock(); stopBusy=false; reply(wire::Stopped,frame.id,p);\n  } else {\n    std::vector<uint8_t> p; wire::append(p,static_cast<uint8_t>(Uncertain)); wire::append(p,uint8_t{0});\n    wire::append(p,MAXDWORD); wire::append(p,DWORD{0}); wire::append(p,uint64_t{0});\n    wire::append(p,DWORD{0}); wire::append(p,DWORD{WAIT_TIMEOUT}); stopBusy=false; reply(wire::Stopped,frame.id,p);\n  }"
+    },
+    {
+      "path": "tools/owned-process-broker/broker.cpp",
+      "blob": "a4912d809aacc1fd4a949267fa0120d324b41be4",
+      "firstLine": 479,
+      "lastLine": 533,
+      "purpose": "Original native release requires confirmed Stop",
+      "body": "      } else if(frame.op==wire::Release) {\n        if(!frame.payload.empty()) abandon();\n#ifdef OWNED_PROCESS_TEST_RELEASE_CONTENTION\n        if(releaseContentionEnabled) {\n          releaseContentionRequested=true;\n          const auto deadline=GetTickCount64()+5000;\n          while(!releaseContentionHeld&&GetTickCount64()<deadline) Sleep(1);\n          if(!releaseContentionHeld) abandon();\n          if(state.try_lock()) { state.unlock(); abandon(); }\n          releaseContentionObserved=true; // contention was observed, not inferred from a delay\n        }\n#endif\n        // Same bounded command-state budget as Resume; a watcher may briefly own this lock.\n        if(!state.try_lock_for(std::chrono::milliseconds(100))) abandon();\n        std::unique_lock<std::timed_mutex> lock(state,std::adopt_lock);\n        if(!confirmed||stopBusy) { failure(frame.id,creation,ERROR_INVALID_STATE); continue; }\n        if(job&&!CloseHandle(job)) { failure(frame.id,creation,GetLastError()); continue; }\n        job=nullptr; releaseAccepted=true;\n#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE\n        // Complete the acquired TEST prefix before either successful release exit can run.\n        if(!debug_service_test::flushBreakpointObservations()) abandon(wire::WriteFailure);\n#endif\n        std::vector<uint8_t> releasedFacts;\n#ifdef OWNED_PROCESS_TEST_RELEASE_CONTENTION\n        if(releaseContentionEnabled) {\n          wire::append(releasedFacts,static_cast<uint8_t>(releaseContentionHeld.load()));\n          wire::append(releasedFacts,static_cast<uint8_t>(releaseContentionObserved.load()));\n          wire::append(releasedFacts,static_cast<uint8_t>(releaseContentionFinished.load()));\n        }\n#endif\n        reply(wire::Released,frame.id,releasedFacts);\n        break; // this command read completed; do not issue another read after accepted Release\n      } else abandon();\n    }\n  } catch(...) { abandon(); }\n  if(releaseAccepted) {\n    const auto deadline=GetTickCount64()+5000;\n#ifdef OWNED_PROCESS_TEST_RELEASE_DELAY\n    if(terminalRaceFixture()) {\n      while(!terminalRaceAckComplete&&!wire::failureCause()&&GetTickCount64()<deadline) Sleep(1);\n      if(!terminalRaceAckComplete||GetTickCount64()>=deadline) terminalRaceBarrierFailed();\n      DWORD active=0;\n      if(!wire::terminalChoice.compare_exchange_strong(active,wire::WriteDeadline))\n        terminalRaceBarrierFailed(); // this main thread must actually win the first-failure CAS\n      while(!wire::terminalRaceRejected&&GetTickCount64()<deadline) Sleep(1);\n      if(!wire::terminalRaceRejected||GetTickCount64()>=deadline) terminalRaceBarrierFailed();\n      wire::terminalRaceObserved=true; // exit74 is now permitted: actual losing CAS was observed\n    } else\n#endif\n    {\n      while(!wire::releaseWon()&&!wire::failureCause()&&GetTickCount64()<deadline) Sleep(1);\n      if(wire::releaseWon()) exitReleased();\n    }\n  }\n  abandon(releaseAccepted?wire::WriteDeadline:wire::OwnerEof); // no receipt from pre-release EOF"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "blob": "4fcd83a62f974f6710ebc641801a13c6748b396c",
+      "firstLine": 87,
+      "lastLine": 141,
+      "purpose": "Finite TEST peer environments, separate runtime and management budgets",
+      "body": "  const environment = (role: 'runtime' | 'management'): Record<string, string> => ({\n    HOME: join(peerRoot, 'home'), USERPROFILE: join(peerRoot, 'home'),\n    TMPDIR: join(peerRoot, 'tmp'), TEMP: join(peerRoot, 'tmp'), TMP: join(peerRoot, 'tmp'),\n    XDG_CONFIG_HOME: join(peerRoot, 'config'), XDG_DATA_HOME: join(peerRoot, 'data'), XDG_CACHE_HOME: join(peerRoot, 'cache'),\n    SystemRoot: systemRoot, PATH: [dirname(node), join(systemRoot, 'System32')].join(';'),\n    ...(provider === 'claude' ? { CLAUDE_CONFIG_DIR: join(peerRoot, 'config') }\n      : provider === 'codex' ? { CODEX_HOME: join(peerRoot, 'config') } : {}),\n    TEST_EMULATED_DESKTOP_PROVIDER: '1', TEST_PEER_SCENARIO: 'desktop-ui-v1', TEST_PEER_PROVIDER: provider,\n    TEST_PEER_ROLE: role, TEST_DESKTOP_PEER_ROOT: peerRoot, TEST_DESKTOP_PEER_WORKSPACE: workspace, TEST_PEER_EFFECTS: effects,\n    ...(provider !== 'claude' ? { TEST_PEER_HELPER_SHA256: helpers[1]!.sha256 } : {}),\n    ...(provider === 'opencode' ? {\n      TEST_PEER_MCP_POLICY_SHA256: helpers[2]!.sha256,\n      OPENCODE_CONFIG_CONTENT: JSON.stringify({ autoupdate: false, share: 'disabled',\n        model: 'test-provider/TEST-model', small_model: 'test-provider/TEST-model', provider: { 'test-provider': {\n          npm: '@ai-sdk/openai-compatible', name: 'TEST provider',\n          options: { baseURL: 'http://127.0.0.1:19999/TEST-no-network', apiKey: 'TEST-LOCALHOST-ONLY' },\n          models: { 'TEST-model': { name: 'TEST model', limit: { context: 4096, output: 1024 },\n            variants: { low: { reasoningEffort: 'low' }, high: { reasoningEffort: 'high' } } } } } },\n        agent: { build: { mode: 'primary' } }, compaction: { auto: false } }),\n      OPENCODE_DISABLE_MODELS_FETCH: '1', OPENCODE_DISABLE_AUTOUPDATE: '1', OPENCODE_DISABLE_TELEMETRY: '1', OPENCODE_DISABLE_SHARE: '1',\n    } : {}),\n  });\n  const nonce = randomUUID(), ownerId = `TEST-source-${provider}-${nonce}`, contextId = 'TEST-source-context';\n  const providerId = provider === 'claude' ? 'anthropic' : provider, model = provider === 'claude' ? 'sonnet' : 'TEST-model';\n  const savedSettings: NonNullable<TeamHostProfile['teams'][number]['savedSettings']> = {\n    cwd: workspace, providerId, model: provider === 'opencode' ? 'test-provider/TEST-model' : model,\n    prompt: '', skipPermissions: false, syncModelsWithLead: true,\n    ...(provider === 'claude' ? { effort: 'low' as const, fastMode: 'off' as const } : {}) };\n  const teams = (['A', 'B'] as const).map((source): TeamHostProfile['teams'][number] => {\n    const binding = { backendId: ownerId, teamId: `TEST-source-team-${source}`, teamName: `test-source-team-${source.toLowerCase()}` };\n    const scope = { projectId: 'TEST-project', workspaceId: 'TEST-workspace', teamId: binding.teamId,\n      runId: `TEST-source-run-${source}`, memberId: 'human', generation: '1' };\n    return { binding, scope, savedSettings,\n      members: [{ memberId: 'alice-id', name: 'alice', role: 'lead' as const,\n        delivery: { ...binding, runId: scope.runId, memberId: 'alice-id', generation: '1' } }],\n      grants: [{ principalId: 'human', memberName: 'user', permissions: ['read', 'task.write', 'message.write', 'admin'] },\n        { principalId: 'alice-session', memberName: 'alice', permissions: ['read', 'task.write', 'message.write'] }] };\n  });\n  const members = await Promise.all(teams.map(async team => runtimeMemberProfileSchema.parse({\n    provider, teamId: team.binding.teamId, memberId: 'alice-id', principalId: 'alice-session',\n    sessionId: randomUUID(), generation: 1, configRevision: 'TEST-source-seed-runtime',\n    cwd: workspace, model, accountBinding: 'TEST-no-vendor-account',\n    executable: { path: images.A.path, sha256: images.A.sha256 }, windowsBroker, environment: environment('runtime'),\n    ...(provider === 'claude' ? { configNamespace: 'custom-directory', nativeTools: ['Read', 'Write', 'AskUserQuestion'], autoAllowedTools: [],\n      nativeOptions: { permissionMode: 'default', settingSources: [], effort: 'low', fastMode: false } }\n      : provider === 'codex' ? { protocolRevision: '0.162.0', nativeOptions: { approvalPolicy: 'on-request', sandbox: 'read-only' } }\n      : { protocolRevision: '1.19.4', endpoint: await endpoint(), nativeOptions: { providerId: 'test-provider', agent: 'build', toolApprovalMode: 'manual' } }),\n    limits: { queuedInputs: 2, inputBytes: 65536, outputBytes: 1_000_000, outputEvents: 1500, pendingInteractions: 4, timeoutMs: 90000 },\n  })));\n  const management = providerManagementProfileSchema.parse({ provider, profileId: `TEST-source-${provider}-management`,\n    configRevision: 'TEST-source-management-1', accountBinding: 'TEST-no-vendor-account', cwd: workspace,\n    executable: { path: images.A.path, sha256: images.A.sha256 }, windowsBroker, environment: environment('management'),\n    timeoutMs: 15000, modelProbeTimeoutMs: 30000,\n    ...(provider === 'claude' ? { sdkRevision: '0.3.305', configNamespace: 'custom-directory', settingSources: [] }\n      : provider === 'codex' ? { protocolRevision: '0.162.0' } : { endpoint: await endpoint() }),"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "blob": "72bcb2ef993c43e8f5199b090ee3df8440d758b9",
+      "firstLine": 291,
+      "lastLine": 302,
+      "purpose": "Incoming a07 dependency archive selection",
+      "body": "  \"devDependencies\": {\n    \"@types/node\": \"^24.12.4\",\n    \"@typescript/native\": \"npm:typescript@7.0.2\"\n  },\n  \"dependencies\": {\n    \"@agent-teams/provider-implementations\": \"file:../../vendor/provider-migration/v2-settled-fetch-c930d3c8/agent-teams-provider-implementations-0.0.0.tgz\",\n    \"@agent-teams/provider-session-contracts\": \"file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz\",\n    \"@modelcontextprotocol/sdk\": \"1.32.0\",\n    \"agent-teams-controller\": \"workspace:*\",\n    \"zod\": \"4.6.7\",\n    \"@agent-teams/task-change-ledger\": \"workspace:*\",\n    \"jsonc-parser\": \"3.3.1\""
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "firstLine": 34,
+      "lastLine": 39,
+      "purpose": "Incoming SPI override",
+      "body": "  allowedVersions:\n    '@nuxt/schema': '3.21.11'\n\noverrides:\n  '@agent-teams/provider-session-contracts': 'file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz'\n  # Fixed Zod collections; retain the headless consumer's unchanged EventType wire API."
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "blob": "93606e49aedfe84b6452aee487efdf2055f45524",
+      "firstLine": 380,
+      "lastLine": 401,
+      "purpose": "Strict final verifier requires every final absence flag and successful original controller; this step was skipped",
+      "body": "              else {\n                assert.equal(row.standalone.phase, 'completed'); assert.equal(row.standalone.ephemeral, true);\n                assert.equal(row.standalone.replayAllocated, false); assert.equal(row.standalone.source.revision, row.selections.B.revision);\n              }\n              assert.equal(row.epochs.length, 2); assert.ok(row.epochs[0].jobs.length > 0);\n              for (const epoch of row.epochs) {\n                assert.equal(epoch.serviceOperations, 0);\n                for (const job of epoch.jobs) for (const field of ['resumed', 'stopped', 'drained', 'released', 'originalHandleAbsent']) assert.equal(job[field], true);\n              }\n              const originalController = rows(log).filter(value => value.gateController);\n              assert.deepEqual(originalController, [{ gateController: 'drained', rootExitCode: 0, activeProcesses: 0 }]);\n              native.push({ log, scope: 'captured Main Host source A/B with finite ' + provider + ' peer', receipt: proof });\n            }\n          } else assert.equal(process.platform, 'darwin');\n          writeFileSync(join(directory, 'scope.json'), JSON.stringify({\n            kind: 'TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE', status: 'PASS',\n            sourceHead: process.env.HOST_PROCESS_SOURCE_HEAD, platform: process.env.HOST_PROCESS_PLATFORM,\n            nodeVersion: process.version, controlledContracts: true, retainedMainTransport: true,\n            posixProcessGroups: process.platform !== 'win32', native,\n            nativeProviderRuntimeQualified: false, darwinNativeRegistrationQualified: false,\n            posixExecutableAdmissionQualified: false, desktopQualified: false, releaseQualified: false,\n          }, null, 2) + '\\n');"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "blob": "4fcd83a62f974f6710ebc641801a13c6748b396c",
+      "firstLine": 40,
+      "lastLine": 84,
+      "purpose": "Exact generated TEST Node image/version/peer implementation, not a real Codex CLI",
+      "body": "  assert.ok(systemRoot && /^[A-Za-z]:\\\\/.test(systemRoot));\n  const peerNames = provider === 'claude' ? ['claudeProviderPeer.mjs'] : ['providerPeer.mjs', 'providerDesktopPeer.mjs'];\n  const helpers = peerNames.map(name => {\n    const path = fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));\n    assert.equal(realpathSync(path), path); return { path, sha256: fileHash(path) };\n  });\n  if (provider === 'opencode') {\n    const path = fileURLToPath(new URL('../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js', import.meta.url));\n    assert.equal(realpathSync(path), path); helpers.push({ path, sha256: fileHash(path) });\n  }\n  const entries = join(root, 'source-entries.ndjson'), effects = join(peerRoot, 'effects.ndjson');\n  const versions = { A: provider === 'codex' ? '0.162.0' : provider === 'claude' ? '2.1.34' : '1.19.4',\n    B: provider === 'codex' ? '0.162.0' : provider === 'claude' ? '2.1.34' : '1.19.4' };\n  const images = {} as Record<'A' | 'B', { path: string; sha256: string; entry: { path: string; sha256: string } }>;\n  for (const source of ['A', 'B'] as const) {\n    const entry = join(root, 'bin', `TEST-source-${source}.mjs`);\n    const output = provider === 'codex' ? `codex-cli ${versions[source]}`\n      : provider === 'claude' ? `${versions[source]} (Claude Code)` : versions[source];\n    const code = `import assert from 'node:assert/strict';\nimport {createHash} from 'node:crypto';import {appendFileSync,readFileSync,realpathSync} from 'node:fs';\nassert.equal(realpathSync.native(process.execPath),${JSON.stringify(node)});\nassert.equal(createHash('sha256').update(readFileSync(process.execPath)).digest('hex'),${JSON.stringify(fileHash(node))});\nconst argv=process.argv.slice(2);\nconst fact={provider:${JSON.stringify(provider)},source:${JSON.stringify(source)},pid:process.pid,parentPid:process.ppid};\nif(argv.length===1&&argv[0]==='--version'){\n  assert.equal(Object.keys(process.env).some(key=>key.startsWith('TEST_')),false);\n  assert.equal(process.env.NODE_OPTIONS,undefined);assert.equal(process.env.BUN_OPTIONS,undefined);\n  appendFileSync(${JSON.stringify(entries)},JSON.stringify({...fact,event:'version'})+'\\\\n');\n  process.stdout.write(${JSON.stringify(output + '\\n')});\n}else{\n  assert.equal(process.env.TEST_EMULATED_DESKTOP_PROVIDER,'1');assert.equal(process.env.TEST_EMULATED_WINDOWS_PROVIDER,undefined);\n  assert.ok(process.env.TEST_PEER_ROLE==='runtime'||process.env.TEST_PEER_ROLE==='management');\n  for(const source of ${JSON.stringify(helpers)}){assert.equal(realpathSync(source.path),source.path);assert.equal(createHash('sha256').update(readFileSync(source.path)).digest('hex'),source.sha256)}\n  appendFileSync(${JSON.stringify(entries)},JSON.stringify({...fact,event:'peer',role:process.env.TEST_PEER_ROLE})+'\\\\n');\n  await import(${JSON.stringify(pathToFileURL(helpers[0]!.path).href)});\n}\n`;\n    writeFileSync(entry, code, { flag: 'wx' });\n    const wrapper = join(root, 'bin', `TEST source ${source}.cmd`);\n    writeFileSync(wrapper, provider === 'codex'\n      ? `@echo off\\r\\nset \"_prog=node\"\\r\\n\"%_prog%\" \"${entry}\" %*\\r\\n`\n      : `@echo off\\r\\n\"${node}\" \"${entry}\" %*\\r\\n`, { flag: 'wx' });\n    images[source] = { path: realpathSync(wrapper), sha256: fileHash(wrapper), entry: { path: entry, sha256: fileHash(entry) } };\n  }\n  assert.notEqual(images.A.sha256, images.B.sha256); assert.notEqual(images.A.entry.sha256, images.B.entry.sha256);"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+      "blob": "e84ee4b6e2ff4cea7d468c3173bc0851c59cdeae",
+      "firstLine": 68,
+      "lastLine": 112,
+      "purpose": "Main capture retains original cleanup authority while fresh launch admission remains mandatory",
+      "body": "export function captureMainWindowsCustody(\n  profile: SelectedHostProfile,\n  sourceGrants: readonly RuntimeSourceGrant[] = []\n): RetainedWindowsCustody | undefined {\n  const captured = readMainWindowsCustodySource(profile);\n  if (!captured) return;\n  const { path, sha256, source, selected } = captured;\n  const assertOriginal = () => { readCapturedProfile(path, sha256); };\n  const sources = sourceGrants.length ? new CapturedWindowsRuntimeSources(source, sourceGrants, selected, assertOriginal) : undefined;\n  const sourceBrokers = sources?.versionBrokers() ?? [];\n  if (!selected.length && !sourceBrokers.length) unavailable();\n  const recipes = selected.map(value => ({ profile: value, launcher: captureWindowsLauncher(value) }));\n  const brokers = new Map(\n    [...selected.map(value => value.windowsBroker!), ...sourceBrokers].map((broker) => {\n      return [windowsBrokerReference(broker), Object.freeze({ ...broker })] as const;\n    })\n  );\n  const owner = new RetainedWindowsCustody({\n    profileId: profile.profileId,\n    profileDigest: capturedHostProfileDigest(profile),\n    selectBroker: (reference) => brokers.get(reference) ?? unavailable(),\n    async verifyLaunch(spec, executableSha256, broker, admission) {\n      // A changed source refuses new work without discarding original cleanup capabilities.\n      readCapturedProfile(path, sha256);\n      const originalRecipe = admission.runtimeSourceOrigin === undefined ? recipes.find(({ profile: value, launcher }) =>\n        launcher.executable.sha256 === executableSha256 &&\n        matchesCapturedWindowsLauncher(launcher, spec) && value.windowsBroker &&\n        windowsBrokerReference(value.windowsBroker) === windowsBrokerReference(broker)) : undefined;\n      const selectedRecipe: WindowsSourceLaunchSelection | undefined = originalRecipe\n        ? { ...originalRecipe, assertCurrent: assertOriginal }\n        : sources?.select(spec, executableSha256, broker, admission);\n      if (!selectedRecipe) unavailable();\n      selectedRecipe.assertCurrent();\n      if ((await realpath(spec.cwd)) !== spec.cwd || !(await stat(spec.cwd)).isDirectory())\n        unavailable();\n      await verifyFile(broker.path, broker.sha256, true);\n      verifyStagedBroker(broker.path, broker.arch, broker.capability ?? 'whole-job-v1');\n      for (const file of selectedRecipe.launcher.files) await verifyFile(file.path, file.sha256, false);\n      selectedRecipe.assertCurrent();\n      readCapturedProfile(path, sha256);\n    },\n  });\n  if (sources) bindMainWindowsRuntimeSources(owner, sources);\n  return owner;\n}"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "blob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+      "firstLine": 17,
+      "lastLine": 32,
+      "purpose": "Readiness projection uses original short circuit, so recordReady=false leaves providerReady/ownerCurrent unobserved",
+      "body": "}): JsonValue {\n  const { entry, record, binding } = options;\n  const observed = options.runtime.readSession(binding);\n  const bindingMatches = runtimeDigest(binding) === runtimeDigest(entry.binding);\n  let recordReady: boolean | null = null, providerReady: boolean | null = null, ownerCurrent: boolean | null = null;\n  const nativeReady =\n    bindingMatches &&\n    (recordReady = !!record?.nativeReady) &&\n    (providerReady = !!entry.provider?.isReady()) &&\n    (ownerCurrent = options.isCurrent());\n  const captured =\n    nativeReady &&\n    observed.attached &&\n    record !== undefined &&\n    record.phase === 'allocated' &&\n    record.custody === 'owned' &&"
+    }
+  ],
+  "verification": {
+    "entireOuterReportsFetchedAndHashesVerified": true,
+    "exactA07FullTreeReadNoCompareTruncation": true,
+    "sourceBodiesFullyRetrievedAndGitUtf8Sha256Matched": true,
+    "semanticReview": "Targeted relevant passages retained in full; no claim to re-audit unrelated source bodies or previous native scenarios.",
+    "originalRawFullyRetainedAndHashVerified": true,
+    "originalArtifactBinaryDownloadedByThisReviewer": false,
+    "finalReceiptInspected": true,
+    "originalReadinessFailurePreserved": true,
+    "sourceAdopted": false,
+    "testsOrRuntimeExecuted": false,
+    "ciQueriesOrMutations": false,
+    "finalSevenJobCleanupAccepted": true,
+    "all14LiteralArtifactBodyHashesAndCrcMatch": true,
+    "archiveBase64ShaAndGitMatch": true,
+    "archiveDecompressionPerformedByThisReviewer": false,
+    "noWholeGatePass": true
+  },
+  "supersession": {
+    "unselectedLogOnlyBareDraft": "8454a3ddcb6b2fd5b6b5f3e9014aef5fe4d2a60f",
+    "reason": "The final artifact and receipt arrived after this earlier log-only draft was created. Final direct evidence now closes seven-job cleanup; no earlier source/evidence bytes are altered.",
+    "earlierRetainedReport": "0f2963af97dcabda330e2635af90c67a4e5d9651",
+    "historicalReportNotRewritten": true
+  },
+  "finalReceiptJoin": {
+    "identity": {
+      "gitBlob": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+      "bytes": 22790,
+      "sha256": "6f34d07150d904bfd7554011d8d11ac22dcb01ecf9c8553bce1a32e26b2d9f3a",
+      "archiveMember": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json"
+    },
+    "topLevel": {
+      "kind": "TEST_WINDOWS_EMULATED_SOURCE_PARITY",
+      "sourceHead": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+      "platform": "win32-arm64",
+      "nodeVersion": "v24.21.0",
+      "provider": "codex",
+      "status": "INCOMPLETE",
+      "cleanup": true,
+      "realProviderExecuted": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "nested": {
+      "provider": "codex",
+      "status": "INCOMPLETE",
+      "stage": "Team-A",
+      "cleanup": true,
+      "realProviderExecuted": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "mainEpoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+      "pending": {
+        "admitted": 1,
+        "revoked": 1
+      },
+      "serviceOperations": 0,
+      "jobCount": 7,
+      "firstCloseEntryMs": 24451.0459
+    },
+    "allSevenFinalFlagsTrue": true,
+    "allSevenSlotJoins": [
+      {
+        "slot": 0,
+        "stdoutLine": 2236,
+        "capability": "76f1286a-e75d-456b-9eff-dbdaa6287742",
+        "root": {
+          "pid": 3680,
+          "birth": "01dd75e01c0a39d9"
+        },
+        "originKind": null,
+        "originTeamId": null,
+        "originMemberId": null,
+        "recipeIdentity": null,
+        "entryStart": 0,
+        "entryEnd": 1,
+        "threadEphemeral": [],
+        "stdoutPreWaitAbsence": true,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": null,
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      },
+      {
+        "slot": 1,
+        "stdoutLine": 2237,
+        "capability": "7a401ffe-af3b-4a9e-94e6-b300d8bc8c06",
+        "root": {
+          "pid": 3400,
+          "birth": "01dd75e01e1d7c20"
+        },
+        "originKind": "runtime",
+        "originTeamId": "TEST-source-team-A",
+        "originMemberId": "alice-id",
+        "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66",
+        "entryStart": 1,
+        "entryEnd": 2,
+        "threadEphemeral": [],
+        "stdoutPreWaitAbsence": false,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      },
+      {
+        "slot": 2,
+        "stdoutLine": 2238,
+        "capability": "f6d75555-d07e-4c19-9f67-c19f7b9fd838",
+        "root": {
+          "pid": 4992,
+          "birth": "01dd75e02074daf3"
+        },
+        "originKind": "runtime",
+        "originTeamId": "TEST-source-team-A",
+        "originMemberId": "alice-id",
+        "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66",
+        "entryStart": 2,
+        "entryEnd": 3,
+        "threadEphemeral": [],
+        "stdoutPreWaitAbsence": false,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      },
+      {
+        "slot": 3,
+        "stdoutLine": 2239,
+        "capability": "2a18131d-2f2c-47b2-9f93-82e9046836bb",
+        "root": {
+          "pid": 3448,
+          "birth": "01dd75e0222075cc"
+        },
+        "originKind": "runtime",
+        "originTeamId": "TEST-source-team-A",
+        "originMemberId": "alice-id",
+        "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66",
+        "entryStart": 3,
+        "entryEnd": 7,
+        "threadEphemeral": [
+          false
+        ],
+        "stdoutPreWaitAbsence": false,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      },
+      {
+        "slot": 4,
+        "stdoutLine": 2240,
+        "capability": "d0ab4614-c8cc-4971-90a2-45e5d7eb8212",
+        "root": {
+          "pid": 10096,
+          "birth": "01dd75e023cf7ff5"
+        },
+        "originKind": "runtime",
+        "originTeamId": "TEST-source-team-A",
+        "originMemberId": "alice-id",
+        "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66",
+        "entryStart": 4,
+        "entryEnd": 5,
+        "threadEphemeral": [],
+        "stdoutPreWaitAbsence": false,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      },
+      {
+        "slot": 5,
+        "stdoutLine": 2241,
+        "capability": "68047207-ea71-4fc8-a91a-f1dbed0e6289",
+        "root": {
+          "pid": 4372,
+          "birth": "01dd75e025fa5744"
+        },
+        "originKind": "runtime",
+        "originTeamId": "TEST-source-team-A",
+        "originMemberId": "alice-id",
+        "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66",
+        "entryStart": 5,
+        "entryEnd": 6,
+        "threadEphemeral": [],
+        "stdoutPreWaitAbsence": false,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      },
+      {
+        "slot": 6,
+        "stdoutLine": 2242,
+        "capability": "ee7ab860-4299-4077-96a0-7a457d1b08d5",
+        "root": {
+          "pid": 8792,
+          "birth": "01dd75e027ca2fde"
+        },
+        "originKind": "runtime",
+        "originTeamId": "TEST-source-team-A",
+        "originMemberId": "alice-id",
+        "recipeIdentity": "b4d389a7d211a417be482cbf212f3d695027ff225e6d2ff6fc7a2554f7d21a66",
+        "entryStart": 6,
+        "entryEnd": 7,
+        "threadEphemeral": [],
+        "stdoutPreWaitAbsence": false,
+        "receiptPostWaitAbsence": true,
+        "allOriginalStatesTrue": true,
+        "source": {
+          "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+          "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+        },
+        "epoch": "0706a8a6-8a95-44cc-b535-8db3cc8a692e",
+        "stagingTimingsExact": true,
+        "firstCloseEntryMsExact": true
+      }
+    ],
+    "lastLaunchReadiness": {
+      "source": {
+        "sourceId": "aa9892054d11a4f7d9e6f90c6f49b5b209a11d2a6ea008b19aeb8ffb7fe88211",
+        "revision": "53347a59d4696e70b79bd36424b60a32d00d44671fbb1a70459bcc4dac15890d"
+      },
+      "image": "A",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "readCount": 108,
+      "elapsedMs": 15016.729199999998,
+      "lastRuntimeRead": {
+        "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+        "memberId": "alice-id",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "phase": "allocated",
+        "sealed": false,
+        "custody": "owned",
+        "nativeReady": false,
+        "attached": true
+      }
+    },
+    "lastLaunchReadinessExactToStdout": true,
+    "runtimeProjection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false
+    },
+    "firstRefusal": {
+      "status": "unknown",
+      "reason": "empty"
+    },
+    "receiptSourcePinJoins": [
+      {
+        "path": "packages/legacy-agent-host/dist/cli.js",
+        "receiptSha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "kind": "compiled output, no tracked Git leaf; hash retained only"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "gitBlob": "4fcd83a62f974f6710ebc641801a13c6748b396c",
+        "gitBytes": 24869,
+        "gitSha256": "e8fa8caa024892b616f5e5aaf116c93a294ac82f968532ac88d9a749377ad3e2",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 25159,
+        "checkoutSha256": "438a2096d08d618fb77e9e8f79a3a0b1805564811dfbfd570075923a2470977d",
+        "receiptSha256": "438a2096d08d618fb77e9e8f79a3a0b1805564811dfbfd570075923a2470977d",
+        "exact": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "gitBlob": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2",
+        "gitBytes": 59216,
+        "gitSha256": "cb5a49b85ae57c28eaf64c1385c193f5aebf9e6ed0cafa4399b4ec1b50ec8931",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 60016,
+        "checkoutSha256": "12ceacf001d6a3e5bbbf4786ee78791137868405cdd6bde0658bf88c19bafae6",
+        "receiptSha256": "12ceacf001d6a3e5bbbf4786ee78791137868405cdd6bde0658bf88c19bafae6",
+        "exact": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+        "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+        "gitBytes": 15213,
+        "gitSha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 15444,
+        "checkoutSha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+        "receiptSha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+        "exact": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+        "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+        "gitBytes": 7926,
+        "gitSha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 8031,
+        "checkoutSha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+        "receiptSha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+        "exact": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateContext.ts",
+        "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+        "gitBytes": 7278,
+        "gitSha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 7470,
+        "checkoutSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+        "receiptSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+        "exact": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateEvents.ts",
+        "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+        "gitBytes": 1367,
+        "gitSha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 1406,
+        "checkoutSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+        "receiptSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+        "exact": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+        "gitBlob": "a7e45d6cadba355ec46a516a68297d46147d741e",
+        "gitBytes": 6451,
+        "gitSha256": "83d26a98fd977696a05aafbceae9e28a1fbf71c553bc9c1db565c20567fcf470",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 6537,
+        "checkoutSha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2",
+        "receiptSha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2",
+        "exact": true
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+        "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36",
+        "gitBytes": 9569,
+        "gitSha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 9722,
+        "checkoutSha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+        "receiptSha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+        "exact": true
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+        "gitBlob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+        "gitBytes": 39026,
+        "gitSha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 39588,
+        "checkoutSha256": "1ea2bf4ba7cb932bdd3b59ad33d3761fdaa07edae4f53d550f4b4de72ba23e2d",
+        "receiptSha256": "1ea2bf4ba7cb932bdd3b59ad33d3761fdaa07edae4f53d550f4b4de72ba23e2d",
+        "exact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+        "gitBlob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+        "gitBytes": 22408,
+        "gitSha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 22989,
+        "checkoutSha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+        "receiptSha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+        "exact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/dist/owned-process/HostWindowsLaunch.js",
+        "receiptSha256": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4",
+        "kind": "compiled output, no tracked Git leaf; hash retained only"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "gitBlob": "90e0ccba36eb51c60dd4f0251b2cc5de995a47b6",
+        "gitBytes": 46201,
+        "gitSha256": "e5d425d97efc2807ed00096b5609680ac70503f747c650defbb3c39d6e6d9652",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 46940,
+        "checkoutSha256": "35a2cfa3fcae987ce64a7053a249c9d1295d72bf87afe5cca4d0554d5a32c3eb",
+        "receiptSha256": "35a2cfa3fcae987ce64a7053a249c9d1295d72bf87afe5cca4d0554d5a32c3eb",
+        "exact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js",
+        "receiptSha256": "28bc45763fa9332fa5f31e6d0a4b6df1268b72b6d054ba87b09f106982295b0b",
+        "kind": "compiled output, no tracked Git leaf; hash retained only"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+        "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+        "gitBytes": 30721,
+        "gitSha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 31321,
+        "checkoutSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+        "receiptSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+        "exact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/dist/management/ModelProbeOwner.js",
+        "receiptSha256": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283",
+        "kind": "compiled output, no tracked Git leaf; hash retained only"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+        "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+        "gitBytes": 3398,
+        "gitSha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 3475,
+        "checkoutSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+        "receiptSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+        "exact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/dist/composition/projectRuntimeMember.js",
+        "receiptSha256": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770",
+        "kind": "compiled output, no tracked Git leaf; hash retained only"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+        "gitBlob": "b98f057ce72161d867b99f01dde0f83e3244c3d2",
+        "gitBytes": 24664,
+        "gitSha256": "50685504916c575c2956720debc7fc30ba35bd51d047ed9de1ee197d1880f79f",
+        "checkoutEncoding": "UTF-8 with LF converted to CRLF",
+        "checkoutBytes": 25248,
+        "checkoutSha256": "f6f95b21ac6359567a57a5bbb37d6e0fb5b0e70a89eacd66a6715269b3eb7626",
+        "receiptSha256": "f6f95b21ac6359567a57a5bbb37d6e0fb5b0e70a89eacd66a6715269b3eb7626",
+        "exact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/dist/adapters/providers/OpenCodeMemberProvider.js",
+        "receiptSha256": "5c3017e85aa3f097597396410dcfb19406645f5a3d055f38e8e8fbebc7dbdc7d",
+        "kind": "compiled output, no tracked Git leaf; hash retained only"
+      }
+    ],
+    "all14TrackedSourcePinsExactAfterWindowsCRLF": true,
+    "compiledPinsQualification": "Six compiled dist pins are literal receipt output identities, not reconstructed executable bytes by this reviewer. Node/broker/generated file pins are retained in the full original receipt.",
+    "wholeSourceJourneyAccepted": false
+  },
+  "nextScopeConstraints": {
+    "originalArtifact": {
+      "id": 14239951548,
+      "name": "host-process-fixtures-win32-arm64-a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+      "sizeInBytes": 34540,
+      "digest": "sha256:f9134f56d694dfa463af1405bdf3d1895b81d4db88bf111ac1a8732c574a5847",
+      "metadataOnly": false,
+      "sourceRun": 43892535299,
+      "head": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+      "qualification": "Root downloaded original ZIP; this child decoded/rehashed the retained base64, checked central/local metadata and rehashed all14 literal bodies/CRC, without independently inflating compressed payloads."
+    },
+    "actualFinalReceipt": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+    "minimalNextStep": "No additional cleanup probe, new helper, runtime rerun or producer is justified to resolve the six false stdout values: direct original final receipt already closes seven-job cleanup. Keep the separate15-second readiness failure open.",
+    "conditionalFutureDiagnosticScope": "Only if an evidence presentation change is later selected under a separate exact R1: explicitly label the existing pre-wait snapshot or retain the outcome of the existing wait after it completes. Preserve the same original HANDLE, single cached wait, all Stop/drain/release and failure precedence, original readiness and native wait budgets, no additional native query/action/retry. This report selects or authors no producer.",
+    "noSelection": "No code, test, runner, R1, native helper, timer or future CI subject is selected or authored."
+  },
+  "actualArtifactVerification": {
+    "wrapper": {
+      "gitBlob": "d41b495d03866d9611b449dd159bd836189c7021",
+      "bytes": 355085,
+      "sha256": "cef51689f252ba3a097002ed5fd760f0ff970e277757dfa6d93b16f3c70db22c"
+    },
+    "archive": {
+      "bytes": 34540,
+      "sha256": "f9134f56d694dfa463af1405bdf3d1895b81d4db88bf111ac1a8732c574a5847",
+      "gitBlob": "fade3c5d612bc0a1d2dadb261d3192f45c7dcf36"
+    },
+    "memberCount": 14,
+    "totalUtf8Bytes": 264452,
+    "archiveBase64HashExact": true,
+    "all14Utf8GitShaCrcExact": true,
+    "centralDirectoryAndLocalHeadersExact": true,
+    "safeUniqueNames": true,
+    "compressedPayloadsIndependentlyInflated": false,
+    "crcQualification": "The full UTF-8 bodies have the exact CRC/size recorded in the checked ZIP central directory. Root independently decompressed/tested every original member; this child did not inflate compressed payloads.",
+    "receiptExact": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+    "sourceHeadExact": true,
+    "sevenArtifactCleanupRowsEqualOriginalRunRaw": true,
+    "memberJoins": [
+      {
+        "name": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+        "bytes": 1929,
+        "sha256": "3a34ab792a45e50d8e10322dc0086c9f36f91f3ba6286a3a7a8018ce2904adfb",
+        "gitBlob": "3eb48b9e5b29696237360fde0d19e0465129eb76",
+        "crc32": 1683601758,
+        "zipMethod": 8,
+        "zipCompressedBytes": 624,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+        "bytes": 20513,
+        "sha256": "42e9aceb7c6f3a44f97414e65babfb6b3857f1ef429f73435b84edf997ada3cc",
+        "gitBlob": "37cbfe5b63b1929d7ab3c3fe52dd0c1e5f6e76b0",
+        "crc32": 434703664,
+        "zipMethod": 8,
+        "zipCompressedBytes": 6493,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+        "bytes": 758,
+        "sha256": "3723e49e9748729f82015aef5153afcd2b64615ab104627003c11372e65250e3",
+        "gitBlob": "eab366d080693f51dc3be58296020452b0ad453a",
+        "crc32": 1709432901,
+        "zipMethod": 8,
+        "zipCompressedBytes": 330,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+        "bytes": 9885,
+        "sha256": "a237114338450b93b078bd7bd26d4702966eef20fca366a4c09103e3a15df79a",
+        "gitBlob": "5973094a6a8865482a1cbff9aed6850448223276",
+        "crc32": 2827823403,
+        "zipMethod": 8,
+        "zipCompressedBytes": 2373,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "bytes": 41,
+        "sha256": "a827865c659dde7468e7b14721b0edde50869b2a76effd752fff8ea79defd8e7",
+        "gitBlob": "bed3a5aee4ec1c2cd7f099d62512fad976e7a89a",
+        "crc32": 1325562081,
+        "zipMethod": 8,
+        "zipCompressedBytes": 40,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+        "bytes": 1929,
+        "sha256": "3a34ab792a45e50d8e10322dc0086c9f36f91f3ba6286a3a7a8018ce2904adfb",
+        "gitBlob": "3eb48b9e5b29696237360fde0d19e0465129eb76",
+        "crc32": 1683601758,
+        "zipMethod": 8,
+        "zipCompressedBytes": 624,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+        "bytes": 93560,
+        "sha256": "8d980a69e33fe6b88ff60bd63ca134ad892533285c4dfffb0c5ed90e05837126",
+        "gitBlob": "1325637805e981e9fab886a5087ded35eb6e3706",
+        "crc32": 4185238680,
+        "zipMethod": 8,
+        "zipCompressedBytes": 6077,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+        "bytes": 2908,
+        "sha256": "5e3120ba02a1e1a03db2c4e20351e7b6d38a8bb70c84ef3cf3cedd6840e88343",
+        "gitBlob": "5180f78d914b2af30880a47a00debda4df76c943",
+        "crc32": 2627933660,
+        "zipMethod": 8,
+        "zipCompressedBytes": 1018,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+        "bytes": 1278,
+        "sha256": "229be726b1c3300eed09e9187ef9526b9bbfb31dc9ee45390939d56b1accd266",
+        "gitBlob": "9cd8c037c08c27b182d411da4f9a6d2be6c9c360",
+        "crc32": 931447938,
+        "zipMethod": 8,
+        "zipCompressedBytes": 303,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+        "bytes": 195,
+        "sha256": "21dafc8fb6e488d4a68ea789e175c5b9cf7b8ac079ac9756f9d4e9dfbbe97176",
+        "gitBlob": "f7eda75bae0ade294b9d6cf65f5890053b0b0b7e",
+        "crc32": 3554436344,
+        "zipMethod": 8,
+        "zipCompressedBytes": 148,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+        "bytes": 93517,
+        "sha256": "eda6dd871e06f802ffe5a0ccccdb01c75f9a2b36a381a5bb1639099e5eda67f7",
+        "gitBlob": "a387ae39499e4b34e944130dad03f13e13bfb4ef",
+        "crc32": 2685113547,
+        "zipMethod": 8,
+        "zipCompressedBytes": 6066,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+        "bytes": 232,
+        "sha256": "e016065cefbca930a2af7363007afdf75c55a1f525943b14081b2ee798acce0b",
+        "gitBlob": "1b7ad3929c1fe3ae439b7843f0da1ae17cd1110a",
+        "crc32": 3332373314,
+        "zipMethod": 8,
+        "zipCompressedBytes": 172,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+        "bytes": 22790,
+        "sha256": "6f34d07150d904bfd7554011d8d11ac22dcb01ecf9c8553bce1a32e26b2d9f3a",
+        "gitBlob": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+        "crc32": 395698387,
+        "zipMethod": 8,
+        "zipCompressedBytes": 3949,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+        "bytes": 14917,
+        "sha256": "d38a5f58b59b3a33a06a3ff8dc26611610a039c61717d4eb130d061eeb456811",
+        "gitBlob": "1562f0c573e4854db9b35d0f39106f6917742403",
+        "crc32": 3308207006,
+        "zipMethod": 8,
+        "zipCompressedBytes": 2783,
+        "centralDirectoryCrcAndSizeExact": true,
+        "localNameExact": true
+      }
+    ]
+  }
+}

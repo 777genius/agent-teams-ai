@@ -1,0 +1,28 @@
+{
+  "argv": [
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+    "--test",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+  ],
+  "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+  "startedAt": "2026-11-16T17:17:04.189559+00:00",
+  "timedOut": false,
+  "exitCode": 1,
+  "exitSignal": null,
+  "capturedPid": 30,
+  "metadataOnly": false,
+  "remainingBeforeCleanup": [],
+  "remainingCapturedSession": [],
+  "raw": {
+    "path": "/tmp/c714-cross-close-evidence/red-command-1.log",
+    "bytes": 37314,
+    "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+    "gitBlob": "d38f2ae2851555b35970a892ce38674221147437"
+  },
+  "finishedAt": "2026-11-16T17:17:31.778141+00:00",
+  "durationSeconds": 27.58532903199739,
+  "interruptions": [],
+  "cleanupSeconds": 0,
+  "deadlineExceeded": false,
+  "successful": false
+}

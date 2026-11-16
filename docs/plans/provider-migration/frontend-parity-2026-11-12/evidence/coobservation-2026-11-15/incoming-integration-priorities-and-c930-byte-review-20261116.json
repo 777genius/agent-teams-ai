@@ -1,0 +1,1349 @@
+{
+  "schemaVersion": 1,
+  "kind": "read-only-parity-prioritization-and-c930-archive-review",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/pr_graph",
+  "reviewedDate": "2026-11-16",
+  "verdict": "Decision support only; no source/test/runner/R1, package adoption, suite or CI action selected.",
+  "subjects": {
+    "own": {
+      "commit": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+      "tree": "ab1b94c6cd1fa02a75b7a19c18148ac364920e25",
+      "parents": [
+        "c0ead43f21d5ed90776d4080fa372f48cf8270d5"
+      ],
+      "pinnedOnly": true
+    },
+    "incomingApp": {
+      "commit": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+      "tree": "56b61eca335f951e6b53bd5c768bd586c5ec6c7b",
+      "parents": [
+        "4d2b3d93c9288a5e0f65c594fbd342f6350a6c1c"
+      ],
+      "pinnedOnly": true
+    },
+    "incomingProvider": {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "commit": "c930d3c8b9a213762528d6e28c9ed0172ab1fa27",
+      "tree": "a9ce51413c87bc65b54fe07e45a1dc13b2b4c63a",
+      "selected": false
+    }
+  },
+  "scope": {
+    "freshness": "One current own-branch read returned a5b948 for Plan/status. Incoming heads remain pinned. No dynamic delivery-head/CI query or new source execution.",
+    "currentCross": "Root reports actual133 RED postflight/semantic review in progress. This record does not infer its outcome or any future Cross producer; refresh actual own preimages after that work.",
+    "inventory": {
+      "bytes": 352944,
+      "sha256": "2804e29cfaa4f1c32ef5abf4ca88339e573421f0f75bf98c2a0b4c6248c5aeea",
+      "gitBlob": "4bcdca3a01d5ccb8027254fdbbca61c8bb8f8dc7",
+      "ownNonDocs": 8798,
+      "incomingNonDocs": 8806,
+      "identical": 8730,
+      "differences": 81,
+      "modified": 63,
+      "incomingOnly": 13,
+      "ownOnly": 5,
+      "fullTextBodiesRead": 139,
+      "textBytes": 7759323,
+      "workflowDefinitions": 42,
+      "workflowDifferences": 6
+    },
+    "prohibited": [
+      "shell/runtime/native/test/provider execution",
+      "source/test/runner/R1/postimage authoring",
+      "install/repack",
+      "CI query/poll/rerun/dispatch/cancel",
+      "source/ref/PR/Ready/default/release/metadata mutation"
+    ],
+    "permittedRetention": "This bare JSON review only."
+  },
+  "mainFindings": [
+    "Finish current Cross before composing overlapping incoming UI. Preserve all own133 and exact resulting Cross changes; whole-file adoption is unsafe.",
+    "Smallest source-supported functional candidates: silent-refresh loading completion, P11 post-await original-cutoff enforcement, Review canEditNow admission. These are separable from larger diagnostics and finite-native expansion.",
+    "c930 source and exact checked package now have source/packed byte evidence; APP atomic dependency/pin admission and full native53 qualification remain separate.",
+    "All25 incoming UI cases have explicit dependencies below.44common/89own-only/25incoming-only gives158 unselected names, not an authorized suite.",
+    "No bounded Windows15s/Packaged10s or strictP09 producer fix is established. M16 genuine donor evidence also remains missing.",
+    "Canonical typing/build and exact-head platform qualification remain open; DraftFullqualification refusal is policy, not a source defect."
+  ],
+  "recommendedOrderNotSelected": [
+    {
+      "order": 0,
+      "group": "complete current Cross",
+      "reason": "Finish already published test-first work before overlapping integration.",
+      "requires": [
+        "Actual133 semantic RED/source custody",
+        "Reviewed/published exact producer if justified",
+        "Actual full resulting133 GREEN and specified guards",
+        "Fresh later preimages; retain accepted97 behavior"
+      ],
+      "missing": "No Cross result inferred here."
+    },
+    {
+      "order": 1,
+      "group": "small functional repairs",
+      "members": [
+        "silent-refresh-current-loading",
+        "p11-original-cutoff",
+        "review-edit-admission"
+      ],
+      "reason": "Concrete bounded source defects with meaningful existing-code test seams.",
+      "requires": [
+        "Exact new source/test R1 and finite budget",
+        "No missing-helper/import or message-only RED",
+        "Keep request/owner/cutoff/error identity",
+        "Bind renderer/script prerequisite and cap obligations"
+      ],
+      "missing": "Own resulting-source execution and review."
+    },
+    {
+      "order": 2,
+      "group": "c930 checked package admission",
+      "reason": "A genuine one-member compiled correction with actual safe563+packed checks.",
+      "requires": [
+        "Preservec79 history/reader",
+        "Atomic exact archive/dependency/lock/active-pin review",
+        "No local repack or wholesale incoming manifests",
+        "Separate native53 and resulting APP qualification"
+      ],
+      "missing": "No APP adoption selected."
+    },
+    {
+      "order": 3,
+      "group": "BOOT and finalStop",
+      "reason": "Coherent initial content/stopped UI admission, preserving own conversation/Cross safety.",
+      "requires": [
+        "Own saved-settings25 and conversation19 coverage",
+        "Same-row content throughout existing target phases",
+        "All BOOT signatures/proof sources",
+        "Original30/60/75s and single action"
+      ],
+      "missing": "Resulting finite union and original GUI receipts; no historical-cause claim."
+    },
+    {
+      "order": 4,
+      "group": "finite V2 P11",
+      "reason": "Separate genuine OpenCode V2 plus finite peers qualification.",
+      "requires": [
+        "Five scripts, fixture, verifier, Host workflow and roster",
+        "Original cutoff/physical absence/terminal/finally/no-replay semantics",
+        "Explicit peer/native qualification limits"
+      ],
+      "missing": "Actual complete selected P11 source receipts; not M16/full vendor parity."
+    },
+    {
+      "order": 5,
+      "group": "diagnostics-only",
+      "members": [
+        "view-load5",
+        "geometry3",
+        "passive-navigation1"
+      ],
+      "reason": "Nine incoming cases do not repair functional behavior.",
+      "requires": [
+        "Specific evidence need",
+        "Publisher/consumer/schema/fixture union",
+        "Preserve own callable-store/pane-aware/getter-free observer"
+      ],
+      "missing": "No diagnostic scope selected."
+    },
+    {
+      "order": 6,
+      "group": "platform/custody and delivery",
+      "reason": "Preserve unresolved Windows/P09/M16 honestly; no artificial deadline/skip/native solution.",
+      "requires": [
+        "Original15/10s",
+        "Supported custody and donor evidence",
+        "Canonical type/build admission",
+        "Separate exact-head workflow action R1 and Git delivery policy"
+      ],
+      "missing": "Detailed below."
+    }
+  ],
+  "functionalGroups": {
+    "silentRefresh": {
+      "classification": "Reachable product-state defect by static source reasoning; no historical GUI-cause claim.",
+      "paths": [
+        {
+          "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "own": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+          "incoming": "48a951b2ddec9970fcaa1efa64be061e8e00b3d2"
+        },
+        {
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "own": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+          "incoming": "c9e19b14b433c58494c10b06eac9f82d5f5cd118"
+        }
+      ],
+      "trace": "Visible A sets loadingtrue; newer silent B advances requestSeq and becomes current. B finally refuses to clear only because silent; late A refuses because stale. Loading can remain latched. Incoming current-request finally clears for silent too while retaining current request/context checks.",
+      "originalPassage": {
+        "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+        "firstLine": 451,
+        "lastLine": 512,
+        "text": "  const refresh = useCallback(\n    async (input: { silent?: boolean } = {}): Promise<boolean> => {\n      if (!options.enabled) {\n        return true;\n      }\n      viewRequestedRef.current = true;\n      const projectContext = getProjectContextSnapshot();\n      const requestSeq = viewLoadRequestSeq.current + 1;\n      viewLoadRequestSeq.current = requestSeq;\n      const requestIsCurrent = (): boolean =>\n        viewLoadRequestSeq.current === requestSeq && isProjectContextCurrent(projectContext);\n      const silent = input.silent === true;\n      if (!silent) {\n        setLoading(true);\n      }\n      setError(null);\n      setErrorDiagnostics(null);\n      try {\n        const response = await api.runtimeProviderManagement.loadView({\n          ...connectionForm.runtimeProviderContext(\n            options.runtimeId,\n            projectContext.path,\n            options.connectionContextToken\n          ),\n        });\n        if (!requestIsCurrent()) {\n          return false;\n        }\n        if (response.error) {\n          if (!silent) {\n            setView(null);\n          }\n          setError(response.error.message);\n          setErrorDiagnostics(response.error.diagnostics ?? null);\n          return false;\n        }\n        const nextView = presentManagementView(response.view ?? null);\n        setView(nextView);\n        setSelectedModelId(nextView?.defaultModel ?? null);\n        setSelectedProviderId((current) => {\n          if (current && nextView?.providers.some((provider) => provider.providerId === current)) {\n            return current;\n          }\n          return selectInitialProviderId(nextView);\n        });\n        return true;\n      } catch (loadError) {\n        if (!requestIsCurrent()) {\n          return false;\n        }\n        if (!silent) {\n          setView(null);\n        }\n        setError(loadError instanceof Error ? loadError.message : 'Failed to load providers');\n        setErrorDiagnostics(null);\n        return false;\n      } finally {\n        if (!silent && requestIsCurrent()) {\n          setLoading(false);\n        }\n      }\n    },"
+      },
+      "cases": "Incoming5 functional cases: current silent success, current error/rejection, newer silent/visible supersession and stale/unmounted completion. They share a larger diagnostic test block; a minimal selection must keep state assertions without requiring an unselected console publisher.",
+      "optionalLargerGroup": "174-line runtimeProviderViewRefresh extraction/publisher plus CDP consumer and diagnostic cases are separable. Own oversized hook2068/incoming2026; preserve cap, no raised exception.",
+      "actualLimit": "IncomingInstaller69 consumer cases do not prove execution of the renderer-hook suite on our selected source."
+    },
+    "p11Cutoff": {
+      "classification": "Harness absolute-deadline admission defect, not Windows15s.",
+      "paths": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "own": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+          "incoming": "de958fcbd9c1aef20ec843904dd89a6fec62568d"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "own": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+          "incoming": "b7fda498b1e50856211616a3c062ca65a148cc26"
+        }
+      ],
+      "originalPassage": {
+        "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "firstLine": 85,
+        "lastLine": 98,
+        "text": "    }\n  };\n  const step = (value: Row) => { assert.ok(steps.length < 512); steps.push({ monotonicMs: Math.round(performance.now()), ...value }); };\n  let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: current, step });\n  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {\n    const cutoff = Date.now() + 90_000; let value = await observe();\n    while (!accepts(value) && Date.now() < cutoff) {\n      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n    }\n    assert.ok(accepts(value), label); return value;\n  };\n  const workspace = join(fixture.root, 'workspace');\n  const ownerDirectory = join(fixture.root, 'hoststore/teams', mixedDesktopTeamName, '.host-owner');\n  const owner = () => read(join(ownerDirectory, 'state.json'));"
+      },
+      "incomingPassage": {
+        "blob": "de958fcbd9c1aef20ec843904dd89a6fec62568d",
+        "firstLine": 90,
+        "lastLine": 105,
+        "text": "      assert.equal(model.observations.length, 0); assert.equal(model.notificationObservations?.length ?? 0, 0);\n    }\n  };\n  const step = (value: Row) => { assert.ok(steps.length < 512); steps.push({ monotonicMs: Math.round(performance.now()), ...value }); };\n  let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: current, step });\n  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {\n    const cutoff = Date.now() + 90_000; let value = await observe();\n    assert.ok(Date.now() < cutoff, label);\n    while (!accepts(value) && Date.now() < cutoff) {\n      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n      assert.ok(Date.now() < cutoff, label);\n    }\n    assert.ok(accepts(value), label); return value;\n  };\n  const workspace = join(fixture.root, 'workspace');\n  const ownerDirectory = join(fixture.root, 'hoststore/teams', mixedDesktopTeamName, '.host-owner');"
+      },
+      "finding": "Old poll may accept true after initial/polled await crosses original90s. Incoming two post-await assertions preserve90s/100ms/currentness/error contract; four semantic cases. This is separate from the withdrawn empty-journal claim where a final original assertion already exists.",
+      "largerFiniteBranchRequired": false
+    },
+    "reviewEdit": {
+      "classification": "Harness input-admission defect; no proven historical GUI cause.",
+      "paths": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "own": "d65706646743798f2646421105f2f6a75819f143",
+          "incoming": "df76ce10ba52725b11fea48659b4cb516fc6fddf"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "own": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+          "incoming": "b7fda498b1e50856211616a3c062ca65a148cc26"
+        }
+      ],
+      "finding": "Original wait accepts truthy object without exact canEditNow. Incoming exacttrue predicate gates one original focus/insertion/submit within original30s; two finite tests. Preserve original errors/currentness and future Cross changes."
+    }
+  },
+  "incomingUI": {
+    "census": {
+      "report": "9637374969dea23c0fdc9ee2f5cc305f110049d1",
+      "bytes": 276318,
+      "sha256": "7cbdf8e82eb9fade2265ed1bfeec65e21f3ec44104c9a152fb2b7349acdb0bd4",
+      "own": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+      "incoming": "b7fda498b1e50856211616a3c062ca65a148cc26",
+      "ownCases": 133,
+      "incomingCases": 69,
+      "common": 44,
+      "ownOnly": 89,
+      "incomingOnly": 25,
+      "unselectedUnion": 158,
+      "allNamesMultiplicity": 1,
+      "byteIdenticalCommonDefinitions": 34,
+      "registrationRows": 202,
+      "bodyIdentities": 121
+    },
+    "groups": [
+      {
+        "id": "view-load-diagnostics",
+        "count": 5,
+        "kind": "diagnostic-only",
+        "dependencies": [
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+          "src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts",
+          "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+        ],
+        "constraint": "Adapt shared startup fixture's listeners/commands/observations; consumer requires selected publisher. Preserve source/document fences and original startup refusal."
+      },
+      {
+        "id": "final-stop-convergence",
+        "count": 2,
+        "kind": "stronger proof/admission",
+        "dependencies": [
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts"
+        ],
+        "constraint": "Incoming fixture extracts stop(liveA,true), absent in cf93. One Stop; original75s; join physical absence and same Team/run disconnected/offline/no-progress UI; no replay/reanchor."
+      },
+      {
+        "id": "passive-navigation",
+        "count": 1,
+        "kind": "diagnostic-only overlap with stronger own coverage",
+        "dependencies": [
+          "scripts/legacy-agent-host/desktop-ui-controls.ts"
+        ],
+        "constraint": "Incoming object-store/openTabs fixture differs from callable Zustand/paneLayout. Preserve own-data/getter-zero behavior and own5 cases; adapt or supersede incoming fixture rather than weakening producer."
+      },
+      {
+        "id": "p11-original-cutoff",
+        "count": 4,
+        "kind": "static absolute-cutoff admission defect",
+        "dependencies": [
+          "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts"
+        ],
+        "constraint": "Actual poll must refuse initial/polled observations returning at/after original90s; preserve timely values/currentness/read-error identity and100ms cadence."
+      },
+      {
+        "id": "geometry-diagnostics",
+        "count": 3,
+        "kind": "diagnostic-only",
+        "dependencies": [
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.ts"
+        ],
+        "constraint": "Compose bounded geometry metadata with own same-row/pane observer and future Cross changes. Preserve hard final equality, error identity, no replay and failure-isolated optional metadata."
+      },
+      {
+        "id": "review-edit-admission",
+        "count": 2,
+        "kind": "static harness input-admission defect",
+        "dependencies": [
+          "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts"
+        ],
+        "constraint": "Actual wait requires canEditNow===true before one original focus/insertion/submit, under original30s; retain errors and no historical cause claim."
+      },
+      {
+        "id": "boot-conversation",
+        "count": 4,
+        "kind": "initial content admission and shared behavior",
+        "dependencies": [
+          "scripts/legacy-agent-host/desktop-emulated-boot-chat.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+          "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts"
+        ],
+        "constraint": "Own openChat second argument is expected reply; incoming takes controls object. BOOT checks initial unique lead row/one exact span, not continued content at every target phase. Preserve own4 forwards, saved-settings guards and original30/60s."
+      },
+      {
+        "id": "finite-v2-p11",
+        "count": 4,
+        "kind": "finite runtime/qualification expansion",
+        "dependencies": [
+          "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+          "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+          "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+          "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts",
+          ".github/workflows/host-emulated-acceptance.yml",
+          "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts"
+        ],
+        "constraint": "Keep complete selector/kernel identity/finally/terminal fixture dependencies. Genuine pinned OpenCode V2 plus finite Claude/Codex peers is not full mixed-vendor or M16 parity."
+      }
+    ],
+    "cases": [
+      {
+        "name": "view-load diagnostics retain and echo the same bounded current-document projection without new reads",
+        "group": "view-load-diagnostics",
+        "firstLine": 100,
+        "lastLine": 168,
+        "bodyIdentity": {
+          "bytes": 4234,
+          "sha256": "c842ea4b10dedef329591f1f4b25f674eef4d39f21a5e857f9c732fff3eeb23a",
+          "gitBlob": "817ec563a67e69b8647fab66e2a7b6ff7cd1498e"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "view-load diagnostics do not reuse the initial document fence after navigation",
+        "group": "view-load-diagnostics",
+        "firstLine": 170,
+        "lastLine": 195,
+        "bodyIdentity": {
+          "bytes": 1447,
+          "sha256": "1c0186b01264b0bb97e3d79cbb33efe2d70502630535a71e1555ee36cc88e12e",
+          "gitBlob": "3e5dce831e2e2ab26efa4fd0ea1586aae91ce69d"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "view-load diagnostics do not reuse the initial document fence after cleared",
+        "group": "view-load-diagnostics",
+        "firstLine": 170,
+        "lastLine": 195,
+        "bodyIdentity": {
+          "bytes": 1447,
+          "sha256": "1c0186b01264b0bb97e3d79cbb33efe2d70502630535a71e1555ee36cc88e12e",
+          "gitBlob": "3e5dce831e2e2ab26efa4fd0ea1586aae91ce69d"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "view-load diagnostics do not reuse the initial document fence after destroyed",
+        "group": "view-load-diagnostics",
+        "firstLine": 170,
+        "lastLine": 195,
+        "bodyIdentity": {
+          "bytes": 1447,
+          "sha256": "1c0186b01264b0bb97e3d79cbb33efe2d70502630535a71e1555ee36cc88e12e",
+          "gitBlob": "3e5dce831e2e2ab26efa4fd0ea1586aae91ce69d"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "throwing diagnostic stdout preserves the retained row and the original startup refusal",
+        "group": "view-load-diagnostics",
+        "firstLine": 197,
+        "lastLine": 212,
+        "bodyIdentity": {
+          "bytes": 922,
+          "sha256": "e8a0a5da5b379d93b811bf29a1d4ecdb7a651b715bc7cfa913f628a121dc667d",
+          "gitBlob": "341028a9e8c911a73e90bf8c66fc947a3028a20e"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget",
+        "group": "final-stop-convergence",
+        "firstLine": 1858,
+        "lastLine": 1872,
+        "bodyIdentity": {
+          "bytes": 1438,
+          "sha256": "eed094892da8d103eee985b8e091053e60bd64e67579628381296d61310f77b9",
+          "gitBlob": "a6ffa132fcefce6997987abe7751262222f2a2a3"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget",
+        "group": "final-stop-convergence",
+        "firstLine": 1874,
+        "lastLine": 1893,
+        "bodyIdentity": {
+          "bytes": 1799,
+          "sha256": "dc933fb27aacb5d341aa94540aff5f1ecf0b3ca6f422159c415bf993f21ef3fd",
+          "gitBlob": "2180df137d76cbb78f754449672112fc36b15215"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "the existing passive click recorder distinguishes the actual Team from later navigation without new actions",
+        "group": "passive-navigation",
+        "firstLine": 1896,
+        "lastLine": 2023,
+        "bodyIdentity": {
+          "bytes": 8096,
+          "sha256": "029b779f572fc1ffa8cba5f720a78b61c59d93bcc6c0b1421a7d3ded8f3a725a",
+          "gitBlob": "3f8b04fbafbf5e1305efceeb3ee386d121b66f88"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "group": "p11-original-cutoff",
+        "firstLine": 2062,
+        "lastLine": 2066,
+        "bodyIdentity": {
+          "bytes": 453,
+          "sha256": "d7cbb9b42d06b90c699d61305ea6f2c1e955b58b9069b588b6e0c6e50b82018b",
+          "gitBlob": "191d91c04d0d51a075698bb9c19cd1e19c6401b6"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "group": "p11-original-cutoff",
+        "firstLine": 2062,
+        "lastLine": 2066,
+        "bodyIdentity": {
+          "bytes": 453,
+          "sha256": "d7cbb9b42d06b90c699d61305ea6f2c1e955b58b9069b588b6e0c6e50b82018b",
+          "gitBlob": "191d91c04d0d51a075698bb9c19cd1e19c6401b6"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+        "group": "p11-original-cutoff",
+        "firstLine": 2062,
+        "lastLine": 2066,
+        "bodyIdentity": {
+          "bytes": 453,
+          "sha256": "d7cbb9b42d06b90c699d61305ea6f2c1e955b58b9069b588b6e0c6e50b82018b",
+          "gitBlob": "191d91c04d0d51a075698bb9c19cd1e19c6401b6"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+        "group": "p11-original-cutoff",
+        "firstLine": 2068,
+        "lastLine": 2085,
+        "bodyIdentity": {
+          "bytes": 1546,
+          "sha256": "8c958e830470cd6b5e705292daeae426ca31e7c22f52d33477b09c5255056284",
+          "gitBlob": "a4a5b953ee7fbb5fc26004ebf56e6f61704ea373"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "final click movement retains five original geometry reads and one closed diagnostic without a press",
+        "group": "geometry-diagnostics",
+        "firstLine": 2087,
+        "lastLine": 2128,
+        "bodyIdentity": {
+          "bytes": 2555,
+          "sha256": "71ae87314336be7e2cfa47039e767767a55fcec027c12fe8ab9bd9710caf4eb7",
+          "gitBlob": "5884700f8d2c21333e551e7d481913380d3e6dac"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "geometry metadata getters cannot replace the original unavailable-target refusal when stdout throws",
+        "group": "geometry-diagnostics",
+        "firstLine": 2130,
+        "lastLine": 2208,
+        "bodyIdentity": {
+          "bytes": 4481,
+          "sha256": "dfaa95e49cc05f2ee8ea16d997b2ade786b0a492c553ceaddec4e48f5a1a56ef",
+          "gitBlob": "5ad19051393ffc8d2481a6f7245d330a1c517812"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "the actual generated target expression keeps the same eligible click when optional geometry APIs fail",
+        "group": "geometry-diagnostics",
+        "firstLine": 2210,
+        "lastLine": 2286,
+        "bodyIdentity": {
+          "bytes": 4743,
+          "sha256": "e5b9ddd42fa55c916169cfa9b9d0f9b18c61cc5adf425f7394247283413e032b",
+          "gitBlob": "696f2b19ee558e8b178dc35baf9d93041f0dc4ec"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "original review correction refuses missing or false live edit authority before any input action",
+        "group": "review-edit-admission",
+        "firstLine": 2348,
+        "lastLine": 2356,
+        "bodyIdentity": {
+          "bytes": 582,
+          "sha256": "f6c03341d4e7483de6de1e8fee8ed0fae216111387986cdcd6b49309897d22cf",
+          "gitBlob": "e7d41f279c9a1579e6052ad3bb930ab7a97f892f"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "original review correction admits current authority with one original insertion and submit",
+        "group": "review-edit-admission",
+        "firstLine": 2358,
+        "lastLine": 2370,
+        "bodyIdentity": {
+          "bytes": 872,
+          "sha256": "b4173cd0e3abea607157b8154a48e444dc6476606c2303dcf076ccf4ee57460f",
+          "gitBlob": "fe7a33dce0fa4f97b36251507831b8e36ac00ad7"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "original first A and B conversation waits for its exact preview before one physical click in the shared budget",
+        "group": "boot-conversation",
+        "firstLine": 2486,
+        "lastLine": 2504,
+        "bodyIdentity": {
+          "bytes": 1399,
+          "sha256": "e9e06d664df3b6cc012739235f6dd70cd245b6e941cef7cec8760135a1820ed6",
+          "gitBlob": "6404da2845740f75feda6709e7cc4f3068e230a3"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "original initial conversation rejects observations crossing the same cutoff without a late press or replay",
+        "group": "boot-conversation",
+        "firstLine": 2506,
+        "lastLine": 2518,
+        "bodyIdentity": {
+          "bytes": 966,
+          "sha256": "5d89b4cd04f15437291c1b916bf229f4035dc4e63a6a3522e3ba5495fe9aced3",
+          "gitBlob": "11c54be88cff90cc90210f38cee8d282a60227b4"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "original initial conversation refuses missing wrong or duplicate terminal previews before opening a chat",
+        "group": "boot-conversation",
+        "firstLine": 2520,
+        "lastLine": 2530,
+        "bodyIdentity": {
+          "bytes": 766,
+          "sha256": "f90da814ef36ce141b45b17715753c515815a95f951a314270de3f2ba06ddedb",
+          "gitBlob": "1a9117979b7344767ea70dcee8f006e356c180a1"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "original lifecycle runtime and collaboration retain their boot budgets and navigation before one chat click",
+        "group": "boot-conversation",
+        "firstLine": 2532,
+        "lastLine": 2559,
+        "bodyIdentity": {
+          "bytes": 2260,
+          "sha256": "c1899118e0d4b038e10055fc53837ab42ced6f3fb03e0842f0f368c424706525",
+          "gitBlob": "c39e79c68208a57b71a950835ee14e2b82bc3cef"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "finite V2 P11 admission rejects mixed selectors before any fixture or process observation",
+        "group": "finite-v2-p11",
+        "firstLine": 2571,
+        "lastLine": 2591,
+        "bodyIdentity": {
+          "bytes": 1742,
+          "sha256": "2526fa0f8b98391d372d6795320d4f7d84ec111d833027b130cd5040ba68df24",
+          "gitBlob": "aed299f26214e2ddbcaa46460a58ecf3faed4dd5"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "finite V2 P11 Linux projection keeps exact kernel identity and refuses changed or foreign children",
+        "group": "finite-v2-p11",
+        "firstLine": 2593,
+        "lastLine": 2645,
+        "bodyIdentity": {
+          "bytes": 3946,
+          "sha256": "20b11ea977f6111919a64505867700defaa202330703e4313b76d234772bca99",
+          "gitBlob": "da6fd5576e42a10bdf67730c4a7cd74960ca464b"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "finite V2 terminal completion retains the original scenario Error after successful original final assertions",
+        "group": "finite-v2-p11",
+        "firstLine": 2672,
+        "lastLine": 2677,
+        "bodyIdentity": {
+          "bytes": 428,
+          "sha256": "1c38838e8e0780e98df4372742fd2225aa4de199db31f252095857e480993a6b",
+          "gitBlob": "62ce94ed85912e0d834dcc44acdfd4dc7f6ff742"
+        },
+        "actualIncomingInstallerPass": true
+      },
+      {
+        "name": "finite V2 terminal completion retains original finally precedence and refuses incomplete successful work",
+        "group": "finite-v2-p11",
+        "firstLine": 2679,
+        "lastLine": 2689,
+        "bodyIdentity": {
+          "bytes": 864,
+          "sha256": "b96a54dae4634547c8769ef495d20c69136dd174ce2579724e9895b4f1cbfde2",
+          "gitBlob": "ee4bcc83ac0a3a56c69cd54f3dc70e2ce9d7f768"
+        },
+        "actualIncomingInstallerPass": true
+      }
+    ],
+    "incomingActual": {
+      "report": "0f2963af97dcabda330e2635af90c67a4e5d9651",
+      "head": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+      "run": 43892535269,
+      "job": 133387314279,
+      "cases": 69,
+      "all25OnceAndPass": true,
+      "limit": "Finite incoming whole-file result only; no own133/future158, renderer-hook, GUI or native qualification transfer."
+    },
+    "fixtureComposition": {
+      "newTopLevelNames": 8,
+      "newNamesCollideWithOwnCross": false,
+      "sharedDeclarations": 10,
+      "commonRegistrations": 44,
+      "required": "Adapt shared startup fixture; preserve createHash/mkdir/readNativeProviderArtifact imports and actual-source extraction. Incoming finalStop/BOOT/finiteP11 require absent producer/helper shapes.",
+      "unsafe": "Whole-file replacement drops89 own names; blind append duplicates44 registrations and10 declarations. A future R1 chooses a coherent subset and explicitly defers/supersedes others;158 is not selected."
+    }
+  },
+  "sourcePins": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "own": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "incoming": "48a951b2ddec9970fcaa1efa64be061e8e00b3d2"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts",
+      "own": null,
+      "incoming": "e8fbf803614d4fecc90b8e8f34c64b9e6350a81f"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "own": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "incoming": "c9e19b14b433c58494c10b06eac9f82d5f5cd118"
+    },
+    {
+      "path": "scripts/ci/source-file-size-baseline.json",
+      "own": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+      "incoming": "8f5deeed4e406894e1ee587ed541014bcb7dde77"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "own": "9aa43a43d6186c62bc92dae60dab4fe57cc63fe6",
+      "incoming": "602c2fe5d57cc67a8b18fe0c193b61e58293f508"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "own": "cf93da72a198dac636658e512093eef7828b5927",
+      "incoming": "de952472530e397059730ed55741fdbfd2ced146"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "own": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "incoming": "1c11809c6458f829bd9bb6995aea2ad60b85511e"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "own": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "incoming": "de958fcbd9c1aef20ec843904dd89a6fec62568d"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "own": "d65706646743798f2646421105f2f6a75819f143",
+      "incoming": "df76ce10ba52725b11fea48659b4cb516fc6fddf"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-boot-chat.ts",
+      "own": null,
+      "incoming": "00e61ff3a6228c33a59790f9ff997111a487d3e5"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "own": "43ab487464098fed0425ffd51441a38abc206f3b",
+      "incoming": "c4cfe890e68024f758001878d8d77ea5e72bbab7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "own": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+      "incoming": "2784d674428177fe89ed87a7b5b8fc3182dd8a80"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "own": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "incoming": "d954e614c6cb9053808a9490914f52c046c98c71"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "own": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "incoming": "9c724c3895e467bc1db062e5015ded70c30e65e4"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+      "own": null,
+      "incoming": "6205acf48ae31051ae3b4dcb4d66c47286022ba4"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+      "own": "426c45f6236a3aaf8b3f5e14b4cf21e4ce000c8f",
+      "incoming": "3313bd7ea5f707a930f87322f8ec4fdaed86a527"
+    },
+    {
+      "path": "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts",
+      "own": null,
+      "incoming": "d725e255682b0c092e7b05970622e732c1124580"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "own": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "incoming": "bdafbc763a97fee129c0ee576beddf402b4faf4a"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "own": "b52876e3215910eba3a3a24756f61c289a0965f9",
+      "incoming": "25964490ee05aa48e1a19c9337a6af4c4ffea544"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "own": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+      "incoming": "b7fda498b1e50856211616a3c062ca65a148cc26"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "own": "dca0c1710273411656e3284db0302449a00ddaf6",
+      "incoming": "ed93d7422ab7a846a568a2b72437ec75931ba03b"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "own": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+      "incoming": "e2b96672feefb924a39e20131514e0db5e347311"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "own": "7b5edfbd4967debe454387c7a8b6246e67216dc8",
+      "incoming": "a9d725fbe11278dd98611b49d570c19d80684087"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "own": "6ea373c48119c94b796e28209a03602d0a438e86",
+      "incoming": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "own": "2891a53b464c400c64ab41dd99674ac6c463b39a",
+      "incoming": "ce5c3a7511009501ca057f01957008a8ce3ef67b"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts",
+      "own": "342fab2bf377b7ca6acd6dbd180a946382c00c1a",
+      "incoming": "a370b8c16f18b21c34699114cd7d92ae801841b6"
+    },
+    {
+      "path": "test/renderer/store/teamSlice.test.ts",
+      "own": "8b5bde2a0ac8a79b4563a810f1a66e21bc0df861",
+      "incoming": "08fbd081d1a1cb4cac9a026d11313c165e776d17"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "own": "42093f5cb1be431e383a2bbf97223a2bd8d54b49",
+      "incoming": "72bcb2ef993c43e8f5199b090ee3df8440d758b9"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "own": "a049a862742a85ba77faafea329fc221b3e500e4",
+      "incoming": "3999f1f503fc23c84db89cf9e964bcc3164122e5"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "own": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+      "incoming": "b709c1ecdf6a29532ebaefca35b75ed44b2428af"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "own": "aadc051d5514773ee81d76758c6bbd40c705df5e",
+      "incoming": "b0174217485fa7dadb4ba9692a3056798e2e3e9f"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "own": "b19c8ff5a815a2c2034358f102e2af2cedc212e6",
+      "incoming": "0b179a8b5fcf089de2f42dd90f8eef9a9160b992"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "own": "a93ff6ba1e5656523668694bca24910a468aebc7",
+      "incoming": "da94c393b024d3c8a40159edbf9975cd528007a6"
+    }
+  ],
+  "evidence": [
+    {
+      "role": "plan",
+      "bytes": 2512476,
+      "sha256": "7d031a2a7e5a32ff63c9b7dfed8b6f00fe0768692f256d923393f5da40de217e",
+      "gitBlob": "db774240d2bd3233b46fef361591a00a2c668464"
+    },
+    {
+      "role": "status",
+      "bytes": 28687,
+      "sha256": "b023a7cf57669cefd3c6251e10f290ab1f8ecd9a0da382bcf0e95cd415198b5f",
+      "gitBlob": "eef4ea5f92e8715cc2c12ab12a1ea5b51115f203"
+    },
+    {
+      "role": "gitPolicy",
+      "bytes": 1829,
+      "sha256": "74ea34f5da9a442c13a306bb6013aac8cde3bf7fca1df224a48865ea05091fd4",
+      "gitBlob": "7a8fe6f04b4189e95ad71852b6276f1232630b0c"
+    },
+    {
+      "role": "CLAUDE.md",
+      "bytes": 16756,
+      "sha256": "9fa0770dc3cca54f4798567566f208211120693c6f6ba8906a53954ae9738bfa",
+      "gitBlob": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e"
+    },
+    {
+      "role": "AGENT_CRITICAL_GUARDRAILS.md",
+      "bytes": 2236,
+      "sha256": "90e009d02b8e4b96ddca344a186f5f145c51c1ab9f7c163e45c0e7f4e24798d3",
+      "gitBlob": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3"
+    },
+    {
+      "role": "incomingCI",
+      "bytes": 4551343,
+      "sha256": "4ec9efc8301ddfbd03777bf6fdc2b69b7592116bfb27f26401495c27617f0157",
+      "gitBlob": "0f2963af97dcabda330e2635af90c67a4e5d9651"
+    },
+    {
+      "role": "typing",
+      "bytes": 263003,
+      "sha256": "bd5c643af2008546a081eae8f00eb6f0ba2dcaaabe8de68a1c3a169aa7d85f57",
+      "gitBlob": "37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff"
+    },
+    {
+      "role": "cleanup",
+      "bytes": 177963,
+      "sha256": "8c6db085d88bd3c4b9bf7b7bf707ceb14a47d649d5163b19925c9dba0239f8c5",
+      "gitBlob": "1ed8a09252170fcfc2b31525d4a7061f7d7de95a"
+    },
+    {
+      "role": "p09",
+      "bytes": 34786,
+      "sha256": "477bf2f39792b1cbf7e43a60648f9c648ee758e4be19875f6078ce5750882395",
+      "gitBlob": "2ed811c6e71c4031486f2a1f139cec474618d1e0"
+    },
+    {
+      "role": "windowsProcess",
+      "bytes": 34430,
+      "sha256": "9345f46f277853d0dddfa9f20fb99e64ba13e48438c4ae7258f3b848446dac52",
+      "gitBlob": "b655c300449165d1421cbff770628b6021cebe28"
+    },
+    {
+      "role": "windowsPackaged",
+      "bytes": 119538,
+      "sha256": "e849a166f56480ecef2bd7d85d86bf68357a4849755870269d656cd8a7a0a0c3",
+      "gitBlob": "8210fce15c46bc5f67991442703fb82234240180"
+    },
+    {
+      "role": "windowsCensus",
+      "bytes": 14360,
+      "sha256": "697c2f3e8e95f7647d7753a5ad185707a5b12d8b4f094c1abf73460e92342455",
+      "gitBlob": "33706a0d85242116032d0d3cac233ffc6ade97a3"
+    },
+    {
+      "role": "providerArtifact",
+      "bytes": 457173,
+      "sha256": "e805ba019ffdcb7ee0899e909a256fdf55afb78fbf5e92926ddc9ee6fd4d7e87",
+      "gitBlob": "6e1073e124c05331e582b27582f25b4e6d0c1bd8"
+    }
+  ],
+  "providerC930": {
+    "status": "Source/artifact identity and safe-CI joins accepted for this review. No APP adoption or full native53 acceptance.",
+    "wrapper": {
+      "role": "providerArtifact",
+      "bytes": 457173,
+      "sha256": "e805ba019ffdcb7ee0899e909a256fdf55afb78fbf5e92926ddc9ee6fd4d7e87",
+      "gitBlob": "6e1073e124c05331e582b27582f25b4e6d0c1bd8"
+    },
+    "sourceCommit": "c930d3c8b9a213762528d6e28c9ed0172ab1fa27",
+    "paths": {
+      "producer": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.ts",
+      "test": "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-native-cut.test.ts"
+    },
+    "sourceAndTestIdentities": [
+      {
+        "bytes": 16526,
+        "sha256": "af8da7adf7b8bf091d79dfe72f3cacf1d31af5435a10a9f22cb6446ae7d49084",
+        "gitBlob": "177f850298c86902a33198d22e2c2020b56827a1",
+        "lines": 293
+      },
+      {
+        "bytes": 16708,
+        "sha256": "4fc5b7050b224c55070d81cc3f5eb0d355226bd5b20f4a8aabbf395c9a4f1a9e",
+        "gitBlob": "c074fa2c2219eab448e1d1276dbab75f2d9ade2e",
+        "lines": 298
+      },
+      {
+        "bytes": 36411,
+        "sha256": "273141da38d39e5e7c292c2ddce6a06c17faa84d1cda28a89cd2e47abf8a575c",
+        "gitBlob": "be55411efcb329191c3db8abf8a564dca54332fa",
+        "lines": 745
+      },
+      {
+        "bytes": 38378,
+        "sha256": "2ffb04cab741e0b936e56a930768f37b74cd35b119e8b1f62ec8763199956616",
+        "gitBlob": "3dc7e46b70b9786ad4f26220611f0865c2ebf4fb",
+        "lines": 786
+      }
+    ],
+    "sourceInverse": [
+      {
+        "kind": "compiled",
+        "inverseExact": true,
+        "oldChars": 17158,
+        "newChars": 17378,
+        "removedChars": 220
+      },
+      {
+        "kind": "source",
+        "inverseExact": true,
+        "oldChars": 16526,
+        "newChars": 16708,
+        "removedChars": 182
+      }
+    ],
+    "testInverse": {
+      "prefixChars": 22760,
+      "addedBytes": 1967,
+      "addedLines": 41,
+      "originalSuffixBytes": 13651,
+      "inverseExact": true,
+      "newCases": 2
+    },
+    "finding": "A rejected pendingFetch stops being counted as pending; an explicit unknown-cleanup rejection retains its cleanup debt. The per-fetch flag records that distinction, rethrows the identical error and tests pending OR unknown debt after existing cleanup. Original sibling join, first failure, authority calls, deadlines and other cleanup checks remain unchanged.",
+    "causeLimit": "These tests do not prove that an earlier native driver-close/unconfirmed failure was caused by this branch.",
+    "artifactId": 14228920904,
+    "run": 43872562100,
+    "archives": {
+      "beforeImplementation": {
+        "bytes": 186398,
+        "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+        "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3"
+      },
+      "afterImplementation": {
+        "bytes": 186425,
+        "sha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41",
+        "gitBlob": "3a044485d5c05da43f46febd0fc76c65fa79ef1f"
+      },
+      "spi": {
+        "bytes": 6230,
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+        "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8"
+      }
+    },
+    "memberProof": {
+      "wrapper": "6e1073e124c05331e582b27582f25b4e6d0c1bd8",
+      "zipIdentity": {
+        "bytes": 193575,
+        "sha256": "6088116cd6df79958c9f0e3024a0df3a0718ab4daf190a3c312fb8118b2ba8e5",
+        "gitBlob": "b9095db9f1bf27bebea3b38fe5b9b4358b4f95c7"
+      },
+      "zipCentralDirectory": [
+        {
+          "name": "agent-teams-provider-implementations-0.0.0.tgz",
+          "flags": 8,
+          "method": 8,
+          "crc": 1441254993,
+          "compressedBytes": 186485,
+          "bytes": 186425,
+          "localOffset": 0
+        },
+        {
+          "name": "agent-teams-provider-session-contracts-0.0.0.tgz",
+          "flags": 8,
+          "method": 8,
+          "crc": 158923112,
+          "compressedBytes": 6235,
+          "bytes": 6230,
+          "localOffset": 186577
+        },
+        {
+          "name": "receipt.json",
+          "flags": 8,
+          "method": 8,
+          "crc": 491931770,
+          "compressedBytes": 345,
+          "bytes": 597,
+          "localOffset": 192906
+        }
+      ],
+      "receiptIdentity": {
+        "bytes": 597,
+        "sha256": "baddfe0e307b3581aded81d52c98884ab6121847e67071d79f7c46330c0511b4",
+        "gitBlob": "9a8804b5fb2208dbc17971fd3d9153f90996d20d"
+      },
+      "receiptCRCVerified": true,
+      "unchanged": 252,
+      "changed": [
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+          "before": {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+            "mode": "0o644",
+            "bytes": 17158,
+            "sha256": "0716d338a425a0498a04e66376c280f23149dbd3a4b7a714bcc95db5f2d7c469",
+            "gitBlob": "c855f82126084c00e92713d113bf91644d01ee3b"
+          },
+          "after": {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+            "mode": "0o644",
+            "bytes": 17378,
+            "sha256": "cbf0762238de460547f3eeeaf77789e591c8877c5fe651d922c96374fa93d7c1",
+            "gitBlob": "54aea8d75ff54ca5bc4d3e53fdf0c3d58c201efc"
+          }
+        }
+      ],
+      "spiMembers": 12,
+      "appReceiptExact": true,
+      "archiveCRCAndTarPayloadAttribution": "Root verified safe extraction-free ZIP/tar bytes and all CRCs. This child independently rehashed encoded ZIP bytes, central directory identities and all embedded literal text; no independent decompression of compressed package members."
+    },
+    "safeCI": {
+      "run": 43872562100,
+      "attempt": 1,
+      "result": "success",
+      "node24": {
+        "job": 133317224402,
+        "raw": "d-node24-raw",
+        "tests": 563,
+        "pass": 563,
+        "fail": 0,
+        "skip": 0,
+        "packedConsumers": [
+          {
+            "tests": 1,
+            "pass": 1
+          },
+          {
+            "tests": 1,
+            "pass": 1
+          }
+        ]
+      },
+      "node26": {
+        "job": 133317224592,
+        "raw": "d-node26-raw",
+        "tests": 563,
+        "pass": 563,
+        "fail": 0,
+        "skip": 0,
+        "packedConsumers": [
+          {
+            "tests": 1,
+            "pass": 1
+          },
+          {
+            "tests": 1,
+            "pass": 1
+          }
+        ]
+      },
+      "rawIdentities": [
+        {
+          "job": 133317224402,
+          "gitBlob": "a0b00fbb5e17e792e1f2b55b8d10438a843bde40",
+          "bytes": 108860,
+          "sha256": "bada338cca5bdc4cf3209da147e44393b5369145ea88fd996dddbf34406764d0"
+        },
+        {
+          "job": 133317224592,
+          "gitBlob": "690eff9714c01d58d8ee8d9b10a5f6cc5ac7e796",
+          "bytes": 103369,
+          "sha256": "c76fdba24499aa38d9c5bab5f2eeb36fbfa363c4499ae360a7fc96d0269a0fe4"
+        }
+      ],
+      "orderedNameSha256": "95ecac127b9bf0bb2a4d6bcf25a6c3cf205838eb5f2a1a01cbcb60b52e730b91",
+      "newActualCases": [
+        "public native read cut preserves settled-rejection after its original sibling revokes the final fetch",
+        "public native read cut preserves unknown-cleanup after its original sibling revokes the final fetch"
+      ],
+      "command": "pnpm check => pnpm build && pnpm typecheck && pnpm test && pnpm test:package",
+      "toolchain": "Original Node24.21.0/26.11.1 with pnpm11.18.0; no new execution.",
+      "qualification": "source-and-packed-consumer-only; nativeHostQualified=false; packagedElectronQualified=false",
+      "update": "0f296 did not download/revalidate binary archives. Later genuine wrapper closes the byte/ledger join with root CRC/tar attribution, not native/Electron qualification."
+    },
+    "nativeMatrix": {
+      "run": 43872562132,
+      "attempt1": {
+        "runConclusion": "failure",
+        "jobs": 53,
+        "success": 50,
+        "cancelled": 3,
+        "failedJobs": 0
+      },
+      "attempt2": {
+        "jobs": 53,
+        "success": 53,
+        "expectedMatrixNamesEqual": true,
+        "qualification": "API status inventory, plus only the three replacement raw logs below; not a full53-log or archive/receipt acceptance."
+      },
+      "retainedReplacementRaws": [
+        "d-v2-a2-pinned-tool-raw",
+        "d-v2-a2-embedded-raw",
+        "d-v2-a2-interrupt-raw"
+      ],
+      "limit": "This lane has attempt2 API53success plus only3 replacement full raws. It does not close full53 raw/receipt acceptance. Preserve attempt1's50success/3cancelled without cause speculation or new rerun."
+    },
+    "laterAppAdmission": [
+      "Keep own c79 historical archives/receipts; do not overwrite with incoming9423/c930 layout.",
+      "Use original checked c930 implementation bytes. SPI bytes are identical, so a changed SPI dependency path need not be manufactured.",
+      "Review Host package.json, pnpm-workspace.yaml and pnpm-lock.yaml atomically as a graph; do not copy incoming files wholesale.",
+      "Original c930 source receipt refers to9423 predecessor, not our c79 transition. Retain that provenance and describe our actual selection separately.",
+      "Preserve own342fab sha256/newSha256 tolerant reader and equality when both exist. Incoming a370 newSha256-only reader regresses c79 and four own tests.",
+      "Review active General/native Claude/Codex pins and source closure coherently. Incoming hardcoded9423 pins do not meanc930.",
+      "Keep original producer/native gates and resulting APP gates explicit. No real Claude/Codex command, install, repack, package/dependency change or native action authorized."
+    ]
+  },
+  "preserveOwn": {
+    "controls": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+    "selection": "cf93da72a198dac636658e512093eef7828b5927",
+    "tests133": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+    "rules": [
+      "Preserve all future root-reviewed Cross additions and current133; refresh later actual source preimages.",
+      "Keep stderr6ea normalized captured-form two-order masking/all27 cases/oversize-first rule; incoming0b0 remains rejected.",
+      "Keep Linux dca exact retained MainThread zombie allowance and6a147 actual caller/owner/cleanup-debt tests.",
+      "Keep Windows resume check-site/capability attribution, Codex separate await ledger and old512 projection. Incoming whole files remove own diagnostic/no-dispatch proof behavior.",
+      "Keep own callable-Zustand/pane-layout/getter-free observer, Task source identity, saved-settings25 and conversation19 checks.",
+      "Keep342fab receipt reader and four renderer roster-race regressions absent incoming.",
+      "Incoming I386 native/workflow changes remain a separate authority/oracle scope, not a Windows/P09 repair.",
+      "Own final journal deadline assertion already refuses late empty journals; incoming earlier assertion is ordering only, not a new missing-refusal RED.",
+      "Packaged source-array wrapping adds no behavior; own version/CDP pins already exist.",
+      "Proof-roster additions must match selected actual consumed files, not unselected helpers.",
+      "Six incoming workflow changes are consequential; retain current42 until separate exact routing/action scope."
+    ]
+  },
+  "platformGaps": {
+    "unchangedWindowsSourceJoin": {
+      "rows": [
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "reported": "71d5629149e8f499a45b54a99922145ee3cae09e",
+          "current": "71d5629149e8f499a45b54a99922145ee3cae09e",
+          "equal": true
+        },
+        {
+          "path": "tools/owned-process-broker/nativeFixture.cpp",
+          "reported": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+          "current": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+          "equal": true
+        },
+        {
+          "path": "tools/owned-process-broker/serviceScopes.h",
+          "reported": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+          "current": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+          "equal": true
+        },
+        {
+          "path": "tools/owned-process-broker/protocol.h",
+          "reported": "8301cd73299220be2c5c9d95d87745f2937dc715",
+          "current": "8301cd73299220be2c5c9d95d87745f2937dc715",
+          "equal": true
+        },
+        {
+          "path": "tools/owned-process-broker/broker.cpp",
+          "reported": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+          "current": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+          "equal": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/owned-process/windowsBroker.ts",
+          "reported": "32b3315f04d91ae6da375bcca710e16948e09ad3",
+          "current": "32b3315f04d91ae6da375bcca710e16948e09ad3",
+          "equal": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+          "reported": "b41629b7ed483f1ab9f42e2e234933999647e7bd",
+          "current": "b41629b7ed483f1ab9f42e2e234933999647e7bd",
+          "equal": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+          "reported": "febc16323b68c0e66d6fd55baaa9a020b451f0fc",
+          "current": "febc16323b68c0e66d6fd55baaa9a020b451f0fc",
+          "equal": true
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+          "reported": "f2af726dd2f352a1ecc0fa40753b76e72d008e14",
+          "current": "f2af726dd2f352a1ecc0fa40753b76e72d008e14",
+          "equal": true
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "reported": "740f654c9c04318779fb4fd9f15b79b76711e53f",
+          "current": "740f654c9c04318779fb4fd9f15b79b76711e53f",
+          "equal": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+          "reported": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+          "current": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+          "equal": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/capturedNativeProcessFactory.ts",
+          "reported": "6eed54e3253a8e714cdc984835c74474d7edb054",
+          "current": "6eed54e3253a8e714cdc984835c74474d7edb054",
+          "equal": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeReadinessOrigin.ts",
+          "reported": "57c68f58a158bc4c6e9f0ea93c349b7abf8daeaa",
+          "current": "57c68f58a158bc4c6e9f0ea93c349b7abf8daeaa",
+          "equal": true
+        },
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "reported": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+          "current": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+          "equal": true
+        },
+        {
+          "path": "src/main/utils/windowsProcessTable.ts",
+          "reported": "5309d3e1ee64e9838fdc29d787817f1ece2fb9ae",
+          "current": "5309d3e1ee64e9838fdc29d787817f1ece2fb9ae",
+          "equal": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/owned-process/HostWindowsServices.ts",
+          "reported": "c2f10e7f1302895dc96686cef362c6537757cb6a",
+          "current": "c2f10e7f1302895dc96686cef362c6537757cb6a",
+          "equal": true
+        }
+      ],
+      "all16Equal": true
+    },
+    "process15": {
+      "review": "b655c300449165d1421cbff770628b6021cebe28",
+      "originalArm": "Codex allocated/attached true but nativeReadyfalse;112 reads/15046.1864ms. Unevaluated providerReady/ownerCurrent fields and optional ledger do not isolate one costly primitive.",
+      "originalX64": "OpenCode69 reads/14994.4085ms after prior Codex/Claude pass. Cutoff-crossing inspection bracket is not an individual hash/I/O/PowerShell timing proof.",
+      "incomingArmFinal": {
+        "review": "1ed8a09252170fcfc2b31525d4a7061f7d7de95a",
+        "receipt": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+        "artifactWrapper": "d41b495d03866d9611b449dd159bd836189c7021",
+        "job": 133387301562,
+        "reads": 108,
+        "elapsedMs": 15016.7292,
+        "status": "INCOMPLETE",
+        "readinessFailure": true,
+        "cleanup": true,
+        "all7PostWaitOriginalHandlesAbsent": true,
+        "correction": "Six earlier stdoutfalse flags preceded final witness waits, so they did not prove leaks. Direct original final receipt now positively closes seven stopped/drained/released/absence facts for this epoch only. Earlier0f/Plan unknown statements remain historical, superseded on this exact fact."
+      },
+      "nextScope": "No producer/timer repair established. Any diagnostic must observe original calls/guards with no extra authority sampling, caching/read reuse, reanchor or deadline widening."
+    },
+    "packaged10": {
+      "review": "8210fce15c46bc5f67991442703fb82234240180",
+      "arm": "Refresh10s refused before press/release; Retry unreached. Actual archive contains no same-Main UI receipt. Emergency root99/active0 is not normal product cleanup.",
+      "x64": "Retry click returned and a successor Host exists; a later fresh-census deadline guard refused before that iteration's DOM read. Earlier ready8381ms is non-atomic. Actual final receipt has cleanupfalse; subsequent required UIStops were not reached.",
+      "timings": "Retained Retry13 fresh calls total8754.1816ms:12combined8422.7359 plus oneprocess331.4457. Last combined666.7607 crossed deadline; no shell/CIM/TCP/parse breakdown exists.",
+      "refusal": "Relevant validateCensus refusal is deadline/currentness, not an observed ownership-identity mismatch.",
+      "nextScope": "A failure-only bounded census projection or per-operation timings inside the same existing query/parse could be separately reviewed. Preserve10s, all samples/order/ownership/finalgeometry/no replay. Incoming observerPID/listener changes do not establish a causal fix."
+    },
+    "censusSubstitution": {
+      "review": "33706a0d85242116032d0d3cac233ffc6ade97a3",
+      "conclusion": "No existing native API substitutes for full process/parent-birth lineage plus foreign TCP-listener census. HANDLE/Job observations have narrower authority; windowsProcessTable still uses CIM and its cached route is ineligible. No new native architecture selected."
+    },
+    "strictP09": {
+      "review": "2ed811c6e71c4031486f2a1f139cec474618d1e0",
+      "conclusion": "Strict refusal established; no bounded implementation repair. Separate x64 unsigned errno13/signing-67062 from signed rewrite/resume A markers on both architectures. Cleanuptrue coexists with custodyINCOMPLETE. No weakened writer/custody assertion, skip, marker-to-mapped-image promotion or platform qualification.",
+      "nextScope": "No further diagnostic/source scope selected. A supported custody contract or exact new evidence is required."
+    },
+    "m16": {
+      "status": "OPEN",
+      "basis": "Current Plan/status plus peer retained assessment, not a fresh corpus reconstruction.",
+      "peerPointers": [
+        "318f324d",
+        "fdd441b6",
+        "5a75014b",
+        "ea6fb627",
+        "7408b30b34d2ff280a429766fdbb51976d899af8",
+        "2270e83ac89afdb475ac78ea20a40ca51777fd63"
+      ],
+      "conclusion": "Tracked manifest/handoffs do not supply genuine old-owner/donor raw corpus. Canonical legacy Stop lacks nativeRelease; a later migration checkpoint is not baseline native Launch→Stop. FiniteP11/saved import or inode rebinding cannot close it."
+    }
+  },
+  "canonicalGatesAndDelivery": {
+    "typingReview": "37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff",
+    "sourceJoin": {
+      "count": 61,
+      "allEqual": true,
+      "serialization": "JSON.stringify(complete ordered comparison rows)+LF; each row carries path/reported/current/equal",
+      "comparisonSha256": "b48e53656fa5a2bff07248509792c056f3efa1e8c66637877da59cc7c56689bd",
+      "sourcePinLocation": "Full61 primary source/config/script/workflow pins and bodies are retained in37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff; complete rows were compared against current a5b non-doc tree during this review.",
+      "currentInventory": "4bcdca3a01d5ccb8027254fdbbca61c8bb8f8dc7"
+    },
+    "canonicalTyping": "pnpm typecheck pretypecheck builds Host/ledger:2emitting compilers then8noEmit. typecheck:workspace retains2emit then12noEmit including Host scripts/HostTEST/MCP.",
+    "omissions": "Main root config alone does not explicitly admit controls/Selection/shared script tests; tsconfig.legacy-agent-host-scripts.json matters. Backend, packaged, broker and native-tooling scopes are not interchangeable.",
+    "inputs": "Latest admitted inputs are not blanket command authority. Full workspace needs exact MCP closure if absent; bind all emitted outputs and new attempt budgets. Original97 guards and originalE compiler passes do not qualify later source.",
+    "build": "pnpm build includes Linux helper/cc, Host/ledger, Radix check, network pricing write, controller/MCP bundles, ElectronVite and optional Sentry effects. Separate complete input/output/side-effect admission is needed.",
+    "guardPolicy": "Canonical typing/typedlint, source-size800/frozen oversized ratchet, Team Provisioning composition and applicable source guards remain. No cap increase or broad formatting.",
+    "gitPolicy": "Tracked git-delivery-policy.md requires PR, independent review and required current-commit CI. It records strictFullqualification onmain and a narrow personal owner-chat exception; this task grants none. Preserve history/normal pushes/required checks.",
+    "draftBoundary": "GeneralFullqualification's observed Draft-feedback refusal is intentional policy, not a product bug. A future Draft E2E venue may gather platform evidence; it cannot achieve strictFullqualification by weakening classifier or silently changing Ready/default/merge.",
+    "futureAction": "After coherent source/package/local gates, root can separately publish/review exact fixed-head CI R1 with full graph/path/workflow/classifier/checkout/route boundaries. Frozen PR1206/1207/1208/1211/1212/1213 and terminal runs remain untouched."
+  },
+  "limitations": [
+    "Source classifications reuse all complete changed relevant bodies from accepted81-file review; this is not a general audit restart.",
+    "Package wrapper closes encoded ZIP byte/central-directory/embedded-text/ledger joins. Root alone independently decompressed/CRC-checked package members; no child package extraction or execution.",
+    "Static traces and already retained actual results are distinguished; no new RED/GREEN is claimed.",
+    "Actual incoming69 PASS is not an adopted158 suite or qualification of our133/renderer/nativeGUI.",
+    "Report pins a5b; later Cross producer/source changes require fresh integration preimages.",
+    "Only a bare immutable review is retained. No source, tree/ref/PR, runner, runtime, CI or adoption action."
+  ]
+}

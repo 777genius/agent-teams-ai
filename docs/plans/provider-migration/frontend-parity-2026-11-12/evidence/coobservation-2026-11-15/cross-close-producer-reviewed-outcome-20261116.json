@@ -1,0 +1,401 @@
+{
+  "schemaVersion": 1,
+  "kind": "Cross Close accepted actual semantic RED and reviewed exact two-source producer publication; local application and GREEN pending",
+  "repository": "777genius/agent-teams-ai",
+  "parent": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+  "parentTree": "ab1b94c6cd1fa02a75b7a19c18148ac364920e25",
+  "selectedR1": {
+    "published": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+    "identity": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    }
+  },
+  "actualTestApplication": {
+    "envelope": {
+      "bytes": 127003,
+      "sha256": "197ffc6245a2af0f0727c6ad629a731177bb8f0eaddbee1aea65b29ec404e221",
+      "gitBlob": "5766c12541ed5cf6cfb77ff92539fba5b68869d3"
+    },
+    "independent": {
+      "bytes": 79583,
+      "sha256": "5a2decfc6c4f5e55ecf7ea3cb19ea91fd1b3249a8770bb57c5854f3663b43066",
+      "gitBlob": "c562c5ab0e2e3e8df58ff9201a89ff2c7152dffa"
+    },
+    "scope": "Source/control/metadata only; runtime dependencies/compiled/providers/cache UNINSPECTED with preservationnull, no behavioralPASS"
+  },
+  "actualRed": {
+    "envelope": {
+      "bytes": 185267,
+      "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+      "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634"
+    },
+    "receipt": {
+      "bytes": 33946,
+      "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+      "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+    },
+    "raw": {
+      "bytes": 37314,
+      "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+      "gitBlob": "d38f2ae2851555b35970a892ce38674221147437"
+    },
+    "primaryReceipt": {
+      "bytes": 883,
+      "sha256": "740b006d5edd0141186145f6d551cbe3940d024a54b88d5456619f8bfac415b3",
+      "gitBlob": "62abf6c38e2f22cdf38987b431b53ffae096a667"
+    },
+    "semantic": {
+      "bytes": 190694,
+      "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+      "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+    },
+    "semanticClosure": {
+      "bytes": 86249,
+      "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+      "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+    },
+    "guard": {
+      "bytes": 140038,
+      "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+      "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+    },
+    "tests": 133,
+    "pass": 118,
+    "semanticFail": 15,
+    "old97AllPass": true,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0,
+    "variants": {
+      "total": 13,
+      "reached": 8,
+      "fullyPassed": 6,
+      "stoppedBySemanticFailure": 2,
+      "unreached": 5
+    },
+    "outerSession": 27541,
+    "outerExit": 0,
+    "primaryExit": 1,
+    "fullRuntimeInputsInspected": true,
+    "fullRuntimeInputsPreserved": true,
+    "files": 67,
+    "fileBytes": 90226849,
+    "metadataChildren": 14,
+    "cleanupDebt": false,
+    "source": {
+      "bytes": 2478516,
+      "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+      "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+    },
+    "timing": {
+      "tests": 133,
+      "pass": 118,
+      "fail": 15,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "old97": "AllPASS;complete names/order/multiplicity preserved",
+      "failures": "Exact independently predicted semantic assertions, no setup/import/fixture/transport errors",
+      "primaryExit": 1,
+      "outerExit": 0,
+      "inputsPreserved": true,
+      "fullRuntimeInputsInspected": true,
+      "fullRuntimeInputsPreserved": true,
+      "scopeCompleted": true,
+      "cleanupDebt": false,
+      "preflightSeconds": 443.69261874699805,
+      "commandSeconds": 27.58532903199739,
+      "commandPhaseSeconds": 27.588782319999154,
+      "postflightSeconds": 461.6092845179992,
+      "totalInvocationSeconds": 932.8914116930027
+    }
+  },
+  "producerAuthorship": {
+    "accepted": true,
+    "at": "2026-11-16 17:31:19 UTC",
+    "publishedR1": {
+      "commit": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+      "identity": {
+        "bytes": 23142,
+        "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+        "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+      },
+      "actualIndependentReadback": {
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34",
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1"
+      }
+    },
+    "actualRed": {
+      "envelope": {
+        "bytes": 185267,
+        "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+        "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634"
+      },
+      "receipt": {
+        "bytes": 33946,
+        "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+        "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+      },
+      "raw": {
+        "bytes": 37314,
+        "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+        "gitBlob": "d38f2ae2851555b35970a892ce38674221147437"
+      },
+      "outerSession": 27541,
+      "outerExit": 0
+    },
+    "semantic": {
+      "bytes": 190694,
+      "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+      "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+    },
+    "semanticFinalClosure": {
+      "bytes": 86249,
+      "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+      "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+    },
+    "guard": {
+      "acceptanceReceivedBeforeAuthorship": true,
+      "reviewer": "/root/guard_review",
+      "acceptance": "COMPLETE actual133 RED independently ACCEPTED; all67files90226849B/42unique,full current beforeafterinputs/lifetime/outer0; only existing8abe two-path producer AUTHORING gate released. ExactR2/publication/readback/GREEN/guards remain.",
+      "exactEnvelope": "7db3b53fab91d32d18c8dd95b34242e515b50634",
+      "exactReceipt": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a",
+      "bareReviewRetentionPendingAtGate": true,
+      "retainedReview": {
+        "bytes": 140038,
+        "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+        "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+      },
+      "fullRootReadbackAfterInitialAuthorshipAt": "2026-11-16 17:32:25 UTC",
+      "bareReviewRetentionNowComplete": true
+    },
+    "permittedPaths": [
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+    ],
+    "producerAuthoredBeforeThisGate": false,
+    "scope": "Root may now author only the two selected Cross producer postimages. No source application/runtime or GREEN binding yet."
+  },
+  "producerR2": {
+    "accepted": true,
+    "at": "2026-11-16 17:39:55 UTC",
+    "guard": {
+      "bytes": 121044,
+      "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+      "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+    },
+    "parity": {
+      "bytes": 109607,
+      "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+      "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+    },
+    "sourcePostimages": {
+      "taskTarget": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      "taskDriver": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      }
+    },
+    "wholeTestUnchanged": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "allR1ScopeConditionsAccepted": true,
+    "guardFullEmbeddedBodiesRehashed": [
+      {
+        "role": "candidate-helper",
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "role": "candidate-driver",
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "role": "root-exact-inverse-and-authoring-gate",
+        "bytes": 8119,
+        "sha256": "eec8303692c8ba0f019939580e76fc77ab22cb764f852b95bafe0a2699343f05",
+        "gitBlob": "6cf280cdf07fe299eb452a6eb61bba3dd53114a4"
+      },
+      {
+        "role": "unchanged-current-task-detail-source",
+        "path": "src/features/team-task-detail/core/domain/taskDetailReadModel.ts",
+        "bytes": 6884,
+        "sha256": "bdc52e3e59c1a2db72e89011afd82c5802d8ab839a8752cac2a64b47a0a78fcf",
+        "gitBlob": "0a1ede79d40bc05af35b67fcf27ed7594d71abb2"
+      },
+      {
+        "role": "unchanged-current-task-detail-source",
+        "path": "src/renderer/store/slices/teamTaskDetailSlice.ts",
+        "bytes": 27966,
+        "sha256": "7c1b2091311e921fc244e8d8d8814cd03451bd31327a91492fdf4f8730aa8fdf",
+        "gitBlob": "5d5da9534eeacf34d554b2df2ed5573876c3a09c"
+      },
+      {
+        "role": "unchanged-current-task-detail-source",
+        "path": "src/features/team-task-detail/core/index.ts",
+        "bytes": 148,
+        "sha256": "e6c8c8dd25c4d9a6fd1c21d5c91cf313044d944cebbf6db9826d1bf313109624",
+        "gitBlob": "b79a465097935f286e58e3bcf1fc54f2fbd8b1e4"
+      },
+      {
+        "role": "unchanged-current-task-detail-source",
+        "path": "src/features/team-task-detail/core/domain/index.ts",
+        "bytes": 158,
+        "sha256": "5bc9dcd069ee5acfb1a71a6085f9ed3bb8c7150421118aadc2a58cd3b5cc7317",
+        "gitBlob": "ba0a3f2e0048684f12a44386f01d8474123e4107"
+      }
+    ],
+    "processingNote": "Initial root in-memory readback assertion expected an accepted boolean; this guard record instead uses disposition ACCEPTED and empty blockers. Full fetched body had already matched; no target/runtime/ref mutation occurred. Correct schema fields inspected and all7 full embedded bodies rehashed before selection.",
+    "localApplication": false,
+    "greenExecuted": false,
+    "scope": "Exact2-source publication may proceed. Actual publication/readback and separately reviewed GREEN binding remain before application."
+  },
+  "rootInverse": {
+    "bytes": 8119,
+    "sha256": "eec8303692c8ba0f019939580e76fc77ab22cb764f852b95bafe0a2699343f05",
+    "gitBlob": "6cf280cdf07fe299eb452a6eb61bba3dd53114a4"
+  },
+  "sourceDelta": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "before": {
+        "bytes": 6433,
+        "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+        "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+      },
+      "after": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      "physicalLines": 123,
+      "cap": 200
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "before": {
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+      },
+      "after": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      "physicalLines": 799,
+      "cap": 800
+    }
+  ],
+  "preservation": {
+    "allOther8796NonDocLeaves": true,
+    "workflows42": true,
+    "test0aec": true,
+    "controlsEd57": true,
+    "selectionCf93": true,
+    "oldThreeGeneratedReadinessModesByteIdentical": true,
+    "wholeCurrentOwnerExpressionByteIdentical": true,
+    "unchangedClickExpressionBudgetsOwnershipFinalGeometryNoReplay": true
+  },
+  "behavior": "The new clarification-cleared stage requires the current original Task/context/surface, matching stored session revision/owner, completed current renderer reads, accepted Team metadata, null error/deletionIntent and absent clarification; then selects the original positive-size exact singleton Close only inside that owner's dialog. Eligibility precedes native disabled and direct/descendant center-hit checks. One helper forwards the same full expression to unchanged clickExpression with original label/selector/text. The driver changes only its named import and original Close statement.",
+  "actualNewProducerExecutions": 0,
+  "localProducerApplication": false,
+  "greenBindingAuthored": false,
+  "greenExecuted": false,
+  "staticGreenPrediction": {
+    "wholeCases": 133,
+    "pass": 133,
+    "fail": 0,
+    "all13TargetVariantsReachable": true,
+    "qualification": "Static only; same unchanged whole file must actually run."
+  },
+  "attemptsRemaining": {
+    "materializeTest": 0,
+    "red": 0,
+    "materializeProducer": 1,
+    "green": 1,
+    "validationPackage": 1
+  },
+  "nextRequired": [
+    "Complete root and independent actual published commit/parent/fulltree/allchangedbody readback",
+    "Exact GREEN data binding R2 and publication/readback",
+    "One metadata-only application of only these two producers; independent source/control/session/outer0 review",
+    "One same133 GREEN with fresh full current input pre/post and independent semantic/lifetime/outer0 acceptance",
+    "Only then one ordered3-command validation package with strict per-child original clocks and no resume"
+  ],
+  "readonlyFollowups": {
+    "incomingFullInventory": {
+      "bytes": 352944,
+      "sha256": "2804e29cfaa4f1c32ef5abf4ca88339e573421f0f75bf98c2a0b4c6248c5aeea",
+      "gitBlob": "4bcdca3a01d5ccb8027254fdbbca61c8bb8f8dc7"
+    },
+    "incomingUiCensus": {
+      "bytes": 276318,
+      "sha256": "7cbdf8e82eb9fade2265ed1bfeec65e21f3ec44104c9a152fb2b7349acdb0bd4",
+      "gitBlob": "9637374969dea23c0fdc9ee2f5cc305f110049d1"
+    },
+    "incomingPrioritiesAndProviderByteReview": {
+      "bytes": 65513,
+      "sha256": "5f00811d3916986548389aca86b29653495284fce67b1603d197e2913dd47a1b",
+      "gitBlob": "209ae3a0c2e4b5c538cc6e6e79889fb85a174417"
+    },
+    "providerOriginalBytes": {
+      "bytes": 457173,
+      "sha256": "e805ba019ffdcb7ee0899e909a256fdf55afb78fbf5e92926ddc9ee6fd4d7e87",
+      "gitBlob": "6e1073e124c05331e582b27582f25b4e6d0c1bd8"
+    },
+    "windowsFinalCleanup": {
+      "wrapper": {
+        "bytes": 355085,
+        "sha256": "cef51689f252ba3a097002ed5fd760f0ff970e277757dfa6d93b16f3c70db22c",
+        "gitBlob": "d41b495d03866d9611b449dd159bd836189c7021"
+      },
+      "receipt": {
+        "bytes": 22790,
+        "sha256": "6f34d07150d904bfd7554011d8d11ac22dcb01ecf9c8553bce1a32e26b2d9f3a",
+        "gitBlob": "3aeccb43654adadf90c38a06e4ffeaa650e63321"
+      },
+      "review": {
+        "bytes": 177963,
+        "sha256": "8c6db085d88bd3c4b9bf7b7bf707ceb14a47d649d5163b19925c9dba0239f8c5",
+        "gitBlob": "1ed8a09252170fcfc2b31525d4a7061f7d7de95a"
+      },
+      "sevenOfSevenFinalHandleAbsent": true,
+      "cleanupConfirmed": true,
+      "readiness": "Still INCOMPLETE at original15s; cleanup alone only qualified"
+    },
+    "qualification": "Pinned a5/incominga07 81-difference analysis precedes these two Cross edits; its inventory must be refreshed before a later integration scope.158-name union and c930 adoption remain unselected."
+  },
+  "open": [
+    "Canonical typecheck/build",
+    "Fresh own GUI/platform acceptance",
+    "Windows Process15s",
+    "Windows Packaged10s",
+    "StrictDarwinP09",
+    "LaterP11 and genuineM16",
+    "Incoming source/provider reconciliation",
+    "WholeE2E"
+  ],
+  "forbiddenScopeUnchanged": [
+    "No realClaude/Codex including version",
+    "No frozenPR actions or originalCIpolling",
+    "No deadline/currentness/authority/census/physicalcleanup/no-replay weakening",
+    "No sourcecap/exception/baseline/workflow changes",
+    "No main/default merge,Ready,release,Stage2 or blanketvendor/native qualification"
+  ]
+}

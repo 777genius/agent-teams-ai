@@ -1,0 +1,2438 @@
+{
+  "schemaVersion": 1,
+  "kind": "cross-close-red-controls-complete-actual-publication-readback",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/parity_audit",
+  "reviewedAtUTC": "2026-11-16 16:57:06 UTC",
+  "accepted": true,
+  "verdict": "COMPLETE_ACTUAL_PUBLICATION_ACCEPTED",
+  "parentNotifiedBeforeBareRetention": true,
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "subject": {
+    "commit": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+    "tree": "ab1b94c6cd1fa02a75b7a19c18148ac364920e25",
+    "orderedParents": [
+      "c0ead43f21d5ed90776d4080fa372f48cf8270d5"
+    ]
+  },
+  "actualCommit": {
+    "sha": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+    "node_id": "C_kwDORVTEtNoAKGE1Yjk0ODMxODA0MzQyMTRmYTM5NDZhNTZkNDRlZjY3ZWY0OGY2YWU",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/a5b9483180434214fa3946a56d44ef67ef48f6ae",
+    "html_url": "https://github.com/777genius/agent-teams-ai/commit/a5b9483180434214fa3946a56d44ef67ef48f6ae",
+    "author": {
+      "name": "Илия",
+      "email": "iliyazelenkog@gmail.com",
+      "date": "2026-11-16T16:53:43Z"
+    },
+    "committer": {
+      "name": "Илия",
+      "email": "iliyazelenkog@gmail.com",
+      "date": "2026-11-16T16:53:43Z"
+    },
+    "tree": {
+      "sha": "ab1b94c6cd1fa02a75b7a19c18148ac364920e25",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/ab1b94c6cd1fa02a75b7a19c18148ac364920e25"
+    },
+    "message": "docs(e2e): retain reviewed Cross Close RED controls and input scope",
+    "parents": [
+      {
+        "sha": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+        "html_url": "https://github.com/777genius/agent-teams-ai/commit/c0ead43f21d5ed90776d4080fa372f48cf8270d5"
+      }
+    ],
+    "verification": {
+      "verified": false,
+      "reason": "unsigned",
+      "signature": null,
+      "payload": null,
+      "verified_at": null
+    }
+  },
+  "actualInitialRef": {
+    "ref": "refs/heads/fix/frontend-parity-coobservation-c714-20261115",
+    "node_id": "REF_kwDORVTEtNoAOnJlZnMvaGVhZHMvZml4L2Zyb250ZW5kLXBhcml0eS1jb29ic2VydmF0aW9uLWM3MTQtMjAyNjExMTU",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/fix/frontend-parity-coobservation-c714-20261115",
+    "object": {
+      "sha": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+      "type": "commit",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/a5b9483180434214fa3946a56d44ef67ef48f6ae"
+    }
+  },
+  "actualFinalRef": {
+    "ref": "refs/heads/fix/frontend-parity-coobservation-c714-20261115",
+    "node_id": "REF_kwDORVTEtNoAOnJlZnMvaGVhZHMvZml4L2Zyb250ZW5kLXBhcml0eS1jb29ic2VydmF0aW9uLWM3MTQtMjAyNjExMTU",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/fix/frontend-parity-coobservation-c714-20261115",
+    "object": {
+      "sha": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+      "type": "commit",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/a5b9483180434214fa3946a56d44ef67ef48f6ae"
+    }
+  },
+  "actualTransport": {
+    "fetchedApiBodies": [
+      {
+        "name": "commit",
+        "identity": {
+          "bytes": 1180,
+          "sha256": "8783ec75c963a3f737bc67810676c22bb385b9f9df7c7a2469d70f85fabf90f4",
+          "gitBlob": "a88cabfe316a958b6bb308a695ececc7b61d256c"
+        }
+      },
+      {
+        "name": "ref",
+        "identity": {
+          "bytes": 492,
+          "sha256": "5c5d93883667ef0d21112884e460a772c37c93c068bfaeb970dbd5b9b7a178a7",
+          "gitBlob": "2b04045b7236f66a98aecb82ae6e6c316990846f"
+        }
+      },
+      {
+        "name": "root",
+        "identity": {
+          "bytes": 12410,
+          "sha256": "d8a0f83b492a4688ce8f693d89d0da598b02695fdd5e72ca6aa5b33e22b7968e",
+          "gitBlob": "2e852955451edf6845df2df40d40946228571930"
+        }
+      },
+      {
+        "name": "parentRoot",
+        "identity": {
+          "bytes": 12410,
+          "sha256": "14318edf2a60eff30b9bd57fdfcc73f6ad0c1ac8b0215b2cd3da8ea79d6d7680",
+          "gitBlob": "8c27e7092ba12af93716d61d364f7b7a0ff2a891"
+        }
+      },
+      {
+        "name": "docs",
+        "identity": {
+          "bytes": 1124172,
+          "sha256": "f04a586877a14a62642ca62283f525558dd543c691126e6fd5ef59c3499e9f49",
+          "gitBlob": "bf4e2dc98f34d6d3b4f6f65a2f86517ca1150aaf"
+        }
+      }
+    ],
+    "finalRefBody": {
+      "bytes": 492,
+      "sha256": "5c5d93883667ef0d21112884e460a772c37c93c068bfaeb970dbd5b9b7a178a7",
+      "gitBlob": "2b04045b7236f66a98aecb82ae6e6c316990846f"
+    },
+    "allApiTreesUntruncated": true,
+    "exactNonrecursiveRoot": {
+      "sha": "ab1b94c6cd1fa02a75b7a19c18148ac364920e25",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/ab1b94c6cd1fa02a75b7a19c18148ac364920e25",
+      "tree": [
+        {
+          "path": ".coderabbit.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "cfdf47bf5d5759599f5383222ebfb8a385f09668",
+          "size": 669,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cfdf47bf5d5759599f5383222ebfb8a385f09668"
+        },
+        {
+          "path": ".dockerignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c2d844c25fc61f06640f362de761e3f8d310c3b5",
+          "size": 694,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c2d844c25fc61f06640f362de761e3f8d310c3b5"
+        },
+        {
+          "path": ".gitattributes",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "924c7377f9ae4c068d106e74e17e964297d61e6e",
+          "size": 180,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/924c7377f9ae4c068d106e74e17e964297d61e6e"
+        },
+        {
+          "path": ".github",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+        },
+        {
+          "path": ".gitignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "777569b186effad3a2bcbcb09cd770180c8c5e2c",
+          "size": 2867,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/777569b186effad3a2bcbcb09cd770180c8c5e2c"
+        },
+        {
+          "path": ".husky",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "665211222b358904b557bd356a129f1ff938ca7e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/665211222b358904b557bd356a129f1ff938ca7e"
+        },
+        {
+          "path": ".mcp.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "da61a538a43375404483bd1f810b6377da5cc72f",
+          "size": 296,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/da61a538a43375404483bd1f810b6377da5cc72f"
+        },
+        {
+          "path": ".node-version",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+          "size": 8,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+        },
+        {
+          "path": ".npmrc",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+          "size": 19,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+        },
+        {
+          "path": ".nvmrc",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+          "size": 8,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+        },
+        {
+          "path": ".oxfmtrc.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b003c531d6e548a5939ceb0694f15296c92e5060",
+          "size": 847,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b003c531d6e548a5939ceb0694f15296c92e5060"
+        },
+        {
+          "path": ".oxlintrc.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "cc0d2441ebfedc93354e081b0cf61b6a2109dcc9",
+          "size": 596,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cc0d2441ebfedc93354e081b0cf61b6a2109dcc9"
+        },
+        {
+          "path": ".prettierignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2",
+          "size": 297,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2"
+        },
+        {
+          "path": ".prettierrc.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c96ec48e897a4ec478beb34716723e13d29068ed",
+          "size": 563,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c96ec48e897a4ec478beb34716723e13d29068ed"
+        },
+        {
+          "path": "AGENTS.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+          "size": 8999,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0c8a4a63abf24c1510c934990a025ebc99c9e435"
+        },
+        {
+          "path": "AGENT_CRITICAL_GUARDRAILS.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3",
+          "size": 2236,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a9a087fa5216ede29c5900b3a10638fc1ec3e2f3"
+        },
+        {
+          "path": "CLAUDE.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e",
+          "size": 16756,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/88df8ee5ef8d951139b2a8eb9b518996babbcb3e"
+        },
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "929839bc0872222df278f9e53f15e1268ff4e0ec",
+          "size": 32433,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/929839bc0872222df278f9e53f15e1268ff4e0ec"
+        },
+        {
+          "path": "README.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "dbf976c3418f0dee7ef84e4458e49af39110bdd5",
+          "size": 48099,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dbf976c3418f0dee7ef84e4458e49af39110bdd5"
+        },
+        {
+          "path": "agent-teams-controller",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "1ef9482608cbaa5b7f28dc42812820cba96b953e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/1ef9482608cbaa5b7f28dc42812820cba96b953e"
+        },
+        {
+          "path": "bin",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "e6b29ba2f2fda222d5831b3c672e88b72f5f7383",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e6b29ba2f2fda222d5831b3c672e88b72f5f7383"
+        },
+        {
+          "path": "docker",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "7e4007a72bc3fdba8d94e8f5eebc3586f110c16e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7e4007a72bc3fdba8d94e8f5eebc3586f110c16e"
+        },
+        {
+          "path": "docs",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "44323d594bf3f41c80ebfb127d0354f75f971864",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/44323d594bf3f41c80ebfb127d0354f75f971864"
+        },
+        {
+          "path": "electron.vite.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9045260aab02891055e324607b83e1bb39c7110a",
+          "size": 13238,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9045260aab02891055e324607b83e1bb39c7110a"
+        },
+        {
+          "path": "eslint.config.js",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+          "size": 37840,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+        },
+        {
+          "path": "eslint.fast.config.js",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+          "size": 7268,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb"
+        },
+        {
+          "path": "eslint.feature-overrides.mts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9c6450d54b87ce33f7d799f900226c316e367937",
+          "size": 657,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9c6450d54b87ce33f7d799f900226c316e367937"
+        },
+        {
+          "path": "eslint.gateway-boundaries.mts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "4975b20df1353a9687fd479ab043beb025e967ba",
+          "size": 3786,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4975b20df1353a9687fd479ab043beb025e967ba"
+        },
+        {
+          "path": "i18next.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5",
+          "size": 1051,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5"
+        },
+        {
+          "path": "landing",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "193513230f45a135704f1b34dbfa0792e6823e26",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/193513230f45a135704f1b34dbfa0792e6823e26"
+        },
+        {
+          "path": "legacy-host.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "6916f66ea9e4a7e8299c3ffd328e226d009ebd79",
+          "size": 947,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6916f66ea9e4a7e8299c3ffd328e226d009ebd79"
+        },
+        {
+          "path": "managed-git.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2099dfe6b1e1c0ff0d64f45d6c8565b498af4333",
+          "size": 1026,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2099dfe6b1e1c0ff0d64f45d6c8565b498af4333"
+        },
+        {
+          "path": "mcp-server",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5"
+        },
+        {
+          "path": "package.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+          "size": 26839,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        {
+          "path": "packages",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "3934729cd387940917b79992f2579bf6269d157c",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/3934729cd387940917b79992f2579bf6269d157c"
+        },
+        {
+          "path": "patches",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "8eb2e6aaa216638cbe6c072d79802733d43f500d",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/8eb2e6aaa216638cbe6c072d79802733d43f500d"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+          "size": 956788,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9d2ce04a1bbf743e49403d2520873134b08b68de"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a049a862742a85ba77faafea329fc221b3e500e4",
+          "size": 6946,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a049a862742a85ba77faafea329fc221b3e500e4"
+        },
+        {
+          "path": "postcss.config.cjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9",
+          "size": 80,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+        },
+        {
+          "path": "resources",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "69acacf60db94f62dbe4a99ed308aab59310e905",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/69acacf60db94f62dbe4a99ed308aab59310e905"
+        },
+        {
+          "path": "runtime.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+          "size": 6127,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1757d79786da78e739a322e8bba81cd3dc88dcaa"
+        },
+        {
+          "path": "scripts",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "80b227a2d1ce22f75571d84438a837778caa1f19",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/80b227a2d1ce22f75571d84438a837778caa1f19"
+        },
+        {
+          "path": "src",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "ed69e62618e57d88c2e5237f98074a1ff8853e6f",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/ed69e62618e57d88c2e5237f98074a1ff8853e6f"
+        },
+        {
+          "path": "tailwind.config.js",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a52ebb338468d8fcef92837aa27aebd48c7206d7",
+          "size": 2941,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a52ebb338468d8fcef92837aa27aebd48c7206d7"
+        },
+        {
+          "path": "terminal-platform.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "039a8a2a7b959b44bf3d483e37335fdc6774e8cb",
+          "size": 1914,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/039a8a2a7b959b44bf3d483e37335fdc6774e8cb"
+        },
+        {
+          "path": "test",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "c771c2bb9ec6d147d4974361cb5730897f7653d6",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/c771c2bb9ec6d147d4974361cb5730897f7653d6"
+        },
+        {
+          "path": "tools",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/9356c03e96405eb578158f06d6fdcbc89d105bd6"
+        },
+        {
+          "path": "tsconfig.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "568952f5025a88c16b0568c7279d8e85a4288b43",
+          "size": 1235,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/568952f5025a88c16b0568c7279d8e85a4288b43"
+        },
+        {
+          "path": "tsconfig.legacy-agent-host-scripts.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+          "size": 646,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+        },
+        {
+          "path": "tsconfig.node.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c94c942012bef62695dc3b22b1a2b7229d047f59",
+          "size": 824,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c94c942012bef62695dc3b22b1a2b7229d047f59"
+        },
+        {
+          "path": "vendor",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f"
+        },
+        {
+          "path": "vitest.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+          "size": 1187,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c57faa53a1bb869b4379bf888194806ef7e228e3"
+        },
+        {
+          "path": "vitest.critical.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c32070bf9e1724892aa8cb695152e8f49f1293f0",
+          "size": 852,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c32070bf9e1724892aa8cb695152e8f49f1293f0"
+        },
+        {
+          "path": "vitest.opencode-proof.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "274de1c0955ad4f98d220857a94576ce6a50864b",
+          "size": 601,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/274de1c0955ad4f98d220857a94576ce6a50864b"
+        }
+      ],
+      "truncated": false
+    },
+    "exactNonrecursiveParentRoot": {
+      "sha": "31554d5e9f57d07c4dff4514f494126633a3d934",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/31554d5e9f57d07c4dff4514f494126633a3d934",
+      "tree": [
+        {
+          "path": ".coderabbit.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "cfdf47bf5d5759599f5383222ebfb8a385f09668",
+          "size": 669,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cfdf47bf5d5759599f5383222ebfb8a385f09668"
+        },
+        {
+          "path": ".dockerignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c2d844c25fc61f06640f362de761e3f8d310c3b5",
+          "size": 694,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c2d844c25fc61f06640f362de761e3f8d310c3b5"
+        },
+        {
+          "path": ".gitattributes",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "924c7377f9ae4c068d106e74e17e964297d61e6e",
+          "size": 180,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/924c7377f9ae4c068d106e74e17e964297d61e6e"
+        },
+        {
+          "path": ".github",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+        },
+        {
+          "path": ".gitignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "777569b186effad3a2bcbcb09cd770180c8c5e2c",
+          "size": 2867,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/777569b186effad3a2bcbcb09cd770180c8c5e2c"
+        },
+        {
+          "path": ".husky",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "665211222b358904b557bd356a129f1ff938ca7e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/665211222b358904b557bd356a129f1ff938ca7e"
+        },
+        {
+          "path": ".mcp.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "da61a538a43375404483bd1f810b6377da5cc72f",
+          "size": 296,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/da61a538a43375404483bd1f810b6377da5cc72f"
+        },
+        {
+          "path": ".node-version",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+          "size": 8,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+        },
+        {
+          "path": ".npmrc",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+          "size": 19,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+        },
+        {
+          "path": ".nvmrc",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+          "size": 8,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+        },
+        {
+          "path": ".oxfmtrc.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b003c531d6e548a5939ceb0694f15296c92e5060",
+          "size": 847,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b003c531d6e548a5939ceb0694f15296c92e5060"
+        },
+        {
+          "path": ".oxlintrc.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "cc0d2441ebfedc93354e081b0cf61b6a2109dcc9",
+          "size": 596,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cc0d2441ebfedc93354e081b0cf61b6a2109dcc9"
+        },
+        {
+          "path": ".prettierignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2",
+          "size": 297,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2"
+        },
+        {
+          "path": ".prettierrc.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c96ec48e897a4ec478beb34716723e13d29068ed",
+          "size": 563,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c96ec48e897a4ec478beb34716723e13d29068ed"
+        },
+        {
+          "path": "AGENTS.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+          "size": 8999,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0c8a4a63abf24c1510c934990a025ebc99c9e435"
+        },
+        {
+          "path": "AGENT_CRITICAL_GUARDRAILS.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3",
+          "size": 2236,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a9a087fa5216ede29c5900b3a10638fc1ec3e2f3"
+        },
+        {
+          "path": "CLAUDE.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e",
+          "size": 16756,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/88df8ee5ef8d951139b2a8eb9b518996babbcb3e"
+        },
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "929839bc0872222df278f9e53f15e1268ff4e0ec",
+          "size": 32433,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/929839bc0872222df278f9e53f15e1268ff4e0ec"
+        },
+        {
+          "path": "README.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "dbf976c3418f0dee7ef84e4458e49af39110bdd5",
+          "size": 48099,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dbf976c3418f0dee7ef84e4458e49af39110bdd5"
+        },
+        {
+          "path": "agent-teams-controller",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "1ef9482608cbaa5b7f28dc42812820cba96b953e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/1ef9482608cbaa5b7f28dc42812820cba96b953e"
+        },
+        {
+          "path": "bin",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "e6b29ba2f2fda222d5831b3c672e88b72f5f7383",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e6b29ba2f2fda222d5831b3c672e88b72f5f7383"
+        },
+        {
+          "path": "docker",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "7e4007a72bc3fdba8d94e8f5eebc3586f110c16e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7e4007a72bc3fdba8d94e8f5eebc3586f110c16e"
+        },
+        {
+          "path": "docs",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "4853ccc588f6aa1a20b4f3bd219e09c16fbae3e9",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/4853ccc588f6aa1a20b4f3bd219e09c16fbae3e9"
+        },
+        {
+          "path": "electron.vite.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9045260aab02891055e324607b83e1bb39c7110a",
+          "size": 13238,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9045260aab02891055e324607b83e1bb39c7110a"
+        },
+        {
+          "path": "eslint.config.js",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+          "size": 37840,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+        },
+        {
+          "path": "eslint.fast.config.js",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+          "size": 7268,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb"
+        },
+        {
+          "path": "eslint.feature-overrides.mts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9c6450d54b87ce33f7d799f900226c316e367937",
+          "size": 657,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9c6450d54b87ce33f7d799f900226c316e367937"
+        },
+        {
+          "path": "eslint.gateway-boundaries.mts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "4975b20df1353a9687fd479ab043beb025e967ba",
+          "size": 3786,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4975b20df1353a9687fd479ab043beb025e967ba"
+        },
+        {
+          "path": "i18next.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5",
+          "size": 1051,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5"
+        },
+        {
+          "path": "landing",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "193513230f45a135704f1b34dbfa0792e6823e26",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/193513230f45a135704f1b34dbfa0792e6823e26"
+        },
+        {
+          "path": "legacy-host.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "6916f66ea9e4a7e8299c3ffd328e226d009ebd79",
+          "size": 947,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6916f66ea9e4a7e8299c3ffd328e226d009ebd79"
+        },
+        {
+          "path": "managed-git.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2099dfe6b1e1c0ff0d64f45d6c8565b498af4333",
+          "size": 1026,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2099dfe6b1e1c0ff0d64f45d6c8565b498af4333"
+        },
+        {
+          "path": "mcp-server",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5"
+        },
+        {
+          "path": "package.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+          "size": 26839,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        {
+          "path": "packages",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "3934729cd387940917b79992f2579bf6269d157c",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/3934729cd387940917b79992f2579bf6269d157c"
+        },
+        {
+          "path": "patches",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "8eb2e6aaa216638cbe6c072d79802733d43f500d",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/8eb2e6aaa216638cbe6c072d79802733d43f500d"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+          "size": 956788,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9d2ce04a1bbf743e49403d2520873134b08b68de"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a049a862742a85ba77faafea329fc221b3e500e4",
+          "size": 6946,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a049a862742a85ba77faafea329fc221b3e500e4"
+        },
+        {
+          "path": "postcss.config.cjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9",
+          "size": 80,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+        },
+        {
+          "path": "resources",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "69acacf60db94f62dbe4a99ed308aab59310e905",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/69acacf60db94f62dbe4a99ed308aab59310e905"
+        },
+        {
+          "path": "runtime.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+          "size": 6127,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1757d79786da78e739a322e8bba81cd3dc88dcaa"
+        },
+        {
+          "path": "scripts",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "80b227a2d1ce22f75571d84438a837778caa1f19",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/80b227a2d1ce22f75571d84438a837778caa1f19"
+        },
+        {
+          "path": "src",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "ed69e62618e57d88c2e5237f98074a1ff8853e6f",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/ed69e62618e57d88c2e5237f98074a1ff8853e6f"
+        },
+        {
+          "path": "tailwind.config.js",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a52ebb338468d8fcef92837aa27aebd48c7206d7",
+          "size": 2941,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a52ebb338468d8fcef92837aa27aebd48c7206d7"
+        },
+        {
+          "path": "terminal-platform.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "039a8a2a7b959b44bf3d483e37335fdc6774e8cb",
+          "size": 1914,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/039a8a2a7b959b44bf3d483e37335fdc6774e8cb"
+        },
+        {
+          "path": "test",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "c771c2bb9ec6d147d4974361cb5730897f7653d6",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/c771c2bb9ec6d147d4974361cb5730897f7653d6"
+        },
+        {
+          "path": "tools",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/9356c03e96405eb578158f06d6fdcbc89d105bd6"
+        },
+        {
+          "path": "tsconfig.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "568952f5025a88c16b0568c7279d8e85a4288b43",
+          "size": 1235,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/568952f5025a88c16b0568c7279d8e85a4288b43"
+        },
+        {
+          "path": "tsconfig.legacy-agent-host-scripts.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+          "size": 646,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+        },
+        {
+          "path": "tsconfig.node.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c94c942012bef62695dc3b22b1a2b7229d047f59",
+          "size": 824,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c94c942012bef62695dc3b22b1a2b7229d047f59"
+        },
+        {
+          "path": "vendor",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f"
+        },
+        {
+          "path": "vitest.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+          "size": 1187,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c57faa53a1bb869b4379bf888194806ef7e228e3"
+        },
+        {
+          "path": "vitest.critical.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c32070bf9e1724892aa8cb695152e8f49f1293f0",
+          "size": 852,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c32070bf9e1724892aa8cb695152e8f49f1293f0"
+        },
+        {
+          "path": "vitest.opencode-proof.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "274de1c0955ad4f98d220857a94576ce6a50864b",
+          "size": 601,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/274de1c0955ad4f98d220857a94576ce6a50864b"
+        }
+      ],
+      "truncated": false
+    },
+    "completeCurrentDocs": {
+      "tree": "44323d594bf3f41c80ebfb127d0354f75f971864",
+      "recursiveEntries": 3308,
+      "leaves": 2902,
+      "truncated": false,
+      "allEntriesConsumed": true
+    },
+    "previousFullActualC0eadReadback": {
+      "bytes": 56894,
+      "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+      "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+    },
+    "compositionMethod": "Fresh complete54-entry roots show only docs changed. The fresh parent root is byte-equivalent at every entry to the previously fully audited actual c0ead root. Reused every complete prior non-doc leaf only under the exact unchanged53 other root entries; replaced docs with every leaf from the fresh untruncated3308-entry current docs tree. Compared complete11700 current leaves against complete11690 prior leaves.",
+    "noCappedRootRecursiveProjection": true
+  },
+  "completeInventoryProof": {
+    "accepted": true,
+    "errors": [],
+    "commit": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+    "parent": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+    "tree": "ab1b94c6cd1fa02a75b7a19c18148ac364920e25",
+    "nonrecursiveRootEntries": 54,
+    "unchangedOtherRootEntries": 53,
+    "freshParentRootEqualsPriorFullAudit": true,
+    "docsRecursiveEntries": 3308,
+    "docsLeaves": 2902,
+    "truncated": false,
+    "parentLeaves": 11690,
+    "publishedLeaves": 11700,
+    "changedDocs": 13,
+    "addedDocs": 10,
+    "modifiedDocs": 3,
+    "deleted": 0,
+    "modeChanges": 0,
+    "nonDocUnchanged": 8798,
+    "workflowsUnchanged": 42,
+    "changedBodies": 13,
+    "changedBodyBytes": 4042933,
+    "manifestIdentity": {
+      "bytes": 7824,
+      "sha256": "34e2438a8e29a3e4b44d3df1e9a086a96864ceaecc03a3124e26928c69894605",
+      "gitBlob": "29e66a012938fea52f552f7c0ded0329b26c3e97"
+    },
+    "planAppend": {
+      "bytes": 2818,
+      "sha256": "346298e71d600ed70a9b8d548d70d1d7581bf4a591ab07b7872f9ff0fa216997",
+      "gitBlob": "5d8db208b583059f3c341ad17f2538d6b7579324"
+    },
+    "statusAppend": {
+      "bytes": 1067,
+      "sha256": "4d7a905e16a08c92153c17c721f39abd996a67cf8d3034da85781e57a6e158f6",
+      "gitBlob": "6c11a0d9730e878b175f6d030a62dea9259a618f"
+    },
+    "completePlanStatusPrefixesExact": true,
+    "completeCatalogInverseExact": true
+  },
+  "exactChangedLeaves": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "db774240d2bd3233b46fef361591a00a2c668464",
+      "size": 2512476
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/canonical-typecheck-build-readiness-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff",
+      "size": 263003
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "eef4ea5f92e8715cc2c12ab12a1ea5b51115f203",
+      "size": 28687
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-binding-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cb12381b46948c807d443fc41581a9a48d18e051",
+      "size": 840295
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-binding-guard-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1bc41522c3af0b9301a847a765a68be0adcf17db",
+      "size": 22539
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-binding-parity-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3f75fb4e2740c7ba0af81b3b60870bcbc3cb98e9",
+      "size": 119166
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-publication-manifest-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "29e66a012938fea52f552f7c0ded0329b26c3e97",
+      "size": 7824
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-reviewed-outcome-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0c218630d93afb5e2e48ce111ab870a5bd896d00",
+      "size": 9619
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-runner-20261116.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1",
+      "size": 48838
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-runner-guard-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9",
+      "size": 85343
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-independent-publication-readback-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6f8dbb18844f8949e75e144452d9b13decad7b48",
+      "size": 56894
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-cleanup-log-interpretation-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "74320612a117ff935bb9dbcb046c6b03facb1161",
+      "size": 1014
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7057b260ea9c5216f7b533130dd4d7adea22da84",
+      "size": 47235
+    }
+  ],
+  "unchangedSource": {
+    "nonDocLeaves": 8798,
+    "workflowLeaves": 42,
+    "actualNonDocDelta": 0,
+    "workflowDelta": 0,
+    "noRemovals": true,
+    "noModeChanges": true,
+    "test": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409"
+    },
+    "controls": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+    "selection": "cf93da72a198dac636658e512093eef7828b5927",
+    "helper": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+    "driver": "3f1ce46fce847a861850ef874017f84227c62b0c",
+    "runnerLocation": "The published .py is documentary control evidence under docs; no tracked application/source path changes in this checkpoint."
+  },
+  "fullActualPublishedBodies": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-independent-publication-readback-20261116.json",
+      "identity": {
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+      },
+      "fullBodyFetched": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-runner-20261116.py",
+      "identity": {
+        "bytes": 48838,
+        "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+        "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+      },
+      "fullBodyFetched": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-runner-guard-r2-20261116.json",
+      "identity": {
+        "bytes": 85343,
+        "sha256": "68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03",
+        "gitBlob": "d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9"
+      },
+      "fullBodyFetched": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-binding-20261116.json",
+      "identity": {
+        "bytes": 840295,
+        "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2",
+        "gitBlob": "cb12381b46948c807d443fc41581a9a48d18e051"
+      },
+      "fullBodyFetched": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-binding-guard-r2-20261116.json",
+      "identity": {
+        "bytes": 22539,
+        "sha256": "c05935baf86694bbf89d4652fcd570745cc011b48560589732843a285e908ba8",
+        "gitBlob": "1bc41522c3af0b9301a847a765a68be0adcf17db"
+      },
+      "fullBodyFetched": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/canonical-typecheck-build-readiness-20261116.json",
+      "identity": {
+        "bytes": 263003,
+        "sha256": "bd5c643af2008546a081eae8f00eb6f0ba2dcaaabe8de68a1c3a169aa7d85f57",
+        "gitBlob": "37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff"
+      },
+      "fullBodyFetched": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-binding-parity-r2-20261116.json",
+      "identity": {
+        "bytes": 119166,
+        "sha256": "6aa08dbfbfdb6ee38a71e995ed7d2285974acd11796f9a31deb8649f9b988194",
+        "gitBlob": "3f75fb4e2740c7ba0af81b3b60870bcbc3cb98e9"
+      },
+      "fullBodyFetched": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-cleanup-log-interpretation-20261116.json",
+      "identity": {
+        "bytes": 1014,
+        "sha256": "6b2aa0fb3b6dc589a45c66d4e1448617e183359c0021277234b0ccb993859bf2",
+        "gitBlob": "74320612a117ff935bb9dbcb046c6b03facb1161"
+      },
+      "fullBodyFetched": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-reviewed-outcome-20261116.json",
+      "identity": {
+        "bytes": 9619,
+        "sha256": "bd75eeea3bfd99ac0916a6c621ecf718d22eb82421d8a1cdcf48d2cef1630975",
+        "gitBlob": "0c218630d93afb5e2e48ce111ab870a5bd896d00"
+      },
+      "fullBodyFetched": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "identity": {
+        "bytes": 2512476,
+        "sha256": "7d031a2a7e5a32ff63c9b7dfed8b6f00fe0768692f256d923393f5da40de217e",
+        "gitBlob": "db774240d2bd3233b46fef361591a00a2c668464"
+      },
+      "fullBodyFetched": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "identity": {
+        "bytes": 28687,
+        "sha256": "b023a7cf57669cefd3c6251e10f290ab1f8ecd9a0da382bcf0e95cd415198b5f",
+        "gitBlob": "eef4ea5f92e8715cc2c12ab12a1ea5b51115f203"
+      },
+      "fullBodyFetched": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "identity": {
+        "bytes": 47235,
+        "sha256": "f15f02cc7ec4de70fbe0b347993f87629a02898e31c953a3e8c04077661723df",
+        "gitBlob": "7057b260ea9c5216f7b533130dd4d7adea22da84"
+      },
+      "fullBodyFetched": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-publication-manifest-20261116.json",
+      "identity": {
+        "bytes": 7824,
+        "sha256": "34e2438a8e29a3e4b44d3df1e9a086a96864ceaecc03a3124e26928c69894605",
+        "gitBlob": "29e66a012938fea52f552f7c0ded0329b26c3e97"
+      },
+      "fullBodyFetched": true
+    }
+  ],
+  "totalActualPublishedBodyBytes": 4042933,
+  "fullPublicationManifest": {
+    "schemaVersion": 1,
+    "kind": "Documentation-only exact Cross RED runner/binding control publication",
+    "repository": "777genius/agent-teams-ai",
+    "branch": "fix/frontend-parity-coobservation-c714-20261115",
+    "exactParent": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+    "exactParentTree": "31554d5e9f57d07c4dff4514f494126633a3d934",
+    "parentLeaves": 11690,
+    "expectedLeaves": 11700,
+    "changedEntriesExcludingManifest": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-independent-publication-readback-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6f8dbb18844f8949e75e144452d9b13decad7b48",
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-runner-20261116.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1",
+        "bytes": 48838,
+        "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-runner-guard-r2-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9",
+        "bytes": 85343,
+        "sha256": "68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-binding-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cb12381b46948c807d443fc41581a9a48d18e051",
+        "bytes": 840295,
+        "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-binding-guard-r2-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1bc41522c3af0b9301a847a765a68be0adcf17db",
+        "bytes": 22539,
+        "sha256": "c05935baf86694bbf89d4652fcd570745cc011b48560589732843a285e908ba8"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/canonical-typecheck-build-readiness-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff",
+        "bytes": 263003,
+        "sha256": "bd5c643af2008546a081eae8f00eb6f0ba2dcaaabe8de68a1c3a169aa7d85f57"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-binding-parity-r2-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3f75fb4e2740c7ba0af81b3b60870bcbc3cb98e9",
+        "bytes": 119166,
+        "sha256": "6aa08dbfbfdb6ee38a71e995ed7d2285974acd11796f9a31deb8649f9b988194"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-cleanup-log-interpretation-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "74320612a117ff935bb9dbcb046c6b03facb1161",
+        "bytes": 1014,
+        "sha256": "6b2aa0fb3b6dc589a45c66d4e1448617e183359c0021277234b0ccb993859bf2"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-reviewed-outcome-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0c218630d93afb5e2e48ce111ab870a5bd896d00",
+        "bytes": 9619,
+        "sha256": "bd75eeea3bfd99ac0916a6c621ecf718d22eb82421d8a1cdcf48d2cef1630975"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "db774240d2bd3233b46fef361591a00a2c668464",
+        "bytes": 2512476,
+        "sha256": "7d031a2a7e5a32ff63c9b7dfed8b6f00fe0768692f256d923393f5da40de217e"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "eef4ea5f92e8715cc2c12ab12a1ea5b51115f203",
+        "bytes": 28687,
+        "sha256": "b023a7cf57669cefd3c6251e10f290ab1f8ecd9a0da382bcf0e95cd415198b5f"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7057b260ea9c5216f7b533130dd4d7adea22da84",
+        "bytes": 47235,
+        "sha256": "f15f02cc7ec4de70fbe0b347993f87629a02898e31c953a3e8c04077661723df"
+      }
+    ],
+    "unchangedNonDocLeaves": 8798,
+    "unchangedWorkflowLeaves": 42,
+    "sourceChanges": 0,
+    "appendOnlyPlan": {
+      "preimage": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e242e3062cb5af2619ac08651f726223c9791be4",
+        "bytes": 2509658,
+        "sha256": "b12a7d687314793d2b7c35c2dad1013a141b1a535106d39214435283c6cf0c4e"
+      },
+      "postimage": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "db774240d2bd3233b46fef361591a00a2c668464",
+        "bytes": 2512476,
+        "sha256": "7d031a2a7e5a32ff63c9b7dfed8b6f00fe0768692f256d923393f5da40de217e"
+      },
+      "addedBytes": 2818
+    },
+    "appendOnlyStatus": {
+      "preimage": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2e70b0164e85d725da97fa910e71328ac986706b",
+        "bytes": 27620,
+        "sha256": "c25887a6dd485a19a36878f6473ad513feb451128e6497b95695171c4f90fc36"
+      },
+      "postimage": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "eef4ea5f92e8715cc2c12ab12a1ea5b51115f203",
+        "bytes": 28687,
+        "sha256": "b023a7cf57669cefd3c6251e10f290ab1f8ecd9a0da382bcf0e95cd415198b5f"
+      },
+      "addedBytes": 1067
+    },
+    "runner": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "binding": {
+      "bytes": 840295,
+      "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2",
+      "gitBlob": "cb12381b46948c807d443fc41581a9a48d18e051"
+    },
+    "independentR2": {
+      "runnerGuard": {
+        "bytes": 85343,
+        "sha256": "68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03",
+        "gitBlob": "d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9"
+      },
+      "bindingGuard": {
+        "bytes": 22539,
+        "sha256": "c05935baf86694bbf89d4652fcd570745cc011b48560589732843a285e908ba8",
+        "gitBlob": "1bc41522c3af0b9301a847a765a68be0adcf17db"
+      },
+      "bindingParity": {
+        "bytes": 119166,
+        "sha256": "6aa08dbfbfdb6ee38a71e995ed7d2285974acd11796f9a31deb8649f9b988194",
+        "gitBlob": "3f75fb4e2740c7ba0af81b3b60870bcbc3cb98e9"
+      }
+    },
+    "requiresCompleteActualReadbackBeforeApplication": true,
+    "actualRuntimeExecutions": 0,
+    "producerAuthored": false,
+    "qualification": "Exact controls accepted for publication only. Static133 census/prediction is not execution or a whole-E2E result."
+  },
+  "acceptedControlBodyJoins": {
+    "completePublishedRunnerEqualsAccepted165f": true,
+    "completePublishedBindingEqualsAcceptedCb123": true,
+    "completePublishedPreviousActualReadbackEqualsAccepted6f8d": true,
+    "completePublishedRunnerGuardEqualsAcceptedD0c875": true,
+    "completePublishedBindingGuardEqualsAccepted1bc415": true,
+    "completePublishedParityR2EqualsAccepted3f75": true,
+    "rootOutcomeHasExactSameIdentities": true,
+    "reviewForFullSemantics": {
+      "bytes": 119166,
+      "sha256": "6aa08dbfbfdb6ee38a71e995ed7d2285974acd11796f9a31deb8649f9b988194",
+      "gitBlob": "3f75fb4e2740c7ba0af81b3b60870bcbc3cb98e9"
+    },
+    "stillSelectedPhase": "red",
+    "materializePaths": [
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "futureProducersPresent": false
+  },
+  "completePrefixProofs": {
+    "plan": {
+      "prior": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e242e3062cb5af2619ac08651f726223c9791be4",
+        "bytes": 2509658,
+        "sha256": "b12a7d687314793d2b7c35c2dad1013a141b1a535106d39214435283c6cf0c4e"
+      },
+      "published": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "db774240d2bd3233b46fef361591a00a2c668464",
+        "bytes": 2512476,
+        "sha256": "7d031a2a7e5a32ff63c9b7dfed8b6f00fe0768692f256d923393f5da40de217e"
+      },
+      "completePriorPrefixExact": true,
+      "appendIdentity": {
+        "bytes": 2818,
+        "sha256": "346298e71d600ed70a9b8d548d70d1d7581bf4a591ab07b7872f9ff0fa216997",
+        "gitBlob": "5d8db208b583059f3c341ad17f2538d6b7579324"
+      },
+      "completeAppend": "\n\n## 2026-11-16 — Cross Close exact RED controls R2; execution pending\n\nThe actual test-only publication c0ead43f21d5ed90776d4080fa372f48cf8270d5 / tree31554d5e9f57d07c4dff4514f494126633a3d934 is completely read back by root and independently in6f8dbb18844f8949e75e144452d9b13decad7b48:10 bodies/2923536B,11690 leaves,only0aec test changed,8797 other non-docs and42 workflows exact. This documentation-only checkpoint publishes runner165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1 and RED bindingcb12381b46948c807d443fc41581a9a48d18e051. Full runner R2d0c875, guard binding1bc415 and parity composition3f75fb4 all accept the exact controls for publication. All7 embedded reviews,8 input records, complete8798-row source composition,133-case ledger and original command/environment constraints are closed statically.\n\nHeld42d62 runner was never applied/executed. Its revised completion flags now distinguish requested runtime scope from two actually complete input boundaries; captured primary invocation/spawn/PID/final-receipt state survives failure, unknown launches never become empty-session proof, and per-primary elapsed/cleanup timing survives receipt persistence errors. Original metadata30s, primary180s prelaunch clocks, capture/quiescence, terminal signal cutoff and independently observed outer0 requirements remain. Full runtime preflight/postflight still inspect all122773 dependency rows,1454 compiled rows,provider253+12,tools/pnpm/config/cache/source. Only source/metadata materialization leaves live dependency/compiled/provider/cache inputs explicitly UNINSPECTED, with all-input-preservation fields null.\n\nComplete actual control-publication readback remains required before local application. Then exactly one test materialization and one whole133 RED are selected. Static118PASS/15semanticFAIL is unexecuted; no producer may be authored before independent full actual semantic/input/lifetime/outer0 acceptance. Future producer/GREEN/validation bindings remain unselected. No incoming source, package, workflow, CI venue, real Claude/Codex, native/platform, release/default or whole-E2E qualification is added.\n\nRead-only canonical typing/build assessment37e5cf0 retains61 source pins and63 complete embedded source/receipt bodies. Plain canonical typecheck includes2 emitting builds+8 noEmit checks; workspace has2+12 and missing MCP fastmcp/tsup closure. The scripts-specific config is additional to root typecheck. No compiler/build/install command is selected here. Incoming Windows ARM cleanup interpretation is corrected from exactca0c93 source: the six false originalHandleAbsent log fields are printed before the final witness.wait and do not prove six negative absence results or a leak. The original15s readiness refusal remains; final cleanup qualification is still under read-only review.\n"
+    },
+    "status": {
+      "prior": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2e70b0164e85d725da97fa910e71328ac986706b",
+        "bytes": 27620,
+        "sha256": "c25887a6dd485a19a36878f6473ad513feb451128e6497b95695171c4f90fc36"
+      },
+      "published": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "eef4ea5f92e8715cc2c12ab12a1ea5b51115f203",
+        "bytes": 28687,
+        "sha256": "b023a7cf57669cefd3c6251e10f290ab1f8ecd9a0da382bcf0e95cd415198b5f"
+      },
+      "completePriorPrefixExact": true,
+      "appendIdentity": {
+        "bytes": 1067,
+        "sha256": "4d7a905e16a08c92153c17c721f39abd996a67cf8d3034da85781e57a6e158f6",
+        "gitBlob": "6c11a0d9730e878b175f6d030a62dea9259a618f"
+      },
+      "completeAppend": "\n\n## Cross Close — exact RED runner/binding reviewed; publication readback next\n\nRunner165f4e8 and bindingcb12381 have complete independent guard and parity R2. This checkpoint changes documentation/control evidence only; all8798 source leaves/42 workflows remain as c0ead43. No local staging, materialization,133 execution or producer has occurred. Complete actual control publication readback precedes one source/metadata-only test materialization and then one full-current-input133 RED. Metadata materialization must report dependency/compiled/provider/cache UNINSPECTED and all-input preservation null. Actual RED full semantic/input/lifetime/outer0 acceptance remains the producer-authorship gate. Canonical typing/build readiness37e5cf0 is read-only and selects no command. Windows incoming six false absence flags were logged before final witness waits; they are not direct negative absence results.15s readiness still failed and final cleanup remains separately unqualified. See cross-close-red-controls-reviewed-outcome-20261116.json and exact R2 records.\n"
+    },
+    "catalog": {
+      "prior": "9806e132c92d759d559a33bbb4ad03747bcdfed6",
+      "published": "7057b260ea9c5216f7b533130dd4d7adea22da84",
+      "exactChanges": [
+        {
+          "key": "currentCrossCloseStage",
+          "previous": {
+            "stage": "test-only-R2-published-runtime-pending",
+            "outcome": {
+              "bytes": 4332,
+              "sha256": "f004dad9be5904649c25c78d890e621e609d399f1c827a4d5c88566639deb853",
+              "gitBlob": "d96c2ab50639168cca3f7673ef219c3f1a16b701",
+              "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-reviewed-outcome-20261116.json"
+            },
+            "r1ActualReadback": {
+              "bytes": 24775,
+              "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+              "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+            },
+            "test": {
+              "bytes": 155423,
+              "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+              "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+            },
+            "guard": {
+              "bytes": 35700,
+              "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+              "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+            },
+            "parity": {
+              "bytes": 98112,
+              "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+              "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+            },
+            "census": {
+              "preserved": 97,
+              "addedReadiness": 28,
+              "addedDriver": 8,
+              "whole": 133,
+              "targetSubcases": 13
+            },
+            "actualNewExecutions": 0,
+            "producerAuthored": false,
+            "attemptsRemaining": {
+              "materializeTest": 1,
+              "red": 1,
+              "materializeProducer": 1,
+              "green": 1,
+              "validationPackage": 1
+            }
+          },
+          "current": {
+            "stage": "exact-RED-controls-R2-published-actual-readback-and-runtime-pending",
+            "runner": {
+              "bytes": 48838,
+              "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+              "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+            },
+            "binding": {
+              "bytes": 840295,
+              "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2",
+              "gitBlob": "cb12381b46948c807d443fc41581a9a48d18e051"
+            },
+            "independentR2": {
+              "runnerGuard": {
+                "bytes": 85343,
+                "sha256": "68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03",
+                "gitBlob": "d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9"
+              },
+              "bindingGuard": {
+                "bytes": 22539,
+                "sha256": "c05935baf86694bbf89d4652fcd570745cc011b48560589732843a285e908ba8",
+                "gitBlob": "1bc41522c3af0b9301a847a765a68be0adcf17db"
+              },
+              "bindingParity": {
+                "bytes": 119166,
+                "sha256": "6aa08dbfbfdb6ee38a71e995ed7d2285974acd11796f9a31deb8649f9b988194",
+                "gitBlob": "3f75fb4e2740c7ba0af81b3b60870bcbc3cb98e9"
+              }
+            },
+            "publishedTest": {
+              "commit": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+              "tree": "31554d5e9f57d07c4dff4514f494126633a3d934",
+              "test": {
+                "bytes": 155423,
+                "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+                "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+              },
+              "independentActualReadback": {
+                "bytes": 56894,
+                "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+                "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+              }
+            },
+            "outcome": {
+              "bytes": 9619,
+              "sha256": "bd75eeea3bfd99ac0916a6c621ecf718d22eb82421d8a1cdcf48d2cef1630975",
+              "gitBlob": "0c218630d93afb5e2e48ce111ab870a5bd896d00",
+              "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-reviewed-outcome-20261116.json"
+            },
+            "actualNewExecutions": 0,
+            "producerAuthored": false,
+            "attemptsRemaining": {
+              "materializeTest": 1,
+              "red": 1,
+              "materializeProducer": 1,
+              "green": 1,
+              "validationPackage": 1
+            },
+            "canonicalTypingBuildAssessment": {
+              "bytes": 263003,
+              "sha256": "bd5c643af2008546a081eae8f00eb6f0ba2dcaaabe8de68a1c3a169aa7d85f57",
+              "gitBlob": "37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff"
+            },
+            "windowsCleanupInterpretationCorrection": {
+              "bytes": 1014,
+              "sha256": "6b2aa0fb3b6dc589a45c66d4e1448617e183359c0021277234b0ccb993859bf2",
+              "gitBlob": "74320612a117ff935bb9dbcb046c6b03facb1161"
+            }
+          }
+        },
+        {
+          "key": "priorCrossCloseStageAtTestPublication",
+          "current": {
+            "stage": "test-only-R2-published-runtime-pending",
+            "outcome": {
+              "bytes": 4332,
+              "sha256": "f004dad9be5904649c25c78d890e621e609d399f1c827a4d5c88566639deb853",
+              "gitBlob": "d96c2ab50639168cca3f7673ef219c3f1a16b701",
+              "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-reviewed-outcome-20261116.json"
+            },
+            "r1ActualReadback": {
+              "bytes": 24775,
+              "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+              "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+            },
+            "test": {
+              "bytes": 155423,
+              "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+              "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+            },
+            "guard": {
+              "bytes": 35700,
+              "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+              "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+            },
+            "parity": {
+              "bytes": 98112,
+              "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+              "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+            },
+            "census": {
+              "preserved": 97,
+              "addedReadiness": 28,
+              "addedDriver": 8,
+              "whole": 133,
+              "targetSubcases": 13
+            },
+            "actualNewExecutions": 0,
+            "producerAuthored": false,
+            "attemptsRemaining": {
+              "materializeTest": 1,
+              "red": 1,
+              "materializeProducer": 1,
+              "green": 1,
+              "validationPackage": 1
+            }
+          }
+        }
+      ],
+      "originalStageRetainedExactly": true,
+      "uniqueInverse": "Replace currentCrossCloseStage with priorCrossCloseStageAtTestPublication and remove the added prior field. JSON.stringify(indent2)+LF restores every byte of the complete original catalog.",
+      "entireOriginalSerializationRestored": true
+    }
+  },
+  "completeOutcomeBody": "{\n  \"schemaVersion\": 1,\n  \"kind\": \"Cross Close exact runner and RED binding R2 publication; no runtime result\",\n  \"exactParent\": \"c0ead43f21d5ed90776d4080fa372f48cf8270d5\",\n  \"exactParentTree\": \"31554d5e9f57d07c4dff4514f494126633a3d934\",\n  \"r1\": {\n    \"bytes\": 23142,\n    \"sha256\": \"dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932\",\n    \"gitBlob\": \"8abe2a1437489d5c0223d532535d6c520fd70184\"\n  },\n  \"publishedR1\": \"a4f5c2d2a05edd636ea0ff461c00615a2ff60d86\",\n  \"publishedTest\": {\n    \"commit\": \"c0ead43f21d5ed90776d4080fa372f48cf8270d5\",\n    \"tree\": \"31554d5e9f57d07c4dff4514f494126633a3d934\",\n    \"test\": {\n      \"bytes\": 155423,\n      \"sha256\": \"b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409\",\n      \"gitBlob\": \"0aec698e88cc3af8d12c48f6d93b038efcc84900\"\n    },\n    \"independentActualReadback\": {\n      \"bytes\": 56894,\n      \"sha256\": \"a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a\",\n      \"gitBlob\": \"6f8dbb18844f8949e75e144452d9b13decad7b48\"\n    }\n  },\n  \"runner\": {\n    \"bytes\": 48838,\n    \"sha256\": \"e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5\",\n    \"gitBlob\": \"165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1\"\n  },\n  \"binding\": {\n    \"bytes\": 840295,\n    \"sha256\": \"d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2\",\n    \"gitBlob\": \"cb12381b46948c807d443fc41581a9a48d18e051\"\n  },\n  \"independentR2\": {\n    \"runnerGuard\": {\n      \"bytes\": 85343,\n      \"sha256\": \"68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03\",\n      \"gitBlob\": \"d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9\"\n    },\n    \"bindingGuard\": {\n      \"bytes\": 22539,\n      \"sha256\": \"c05935baf86694bbf89d4652fcd570745cc011b48560589732843a285e908ba8\",\n      \"gitBlob\": \"1bc41522c3af0b9301a847a765a68be0adcf17db\"\n    },\n    \"bindingParity\": {\n      \"bytes\": 119166,\n      \"sha256\": \"6aa08dbfbfdb6ee38a71e995ed7d2285974acd11796f9a31deb8649f9b988194\",\n      \"gitBlob\": \"3f75fb4e2740c7ba0af81b3b60870bcbc3cb98e9\"\n    }\n  },\n  \"rootCompleteR2\": {\n    \"accepted\": true,\n    \"runner\": {\n      \"bytes\": 48838,\n      \"sha256\": \"e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5\",\n      \"gitBlob\": \"165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1\"\n    },\n    \"binding\": {\n      \"bytes\": 840295,\n      \"sha256\": \"d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2\",\n      \"gitBlob\": \"cb12381b46948c807d443fc41581a9a48d18e051\"\n    },\n    \"runnerReview\": {\n      \"bytes\": 85343,\n      \"sha256\": \"68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03\",\n      \"gitBlob\": \"d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9\"\n    },\n    \"guardBindingReview\": {\n      \"bytes\": 22539,\n      \"sha256\": \"c05935baf86694bbf89d4652fcd570745cc011b48560589732843a285e908ba8\",\n      \"gitBlob\": \"1bc41522c3af0b9301a847a765a68be0adcf17db\"\n    },\n    \"parityBindingReview\": {\n      \"bytes\": 119166,\n      \"sha256\": \"6aa08dbfbfdb6ee38a71e995ed7d2285974acd11796f9a31deb8649f9b988194\",\n      \"gitBlob\": \"3f75fb4e2740c7ba0af81b3b60870bcbc3cb98e9\"\n    },\n    \"rootComposition\": {\n      \"accepted\": true,\n      \"runner\": {\n        \"bytes\": 48838,\n        \"sha256\": \"e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5\",\n        \"gitBlob\": \"165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1\"\n      },\n      \"binding\": {\n        \"bytes\": 840295,\n        \"sha256\": \"d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2\",\n        \"gitBlob\": \"cb12381b46948c807d443fc41581a9a48d18e051\"\n      },\n      \"beforeSource\": {\n        \"bytes\": 2478453,\n        \"sha256\": \"74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb\",\n        \"gitBlob\": \"67a014a69edb6c0e1379fff08bff15ce95e6ec9a\"\n      },\n      \"expectedAfterSource\": {\n        \"bytes\": 2478516,\n        \"sha256\": \"006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f\",\n        \"gitBlob\": \"77516ddaecaa6d0f485825e250a8106db599f781\"\n      },\n      \"nonDocRows\": 8798,\n      \"workflowRows\": 42,\n      \"sourceLocalChanges\": [\n        \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n      ],\n      \"actualRemoteNonDocWholeMatch\": true,\n      \"embeddedReviews\": 7,\n      \"pinnedInputFiles\": 8,\n      \"executed\": false\n    },\n    \"scope\": \"publication only; complete actual control publication precedes local staging/materialization/execution\",\n    \"newRuntimeExecutions\": 0\n  },\n  \"heldRunnerHistory\": {\n    \"candidate\": {\n      \"bytes\": 45907,\n      \"sha256\": \"7cd7ce0eb2e1bdd5cfa7623bf3dfc0217a0650c95b31d140a84533c7d1573f38\",\n      \"gitBlob\": \"42d62ca41b3e350b2f90cb960205fe885de227ae\"\n    },\n    \"selected\": false,\n    \"applied\": false,\n    \"executed\": false,\n    \"corrected\": [\n      \"Complete runtime inspection only after both full snapshots return\",\n      \"Retain attempted primary/spawn/PID/finalization state without falsely claiming UNREACHED\",\n      \"Preserve actual elapsed and cleanup accounting when final receipt persistence raises\"\n    ],\n    \"intermediateUnselected\": {\n      \"bytes\": 48451,\n      \"sha256\": \"a7d16e39d87911f2167bb855f31a7ebfc304952f16579dc4a93f7c1ecdfcec75\",\n      \"gitBlob\": \"d7307ac47f8b1712094259762c231b8b7e3022c2\"\n    },\n    \"inverseFull42dBodyRetainedInIndependentRunnerReview\": true\n  },\n  \"selectedNextActions\": {\n    \"metadataOnlyMaterializeTest\": 1,\n    \"whole133Red\": 1,\n    \"phase\": \"red\",\n    \"futureProducerBodiesPresent\": false,\n    \"producerAuthorship\": \"Only after independently accepted complete actual semantic RED plus full current input/lifetime and separately observed outer0\",\n    \"greenOrValidationSelected\": false\n  },\n  \"sourceComposition\": {\n    \"accepted\": true,\n    \"runner\": {\n      \"bytes\": 48838,\n      \"sha256\": \"e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5\",\n      \"gitBlob\": \"165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1\"\n    },\n    \"binding\": {\n      \"bytes\": 840295,\n      \"sha256\": \"d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2\",\n      \"gitBlob\": \"cb12381b46948c807d443fc41581a9a48d18e051\"\n    },\n    \"beforeSource\": {\n      \"bytes\": 2478453,\n      \"sha256\": \"74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb\",\n      \"gitBlob\": \"67a014a69edb6c0e1379fff08bff15ce95e6ec9a\"\n    },\n    \"expectedAfterSource\": {\n      \"bytes\": 2478516,\n      \"sha256\": \"006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f\",\n      \"gitBlob\": \"77516ddaecaa6d0f485825e250a8106db599f781\"\n    },\n    \"nonDocRows\": 8798,\n    \"workflowRows\": 42,\n    \"sourceLocalChanges\": [\n      \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n    ],\n    \"actualRemoteNonDocWholeMatch\": true,\n    \"embeddedReviews\": 7,\n    \"pinnedInputFiles\": 8,\n    \"executed\": false\n  },\n  \"metadataMaterializationQualification\": {\n    \"scope\": \"source-and-supervisor-metadata-only\",\n    \"fullRuntimeInputsInspected\": false,\n    \"fullRuntimeInputsPreserved\": null,\n    \"dependencies\": \"UNINSPECTED\",\n    \"compiled\": \"UNINSPECTED\",\n    \"providerArchivesAndInstalledMembers\": \"UNINSPECTED\",\n    \"bootstrapNodeCache\": \"UNINSPECTED\",\n    \"required\": \"Complete actual source/control/tool/config and captured metadata/session lifecycle before/after plus independent observed outer0. Source preservation is stated separately with exactly authorized written paths. This is not a behavioral or all-input result.\"\n  },\n  \"actualNewExecutions\": 0,\n  \"localControlOrSourceApplication\": false,\n  \"producerAuthored\": false,\n  \"requiredNextGate\": \"Complete actual root and independent publication readback of this exact runner/binding checkpoint. Then root-only source/metadata materialization; complete actual receipt and outer0 acceptance before one full-input whole133 RED.\",\n  \"canonicalTypingBuildAssessment\": {\n    \"identity\": {\n      \"bytes\": 263003,\n      \"sha256\": \"bd5c643af2008546a081eae8f00eb6f0ba2dcaaabe8de68a1c3a169aa7d85f57\",\n      \"gitBlob\": \"37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff\"\n    },\n    \"rootEmbeddedBodyAudit\": {\n      \"fullBodies\": 63,\n      \"allRehashed\": true,\n      \"bodyBytes\": 158536,\n      \"selectedCommands\": 0\n    },\n    \"commandsSelected\": 0,\n    \"qualification\": \"Existing source routes and missing MCP dependencies assessed read-only; no compiler/build/install or closure result.\"\n  },\n  \"windowsCleanupInterpretationCorrection\": {\n    \"kind\": \"Read-only correction to interpretation of incoming Windows ARM cleanup log fields\",\n    \"source\": {\n      \"path\": \"tools/owned-process-broker/nativeEmulatedSourceScenario.ts\",\n      \"bytes\": 59216,\n      \"sha256\": \"cb5a49b85ae57c28eaf64c1385c193f5aebf9e6ed0cafa4399b4ec1b50ec8931\",\n      \"gitBlob\": \"ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2\"\n    },\n    \"incomingCiReport\": \"0f2963af97dcabda330e2635af90c67a4e5d9651\",\n    \"observation\": \"In exact a07 source, TEST_SOURCE_CLEANUP logs originalHandleAbsent at310–315 before awaiting retained witness.wait at318 and setting handleAbsent=true at319. Slot0 was set by the earlier publish-A wait402–403.\",\n    \"correction\": \"The six captured false fields are pre-wait bookkeeping values, not six negative native absence results. They do not prove a process leak. The actual15s readiness refusal remains. Full final physical-absence/cleanup qualification remains open pending complete source/control-flow and retained result review.\",\n    \"newSourceOrRuntimeAction\": false\n  },\n  \"remainingOpen\": [\n    \"Windows Process15s\",\n    \"Windows Packaged10s\",\n    \"strictDarwinP09\",\n    \"laterP11/genuineM16\",\n    \"new-head reconciliation\",\n    \"canonical typecheck/build\",\n    \"actual fresh GUI/platform acceptance\",\n    \"whole E2E completion\"\n  ],\n  \"qualification\": \"Exact controls accepted for publication only. Static133 census/prediction is not execution or a whole-E2E result.\"\n}\n",
+  "canonicalBuildAssessment": {
+    "identity": {
+      "bytes": 263003,
+      "sha256": "bd5c643af2008546a081eae8f00eb6f0ba2dcaaabe8de68a1c3a169aa7d85f57",
+      "gitBlob": "37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff"
+    },
+    "originalReviewer": "/root/pr_graph",
+    "fullPublishedBodyFetchedAndRehashed": true,
+    "scope": {
+      "requestedBy": "/root",
+      "purpose": "Describe the exact existing canonical typing/build routes and present admission gaps for later integration. This is an evidence assessment, not a command selection or new R1.",
+      "sourceSubject": {
+        "commit": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+        "tree": "21ea9ec18febadf981f16ee455a7ad6fcf65ed5c",
+        "fullLeaves": 11684,
+        "nonDocLeaves": 8798,
+        "workflowLeaves": 42
+      },
+      "actualLocalSource": {
+        "head": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+        "tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+        "sourceInventory": {
+          "bytes": 2478453,
+          "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+          "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+        },
+        "sourceRows": 8798,
+        "overlays": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "mode": "100644",
+            "bytes": 28974,
+            "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+            "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+            "mode": "100644",
+            "bytes": 24759,
+            "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+            "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+          }
+        ],
+        "test": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "bytes": 136700,
+          "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+          "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+        }
+      },
+      "sourceRelationship": "The own a4f documentary checkpoint preserves the exact bc6594 controls/Selection source and unchanged whole97 test. Local detached HEAD/index is C5 plus two reviewed overlays, not the documentary head materialized.",
+      "prohibitedActionsPreserved": [
+        "No canonical typecheck or build execution",
+        "No install or dependency mutation",
+        "No source/test/runner/R1 postimage or selection",
+        "No refs, PRs, CI queries, workflow changes or frozen-run polling",
+        "No real Claude/Codex/provider or GUI/native execution",
+        "No reuse or reset of exhausted original97/guard budgets"
+      ],
+      "crossR1": "8abe2a1437489d5c0223d532535d6c520fd70184 does not authorize any command discussed here.",
+      "writesByReviewer": "Only this authorized bare immutable evidence blob; no repository tree, branch, working source or runtime file mutation."
+    },
+    "primaryConclusions": [
+      "The existing pnpm typecheck route is not entirely no-write: admitted ENABLE_PRE_POST_SCRIPTS=true runs root pretypecheck, Host prebuild and the ledger/Host emitting builds before eight root noEmit checks.",
+      "If every stage reaches completion, pnpm typecheck:workspace performs two emitting compiler invocations and twelve noEmit compiler invocations. It is a different and broader gate than plain typecheck.",
+      "The admitted complete dependency inventory has no MCP workspace node_modules, no fastmcp package and no tsup package/shim. The complete workspace typing/build route therefore lacks established MCP input closure in the current admitted environment.",
+      "The root TS7 launcher and its native Linux compiler binary, root dependencies, Host/ledger inputs and generated Host/ledger declarations exist in the admitted snapshot. This establishes specific available prerequisites, not a successful whole application compiler result or complete transitive resolution proof.",
+      "Canonical build is broader than typechecking: Linux helper build/selection, ledger/Host emission, Radix checks, network pricing generation, controller dist copy, MCP bundle generation and Electron-Vite outputs/plugins. Canonical build:workspace repeats the controller and MCP builds after the root build.",
+      "No real Claude/Codex invocation or application/GUI launch is defined by the inspected typing/build scripts. The build still has executable compiler/plugin, filesystem, network and optional Sentry-upload effects that require separate exact admission.",
+      "The main root tsconfig does not explicitly include the conversation TEST scripts. Their explicit config is tsconfig.legacy-agent-host-scripts.json, reached by typecheck:workspace. Existing backend/packaged/broker focused compiler gates remain separately defined."
+    ],
+    "exactPackageCommandsMatchEmbeddedSource": true,
+    "compilerRouteCounts": {
+      "plain": {
+        "emittingCompilerInvocations": 2,
+        "noEmitCompilerInvocations": 8
+      },
+      "workspace": {
+        "emittingCompilerInvocations": 2,
+        "noEmitCompilerInvocations": 12
+      },
+      "scope": "Descriptive existing package/lifecycle definitions, conditional on preceding commands completing; no execution result or command selection."
+    },
+    "completeEmbeddedBodyHashAndSourceJoinProof": {
+      "fullBodies": 63,
+      "totalBytes": 158536,
+      "sourcePinCount": 61,
+      "allSourcePinsExactPriorActual67a": true,
+      "allBodiesHashed": true,
+      "ledger": [
+        {
+          "kind": "source",
+          "path": ".npmrc",
+          "identity": {
+            "bytes": 19,
+            "sha256": "7151cf397def0c2cb0ab65643701d27d335a72c90f775675b5f826bc7005818a",
+            "gitBlob": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "agent-teams-controller/package.json",
+          "identity": {
+            "bytes": 526,
+            "sha256": "7da9c6dae6931016efbdd571ed858529851268a5b965d955a9d4c76ed1395a2e",
+            "gitBlob": "293fb7e08df5e9cc00663e0e5454dfde6ecfb103"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "agent-teams-controller/scripts/build.mjs",
+          "identity": {
+            "bytes": 990,
+            "sha256": "a7afb7428749efcd15c45acf9b4da03ce4d529ff663b57af876a55b373b97399",
+            "gitBlob": "bf2ce41041a9aee92261319e86cf802d82004739"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "electron.vite.config.ts",
+          "identity": {
+            "bytes": 13238,
+            "sha256": "a0b6a4ee707718251fad2efc26526e0f942e7278aa922cb4bcc2e328c4076bf7",
+            "gitBlob": "9045260aab02891055e324607b83e1bb39c7110a"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "mcp-server/deploymentManifest.ts",
+          "identity": {
+            "bytes": 406,
+            "sha256": "e13f19ccfa03a18f47e337cad58e2e45c46f7eae3d683361c3cb38ed8b76e6b6",
+            "gitBlob": "be15c31affd045a103b2153c06757893faeae44a"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "mcp-server/package.json",
+          "identity": {
+            "bytes": 1279,
+            "sha256": "b6b245a0062d111cee110ec7222ce00c3730e03a70cf99a29b92bfda245efa5f",
+            "gitBlob": "febb21f74d77d21e157039f76380cfd5795d359c"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "mcp-server/src/index.ts",
+          "identity": {
+            "bytes": 7322,
+            "sha256": "bd2678704a248e05b0e787ed836814bffdcde3e8f78e80f4e381cdfd709ece37",
+            "gitBlob": "516d24de6ae45c8c56ef1747186b9d8efd4b8fc7"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "mcp-server/tsconfig.json",
+          "identity": {
+            "bytes": 514,
+            "sha256": "5b8733555d297f0d9d9cd355e3b441ce71ca07ec58d1fd40ccc1d3c457c05d62",
+            "gitBlob": "2bd3eb89a37f0eb93bf33c6eb0b4fe175699f2e6"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "mcp-server/tsconfig.test.json",
+          "identity": {
+            "bytes": 228,
+            "sha256": "ba7cf597165fc9840aec168043e11431c534ef8aec3de53256ae2f843aaf596b",
+            "gitBlob": "4f6ab56b6dba7bf95078f4a1ae57e1f36ea473ac"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "mcp-server/tsup.config.ts",
+          "identity": {
+            "bytes": 1491,
+            "sha256": "691c8486f95f360f0ac8985ad42ba17e81100cac6989317bfb75981552833321",
+            "gitBlob": "c7de6f562687ef92f3fcdaf12eb8493864d14f37"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "package.json",
+          "identity": {
+            "bytes": 26839,
+            "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+            "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "packages/agent-graph/package.json",
+          "identity": {
+            "bytes": 566,
+            "sha256": "5d276fb29583ee73e8df94acf90256efa1668b0cf8a8ca2a6bacf787c7bd4be9",
+            "gitBlob": "6bdadcaeaca082675c8ef6ff7746acbdf79fdb0f"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "packages/agent-graph/tsconfig.json",
+          "identity": {
+            "bytes": 411,
+            "sha256": "791eb282c2da0cfeba49197018f841a16c7667d689efa55bf9d63558a89ccbda",
+            "gitBlob": "4196ea0e4ce8fa51b94c6b81d497944b631291ba"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "packages/legacy-agent-host/package.json",
+          "identity": {
+            "bytes": 12355,
+            "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+            "gitBlob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "packages/legacy-agent-host/tsconfig.json",
+          "identity": {
+            "bytes": 456,
+            "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+            "gitBlob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "packages/legacy-agent-host/tsconfig.test.json",
+          "identity": {
+            "bytes": 174,
+            "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+            "gitBlob": "65edbd94041b7d9a986480badd6802b1dd0a8837"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "packages/task-change-ledger/package.json",
+          "identity": {
+            "bytes": 2714,
+            "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132",
+            "gitBlob": "0fac5843889e1b28d53712f353bce1b0bae855a4"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "packages/task-change-ledger/tsconfig.json",
+          "identity": {
+            "bytes": 378,
+            "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c",
+            "gitBlob": "ff7683dc99c69dbf8c884ba138382468c9c86314"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "packages/task-change-ledger/tsconfig.test.json",
+          "identity": {
+            "bytes": 174,
+            "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+            "gitBlob": "65edbd94041b7d9a986480badd6802b1dd0a8837"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "pnpm-workspace.yaml",
+          "identity": {
+            "bytes": 6946,
+            "sha256": "581c6a5ada272bf4fd370efccf5398c63a3abd32782cf82021cfa11d94a0e1a5",
+            "gitBlob": "a049a862742a85ba77faafea329fc221b3e500e4"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "postcss.config.cjs",
+          "identity": {
+            "bytes": 80,
+            "sha256": "b9357981319940ed660b848c7a15ea479915885b7cbe60d6951b5d5cef5b509d",
+            "gitBlob": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/build/buildLinuxNodeExec.mjs",
+          "identity": {
+            "bytes": 4125,
+            "sha256": "fc7e6f68bd899b1109df035d0c903d0df50d9613b5a6c7f1543b763727d8b927",
+            "gitBlob": "f0ed24053ad252e8e348090c535b0818100a5a80"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/build/sentryArtifactInventory.ts",
+          "identity": {
+            "bytes": 12276,
+            "sha256": "c5aea2947c579d293bc7706497e31c0076a05de12665c751b890e90bc5677559",
+            "gitBlob": "0a2d4ba483cbe6f7d4fd0c41f4da8982f5b5dc7c"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/build/sentryBuildIdentity.ts",
+          "identity": {
+            "bytes": 1652,
+            "sha256": "e4ae3ce42f9db363f72caa56f0cea778dc19138c891de2b464bc5b5f49eddedd",
+            "gitBlob": "226ef0bd09ef18e79fb2f7aaa6c36f6fa3c2bdd1"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/ci/enforce-pnpm-install.mjs",
+          "identity": {
+            "bytes": 312,
+            "sha256": "79b147e33807a5d236bda58f6fd4c401c54015b09684e66b054497d08a4f9bed",
+            "gitBlob": "fb33357b9d8b38c2d133593791153aa2fe0bdcf0"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/ci/verify-radix-presence-patch.mjs",
+          "identity": {
+            "bytes": 5400,
+            "sha256": "5a48107033a016b49ff7b143450a5acac430d9c4c58275af7b616beaffa98453",
+            "gitBlob": "6f69e22edf6809288cb1044855e644b0435402ae"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/ci/verify-radix-renderer-bundle.mjs",
+          "identity": {
+            "bytes": 3194,
+            "sha256": "70e241acca751b5dbdcbe9e86c0f0f204dfd60d00290688b6b51907afe602dc0",
+            "gitBlob": "528146d11c0844324972131e3dd60683ec3bb785"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/fetch-pricing-data.ts",
+          "identity": {
+            "bytes": 4570,
+            "sha256": "4a7afc9952ef1b541716c4604d5cb6c5c2b4bc6c2bbf43b77aa43e9ed4204464",
+            "gitBlob": "9c5a0f79fe4765c537acf34a689339d06ddcae5f"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/local-checks/tsconfig.native-tooling.json",
+          "identity": {
+            "bytes": 343,
+            "sha256": "8143da33504a9a0082255810c464ab52c0094db31612cf472c3020149a755d6c",
+            "gitBlob": "3ec6d037c9b4a2d869f1bb78112fefe7bc57461e"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/postinstall-electron.cjs",
+          "identity": {
+            "bytes": 1841,
+            "sha256": "28e967a5ebc00448d1c79ef388344e822ba893a6ec6fdc4e78cfdbaab7411dae",
+            "gitBlob": "71d2e9fc938c082bac2b6f5f0d66b6cc4eb9e78b"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/tsconfig/e2e-base.json",
+          "identity": {
+            "bytes": 158,
+            "sha256": "c5fdb87700636ae4a80582da90cf885d1e7930844d1be27c4cde12564916e5a2",
+            "gitBlob": "1505ea186848fed8d2eadc783933a0581c384a74"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/tsconfig/README.md",
+          "identity": {
+            "bytes": 1119,
+            "sha256": "ddc619fc45ceb40796cde00a696479b2f522ee150a9c40a3ed8369d6d73c8d67",
+            "gitBlob": "7f2081e06c9be28a4188a9721fce80d27196ed3e"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/tsconfig/tsconfig.desktop-e2e.json",
+          "identity": {
+            "bytes": 1932,
+            "sha256": "b3f227e29ff6787249b63d434ea05a9d10e0a6d72c774211f0162019f37d883d",
+            "gitBlob": "eba40e80b32c93bcec2d5c624e74e33ea84bc4d1"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/tsconfig/tsconfig.packaged-ci.json",
+          "identity": {
+            "bytes": 328,
+            "sha256": "c593c949f08ca8b7ef10e87b8c2b92e2ee8d2c66d163e72848441e50f8106a1b",
+            "gitBlob": "79b223201376a533d325ed93b98a19d798f8d043"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/tsconfig/tsconfig.release-tooling.json",
+          "identity": {
+            "bytes": 1562,
+            "sha256": "53977a7dbc9cb39f2e0285de4a90f874db525227b0968c2446bb96bda6764a5a",
+            "gitBlob": "ae0446dd70a2d7f81b95fc1cfdde387a01485a2b"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/tsconfig/tsconfig.sentry-e2e.json",
+          "identity": {
+            "bytes": 299,
+            "sha256": "7af319b3e444fa4684119a2feabfd3579b11e312c2559ce0e8d10691a3aa7f90",
+            "gitBlob": "37ae2cb93a5d82f7fda8e576311b4906ec7f057b"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/tsconfig/tsconfig.sentry-history-retrieval-gate.json",
+          "identity": {
+            "bytes": 411,
+            "sha256": "29522c3597ce12d33521a663e276a06ece762e62db90a94dab44c9b9cdec268b",
+            "gitBlob": "a43a7e95960d9fbaa8db3ccffd1d99f9e22a44a5"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/tsconfig/tsconfig.sentry-sdk-e2e.json",
+          "identity": {
+            "bytes": 560,
+            "sha256": "05b45fa4989a8fdd3a3f66f1ff3b3c74dbed3370e112e57683ec202ece2bd204",
+            "gitBlob": "8eca24261ffe5dc1e7e71df7adf38d7742aac0c2"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/tsconfig/tsconfig.sentry-sdk-preload.json",
+          "identity": {
+            "bytes": 133,
+            "sha256": "1db1445b7c35b01bbc2cd983f6a44c999fb7b65b8cb51f572dd4ae675be21f51",
+            "gitBlob": "f387d3c1c197feeb7ecf8de352d10d8b1013685b"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/tsconfig/tsconfig.sentry-sdk-renderer.json",
+          "identity": {
+            "bytes": 134,
+            "sha256": "7cb2d53b356116c1b1913e2c6bb4af0daeb3b0da6f504ca9dbcbe75bdf7e957f",
+            "gitBlob": "d56b6bb70f7f118e69862c1dbc1995de3a714cd2"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "scripts/tsconfig/tsconfig.updater-e2e.json",
+          "identity": {
+            "bytes": 459,
+            "sha256": "dc6e75b3997fb72f9d605d2b0071797b0ff120b8c2bf3d0e22b7ad46f898d34b",
+            "gitBlob": "fd0dbf4ffcc3a899a5a16169f1ead0cdf101e35c"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "src/main/services/team/WorkspaceMcpBundle.ts",
+          "identity": {
+            "bytes": 5322,
+            "sha256": "983bd354cf982ed251758fef11cab9b034260789bbe5c50028a64f7164c97707",
+            "gitBlob": "f188b66f766eb9f038c130e7bc7f98caba94c205"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "src/main/utils/inheritedHarnessEnv.ts",
+          "identity": {
+            "bytes": 1030,
+            "sha256": "eec265b7ee8d00cc377d91e6c50755a48ed6cef3d5c31f1b06fb4e84f3af714c",
+            "gitBlob": "becac1afdaa7d633bc392bcdae28b6d4ad697cc9"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "src/main/utils/linuxNodeExecArtifact.ts",
+          "identity": {
+            "bytes": 6181,
+            "sha256": "5f83c0db30747a7cc762ea5b40634b315029088f68dcdeaf6274591e1c1462c1",
+            "gitBlob": "f7d2ac8cb75afdd5649facc4f5b6ad605236ae4c"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "src/shared/utils/posthogBuildPolicy.ts",
+          "identity": {
+            "bytes": 789,
+            "sha256": "ec3c2c5a2122249df3d7af26f0c1aa02725788394919644de6bf9199c8c112d7",
+            "gitBlob": "55051ee2e9cbb25ff9b1aace16e7c2b2dcc3db05"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "src/shared/utils/sentryArtifactInventory.ts",
+          "identity": {
+            "bytes": 5197,
+            "sha256": "302a183e74e972a1c98bcab0986e08d17d1dd0310660e4117986da7934f74780",
+            "gitBlob": "67ccda15bb39fca514a8bb3dbf76d5251429796c"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "src/shared/utils/sentryBuildPolicy.ts",
+          "identity": {
+            "bytes": 963,
+            "sha256": "c7feaebdc971931da522639b99b70e5cc4f1947d083d2c4fb28b033d52a54afd",
+            "gitBlob": "d23a09b4d4c6c6241cd3d31864919c73e02277fa"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "tailwind.config.js",
+          "identity": {
+            "bytes": 2941,
+            "sha256": "d779385dd828be2017124d59b82372f5e591ac0f9ceb8b0e33c7c8044a9207c7",
+            "gitBlob": "a52ebb338468d8fcef92837aa27aebd48c7206d7"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "test/features/agent-backend/tsconfig.json",
+          "identity": {
+            "bytes": 379,
+            "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79",
+            "gitBlob": "de2814ddc27524ac335f9f6c174aace1c7b1387c"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "tools/linux-node-exec/close-fds-exec.c",
+          "identity": {
+            "bytes": 1932,
+            "sha256": "4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3",
+            "gitBlob": "34eb3d68815cd4a2c79fbb972934332d79c449b6"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "tools/owned-process-broker/tsconfig.json",
+          "identity": {
+            "bytes": 557,
+            "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+            "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+          "identity": {
+            "bytes": 393,
+            "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+            "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "tsconfig.json",
+          "identity": {
+            "bytes": 1235,
+            "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+            "gitBlob": "568952f5025a88c16b0568c7279d8e85a4288b43"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "tsconfig.legacy-agent-host-scripts.json",
+          "identity": {
+            "bytes": 646,
+            "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306",
+            "gitBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+          }
+        },
+        {
+          "kind": "source",
+          "path": "tsconfig.node.json",
+          "identity": {
+            "bytes": 824,
+            "sha256": "b2dc91e021bf19673321d5e5f0e6ab6793e658e28d0ea83f52f0f912b71d2bfa",
+            "gitBlob": "c94c942012bef62695dc3b22b1a2b7229d047f59"
+          }
+        },
+        {
+          "kind": "originalInstallBuild",
+          "path": "host-build-1-receipt.json",
+          "identity": {
+            "bytes": 1054,
+            "sha256": "8cc8bc3ba9dad7cbb2c27046e42ddc83d7da30bea6c53696cc512c0f0c3a23b1",
+            "gitBlob": "49fb85ee1ee8960160cffecaf4a14eb6e6ba527a"
+          }
+        },
+        {
+          "kind": "originalInstallBuild",
+          "path": "host-build-1-start.json",
+          "identity": {
+            "bytes": 572,
+            "sha256": "29772fb67c5a39f1c3118bf112553c6492ff68dbb26225aeb773e9e0ef76623b",
+            "gitBlob": "d8ca3781878eab366ac9ca23a5d0ee4a6495a18c"
+          }
+        },
+        {
+          "kind": "originalInstallBuild",
+          "path": "host-build-1.log",
+          "identity": {
+            "bytes": 182,
+            "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789",
+            "gitBlob": "d7724909302502a19004cf707ff5c03ec76ff684"
+          }
+        },
+        {
+          "kind": "originalInstallBuild",
+          "path": "host-build-environment-after.json",
+          "identity": {
+            "bytes": 4406,
+            "sha256": "10669149eb9df515b8221b6b001d813e5190cb3a7e8fdc9e11b8d9f507777c27",
+            "gitBlob": "26a95399af60eed4ad8c208557a5e2f553258ccc"
+          }
+        },
+        {
+          "kind": "originalInstallBuild",
+          "path": "host-build-tools-after.json",
+          "identity": {
+            "bytes": 1263,
+            "sha256": "738e4946957755331de507eeb52fa7cca636f814b8092344919cb4e52f32d80d",
+            "gitBlob": "859c6f4d1f805d00aab49a7acc638b67fea41920"
+          }
+        },
+        {
+          "kind": "originalInstallBuild",
+          "path": "install-1-receipt.json",
+          "identity": {
+            "bytes": 1278,
+            "sha256": "9400e5c055844570cae1697987ab06b58cf3cd0e88e1f9ecd747bf4d674ce1bf",
+            "gitBlob": "2e4de00b8796ebd3121c2c1f3a314719fbb396db"
+          }
+        },
+        {
+          "kind": "originalInstallBuild",
+          "path": "install-1-start.json",
+          "identity": {
+            "bytes": 797,
+            "sha256": "d51de6e207f857fed87ee9932f7455216a4e13c906e67970b7ed9cf56b56f953",
+            "gitBlob": "d89271f98e6ca49e778156480c925cb45735d7e5"
+          }
+        },
+        {
+          "kind": "originalInstallBuild",
+          "path": "install-1.log",
+          "identity": {
+            "bytes": 2681,
+            "sha256": "76f45092b9f32353d0daa8a700ff0a05c35baaab61b755dc1a598ae863fe5a5d",
+            "gitBlob": "beb5e8b19d5b69489a92d19c8c8231413c5c85c5"
+          }
+        }
+      ],
+      "packageCommandChecks": [
+        {
+          "name": "root",
+          "path": "package.json",
+          "exactScripts": true,
+          "exactEngines": true
+        },
+        {
+          "name": "host",
+          "path": "packages/legacy-agent-host/package.json",
+          "exactScripts": true,
+          "exactEngines": true
+        },
+        {
+          "name": "ledger",
+          "path": "packages/task-change-ledger/package.json",
+          "exactScripts": true,
+          "exactEngines": true
+        },
+        {
+          "name": "mcp",
+          "path": "mcp-server/package.json",
+          "exactScripts": true,
+          "exactEngines": true
+        },
+        {
+          "name": "controller",
+          "path": "agent-teams-controller/package.json",
+          "exactScripts": true,
+          "exactEngines": true
+        }
+      ]
+    },
+    "inputEvidenceQualification": "The missing MCP dependency closure and available compiler/tool rows are attributed to the report's independently retained complete immutable input reconstruction. This publication readback makes no fresh live-filesystem admission claim.",
+    "reviewedLimits": [
+      "This is source/input admission evidence, not an actual root typecheck/build outcome. No type/runtime/GUI/native/vendor PASS is created.",
+      "Every embedded source/receipt body is complete and Git/SHA256/UTF8 revalidated. Large already immutable lock/workflow/dependency bodies are represented by full verified identities plus exact relevant passages or reconstructed inventory facts; they are not claimed newly executed.",
+      "Static compiler configuration is not an exhaustive realized application module graph. Includes/excludes describe explicit project admission; imports can add transitive files.",
+      "Historical original E CI compiler results remain attributable to E and cannot qualify the selected later ed57/cf93/efd source. Current whole97 and three scoped guards remain their original narrower results.",
+      "No incoming UI/BOOT/provider source or later delivery head has been adopted.",
+      "All named commands are descriptive existing source definitions. Only root can select a separately reviewed concrete future R1/command scope."
+    ],
+    "allCommandsDescriptiveOnly": true,
+    "selectedNewCommands": 0,
+    "compilerBuildInstallExecutedByThisReview": false,
+    "noTransferFromOriginalECompilerResults": true
+  },
+  "windowsCleanupCorrection": {
+    "publishedIdentity": {
+      "bytes": 1014,
+      "sha256": "6b2aa0fb3b6dc589a45c66d4e1448617e183359c0021277234b0ccb993859bf2",
+      "gitBlob": "74320612a117ff935bb9dbcb046c6b03facb1161"
+    },
+    "fullPublishedBody": "{\n  \"kind\": \"Read-only correction to interpretation of incoming Windows ARM cleanup log fields\",\n  \"source\": {\n    \"path\": \"tools/owned-process-broker/nativeEmulatedSourceScenario.ts\",\n    \"bytes\": 59216,\n    \"sha256\": \"cb5a49b85ae57c28eaf64c1385c193f5aebf9e6ed0cafa4399b4ec1b50ec8931\",\n    \"gitBlob\": \"ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2\"\n  },\n  \"incomingCiReport\": \"0f2963af97dcabda330e2635af90c67a4e5d9651\",\n  \"observation\": \"In exact a07 source, TEST_SOURCE_CLEANUP logs originalHandleAbsent at310–315 before awaiting retained witness.wait at318 and setting handleAbsent=true at319. Slot0 was set by the earlier publish-A wait402–403.\",\n  \"correction\": \"The six captured false fields are pre-wait bookkeeping values, not six negative native absence results. They do not prove a process leak. The actual15s readiness refusal remains. Full final physical-absence/cleanup qualification remains open pending complete source/control-flow and retained result review.\",\n  \"newSourceOrRuntimeAction\": false\n}\n",
+    "independentlyFetchedCompleteSourceIdentity": {
+      "bytes": 59216,
+      "sha256": "cb5a49b85ae57c28eaf64c1385c193f5aebf9e6ed0cafa4399b4ec1b50ec8931",
+      "gitBlob": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2"
+    },
+    "sourcePath": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+    "exactClosePassage": {
+      "firstLine": 301,
+      "lastLine": 324,
+      "body": "      async close() {\n        firstCloseEntryMs ??= performance.now() - phaseClock;\n        if (closed) return;\n        const failures: unknown[] = [];\n        try { projectionHostExit = (await client.shutdown()).childExit; } catch (error) { failures.push(error); }\n        try { assert.equal(await physical.close(), true); } catch (error) { failures.push(error); }\n        available = false;\n        for (const [jobSlot, job] of jobs.entries()) {\n          try {\n            console.log(JSON.stringify({ kind: 'TEST_SOURCE_CLEANUP', provider, mainEpoch: physical.mainEpoch,\n              jobSlot, source: job.origin ? sourceRef(job.origin) : null,\n              rootCaptured: job.root !== undefined, witnessCaptured: job.witness !== undefined,\n              resumed: job.resumed, stopped: job.stopped, drained: job.drained, released: job.released,\n              originalHandleAbsent: job.handleAbsent, custodyTimings: job.timings,\n              stagingTimings: job.stagingTimings, firstCloseEntryMs }));\n            assert.ok(job.root && job.witness && job.resumed && job.stopped && job.drained && job.released,\n              'Every original physical Job retains confirmed Stop/drain/release');\n            assert.equal(await job.witness.wait(), 0);\n            job.handleAbsent = true;\n          } catch (error) { failures.push(error); }\n        }\n        assert.equal(counts.service, 0, 'Source metadata/probes/standalone do not register Team services');\n        if (failures.length) throw new AggregateError(failures, 'TEST original source epoch cleanup incomplete');\n        closed = true;\n"
+    },
+    "earlierPublishPassage": {
+      "firstLine": 395,
+      "lastLine": 408,
+      "body": "      const result = await first.sources.publish(input);\n      assert.equal(result.phase, 'published'); assert.ok(result.selection);\n      const jobs = first.jobs.slice(before), expected = image === 'B' && provider === 'claude' ? ['A', 'B'] : [image];\n      assert.equal(jobs.length, expected.length); assert.ok(quiescent(jobs));\n      assert.deepEqual(entries().slice(beforeEntries).map(value => [value.event, value.source]), expected.map(value => ['version', value]));\n      for (const [index, job] of jobs.entries()) {\n        assert.equal(job.origin, undefined); assert.equal(jobEntry(job, 'version').source, expected[index]);\n        assert.equal(await job.witness!.wait(), 0);\n        job.handleAbsent = true;\n      }\n      assert.deepEqual(first.pending, { admitted: pending.admitted + 1, revoked: pending.revoked + 1 });\n      return { input, result, source: result.selection };\n    };\n    stage('publish-A'); const a = await publish('A', captured);\n"
+    },
+    "directlySupportedConclusion": "TEST_SOURCE_CLEANUP reads and prints job.handleAbsent at310–315 before its retained witness.wait() assertion318 and only then sets handleAbsent=true319. Earlier publication sets that flag after its own wait402–403. Therefore false values in the earlier log do not themselves represent failed native absence queries.",
+    "independentPeerMessage": "/root/pr_graph confirmed the same exact source order; its wider raw/final-result analysis remains separate.",
+    "preservedUnknowns": "This correction supplies no final receipt, per-slot physical absence, completed cleanup or historical run PASS. The original15-second readiness failure remains. A process leak is neither established nor disproved solely by these pre-wait flags.",
+    "noIncomingSourceAdoption": true,
+    "noNativeObservationPerformed": true
+  },
+  "publicationGate": {
+    "completeActualReadbackAccepted": true,
+    "controlsExactlyAcceptedR2": true,
+    "allThirteenCompletePublishedBodiesFreshlyFetchedAndRehashed": true,
+    "selectedNextScope": "Root-only previously approved metadata/source test materialization, then one whole133 RED only after its actual receipt and observed outer0 are accepted.",
+    "metadataMaterializationQualification": "Actual dependency/compiled/provider/cache contents remain UNINSPECTED there; no blanket runtime input preservation claim.",
+    "actualRedRequirements": "Full current runtime pre/post input checks, complete133 raw names/order/failure/subcase review, normal inner semanticRED and separate actual outer0/lifetime acceptance remain mandatory.",
+    "noProducerBeforeAcceptedActualSemanticRed": true,
+    "futureGreenOrValidationBindingSelected": false,
+    "newRuntimeExecutionsByReviewer": 0
+  },
+  "limitations": [
+    "This is actual Git publication verification, not a projection from the proposed candidate.",
+    "All13 full published bodies were fetched and rehashed. Already accepted control/review semantics are bound by whole-body equality rather than rerun.",
+    "The full canonical build assessment is documentary and admits no compiler, build, install or changed inputs.",
+    "The Windows correction is source-supported ordering, not final native custody or cleanup proof.",
+    "Static133/118PASS15FAIL predictions remain unexecuted at this checkpoint.",
+    "No local source/control application, shell/runtime/module evaluation, test, provider/native/GUI, CI/ref/PR mutation was performed by this reviewer.",
+    "This authorized bare review is documentary evidence only."
+  ],
+  "auditErrors": []
+}

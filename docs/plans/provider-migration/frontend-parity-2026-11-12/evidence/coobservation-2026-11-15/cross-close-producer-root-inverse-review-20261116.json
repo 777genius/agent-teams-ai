@@ -1,0 +1,142 @@
+{
+  "authoredAfterAcceptedActualRedGate": "2026-11-16 17:31:19 UTC",
+  "scope": "Only two8abeR1 producer postimages; no local application or execution",
+  "sourcePreimages": {
+    "taskTarget": {
+      "bytes": 6433,
+      "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+      "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+    },
+    "taskDriver": {
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+    }
+  },
+  "sourcePostimages": {
+    "taskTarget": {
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+    },
+    "taskDriver": {
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+    }
+  },
+  "physicalLines": {
+    "taskTarget": 123,
+    "taskDriver": 799
+  },
+  "exactInversePreimages": true,
+  "changes": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "operations": [
+        {
+          "before": "stage?: 'in-progress-comment' | 'clarification'",
+          "after": "stage?: 'in-progress-comment' | 'clarification' | 'clarification-cleared'"
+        },
+        {
+          "before": "    ` : ''}\n    const input=document.getElementById(owner.inputId),dialog=input?.closest('[role=\"dialog\"]');",
+          "after": "    ` : stage === 'clarification-cleared' ? `\n      const key=JSON.stringify([i.contextId,i.teamName,i.taskId]),session=s.taskDetailSessionById?.[key];\n      if(!session||session.ownerSurfaceId!==owner.surfaceId||session.ownerRevision!==owner.ownerRevision||\n        detail.loading!==false||detail.refreshPending!==false||detail.error!==null||detail.deletionIntent!==null||\n        detail.full.needsClarification!==undefined||detail.full.deletedAt||detail.full.status==='deleted')return null;\n    ` : ''}\n    const input=document.getElementById(owner.inputId),dialog=input?.closest('[role=\"dialog\"]');"
+        },
+        {
+          "before": "    return owner;\n  })()`;",
+          "after": "    ${stage === 'clarification-cleared' ? `\n      const elements = [...dialog.querySelectorAll('button')].filter(e => {\n        const r=e.getBoundingClientRect(); return r.width>0&&r.height>0&&e.textContent.trim()==='Close';\n      });\n      if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};\n      const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;\n      const hit=document.elementFromPoint(x,y), disabled=e.matches(':disabled');\n      if(!hit||!(hit===e||e.contains(hit))||disabled)return {\n        unavailableTarget:true,matches:1,disabled,ariaDisabled:e.getAttribute('aria-disabled')==='true',\n        pointerEventsNone:getComputedStyle(e).pointerEvents==='none',\n        centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)\n      };\n      return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};\n    ` : 'return owner;'}\n  })()`;"
+        }
+      ],
+      "appended": "\n/** Close the original assigned Task only after its current owner and cleared detail are ready. */\nexport function clickDesktopTaskBoardClearedClose(\n  ui: { clickExpression(expression: string, label: string, selector?: string, text?: string): Promise<void> },\n  handleId: string,\n  taskId: string,\n  captured: { contextId: string; surfaceId: string }\n): Promise<void> {\n  return ui.clickExpression(\n    desktopTaskBoardAssignmentReadyExpression(handleId, taskId, captured, 'clarification-cleared'),\n    'close original Task detail',\n    '[role=\"dialog\"] button',\n    'Close'\n  );\n}\n"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "operations": [
+        {
+          "before": "import {\n  desktopTaskBoardAssignmentReadyExpression,",
+          "after": "import {\n  clickDesktopTaskBoardClearedClose,\n  desktopTaskBoardAssignmentReadyExpression,"
+        },
+        {
+          "before": "  await ui.click('[role=\"dialog\"] button', 'close original Task detail', 'Close');",
+          "after": "  await clickDesktopTaskBoardClearedClose(ui, options.handleId, taskId, { contextId, surfaceId });"
+        }
+      ]
+    }
+  ],
+  "existingExpressionPreservation": "For every existing stage, the new middle stage ternary is false, the final stage ternary emits the exact original return owner; and the remaining source-template literal chunks/embedded expressions are unchanged. The undefined/clarification/in-progress-comment generated expression byte strings are therefore unchanged for all original arguments. No candidate source was executed for this static inverse proof.",
+  "controlsAndSelectionUnchanged": true,
+  "wholeTestUnchanged": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+  "newRuntimeImports": 0,
+  "originalBrowserImports": 2,
+  "postimagesApplied": false,
+  "greenExecuted": false,
+  "independentR2Pending": true,
+  "actualRedAdmission": {
+    "accepted": true,
+    "at": "2026-11-16 17:31:19 UTC",
+    "publishedR1": {
+      "commit": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+      "identity": {
+        "bytes": 23142,
+        "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+        "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+      },
+      "actualIndependentReadback": {
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34",
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1"
+      }
+    },
+    "actualRed": {
+      "envelope": {
+        "bytes": 185267,
+        "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+        "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634"
+      },
+      "receipt": {
+        "bytes": 33946,
+        "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+        "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+      },
+      "raw": {
+        "bytes": 37314,
+        "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+        "gitBlob": "d38f2ae2851555b35970a892ce38674221147437"
+      },
+      "outerSession": 27541,
+      "outerExit": 0
+    },
+    "semantic": {
+      "bytes": 190694,
+      "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+      "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+    },
+    "semanticFinalClosure": {
+      "bytes": 86249,
+      "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+      "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+    },
+    "guard": {
+      "acceptanceReceivedBeforeAuthorship": true,
+      "reviewer": "/root/guard_review",
+      "acceptance": "COMPLETE actual133 RED independently ACCEPTED; all67files90226849B/42unique,full current beforeafterinputs/lifetime/outer0; only existing8abe two-path producer AUTHORING gate released. ExactR2/publication/readback/GREEN/guards remain.",
+      "exactEnvelope": "7db3b53fab91d32d18c8dd95b34242e515b50634",
+      "exactReceipt": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a",
+      "bareReviewRetentionPendingAtGate": true,
+      "retainedReview": {
+        "bytes": 140038,
+        "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+        "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+      },
+      "fullRootReadbackAfterInitialAuthorshipAt": "2026-11-16 17:32:25 UTC",
+      "bareReviewRetentionNowComplete": true
+    },
+    "permittedPaths": [
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+    ],
+    "producerAuthoredBeforeThisGate": false,
+    "scope": "Root may now author only the two selected Cross producer postimages. No source application/runtime or GREEN binding yet."
+  },
+  "authoredAndBareRetainedBeforeR2At": "2026-11-16 17:32:25 UTC"
+}

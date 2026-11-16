@@ -1,0 +1,2473 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-cross-close-two-producer-source-r2",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/parity_audit",
+  "reviewDate": "2026-11-16",
+  "verdict": "ACCEPTED for exact helper3c7b and driver4700 as bounded source proposals under published8abeR1; no local application, resulting-source execution, whole-tree publication or actualGREEN acceptance is implied",
+  "accepted": true,
+  "exactCandidates": {
+    "helper": {
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+    },
+    "driver": {
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+    },
+    "rootInverseGateAudit": {
+      "bytes": 8119,
+      "sha256": "eec8303692c8ba0f019939580e76fc77ab22cb764f852b95bafe0a2699343f05",
+      "gitBlob": "6cf280cdf07fe299eb452a6eb61bba3dd53114a4"
+    }
+  },
+  "priorAdmission": {
+    "publishedR1": {
+      "commit": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+      "identity": {
+        "bytes": 23142,
+        "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+        "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+      },
+      "actualIndependentReadback": {
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34",
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1"
+      }
+    },
+    "rootRecordedGateAt": "2026-11-16 17:31:19 UTC",
+    "chronologyAttribution": "Root reports gate17:31:19 before the two postimages. Independent Guard acceptance was sent before its bare record was retained; root's full bare-readback time17:32:25 is explicitly later than initial authorship and is not misrepresented as the initial permission.",
+    "actualRedEnvelope": {
+      "bytes": 185267,
+      "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+      "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634"
+    },
+    "actualRedReceipt": {
+      "bytes": 33946,
+      "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+      "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+    },
+    "actualRedSemantic": {
+      "bytes": 190694,
+      "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+      "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+    },
+    "actualRedFinalSemanticSourceOuter": {
+      "bytes": 86249,
+      "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+      "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+    },
+    "actualRedGuard": {
+      "bytes": 140038,
+      "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+      "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+    },
+    "completeActualRedAccepted": true,
+    "actualRedStillTests118Pass15Fail": true,
+    "guardVerdict": "ACCEPTED_ACTUAL_EXPECTED_SEMANTIC_RED_NOT_TEST_PASS",
+    "guardCombinedAcceptance": {
+      "allSameExactFinalEvidence": true,
+      "parityPrimarySemantic": "b1d7d6c148d0f2b11e72aa728a03a64091590838",
+      "parityFinalSourceOuter": "ffc5a83973da41cd9e9b9e780b302b0cb16704db",
+      "guardCurrentInputLifetime": "This record",
+      "actualFullRedAccepted": true,
+      "producerAuthorshipPrerequisiteReleased": true,
+      "onlyReleasedScope": "The existing8abe bounded helper/Taskboard producer authoring stage. No producer content or future execution is accepted by this review.",
+      "remainingRequired": [
+        "Exact bounded two-producer postimages and full independent R2",
+        "Immediate commit/push and complete actual published readback",
+        "Exact GREEN binding and independent R2/publication/readback",
+        "One metadata-only producer materialization and actual source/control/outer0 gate",
+        "One complete whole133 GREEN with full current runtime inputs and independent semantics/lifetime/outer0 acceptance",
+        "Only then one ordered conditional validation package under its original clocks",
+        "Canonical typing/build, fresh GUI/native/platform and whole E2E qualification remain separate"
+      ]
+    }
+  },
+  "fullTwoBodiesReadAndRehashed": true,
+  "sourcePreimages": {
+    "taskTarget": {
+      "bytes": 6433,
+      "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+      "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+    },
+    "taskDriver": {
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+    }
+  },
+  "sourcePostimages": {
+    "taskTarget": {
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+    },
+    "taskDriver": {
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+    }
+  },
+  "completeForwardAndInverseJournal": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "preimage": {
+        "bytes": 6433,
+        "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+        "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+      },
+      "postimage": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      "operations": [
+        {
+          "beforeIdentity": {
+            "bytes": 47,
+            "sha256": "ab0d1bd1de5c1aabed6198e43e881e9776f4ed905d10ffff697b110d39051ed7",
+            "gitBlob": "42c6e1029d9827d0f38dac936f5519991b91ff0c"
+          },
+          "afterIdentity": {
+            "bytes": 73,
+            "sha256": "d2a400ca7ff10b87d99f278968dff50500917378e2601c439c43f94986fa9f64",
+            "gitBlob": "2492ddb75d82d76a35972c833fe3bba0336033d4"
+          },
+          "beforeUnique": true
+        },
+        {
+          "beforeIdentity": {
+            "bytes": 108,
+            "sha256": "4d4d758b361b684a2efc4f7024b86c68cd01ba0bfde4d434e76e4b09b4b7af36",
+            "gitBlob": "8fb7bf2757a4ece9acdae541be5f82f6097f45db"
+          },
+          "afterIdentity": {
+            "bytes": 601,
+            "sha256": "c1743fab2401df6229ac10ff3a4264146e77f57b9c681a59479449de341a35b7",
+            "gitBlob": "34ea1bb999c4f1aeab543429bb719cec17daa311"
+          },
+          "beforeUnique": true
+        },
+        {
+          "beforeIdentity": {
+            "bytes": 26,
+            "sha256": "22d36c7999595c032991d3125a50db3e828f0d217f6a6607de5a30be88d24799",
+            "gitBlob": "263a63c37ab6ccf4d193272778897cc28c40a3b4"
+          },
+          "afterIdentity": {
+            "bytes": 947,
+            "sha256": "415af1a93be063d3df3224aac695f3f206fe4fcc246ace1cbbc6d088e755768a",
+            "gitBlob": "a63f3d06186e21b50f7e4ec0311b8c06d580326a"
+          },
+          "beforeUnique": true
+        }
+      ],
+      "appended": {
+        "bytes": 584,
+        "sha256": "43cdc88580a4ecd8812525f78aa775e75af061ebe35358cf55d0989888b9ead3",
+        "gitBlob": "97eabc5ffc2ee5ede86ae2b340a0c07b857abc2c"
+      },
+      "entireForwardExact": true,
+      "entireInverseExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "preimage": {
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+      },
+      "postimage": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      "operations": [
+        {
+          "beforeIdentity": {
+            "bytes": 53,
+            "sha256": "e160a9dc7b170ca4ca0b5ee2a9e65eafc8d42964dbd0a2819724f530b5f6e814",
+            "gitBlob": "43acca1b2969cac85ec3f80ca0132669b74d7e7e"
+          },
+          "afterIdentity": {
+            "bytes": 90,
+            "sha256": "f2c8a8cf35c6334afbb822ba2f7af172fce97acbdef8c8a39d925f2420618806",
+            "gitBlob": "2381bc8addd401d7f3f96a0deac5f863839684a7"
+          },
+          "beforeUnique": true
+        },
+        {
+          "beforeIdentity": {
+            "bytes": 82,
+            "sha256": "c94403023c1fd87a4d326f041988febdfc2699142af37c813aae9ac549856cc6",
+            "gitBlob": "acbe079be75953b6f72a0adb575c0cbbaca78bb3"
+          },
+          "afterIdentity": {
+            "bytes": 98,
+            "sha256": "971763318b92adb33763c0c850345c34649ec114f205b21439b2ef6af772e5c0",
+            "gitBlob": "3ca7785c179a324b61a3e6585ca4d73d3e499eeb"
+          },
+          "beforeUnique": true
+        }
+      ],
+      "appended": null,
+      "entireForwardExact": true,
+      "entireInverseExact": true
+    }
+  ],
+  "exactRootLiteralEditJournal": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "operations": [
+        {
+          "before": "stage?: 'in-progress-comment' | 'clarification'",
+          "after": "stage?: 'in-progress-comment' | 'clarification' | 'clarification-cleared'"
+        },
+        {
+          "before": "    ` : ''}\n    const input=document.getElementById(owner.inputId),dialog=input?.closest('[role=\"dialog\"]');",
+          "after": "    ` : stage === 'clarification-cleared' ? `\n      const key=JSON.stringify([i.contextId,i.teamName,i.taskId]),session=s.taskDetailSessionById?.[key];\n      if(!session||session.ownerSurfaceId!==owner.surfaceId||session.ownerRevision!==owner.ownerRevision||\n        detail.loading!==false||detail.refreshPending!==false||detail.error!==null||detail.deletionIntent!==null||\n        detail.full.needsClarification!==undefined||detail.full.deletedAt||detail.full.status==='deleted')return null;\n    ` : ''}\n    const input=document.getElementById(owner.inputId),dialog=input?.closest('[role=\"dialog\"]');"
+        },
+        {
+          "before": "    return owner;\n  })()`;",
+          "after": "    ${stage === 'clarification-cleared' ? `\n      const elements = [...dialog.querySelectorAll('button')].filter(e => {\n        const r=e.getBoundingClientRect(); return r.width>0&&r.height>0&&e.textContent.trim()==='Close';\n      });\n      if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};\n      const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;\n      const hit=document.elementFromPoint(x,y), disabled=e.matches(':disabled');\n      if(!hit||!(hit===e||e.contains(hit))||disabled)return {\n        unavailableTarget:true,matches:1,disabled,ariaDisabled:e.getAttribute('aria-disabled')==='true',\n        pointerEventsNone:getComputedStyle(e).pointerEvents==='none',\n        centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)\n      };\n      return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};\n    ` : 'return owner;'}\n  })()`;"
+        }
+      ],
+      "appended": "\n/** Close the original assigned Task only after its current owner and cleared detail are ready. */\nexport function clickDesktopTaskBoardClearedClose(\n  ui: { clickExpression(expression: string, label: string, selector?: string, text?: string): Promise<void> },\n  handleId: string,\n  taskId: string,\n  captured: { contextId: string; surfaceId: string }\n): Promise<void> {\n  return ui.clickExpression(\n    desktopTaskBoardAssignmentReadyExpression(handleId, taskId, captured, 'clarification-cleared'),\n    'close original Task detail',\n    '[role=\"dialog\"] button',\n    'Close'\n  );\n}\n"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "operations": [
+        {
+          "before": "import {\n  desktopTaskBoardAssignmentReadyExpression,",
+          "after": "import {\n  clickDesktopTaskBoardClearedClose,\n  desktopTaskBoardAssignmentReadyExpression,"
+        },
+        {
+          "before": "  await ui.click('[role=\"dialog\"] button', 'close original Task detail', 'Close');",
+          "after": "  await clickDesktopTaskBoardClearedClose(ui, options.handleId, taskId, { contextId, surfaceId });"
+        }
+      ]
+    }
+  ],
+  "bounds": {
+    "helperPhysicalLines": 123,
+    "helperCap": 200,
+    "driverPhysicalLines": 799,
+    "driverCap": 800,
+    "noNewProductionPath": true,
+    "remainingDriverPhysicalLineCapacity": 1
+  },
+  "scope": {
+    "helper": "Only stage-union extension, new clarification-cleared branch, own-dialog Close target branch, and one narrow clickExpression wrapper.",
+    "driver": "Only one named import in its existing helper block and one original Close-call replacement at474; full inverse preserves all other36207-byte preimage content.",
+    "unchangedPins": {
+      "test": {
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409"
+      },
+      "controls": {
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386"
+      },
+      "selection": {
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b"
+      }
+    },
+    "preservedDriverContext": "Original Task/owner capture, assignment and clarification actions/receipt checks, canonical cleared Task check, closed-dialog wait and all later board/reload/attachment actions are byte-identical under full inverse.",
+    "futureTreeQualification": "These are bare source proposals; complete future composition/publication/readback must independently prove no other source change."
+  },
+  "existingStageByteIdentity": {
+    "stages": [
+      {
+        "stage": "undefined",
+        "middleNewCondition": false,
+        "finalNewCondition": false
+      },
+      {
+        "stage": "clarification",
+        "originalMiddleBranch": true,
+        "finalNewCondition": false
+      },
+      {
+        "stage": "in-progress-comment",
+        "middleNewCondition": false,
+        "finalNewCondition": false
+      }
+    ],
+    "argumentSpace": "All original handleId/taskId/captured arguments passing unchanged original assertions",
+    "method": "Static literal/branch proof only; no template function or source evaluation.",
+    "originalWholeHelperIdentity": {
+      "bytes": 6433,
+      "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+      "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+    },
+    "exactWholeInverse": true,
+    "oldOwnerExpressionPrefixExact": true,
+    "middleBranch": "Original clarification branch unchanged; the new clarification-cleared branch exists only in its else path and is false for undefined/in-progress-comment.",
+    "returnBranch": "The new clarification-cleared final ternary evaluates to literal return owner; for all original stages, preserving original surrounding whitespace and newline.",
+    "allOtherLiteralChunksAndInterpolationExpressionsExact": "Unique inverse journal restores the complete old helper after only stage-union extension, the two new branch insertions and appended wrapper.",
+    "resultingOldGeneratedStringsByteIdenticalByBranchSubstitution": true
+  },
+  "newStageReview": {
+    "ownerAndScope": "Unchanged current React fiber/unique owner+input logic and captured context/surface checks run after the same two readonly imports. Current detail/active context/selected Team/full Task identity/alice owner/accepted Team metadata checks remain.",
+    "newStoredSession": "Same current identity-keyed stored session must exist and match observed owner surface and revision.",
+    "clearedState": "loading and refreshPending strictlyfalse; error/deletionIntent strictlynull; needsClarification undefined; no truthy deletedAt or deleted status. The branch does not require canResolveClarification=true after clearing.",
+    "assignmentControl": "Unchanged exactly-one enabled collapsed alice combobox remains required for this original assigned Task flow.",
+    "targetScope": "Only the observed input's owning dialog.querySelectorAll('button'); positive width+height and exact trimmed Close text, then singleton before disabled/hit filtering.",
+    "targetShape": {
+      "entireHitDisabledDiagnosticsTupleTextEqualsAfterIndentOnly": true,
+      "sourceControlsGit": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "actualOriginalBody": "    const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;\n    const hit=document.elementFromPoint(x,y), disabled=e.matches(':disabled');\n    if(!hit||!(hit===e||e.contains(hit))||disabled)return {\n      unavailableTarget:true,matches:1,disabled,ariaDisabled:e.getAttribute('aria-disabled')==='true',\n      pointerEventsNone:getComputedStyle(e).pointerEvents==='none',\n      centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)\n    };\n    return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};",
+      "actualNewBody": "      const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;\n      const hit=document.elementFromPoint(x,y), disabled=e.matches(':disabled');\n      if(!hit||!(hit===e||e.contains(hit))||disabled)return {\n        unavailableTarget:true,matches:1,disabled,ariaDisabled:e.getAttribute('aria-disabled')==='true',\n        pointerEventsNone:getComputedStyle(e).pointerEvents==='none',\n        centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)\n      };\n      return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};",
+      "normalization": "Remove leading indentation per line solely for comparing generated-code spelling; no code evaluated",
+      "selectorChanges": "New only: current own dialog.querySelectorAll('button') after same-Task/session readiness; positive-size/exact Close text filter then singleton."
+    },
+    "noAsyncGap": "After the two existing readonly await imports, owner/state/session/readiness and own-dialog geometry/hit work is synchronous. No new await, timer, listener, native call, mutation or CDP request is inserted into that section.",
+    "finalChecks": "The wrapper passes one complete predicate to existing clickExpression, so all current readPoint samples and the final direct evaluate use the same expression. The original final owner checks, exact tuple refusal and one press/release sequence are unchanged.",
+    "pollingQualification": "The stricter first predicate intentionally can increase passive iterations inside unchanged original deadlines. No equality of execution time/read totals is claimed for arbitrary real UI states, and no new overall30-second whole-click deadline is invented."
+  },
+  "actualTestExtractionProof": {
+    "driverIdentity": {
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+    },
+    "testIdentity": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "helperIdentity": {
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+    },
+    "uniqueReceiptBegin": "  proof.clarificationReceipt = await receiptFor(",
+    "uniqueEnd": "  await ui.waitRead(`!document.querySelector('[role=\"dialog\"]')`, 'Task detail closed');",
+    "singleExtractedStatement": "await clickDesktopTaskBoardClearedClose(ui, options.handleId, taskId, { contextId, surfaceId });",
+    "extractedIdentity": {
+      "bytes": 96,
+      "sha256": "93a9b6d47de943de373975cf888826b12662a1a6170d5c999a0ee041a8304276",
+      "gitBlob": "9f9236354f017bea14a1924f057ee9d8b9c166d9"
+    },
+    "extractedChars": 96,
+    "statementSourceLine": 474,
+    "argsGrammarAdmitsExactStatement": true,
+    "actualNamedImportBlock": "import {\n  clickDesktopTaskBoardClearedClose,\n  desktopTaskBoardAssignmentReadyExpression,\n  desktopTaskCommentInputExpression,\n} from './desktop-task-comment-input-target.ts';",
+    "actualNamedBindings": [
+      "clickDesktopTaskBoardClearedClose",
+      "desktopTaskBoardAssignmentReadyExpression",
+      "desktopTaskCommentInputExpression"
+    ],
+    "actualFunctionExports": [
+      "desktopTaskCommentInputExpression",
+      "desktopTaskBoardAssignmentReadyExpression",
+      "clickDesktopTaskBoardClearedClose"
+    ],
+    "calleeActuallyImportedAndExported": true,
+    "noAliasesOrUnknownDuplicateBindings": true,
+    "helperWrapper": "/** Close the original assigned Task only after its current owner and cleared detail are ready. */\nexport function clickDesktopTaskBoardClearedClose(\n  ui: { clickExpression(expression: string, label: string, selector?: string, text?: string): Promise<void> },\n  handleId: string,\n  taskId: string,\n  captured: { contextId: string; surfaceId: string }\n): Promise<void> {\n  return ui.clickExpression(\n    desktopTaskBoardAssignmentReadyExpression(handleId, taskId, captured, 'clarification-cleared'),\n    'close original Task detail',\n    '[role=\"dialog\"] button',\n    'Close'\n  );\n}\n",
+    "originalActionArgumentsPreserved": {
+      "label": "close original Task detail",
+      "selector": "[role=\"dialog\"] button",
+      "text": "Close"
+    },
+    "capturedArguments": {
+      "handle": "options.handleId",
+      "task": "taskId",
+      "context": "contextId",
+      "surface": "surfaceId",
+      "originalCaptureLines": [
+        399,
+        401
+      ]
+    },
+    "readonlyBrowserImports": [
+      "/store/slices/teamSlice.ts",
+      "/store/team/taskDetailReadAuthority.ts"
+    ],
+    "readonlyImportCount": 2,
+    "newWrapperAwaitCount": 0,
+    "singleExistingClickExpressionInvocation": true,
+    "candidateNotExecuted": true
+  },
+  "setupAndTypeReview": {
+    "namedImport": "Three simple unique actual named bindings correspond to three actual exported functions; the new direct callee is imported and not supplied by a test fallback.",
+    "exactStatement": "The unchanged0aec strict grammar admits the96-byte source-extracted awaited helper call with captured identity object; no extra statement or source marker change.",
+    "uiPort": "Narrow clickExpression(expression,label,selector?,text?) =>Promise<void> matches the unchanged actual control method; wrapper directly returns that promise and introduces no unchecked cast or async-return mismatch.",
+    "capturedTypes": "The existing const contextId/surfaceId values retain their preceding typeof-string assertion before the new call.",
+    "oldTests": "No old97 source case reads the changed desktop-task-board-ui-smoke.ts Close seam; helper's three old output strings remain exact and all old test bodies/imports remain unchanged.",
+    "staticOnly": "No TypeScript compiler, JS evaluator, VM fixture or test was run in this review. Syntax/type conclusions are source analysis; actualGREEN and separately required type qualification remain distinct."
+  },
+  "expectedGreen": {
+    "observed": false,
+    "requiredCases": 133,
+    "predictedPass": 133,
+    "predictedFail": 0,
+    "predictedSkip": 0,
+    "predictedCancelled": 0,
+    "predictedTodo": 0,
+    "wholeFileUnchanged": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+    "all133NamesOrderMultiplicityPreserved": true,
+    "completeCaseLedger": [
+      {
+        "ordinal": 1,
+        "name": "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+        "multiplicity": 1,
+        "testDefinitionLine": 63,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+        "multiplicity": 1,
+        "testDefinitionLine": 79,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+        "multiplicity": 1,
+        "testDefinitionLine": 124,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+        "multiplicity": 1,
+        "testDefinitionLine": 139,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "isolated shell fixture emits the actual framed environment and refuses shell effects",
+        "multiplicity": 1,
+        "testDefinitionLine": 149,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+        "multiplicity": 1,
+        "testDefinitionLine": 337,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "Task attachment comment waits for its original focused owner after one click before inserting text",
+        "multiplicity": 1,
+        "testDefinitionLine": 372,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+        "multiplicity": 1,
+        "testDefinitionLine": 546,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+        "multiplicity": 1,
+        "testDefinitionLine": 583,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "original desktop click waits for stable target geometry, without repeating input",
+        "multiplicity": 1,
+        "testDefinitionLine": 613,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "original Task hover waits through layout and unavailability before its one physical move",
+        "multiplicity": 1,
+        "testDefinitionLine": 641,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "original desktop click refuses a constantly moving target before dispatch",
+        "multiplicity": 1,
+        "testDefinitionLine": 667,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+        "multiplicity": 1,
+        "testDefinitionLine": 685,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "login failure facts retain only bounded original attempts and confirmed milestones",
+        "multiplicity": 1,
+        "testDefinitionLine": 715,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "finite readiness failure summaries keep only bounded states and never private snapshot data",
+        "multiplicity": 1,
+        "testDefinitionLine": 770,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+        "multiplicity": 1,
+        "testDefinitionLine": 808,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+        "multiplicity": 1,
+        "testDefinitionLine": 896,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+        "multiplicity": 1,
+        "testDefinitionLine": 952,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "installer CDP and cleanup projection retains only exact finite observations",
+        "multiplicity": 1,
+        "testDefinitionLine": 985,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "Selection target summaries retain the exact original phase and six closed facts",
+        "multiplicity": 1,
+        "testDefinitionLine": 1038,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+        "multiplicity": 1,
+        "testDefinitionLine": 1073,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+        "multiplicity": 1,
+        "testDefinitionLine": 1102,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "original desktop click refuses a target unavailable during the final ownership check",
+        "multiplicity": 1,
+        "testDefinitionLine": 1198,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "original desktop click refuses a target moved during the final ownership check",
+        "multiplicity": 1,
+        "testDefinitionLine": 1198,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "original default scroll preserves a disabled control before its readiness wait",
+        "multiplicity": 1,
+        "testDefinitionLine": 1228,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+        "multiplicity": 1,
+        "testDefinitionLine": 1228,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 27,
+        "name": "original desktop click rechecks owner after its pending final target read",
+        "multiplicity": 1,
+        "testDefinitionLine": 1280,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 28,
+        "name": "original desktop click rechecks cutoff after its pending final target read",
+        "multiplicity": 1,
+        "testDefinitionLine": 1280,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 29,
+        "name": "original clarification lookup admits its retained read without completing the assignment prerequisite",
+        "multiplicity": 1,
+        "testDefinitionLine": 1324,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 30,
+        "name": "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+        "multiplicity": 1,
+        "testDefinitionLine": 1347,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 31,
+        "name": "original owner availability admits three captured A Teams through its actual first DOM read",
+        "multiplicity": 1,
+        "testDefinitionLine": 1464,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 32,
+        "name": "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+        "multiplicity": 1,
+        "testDefinitionLine": 1480,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 33,
+        "name": "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+        "multiplicity": 1,
+        "testDefinitionLine": 1494,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 34,
+        "name": "original owner availability refuses invalid captured discovery before navigation",
+        "multiplicity": 1,
+        "testDefinitionLine": 1541,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 35,
+        "name": "owner availability admits every captured A Team through the actual first observation",
+        "multiplicity": 1,
+        "testDefinitionLine": 1610,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 36,
+        "name": "owner availability refuses healthy B in unavailable A rows",
+        "multiplicity": 1,
+        "testDefinitionLine": 1628,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 37,
+        "name": "owner availability refuses captured foreign owner in unavailable A rows",
+        "multiplicity": 1,
+        "testDefinitionLine": 1628,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 38,
+        "name": "owner availability refuses unknown Team in unavailable A rows",
+        "multiplicity": 1,
+        "testDefinitionLine": 1628,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 39,
+        "name": "owner availability refuses malformed Team in unavailable A rows",
+        "multiplicity": 1,
+        "testDefinitionLine": 1628,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 40,
+        "name": "owner availability refuses missing selected A before original navigation",
+        "multiplicity": 1,
+        "testDefinitionLine": 1638,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 41,
+        "name": "owner availability refuses non-string A handle before original navigation",
+        "multiplicity": 1,
+        "testDefinitionLine": 1638,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 42,
+        "name": "owner availability refuses empty A handle before original navigation",
+        "multiplicity": 1,
+        "testDefinitionLine": 1638,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 43,
+        "name": "owner availability refuses duplicate A handle before original navigation",
+        "multiplicity": 1,
+        "testDefinitionLine": 1638,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 44,
+        "name": "owner availability refuses over-bound capture before original navigation",
+        "multiplicity": 1,
+        "testDefinitionLine": 1638,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 45,
+        "name": "passive input keeps its actual Team target and three separate original navigation samples",
+        "multiplicity": 1,
+        "testDefinitionLine": 1722,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 46,
+        "name": "passive navigation preserves non-card events, the original ring bounds and null or non-Team state",
+        "multiplicity": 1,
+        "testDefinitionLine": 1747,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 47,
+        "name": "passive navigation refuses malformed target and store facts without losing original callbacks",
+        "multiplicity": 1,
+        "testDefinitionLine": 1767,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 48,
+        "name": "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure",
+        "multiplicity": 1,
+        "testDefinitionLine": 1813,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 49,
+        "name": "passive navigation uses only the callable store own method and ignores unrelated card surfaces",
+        "multiplicity": 1,
+        "testDefinitionLine": 1835,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 50,
+        "name": "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+        "multiplicity": 1,
+        "testDefinitionLine": 1853,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 51,
+        "name": "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority",
+        "multiplicity": 1,
+        "testDefinitionLine": 1866,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 52,
+        "name": "every present provider implementation digest must be valid and both recognized fields must agree",
+        "multiplicity": 1,
+        "testDefinitionLine": 1890,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 53,
+        "name": "provider receipt shape, package selection and original file or JSON errors remain strict",
+        "multiplicity": 1,
+        "testDefinitionLine": 1916,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 54,
+        "name": "saved Launch uses three stable actual DOM samples before its original settings action",
+        "multiplicity": 1,
+        "testDefinitionLine": 2042,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 55,
+        "name": "saved Launch resets exact geometry when the original button shifts by a quarter pixel",
+        "multiplicity": 1,
+        "testDefinitionLine": 2047,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 56,
+        "name": "saved Launch restarts its three samples after changed identity",
+        "multiplicity": 1,
+        "testDefinitionLine": 2060,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 57,
+        "name": "saved Launch restarts its three samples after changed expanded state",
+        "multiplicity": 1,
+        "testDefinitionLine": 2060,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 58,
+        "name": "saved Launch restarts its three samples after changed horizontal position",
+        "multiplicity": 1,
+        "testDefinitionLine": 2060,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 59,
+        "name": "saved Launch restarts its three samples after changed width",
+        "multiplicity": 1,
+        "testDefinitionLine": 2060,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 60,
+        "name": "saved Launch restarts its three samples after changed height",
+        "multiplicity": 1,
+        "testDefinitionLine": 2060,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 61,
+        "name": "saved Launch resets its original readiness after absent target",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 62,
+        "name": "saved Launch resets its original readiness after ambiguous target",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 63,
+        "name": "saved Launch resets its original readiness after wrong model",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 64,
+        "name": "saved Launch resets its original readiness after absent identity",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 65,
+        "name": "saved Launch resets its original readiness after empty identity",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 66,
+        "name": "saved Launch resets its original readiness after invalid expansion",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 67,
+        "name": "saved Launch resets its original readiness after missing owning dialog",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 68,
+        "name": "saved Launch resets its original readiness after nonfinite x",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 69,
+        "name": "saved Launch resets its original readiness after nonfinite y",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 70,
+        "name": "saved Launch resets its original readiness after zero width",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 71,
+        "name": "saved Launch resets its original readiness after negative height",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 72,
+        "name": "saved Launch resets its original readiness after running own animation",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 73,
+        "name": "saved Launch resets its original readiness after paused own animation",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 74,
+        "name": "saved Launch resets its original readiness after pending own animation",
+        "multiplicity": 1,
+        "testDefinitionLine": 2077,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 75,
+        "name": "saved Launch allows finished own animation without inspecting descendant spinners or model status",
+        "multiplicity": 1,
+        "testDefinitionLine": 2083,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 76,
+        "name": "saved Launch allows idle own animation without inspecting descendant spinners or model status",
+        "multiplicity": 1,
+        "testDefinitionLine": 2083,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 77,
+        "name": "saved Launch exhausts its one original deadline with no matching model and no settings action",
+        "multiplicity": 1,
+        "testDefinitionLine": 2092,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 78,
+        "name": "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action",
+        "multiplicity": 1,
+        "testDefinitionLine": 2092,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 79,
+        "name": "original conversation waits for its own reply before one click at the hydrated coordinates",
+        "multiplicity": 1,
+        "testDefinitionLine": 2146,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 80,
+        "name": "default conversation click retains its original final geometry refusal without a preview predicate",
+        "multiplicity": 1,
+        "testDefinitionLine": 2158,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 81,
+        "name": "original conversation refuses body-only reply within its unchanged first read deadline",
+        "multiplicity": 1,
+        "testDefinitionLine": 2173,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 82,
+        "name": "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+        "multiplicity": 1,
+        "testDefinitionLine": 2173,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 83,
+        "name": "original conversation refuses different required reply within its unchanged first read deadline",
+        "multiplicity": 1,
+        "testDefinitionLine": 2173,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 84,
+        "name": "original conversation refuses empty preview within its unchanged first read deadline",
+        "multiplicity": 1,
+        "testDefinitionLine": 2173,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 85,
+        "name": "original conversation refuses missing target within its unchanged first read deadline",
+        "multiplicity": 1,
+        "testDefinitionLine": 2173,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 86,
+        "name": "original conversation refuses zero-size target within its unchanged first read deadline",
+        "multiplicity": 1,
+        "testDefinitionLine": 2173,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 87,
+        "name": "original conversation refuses disabled target within its unchanged first read deadline",
+        "multiplicity": 1,
+        "testDefinitionLine": 2173,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 88,
+        "name": "original conversation refuses covered target within its unchanged first read deadline",
+        "multiplicity": 1,
+        "testDefinitionLine": 2173,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 89,
+        "name": "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+        "multiplicity": 1,
+        "testDefinitionLine": 2173,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 90,
+        "name": "original conversation serializes its required preview as literal data",
+        "multiplicity": 1,
+        "testDefinitionLine": 2182,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 91,
+        "name": "original conversation rereads a revoked preview at unchanged final coordinates before input",
+        "multiplicity": 1,
+        "testDefinitionLine": 2189,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 92,
+        "name": "original conversation still refuses final owner despite a ready preview",
+        "multiplicity": 1,
+        "testDefinitionLine": 2200,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 93,
+        "name": "original conversation still refuses final movement despite a ready preview",
+        "multiplicity": 1,
+        "testDefinitionLine": 2200,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 94,
+        "name": "actual openChat forwards TEST boot ready for alice",
+        "multiplicity": 1,
+        "testDefinitionLine": 2219,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 95,
+        "name": "actual openChat forwards TEST stream partial for alice",
+        "multiplicity": 1,
+        "testDefinitionLine": 2219,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 96,
+        "name": "actual openChat forwards TEST boot ready for team-lead",
+        "multiplicity": 1,
+        "testDefinitionLine": 2219,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 97,
+        "name": "actual openChat forwards TEST stream partial for team-lead",
+        "multiplicity": 1,
+        "testDefinitionLine": 2219,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "basis": "All97 passed actual RED; complete test prefix/controls/Selection unchanged, existing three helper-generated expressions byte-identical by static branch substitution; no old case reads the changed driver Close seam."
+        }
+      },
+      {
+        "ordinal": 98,
+        "name": "original Cross Close target admits the ready cleared Task when canResolveClarification is false",
+        "multiplicity": 1,
+        "testDefinitionLine": 2417,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "93–105",
+          "basis": "Ready cleared detail returns its own exact Close point despite canResolveClarification=false; direct observer emits no input and retains two readonly import paths."
+        }
+      },
+      {
+        "ordinal": 99,
+        "name": "original Cross Close target refuses retained user clarification",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "86",
+          "basis": "needsClarification must be undefined; user is refused."
+        }
+      },
+      {
+        "ordinal": 100,
+        "name": "original Cross Close target refuses retained external clarification",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "86",
+          "basis": "needsClarification must be undefined; external is refused."
+        }
+      },
+      {
+        "ordinal": 101,
+        "name": "original Cross Close target refuses null clarification",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "86",
+          "basis": "needsClarification must be undefined; null is refused."
+        }
+      },
+      {
+        "ordinal": 102,
+        "name": "original Cross Close target refuses full-detail refreshPending",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "68,85",
+          "basis": "refreshPending true is refused."
+        }
+      },
+      {
+        "ordinal": 103,
+        "name": "original Cross Close target refuses full-detail loading",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "68,85",
+          "basis": "loading true is refused."
+        }
+      },
+      {
+        "ordinal": 104,
+        "name": "original Cross Close target refuses current detail error",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "85",
+          "basis": "detail.error must be null."
+        }
+      },
+      {
+        "ordinal": 105,
+        "name": "original Cross Close target refuses current deletionIntent",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "85",
+          "basis": "detail.deletionIntent must be null."
+        }
+      },
+      {
+        "ordinal": 106,
+        "name": "original Cross Close target refuses full Task deletedAt",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "86",
+          "basis": "truthy deletedAt is refused."
+        }
+      },
+      {
+        "ordinal": 107,
+        "name": "original Cross Close target refuses full Task deleted status",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "86",
+          "basis": "deleted status is refused."
+        }
+      },
+      {
+        "ordinal": 108,
+        "name": "original Cross Close target refuses non-ready full-detail phase",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "68",
+          "basis": "Non-ready detail.phase is refused."
+        }
+      },
+      {
+        "ordinal": 109,
+        "name": "original Cross Close target refuses foreign full Task ID",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "68",
+          "basis": "full Task id must match captured current identity."
+        }
+      },
+      {
+        "ordinal": 110,
+        "name": "original Cross Close target refuses foreign detail identity",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "67",
+          "basis": "detail identity must match current owner identity."
+        }
+      },
+      {
+        "ordinal": 111,
+        "name": "original Cross Close target refuses changed active context",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "66",
+          "basis": "active context must match owner context."
+        }
+      },
+      {
+        "ordinal": 112,
+        "name": "original Cross Close target refuses different selected Team",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "66",
+          "basis": "selected Team must match owner Team."
+        }
+      },
+      {
+        "ordinal": 113,
+        "name": "original Cross Close target refuses rebound controller surface",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "63",
+          "basis": "Observed controller surface must equal captured original surface."
+        }
+      },
+      {
+        "ordinal": 114,
+        "name": "original Cross Close target refuses missing stored session",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "83–84",
+          "basis": "Missing stored session is refused."
+        }
+      },
+      {
+        "ordinal": 115,
+        "name": "original Cross Close target refuses different stored session owner surface",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "84",
+          "basis": "Stored ownerSurfaceId must match observed owner surface."
+        }
+      },
+      {
+        "ordinal": 116,
+        "name": "original Cross Close target refuses changed stored owner revision",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "84",
+          "basis": "Stored ownerRevision must match observed controller ownerRevision."
+        }
+      },
+      {
+        "ordinal": 117,
+        "name": "original Cross Close target refuses current canEditNow false",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "63",
+          "basis": "Current canEditNow must be true."
+        }
+      },
+      {
+        "ordinal": 118,
+        "name": "original Cross Close target refuses non-owning controller",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "25–29,63",
+          "basis": "Non-owning controller produces no valid owner; new branch cannot bypass it."
+        }
+      },
+      {
+        "ordinal": 119,
+        "name": "original Cross Close target refuses scoped Team refresh",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "69",
+          "basis": "Original scoped Team refresh refusal remains."
+        }
+      },
+      {
+        "ordinal": 120,
+        "name": "original Cross Close target refuses unavailable accepted Team metadata",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "70",
+          "basis": "Original accepted Team metadata unavailability refusal remains."
+        }
+      },
+      {
+        "ordinal": 121,
+        "name": "original Cross Close target refuses disabled assignment control",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "92",
+          "basis": "Exactly one assignment combobox and not disabled remains required."
+        }
+      },
+      {
+        "ordinal": 122,
+        "name": "original Cross Close target refuses expanded assignment control",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "92",
+          "basis": "Assignment combobox must remain collapsed."
+        }
+      },
+      {
+        "ordinal": 123,
+        "name": "original Cross Close target refuses another assignee",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "92",
+          "basis": "Assignment combobox trimmed text must remain alice."
+        }
+      },
+      {
+        "ordinal": 124,
+        "name": "original Cross Close target refuses missing assignment control",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "92",
+          "basis": "Absent assignment combobox remains refused."
+        }
+      },
+      {
+        "ordinal": 125,
+        "name": "original Cross Close target refuses duplicate assignment controls",
+        "multiplicity": 1,
+        "testDefinitionLine": 2456,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "92",
+          "basis": "Duplicate assignment comboboxes remain refused."
+        }
+      },
+      {
+        "ordinal": 126,
+        "name": "actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates",
+        "multiplicity": 1,
+        "testDefinitionLine": 2462,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "82–105,117–122",
+          "basis": "Actual helper call waits through the initial same-Task pending state, first admits after owner check6, then uses the unchanged clickExpression. Both exact-hit and descendant-hit variants should complete."
+        }
+      },
+      {
+        "ordinal": 127,
+        "name": "actual original Cross Close retains the first-read deadline while renderer readiness is pending",
+        "multiplicity": 1,
+        "testDefinitionLine": 2490,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "68,85",
+          "basis": "Pending full-detail refresh keeps first read false until the original30,000ms finite cutoff with no input."
+        }
+      },
+      {
+        "ordinal": 128,
+        "name": "actual original Cross Close cannot use a foreign dialog or an absent ineligible own control",
+        "multiplicity": 1,
+        "testDefinitionLine": 2496,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "88,94–97",
+          "basis": "Only current input's owning dialog is searched. Foreign-only, missing, wrong-text, zero-width and zero-height cases remain unavailable through original first-read cutoff."
+        }
+      },
+      {
+        "ordinal": 129,
+        "name": "actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing",
+        "multiplicity": 1,
+        "testDefinitionLine": 2507,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "94–99",
+          "basis": "Positive-size/exact-text filter precedes singleton count, which precedes native disabled and hit narrowing. All three duplicate variants remain refused."
+        }
+      },
+      {
+        "ordinal": 130,
+        "name": "actual original Cross Close refuses disabled covered and absent-hit controls",
+        "multiplicity": 1,
+        "testDefinitionLine": 2517,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "99–104",
+          "basis": "Native disabled, covered and absent-hit cases return the unchanged unavailableTarget diagnostic shape through original cutoff."
+        }
+      },
+      {
+        "ordinal": 131,
+        "name": "actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates",
+        "multiplicity": 1,
+        "testDefinitionLine": 2527,
+        "priorActualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "68,85,117–122",
+          "basis": "The unchanged final direct evaluate repeats the complete predicate; final refresh revocation returns null and original record guard rejects before press/release."
+        }
+      },
+      {
+        "ordinal": 132,
+        "name": "actual original Cross Close preserves final renderer ownership refusal without a press",
+        "multiplicity": 1,
+        "testDefinitionLine": 2536,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "117–122",
+          "basis": "Narrow wrapper does not catch or replace the original final assertOwnedRenderer error; identical supplied error and hover-only counts remain."
+        }
+      },
+      {
+        "ordinal": 133,
+        "name": "actual original Cross Close preserves final exact geometry refusal without replay",
+        "multiplicity": 1,
+        "testDefinitionLine": 2545,
+        "priorActualRed": "PASS",
+        "predictedGreen": "PASS",
+        "greenObserved": false,
+        "sourceProof": {
+          "helperLines": "98–105,117–122",
+          "basis": "The complete final predicate returns the changed exact center, so unchanged controls326 tuple comparison refuses and does not replay."
+        }
+      }
+    ],
+    "allTargetVariants": {
+      "total": 13,
+      "predictedReached": 13,
+      "predictedCompletePass": 13,
+      "observed": false,
+      "ledger": [
+        {
+          "registration": 126,
+          "variant": 1,
+          "name": "positive exact button hit",
+          "fixture": {
+            "descendantHit": false
+          },
+          "actualRed": {
+            "reached": true,
+            "completedAssertions": false,
+            "outcome": "FAIL at original final geometry assertion before successful one-pair/count checks"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 700,
+              "owned": 12,
+              "reads": 10,
+              "front": 1
+            },
+            "waits": {
+              "count": 7,
+              "eachMs": 100
+            },
+            "input": "Exactly one hover+press+release pair at1121,171.125"
+          }
+        },
+        {
+          "registration": 126,
+          "variant": 2,
+          "name": "positive descendant hit",
+          "fixture": {
+            "descendantHit": true
+          },
+          "actualRed": {
+            "reached": false,
+            "completedAssertions": false,
+            "outcome": "UNREACHED because the first loop iteration failed"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 700,
+              "owned": 12,
+              "reads": 10,
+              "front": 1
+            },
+            "waits": {
+              "count": 7,
+              "eachMs": 100
+            },
+            "input": "Exactly one hover+press+release pair at1121,171.125"
+          }
+        },
+        {
+          "registration": 128,
+          "variant": 1,
+          "name": "foreign dialog Close with no own Close",
+          "fixture": {
+            "count": 0,
+            "foreignClose": true
+          },
+          "actualRed": {
+            "reached": true,
+            "completedAssertions": false,
+            "outcome": "FAIL: generic source resolved; assert.rejects at2502 reports Missing expected rejection"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 30000,
+              "owned": 300,
+              "reads": 300,
+              "front": 1
+            },
+            "waits": {
+              "count": 300,
+              "eachMs": 100
+            },
+            "input": "No hover/press/release"
+          }
+        },
+        {
+          "registration": 128,
+          "variant": 2,
+          "name": "missing own Close",
+          "fixture": {
+            "count": 0
+          },
+          "actualRed": {
+            "reached": false,
+            "completedAssertions": false,
+            "outcome": "UNREACHED after first iteration failure"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 30000,
+              "owned": 300,
+              "reads": 300,
+              "front": 1
+            },
+            "waits": {
+              "count": 300,
+              "eachMs": 100
+            },
+            "input": "No hover/press/release"
+          }
+        },
+        {
+          "registration": 128,
+          "variant": 3,
+          "name": "wrong own text",
+          "fixture": {
+            "text": "Close another task"
+          },
+          "actualRed": {
+            "reached": false,
+            "completedAssertions": false,
+            "outcome": "UNREACHED after first iteration failure"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 30000,
+              "owned": 300,
+              "reads": 300,
+              "front": 1
+            },
+            "waits": {
+              "count": 300,
+              "eachMs": 100
+            },
+            "input": "No hover/press/release"
+          }
+        },
+        {
+          "registration": 128,
+          "variant": 4,
+          "name": "zero width own Close",
+          "fixture": {
+            "width": 0
+          },
+          "actualRed": {
+            "reached": false,
+            "completedAssertions": false,
+            "outcome": "UNREACHED after first iteration failure"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 30000,
+              "owned": 300,
+              "reads": 300,
+              "front": 1
+            },
+            "waits": {
+              "count": 300,
+              "eachMs": 100
+            },
+            "input": "No hover/press/release"
+          }
+        },
+        {
+          "registration": 128,
+          "variant": 5,
+          "name": "zero height own Close",
+          "fixture": {
+            "height": 0
+          },
+          "actualRed": {
+            "reached": false,
+            "completedAssertions": false,
+            "outcome": "UNREACHED after first iteration failure"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 30000,
+              "owned": 300,
+              "reads": 300,
+              "front": 1
+            },
+            "waits": {
+              "count": 300,
+              "eachMs": 100
+            },
+            "input": "No hover/press/release"
+          }
+        },
+        {
+          "registration": 129,
+          "variant": 1,
+          "name": "two eligible own controls",
+          "fixture": {
+            "count": 2
+          },
+          "actualRed": {
+            "reached": true,
+            "completedAssertions": true,
+            "outcome": "PASS including original deadline,300 reads/ownership checks,100ms cadence,30,000ms fake-clock,no input"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 30000,
+              "owned": 300,
+              "reads": 300,
+              "front": 1
+            },
+            "waits": {
+              "count": 300,
+              "eachMs": 100
+            },
+            "input": "No hover/press/release"
+          }
+        },
+        {
+          "registration": 129,
+          "variant": 2,
+          "name": "duplicate with only first enabled",
+          "fixture": {
+            "count": 2,
+            "secondDisabled": true
+          },
+          "actualRed": {
+            "reached": true,
+            "completedAssertions": true,
+            "outcome": "PASS including unchanged deadline and no input; singleton precedes disabled narrowing"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 30000,
+              "owned": 300,
+              "reads": 300,
+              "front": 1
+            },
+            "waits": {
+              "count": 300,
+              "eachMs": 100
+            },
+            "input": "No hover/press/release"
+          }
+        },
+        {
+          "registration": 129,
+          "variant": 3,
+          "name": "duplicate with descendant hit",
+          "fixture": {
+            "count": 2,
+            "descendantHit": true
+          },
+          "actualRed": {
+            "reached": true,
+            "completedAssertions": true,
+            "outcome": "PASS including unchanged deadline and no input; singleton precedes hit narrowing"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 30000,
+              "owned": 300,
+              "reads": 300,
+              "front": 1
+            },
+            "waits": {
+              "count": 300,
+              "eachMs": 100
+            },
+            "input": "No hover/press/release"
+          }
+        },
+        {
+          "registration": 130,
+          "variant": 1,
+          "name": "disabled own Close",
+          "fixture": {
+            "disabled": true
+          },
+          "actualRed": {
+            "reached": true,
+            "completedAssertions": true,
+            "outcome": "PASS including original deadline and no input"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 30000,
+              "owned": 300,
+              "reads": 300,
+              "front": 1
+            },
+            "waits": {
+              "count": 300,
+              "eachMs": 100
+            },
+            "input": "No hover/press/release"
+          }
+        },
+        {
+          "registration": 130,
+          "variant": 2,
+          "name": "covered own Close",
+          "fixture": {
+            "covered": true
+          },
+          "actualRed": {
+            "reached": true,
+            "completedAssertions": true,
+            "outcome": "PASS including original deadline and no input"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 30000,
+              "owned": 300,
+              "reads": 300,
+              "front": 1
+            },
+            "waits": {
+              "count": 300,
+              "eachMs": 100
+            },
+            "input": "No hover/press/release"
+          }
+        },
+        {
+          "registration": 130,
+          "variant": 3,
+          "name": "absent hit",
+          "fixture": {
+            "noHit": true
+          },
+          "actualRed": {
+            "reached": true,
+            "completedAssertions": true,
+            "outcome": "PASS including original deadline and no input"
+          },
+          "predictedGreen": {
+            "reached": true,
+            "completeAssertions": true,
+            "result": "PASS",
+            "observed": false,
+            "counts": {
+              "now": 30000,
+              "owned": 300,
+              "reads": 300,
+              "front": 1
+            },
+            "waits": {
+              "count": 300,
+              "eachMs": 100
+            },
+            "input": "No hover/press/release"
+          }
+        }
+      ]
+    },
+    "positiveClockDerivation": [
+      "Owner checks1–5: five pending reads, five100ms waits, no hover or pair.",
+      "Owner check6: fixture clears detail/refresh and moves own center to171.125; first read now admits.",
+      "Owner check7 precedes the only hover; check8/post-enter is read7.",
+      "Two unchanged100ms stable samples produce checks9/10 and reads8/9 at600/700ms.",
+      "Check11 precedes final direct read10; check12 follows exact tuple success; then one press/release.",
+      "Both direct and descendant-hit variants reset the finite fixture and assert now700/owned12/reads10/front1 plus seven100ms waits."
+    ],
+    "negativeClockDerivation": "A persistently null or unavailableTarget first result repeats original300 reads/owner checks and300×100ms waits to30,000ms; no hover/input. All eight ineligible-target variants (five own/foreign eligibility and three disabled/covered/no-hit) plus three duplicate variants use this same unchanged first-read oracle.",
+    "finalRevocation": "At original owner check6 the refreshed detail becomes pending; the final direct complete predicate returnsnull, and the unchanged record guard rejects before press/release. Expected now200/owned6/reads5/front1 and hover-only.",
+    "finalOwnership": "Check6 throws the identical supplied error before final evaluate; expected now200/owned6/reads4/front1, hover-only.",
+    "finalGeometry": "Check6 moves the exact center; final read returns changed center and original controls326 rejects before pair; expected now200/owned6/reads5/front1, hover-only.",
+    "remainingQualification": "All predictions require the same complete133-file actualGREEN; all13 variants and downstream assertions previously unreachable in RED remain unqualified until that result."
+  },
+  "notAuthorizedByThisReview": [
+    "No local source apply or runner/binding creation is performed by this reviewer.",
+    "No actualGREEN, validation, canonical typing/build, native/provider, GUI, CI or incoming source selection is claimed.",
+    "Future whole-tree composition, immediate publication/readback, exactGREEN binding review/publication/readback and accepted metadata materialization remain prerequisites to one whole133GREEN.",
+    "No source cap/allowlist/workflow/package change, input replay, final geometry tolerance or currentness/deadline relaxation is included."
+  ]
+}
