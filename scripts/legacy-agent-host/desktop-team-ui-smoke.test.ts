@@ -678,6 +678,7 @@ test('original desktop click refuses a constantly moving target before dispatch'
   const ui = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });
   await assert.rejects(ui.click('#TEST-original-toggle', 'TEST moving original toggle'), /did not settle before one click/);
   assert.deepEqual(dispatched, ['mouseMoved'], 'no physical click after unstable ownership');
+  assert.equal(reads, 17, 'two initial reads plus at most fifteen unstable observations');
 });
 
 test('original owner-qualified click rereads its full expression through unavailability at unchanged coordinates', { timeout: 5000 }, async () => {
@@ -1189,9 +1190,11 @@ test('Taskboard focus diagnostics preserve last samples and bounded transitions 
   assert.equal(JSON.stringify(bounded).includes(secret), false);
 });
 
-for (const [change, replacement] of [
-  ['unavailable', { unavailableTarget: true, matches: 1 }],
-  ['moved', { x: 100, y: 200, tag: 'BUTTON' }],
+for (const [change, replacement, refusal] of [
+  ['unavailable', { unavailableTarget: true, matches: 1 }, 'unavailable'],
+  ['retagged', { x: 100, y: 200, tag: 'DIV' }, 'moved'],
+  ['non-numeric', { x: 100, y: '200', tag: 'BUTTON' }, 'moved'],
+  ['non-finite', { x: 100, y: Number.POSITIVE_INFINITY, tag: 'BUTTON' }, 'moved'],
 ] as const) {
   test(`original desktop click refuses a target ${change} during the final ownership check`, { timeout: 5000 }, async () => {
     const expression = 'TEST_originalOwnerAndHitTestedTarget()';
@@ -1212,7 +1215,7 @@ for (const [change, replacement] of [
     }, step() {} });
     await assert.rejects(
       ui.clickExpression(expression, 'TEST original final target'),
-      new RegExp(`Original UI target ${change} after ownership check`)
+      new RegExp(`Original UI target ${refusal} after ownership check`)
     );
     assert.equal(guardChanges, 1, 'the original final ownership guard changes the target once');
     assert.deepEqual(expressions, Array.from({ length: 5 }, () => expression),
@@ -1893,4 +1896,177 @@ test('the existing passive click recorder distinguishes the actual Team from lat
   for (let i = 0; i < 35; i++) { bounded.fire(null, 'pointermove'); bounded.microtask(); bounded.dispatch(); }
   assert.equal(bounded.rows().length, 96); assert.equal(bounded.rows('__TEST_desktopDragEvents').length, 32);
   assert.deepEqual(bounded.calls, { send: 1, evaluate: 2, stateReads: 0, microtasks: 135, timers: 135, business: 0 });
+});
+
+
+test('original desktop click restabilizes a coordinate-only shift before its one physical click', { timeout: 5000 }, async () => {
+  const expression = 'TEST_originalOwnerAndHitTestedTarget()';
+  const original = { x: 100, y: 100, tag: 'BUTTON' }, shifted = { x: 100, y: 200, tag: 'BUTTON' };
+  const expressions: string[] = [], observed: unknown[] = [], ownershipReads: number[] = [], trace: string[] = [];
+  const dispatched: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
+  let changed = false, frontCalls = 0;
+  const ui = createDesktopUiControls({
+    async evaluate(actual: string) {
+      assert.equal(trace.at(-1), 'owner', 'every complete target observation follows its fresh owner check');
+      expressions.push(actual); trace.push('read');
+      const point = changed ? shifted : original; observed.push(point); return point;
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      if (method === 'Page.bringToFront') { frontCalls++; return {}; }
+      assert.equal(method, 'Input.dispatchMouseEvent');
+      if (params.type === 'mousePressed') assert.equal(trace.at(-1), 'attempt', 'owner precedes the original attempted-click record');
+      dispatched.push({ ...params }); trace.push(String(params.type)); return {};
+    },
+  }, { assertOwnedRenderer() {
+    ownershipReads.push(expressions.length); trace.push('owner');
+    if (expressions.length === 4) changed = true;
+  }, step(value) {
+    if (value.action === 'mouseClick') { assert.equal(trace.at(-1), 'owner'); trace.push('attempt'); }
+    steps.push(value);
+  } });
+  await ui.clickExpression(expression, 'TEST shifted original target');
+  assert.deepEqual(expressions, Array.from({ length: 8 }, () => expression));
+  assert.deepEqual(observed, [original, original, original, original, shifted, shifted, shifted, shifted]);
+  assert.deepEqual(ownershipReads, [0, 1, 1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.equal(frontCalls, 1);
+  assert.deepEqual(dispatched, [
+    { type: 'mouseMoved', x: 100, y: 100 },
+    { type: 'mousePressed', x: 100, y: 200, button: 'left', clickCount: 1 },
+    { type: 'mouseReleased', x: 100, y: 200, button: 'left', clickCount: 1 },
+  ]);
+  assert.deepEqual(steps.map(step => step.action), ['mouseMoved', 'mouseClick']);
+  assert.deepEqual(steps[1]!.target, shifted);
+});
+
+for (const settlesAtLastObservation of [false, true]) {
+  test('original desktop click shares its sixteen observations with final reads: ' + settlesAtLastObservation, { timeout: 5000 }, async () => {
+    const expression = 'TEST_originalOwnerAndHitTestedTarget()';
+    const ys = [100, 100, 200, 200, 200, 300, 300, 300, 400, 400, 400, 500, 500, 500, 600, 600, 600,
+      settlesAtLastObservation ? 600 : 700];
+    const dispatched: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
+    let reads = 0, frontCalls = 0;
+    const ui = createDesktopUiControls({
+      async evaluate(actual: string) {
+        assert.equal(actual, expression); assert.ok(reads < ys.length, 'no replenished observation allowance');
+        return { x: 100, y: ys[reads++], tag: 'BUTTON' };
+      },
+      async send(method: string, params: Record<string, unknown> = {}) {
+        if (method === 'Page.bringToFront') { frontCalls++; return {}; }
+        assert.equal(method, 'Input.dispatchMouseEvent'); dispatched.push({ ...params }); return {};
+      },
+    }, { assertOwnedRenderer() {}, step(value) { steps.push(value); } });
+    const pending = ui.clickExpression(expression, 'TEST original observation limit');
+    if (settlesAtLastObservation) await pending;
+    else await assert.rejects(pending, /Original UI target moved after ownership check/);
+    assert.equal(reads, 18, 'two initial reads plus sixteen shared stability/final observations');
+    assert.equal(frontCalls, 1);
+    assert.deepEqual(dispatched, [{ type: 'mouseMoved', x: 100, y: 100 }, ...(settlesAtLastObservation ? [
+      { type: 'mousePressed', x: 100, y: 600, button: 'left', clickCount: 1 },
+      { type: 'mouseReleased', x: 100, y: 600, button: 'left', clickCount: 1 },
+    ] : [])]);
+    assert.equal(steps.filter(step => step.action === 'mouseClick').length, settlesAtLastObservation ? 1 : 0);
+  });
+}
+
+test('original desktop click refuses non-finite settled coordinates before its final read or press', { timeout: 5000 }, async () => {
+  const dispatched: string[] = []; let reads = 0;
+  const ui = createDesktopUiControls({
+    async evaluate() { reads++; return { x: 100, y: Number.POSITIVE_INFINITY, tag: 'BUTTON' }; },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      if (method === 'Input.dispatchMouseEvent') dispatched.push(String(params.type)); return {};
+    },
+  }, { assertOwnedRenderer() {}, step() {} });
+  await assert.rejects(ui.clickExpression('TEST_nonFiniteOriginalTarget()', 'TEST non-finite target'), /coordinates must be finite/);
+  assert.equal(reads, 4); assert.deepEqual(dispatched, ['mouseMoved']);
+});
+
+for (const boundary of ['owner', 'final-CDP', 'press', 'release'] as const) {
+  test('original desktop click preserves ' + boundary + ' refusal after coordinate-only continuation', { timeout: 5000 }, async () => {
+    const expression = 'TEST_originalOwnerAndHitTestedTarget()';
+    const refusal = new Error(boundary === 'final-CDP' ? 'execution context was destroyed: TEST final read' : 'TEST original ' + boundary + ' refusal');
+    const dispatched: string[] = [], steps: Record<string, unknown>[] = [];
+    let reads = 0, frontCalls = 0;
+    const ui = createDesktopUiControls({
+      async evaluate(actual: string) {
+        assert.equal(actual, expression); reads++;
+        if (boundary === 'final-CDP' && reads === 8) throw refusal;
+        return { x: 100, y: reads < 5 ? 100 : 200, tag: 'BUTTON' };
+      },
+      async send(method: string, params: Record<string, unknown> = {}) {
+        if (method === 'Page.bringToFront') { frontCalls++; return {}; }
+        assert.equal(method, 'Input.dispatchMouseEvent'); dispatched.push(String(params.type));
+        if (boundary === 'press' && params.type === 'mousePressed' || boundary === 'release' && params.type === 'mouseReleased') throw refusal;
+        return {};
+      },
+    }, { assertOwnedRenderer() { if (boundary === 'owner' && reads === 7) throw refusal; },
+      step(value) { steps.push(value); } });
+    await assert.rejects(ui.clickExpression(expression, 'TEST original refusal'), error => { assert.equal(error, refusal); return true; });
+    assert.equal(reads, boundary === 'owner' ? 7 : 8, 'no read is repeated after the original refusal');
+    assert.equal(frontCalls, 1);
+    assert.deepEqual(dispatched, boundary === 'press' ? ['mouseMoved', 'mousePressed'] :
+      boundary === 'release' ? ['mouseMoved', 'mousePressed', 'mouseReleased'] : ['mouseMoved']);
+    assert.equal(steps.filter(step => step.action === 'mouseClick').length, boundary === 'press' || boundary === 'release' ? 1 : 0);
+  });
+}
+
+
+async function originalLiveMembershipPoll() {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = '  const poll = async <T>(', end = "  const workspace = join(fixture.root, 'workspace');";
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original P11 poll boundary');
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const makePoll = Function('environment', `'use strict';
+    const {assert,current,Date,setTimeout}=environment;
+    ${actual}
+    return poll;`) as (environment: Record<string, unknown>) =>
+      (observe: () => Promise<boolean>, accepts: (value: boolean) => boolean, label: string) => Promise<boolean>;
+  return (observations: { at: number; value?: boolean; error?: Error }[], guardError?: Error) => {
+    let now = 0, reads = 0;
+    const trace: string[] = [], delays: number[] = [];
+    const poll = makePoll({ assert, Date: { now: () => now },
+      current() { trace.push('guard'); if (guardError) throw guardError; },
+      setTimeout(done: () => void, delay: number) {
+        assert.equal(delay, 100); delays.push(delay); now += delay; done();
+      },
+    });
+    return { trace, delays, reads: () => reads,
+      run: (label: string) => poll(async () => {
+        const observation = observations[reads++]; assert.ok(observation, 'no unplanned observation');
+        trace.push('read'); assert.ok(observation.at >= now); now = observation.at;
+        if (observation.error) throw observation.error;
+        assert.equal(typeof observation.value, 'boolean'); return observation.value!;
+      }, value => value, label),
+    };
+  };
+}
+
+for (const scenario of [
+  { name: 'first result at the exact cutoff', values: [{ at: 90_000, value: true }], reads: 1, trace: ['read'], delays: [] },
+  { name: 'first result after the cutoff', values: [{ at: 90_001, value: true }], reads: 1, trace: ['read'], delays: [] },
+  { name: 'polled result after the cutoff', values: [{ at: 0, value: false }, { at: 90_001, value: true }], reads: 2,
+    trace: ['read', 'guard', 'read'], delays: [100] },
+]) test('P11 keeps the original 90-second cutoff for ' + scenario.name, async () => {
+  const make = await originalLiveMembershipPoll(), f = make(scenario.values), label = 'TEST original P11 deadline';
+  await assert.rejects(f.run(label), error => error instanceof assert.AssertionError && error.message.includes(label));
+  assert.equal(f.reads(), scenario.reads); assert.deepEqual(f.trace, scenario.trace); assert.deepEqual(f.delays, scenario.delays);
+});
+
+test('P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity', async () => {
+  const make = await originalLiveMembershipPoll(), label = 'TEST original P11 observation';
+  const immediate = make([{ at: 89_999, value: true }]);
+  assert.equal(await immediate.run(label), true); assert.equal(immediate.reads(), 1);
+  assert.deepEqual(immediate.trace, ['read']); assert.deepEqual(immediate.delays, []);
+  const later = make([{ at: 0, value: false }, { at: 101, value: true }]);
+  assert.equal(await later.run(label), true); assert.equal(later.reads(), 2);
+  assert.deepEqual(later.trace, ['read', 'guard', 'read']); assert.deepEqual(later.delays, [100]);
+  const refusal = new Error('TEST original observation failure'), failed = make([{ at: 90_001, error: refusal }]);
+  await assert.rejects(failed.run(label), error => error === refusal);
+  assert.equal(failed.reads(), 1); assert.deepEqual(failed.trace, ['read']); assert.deepEqual(failed.delays, []);
+  const stale = new Error('TEST original currentness failure'), guarded = make([{ at: 0, value: false }], stale);
+  await assert.rejects(guarded.run(label), error => error === stale);
+  assert.equal(guarded.reads(), 1); assert.deepEqual(guarded.trace, ['read', 'guard']); assert.deepEqual(guarded.delays, []);
+  const noReady = make([{ at: 90_000, value: false }]);
+  await assert.rejects(noReady.run(label), assert.AssertionError);
+  assert.equal(noReady.reads(), 1); assert.deepEqual(noReady.trace, ['read']); assert.deepEqual(noReady.delays, []);
 });

@@ -302,27 +302,44 @@ export function createDesktopUiControls(
     point = await readPoint(label + ' after pointer enter');
     // Async Host hydration can shift the DOM after hover. Check the original
     // target is stable before ONE physical click, never replay an uncertain click.
-    let stableSamples = 0;
-    for (let sample = 0; sample < 15 && stableSamples < 2; sample++) {
+    // Share the original 15 stability reads plus one final read; reserve the
+    // final slot, and never replenish this allowance after a coordinate shift.
+    const observationLimit = 16;
+    let observations = 0, stableSamples = 0, confirmed = false;
+    while (observations < observationLimit - 1) {
       await new Promise<void>((done) => setTimeout(done, 100));
+      observations++;
       const next = await readPoint(label + ' stable target');
       stableSamples =
         next.x === point.x && next.y === point.y && next.tag === point.tag
           ? stableSamples + 1
           : 0;
       point = next;
+      if (stableSamples !== 2) continue;
+      assert.equal(typeof point.x, 'number');
+      assert.equal(typeof point.y, 'number');
+      assert.ok(Number.isFinite(point.x) && Number.isFinite(point.y), 'Original UI target coordinates must be finite');
+      observations++;
+      options.assertOwnedRenderer();
+      const finalPoint = record(await cdp.evaluate(expression));
+      assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
+      if (observations + 3 <= observationLimit && finalPoint.tag === point.tag &&
+          Number.isFinite(finalPoint.x) && Number.isFinite(finalPoint.y) &&
+          (finalPoint.x !== point.x || finalPoint.y !== point.y)) {
+        // No press occurred. Require two new equal comparisons and another
+        // fresh post-owner read, without repeating the original hover.
+        point = finalPoint; stableSamples = 0;
+        continue;
+      }
+      assert.deepEqual(
+        [finalPoint.x, finalPoint.y, finalPoint.tag],
+        [point.x, point.y, point.tag],
+        'Original UI target moved after ownership check'
+      );
+      confirmed = true;
+      break;
     }
-    assert.ok(stableSamples === 2, 'Original UI target did not settle before one click');
-    assert.equal(typeof point.x, 'number');
-    assert.equal(typeof point.y, 'number');
-    options.assertOwnedRenderer();
-    const finalPoint = record(await cdp.evaluate(expression));
-    assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
-    assert.deepEqual(
-      [finalPoint.x, finalPoint.y, finalPoint.tag],
-      [point.x, point.y, point.tag],
-      'Original UI target moved after ownership check'
-    );
+    assert.ok(confirmed, 'Original UI target did not settle before one click');
     options.assertOwnedRenderer();
     step({
       action: 'mouseClick',

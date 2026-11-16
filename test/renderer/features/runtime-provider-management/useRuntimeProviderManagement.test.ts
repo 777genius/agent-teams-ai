@@ -3504,7 +3504,7 @@ describe('useRuntimeProviderManagement', () => {
     });
     expect(state?.error).toBeNull();
     expect(state?.setupSubmitError).toBe(
-      'OpenRouter rejected this API key. The new credential was not kept. Copy the key from the correct account or subscription plan, then try again.'
+      'OpenRouter rejected this API key. Copy the key from the correct account or subscription plan, then try again.'
     );
     expect(state?.apiKeyValue).toBe('sk-bad-value');
     expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith('provider_setup:connection_end', {
