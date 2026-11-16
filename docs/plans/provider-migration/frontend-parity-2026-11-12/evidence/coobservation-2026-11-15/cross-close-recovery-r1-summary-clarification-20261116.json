@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "kind": "Append-only precision correction for historical RED and GREEN admission summary",
+  "parent": "062edc90c3d25c69b6451c13adeafa3ffcaa55e3",
+  "parentTree": "5e157d1912fb20d7d51641ef893ecc8a65d44982",
+  "plan": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "before": {
+      "bytes": 2522854,
+      "sha256": "35538d0e371b52ae0a732b1fb66358f4e537db59c08e16bed89ecff46ad4a384",
+      "gitBlob": "8791823a44b76b0b98014a54d1e6cde380db5765"
+    },
+    "after": {
+      "bytes": 2523636,
+      "sha256": "4bfb37ffd74156c1fedd78634bc788b66172a9373bc5da4ec24d03d2f748d5a1",
+      "gitBlob": "f89a146f5d68369b452480f9b95eb62ae0c81a25"
+    },
+    "append": {
+      "bytes": 782,
+      "sha256": "daadfaf40f710a58508efe842e0476deeff0dc3cf8a3eb60d6c57bc7f481377d",
+      "gitBlob": "07025ec08ef0c82ea79c2c09b6938a7339468b6a"
+    },
+    "completeParentPrefixUnchanged": true
+  },
+  "historicalRed": {
+    "receipt": {
+      "bytes": 33946,
+      "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+      "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+    },
+    "binding": {
+      "bytes": 840295,
+      "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2",
+      "gitBlob": "cb12381b46948c807d443fc41581a9a48d18e051"
+    },
+    "source": {
+      "commit": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+      "tree": "31554d5e9f57d07c4dff4514f494126633a3d934",
+      "qualification": "Exact published test-only0aec append preserving97 prior cases; Cross helper/driver preimages unchanged. Local C5 index plus fixed ed57/cf93 and selected test overlay; remote documentation is not claimed locally materialized."
+    }
+  },
+  "historicalGreen": {
+    "receipt": {
+      "bytes": 33963,
+      "sha256": "04b75f107619fb1fcdd89659cbde2d5ba030bd22583e233be7acd8a6fbd45d0b",
+      "gitBlob": "8e03dc33aca8c5dbd8ebc354e8a41a2361fa525f"
+    },
+    "binding": {
+      "bytes": 1800456,
+      "sha256": "5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2",
+      "gitBlob": "020f6efa5dce4a1a5fe269836136ce554d76792c"
+    },
+    "source": {
+      "commit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+      "tree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+      "qualification": "Exact published two-source helper3c7b/driver4700 under8abeR1, unchanged0aec whole133 test and fixeded57/cf93. Local C5 index plus five exact source overlays; remote documentation is not claimed locally materialized."
+    }
+  },
+  "recoveryR1Unchanged": {
+    "bytes": 22522,
+    "sha256": "9376703a1fead5196e12b16da75f20d723cac8647dd2593701c80f7a5976b185",
+    "gitBlob": "e664eaa666943272570ec13012bf6d6439d3d454"
+  },
+  "sourceChanges": 0,
+  "sourceNonDocRows": 8798,
+  "workflowChanges": 0,
+  "workflows": 42,
+  "expectedTreeLeaves": 11749,
+  "newRuntimeOrSourceAuthority": false,
+  "runnerAuthored": false,
+  "qualification": "Composite complete actual parent20-body readback and this two-file child clarification precede any recovery runner authorship."
+}
