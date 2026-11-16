@@ -211,6 +211,14 @@ describe('team provisioning stop flow', () => {
     expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
   });
 
+  it('does not claim unwrapped Job containment just because the root already exited', async () => {
+    const bob = originalChild(8223, 'exit');
+    Object.defineProperty(bob.child, 'exitCode', { value: 0, configurable: true });
+    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32'))
+      .rejects.toThrow('lacks verified owned Job wrapper');
+    expect(bob.kill).not.toHaveBeenCalled();
+  });
+
   it('awaits custody verification before killing the original Windows handle', async () => {
     const bob = originalChild(8300, 'exit');
     let finishTree!: () => void;

@@ -12,7 +12,7 @@ const WINDOWS_ORIGINAL_MEMBER_EXIT_TIMEOUT_MS = 15_000;
  * terminate an unrelated process tree; never use it as kill authority.
  */
 function verifyOwnedWindowsMemberTree(child: ChildProcess): Promise<void> {
-  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+  // Exit alone does not establish tree containment for a never-wrapped runtime.
   if (!isOwnedWindowsTeamRuntimeWrapperProcess(child)) {
     return Promise.reject(new Error('Original Windows teammate lacks verified owned Job wrapper'));
   }
@@ -49,9 +49,8 @@ function killOriginalWindowsDirectMember(child: ChildProcess): Promise<void> {
     try {
       // Node/libuv targets this original process handle on Windows, never a
       // later process which might have acquired the same integer PID.
-      // taskkill /T may have already terminated this process while libuv has
-      // not emitted 'exit' yet. A refused handle signal must still await that
-      // event or the bounded timeout; it is not evidence of a live process.
+      // An already-terminating native handle still needs its exit event or a
+      // bounded timeout; a refused signal alone proves no termination.
       child.kill('SIGKILL');
     } catch {
       finish(new Error('Original Windows teammate handle signal failed'));
