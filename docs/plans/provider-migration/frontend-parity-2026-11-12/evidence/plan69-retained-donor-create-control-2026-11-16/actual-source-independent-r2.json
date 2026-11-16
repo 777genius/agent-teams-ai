@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "status": "APPROVE_ACTUAL_PLAN69_ONE_LITERAL_SOURCE",
+  "reviewer": "frontend_failures independent retained-byte source review",
+  "reviewedAt": "2026-11-16T23:29:17.725362+00:00",
+  "publishedSourceCommit": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+  "reportedDeliveryCommit": "f8d3b9d2fb07ec4cb26f28bb76d9fc15fa3b49ab",
+  "publicationProvenance": {
+    "fullReadback": "/tmp/migration-evidence-20261116/root/incoming-f8d3-full-patch-readback.json",
+    "rootReadbackGitBlob": "37005d4ce2e566e55028675c74c72c5d6f0ebcc5",
+    "boundary": "Root owns exact commit/tree/ref reconciliation; no repeated API/ref query by this reviewer."
+  },
+  "governingPlan": {
+    "gitBlob": "ec8fc3c3f8bb9377a02e7222231243856556a5f7",
+    "sha256": "17ae879ba77b6dc9f0cbf6477dc370257bf194ff2dc7d646b5f239c1ecbd23d1"
+  },
+  "priorIndependentProspectiveR2": {
+    "path": "/tmp/migration-evidence-20261116/frontend/plan69-published-prospective-r2/independent-r2.json",
+    "gitBlob": "096bef79deb5f52e30773b87d823bb347c0c368e",
+    "sha256": "1e310ba28e4db1651fcbe29612a7f22ca6abc9ca3e174b9fdaffcceace5d2b42"
+  },
+  "repositoryPath": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+  "before": {
+    "path": "/tmp/migration-evidence-20261116/root/incoming-f8d3-review/before/scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+    "bytes": 49147,
+    "naturalLines": 727,
+    "gitBlob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+    "sha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef"
+  },
+  "after": {
+    "path": "/tmp/migration-evidence-20261116/root/incoming-f8d3-review/after/scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+    "bytes": 49210,
+    "naturalLines": 727,
+    "gitBlob": "f6e333d97af0ffab67b396306bb26d8a9edd6a28",
+    "sha256": "89fb61486d4cf808f11a78f950586a4ee7e18794f0fe1d7779f3aca3786fbc02"
+  },
+  "exactDiff": "--- a/scripts/legacy-agent-host/desktop-retained-opencode-app.ts\n+++ b/scripts/legacy-agent-host/desktop-retained-opencode-app.ts\n@@ -504,7 +504,7 @@\n         assert.deepEqual(await app.call('window.__TEST_retainedApi.teams.list()'), [], 'fresh donor has no seeded teams');\n         await ui.click('button[aria-label=\"More actions\"]', 'open existing More menu');\n         await ui.click('button', 'open original Teams', 'Teams');\n-        await ui.click('button', 'open original creation', 'Create Team');\n+        await ui.click('div:has(> h2):has(input[aria-label=\"Search teams...\"]) + div > button', 'open original creation', 'Create Team');\n         const page = '[data-testid=\"create-team-page\"]';\n         await fill(page + ' #team-name', teamName);\n         await ui.scrollTo('#solo-team', 'solo control visible');\n",
+  "checks": {
+    "fullBodiesRehashed": true,
+    "originalRetainedFailurePreimageByteIdentical": true,
+    "exactOneOriginalCall": true,
+    "exactOneReplacementCall": true,
+    "onlyFirstSelectorLiteralChanged": true,
+    "forwardReplacementEqualsEntireAfterimage": true,
+    "inverseReplacementEqualsEntirePreimage": true,
+    "wholeOldCoreAndDonorSuffixPreserved": true,
+    "allOriginalImportsAndGuardsPreserved": true,
+    "same727NaturalLines": true,
+    "below800LineCap": true,
+    "noWorkflowRosterOrProductDeltaInSelectedSource": true
+  },
+  "semanticConclusion": "Actual postimage implements exactly the approved Header heading/search adjacent-actions relation. It retains the same Create Team exact text, action label and position. The unchanged shared reader preserves strict unique positive-size target, hit/disabled checks, hover/stability, final current-owner/x/y/tag guard and one press/release. No first/nth selection or fallback is added.",
+  "preserved": "All other file bytes, original 29-step core, donor Task/PNG/Review/history/Stop/Quit/current/cold sequence, no-replay assertions, 900000ms test and original per-call clocks, historical158/donor160/nativeV1/V2/c930 identities and final cleanup/receipt qualification remain unchanged by this one literal.",
+  "retiredAlternative": "Earlier class-selector3c632 remains unselected and unapplied. This review binds only actual published f6e333.",
+  "findings": [],
+  "limits": [
+    "No DOM query, project build, compiler, linter, test, native/provider or GUI execution.",
+    "No resulting-source runtime PASS is established; existing normal lane compiler/lint and whole B2/source-selection/cleanup receipts remain required.",
+    "No repeated log/artifact/source retrieval or canonical write.",
+    "Current-parent/primary integration decision and fresh lease remain root-owned."
+  ]
+}

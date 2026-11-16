@@ -1,0 +1,93 @@
+{
+  "kind": "independent-exact-documentary-R2-Plan70-observation-boundary-clarification",
+  "reviewedAtUtc": "2026-11-16T23:34:20.976310+00:00",
+  "disposition": "APPROVE_EXACT_DOCUMENTARY_AMENDMENT_FOR_B_AND_STATUS_ONLY",
+  "blockingFindings": [],
+  "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+  "base": "f8d3b9d2fb07ec4cb26f28bb76d9fc15fa3b49ab",
+  "actualOriginalCommitTitle": "docs(provider): select nested model scroll correction with independent review",
+  "before": {
+    "path": "/tmp/migration-evidence-20261116/root/plan70-observation-amendment-r1/before/docs/plans/provider-migration/frontend-parity-2026-11-12/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+    "gitBlob": "61661bc95399364db94536924e55e182db2dacaa",
+    "sha256": "69396e4ccb4d167d333cf64c7d22033b3a6d2224346fcd7ec6b9162bc22a1208",
+    "bytes": 10821,
+    "lines": 54
+  },
+  "after": {
+    "path": "/tmp/migration-evidence-20261116/root/plan70-observation-amendment-r1/after/docs/plans/provider-migration/frontend-parity-2026-11-12/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+    "gitBlob": "02c4b0eae4c47d1e8878de45df213c97064f1f0b",
+    "sha256": "e32ce5a5bb8f4bbc3798e78716e78914fa74ee09c75aa2b4031fe646693c2374",
+    "bytes": 13643,
+    "lines": 64
+  },
+  "patch": {
+    "path": "/tmp/migration-evidence-20261116/root/plan70-observation-amendment-r1/document.patch",
+    "gitBlob": "1c4437f2ac6222322cc208102914b1bb94fe29f4",
+    "sha256": "e9174e5e6aa43226eb9352e2823f84363b924db58e5a898375070ee889b3ea60",
+    "bytes": 7028,
+    "lines": 33
+  },
+  "rootDocumentR1": {
+    "path": "/tmp/migration-evidence-20261116/root/plan70-observation-amendment-r1/document-r1.json",
+    "gitBlob": "117b2cf708f2bfb5b7f86bced21f7d50ea1c7d4f",
+    "sha256": "5d8a211e95c70aeb1172781c515c2a46d72ad6ed2e4629a2ef3be0dae30c2e84",
+    "bytes": 1609,
+    "lines": 37
+  },
+  "priorIndependentBReview": {
+    "path": "/tmp/migration-evidence-20261116/native/plan70-correction-b-original-contract-review/independent-review.json",
+    "gitBlob": "981176dc7424837cd2d6652ea9ed694519d71d4b",
+    "sha256": "1aec256b4ee9f459016f3f04e3895c8678768ae59e0ebeb5747e04245ea816f1",
+    "bytes": 17215,
+    "lines": 211
+  },
+  "exactAppendedText": {
+    "path": "/tmp/migration-evidence-20261116/native/plan70-correction-b-original-contract-review/compact-amendment-wording.md",
+    "gitBlob": "d6cc96038e3d4c6bd2430cf9942a8b5f6ea002d7",
+    "sha256": "bc40e5bbd9e9b2c83cd2534920f851aad3f1c291141006eba295f17dde147143",
+    "bytes": 2458,
+    "lines": 9
+  },
+  "independentByteProof": {
+    "wholeBeforeAndAfterRehashed": true,
+    "forwardUnifiedPatchAppliesExactly": true,
+    "inverseUnifiedPatchRestoresExactBefore": true,
+    "hunks": 3,
+    "originalLinesChanged": [
+      3,
+      36
+    ],
+    "original54LineBodyOtherwiseByteIdentical": true,
+    "append": "Exactly one separating LF followed by the reviewer authored2458-byte §6; no other appended content.",
+    "ASectionAndOriginalTestRequirementsAndAllOtherBudgetSourceGateTextUnchanged": true,
+    "sourceFilesOrAfterimagesInThisDocumentaryCut": 0
+  },
+  "semantics": [
+    {
+      "topic": "Selection status",
+      "finding": "The actual retained f8d commit title selects the proposal. Replacing the stale authoring-state not-selected label with selected prospective scope resolves that contradiction while preserving the existing independent source preparation/publication gates. This is not a claim to have observed an earlier external review chronology or to possess a source afterimage."
+    },
+    {
+      "topic": "Exact narrow supersession",
+      "finding": "§6 explicitly invokes P08§18.8 and supersedes only the earlier Plan30 property/diagnostic promises to preserve outer scrollTo440. It disallows removing any other guard, changing census query or merging the Processes-row waits. It gives no additional authority to Correction A."
+    },
+    {
+      "topic": "Remaining guard meaning",
+      "finding": "The same waitRead190 owner still runs before each actual DOM evaluation/retry/wheel-loop read. No result cache is selected. The new text correctly states that the original wheel has no additional immediate post-evaluate guard; it neither claims nor introduces one. Other existing checks and physical/source/receipt/screenshot/cleanup oracles remain."
+    },
+    {
+      "topic": "History and refusal change",
+      "finding": "§6 explicitly acknowledges one omitted sample per entered scroll iteration, the historical x64 three observations/~1380.98ms, stateful lineage/query-explanation/native-child callbacks, missed transient states/ancestor capture, changed earliest error and all-caller scope. This corrects the former overbroad unchanged-admission implication. It does not claim all-refusal or history equivalence."
+    },
+    {
+      "topic": "Clocks and qualification",
+      "finding": "It preserves fixed10s phase, outer/controller/30s read/100ms cadence/wheel/native witness limits and warns that start times/scheduling change. It predicts neither resulting-source timing nor PASS. ARM Retry is expressly not a demonstrated repair. Historical failures remain failed and original resulting-source CI/E2E remain mandatory without a new diagnostic-only cycle."
+    }
+  ],
+  "scopeLimits": [
+    "This is independent approval of the exact documentary correction for B/status. A DOM/clipping/hit-routing design remains the separate assigned review; unchanged bytes are a preservation finding, not A semantic approval.",
+    "No implementation/source-afterimage/test execution/typecheck/lint/native/GUI/provider/CI PASS is claimed. Later exact source and actual regression assertions still require independent R2.",
+    "No fresh ref lease or primary/delivery publication was performed. Root must compose any incoming history and verify actual publication readback."
+  ],
+  "actions": "Retained text/JSON reads, hashes, independent strict unified-diff forward/inverse application as inert data, and this scratch report only. No network/download/remote operation/CI poll/action/local project execution/source/canonical mutation."
+}

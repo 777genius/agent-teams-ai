@@ -1,0 +1,37 @@
+{
+  "kind": "ROOT_PLAN70_DOCUMENTARY_OBSERVATION_BOUNDARY_CLARIFICATION_R1",
+  "status": "PROSPECTIVE_DOCUMENT_EDIT_ONLY_PENDING_INDEPENDENT_R2",
+  "base": "f8d3b9d2fb07ec4cb26f28bb76d9fc15fa3b49ab",
+  "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+  "before": {
+    "sha": "61661bc95399364db94536924e55e182db2dacaa",
+    "bytes": 10821,
+    "sha256": "69396e4ccb4d167d333cf64c7d22033b3a6d2224346fcd7ec6b9162bc22a1208"
+  },
+  "after": {
+    "sha": "02c4b0eae4c47d1e8878de45df213c97064f1f0b",
+    "bytes": 13643,
+    "sha256": "e32ce5a5bb8f4bbc3798e78716e78914fa74ee09c75aa2b4031fe646693c2374"
+  },
+  "changes": [
+    "Clarify actual f8d selection while preserving prior authoring chronology.",
+    "Replace the overbroad unchanged-admission claim with precise remaining-observation predicates and history limit.",
+    "Append only native reviewer proposed explicit P08§18.8 amendment for outer440; original A geometry, tests, remaining scope/budgets and source gates unchanged."
+  ],
+  "exactInverse": true,
+  "sourceFilesChanged": 0,
+  "candidateAfterimageCreated": false,
+  "nativeReview": {
+    "gitBlob": "981176dc7424837cd2d6652ea9ed694519d71d4b"
+  },
+  "appendedText": {
+    "sha": "d6cc96038e3d4c6bd2430cf9942a8b5f6ea002d7",
+    "bytes": 2458,
+    "sha256": "bc40e5bbd9e9b2c83cd2534920f851aad3f1c291141006eba295f17dde147143"
+  },
+  "lines": {
+    "before": 54,
+    "after": 64
+  },
+  "execution": "Only document text/hash/diff work; no project/test/compiler/lint/provider/native/UI or CI execution or mutation."
+}

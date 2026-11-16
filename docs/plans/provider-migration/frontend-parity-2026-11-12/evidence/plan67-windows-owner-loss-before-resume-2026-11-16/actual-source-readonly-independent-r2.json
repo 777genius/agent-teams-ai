@@ -1,0 +1,215 @@
+{
+  "kind": "INDEPENDENT_READ_ONLY_ACTUAL_PLAN67_SOURCE_REVIEW",
+  "reviewer": "migration_scope",
+  "disposition": "NO_STATIC_SCOPE_OR_INVARIANT_BLOCKER_IDENTIFIED",
+  "concreteBlockers": [],
+  "publication": {
+    "sourceCommit": "0e84576f2cf1be94b464e673713fcd74d7ff33fc",
+    "parent": "f929d7518d32df8264b067810322fb3f683aea1c",
+    "tree": "fb45fb8d89a08fb6e6fa018092a5e0e18da14fcb",
+    "followingPlan68Commit": "0ba71b0e24424af6867ccc32ab795bc4453c32c8",
+    "retainedCurrentHead": "3c9cae105ef748a931c2851cd0dddb0d097060df",
+    "retainedCurrentTree": "d1585412225e9e82aabe2f5af65fcb8311fadbd2",
+    "leafCount": 11243,
+    "sixImagesUnchangedInSubsequentPlan68AndDocumentaryCommits": true
+  },
+  "publishedSelection": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/67-windows-owner-loss-before-resume-2026-11-16.md",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "b550f33385a1da00915548047fa814743fcd5324",
+    "size": 18528
+  },
+  "actualManifestExact": {
+    "path": "/tmp/migration-evidence-20261116/root/incoming-3c9c-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan67-windows-owner-loss-before-resume-2026-11-16/source-manifest.json",
+    "gitBlob": "e0c576e04144f12b0ed9dd3f1974e7dd894e0a6d",
+    "bytes": 4418,
+    "sha256": "0bbc4070b16ebe9cb5e76b8948f376c3da988ce6b21df2994dd3a06866b3dd61"
+  },
+  "source": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "gitBlob": "f7d9534ccc58aa8b77fe7a424ff3d652873c0a15",
+        "bytes": 142325,
+        "sha256": "348d5a5c093e0608b6d16fe53d6136bf6c7f86c335287f979bb88e56be4d2979"
+      },
+      "after": {
+        "gitBlob": "d132a5e37cec1e62120571606f3f272f56b9b4af",
+        "bytes": 142538,
+        "sha256": "2470e8c83d8e77eddb4d5156947c30fda993e5b3485b9fb238bc12d6e2be6839",
+        "lines": 1777
+      },
+      "officialForwardInverseExact": true,
+      "additions": 4,
+      "deletions": 1
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "before": {
+        "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524",
+        "bytes": 32370,
+        "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e"
+      },
+      "after": {
+        "gitBlob": "b051fba3021eedd15ce256577c3fc711e0d0786b",
+        "bytes": 36941,
+        "sha256": "b0ad0cb688f5cf1a4c00d4252aa04094975189d2504f5acc0505a0ea92a7d926",
+        "lines": 446
+      },
+      "officialForwardInverseExact": true,
+      "additions": 27,
+      "deletions": 0
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "before": null,
+      "after": {
+        "gitBlob": "bfeb7748103d61fdcd82199ba637061ecad824a8",
+        "bytes": 20014,
+        "sha256": "ad6ef7894c8735b110d2573dea7fdeab2749f4c035b3bae9f5cc7861613ea80e",
+        "lines": 298
+      },
+      "officialForwardInverseExact": true,
+      "additions": 298,
+      "deletions": 0
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "before": {
+        "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+        "bytes": 7926,
+        "sha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e"
+      },
+      "after": {
+        "gitBlob": "c0f616460e686a62bad9f1cdb2d05eb1f0a61312",
+        "bytes": 8129,
+        "sha256": "c67c2d4872a7ba0cb8773976e25f29716d5150d3b48e0a61979219bc6bb0d912",
+        "lines": 108
+      },
+      "officialForwardInverseExact": true,
+      "additions": 6,
+      "deletions": 3
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "before": {
+        "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+        "bytes": 15213,
+        "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd"
+      },
+      "after": {
+        "gitBlob": "46c15f014e9e3e9e5a7d161c2aee5d37ee499e0b",
+        "bytes": 15748,
+        "sha256": "2241f833a8c4cb1a60cadcdd1583cf26adbef9031b4f133c9db8e54d9958854d",
+        "lines": 237
+      },
+      "officialForwardInverseExact": true,
+      "additions": 7,
+      "deletions": 1
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "before": {
+        "gitBlob": "6336605c2aa95ebd830b079c9e23c316231471c4",
+        "bytes": 624,
+        "sha256": "f6e40050d1892a2f1f867a11906fb123c56df2626b2ca2b0359abce58fcf5661"
+      },
+      "after": {
+        "gitBlob": "d7ac2622eba336663453e5e4f1cf96feb0fd1346",
+        "bytes": 662,
+        "sha256": "7e0b94cbac43fb23db2595838675f507e43b3005b7dae50b8efafc4c1471e37a",
+        "lines": 6
+      },
+      "officialForwardInverseExact": true,
+      "additions": 1,
+      "deletions": 1
+    }
+  ],
+  "dataProof": {
+    "source-readback.json": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/incoming-0ba7-independent-readback/source-readback.json",
+      "gitBlob": "94cca60c0e4a6e741a1e9213d73aaba77dfca7b2",
+      "bytes": 593136,
+      "sha256": "c86bf51c670f12c2b1d112078a892317a9b9596afd9a642c5e4d5df7be5f3ff3"
+    },
+    "whole-tree-verification.json": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/incoming-0ba7-independent-readback/whole-tree-verification.json",
+      "gitBlob": "8102a888ad203aa9b8a89fe8655937228f041fad",
+      "bytes": 3455236,
+      "sha256": "f27248a7b934a91fdf48143cb6878cd6c56ae9428b68c7788afa0be694621350"
+    },
+    "current-3c9c-whole-tree-verification.json": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/incoming-0ba7-independent-readback/current-3c9c-whole-tree-verification.json",
+      "gitBlob": "c0947173c3d7e978b114d0539399f4e4bbaa4bcc",
+      "bytes": 3473402,
+      "sha256": "b33441c617fa28bb5652e6ddeefdc6929b00e245ce056ad1bd26f145baa474fe"
+    }
+  },
+  "checks": [
+    {
+      "name": "Actual completed-install boundary",
+      "anchors": "helper 128-137/200-225; WindowsCapturedProcess b63b0c2b97bc196d0c1c87c0f106c2e2346e3de9 109-116; HostWindowsLaunch 3b5a244c27d004af6e82fffa092fa83e1894de73 391-407",
+      "finding": "The published observer intercepts the subsequent Main Resume request after the original Host install callback has synchronously set allocation.installed and completed. It holds the pending request without forwarding it; it does not interrupt those assignments or claim a successful physical Resume. Release of the hold ends with the expected error, not a success ACK."
+    },
+    {
+      "name": "Original identities and successor admission",
+      "anchors": "helper 121-161/169-199; RetainedWindowsCustody 10e1a457bb65a136128eb1db5176a4701d2fe4e2 100-167",
+      "finding": "Original allocation/prepare capability, captured root and witness, Main epoch, Host incarnations, profile digest and actual attach context are joined. Successor admission remains dependent on original abort and exit. Public projections or TEST pid/birth journal rows are not substituted for native process identity or custody authority."
+    },
+    {
+      "name": "No-input and physical-resume refusal",
+      "anchors": "helper 182-226/280-287",
+      "finding": "Requires one allocation, prepare and intercepted Resume request; zero forwarded/completed Resume and write; zero peer journal rows. Original open must remain pending before the selected marker action and then reject specifically transport-closed/unknown. Timeout or success is not accepted. Original HANDLE witness remains separately checked alive across the boundary."
+    },
+    {
+      "name": "Read/reconcile/replay/negative separation",
+      "anchors": "helper 228-255; RuntimeOwner a566efc5987b6859d004a8531cb8e6bac80bec30 612-637",
+      "finding": "One successor Host retains Main/profile with a new owner incarnation. Passive read stays unknown; explicit original reconciliation produces held/unknown. One identical open-command replay stays held with no new allocation/input. Stale and successor Resume/write attempts on the old capability must refuse, and numeric-PID-only authority is invalid. Direct negative calls remain distinct from forwarded-success counters."
+    },
+    {
+      "name": "Actual durable store and honest state",
+      "anchors": "helper 103-118/194-198/210-211/273-278; FileRuntimeStore 60873a7a750aacfd4affbff90b21e1a739f127d4 fenced",
+      "finding": "Real fenced reads supply opening and final observations. Original binding, Runtime incarnation and private fingerprint are preserved and inputs/interactions stay zero. The helper does not synthesize a ledger or convert unknown into logical closed; durable/public/physical outcomes are separate."
+    },
+    {
+      "name": "Mandatory cleanup and failure persistence",
+      "anchors": "helper 260-297; CapturedHostClient c4389ac113de03138fd6a9b4b0c6070fb2f06d86 758-798",
+      "finding": "Host shutdown requires child exit confirmation while preserving providerCustody unresolved. Main close and original captured-witness HANDLE wait are independently mandatory. Fallback observer-child cleanup follows these attempts. Any observation or cleanup failure keeps INCOMPLETE and throws; held/unknown is not physical-cleanup PASS."
+    },
+    {
+      "name": "Closed finite peer scope",
+      "anchors": "nativeEmulatedProfile closed loss argument and helper pins",
+      "finding": "Only the exact owner-loss-before-resume selector enables existing TEST marker/birth support for the finite Codex Node peer, with provider/packaged constraints. Ordinary/packaged calls without the option preserve old behavior. No genuine vendor discovery/install/exec is selected. This engineering phase is not full W05/W07/Desktop/P09 or release qualification."
+    },
+    {
+      "name": "Original gate/source branches preserved",
+      "anchors": "nativeEmulatedProviderGate and Host process assertion hunk",
+      "finding": "The whole original providerScenario function is byte-identical. Source-provider scenarios stay in their separate original branch. A normal-branch INCOMPLETE record is initialized before async work, passed once after old wrapper/provider scenarios and retained in the outer finally receipt. New nested assertions do not replace the original outer controller-drained assertion."
+    },
+    {
+      "name": "Exact validation closure and caps",
+      "finding": "Original 139 ordered fast-lint operands remain an exact prefix followed only by Profile, ProviderGate and new helper, yielding 142 unique operands. Low-level config only appends the integration-helper exclusion; retained-host project 905f1a1489f3b37d651a9984169b0321c9915a15 already includes the Gate and follows its static import. Helper/Profile/Gate are 298/108/237 lines. No rule, source cap, matrix, job timeout, existing command or native-owner clock increases."
+    },
+    {
+      "name": "Execution cost and result limits",
+      "finding": "The published added finite phase is real additional work under existing wrapper/profile bounds, not zero overhead. Static review checks its boundary and refusal reachability only. Actual native execution, timing, physical cleanup and product acceptance remain unproved by this review."
+    }
+  ],
+  "authorityBoundary": {
+    "publishedSourceReadOnlyReviewOnly": true,
+    "newFaultOrSourceProposalPrepared": false,
+    "executionAuthorization": false,
+    "priorAutomatedContentFlagOverridden": false,
+    "note": "Review of already published immutable source only. This does not bypass the previous automated flag on a new W05 proposal, prepare that proposal, or authorize its execution."
+  },
+  "limits": {
+    "method": "Retained complete official patches and full source bytes; standard-library data/hash/diff/Merkle checks only. No project parser, compiler, lint, test, provider, native or GUI execution.",
+    "apiOrDownloads": false,
+    "ciPollingOrActions": false,
+    "canonicalOrGitIndexRefMutation": false,
+    "newSourceProposal": false,
+    "runtimePassClaim": false,
+    "chronology": "Immutable actual source publication and the latest retained complete 3c9 map are joined. No unobserved approval/execution chronology or fresh remote-ref currentness is claimed."
+  }
+}

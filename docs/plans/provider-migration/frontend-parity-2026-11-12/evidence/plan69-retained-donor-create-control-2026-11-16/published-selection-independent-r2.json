@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "status": "APPROVE_PUBLISHED_PROSPECTIVE_ONE_LITERAL_SCOPE",
+  "reviewer": "frontend_failures independent of the published Plan69 author",
+  "reviewedAt": "2026-11-16T23:25:49.958437+00:00",
+  "publication": {
+    "commit": "3c9cae105ef748a931c2851cd0dddb0d097060df",
+    "provenance": "Complete root-retained publication readback; this review rehashed all four document bodies and did not repeat GitHub retrieval or claim a fresh ref lease.",
+    "documents": [
+      {
+        "path": "/tmp/migration-evidence-20261116/root/incoming-3c9c-review/docs/plans/provider-migration/frontend-parity-2026-11-12/69-retained-donor-create-control-2026-11-16.md",
+        "bytes": 7926,
+        "gitBlob": "ec8fc3c3f8bb9377a02e7222231243856556a5f7",
+        "sha256": "17ae879ba77b6dc9f0cbf6477dc370257bf194ff2dc7d646b5f239c1ecbd23d1",
+        "lines": 41
+      },
+      {
+        "path": "/tmp/migration-evidence-20261116/root/incoming-3c9c-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan69-retained-donor-create-control-2026-11-16/prospective-r1.json",
+        "bytes": 2289,
+        "gitBlob": "34ba579b5f8aef0ac98a2bedb9c56f91d43f298b",
+        "sha256": "2844c45f5266712d4466e1bdaa0f211efce956837a5ded585aa1701cdabcd606",
+        "lines": 51
+      },
+      {
+        "path": "/tmp/migration-evidence-20261116/root/incoming-3c9c-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan69-retained-donor-create-control-2026-11-16/prospective-r2.json",
+        "bytes": 5654,
+        "gitBlob": "1599359c28efeb0fb224d18366530304ea608d4a",
+        "sha256": "fbb156dc77b4daa9dd989a563e45d9e35dc5d7f9b51482d981d68859f39d821e",
+        "lines": 164
+      },
+      {
+        "path": "/tmp/migration-evidence-20261116/root/incoming-3c9c-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan69-retained-donor-create-control-2026-11-16/prospective-r2.md",
+        "bytes": 963,
+        "gitBlob": "366ea7975aaa53b65cb07f74d32472269b621c49",
+        "sha256": "b5fcb05e18f8c58a8d1de40f73c2b96217f60c7e15f4924d4ce498a10eec83c6",
+        "lines": 7
+      }
+    ]
+  },
+  "selection": {
+    "repositoryPath": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+    "preimageGitBlob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+    "bytes": 49147,
+    "naturalLines": 727,
+    "preimageRefFromPlan": "0e84576f2cf1be94b464e673713fcd74d7ff33fc",
+    "existingCallLine": 507,
+    "existingCall": "await ui.click('button', 'open original creation', 'Create Team');",
+    "replacementFirstArgument": "div:has(> h2):has(input[aria-label=\"Search teams...\"]) + div > button",
+    "otherArguments": [
+      "open original creation",
+      "Create Team"
+    ],
+    "scope": "Exactly one selector literal in the existing donor branch; no afterimage or patch authored by this reviewer."
+  },
+  "donorIdentity": {
+    "commit": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+    "tree": "4bb456a5b35b6fca0e795bc8b19a13f5f1f6defd",
+    "sourceJoin": "Six retained immutable donor source bodies rehashed against the exact published R1 pins. Existing source-readback provenance is retained; no new donor checkout, staging, execution, or archive read."
+  },
+  "sourceReferences": [
+    {
+      "path": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/donor/src/renderer/components/team/TeamListHeader.tsx",
+      "bytes": 5254,
+      "gitBlob": "11680dec43cd0050f24a2abc868eae0575e03f66",
+      "sha256": "f457121df5d77fdb94800ada94f4111e1e7efd8e82763909fb2d6e99fc6211ea",
+      "lines": 149,
+      "repositoryPath": "src/renderer/components/team/TeamListHeader.tsx",
+      "sourceCommit": "4a0e06277fe216d9f82dbbede362668fe46622ee"
+    },
+    {
+      "path": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/donor/src/renderer/components/team/TeamEmptyState.tsx",
+      "bytes": 1754,
+      "gitBlob": "7cd0020110a081447f7eb816728f3a33c77d03c7",
+      "sha256": "c4f96fcd5d3d02777288eef8a49b4640e6a284866258ca194ad1266cb9e4a459",
+      "lines": 50,
+      "repositoryPath": "src/renderer/components/team/TeamEmptyState.tsx",
+      "sourceCommit": "4a0e06277fe216d9f82dbbede362668fe46622ee"
+    },
+    {
+      "path": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/donor/src/renderer/components/team/TeamListView.tsx",
+      "bytes": 58205,
+      "gitBlob": "a83b4c18acccd53e9df45e346af813737f925a94",
+      "sha256": "45412367fe95c2e455d7cc20bf2b15c2541e21a5dd3aa998364e46bd63672da0",
+      "lines": 1540,
+      "repositoryPath": "src/renderer/components/team/TeamListView.tsx",
+      "sourceCommit": "4a0e06277fe216d9f82dbbede362668fe46622ee"
+    },
+    {
+      "path": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/donor/src/renderer/components/ui/input.tsx",
+      "bytes": 848,
+      "gitBlob": "7c6a2f65edee407a06aef45e4f3eb9dd01c2b363",
+      "sha256": "3b74ec04725f652c0a02d4ffa339d6775c3de66c7bc18c9bdd827d6d49bd11ba",
+      "lines": 22,
+      "repositoryPath": "src/renderer/components/ui/input.tsx",
+      "sourceCommit": "4a0e06277fe216d9f82dbbede362668fe46622ee"
+    },
+    {
+      "path": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/donor/src/renderer/components/ui/button.tsx",
+      "bytes": 2272,
+      "gitBlob": "a460eed1cbaf3ec1771951fb1073393fdde86401",
+      "sha256": "e1e0fc2dcd7c792a296fd326667c7ba7fb15f89771aac433597edde401d21989",
+      "lines": 54,
+      "repositoryPath": "src/renderer/components/ui/button.tsx",
+      "sourceCommit": "4a0e06277fe216d9f82dbbede362668fe46622ee"
+    },
+    {
+      "path": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/donor/src/features/localization/renderer/locales/en/team.json",
+      "bytes": 147102,
+      "gitBlob": "7635f35d831e58846d51d6959e372faa9c92b9bc",
+      "sha256": "f1bdbde79c40b1ecd2ff33995a208016faf81ef67cb45e8e9c3114ebea22f232",
+      "lines": 3411,
+      "repositoryPath": "src/features/localization/renderer/locales/en/team.json",
+      "sourceCommit": "4a0e06277fe216d9f82dbbede362668fe46622ee"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/p10-retained-75cf-original/source-reference/scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "bytes": 49147,
+      "gitBlob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+      "sha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef",
+      "lines": 727,
+      "repositoryPath": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/p10-retained-75cf-original/source-reference/scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "bytes": 56997,
+      "gitBlob": "de1b4b77fa7b90bdeda9618da8f98ac20fdaaef5",
+      "sha256": "62b222833b0d6b86706f84e92fbb0fe954bb0f62b7cd8b48a7e38c1724b4ed43",
+      "lines": 764,
+      "repositoryPath": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/p10-retained-75cf-original/source-reference/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 30733,
+      "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "lines": 548,
+      "repositoryPath": "scripts/legacy-agent-host/desktop-ui-controls.ts"
+    },
+    {
+      "path": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/source/packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+      "bytes": 9765,
+      "gitBlob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+      "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979",
+      "lines": 186
+    }
+  ],
+  "originalEvidence": {
+    "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "runId": 43959134337,
+    "jobId": 133637933704,
+    "raw": {
+      "path": "/tmp/migration-evidence-20261116/frontend/p10-retained-75cf-original/job-133637933704.log",
+      "bytes": 254894,
+      "gitBlob": "21a28e1934f8dbfecef920becea828b8e4932d07",
+      "sha256": "b00b8b4f138a343cfcaa624f33279f0dd49e081714137f7b295b2270024136b3",
+      "lines": 2617
+    },
+    "receipt": {
+      "path": "/tmp/migration-evidence-20261116/frontend/p10-retained-75cf-original/archive/retained-opencode-coexistence.json",
+      "bytes": 171552,
+      "gitBlob": "5c62f2b01f4f6268ad8d3e336a00679d732f726c",
+      "sha256": "2914bcd4048475717366c34e333e3f7241865085e5fe3df7902e4cbc588ebbca",
+      "lines": 4968
+    },
+    "completedAudit": {
+      "path": "/tmp/migration-evidence-20261116/frontend/p10-retained-75cf-original/audit.json",
+      "bytes": 7155,
+      "gitBlob": "db8efe0b4b7f111362bcc05a117c4b24d6ff0609",
+      "sha256": "520f1ce296a99aeb8faf1546e1a2be519071372b30c636c14654b873830520f0",
+      "lines": 163
+    },
+    "artifact": {
+      "id": 14278973394,
+      "bytes": 481540,
+      "gitBlob": "9b4602e65ec867a25757c991039f90c1f431e9fe",
+      "sha256": "ad13dbb3f4ce0dc9cd0f2314c5950adb76507125f467116601525a8c4c5fdbef",
+      "safeCrcMembers": 13
+    },
+    "firstFailure": "The initial exact-text Create Team target read returned matches:2 before hover/press. More and Teams were the only completed donor navigation actions.",
+    "positiveBoundary": "The original 29-step core and its old model/owner checks reached completion on 75cf; this is historical original-source evidence, not resulting-source acceptance.",
+    "negativeBoundary": "Donor native Task/PNG/Review/history, normal Stop/Quit, upgraded/cold readback, and following source-selection receipts were not qualified. Failure-finalizer cleanup is separate from the unreached normal donor Stop/Quit sequence."
+  },
+  "findings": [],
+  "reasoning": [
+    {
+      "claim": "The proposed relation selects the existing Header actions, not the second EmptyState control.",
+      "anchors": [
+        "TeamListHeader.tsx:62-88 has direct h2 and descendant Input",
+        "TeamListHeader.tsx:89-134 next sibling actions div/direct Create Button",
+        "TeamEmptyState.tsx:20-30 contains neither the required h2/search relation nor Header sibling position"
+      ],
+      "limit": "This is a static JSX/component/locale join, not an executed DOM query. Any runtime duplicate matching header remains a refusal under the unchanged target reader."
+    },
+    {
+      "claim": "Both original buttons invoke the same creation owner, so narrowing to the existing Header retains the intended business action.",
+      "anchors": [
+        "TeamListView.tsx:1206-1226 onCreate invokes openTeamsCreationPage",
+        "TeamListView.tsx:1261-1266 EmptyState onCreateTeam invokes the same owner",
+        "TeamListView.tsx:1522-1531 renders Header and content together before createPageOpen"
+      ]
+    },
+    {
+      "claim": "The semantic literals are real donor DOM attributes/text under the actual fixture locale.",
+      "anchors": [
+        "team.json:list.searchPlaceholder = Search teams...",
+        "team.json:list.actions.createTeam = Create Team",
+        "input.tsx:8-15 renders input and forwards aria-label props",
+        "button.tsx:43-46 defaults to button and forwards onClick",
+        "runner:552-555 creates English general configuration in the fresh donor profile"
+      ],
+      "limit": "An unexpected creation draft changes the exact target text to Continue creating and will still refuse; no fallback is selected."
+    },
+    {
+      "claim": "The correction preserves strict uniqueness and all original physical-input safety checks.",
+      "anchors": [
+        "controls:207-211 querySelectorAll, positive rectangle, exact trimmed text, exactly one match",
+        "controls:212-218 hit test and disabled refusal",
+        "controls:307 original 30000ms waitRead",
+        "controls:343-364 hover and original stability samples",
+        "controls:367-385 current owner and exact final x/y/tag equality",
+        "controls:395-407 one mousePressed and one mouseReleased",
+        "controls:410-411 click forwards the selector/text unchanged"
+      ],
+      "limit": "The selector may reduce the candidate set; it does not authorize first/nth selection, more than one candidate, repeat input, or a relaxed hit/geometry oracle."
+    },
+    {
+      "claim": "The observed false geometry fields are parser defaults following ambiguity, not a proven visibility or hit-test cause.",
+      "anchors": [
+        "controls:211 returns only unavailableTarget/matches when count differs from one",
+        "controls:312-316 maps absent booleans to false",
+        "original receipt/log: matches 2 at open original creation"
+      ]
+    },
+    {
+      "claim": "Existing source, compiler and lint routes cover this one helper without a new roster or workflow edit.",
+      "anchors": [
+        "opencode-v1-version-source.ts inputs includes scripts/legacy-agent-host",
+        "runner:49-57 invokes original source guard",
+        "runner:484-498 rechecks exact donor tree, all selected inputs and native identities",
+        "original full log:727 invokes pnpm typecheck:legacy-host-scripts",
+        "original full log:751 ESLint operands include desktop-retained-opencode-app.ts"
+      ],
+      "limit": "These are retained original route/source coverage facts. They do not establish compiler/linter success for a not-yet-created postimage or substitute for the resulting-source original lane."
+    },
+    {
+      "claim": "The exact one-literal scope leaves all clocks, native recipes and qualification oracles intact.",
+      "anchors": [
+        "runner:38-42 original Linux/x64, Node24.21.0 and 900000ms test contract",
+        "runner:393-398 ordinary old Quit/absence precedes donor epoch",
+        "app:503-509 exact existing call position and following create-team-page fill",
+        "Plan69 sections4-5 retain all original native/Task/PNG/Review/Stop/Quit/cold and no-replay requirements"
+      ],
+      "limit": "The preservation statement is the approved prospective obligation. A later source R2 must verify the full before/after inverse, not infer compliance from this R1 review."
+    }
+  ],
+  "preservationObligations": {
+    "historicalRetained": {
+      "appAndStager": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+      "runtime": "0.0.158",
+      "runtimeSource": "f5c69c2e9024ffc36a5db5eafe30f53539b52f62",
+      "archiveSha256": "4c106fcebab79de525aa7c9bb7636aa91fa43e76b4d567a00f98b2e6650ab29d"
+    },
+    "donor": {
+      "app": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+      "runtime": "0.0.160",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "archiveSha256": "09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10"
+    },
+    "actualV1": "1.19.4",
+    "hostV2": "2.1.4",
+    "deliveredC930Archive": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41",
+    "sourceBuiltCustodyPublishedRuntimeComplete": false,
+    "unchanged": [
+      "Complete original 29-step core",
+      "All donor and upgraded/cold Task/PNG/Review/history assertions",
+      "Original process identities, scoped Stop, ordinary Quit and cleanup predicates",
+      "Private TEST environment and no genuine Claude/Codex execution",
+      "All per-action clocks and overall 900000ms test",
+      "Source-selection V1/V2 receipts and lane final qualification"
+    ],
+    "noNew": [
+      "Helper",
+      "Import",
+      "Product marker or product change",
+      "Timer or retry",
+      "Workflow/roster/lint operand",
+      "Mirrored unit suite",
+      "Manual CI action"
+    ]
+  },
+  "retiredAlternative": {
+    "path": "/tmp/migration-evidence-20261116/frontend/p10-donor-create-r1-only/prospective-r1.md",
+    "gitBlob": "3c63202d17454af8c9a69b0f40a98d60f5de7b13",
+    "status": "UNSELECTED_HISTORICAL_CLASS_SELECTOR; not this published Plan69 and never applied"
+  },
+  "requiredNextGate": [
+    "Root fresh current-parent/preimage binding before publication",
+    "Exactly one literal source change; full unchanged-byte forward/inverse comparison and independent source R2",
+    "Existing normal resulting-source strict script compiler/scoped lint and complete B2 receipt/cleanup/source-selection outcome"
+  ],
+  "execution": {
+    "project": false,
+    "compiler": false,
+    "linter": false,
+    "tests": false,
+    "nativeOrProvider": false,
+    "guiOrDomQuery": false,
+    "newApiRetrieval": false,
+    "ciMutation": false,
+    "canonicalWrites": false,
+    "sourceAfterimage": false,
+    "performed": "Read-only retained-byte inspection, static source reasoning and data-only hashes/report serialization."
+  },
+  "limits": [
+    "No runtime selector/Chromium/JSX execution was performed.",
+    "This independently approves the actual published prospective scope; it does not certify publication chronology of another reviewer.",
+    "The latest branch/PR lease and immutable whole-tree reconciliation remain root-owned.",
+    "The original failed donor run is not upgraded to PASS, and original core positives are not transferred to the prospective postimage."
+  ]
+}

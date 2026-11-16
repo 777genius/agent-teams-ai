@@ -1,0 +1,211 @@
+{
+  "kind": "independent-original-contract-review-of-published-Plan70-Correction-B-only",
+  "reviewedAtUtc": "2026-11-16T23:32:22.934118+00:00",
+  "status": "ACCEPT_PROSPECTIVE_DESIGN_WITH_EXPLICIT_DOCUMENTARY_CLARIFICATION_BEFORE_SOURCE_ENDORSEMENT",
+  "reviewBoundary": "B only. No review/endorsement of A DOM fallback, no competing plan, no source afterimage, no selected source application, no unseen publication-review chronology claim.",
+  "currentPublishedDocument": {
+    "name": "Plan70",
+    "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+    "path": "/tmp/migration-evidence-20261116/root/incoming-f8d3-review/after/docs/plans/provider-migration/frontend-parity-2026-11-12/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+    "gitBlob": "61661bc95399364db94536924e55e182db2dacaa",
+    "sha256": "69396e4ccb4d167d333cf64c7d22033b3a6d2224346fcd7ec6b9162bc22a1208",
+    "bytes": 10821,
+    "lines": 54
+  },
+  "currentRepositoryBinding": {
+    "head": "f8d3b9d2fb07ec4cb26f28bb76d9fc15fa3b49ab",
+    "tree": "360c8a92c25e65959cf1b53e00587a1911c225c8",
+    "leafCount": 11253,
+    "fullMapSuppliedByRoot": {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-f8d3-whole-tree-verification.json",
+      "gitBlob": "fdaf1689fe8c020d41b2767af60bd899d5b700a6",
+      "sha256": "4802e0cfe184e05bd40ee9aa3643208a6dcfd6a63ea4a6f1c2f64fd4a8379774",
+      "bytes": 3474238,
+      "lines": 78905
+    },
+    "ownCheck": "Every listed body and 49 retained factory-path body hashes matched current leaves. Full tree Merkle verification is reused from the root map, not independently re-run in this narrow review."
+  },
+  "sourcePins": [
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "path": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/source/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "bytes": 30733,
+      "lines": 548
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "path": "/workspace/scratch/20ba97c23d57/type-inference-review/proposal/after/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "gitBlob": "a67601fe1a6785b233aef6cacf494661100df472",
+      "sha256": "e2c1fdbc87395de78a9faed0a1a9a50d1861e02d0bdb686e3530e20eb078fc02",
+      "bytes": 162195,
+      "lines": 2689
+    },
+    {
+      "repositoryPath": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "path": "/workspace/scratch/20ba97c23d57/p08-recovery-audit/source/tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "gitBlob": "40d7c19142de2cafdb0a7b433bbedddc216e99da",
+      "sha256": "feccb3979905fb65ee65d9d925d6d50496c9123c6d6b9fadec3ea11a7f0654ea",
+      "bytes": 38528,
+      "lines": 666
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "path": "/workspace/scratch/20ba97c23d57/frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-captured-app.ts",
+      "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "bytes": 49613,
+      "lines": 787
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-donor-saved-producer.ts",
+      "path": "/workspace/scratch/20ba97c23d57/frontend-proposal/stage1-gap-review-447a/source-current-3be1/scripts/legacy-agent-host/desktop-donor-saved-producer.ts",
+      "gitBlob": "5d8cb080e63039bdf566cdf3df924cec258db151",
+      "sha256": "ac9abf71513f49631704f8367692f1a8c67797d5bbb0068b34a1c0f6486387b2",
+      "bytes": 27239,
+      "lines": 595
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-stopped-import-prior-run.ts",
+      "path": "/workspace/scratch/20ba97c23d57/frontend-proposal/stage1-gap-review-447a/source/scripts/legacy-agent-host/desktop-stopped-import-prior-run.ts",
+      "gitBlob": "8a743d65e4c2a87975f07e27021ede576f36443a",
+      "sha256": "31f24df5afe1f123ca6892457d9a0c20ef8696f8b26f1a493fc777822ecbf96c",
+      "bytes": 32310,
+      "lines": 799
+    }
+  ],
+  "governingDocuments": [
+    {
+      "name": "P08",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/08-windows-provider-runtime.md",
+      "path": "/workspace/scratch/20ba97c23d57/p08-recovery-audit/source/docs/plans/provider-migration/frontend-parity-2026-11-12/08-windows-provider-runtime.md",
+      "gitBlob": "fb05c432887dd9db5dedab8d0e24544cf3ac842d",
+      "sha256": "31f18c2b0fd9b3ba63a529b91ca808cc0e114672744de56d15ff22a2d9f8aebc",
+      "bytes": 192654,
+      "lines": 1081
+    },
+    {
+      "name": "Plan30",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+      "path": "/workspace/scratch/20ba97c23d57/p08-recovery-audit/source/docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+      "gitBlob": "bea6f50310ca47022159631131f4815a93951251",
+      "sha256": "471dbcadb0040241d802c0044f9ae8f670789d162cd816e8f37d43294e84a5f8",
+      "bytes": 141747,
+      "lines": 504
+    },
+    {
+      "name": "Plan37",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/37-windows-retry-failure-evidence-2026-11-16.md",
+      "path": "/workspace/scratch/20ba97c23d57/p08-recovery-audit/source/docs/plans/provider-migration/frontend-parity-2026-11-12/37-windows-retry-failure-evidence-2026-11-16.md",
+      "gitBlob": "68f482f91b361f6ef51043401a4145036677d652",
+      "sha256": "a50aaa39356b56f0e96a7f244ce5a16d1c1b98e0b096606d2427abc031fd79dd",
+      "bytes": 3091,
+      "lines": 23
+    },
+    {
+      "name": "Plan70",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+      "path": "/tmp/migration-evidence-20261116/root/incoming-f8d3-review/after/docs/plans/provider-migration/frontend-parity-2026-11-12/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+      "gitBlob": "61661bc95399364db94536924e55e182db2dacaa",
+      "sha256": "69396e4ccb4d167d333cf64c7d22033b3a6d2224346fcd7ec6b9162bc22a1208",
+      "bytes": 10821,
+      "lines": 54
+    }
+  ],
+  "contractFindings": [
+    {
+      "anchor": "P08 §18.6:982–997 / §18.7:1003–1005",
+      "finding": "The original finite Windows composition requires original UI/strict receipt controls, independent complete family census, exact PID/birth/capability/source identities, three original query/synchronize HANDLE witnesses with their original Q/W limits, one explicit Retry and the two scoped Stops, screenshot/source and cleanup oracles, and unchanged absolute phase/outer bounds. It does not specify a numeric full-census invocation count for scroll iterations."
+    },
+    {
+      "anchor": "P08 §18.8:1032–1034",
+      "finding": "Exact plan review/publication precedes source; scope additions require an explicit amendment. This permits proposing a narrowly reviewed observation-boundary amendment. It does not itself authorize source edits or waive the original physical acceptance requirements."
+    },
+    {
+      "anchor": "Plan30:256–258 and diagnostic continuation:290/298",
+      "finding": "Those earlier selected cuts expressly preserved every existing ownership/census boundary and authorized no removed guard. Calling B an already permitted behavior-identical cleanup would be inaccurate; current selection must expressly supersede only outer440 for this new cut."
+    },
+    {
+      "anchor": "Plan30 reconciliation:319–329",
+      "finding": "The separately staged row co-observation text distinguishes current retained code from future narrowed supersession, and explicitly discusses changed dynamic guard/evaluation counts while preserving a fresh guard at each actual evaluation. Its special test-first RED is scoped to that different co-observation proposal. It supplies no generic requirement for an extra diagnostic-only CI cycle here, nor authority to merge row waits as part of B."
+    },
+    {
+      "anchor": "Plan37:13–21",
+      "finding": "The existing bounded failure projection observes saved measurements and preserves failure/cleanup. It neither grants a performance exemption nor identifies the ARM Retry callsite/cause."
+    }
+  ],
+  "exactSourceControlFlow": {
+    "controls": "548 physical lines. scrollTo432–475 validates maxWheelEvents, then outer440 immediately precedes synchronous expression construction and invocation of waitRead442. waitRead188–190 computes its deadline/checks Date, then invokes the same synchronous owner before evaluate192; there is no helper DOM read/input or await between the two owner calls.",
+    "proposedOnlyProductionDeletion": "One invocation at controls440. No afterimage or patch was authored by this reviewer.",
+    "freshnessPreserved": "Every actual waitRead evaluation still has its original fresh190 guard, including transient-context retries and each wheel iteration. Its own refusal is outside the catch and propagates. Invalid/zero-read deadline paths perform no evaluate or input. Existing final click guards and all click geometry/ownership refusals remain untouched.",
+    "wheelPrecision": "The current wheel dispatch465 follows an awaited DOM evaluation. There is no additional current callback between that awaited evaluation and the wheel; B may not be described as adding or proving such a guard. It preserves the same latest existing per-read check and does not remove a check across await.",
+    "timingPrecision": "The30-second local waitRead deadline would begin without the preceding outer callback cost; equal timeout constants do not mean equal start instant or equal later scheduling. Windows active10-second and outer/controller cutoffs are not renewed. Lower overhead can change subsequent observation times and loop counts."
+  },
+  "observableDifferenceAndAllCallers": {
+    "inventory": {
+      "path": "/tmp/migration-evidence-20261116/native/plan70-correction-b-original-contract-review/current-caller-joins.json",
+      "gitBlob": "0733e7c181c25591063e1581e5c9f30cab5048ff",
+      "sha256": "b3e174d61e4f96098195b1fa6cb0e1125737eb27f178d17ed65158e74a0484e4",
+      "bytes": 30423,
+      "lines": 867
+    },
+    "scope": "Shared module semantics apply to all current/future consumers, not just Windows. Retained inventory has43 TEST caller paths,34 with direct scrollTo calls, plus two existing tests; three documentary aliases are not runtime callers.",
+    "windows": "Gate216–247 validates the full returned census;224–226 retain ancestry and231–245 derive orphan refusals/query explanations before its cutoff check. Gate273–280 starts fresh full process/listener read and validates listener PID/birth against lineage. Eliminating an outer call eliminates one actual observation/history update/refusal opportunity, even with no JavaScript await between guards; external processes evolve independently.",
+    "otherStatefulExample": "desktop-donor-saved-producer271–274 calls assertOwnedCdpListener then observeOriginalNative. desktop-stopped-import-prior-run198–204 similarly calls native.observe and verifies model failures. captureDesktopNativeExecutable75–112 records child PID/birth/ancestry in an originals map used by later captured()/remaining(). Their histories can also lose an intermediate sample.",
+    "requiredDisclosure": "A process/ancestor or invalid state visible only in an omitted snapshot may not be retained/refused later. Existing predicate code is unchanged, but callback count, earliest refusal, first observed error and historical lineage may differ. No all-sample/history/refusal equivalence or continuous-observation claim is permissible.",
+    "notWaived": "Every remaining complete census, exact owner/source/target predicate, finite native HANDLE oracle, Stop/settlement receipt, screenshot and final cleanup requirement remains required. Numeric PID alone cannot gain native authority; no cached authorization is introduced."
+  },
+  "originalWindowsEvidence": {
+    "x64Audit": {
+      "path": "/tmp/migration-evidence-20261116/native/75cf-packaged-win-x64-independent-audit/independent-r2.json",
+      "gitBlob": "722cdaaab3c280e7929669e786ae56f0cc8bb766",
+      "sha256": "28716f8e2bc5243734107b2ae98f548aa87113cf9b1c49c7dee26c1fd4e43b55",
+      "bytes": 70991,
+      "lines": 1866
+    },
+    "costAudit": {
+      "path": "/tmp/migration-evidence-20261116/native/75cf-packaged-windows-observer-cost-review/observer-cost-review.json",
+      "gitBlob": "9daa0ff2711be9488b07eb510eb448cbd0dfd220",
+      "sha256": "312443db61a78886e8eb2b8aacdddf2314780a50300e10f0d04d4a6ee5bf600c",
+      "bytes": 19402,
+      "lines": 458
+    },
+    "historicalOuterIndices": [
+      1,
+      3,
+      5
+    ],
+    "historicalOuterMeasuredMs": 1380.979999999996,
+    "x64Finding": "The retained path has three scroll iterations/two wheels. Its actual primary Stop was confirmed before the later screenshot ownership read exhausted the fixed10s phase; this is not an unaccepted Stop or a35s phase. B would remove the recorded outer-sample positions in that historical path, but a future path/count cannot be proved by replaying old timing arithmetic.",
+    "armAudit": {
+      "path": "/tmp/migration-evidence-20261116/native/75cf-packaged-windows-observer-cost-review/arm-original-evidence.json",
+      "gitBlob": "dc700e4ef2de2907ab37d27294a7864b21a80bd3",
+      "sha256": "07c61631ae6f28640c7584c8b52d633bf706a66c500649c7b2460df0a5aee9ec",
+      "bytes": 24028,
+      "lines": 573
+    },
+    "armLimit": "The distinct Retry click does not call this scrollTo. ARM uiReady8465ms and later expiry do not demonstrate that B repairs that failure; its exact late callsite remains unrecorded in the absent UI receipt.",
+    "qualification": "Original failures and failed/unknown cleanup remain. No deadline increase, screenshot relocation, broader phase, inherited PASS or predicted wallclock success."
+  },
+  "existingRegressionSeam": {
+    "currentTests": "a6761352–1401 executes the real generated scroll expression with runInNewContext and records exact CDP wheel commands. Original default disabled-control/no-hit and opt-in center-hit cases use a no-op owner; their assertions can stay byte-identical. a6761319–1349 and1404+ preserve final click ownership/geometry/cutoff refusal coverage.",
+    "Plan70BTestReview": "Plan70:46 selects meaningful guard/read/action-order and changed-owner-after-wheel refusal through the actual controls seam. Keep the exact thrown original owner Error and verify no next evaluate/input after refusal. This is prospective coverage, not a test execution or afterimage review.",
+    "preservation": "Retain all original test bodies/expectations and the ordinary original CI/E2E routes. B adds no native test process, clock, framework, workflow, proof roster or generic fault scenario. Existing cap548 naturally permits a single deletion; joint A+B final physical count still requires actual-source R2. Frozen suite2689 baseline is not raised by this report.",
+    "CIClaimLimit": "Published Plan70 declares both paths already in existing proof/lint/test admission. This review rehashes their current bodies and existing test seam; it does not newly audit every workflow execution or claim current CI PASS."
+  },
+  "requiredDocumentaryClarification": {
+    "statusMismatch": "Plan70 line3 still says prospective/not selected while official f8d commit title says select. Root must make the current selection/status precise before its source endorsement, retaining old chronology rather than claiming an unseen prior independent review order.",
+    "narrowSupersession": "Expressly name only outer440 and earlier Plan30 boundary freezes, all-callers scope, lost samples/history/early refusals, unchanged remaining predicates and clocks.",
+    "compactProposedText": {
+      "path": "/tmp/migration-evidence-20261116/native/plan70-correction-b-original-contract-review/compact-amendment-wording.md",
+      "gitBlob": "d6cc96038e3d4c6bd2430cf9942a8b5f6ea002d7",
+      "sha256": "bc40e5bbd9e9b2c83cd2534920f851aad3f1c291141006eba295f17dde147143",
+      "bytes": 2458,
+      "lines": 9
+    },
+    "sourceGate": "Root decides exact documentary selection, then requires its published-R1 review and later full exact two-source implementation/test R2. This report is not SOURCE GO."
+  },
+  "actions": "Only retained file/JSON/source text reads, Git/SHA hashing and scratch documentary reports. No network/download, CI poll/action, Git/ref/index/canonical mutation, project/compiler/linter/test/TS/provider/native/GUI execution, source afterimage or competing source proposal.",
+  "historicalReportsPreserved": "The prior cost audit9daa remains unchanged. Its refusal to call this equivalent under the then-stricter preserve-each-observation instruction remains a valid historical record; this review adds the original-plan interpretation and explicit new-amendment route."
+}

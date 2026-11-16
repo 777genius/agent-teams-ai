@@ -1,0 +1,311 @@
+{
+  "kind": "INDEPENDENT_ACTUAL_PLAN64_AND_PLAN66_SOURCE_R2",
+  "reviewer": "/root/migration_scope",
+  "disposition": "APPROVE_SOURCE_ONLY_BOTH_PUBLISHED_CUTS",
+  "blockingFindings": [],
+  "boundary": "Retrospective independent review of actual published code and current identities. No external prepublication chronology, resulting compiler/lint/test/native/UI PASS, new primary lease or total-goal qualification is credited.",
+  "publication": {
+    "plan64Commit": "3b584da7c5105564cc105e5731a1fca08b3f0a5a",
+    "plan64Parent": "cbe788af73bfd7101a8e00da88cac54ea95813c5",
+    "independentlyRecomputedParentTree": "b5803ef11c48e67d6922a7ca26116a0b74875043",
+    "plan64Tree": "0acddc04755ee9b1e7c3efd7bb06092a50bd1f44",
+    "plan66Commit": "39a00ee65eb4ecfd5ba42c4c0504db837f6db470",
+    "plan66Parent": "3b584da7c5105564cc105e5731a1fca08b3f0a5a",
+    "plan66Tree": "1084235f7e9e432b99de08f63efba773f95d89f2",
+    "leavesAfter": 11194,
+    "sevenSourcesStillExactAtB60": true
+  },
+  "sourceImages": [
+    {
+      "plan": 64,
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "gitBlob": "889332aafb86855e891b03f268bc33e49bd87597",
+        "sha256": "df050a35c76dfd64c74d66dfd5871cfff5459aed1e61eedc5e5d50b548edd1a9",
+        "bytes": 142256,
+        "lines": 1773
+      },
+      "after": {
+        "gitBlob": "f7d9534ccc58aa8b77fe7a424ff3d652873c0a15",
+        "sha256": "348d5a5c093e0608b6d16fe53d6136bf6c7f86c335287f979bb88e56be4d2979",
+        "bytes": 142325,
+        "lines": 1774
+      }
+    },
+    {
+      "plan": 64,
+      "path": "tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+      "before": null,
+      "after": {
+        "gitBlob": "c5bf79733969eeb61e9a555818a2d966e8bb4672",
+        "sha256": "ec9017824c70a384d3b42a53f2b836d2d28ebb66129237770d33da52aec7555c",
+        "bytes": 5973,
+        "lines": 102
+      }
+    },
+    {
+      "plan": 64,
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "before": {
+        "gitBlob": "e0a107ffb1f57b62396c725cef57e9cadb78c5b1",
+        "sha256": "ece91a5b47fb81afe2f271a2ec627e577615eca256f309c2a51dcce291d41767",
+        "bytes": 25025,
+        "lines": 291
+      },
+      "after": {
+        "gitBlob": "0df0e08a0180c48a74aaca8d79cebe7fbe06d032",
+        "sha256": "c4a9d2d5cca3f7d86c83bb41f1aa8fc56ad779ae9acbbaa376033aee5a45335a",
+        "bytes": 25056,
+        "lines": 291
+      }
+    },
+    {
+      "plan": 64,
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "before": {
+        "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+        "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436",
+        "bytes": 59461,
+        "lines": 800
+      },
+      "after": {
+        "gitBlob": "7fa754daff8b6d538b0a186955edffb6b97d4ca0",
+        "sha256": "b6d30e2dc1a6f1fe2e2081f87a24d4dd6c31028f6f6ea002f1d9aafd8ab0a3e3",
+        "bytes": 59211,
+        "lines": 797
+      }
+    },
+    {
+      "plan": 64,
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "before": {
+        "gitBlob": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9",
+        "sha256": "d503beb57a0e2e41d81c89a73349acbecd1f7e1c958b3d732db4500bd532fb21",
+        "bytes": 593,
+        "lines": 6
+      },
+      "after": {
+        "gitBlob": "6336605c2aa95ebd830b079c9e23c316231471c4",
+        "sha256": "f6e40050d1892a2f1f867a11906fb123c56df2626b2ca2b0359abce58fcf5661",
+        "bytes": 624,
+        "lines": 6
+      }
+    },
+    {
+      "plan": 66,
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "before": {
+        "bytes": 17067,
+        "lines": 465,
+        "sha256": "9aa3aabc0d50852af7010fc9dfd1834905c6c078ac4bfe691e789f002ac05bd1",
+        "gitBlob": "68499fd50746417a48883f73ca1d25592c644089"
+      },
+      "after": {
+        "bytes": 17075,
+        "lines": 465,
+        "sha256": "8d32dd960c841554fd59180308fc36e5b60def8e813803b087a5d44044072070",
+        "gitBlob": "e9d5580a90239d0748f6b5f374d04fd827b40dce"
+      }
+    },
+    {
+      "plan": 66,
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "before": {
+        "bytes": 22366,
+        "lines": 344,
+        "sha256": "aa3f5a3d846570be1066db23b657fda483216dcef15c1581903d007b6540e34f",
+        "gitBlob": "fc47d6a0a2c38b33e8a5a6439dbddc9ee240ce10"
+      },
+      "after": {
+        "bytes": 22434,
+        "lines": 345,
+        "sha256": "651be27777eba7280304a791e52a088cec616e94b15d88734043c29c1adf234b",
+        "gitBlob": "e191694db8ccd8bbd2e05bcdbcacd8cb1703e23c"
+      }
+    }
+  ],
+  "independentDataChecks": {
+    "allSevenFullBeforeAfterHashByteLineJoins": true,
+    "officialFullBodyPacketsEqual": true,
+    "completeDiffRead": true,
+    "diff64": {
+      "files": 5,
+      "additions": 146,
+      "deletions": 46
+    },
+    "diff66": {
+      "files": 2,
+      "additions": 2,
+      "deletions": 1
+    },
+    "profileOnlyHashOperandInverse": true,
+    "lowLevelConfigOnlyExclusionInverse": true,
+    "originalPlan62ExclusionPreserved": true,
+    "workflowExactInverse": true,
+    "lint138OrderedPrefixPreserved": true,
+    "onlyNewOperand139": "tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+    "headerOnlyMinHeightTokenInverse": true,
+    "commonRoster256OrderedPrefixPreserved": true,
+    "common257OnlyHeaderAppend": true,
+    "process27AndWindowsRetry46SeparateBodiesExact": true,
+    "oldLaunchCompleteAfterExplicitEpochAndActionParameterTransform": true,
+    "oldRestoreCompleteAfterExplicitBindingIndentAndEquivalentStringCheckTransform": true,
+    "byteExactFullSegments": [
+      "poll pre/post-await and cadence",
+      "physical epoch including cleanup snapshot/witness wait",
+      "boot and terminal predicate",
+      "generic cold read/publication/probe/no-replay",
+      "original live checkpoint plus both warm Stops",
+      "cold.close through all finally/diagnostics/final PASS"
+    ],
+    "helperFreshLaunchBootStopCallCounts": [
+      1,
+      1,
+      1
+    ],
+    "naturalLines": {
+      "Scenario": 797,
+      "ColdHelper": 102,
+      "Profile": 291,
+      "Header": 465,
+      "SupplementaryRoster": 345
+    }
+  },
+  "plan64Findings": [
+    "Only the existing finite Claude checkpoint selects the helper. Codex/OpenCode do not enter it; no genuine vendor command, runtime mode or production authority is introduced.",
+    "One checkpoints.read after both warm Stops and before first.close checks original member/source generation, exact checkpoint id/reference and owner-eligible/native-backing-unverified. It adds no capture and does not claim that owner eligibility proves native backing.",
+    "The moved Restore block preserves old session continuity, changed generation within the same run, zero replay allocation/input, current sourceB, one continuation and closed/released Stop. The independent text inverse closes the whole moved block under explicit parameter and equivalent string-assertion substitutions.",
+    "After restored Stop, one fresh Launch uses the original roster/capture/start/readiness path on cold epoch/teamA/currentB with B-fresh keys. It requires a distinct launch id/capability, precisely one appended Job, one current-peer initialized event with restored=false, and a distinct nonempty session. The unchanged jobEntry uses scoped entry bounds and original root/witness.",
+    "Before one fresh boot the entire native input ledger is unchanged. After successful original terminal polling exactly one row is added, its old prefix remains exact, and pid/session/marker/native UUID are checked. Runtime delivery ids are checked separately from native UUIDs, and unrelated generations across fresh runs are not equated.",
+    "The explicit fresh Stop must return closed/released. Helper result fields do not replace physical proof: original epoch close, pre-wait resumed/Stop/drain/release snapshot, original HANDLE wait, sentinel/source-pin checks and error aggregation remain exact.",
+    "Helper interface is limited to existing RPC/data/observers and bound boot/launch callbacks; Job dependency is type-only. No runtime cycle, owner registry, timer, retry loop or native protocol is added.",
+    "Original15-second action/poll bounds,25ms cadence and120-second outer controller remain. The extra read/launch/input/Stop have real cost and must fit the existing original CI budget. Static review neither predicts a pass nor grants an extension."
+  ],
+  "plan66Findings": [
+    "Only min-h-8 is added to the existing inner assignee slot. canReassign/onOwnerChange, all picker/badge/unassigned props, callbacks and owner/read-only/call-time guards remain exact.",
+    "The local minimum-height reservation addresses the source-confirmed presentation height difference without hiding refresh or preserving stale authority. Larger/wrapped content can grow. No universal viewport stability or exact historical owner-transition cause is asserted.",
+    "Header is appended after all256 common source pins, including prior CDP. The separate27/46 arrays and all other text are unchanged. No UI helper, selector, action, stability sample, coordinate tolerance, timeout or cleanup change is included.",
+    "Independent Plan65 remains preserved in later bf6/currentb60. Its stronger clarification-read expression and this height reservation address separate properties. The original failed Taskboard result is not promoted; original strict resulting-source acceptance remains."
+  ],
+  "validationClosure": {
+    "retainedHostTypeConfig": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/tsconfig.retained-host.json",
+      "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "bytes": 393,
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7"
+    },
+    "currentGate": {
+      "path": "/tmp/migration-evidence-20261116/native/current-consumer-regions-proposal/reference/tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "bytes": 15213,
+      "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd"
+    },
+    "staticImportChain": "retained-host include nativeEmulatedProviderGate -> nativeEmulatedSourceScenario -> nativeEmulatedSourceCold",
+    "newHelperFastLintOperand": 139,
+    "precision": "The explicit helper route is original retained-host compiler plus non-type-aware lint:fast:files. Existing full typed lint stays unchanged; no helper typed-lint PASS is invented.",
+    "plan66": "Existing src/features typed lint/workspace types and supplementary roster fast operand remain; no new command/job/route/mandatory CI cycle."
+  },
+  "canonicalSourceDocuments": [
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-b60f-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan64-windows-cold-resume-fresh-launch-2026-11-16/source-manifest.json",
+      "gitBlob": "91f8746cca823b56d96b412e108233045e3b166c",
+      "bytes": 4117,
+      "sha256": "efb80b682df6611174237d9cab9ebb4447f494e66530f05cde57e254330b9488"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-b60f-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan64-windows-cold-resume-fresh-launch-2026-11-16/source-publication-readback.json",
+      "gitBlob": "0761bc399ed1eaefa5b3109dd3415abf22d49221",
+      "bytes": 2211,
+      "sha256": "0c1bdc5e848687519ee738c0c64428d8fce010ad40326fe3f42572ab363d52cd"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-b60f-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan64-windows-cold-resume-fresh-launch-2026-11-16/source-r1.md",
+      "gitBlob": "51e1f5bb525f16ef9f25b726e9130853e17066a2",
+      "bytes": 6444,
+      "sha256": "a82112ec9463c33fddd7e07bdedbe0cffec1541cfee020d4b9a4d419455bb26c"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-b60f-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan64-windows-cold-resume-fresh-launch-2026-11-16/source-r2.json",
+      "gitBlob": "90fa2d0f60befe76d9e0db739a1235e56683b2bd",
+      "bytes": 9902,
+      "sha256": "32de840a19ff4fe43db4de170372e7ceed16e2cd099bb621119b15906a7fd7ec"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-b60f-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan66-task-detail-assignee-slot-2026-11-16/source-manifest.json",
+      "gitBlob": "5f766b97c5be0a8ef411eb8902f19c38560fc9c3",
+      "bytes": 1612,
+      "sha256": "1946bb13d244d33cea8e628376e681ee5b012e16ebca5c2e58192572dbbe5141"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-b60f-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan66-task-detail-assignee-slot-2026-11-16/source-publication-readback.json",
+      "gitBlob": "4fbc22db3d0c5407ed2efe22ec11f9e71bb8d529",
+      "bytes": 1193,
+      "sha256": "77ee4b2519978deba33bd4c043fb9d9b7b5253ffc850566148b803c07797b53d"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-b60f-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan66-task-detail-assignee-slot-2026-11-16/source-r1.json",
+      "gitBlob": "1e784f15c1bb646fb8589e7c2ecd65cb3a4a4627",
+      "bytes": 3737,
+      "sha256": "6b4f04680e9808bae6014065d1f18941fe71b8d95d566ea51fab23c7c7454e77"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-b60f-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan66-task-detail-assignee-slot-2026-11-16/source-r2.json",
+      "gitBlob": "ac14de179ea6e336bf061965dd15a8b3fa678446",
+      "bytes": 12007,
+      "sha256": "908dd38f873a05fa797cbd39071c2eae62c95394c9fdac02d567e5bc90dd6325"
+    }
+  ],
+  "reusedEvidence": [
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/plan64-published-prospective-independent-r2/independent-r2.json",
+      "gitBlob": "ef168ad3f56bfa796adb7502102c45816a0e5619",
+      "bytes": 30754,
+      "sha256": "4b308c416d991c01990d436216c982702ba96d276afda06f81e256b9125b849f"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/plan65-taskboard-source-independent-r2/parent-39a0-addendum.json",
+      "gitBlob": "9ce2a04b1d643507c14d017ede3f0909fb00fdae",
+      "bytes": 13050,
+      "sha256": "6b421219ae10ee2d877dfb85c2e46d26d53932227e9484a56cbded1f01bd40fd"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/plan65-taskboard-source-independent-r2/actual-bf6-publication-addendum.json",
+      "gitBlob": "3f9915b0edb0b4f7cb974e559009591b1e786a97",
+      "bytes": 2924,
+      "sha256": "7b10f52e4c121672a34f7d7ea5bf7cb366ed1c0991594e4ee8596a08bc86e7a5"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-39a0-api-readback.json",
+      "gitBlob": "a3db77f04d94c9a232939d5afc286fa71e0d1be8",
+      "bytes": 803925,
+      "sha256": "1e3e57e74a6f0526f662128eca802bf5511c70235e56a50128f3058ae93ff2b9"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-39a0-full-patch-readback.json",
+      "gitBlob": "d685767bc06f18db8bc1ecf70515eda2939cb41f",
+      "bytes": 842324,
+      "sha256": "98584d7b9dbfd58b6d59ef660d3a751ab5136769a483bbd59e5f98f55a3e2b5d"
+    }
+  ],
+  "limits": [
+    "No semantic approval of unrelated Plan67 or other incoming documents.",
+    "Genuine W07/W05/Desktop recovery/P09/release/full parity are not closed by this finite engineering source.",
+    "No old PASS transfer, new RED cycle or extra mandatory CI round.",
+    "Historical prepared-state wording in source documents is distinguished from the actual published commit/body metadata."
+  ],
+  "execution": {
+    "dataReadHashDiffMerkleOnly": true,
+    "project": false,
+    "compiler": false,
+    "sourceParser": false,
+    "tests": false,
+    "lint": false,
+    "provider": false,
+    "native": false,
+    "gui": false,
+    "apiOrPoll": false,
+    "gitIndexRef": false,
+    "canonicalWrite": false,
+    "sourceAfterimageAuthored": false
+  }
+}

@@ -1,0 +1,212 @@
+{
+  "kind": "INDEPENDENT_PUBLISHED_PLAN68_PROSPECTIVE_SCOPE_R2",
+  "disposition": "APPROVE_PUBLISHED_PROSPECTIVE_TWO_PATH_SCOPE",
+  "reviewer": "/root/migration_scope",
+  "boundary": "Published Plan68 R1 and existing prospective R2 plus current original source owners. No source afterimage, compiler/lint/test result, runtime qualification, latest-ref lease, or primary advancement is approved by this report.",
+  "publication": {
+    "head": "b60f2d58cffd30129b0a96bccff643c3d30b3149",
+    "soleParent": "bf6aa99756dabde0fdb2bf7f3d6f794ab22c669f",
+    "tree": "9840220d1f285882f65e7c1f0d1e53df4ea4c81d",
+    "leaves": 11211,
+    "onlyAddedDocuments": 17,
+    "all11194PriorLeavesByteIdentityPreserved": true,
+    "sourceChanges": 0,
+    "parentTreeIndependentlyRecomputed": "8b20a0dc3f1dcfeac6d2e236facd67e92d5130bc",
+    "currentTreeIndependentlyRecomputed": "9840220d1f285882f65e7c1f0d1e53df4ea4c81d",
+    "acquisition": "Retained complete official added-patch bodies and retained whole maps; no network request. Fullbody Git/SHA/size joins and both complete Merkle roots independently recomputed. Other eleven incoming documents receive identity/preservation credit only."
+  },
+  "retainedPublicationPackets": [
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-b60f-full-patch-readback.json",
+      "gitBlob": "59b9b0798c0202e17ddbe06623d9d733ae4163ef",
+      "bytes": 117911,
+      "sha256": "93d3b4412ab67bc3e61eafb286b400d7673f4b250096d972df5e0c1cb7780eb6"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-b60f-whole-tree-verification.json",
+      "gitBlob": "4ea7adb429a787a397a18d291a5a1623e7399d06",
+      "bytes": 3457869,
+      "sha256": "e1f72c4bc7756ef1c22a91dc864563d4c2bd36c05eb30b7cbd7c4fcb94e44f9e"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan65-taskboard-actual-source-whole-tree-verification.json",
+      "gitBlob": "5cdeccc94c0a88a2ccf392d601751dde84a88808",
+      "bytes": 3445137,
+      "sha256": "fac5924bc091ff230693c80e0d53fda6c87ca484e2010d27db3ccba3d9eb411c"
+    }
+  ],
+  "plan68Documents": {
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/68-captured-team-readiness-render-purity-2026-11-16.md": {
+      "gitBlob": "bc75c16dc6db634df125bfb5faf8665975febdac",
+      "bytes": 7804,
+      "sha256": "c859c7342a74681636c3d10ee39778a483d5272632c93c5b73d2f4120bd31422"
+    },
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan68-captured-team-render-purity-2026-11-16/prospective-r1.json": {
+      "gitBlob": "6f49d66edbcb3651e6edce9dccc8851ae3a623b7",
+      "bytes": 8877,
+      "sha256": "50931cd52058c4b859e021a3339d74b969679b9959fce131c8d6db496490377f"
+    },
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan68-captured-team-render-purity-2026-11-16/prospective-r1.md": {
+      "gitBlob": "f1e1aa00e64524b51387317f926ead626f33e0e7",
+      "bytes": 4372,
+      "sha256": "58770812134afe0ec77e8a9f77f24ca3b1c8776c5f99039a5e6fc0a76fb0b1b7"
+    },
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan68-captured-team-render-purity-2026-11-16/prospective-r2.json": {
+      "gitBlob": "f3fc67285a37324128ea5ac294a9e44700fb3ed4",
+      "bytes": 17196,
+      "sha256": "059f7c75f9c46afa9177ac7a86a3f14c6318ddf7ab1793405705472ec0415d76"
+    },
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan68-captured-team-render-purity-2026-11-16/prospective-r2.md": {
+      "gitBlob": "5c7e3507b9b99c2100c9ac58012473ad54f55ef2",
+      "bytes": 2309,
+      "sha256": "214f8ee535f320730600b95ea83c404585deb1db239b69cd1c281c8112332593"
+    },
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan68-captured-team-render-purity-2026-11-16/revision1-plan.md": {
+      "gitBlob": "9d9026fb89f454e88dda1afae19e215f364738f9",
+      "bytes": 7415,
+      "sha256": "5495480dbf338adc59892adf58be92a4053dec84eb277961a4926002d69d76c4"
+    }
+  },
+  "sourceBindings": [
+    {
+      "repositoryPath": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "retainedPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/team-purity-75cf/source/src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "gitBlob": "c1d31ee945c28cfe1f1339d914d0d1be7fc5e928",
+      "bytes": 13822,
+      "sha256": "b0f3a9ede1f0bb08f75f11c2742d0fdb14b281b1ea63da5509e50b38d9d98cac",
+      "lines": 396
+    },
+    {
+      "repositoryPath": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "retainedPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/team-purity-75cf/source/test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "gitBlob": "c1ab11f043ea5bcfb5325cb8fb6f147541076f38",
+      "bytes": 28286,
+      "sha256": "375ab28dfb1aaf9506b0c852fc97dc48ae612d38edf5fad3099dcf9e420de286",
+      "lines": 844
+    },
+    {
+      "repositoryPath": "src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "retainedPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "gitBlob": "e8f5137ea0b7b69f4c098203d797780be99a5c01",
+      "bytes": 5710,
+      "sha256": "7327fb6ed0504e412dcdafe4989c91625c2ef0712edf0705c767c5bfc52775af",
+      "lines": 149
+    },
+    {
+      "repositoryPath": "src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "retainedPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "gitBlob": "7a78f0791a54d09bcdda9c466b4df9c8b3b569d1",
+      "bytes": 1376,
+      "sha256": "5a3e24af0a051afe0e8736e4d79e21239ef23b3aeb7a972c59fe5e79655db09e",
+      "lines": 45
+    },
+    {
+      "repositoryPath": "src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "retainedPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "gitBlob": "a6dbcf114109c75f5a0dfad9ca20e71884956f31",
+      "bytes": 8286,
+      "sha256": "7c122f43c764f438d9c9d78413f5e3912e83f29a3c30f72631333dc34d6e44d0",
+      "lines": 223
+    },
+    {
+      "repositoryPath": "src/renderer/components/team/dialogs/optionalProviderPreflight.ts",
+      "retainedPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/optionalProviderPreflight.ts",
+      "gitBlob": "a57bb61faac6657400e60cefd39ff9dd4995c5c3",
+      "bytes": 11013,
+      "sha256": "a3d491d4569b2ab696981bd4b3312a51778ce494919c0534ed889f2f0edb7f1b",
+      "lines": 291
+    },
+    {
+      "repositoryPath": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "retainedPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/plan49-source-review/after/src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "gitBlob": "832ed8f713a1bc34b2eaa78858180af19eda6862",
+      "bytes": 132386,
+      "sha256": "70f0a8dac05a8031d191de97c3e9ab7bc60ed21ca87b4dfcea167e32478ea66e",
+      "lines": 3220
+    }
+  ],
+  "immutableEslintConfig": {
+    "repositoryPath": "eslint.config.js",
+    "path": "/workspace/scratch/20ba97c23d57/installer-proposal/plan68-prospective-r2/eslint.config.js",
+    "gitBlob": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+    "bytes": 37840,
+    "sha256": "d9f0cf7c33672b9304fc524bbc028e07939bcab4583bb1e7c94b99fd773eb597",
+    "currentLeafJoined": true
+  },
+  "failureBinding": {
+    "source": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "run": 43959134362,
+    "job": 133621515563,
+    "firstFailedCommand": "pnpm lint:ci:files src/renderer --cache-location .eslintcache-renderer",
+    "location": "src/renderer/components/common/ProviderActivityStatusStrip.tsx:168:59",
+    "rule": "react-hooks/purity",
+    "expression": "Date.now() inside providerStates render memo",
+    "independentOriginalFailureReview": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/team-75cf-independent-review/independent-r2.json",
+      "gitBlob": "3decd25bea69e0402b94a79f380eb7eb934b054b",
+      "bytes": 38302,
+      "sha256": "f464d250e854d4f4511db8385fc450e51a67396369b330dce458633a3e4f37db"
+    },
+    "notTransferred": "Original 143/7/179 passing contracts and 114/115 diagnostics do not imply resulting-source lint, UI or runtime success."
+  },
+  "independentFindings": [
+    {
+      "finding": "Exact current caller supports callback-only identity",
+      "evidence": "LaunchTeamDialog 1517–1534 instantiates the real owner and 3017 passes capturedReadiness.permits. useCapturedTeamLaunchReadiness 110–118 allocates a fresh permits function each parent render; expiry effect 68–75 uses its unchanged expiry+1 timer to invalidate that parent. The other existing providerStates memo dependencies originate parent props or memo projections of those props.",
+      "conclusion": "No concrete current-production counterexample requires expanding the observation key to every memo input. The earlier full-key b310 draft is unselected and is not a publication prerequisite. This conclusion does not promise correctness for an arbitrary future permanently stable callback contract."
+    },
+    {
+      "finding": "Render remains pure with the selected local observation",
+      "evidence": "The selected nullable state contains only callback identity and observed timestamp. A layout effect depends only on the callback, directly samples Date.now when present, and clears absent callback state without a clock read. Render admits the stored observation only for matching current callback identity, after the original loading/scoped-OpenCode short circuits.",
+      "conclusion": "Child synchronization does not recreate the parent callback; child-only same-callback recomputation reuses the same observed time. No new timer, provider operation, authority cache, global readiness write or changed clock owner is selected."
+    },
+    {
+      "finding": "Action-time and expiry authority stays separate",
+      "evidence": "providerLaunchAuthority 151–209 keeps createLaunchGuard blockers default now=Date.now and real pure permits; useCapturedTeamLaunchReadiness 124–147 retains captureForSubmit actual-time and current-owner checks. capturedTeamLaunchReadiness requires finite expiry strictly greater than now and exact draft/team/preparation/selection joins.",
+      "conclusion": "Stored display time cannot authorize a later action. The real existing expiry callback must cause the committed chip to stop showing Ready; no independent continuous wall-clock update contract is added."
+    },
+    {
+      "finding": "Revision 2 is a meaningful regression boundary",
+      "evidence": "The selected test forces providerStates memo recomputation with a fresh equivalent cliProviderStatusLoading object while holding the actual parent predicate identity. It delegates to the real predicate and separately records presentation timestamps; it then rejects at exact expiry with the actual guard before processing the original hook timer, and processes that timer to observe invalidation.",
+      "conclusion": "A label-only child update would leave the old memo cached and could pass the old code; the revised test avoids that weakness. Test authoring must retain real owner/fence, original timer, nine captured-readiness cases, existing assertions/mocks and teardown. No test execution or predicted PASS is credited."
+    },
+    {
+      "finding": "The proposed real-owner test needs no provider/preflight call",
+      "evidence": "createProviderSubmissionFence 210–220 only constructs local latch, UUID and diagnostic map; provider diagnostics are invoked only through its explicit runPreflight method. The selected harness may construct the real fence and seed finite exact proof/context without invoking runPreflight or API operations.",
+      "conclusion": "No provider execution, mocked substitute expiry owner or broader test framework is required by the published scope."
+    },
+    {
+      "finding": "Existing ESLint setting permits the selected bounded synchronization to be assessed normally",
+      "evidence": "Current exact eslint.config.js renderer block enables recommended React hooks rules; set-state-in-effect is warning at 720, exhaustive-deps/rules-of-hooks warnings at 713/716, purity remains enforced and actually failed.",
+      "conclusion": "A possible set-state-in-effect warning is disclosed, not suppressed or presented as lint success. Existing full workspace/types/typed lint and selected renderer suite remain required on actual resulting source; no new mandatory CI cycle is introduced."
+    }
+  ],
+  "lifecycleLimits": [
+    "Layout-effect state synchronization is intended to resolve the conservative transition before normal paint; this review does not claim that the first DOM commit already has the final chip, that no passive effect can flush, or that a DOM test proves absence of browser paint.",
+    "The phrase one bounded synchronization render is a design bound per callback observation, not an exact total React render/setup count. Development StrictMode may repeat setup; no exact count oracle should replace the state/currentness assertions.",
+    "An unchanged callback intentionally retains its observation time. Real current parent expiry invalidation, not an added clock or synthetic parent refresh, is the tested mechanism.",
+    "The production component is currently 396 lines; the existing 844-line test is retained under its existing guard baseline/exclusions. Actual afterimage size and old-test preservation remain exact-source review obligations; no baseline increase or compression is approved."
+  ],
+  "preservedValidation": "The published two paths already belong to original source freeze/fast operands and existing renderer/type/lint scopes; this review selects no workflow/roster/config change. Actual source must still be independently reviewed and qualify on existing resulting-source commands.",
+  "blockingFindings": [],
+  "retiredAlternatives": [
+    "c65 passive-effect draft",
+    "b310 full-input-key layout draft"
+  ],
+  "execution": {
+    "dataOnlyPythonHashAndJSON": true,
+    "project": false,
+    "compiler": false,
+    "tests": false,
+    "lint": false,
+    "parser": false,
+    "provider": false,
+    "native": false,
+    "gui": false,
+    "networkOrApi": false,
+    "ciPollOrAction": false,
+    "gitOrIndex": false,
+    "canonicalWrite": false,
+    "sourceAfterimageCreated": false
+  }
+}

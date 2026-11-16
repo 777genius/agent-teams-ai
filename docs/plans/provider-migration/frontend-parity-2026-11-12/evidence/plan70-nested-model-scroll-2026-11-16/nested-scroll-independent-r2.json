@@ -1,0 +1,157 @@
+{
+  "kind": "INDEPENDENT_PLAN70_CORRECTION_A_PROSPECTIVE_R1_REVIEW",
+  "reviewer": "migration_scope",
+  "disposition": "APPROVE_CORRECTION_A_PROSPECTIVE_SCOPE_ONLY",
+  "concreteCorrectionABlockers": [],
+  "scope": "Correction A empty nearest-scrollport viewport branch plus its existing-suite regression seam, and exact preservation of these clauses in the root documentary amendment. Correction B sampling/history semantics are separately owned by native_failures and are not approved by this report.",
+  "publishedPlan": {
+    "path": "/tmp/migration-evidence-20261116/root/incoming-f8d3-review/after/docs/plans/provider-migration/frontend-parity-2026-11-12/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+    "gitBlob": "61661bc95399364db94536924e55e182db2dacaa",
+    "bytes": 10821,
+    "sha256": "69396e4ccb4d167d333cf64c7d22033b3a6d2224346fcd7ec6b9162bc22a1208"
+  },
+  "rootAmendmentCandidate": {
+    "path": "/tmp/migration-evidence-20261116/root/plan70-observation-amendment-r1/after/docs/plans/provider-migration/frontend-parity-2026-11-12/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+    "gitBlob": "02c4b0eae4c47d1e8878de45df213c97064f1f0b",
+    "bytes": 13643,
+    "sha256": "e32ce5a5bb8f4bbc3798e78716e78914fa74ee09c75aa2b4031fe646693c2374"
+  },
+  "sections2_4_5ByteIdenticalIgnoringOnlyTrailingSectionWhitespace": true,
+  "retainedCurrentParent": {
+    "head": "f8d3b9d2fb07ec4cb26f28bb76d9fc15fa3b49ab",
+    "tree": "360c8a92c25e65959cf1b53e00587a1911c225c8",
+    "leafCount": 11253,
+    "map": {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-f8d3-whole-tree-verification.json",
+      "gitBlob": "fdaf1689fe8c020d41b2767af60bd899d5b700a6",
+      "bytes": 3474238,
+      "sha256": "4802e0cfe184e05bd40ee9aa3643208a6dcfd6a63ea4a6f1c2f64fd4a8379774"
+    }
+  },
+  "exactReferences": [
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "local": {
+        "path": "/workspace/scratch/20ba97c23d57/frontend-proposal/nested-scroll-proposal/before/scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+        "bytes": 30733,
+        "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e"
+      },
+      "currentLeaf": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "sha": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+        "mode": "100644",
+        "type": "blob",
+        "size": 30733
+      }
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "local": {
+        "path": "/workspace/scratch/20ba97c23d57/frontend-proposal/nested-scroll-proposal/before/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "gitBlob": "a67601fe1a6785b233aef6cacf494661100df472",
+        "bytes": 162195,
+        "sha256": "e2c1fdbc87395de78a9faed0a1a9a50d1861e02d0bdb686e3530e20eb078fc02"
+      },
+      "currentLeaf": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "sha": "a67601fe1a6785b233aef6cacf494661100df472",
+        "mode": "100644",
+        "type": "blob",
+        "size": 162195
+      }
+    },
+    {
+      "repositoryPath": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+      "local": {
+        "path": "/tmp/migration-evidence-20261116/frontend/v2-resume-75cf-original/source-reference/src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+        "gitBlob": "e54fd44a11644202b3c3d0c17a0c85b66e9f1520",
+        "bytes": 157938,
+        "sha256": "919572aefbd5b4f8f56eb0c6a0953e8ac1efff9868861ff32655e73b58994d38"
+      },
+      "currentLeaf": {
+        "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+        "sha": "e54fd44a11644202b3c3d0c17a0c85b66e9f1520",
+        "mode": "100644",
+        "type": "blob",
+        "size": 157938
+      }
+    },
+    {
+      "repositoryPath": "src/renderer/components/team/dialogs/ResponsiveModelGrid.tsx",
+      "local": {
+        "path": "/workspace/scratch/20ba97c23d57/frontend-proposal/resume-75cf/source/src/renderer/components/team/dialogs/ResponsiveModelGrid.tsx",
+        "gitBlob": "c0df7a850a0d1070de5af9c3745ea7008a840ab3",
+        "bytes": 1464,
+        "sha256": "599febb8768a2e9bb094308d16a847324b2890c09520964f134111af69e341b0"
+      },
+      "currentLeaf": {
+        "path": "src/renderer/components/team/dialogs/ResponsiveModelGrid.tsx",
+        "sha": "c0df7a850a0d1070de5af9c3745ea7008a840ab3",
+        "mode": "100644",
+        "type": "blob",
+        "size": 1464
+      }
+    }
+  ],
+  "findings": [
+    {
+      "id": "constructible-reachability",
+      "anchors": "Controls 444-454; TeamModelSelector 244 and 3521-3578",
+      "finding": "The original helper selects the exact original target and its nearest vertically scrollable ancestor, then returns null when that ancestor has no positive viewport interval. That occurs before any wheel; waitRead repeats the same failing geometry. The actual model selector uses a constrained-height overflow-y-auto grid, so nested scroll owners are real source structure. This establishes the described source-level dead branch; it does not establish exclusive causation for any historical Resume receipt, which did not retain every ancestor rectangle/count."
+    },
+    {
+      "id": "strictly-local-branch",
+      "anchors": "Plan70 section2; Controls 445-454",
+      "finding": "The proposal retains selector/text/one-match admission, original target rectangle, nearest-ancestor lookup and zero-size refusal. The positive nearest-viewport branch must retain the complete old return path, including optional target-center hit behavior and its absence by default. The fallback is confined to bottom<=top and cannot return target visible:true."
+    },
+    {
+      "id": "original-owner-only",
+      "anchors": "Plan70 section2 paragraphs2-4",
+      "finding": "Candidates come only from the target's actual ancestor chain above the unavailable inner scrollport and use the existing vertical overflow predicate. No named dialog, unrelated container, global fallback, alternate point or probe wheel is authorized. A candidate needs finite positive exposed area after viewport and per-axis clipping intersections; intervening fixed clips cannot be treated as removable by an outer vertical wheel."
+    },
+    {
+      "id": "routing-and-direction",
+      "anchors": "Plan70 section2 paragraphs3-5",
+      "finding": "The chosen single center point must actually hit that candidate or a descendant whose nearest vertical scroll owner is exactly the candidate. A foreign overlay, different nested owner, absent hit or exhausted range in the intended direction refuses. Direction follows the original nested scrollport being exposed, not offscreen/clipped target-content center. When multiple nested scrollports are offscreen, the chosen outer operation must expose the relevant intervening scrollport before the next unchanged loop can progress inward. These are necessary constraints already in the R1, not a newly authored implementation."
+    },
+    {
+      "id": "unchanged-ordinary-regression-oracles",
+      "anchors": "desktop-team-ui-smoke.test.ts 1352-1401",
+      "finding": "The existing tests import createDesktopUiControls and run the actual generated expression in runInNewContext. They assert one default disabled-control read with no hit calls or input; the opt-in case asserts exactly two original center-hit coordinates and the exact one centering wheel with delta -276. They also require the identical expression on each loop read. These exact old cases would expose a broad rewrite of the positive-viewport path and must remain unchanged."
+    },
+    {
+      "id": "actual-finite-new-seam",
+      "anchors": "Plan70 section4; existing tests 1319-1446",
+      "finding": "The selected appended cases can use the existing real-expression VM seam and recorded CDP commands. Geometry changes only in response to the matching recorded wheel; outer then inner progress and the above-viewport direction case cannot be satisfied by faking a helper return. Fully clipped/overlay/foreign-owner and missing/duplicate-target cases require zero wheel. The existing fake-Date API supports bounded timeout refusal without a real 30-second wait. No new test framework, native process or separate CI round is needed or selected."
+    },
+    {
+      "id": "ownership-separation",
+      "anchors": "Controls waitRead 182-204, scrollTo432-474; Plan70 amended section6",
+      "finding": "Correction A leaves original waitRead and input-loop boundaries intact. Correction B removes an adjacent sample and can change accumulated history/early refusal; root section6 explicitly treats that as a separate scoped amendment. This A-only review does not assume observation-history equivalence and does not approve that loss on behalf of the separate B reviewer."
+    },
+    {
+      "id": "bounded-actions-and-cost",
+      "anchors": "Controls 433-474; Plan70 section5",
+      "finding": "Default 12 wheels, explicit 1..32 bound, final visibility read, each original nominal 30-second waitRead deadline, 100ms cadence and +/-600 clamp remain. Newly reachable wheels are real additional actions within that existing budget, not zero work or a retried business mutation. No extra CDP evaluate, timer owner, DOM mutation, scrollIntoView, scrollTop assignment or synthetic event is selected. Per-read awaited work remains subject to the existing enclosing controls; this is not a new hard per-evaluation cancellation promise."
+    },
+    {
+      "id": "source-and-validation-scope",
+      "finding": "Exactly Controls and the existing whole Team test are named, with current preimages joined to f8d3. Helper baseline is 548 lines and must remain naturally below800; the existing 2689-line test baseline is not raised by a policy change. No workflow/roster/production UI/new module is selected. Exact afterimage, reversible diff, whole old assertions, finite new cases and original validation remain for the existing source-R2 stage; no code was prepared or approved here."
+    }
+  ],
+  "remainingBoundaries": [
+    "No source afterimage or implementation in the external cache was read or reviewed for this prospective assignment.",
+    "No historical failed result is converted to PASS and no timing success is predicted by subtracting old cost.",
+    "Distinct later live-membership model absence, probe cleanup and PNG timeout are not repaired or qualified by this scope.",
+    "Root owns actual R1 selection/publication binding and any later exact-source application; this report only approves the bounded A design."
+  ],
+  "operations": {
+    "retainedReadsAndDataHashingOnly": true,
+    "apiOrDownloads": false,
+    "projectCompilerLintTestNativeGuiExecution": false,
+    "sourceAfterimageAuthoredOrApplied": false,
+    "ciPollingOrActions": false,
+    "canonicalOrGitMutation": false
+  }
+}

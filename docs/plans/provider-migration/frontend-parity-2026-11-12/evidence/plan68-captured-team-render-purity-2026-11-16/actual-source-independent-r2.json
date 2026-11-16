@@ -1,0 +1,133 @@
+{
+  "kind": "INDEPENDENT_ACTUAL_PLAN68_SOURCE_R2",
+  "reviewer": "migration_scope",
+  "disposition": "APPROVE_SOURCE_ONLY",
+  "concreteBlockers": [],
+  "publication": {
+    "sourceCommit": "0ba71b0e24424af6867ccc32ab795bc4453c32c8",
+    "parent": "0e84576f2cf1be94b464e673713fcd74d7ff33fc",
+    "tree": "492bde69b35c661df2876f7a6bc01751d7697d24",
+    "retainedCurrentHead": "3c9cae105ef748a931c2851cd0dddb0d097060df",
+    "retainedCurrentTree": "d1585412225e9e82aabe2f5af65fcb8311fadbd2",
+    "leafCount": 11243,
+    "sourceUnchangedIn25DocumentDescendant": true
+  },
+  "publishedSelection": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/68-captured-team-readiness-render-purity-2026-11-16.md",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "bc75c16dc6db634df125bfb5faf8665975febdac",
+    "size": 7804
+  },
+  "priorProspectiveReview": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/plan68-published-prospective-independent-r2/independent-r2.json",
+    "gitBlob": "75c4e2f9ca0acbd25460ff7b11896d35bdc7e412",
+    "bytes": 14561,
+    "sha256": "a7c7d7452c65dc7762f80c2fd94a0cfd58decc91c0f8b748ccc35033eee81e82"
+  },
+  "actualManifestExact": {
+    "path": "/tmp/migration-evidence-20261116/root/incoming-3c9c-review/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan68-captured-team-render-purity-2026-11-16/source-manifest.json",
+    "gitBlob": "5df881876f3474d654176f3b506727df2d79648f",
+    "bytes": 2191,
+    "sha256": "d271cca416c2276e0797c5dc3189ab96430bfbbb2d3bbf3cb1df82a414be99fd"
+  },
+  "source": [
+    {
+      "path": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "before": {
+        "gitBlob": "c1d31ee945c28cfe1f1339d914d0d1be7fc5e928",
+        "bytes": 13822,
+        "sha256": "b0f3a9ede1f0bb08f75f11c2742d0fdb14b281b1ea63da5509e50b38d9d98cac"
+      },
+      "after": {
+        "gitBlob": "5ceced2c642f104116899d000e9b20e87b7a8c1c",
+        "bytes": 14537,
+        "sha256": "3c9012b55260c7b25fdbc4004e01052dfdce1d67562fac4f0296070065bab6ce",
+        "lines": 415
+      },
+      "officialForwardInverseExact": true,
+      "additions": 21,
+      "deletions": 2
+    },
+    {
+      "path": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "before": {
+        "gitBlob": "c1ab11f043ea5bcfb5325cb8fb6f147541076f38",
+        "bytes": 28286,
+        "sha256": "375ab28dfb1aaf9506b0c852fc97dc48ae612d38edf5fad3099dcf9e420de286"
+      },
+      "after": {
+        "gitBlob": "6316cdc53a951d99983266bdaa84493fdeb7dbbf",
+        "bytes": 33597,
+        "sha256": "5e71cad4e017265ca1adc156ecc51771a1703499ca37081db5752eb8912ed49a",
+        "lines": 984
+      },
+      "officialForwardInverseExact": true,
+      "additions": 141,
+      "deletions": 1
+    }
+  ],
+  "dataProof": {
+    "source-readback.json": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/incoming-0ba7-independent-readback/source-readback.json",
+      "gitBlob": "94cca60c0e4a6e741a1e9213d73aaba77dfca7b2",
+      "bytes": 593136,
+      "sha256": "c86bf51c670f12c2b1d112078a892317a9b9596afd9a642c5e4d5df7be5f3ff3"
+    },
+    "whole-tree-verification.json": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/incoming-0ba7-independent-readback/whole-tree-verification.json",
+      "gitBlob": "8102a888ad203aa9b8a89fe8655937228f041fad",
+      "bytes": 3455236,
+      "sha256": "f27248a7b934a91fdf48143cb6878cd6c56ae9428b68c7788afa0be694621350"
+    },
+    "current-3c9c-whole-tree-verification.json": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/incoming-0ba7-independent-readback/current-3c9c-whole-tree-verification.json",
+      "gitBlob": "c0947173c3d7e978b114d0539399f4e4bbaa4bcc",
+      "bytes": 3473402,
+      "sha256": "b33441c617fa28bb5652e6ddeefdc6929b00e245ce056ad1bd26f145baa474fe"
+    }
+  },
+  "checks": [
+    {
+      "name": "Exact purity offender and snapshot",
+      "anchors": "ProviderActivityStatusStrip.tsx local useLayoutEffect and provider-state memo",
+      "finding": "The selected direct render Date.now is replaced by layout-effect setup storing the actual permits callback and observedAt. The memo uses that observation only if its predicate identity still equals the current callback. Absent callbacks clear the snapshot without reading time. Loading/OpenCode short circuits and the original authority fallback retain their order."
+    },
+    {
+      "name": "Current sole-caller sufficiency",
+      "anchors": "LaunchTeamDialog 832ed8f713a1bc34b2eaa78858180af19eda6862; useCapturedTeamLaunchReadiness e8f5137ea0b7b69f4c098203d797780be99a5c01",
+      "finding": "The actual hook creates fresh permits on every parent render, including source/fence/check/draft/selection and expiry invalidations; other relevant strip props originate in that parent. Callback-only sampling covers the real current contract. A same-callback child render deliberately retains the observation. No concrete present-caller counterexample requiring the unselected full-key proposal was found."
+    },
+    {
+      "name": "Strict expiry and action authority preserved",
+      "anchors": "capturedTeamLaunchReadiness 7a78f0791a54d09bcdda9c466b4df9c8b3b569d1; providerLaunchAuthority a6dbcf114109c75f5a0dfad9ca20e71884956f31",
+      "finding": "No predicate, action fence, captureForSubmit, preparation owner or strict expiry code changes. Presentation time is not action authority. The real guard refuses at exact expiry; the original expiry+1 callback later invalidates parent presentation. No new timer/polling owner or coarse clock is introduced."
+    },
+    {
+      "name": "Real-owner contract case",
+      "anchors": "ProviderActivityStatusStrip.test.ts appended case",
+      "finding": "Uses the actual hook, fence, selection signature and launch guard. It exercises initial refusal, valid readiness, +250ms child rerender with a fresh loading object to invalidate the memo while retaining the same callback/time, strict +1000ms action refusal, and the real +1001ms owner invalidation with new callback/error chip. It restores fake timers and unmounts. Fence construction is local; no preflight/provider API is invoked."
+    },
+    {
+      "name": "Whole original test preservation",
+      "finding": "After the necessary import changes, every old test-body byte before the final describe closure is an exact 27,283-byte prefix. Exactly one case is appended. Old mocks, assertions, helper bodies and setup/teardown are preserved."
+    },
+    {
+      "name": "Layout and test limits",
+      "finding": "The source provides a commit-phase observation; this review does not claim the first DOM commit is already final, that passive effects cannot flush early, or that a DOM test proves actual paint. StrictMode may replay setup and no exact render/effect count is promised. Existing unrelated helper clocks remain outside this selected direct-offender correction."
+    },
+    {
+      "name": "Caps and remaining qualification",
+      "finding": "Production component is 415 physical lines, below 800. The existing test grows from 844 to 984 lines without a production cap/baseline change or compression. Existing compiler, typed renderer lint and original test venues must qualify resulting source; no resulting-source PASS is inferred."
+    }
+  ],
+  "limits": {
+    "method": "Retained complete official patches and full source bytes; standard-library data/hash/diff/Merkle checks only. No project parser, compiler, lint, test, provider, native or GUI execution.",
+    "apiOrDownloads": false,
+    "ciPollingOrActions": false,
+    "canonicalOrGitIndexRefMutation": false,
+    "newSourceProposal": false,
+    "runtimePassClaim": false,
+    "chronology": "Immutable actual source publication and the latest retained complete 3c9 map are joined. No unobserved approval/execution chronology or fresh remote-ref currentness is claimed."
+  }
+}
