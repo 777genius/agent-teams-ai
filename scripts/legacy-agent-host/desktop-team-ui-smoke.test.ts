@@ -2549,3 +2549,152 @@ test('actual original Cross Close preserves final exact geometry refusal without
   assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
   assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, front: 1 });
 });
+
+async function originalLiveMembershipPoll() {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = '  const poll = async <T>(', end = "  const workspace = join(fixture.root, 'workspace');";
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original P11 poll boundary');
+  const start = source.indexOf(begin), finish = source.indexOf(end);
+  assert.ok(finish > start, 'original source boundaries are ordered');
+  const actual = stripTypeScriptTypes(source.slice(start, finish));
+  const makePoll = Function('environment', `'use strict';
+    const {assert,current,Date,setTimeout}=environment;
+    ${actual}
+    return poll;`) as (environment: Record<string, unknown>) =>
+      (observe: () => Promise<boolean>, accepts: (value: boolean) => boolean, label: string) => Promise<boolean>;
+  return (observations: { at: number; value?: boolean; error?: Error }[], guardError?: Error) => {
+    let now = 0, reads = 0;
+    const trace: string[] = [], delays: number[] = [];
+    const poll = makePoll({ assert, Date: { now: () => now },
+      current() { trace.push('guard'); if (guardError) throw guardError; },
+      setTimeout(done: () => void, delay: number) {
+        assert.equal(delay, 100); delays.push(delay); now += delay; done();
+      },
+    });
+    return { trace, delays, reads: () => reads,
+      run: (label: string) => poll(async () => {
+        const observation = observations[reads++]; assert.ok(observation, 'no unplanned observation');
+        trace.push('read'); assert.ok(observation.at >= now); now = observation.at;
+        if (observation.error) throw observation.error;
+        assert.equal(typeof observation.value, 'boolean'); return observation.value!;
+      }, value => value, label),
+    };
+  };
+}
+
+for (const scenario of [
+  { name: 'first result at the exact cutoff', values: [{ at: 90_000, value: true }], reads: 1, trace: ['read'], delays: [] },
+  { name: 'first result after the cutoff', values: [{ at: 90_001, value: true }], reads: 1, trace: ['read'], delays: [] },
+  { name: 'polled result after the cutoff', values: [{ at: 0, value: false }, { at: 90_001, value: true }], reads: 2,
+    trace: ['read', 'guard', 'read'], delays: [100] },
+]) test('P11 keeps the original 90-second cutoff for ' + scenario.name, async () => {
+  const make = await originalLiveMembershipPoll(), f = make(scenario.values), label = 'TEST original P11 deadline';
+  await assert.rejects(f.run(label), error => error instanceof assert.AssertionError && error.message.includes(label));
+  assert.equal(f.reads(), scenario.reads); assert.deepEqual(f.trace, scenario.trace); assert.deepEqual(f.delays, scenario.delays);
+});
+
+test('P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity', async () => {
+  const make = await originalLiveMembershipPoll(), label = 'TEST original P11 observation';
+  const immediate = make([{ at: 89_999, value: true }]);
+  assert.equal(await immediate.run(label), true); assert.equal(immediate.reads(), 1);
+  assert.deepEqual(immediate.trace, ['read']); assert.deepEqual(immediate.delays, []);
+  const later = make([{ at: 0, value: false }, { at: 101, value: true }]);
+  assert.equal(await later.run(label), true); assert.equal(later.reads(), 2);
+  assert.deepEqual(later.trace, ['read', 'guard', 'read']); assert.deepEqual(later.delays, [100]);
+  const refusal = new Error('TEST original observation failure'), failed = make([{ at: 90_001, error: refusal }]);
+  await assert.rejects(failed.run(label), error => error === refusal);
+  assert.equal(failed.reads(), 1); assert.deepEqual(failed.trace, ['read']); assert.deepEqual(failed.delays, []);
+  const stale = new Error('TEST original currentness failure'), guarded = make([{ at: 0, value: false }], stale);
+  await assert.rejects(guarded.run(label), error => error === stale);
+  assert.equal(guarded.reads(), 1); assert.deepEqual(guarded.trace, ['read', 'guard']); assert.deepEqual(guarded.delays, []);
+  const noReady = make([{ at: 90_000, value: false }]);
+  await assert.rejects(noReady.run(label), assert.AssertionError);
+  assert.equal(noReady.reads(), 1); assert.deepEqual(noReady.trace, ['read']); assert.deepEqual(noReady.delays, []);
+});
+
+async function originalReviewCorrectionStage(observations: unknown[], insertFailure?: Error) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-task-review-cycle-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = '  const commentTarget = record(', end = "  await snapshotStage(await newReceipt(commentBefore, 'task.comment'), 'in_progress');";
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original correction input boundary');
+  const start = source.indexOf(begin), finish = source.indexOf(end);
+  assert.ok(finish > start, 'original source boundaries are ordered');
+  const actual = stripTypeScriptTypes(source.slice(start, finish));
+  const selector = '[role="dialog"] textarea[id="TEST-original-correction-input"]';
+  const original = { selector, canEditNow: true }, trace: string[] = [], budgets: number[] = [];
+  let reads = 0;
+  const cdp = {
+    async evaluate(expression: string) {
+      assert.equal(expression, 'TEST-original-current-correction-expression');
+      assert.ok(reads < observations.length, 'no unplanned currentness observation');
+      const value = observations[reads++]; trace.push('read');
+      if (value instanceof Error) throw value;
+      return value === 'current' ? original : value && typeof value === 'object' && !Array.isArray(value)
+        ? { selector, ...value } : value;
+    },
+    async send(method: string, params?: Record<string, unknown>) {
+      assert.equal(method, 'Input.insertText');
+      assert.deepEqual(params, { text: 'TEST original correction text' });
+      trace.push('insert');
+      if (insertFailure) throw insertFailure;
+      return {};
+    },
+  };
+  const controls = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });
+  const ui = {
+    ...controls,
+    waitRead: ((expression: string, label: string, timeoutMs = 30_000, accepts?: (value: unknown) => boolean) => {
+      assert.equal(label, 'exact current correction Task/owner/surface');
+      budgets.push(timeoutMs);
+      return controls.waitRead(expression, label, timeoutMs, accepts);
+    }) as typeof controls.waitRead,
+    async scrollTo(target: string, label: string) {
+      assert.equal(target, selector); assert.equal(label, 'existing Task comment composer'); trace.push('scroll');
+    },
+    async click(target: string, label: string, text?: string) {
+      if (label === 'focus existing correction comment') {
+        assert.equal(target, selector); assert.equal(text, undefined); trace.push('focus');
+      } else {
+        assert.equal(target, '[role="dialog"] button.message-composer-send-button');
+        assert.equal(label, 'original correction Comment once'); assert.equal(text, 'Comment'); trace.push('submit');
+      }
+    },
+  };
+  const run = Function('environment', `'use strict';
+    const {assert,record,ui,cdp,options,taskId,commentText,desktopTaskCommentInputExpression}=environment;
+    return (async()=>{${actual}})();`) as (environment: Record<string, unknown>) => Promise<void>;
+  return { trace, budgets, reads: () => reads, run: () => run({ assert, ui, cdp,
+    record(value: unknown) { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value; },
+    options: { handleId: 'TEST-original-correction-owner' }, taskId: 'TEST-original-correction-task',
+    commentText: 'TEST original correction text',
+    desktopTaskCommentInputExpression(handleId: string, taskId: string) {
+      assert.equal(handleId, 'TEST-original-correction-owner'); assert.equal(taskId, 'TEST-original-correction-task');
+      return 'TEST-original-current-correction-expression';
+    },
+  }) };
+}
+
+test('original review correction refuses missing or false live edit authority before any input action', { timeout: 5000 }, async () => {
+  for (const observation of [null, {}, { canEditNow: false }, { canEditNow: 1 }, [{ canEditNow: true }]]) {
+    const refusal = new Error('TEST original currentness read failed');
+    const f = await originalReviewCorrectionStage([observation, refusal]);
+    await assert.rejects(f.run(), error => error === refusal);
+    assert.deepEqual(f.trace, ['read', 'read']); assert.deepEqual(f.budgets, [30_000]);
+    assert.equal(f.reads(), 2);
+  }
+});
+
+test('original review correction admits current authority with one original insertion and submit', { timeout: 5000 }, async () => {
+  for (const observations of [['current'], [{ canEditNow: false }, 'current']]) {
+    const f = await originalReviewCorrectionStage(observations);
+    await f.run();
+    assert.deepEqual(f.trace, [...observations.map(() => 'read'), 'scroll', 'focus', 'insert', 'submit']);
+    assert.deepEqual(f.budgets, [30_000]); assert.equal(f.reads(), observations.length);
+  }
+  const failure = new Error('TEST original insertion response failed');
+  const refused = await originalReviewCorrectionStage(['current'], failure);
+  await assert.rejects(refused.run(), error => error === failure);
+  assert.deepEqual(refused.trace, ['read', 'scroll', 'focus', 'insert']);
+  assert.deepEqual(refused.budgets, [30_000]); assert.equal(refused.reads(), 1);
+});

@@ -1,0 +1,579 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-complete-two-test-r2-guard-review",
+  "reviewer": "/root/recovery_guard_v2",
+  "repository": "777genius/agent-teams-ai",
+  "recordedAtUTC": "2026-11-16T21:11:22.276Z",
+  "verdict": {
+    "accepted": true,
+    "disposition": "ACCEPTED: exact two-test proposal061cb0545b58d847ef69b05baa2b140065456730, Node896c587e077da56a98a314a175fb3cba0353d6ee and final renderer76495189c992fcda47cd7a43a0c697190b5acbb3 conform to published combinedR1d52.",
+    "blockingIssues": [],
+    "scope": "Complete-byte/source/inverse/contract review of both test postimages, with detailed Node139 fixture/currentness/old133 preservation review.",
+    "runtimeExecuted": false,
+    "runtimeResultClaimed": false,
+    "producerPostimagesAdmitted": false,
+    "runnerOrBindingApprovalIncluded": false
+  },
+  "exactReviewedSubjects": {
+    "proposal": {
+      "bytes": 24017,
+      "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+      "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+    },
+    "nodePre": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "nodePost": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "nodeAppend": {
+      "bytes": 9542,
+      "sha256": "e0900d02f3294294c63f97c85eb073d635007635b5e9f70e60faa09a490312e3",
+      "gitBlob": "52b16c18eca119b8eb104257c870c37a26496a4d"
+    },
+    "rendererPre": {
+      "bytes": 180091,
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+      "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+    },
+    "rendererPost": {
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    },
+    "rendererInsertion": {
+      "bytes": 7799,
+      "sha256": "97709ff796be1678dae58cee0ca2fc34f9f59a12b75ea0ad3237d59185f640bc",
+      "gitBlob": "3ed3c02182c07da18e9a67a12b74d878884d243a"
+    },
+    "priorProposal": {
+      "bytes": 23864,
+      "sha256": "ec2334bc54d0299f42ef8ee59356572bc8ded1ed924d43f949db4443dd06b7d9",
+      "gitBlob": "d1fc505f73e01b40cb9830cc2b85fc48d6384c2e"
+    },
+    "priorRenderer": {
+      "bytes": 187816,
+      "sha256": "1ed7e2ab84c4bf86b054aae3a3ce862bdbbfd1864f3e45c402a4f0e028d3e2b6",
+      "gitBlob": "75f46829f74b02f9d4f72df903a4f48638ae0867"
+    },
+    "publishedR1": {
+      "bytes": 77830,
+      "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+      "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+    },
+    "r1RootReadback": {
+      "bytes": 25481,
+      "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+      "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+    },
+    "r1IndependentReadback": {
+      "bytes": 80224,
+      "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+      "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+    },
+    "p11Source": {
+      "bytes": 45707,
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+      "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+    },
+    "reviewSource": {
+      "bytes": 32845,
+      "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+      "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+    },
+    "fixedUiControls": {
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    "acceptedOld133Envelope": {
+      "bytes": 166444,
+      "sha256": "c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981",
+      "gitBlob": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b"
+    }
+  },
+  "method": {
+    "readOnlyGitBlobRetrieval": true,
+    "bothFullPreimagesAndPostimagesReadAndRehashed": true,
+    "entireNodeAppendAndRendererInsertionInspected": true,
+    "bothFullBodyInversesProved": true,
+    "sourceSnippetsReadAsDataOnly": true,
+    "targetParsingEvaluationOrRuntime": false,
+    "shellExecution": false,
+    "sourceOrControlApplication": false,
+    "refPrCiMutation": false,
+    "realClaudeCodexExecution": false,
+    "reportPersistence": "Bare Git blob only, followed by complete fetch/readback.",
+    "knownSourceBasis": "Prior immutable133 test coverage is carried through complete byte-identical prefix and exact accepted133-case ledger join, not reclassified or inferred from a summary count."
+  },
+  "authorshipGate": {
+    "publishedCommit": "cf6547aa79cc903a5833fa950a2de3178194c429",
+    "publishedTree": "8d31b9a94c6869af2596585d786db5ab0dd97e12",
+    "rootActualReadback": {
+      "bytes": 25481,
+      "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+      "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+    },
+    "independentActualReadback": {
+      "bytes": 80224,
+      "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+      "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+    },
+    "bothAccepted": true,
+    "recordedGateClosedAt": "2026-11-16T21:02:37.102Z",
+    "recordedInitialTestAuthorshipAt": "2026-11-16T21:03:44.666Z",
+    "recordedGatePrecedesAuthorship": true,
+    "qualification": "The complete retained root and independent actual publication records bind exactcf6547/d52. The proposal's recorded root-readback gate precedes initial test authorship. This does not claim a later test/runner publication or local materialization."
+  },
+  "completeNodePreservation": {
+    "preimage": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "postimage": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "entirePreimageExactPrefix": true,
+    "exactAppend": {
+      "bytes": 9542,
+      "sha256": "e0900d02f3294294c63f97c85eb073d635007635b5e9f70e60faa09a490312e3",
+      "gitBlob": "52b16c18eca119b8eb104257c870c37a26496a4d"
+    },
+    "appendBytes": 9542,
+    "exactInverseRecoversAll155423OriginalBytes": true,
+    "maximumSelectedBytes": 180000,
+    "actualBytes": 164965,
+    "old133NamesOrderMultiplicityExact": true,
+    "newSixNames": [
+      "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+      "P11 keeps the original 90-second cutoff for first result after the cutoff",
+      "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+      "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+      "original review correction refuses missing or false live edit authority before any input action",
+      "original review correction admits current authority with one original insertion and submit"
+    ],
+    "totalNames": 139,
+    "uniqueNames": 139,
+    "registrationStructure": "One literal three-scenario P11 registration loop plus three literal test calls expands to exactly six new cases. All old registration code/imports/helpers/assertions remain the full0aec prefix.",
+    "imports": "No appended static import. The two new fixture helpers dynamically import only the selected Node builtin node:module for stripTypeScriptTypes.",
+    "sideEffects": "The append performs full source readFile only. It adds no child-process launch, source write, install, provider startup, global clock replacement or real renderer execution. P11's mutable clock/timer are local injected fixture data; Review retains actual existing controls.waitRead."
+  },
+  "actualSourceExtraction": {
+    "markers": [
+      {
+        "name": "p11",
+        "begin": "  const poll = async <T>(",
+        "end": "  const workspace = join(fixture.root, 'workspace');",
+        "start": 5587,
+        "finish": 5980,
+        "beginOccurrences": 1,
+        "endOccurrences": 1,
+        "sourceIdentity": {
+          "bytes": 45707,
+          "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+          "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+        },
+        "span": "  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {\n    const cutoff = Date.now() + 90_000; let value = await observe();\n    while (!accepts(value) && Date.now() < cutoff) {\n      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n    }\n    assert.ok(accepts(value), label); return value;\n  };\n"
+      },
+      {
+        "name": "review",
+        "begin": "  const commentTarget = record(",
+        "end": "  await snapshotStage(await newReceipt(commentBefore, 'task.comment'), 'in_progress');",
+        "start": 17160,
+        "finish": 17773,
+        "beginOccurrences": 1,
+        "endOccurrences": 1,
+        "sourceIdentity": {
+          "bytes": 32845,
+          "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+          "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+        },
+        "span": "  const commentTarget = record(\n    await ui.waitRead(\n      desktopTaskCommentInputExpression(options.handleId, taskId),\n      'exact current correction Task/owner/surface'\n    )\n  );\n  assert.equal(typeof commentTarget.selector, 'string');\n  await ui.scrollTo(String(commentTarget.selector), 'existing Task comment composer');\n  await ui.click(String(commentTarget.selector), 'focus existing correction comment');\n  await cdp.send('Input.insertText', { text: commentText });\n  await ui.click(\n    '[role=\"dialog\"] button.message-composer-send-button',\n    'original correction Comment once',\n    'Comment'\n  );\n"
+      }
+    ],
+    "uniqueBoundaries": true,
+    "orderedBoundaries": true,
+    "assertions": "Both fixtures assert one occurrence of each exact marker and finish>start before slicing/type erasure. Missing/ambiguous/reversed boundaries fail the fixture; they are not semantic RED.",
+    "p11": "The exact current45707-byte source has one selected poll span. Its initial await currently precedes the cutoff check, and the second awaited value is interpreted at loop/return without a post-await cutoff check.",
+    "review": "The exact current32845-byte source has one selected correction span with original waitRead label/expression, selector assertion and scroll/focus/insert/submit sequence.",
+    "typeErasure": "stripTypeScriptTypes receives only the extracted actual TypeScript span. Function receives that span plus explicitly local finite fixture dependencies; full drivers and real provider/native startup are not evaluated by these new fixtures.",
+    "sourceCurrentness": "Future selected runner/binding must still enforce all exact source pins and full runtime boundaries. This static review does not replace those actual checks."
+  },
+  "nodeFixtureContract": {
+    "p11Deadline": "The injected Date.now starts at0 for cutoff construction. Observations advance the same virtual clock to90000,90001 or0->90001. Every original wait must be exactly100ms and increments that clock. No new/reset/extended cutoff is supplied.",
+    "p11ControlBranches": [
+      {
+        "branch": "timely first true",
+        "at": 89999,
+        "reads": 1,
+        "trace": [
+          "read"
+        ],
+        "delays": []
+      },
+      {
+        "branch": "timely after one original cadence",
+        "observations": [
+          0,
+          101
+        ],
+        "reads": 2,
+        "trace": [
+          "read",
+          "guard",
+          "read"
+        ],
+        "delays": [
+          100
+        ]
+      },
+      {
+        "branch": "read error returned after cutoff",
+        "at": 90001,
+        "reads": 1,
+        "sameErrorIdentity": true,
+        "noCurrentnessOrWaitAfterError": true
+      },
+      {
+        "branch": "original currentness refusal",
+        "reads": 1,
+        "trace": [
+          "read",
+          "guard"
+        ],
+        "sameErrorIdentity": true,
+        "noSecondReadOrWait": true
+      },
+      {
+        "branch": "false at exact cutoff",
+        "at": 90000,
+        "reads": 1,
+        "originalAssertionErrorRequired": true,
+        "noFurtherObservation": true
+      }
+    ],
+    "reviewReadiness": "The fixture supplies null,{},canEditNow:false,canEditNow:1 and an array. The actual extracted source passes its own accepts argument through a budget-capturing wrapper into actual createDesktopUiControls.waitRead. No test-side predicate repairs the old defect.",
+    "reviewCurrentness": "For each unavailable/unauthorized input, the next read throws a distinct exact refusal Error. Tests require that same Error, two reads, captured30000-ms budget and no scroll/focus/insert/submit. These finite variants do not exhaust the full30-second timer.",
+    "reviewPositive": "Current authority requires one read then precisely scroll,focus,one insertion,one submit. False then current requires two reads and the same input trace. Insertion rejection requires identical Error, one insertion and no submit/replay.",
+    "reviewBudgets": "Both new Review cases retain5000-ms test caps. Actual controls preserve their original100-ms wait and30000-ms default. The fixture only records that budget and passes the supplied predicate onward.",
+    "expressionBoundary": "The expression builder is deliberately a finite sentinel with exact owner/task arguments. This verifies actual driver admission/order with actualwaitRead, not execution of the renderer expression or live GUI. Fixedhelper3c7b and prior133 expression/control regressions remain unchanged."
+  },
+  "staticNodeRedPrediction": [
+    {
+      "ordinal": 134,
+      "name": "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+      "predicted": "FAIL",
+      "site": "postimage line2593 assert.rejects",
+      "reason": "Old first observation returns true at90000; original poll accepts it and fulfills. Expected rejection is missing.",
+      "unreached": "Following reads/trace/delay assertions in this case."
+    },
+    {
+      "ordinal": 135,
+      "name": "P11 keeps the original 90-second cutoff for first result after the cutoff",
+      "predicted": "FAIL",
+      "site": "postimage line2593 assert.rejects",
+      "reason": "Old first observation returns true at90001 and fulfills despite the original cutoff.",
+      "unreached": "Following reads/trace/delay assertions in this case."
+    },
+    {
+      "ordinal": 136,
+      "name": "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+      "predicted": "FAIL",
+      "site": "postimage line2593 assert.rejects",
+      "reason": "False at0 enters original currentness/100-ms wait, then true at90001 causes old poll to stop and fulfill. Expected rejection is missing.",
+      "unreached": "Following reads/trace/delay assertions in this case."
+    },
+    {
+      "ordinal": 137,
+      "name": "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+      "predicted": "PASS_CONTROL",
+      "reason": "All five finite timely/currentness/read-error/cadence/cutoff controls agree with the actual original poll.",
+      "allFiveBranchesStaticallyReachable": true
+    },
+    {
+      "ordinal": 138,
+      "name": "original review correction refuses missing or false live edit authority before any input action",
+      "predicted": "FAIL",
+      "site": "postimage line2682 assert.rejects on second variant",
+      "reason": "Null is refused and the second exact Error propagates, so first variant passes. The{} variant becomes{selector}, which old Boolean readiness accepts; the original input sequence completes and the expected rejection is missing.",
+      "reached": [
+        "null variant complete",
+        "{} variant read/scroll/focus/insert/submit"
+      ],
+      "unreached": [
+        "{} post-rejection trace/budget/read assertions",
+        "canEditNow:false variant",
+        "canEditNow:1 variant",
+        "array variant"
+      ]
+    },
+    {
+      "ordinal": 139,
+      "name": "original review correction admits current authority with one original insertion and submit",
+      "predicted": "FAIL",
+      "site": "postimage line2692 trace assertion on second variant",
+      "reason": "Already-current variant completes correctly. Old Boolean accepts the first canEditNow:false object in the next variant, producing one read before input instead of two.",
+      "reached": [
+        "already-current variant complete",
+        "false-then-current variant through one-read input sequence"
+      ],
+      "unreached": [
+        "second variant later budget/read assertions",
+        "final insertion-error control"
+      ]
+    }
+  ],
+  "staticPredictionQualification": {
+    "nodeExpectedRed": {
+      "pass": 134,
+      "fail": 5,
+      "old133PassRequired": true,
+      "newControlPass": 1
+    },
+    "nodeExpectedGreen": {
+      "pass": 139,
+      "fail": 0
+    },
+    "observed": false,
+    "qualification": "These are static predictions from exact preimages and selected finite fixtures. Actual full139 registration/outcomes, all preserved133PASS, exact failure sites, complete inputs/lifetime and separate outer0 remain required. Unexpected extraction/import/setup/runtime errors never qualify as RED. GREEN must reach every previously blocked variant."
+  },
+  "completeRendererPreservation": {
+    "preimage": {
+      "bytes": 180091,
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+      "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+    },
+    "finalPostimage": {
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    },
+    "insertion": {
+      "bytes": 7799,
+      "sha256": "97709ff796be1678dae58cee0ca2fc34f9f59a12b75ea0ad3237d59185f640bc",
+      "gitBlob": "3ed3c02182c07da18e9a67a12b74d878884d243a"
+    },
+    "insertionOffsetUtf16": 180087,
+    "insertionOffsetBytes": 180087,
+    "insertionBytes": 7799,
+    "exactInverseRecoversAll180091OriginalBytes": true,
+    "insertionBeforeExactFinalOuterDescribeClosing": true,
+    "maximumSelectedBytes": 200000,
+    "actualBytes": 187890,
+    "old80NamesOrderMultiplicityExact": true,
+    "newFiveNames": [
+      "clears loading for the current silent refresh and refuses a stale response",
+      "clears pending loading when the current silent refresh ends with response-error",
+      "clears pending loading when the current silent refresh ends with rejection",
+      "keeps a silent view completion inert after newer-request",
+      "keeps a silent view completion inert after unmounted"
+    ],
+    "totalNames": 85,
+    "uniqueNames": 85,
+    "registrationStructure": "One ordinary test plus two two-entry it.each blocks; no additional helper/import/diagnostic publisher, filter,only,skip,todo or unrelated case.",
+    "existingHarnessAndCleanup": "Full original imports, helpers, mocks, before/after hooks and cleanup are byte-identical after removing the one insertion; all new fixture variables are inside the selected callbacks.",
+    "finalCorrection": {
+      "priorRenderer": {
+        "bytes": 187816,
+        "sha256": "1ed7e2ab84c4bf86b054aae3a3ce862bdbbfd1864f3e45c402a4f0e028d3e2b6",
+        "gitBlob": "75f46829f74b02f9d4f72df903a4f48638ae0867"
+      },
+      "change": "Exactly two expect(state?.error).toBeNull() assertions inside the first new success case: after current-success view check and after stale-success view check.",
+      "exactInverseToPriorInsertion": true,
+      "reason": "Makes the selected R1 success-case error-preservation contract explicit alongside view/loading and stale-request refusal.",
+      "expectedCountsUnchanged": true
+    },
+    "semanticScope": "Current silent success/response-error/rejection loading behavior plus newer-request and unmount inertness. All original80 must pass; intended RED is82P3F and GREEN85P0F. Detailed renderer-specialist acceptance remains a separate required review.",
+    "predictionsObserved": false
+  },
+  "scopeAndPublicationLimits": {
+    "testOnlyAcceptance": true,
+    "runnerAndBindingsStillRequireTheirOwnFullR2": true,
+    "testRunnerDocsPublicationAndCompleteActualReadbackBeforeApplication": true,
+    "materializationScopeRemainsSourceAndSupervisorMetadataOnly": true,
+    "noStagingMaterializationOrRuntimePerformedByReviewer": true,
+    "producersRemainForbiddenUntilFullAcceptedActualCombinedRed": true,
+    "allFourFixedProducerRowsUnchanged": true,
+    "allThreeProspectiveProducerPreimagesUnchangedInThisProposal": true,
+    "noPrimaryOrMetadataClockChanged": true,
+    "noSourceCapExceptionCountWorkflowOrPackageChange": true,
+    "oldValidation81561": "INCOMPLETE/SPENT; aggregate,outer and physical-supervisor lifetimeUNKNOWN unchanged.",
+    "noRealClaudeCodexEvenVersion": true,
+    "frozenPrsAndTerminalCIUntouched": true,
+    "canonicalTypecheckBuildGuiNativeWholeE2EQualified": false
+  },
+  "structuredChecks": [
+    {
+      "name": "node full preimage identity",
+      "pass": true
+    },
+    {
+      "name": "node full postimage identity",
+      "pass": true
+    },
+    {
+      "name": "renderer full preimage identity",
+      "pass": true
+    },
+    {
+      "name": "renderer full postimage identity",
+      "pass": true
+    },
+    {
+      "name": "R2 gate/source R1 exact published d52",
+      "pass": true
+    },
+    {
+      "name": "Exact accepted root and independent publication bodies",
+      "pass": true
+    },
+    {
+      "name": "Exact publication commit gate",
+      "pass": true
+    },
+    {
+      "name": "Recorded actual gate predates test authorship",
+      "pass": true
+    },
+    {
+      "name": "Exactly two selected test paths",
+      "pass": true
+    },
+    {
+      "name": "Node complete old body exact prefix and exact inverse",
+      "pass": true
+    },
+    {
+      "name": "Node append9542 exact triple identity",
+      "pass": true
+    },
+    {
+      "name": "Node append within selected180000 cap",
+      "pass": true
+    },
+    {
+      "name": "Node retains exact133 previously accepted actual names in order",
+      "pass": true
+    },
+    {
+      "name": "Node adds exactly six selected R1 names after old133",
+      "pass": true
+    },
+    {
+      "name": "Node helper names do not shadow old body",
+      "pass": true
+    },
+    {
+      "name": "No appended static imports",
+      "pass": true
+    },
+    {
+      "name": "Only two appended dynamic builtin node:module imports",
+      "pass": true
+    },
+    {
+      "name": "No appended childprocess launch or source write calls",
+      "pass": true
+    },
+    {
+      "name": "Both exact source extraction markers unique and ordered",
+      "pass": true
+    },
+    {
+      "name": "Both fixtures assert ordered extraction before type erasure",
+      "pass": true
+    },
+    {
+      "name": "Source preimages exact selected P11 and Review pins",
+      "pass": true
+    },
+    {
+      "name": "P11 scenario registration expands exact first three R1 names",
+      "pass": true
+    },
+    {
+      "name": "P11 plus Review literal registrations exact remaining three R1 names",
+      "pass": true
+    },
+    {
+      "name": "Exactly four appended test callsites expanding to six cases",
+      "pass": true
+    },
+    {
+      "name": "Review real controls.waitRead used with original captured budget",
+      "pass": true
+    },
+    {
+      "name": "Review case caps unchanged5000 both",
+      "pass": true
+    },
+    {
+      "name": "Renderer one exact insertion recovers entire original body",
+      "pass": true
+    },
+    {
+      "name": "Renderer insertion at original final outer closing",
+      "pass": true
+    },
+    {
+      "name": "Renderer insertion7799 exact triple identity",
+      "pass": true
+    },
+    {
+      "name": "Renderer187890 under selected200000 cap",
+      "pass": true
+    },
+    {
+      "name": "Renderer exact80 preserved name order and five selected additions",
+      "pass": true
+    },
+    {
+      "name": "Renderer exactly one plain plus two2-entry it.each blocks",
+      "pass": true
+    },
+    {
+      "name": "No new diagnostic helper or static/dynamic import in insertion",
+      "pass": true
+    },
+    {
+      "name": "No only/skip/todo/filter/retry directive in new blocks",
+      "pass": true
+    },
+    {
+      "name": "R2 RED and GREEN remain explicitly unobserved",
+      "pass": true
+    },
+    {
+      "name": "Final renderer delta exactly two null-error assertions in first new case",
+      "pass": true
+    },
+    {
+      "name": "Final R2 Node metadata and all other proposal fields unchanged",
+      "pass": true
+    },
+    {
+      "name": "Final R2 exact24017-byte identity",
+      "pass": true
+    }
+  ],
+  "structuredCheckCount": 38,
+  "failedStructuredChecks": [],
+  "reviewerActions": {
+    "shellCommands": 0,
+    "targetEvaluations": 0,
+    "testRuns": 0,
+    "providerRuns": 0,
+    "sourceWrites": 0,
+    "refWrites": 0,
+    "prWrites": 0,
+    "ciActions": 0,
+    "bareReportOnly": true
+  }
+}

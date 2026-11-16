@@ -1,0 +1,1234 @@
+{
+  "schema": "c714-combined-two-test-r2-renderer-semantic-review-v1",
+  "reviewer": "/root/renderer_combined_plan",
+  "repository": "777genius/agent-teams-ai",
+  "reviewedDate": "2026-11-16",
+  "accepted": true,
+  "verdict": "ACCEPT exact final two-test postimages for their selected R2 source/test review scope; no remaining blocker. This is not acceptance of an unseen runner, publication, materialization or actual RED/GREEN execution.",
+  "subject": {
+    "proposal": {
+      "fetched": "061cb0545b58d847ef69b05baa2b140065456730",
+      "bytes": 24017,
+      "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+      "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+    },
+    "r1": {
+      "bytes": 77830,
+      "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+      "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+    },
+    "node": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "preimage": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "postimage": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "append": {
+        "bytes": 9542,
+        "sha256": "e0900d02f3294294c63f97c85eb073d635007635b5e9f70e60faa09a490312e3",
+        "gitBlob": "52b16c18eca119b8eb104257c870c37a26496a4d"
+      },
+      "completeOldBodyIsExactPrefix": true,
+      "oldCases": 133,
+      "addedCases": 6,
+      "totalCases": 139,
+      "names": [
+        "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+        "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+        "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+        "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+        "isolated shell fixture emits the actual framed environment and refuses shell effects",
+        "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+        "Task attachment comment waits for its original focused owner after one click before inserting text",
+        "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+        "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+        "original desktop click waits for stable target geometry, without repeating input",
+        "original Task hover waits through layout and unavailability before its one physical move",
+        "original desktop click refuses a constantly moving target before dispatch",
+        "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+        "login failure facts retain only bounded original attempts and confirmed milestones",
+        "finite readiness failure summaries keep only bounded states and never private snapshot data",
+        "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+        "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+        "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+        "installer CDP and cleanup projection retains only exact finite observations",
+        "Selection target summaries retain the exact original phase and six closed facts",
+        "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+        "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+        "original desktop click refuses a target unavailable during the final ownership check",
+        "original desktop click refuses a target moved during the final ownership check",
+        "original default scroll preserves a disabled control before its readiness wait",
+        "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+        "original desktop click rechecks owner after its pending final target read",
+        "original desktop click rechecks cutoff after its pending final target read",
+        "original clarification lookup admits its retained read without completing the assignment prerequisite",
+        "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+        "original owner availability admits three captured A Teams through its actual first DOM read",
+        "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+        "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+        "original owner availability refuses invalid captured discovery before navigation",
+        "owner availability admits every captured A Team through the actual first observation",
+        "owner availability refuses healthy B in unavailable A rows",
+        "owner availability refuses captured foreign owner in unavailable A rows",
+        "owner availability refuses unknown Team in unavailable A rows",
+        "owner availability refuses malformed Team in unavailable A rows",
+        "owner availability refuses missing selected A before original navigation",
+        "owner availability refuses non-string A handle before original navigation",
+        "owner availability refuses empty A handle before original navigation",
+        "owner availability refuses duplicate A handle before original navigation",
+        "owner availability refuses over-bound capture before original navigation",
+        "passive input keeps its actual Team target and three separate original navigation samples",
+        "passive navigation preserves non-card events, the original ring bounds and null or non-Team state",
+        "passive navigation refuses malformed target and store facts without losing original callbacks",
+        "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure",
+        "passive navigation uses only the callable store own method and ignores unrelated card surfaces",
+        "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+        "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority",
+        "every present provider implementation digest must be valid and both recognized fields must agree",
+        "provider receipt shape, package selection and original file or JSON errors remain strict",
+        "saved Launch uses three stable actual DOM samples before its original settings action",
+        "saved Launch resets exact geometry when the original button shifts by a quarter pixel",
+        "saved Launch restarts its three samples after changed identity",
+        "saved Launch restarts its three samples after changed expanded state",
+        "saved Launch restarts its three samples after changed horizontal position",
+        "saved Launch restarts its three samples after changed width",
+        "saved Launch restarts its three samples after changed height",
+        "saved Launch resets its original readiness after absent target",
+        "saved Launch resets its original readiness after ambiguous target",
+        "saved Launch resets its original readiness after wrong model",
+        "saved Launch resets its original readiness after absent identity",
+        "saved Launch resets its original readiness after empty identity",
+        "saved Launch resets its original readiness after invalid expansion",
+        "saved Launch resets its original readiness after missing owning dialog",
+        "saved Launch resets its original readiness after nonfinite x",
+        "saved Launch resets its original readiness after nonfinite y",
+        "saved Launch resets its original readiness after zero width",
+        "saved Launch resets its original readiness after negative height",
+        "saved Launch resets its original readiness after running own animation",
+        "saved Launch resets its original readiness after paused own animation",
+        "saved Launch resets its original readiness after pending own animation",
+        "saved Launch allows finished own animation without inspecting descendant spinners or model status",
+        "saved Launch allows idle own animation without inspecting descendant spinners or model status",
+        "saved Launch exhausts its one original deadline with no matching model and no settings action",
+        "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action",
+        "original conversation waits for its own reply before one click at the hydrated coordinates",
+        "default conversation click retains its original final geometry refusal without a preview predicate",
+        "original conversation refuses body-only reply within its unchanged first read deadline",
+        "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+        "original conversation refuses different required reply within its unchanged first read deadline",
+        "original conversation refuses empty preview within its unchanged first read deadline",
+        "original conversation refuses missing target within its unchanged first read deadline",
+        "original conversation refuses zero-size target within its unchanged first read deadline",
+        "original conversation refuses disabled target within its unchanged first read deadline",
+        "original conversation refuses covered target within its unchanged first read deadline",
+        "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+        "original conversation serializes its required preview as literal data",
+        "original conversation rereads a revoked preview at unchanged final coordinates before input",
+        "original conversation still refuses final owner despite a ready preview",
+        "original conversation still refuses final movement despite a ready preview",
+        "actual openChat forwards TEST boot ready for alice",
+        "actual openChat forwards TEST stream partial for alice",
+        "actual openChat forwards TEST boot ready for team-lead",
+        "actual openChat forwards TEST stream partial for team-lead",
+        "original Cross Close target admits the ready cleared Task when canResolveClarification is false",
+        "original Cross Close target refuses retained user clarification",
+        "original Cross Close target refuses retained external clarification",
+        "original Cross Close target refuses null clarification",
+        "original Cross Close target refuses full-detail refreshPending",
+        "original Cross Close target refuses full-detail loading",
+        "original Cross Close target refuses current detail error",
+        "original Cross Close target refuses current deletionIntent",
+        "original Cross Close target refuses full Task deletedAt",
+        "original Cross Close target refuses full Task deleted status",
+        "original Cross Close target refuses non-ready full-detail phase",
+        "original Cross Close target refuses foreign full Task ID",
+        "original Cross Close target refuses foreign detail identity",
+        "original Cross Close target refuses changed active context",
+        "original Cross Close target refuses different selected Team",
+        "original Cross Close target refuses rebound controller surface",
+        "original Cross Close target refuses missing stored session",
+        "original Cross Close target refuses different stored session owner surface",
+        "original Cross Close target refuses changed stored owner revision",
+        "original Cross Close target refuses current canEditNow false",
+        "original Cross Close target refuses non-owning controller",
+        "original Cross Close target refuses scoped Team refresh",
+        "original Cross Close target refuses unavailable accepted Team metadata",
+        "original Cross Close target refuses disabled assignment control",
+        "original Cross Close target refuses expanded assignment control",
+        "original Cross Close target refuses another assignee",
+        "original Cross Close target refuses missing assignment control",
+        "original Cross Close target refuses duplicate assignment controls",
+        "actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates",
+        "actual original Cross Close retains the first-read deadline while renderer readiness is pending",
+        "actual original Cross Close cannot use a foreign dialog or an absent ineligible own control",
+        "actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing",
+        "actual original Cross Close refuses disabled covered and absent-hit controls",
+        "actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates",
+        "actual original Cross Close preserves final renderer ownership refusal without a press",
+        "actual original Cross Close preserves final exact geometry refusal without replay",
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+        "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+        "original review correction refuses missing or false live edit authority before any input action",
+        "original review correction admits current authority with one original insertion and submit"
+      ],
+      "adaptation": "Only two incoming actual-source fixtures, no new imports. Added explicit finish>start checks after unique extraction markers. Mutable virtual P11 clock and actual controls.waitRead Review fixture; original100ms/90s/30s, no new child startup."
+    },
+    "renderer": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "preimage": {
+        "bytes": 180091,
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+        "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+      },
+      "postimage": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "insertion": {
+        "bytes": 7799,
+        "sha256": "97709ff796be1678dae58cee0ca2fc34f9f59a12b75ea0ad3237d59185f640bc",
+        "gitBlob": "3ed3c02182c07da18e9a67a12b74d878884d243a",
+        "offsetUtf16": 180087,
+        "offsetBytes": 180087
+      },
+      "exactInverseRecoversWholeOldBody": true,
+      "oldCases": 80,
+      "addedCases": 5,
+      "totalCases": 85,
+      "names": [
+        "refreshes shared provider metadata after filtered connect (null, full=false)",
+        "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=false)",
+        "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=true)",
+        "refreshes shared provider metadata after filtered forget (null, full=false)",
+        "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=false)",
+        "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=true)",
+        "skips unsupported shared directory reads after connect without a refresh warning",
+        "skips unsupported shared directory reads after forget without a refresh warning",
+        "cancels all active probe attempts when startConnect closes the picker",
+        "cancels all active probe attempts when startReconnect closes the picker",
+        "cancels all active probe attempts when closeModelPicker closes the picker",
+        "cancels all active probe attempts when switchProvider closes the picker",
+        "stops only one probe and ignores its late response after immediate restart",
+        "keeps the probe running when stop is rejected",
+        "uses a clicked model as the app default for new teams without a global success banner",
+        "opens only the public GitHub device-login URL from OAuth progress",
+        "passes projectPath to the runtime provider management API",
+        "defers the full managed view until explicitly requested",
+        "opens a deep-linked provider setup after the directory row is ready",
+        "reloads a requested Models view when native runtime identity settles",
+        "reopens a pending deep-linked Connect when native runtime identity settles",
+        "hydrates the full provider directory without a catalog refresh",
+        "keeps summary providers when the full catalog comes back empty",
+        "paints same-scope curated cache while summary IPC is pending and retains errors",
+        "never emits a previous-project provider in the transition render",
+        "does not project cached summary credentials into another project or global scope",
+        "recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+        "ignores a pre-mutation directory response without changing the project",
+        "masks cached rows and ignores pending responses when the OpenCode binary changes",
+        "reopens a cached full catalog without flashing the 16-provider summary",
+        "does not replace the cached full catalog with search results",
+        "reuses setup while preserving the connected auth method for reconnect",
+        "keeps provider search local until full-catalog search is explicitly requested",
+        "clears structured errors and stale provider state when disabled",
+        "ignores pending directory and setup-form responses after being disabled",
+        "ignores stale provider views after project context changes",
+        "reissues a requested view after temporary project-context hydration",
+        "restarts provider directory loading when project context changes while loading",
+        "drops stale model probe results after project context changes",
+        "drops stale set-default responses after project context changes",
+        "clears pending provider save state after project context changes",
+        "refreshes view and catalog after forgetting managed auth while local auth remains",
+        "refreshes the view and catalog after a confirmed connection",
+        "keeps provider data visible during catalog refresh",
+        "lazy-loads provider directory and ignores stale search responses",
+        "keeps the API key draft when provider connect fails",
+        "explains Copilot model access separately from GitHub authentication",
+        "keeps setup form diagnostics available when submit is attempted after form load failure",
+        "submits a supported setup form without a secret as a null API key",
+        "keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+        "keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+        "keeps setup open when the backend does not confirm a connected provider",
+        "keeps the actual API credential hint when xAI refresh fails after connect",
+        "refreshes provider status after a cancelled OAuth child settles",
+        "preserves the full slow model-picker allowance: complete",
+        "preserves the full slow model-picker allowance: timeout",
+        "clears model loading when switching from model picker to setup form",
+        "debounces provider model search and groups superseded picker requests",
+        "keeps Test results across a debounced catalog search reload",
+        "appends paged provider models without duplicates",
+        "tracks concurrent model probes independently",
+        "drops stale model probe results after leaving the model picker",
+        "refreshes global provider status after a current model test (ok=true)",
+        "refreshes global provider status after a current model test (ok=false)",
+        "records an empty model test response as a row failure and refreshes provider status",
+        "preserves successful model verification when its global status refresh rejects",
+        "does not refresh global status from a model test after project change",
+        "does not refresh global status from a model test after unmount",
+        "keeps failed model probes scoped to the model result instead of a global success banner",
+        "keeps structured runtime endpoint diagnostics on the model result",
+        "keeps the model-test UI watchdog outside the runtime probe transport budget",
+        "promotes structured model probe failures to the global diagnostics alert state",
+        "keeps successful model probes scoped to the model card instead of a global success banner",
+        "saves a default without probing or fabricating verified model state",
+        "keeps the effective project default selected when an all-projects default is shadowed",
+        "preserves project-scoped access evidence after a neutral all-projects probe",
+        "does not clear a project override before the bundled runtime supports scoped defaults",
+        "clears a valid project override with a compatible bundled runtime",
+        "keeps the clear-project watchdog beyond the 300-second main-process timeout",
+        "does not clear project B while its view is still refreshing after switching from A",
+        "clears loading for the current silent refresh and refuses a stale response",
+        "clears pending loading when the current silent refresh ends with response-error",
+        "clears pending loading when the current silent refresh ends with rejection",
+        "keeps a silent view completion inert after newer-request",
+        "keeps a silent view completion inert after unmounted"
+      ],
+      "adaptation": "Only functional incoming three registration blocks (1 +2+2 expanded cases), inside existing outer describe before final closing. Removed captureViewLoadDiagnostics wrappers and their diagnostic assertions; reused all existing imports/harness/mocks/cleanup. First case name updated exactly to selected R1. Every original byte is recovered by removing the one insertion. The added block uses the surrounding multiline object/callback formatting; no old byte is reformatted. Review correction: success case explicitly asserts null error after current success and after stale completion, matching R1 error-preservation contract."
+    }
+  },
+  "method": {
+    "fullDataReads": "Complete source/test blob strings fetched as inert data. Recomputed UTF-8 byte count, SHA256 and Git blob identity for each pre/postimage and proposal. Compared every old byte through exact Node prefix and renderer inverse.",
+    "semanticReads": "Read the entire9542-byte Node append and final7799-byte renderer insertion. Re-read actual original hook refresh/silent caller/context guard, existing renderer imports/harness/beforeEach/afterEach, API proxy, original P11/Review/waitRead spans, and incoming functional case blocks from complete c43 preparation.",
+    "preserved80": "Reused the retained complete80-case/67-site inventory and re-proved its byte-exact embedding. No repeated broad DOM/import/native census was needed.",
+    "dataHashing": "Pure UTF8/SHA256/Git SHA1 helper from e4a4568d589e1254b88ade1a5f87d53924e7c2e8, no target-source evaluation. Empty and abc standard vectors pass in the same retained work.",
+    "syntaxScope": "Manual static TypeScript/JSX-free block review found no syntax or unbound-name issue. No compiler, transpiler, parser CLI, test registration or runtime was invoked; actual parsing errors cannot qualify as RED.",
+    "publicationScope": "Consumed complete accepted72db and0669 publication receipts, with identities independently recomputed, rather than repeating the completed tree census."
+  },
+  "fullBodyIdentityEvidence": [
+    {
+      "fetched": "d1fc505f73e01b40cb9830cc2b85fc48d6384c2e",
+      "bytes": 23864,
+      "sha256": "ec2334bc54d0299f42ef8ee59356572bc8ded1ed924d43f949db4443dd06b7d9",
+      "gitBlob": "d1fc505f73e01b40cb9830cc2b85fc48d6384c2e",
+      "gitMatches": true
+    },
+    {
+      "fetched": "75f46829f74b02f9d4f72df903a4f48638ae0867",
+      "bytes": 187816,
+      "sha256": "1ed7e2ab84c4bf86b054aae3a3ce862bdbbfd1864f3e45c402a4f0e028d3e2b6",
+      "gitBlob": "75f46829f74b02f9d4f72df903a4f48638ae0867",
+      "gitMatches": true
+    },
+    {
+      "fetched": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "bytes": 180091,
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+      "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "gitMatches": true
+    },
+    {
+      "fetched": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "gitMatches": true
+    },
+    {
+      "fetched": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+      "gitMatches": true
+    },
+    {
+      "fetched": "72db8984a98696287225899a3bf0c31bfd57a71f",
+      "bytes": 25481,
+      "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+      "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f",
+      "gitMatches": true
+    },
+    {
+      "fetched": "0669feaf0e8759ad2fd4330efe315c5540b55252",
+      "bytes": 80224,
+      "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+      "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252",
+      "gitMatches": true
+    },
+    {
+      "fetched": "061cb0545b58d847ef69b05baa2b140065456730",
+      "bytes": 24017,
+      "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+      "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+    },
+    {
+      "fetched": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    }
+  ],
+  "finalRendererInsertionIdentity": {
+    "bytes": 7799,
+    "sha256": "97709ff796be1678dae58cee0ca2fc34f9f59a12b75ea0ad3237d59185f640bc",
+    "gitBlob": "3ed3c02182c07da18e9a67a12b74d878884d243a"
+  },
+  "finalRendererInverse": {
+    "offsetUtf16": 180087,
+    "offsetBytes": 180087,
+    "removedBytes": 7799,
+    "unchangedSuffix": "});\n",
+    "entireInverseIdentity": {
+      "bytes": 180091,
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+      "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+    },
+    "entireOldBodyExactlyRecovered": true
+  },
+  "resolvedReviewFinding": {
+    "originallyReviewedProposal": "d1fc505f73e01b40cb9830cc2b85fc48d6384c2e",
+    "originallyReviewedRenderer": "75f46829f74b02f9d4f72df903a4f48638ae0867",
+    "issue": "Published R1 first-case contract includes preserving error through stale completion; the initial postimage checked view/loading only.",
+    "rootFix": "Added expect(state?.error).toBeNull() after current-view assertion and after stale-completion view assertion inside first new case.",
+    "deltaBytes": 74,
+    "exactCorrectionOnly": true,
+    "finalProposalDelta": [
+      {
+        "path": "/tests/1/postimage/bytes",
+        "before": 187816,
+        "after": 187890
+      },
+      {
+        "path": "/tests/1/postimage/sha256",
+        "before": "1ed7e2ab84c4bf86b054aae3a3ce862bdbbfd1864f3e45c402a4f0e028d3e2b6",
+        "after": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9"
+      },
+      {
+        "path": "/tests/1/postimage/gitBlob",
+        "before": "75f46829f74b02f9d4f72df903a4f48638ae0867",
+        "after": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      {
+        "path": "/tests/1/insertion/bytes",
+        "before": 7725,
+        "after": 7799
+      },
+      {
+        "path": "/tests/1/insertion/sha256",
+        "before": "905681d70db53715dfdc55ce2c3952040d1dc60a54e5a06aa3b7b05af3f8fb8f",
+        "after": "97709ff796be1678dae58cee0ca2fc34f9f59a12b75ea0ad3237d59185f640bc"
+      },
+      {
+        "path": "/tests/1/insertion/gitBlob",
+        "before": "825f5d491efd78ece7dd7c1bb017fb702a14de0e",
+        "after": "3ed3c02182c07da18e9a67a12b74d878884d243a"
+      },
+      {
+        "path": "/tests/1/adaptation",
+        "before": "Only functional incoming three registration blocks (1 +2+2 expanded cases), inside existing outer describe before final closing. Removed captureViewLoadDiagnostics wrappers and their diagnostic assertions; reused all existing imports/harness/mocks/cleanup. First case name updated exactly to selected R1. Every original byte is recovered by removing the one insertion. The added block uses the surrounding multiline object/callback formatting; no old byte is reformatted.",
+        "after": "Only functional incoming three registration blocks (1 +2+2 expanded cases), inside existing outer describe before final closing. Removed captureViewLoadDiagnostics wrappers and their diagnostic assertions; reused all existing imports/harness/mocks/cleanup. First case name updated exactly to selected R1. Every original byte is recovered by removing the one insertion. The added block uses the surrounding multiline object/callback formatting; no old byte is reformatted. Review correction: success case explicitly asserts null error after current success and after stale completion, matching R1 error-preservation contract."
+      }
+    ],
+    "closed": true
+  },
+  "registrationCensus": {
+    "renderer": {
+      "oldExpanded": 80,
+      "oldSites": 67,
+      "oldEachSites": 7,
+      "addedSites": 3,
+      "addedEachSites": 2,
+      "addedExpanded": 5,
+      "totalExpanded": 85,
+      "totalSites": 70,
+      "totalEachSites": 9,
+      "derivedAddedNames": [
+        "clears loading for the current silent refresh and refuses a stale response",
+        "clears pending loading when the current silent refresh ends with response-error",
+        "clears pending loading when the current silent refresh ends with rejection",
+        "keeps a silent view completion inert after newer-request",
+        "keeps a silent view completion inert after unmounted"
+      ],
+      "allOldNamesRetained": true,
+      "oldOrderedNamesSha256": "20912d04248b877e3cc8b5fd6709d512d474ecd2758b48eaeb4325da05f8f647",
+      "multiplicity": 1
+    },
+    "node": {
+      "oldExpanded": 133,
+      "addedExpanded": 6,
+      "totalExpanded": 139,
+      "entireOldBodyLiteralPrefix": true,
+      "addedNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+        "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+        "original review correction refuses missing or false live edit authority before any input action",
+        "original review correction admits current authority with one original insertion and submit"
+      ],
+      "multiplicity": 1
+    }
+  },
+  "rendererSemanticCases": [
+    {
+      "name": "clears loading for the current silent refresh and refuses a stale response",
+      "expectedRed": "FAIL loading false expected, true actual, line5722",
+      "redReached": "Visible A begins and loading=true. Current silent B succeeds and publishes current view with null error. Both call count2 and current view/null-error assertions pass before failing loading=false.",
+      "redUnreached": "Resolve stale A, await pending=false, and all subsequent view/error/loading/call-count assertions.",
+      "greenRequired": "B's current finally clears loading; stale A returns false, preserves current view/null error/false loading and call count2.",
+      "changeReason": "Only the selected removal of !silent && from current finally is needed; preserve request-current guard."
+    },
+    {
+      "name": "clears pending loading when the current silent refresh ends with response-error",
+      "expectedRed": "FAIL loading false expected, true actual, line5781",
+      "redReached": "A pending; B response.error handled by actual hook; refreshDirectory finishes; calls2.",
+      "redUnreached": "Null view, exact failure.message, null diagnostics, stale A resolution/refusal and retained error/loading assertions.",
+      "greenRequired": "Current silent response-error clears loading while retaining actual current error; stale A cannot overwrite view/error/loading; exactly2 calls."
+    },
+    {
+      "name": "clears pending loading when the current silent refresh ends with rejection",
+      "expectedRed": "FAIL loading false expected, true actual, line5781",
+      "redReached": "A pending; B Promise.reject(failure) caught by actual hook; refreshDirectory finishes; calls2.",
+      "redUnreached": "Current error/diagnostic assertions and stale A assertions below failing loading expectation.",
+      "greenRequired": "Current silent rejection clears loading, retains failure.message and null diagnostics, then stale A returns false without overwriting current state; no retry."
+    },
+    {
+      "name": "keeps a silent view completion inert after newer-request",
+      "expectedRed": "PASS_CONTROL",
+      "redReached": "All branches: A visible pending; B silent pending; C newer visible pending. Resolve B: calls3/loading true/view null. Resolve A: false/loading true. Resolve C: true/latest view/loading false/calls3.",
+      "greenRequired": "Same complete sequence and observations; stale silent finally must refuse clearing C loading."
+    },
+    {
+      "name": "keeps a silent view completion inert after unmounted",
+      "expectedRed": "PASS_CONTROL",
+      "redReached": "All branches: A visible and B silent pending; retain state identity; unmount; resolve B then A. Calls2, loading true, view null, state identity unchanged and A false.",
+      "greenRequired": "Same complete sequence under original mounted/context-generation guard; no post-unmount publication or clearing; no C call."
+    }
+  ],
+  "cleanupAndLimits": {
+    "unchangedCleanup": "All original beforeEach and afterEach bytes remain. afterEach awaits act around root unmounts, clears roots, deletes window.electronAPI, clears body, resets directory cache and unstubs globals.",
+    "explicitUnmount": "New unmounted branch uses the same existing roots-tracking mechanism; afterEach retains its original complete cleanup without replacement or diagnostic wrappers.",
+    "expectedRedPendingPromises": "At each of the three intended RED failures, the unresolved initial visible request and later assertions are unreached. The new promises are finite test-controlled deferred objects with no new timer/IO/provider handles. Existing afterEach unmount invalidates project context. Do not claim these promises were settled in RED or every microtask globally completed.",
+    "greenPendingPromises": "Success/error cases explicitly resolve and await initial A. Newer-request control resolves and awaits A/B/C. Unmounted control resolves and awaits A/B; its created latest promise is never requested or awaited and has no handle. This is not a global promise-drain claim.",
+    "environment": "No test changes HOME, CODEX_HOME, TMPDIR, config, setup, install state, package/native path or reporter. Existing setup's best-effort worker-HOME cleanup still requires external verification in actual package.",
+    "clocks": "No renderer timeout override. Retain unchanged15000ms Vitest per-test config and independently measured180s primary clocks with30s metadata limits. Node selected5000ms test caps and original30s/100ms waitRead budget/cadence unchanged.",
+    "externalLifecycle": "Unseen runner must still enforce entire phase TMPDIR empty immediately after Node capture/cleanup before any supervisor deletion and before renderer launch. Renderer surviving-file capture/removal cannot discharge Node debt. Capture every surviving owned temp with path/mode/bytes before exact cleanup; require .vite-temp and TMPDIR absence/emptiness before full postflight. Self-deleted intermediate byte history is not promised.",
+    "acceptance": "Observed exit0 alone cannot qualify close/teardown. Default reporter and raw stdout/stderr plus exact JSON, no unhandled error/console/setup/teardown failure, exact groups/process cleanup, complete package input-before/input-after and separate outer0 remain required."
+  },
+  "nodeIntegrationReview": {
+    "fixtureScope": "Two added async helpers read actual full selected source as data, require unique ordered boundaries, strip selected fragment TypeScript via Node builtin, then use finite Function fixtures. This review did not execute them.",
+    "p11": "Three true-at/after-cutoff cases predict missing-rejection failures on original poll; all later per-case trace assertions are unreached in those RED failures. Composite control predicts PASS for timely immediate/delayed acceptance, original error identity, currentness error and false-at-cutoff refusal.",
+    "reviewNegative": "Original null case reaches identical refusal and passes; next {} is truthy under original default Boolean and proceeds with input, so missing rejection fails there. Remaining false/nonboolean/array variants are unreached in RED. GREEN requires every variant, two reads, budget30000 and no input action.",
+    "reviewPositive": "Already-current branch passes on original. False-authority then current is prematurely admitted by original waitRead, producing one read rather than expected two and failing exact trace. Insertion-error branch is unreached in RED. GREEN requires both authority branches and identical insertion error with no submit.",
+    "expectedRed": "Original133 PASS plus composite P11 control PASS; three cutoff and two Review test failures:134P5F. This is a static prediction, not an observed result.",
+    "guardComplement": "Root assigned Guard the detailed Node-centered independent review. This report still reads the complete append and verifies its exact prefix/hash/selected fixtures and cross-package integration."
+  },
+  "publicationGateConsumed": {
+    "parentPublication": "cf6547aa79cc903a5833fa950a2de3178194c429",
+    "rootIdentity": {
+      "bytes": 25481,
+      "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+      "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+    },
+    "independentIdentity": {
+      "bytes": 80224,
+      "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+      "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+    },
+    "exactR1": {
+      "bytes": 77830,
+      "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+      "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+    },
+    "rootAccepted": true,
+    "independentAccepted": true,
+    "independentAssertions": 72,
+    "independentErrors": [],
+    "closedAtUtc": "2026-11-16T21:02:37.102Z",
+    "authoredAtUtc": "2026-11-16T21:03:44.666Z",
+    "chronologyQualification": "Chronology is the retained root/proposal record; this review validates its exact joined identities and ordering, not an independently measured prior wall clock."
+  },
+  "checks": [
+    {
+      "name": "Final proposal full UTF-8 size, SHA256 and Git identity exact",
+      "pass": true,
+      "evidence": {
+        "fetched": "061cb0545b58d847ef69b05baa2b140065456730",
+        "bytes": 24017,
+        "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+        "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+      },
+      "method": "inert-data"
+    },
+    {
+      "name": "Final renderer full UTF-8 size, SHA256 and Git identity exact",
+      "pass": true,
+      "evidence": {
+        "fetched": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "method": "inert-data"
+    },
+    {
+      "name": "Both full test preimages and unchanged Node postimage identities recomputed",
+      "pass": true,
+      "evidence": "Full bodies, not truncation or metadata-only reads.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Renderer single insertion exact identity",
+      "pass": true,
+      "evidence": {
+        "bytes": 7799,
+        "sha256": "97709ff796be1678dae58cee0ca2fc34f9f59a12b75ea0ad3237d59185f640bc",
+        "gitBlob": "3ed3c02182c07da18e9a67a12b74d878884d243a"
+      },
+      "method": "inert-data"
+    },
+    {
+      "name": "Renderer entire old body recovered by one exact deletion",
+      "pass": true,
+      "evidence": {
+        "bytes": 180091,
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+        "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+      },
+      "method": "inert-data"
+    },
+    {
+      "name": "Insertion is immediately before unchanged final outer describe closing",
+      "pass": true,
+      "evidence": "Zero-based UTF-16 and byte offset180087; ASCII prefix; unchanged4-byte suffix.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Original renderer imports, helpers, mocks, assertions and cleanup all byte-identical",
+      "pass": true,
+      "evidence": "Consequence of the full exact inverse, including every original80 registration.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Existing80 ordered registry agrees with final proposal",
+      "pass": true,
+      "evidence": "Prior complete67-site/80-case inventory reused.",
+      "method": "inert-data"
+    },
+    {
+      "name": "New five expanded names independently derived from three literal blocks",
+      "pass": true,
+      "evidence": [
+        "clears loading for the current silent refresh and refuses a stale response",
+        "clears pending loading when the current silent refresh ends with response-error",
+        "clears pending loading when the current silent refresh ends with rejection",
+        "keeps a silent view completion inert after newer-request",
+        "keeps a silent view completion inert after unmounted"
+      ],
+      "method": "inert-data"
+    },
+    {
+      "name": "Complete85 names order and multiplicity equal published R1",
+      "pass": true,
+      "evidence": "80 preserved plus1+2+2, every name once.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Exactly three renderer registration sites, two each tables",
+      "pass": true,
+      "evidence": "67 original sites plus3 gives70 sites; seven original each sites plus2 gives9.",
+      "method": "inert-data"
+    },
+    {
+      "name": "First new name is exact selected R1 name",
+      "pass": true,
+      "evidence": "clears loading for the current silent refresh and refuses a stale response",
+      "method": "inert-data"
+    },
+    {
+      "name": "Root correction adds only two null-error assertions to prior insertion",
+      "pass": true,
+      "evidence": "Exactly74 added bytes; both inside first new case.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Resolved first success case now asserts error before and after stale completion",
+      "pass": true,
+      "evidence": "Published per-case error-preservation contract now explicit.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Remaining four cases unchanged by correction",
+      "pass": true,
+      "evidence": "No new registration, branch or timing change.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Node entire original133 source is exact prefix",
+      "pass": true,
+      "evidence": "155423-byte complete0aec prefix.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Node append exact identity",
+      "pass": true,
+      "evidence": {
+        "bytes": 9542,
+        "sha256": "e0900d02f3294294c63f97c85eb073d635007635b5e9f70e60faa09a490312e3",
+        "gitBlob": "52b16c18eca119b8eb104257c870c37a26496a4d"
+      },
+      "method": "inert-data"
+    },
+    {
+      "name": "Node postimage/proposal unchanged by renderer correction",
+      "pass": true,
+      "evidence": "Exact896c postimage remains164965 bytes.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Node six selected names match R1 without duplicate final names",
+      "pass": true,
+      "evidence": "Three parameterized cutoff cases plus three standalone registrations.",
+      "method": "inert-data"
+    },
+    {
+      "name": "New Node helper declarations do not collide with original file",
+      "pass": true,
+      "evidence": "No old binding or byte edited.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Both test caps obey published limits",
+      "pass": true,
+      "evidence": {
+        "node": 164965,
+        "renderer": 187890
+      },
+      "method": "inert-data"
+    },
+    {
+      "name": "No renderer filter, skip, diagnostic helper, new import or timer",
+      "pass": true,
+      "evidence": "Full insertion manually read; mocks are finite existing-style vi.fn Electron API stubs.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Existing real React hook harness and API proxy used",
+      "pass": true,
+      "evidence": "ConfigurableHarness invokes actual hook; installed window.electronAPI precedes root.render and proxy property reads.",
+      "method": "static-source-review"
+    },
+    {
+      "name": "Success case RED failure is original silent finally retaining loading",
+      "pass": true,
+      "evidence": "Old finally suppresses silent clearing; current view and null error pass before loading=false fails at final source line5722.",
+      "method": "static-semantic-prediction"
+    },
+    {
+      "name": "Response-error case RED failure remains loading=false only",
+      "pass": true,
+      "evidence": "loadView response.error is caught by actual hook response branch; refreshDirectory resolves; loading=true causes failure at line5781 before later error/stale checks.",
+      "method": "static-semantic-prediction"
+    },
+    {
+      "name": "Rejection case RED failure remains loading=false only",
+      "pass": true,
+      "evidence": "Finite Promise rejection is awaited/caught in actual refresh; same loading failure at line5781; no expected unhandled rejection.",
+      "method": "static-semantic-prediction"
+    },
+    {
+      "name": "Newer-request control completes on original and proposed hook",
+      "pass": true,
+      "evidence": "Silent B is superseded by visible C; resolving B and stale A leaves loading true/view null; only current C returns true, publishes latest view and clears loading.",
+      "method": "static-semantic-prediction"
+    },
+    {
+      "name": "Unmounted control completes on original and proposed hook",
+      "pass": true,
+      "evidence": "Unmount increments project context generation; B and A completions are stale, leave retained state identity unchanged and keep loading true; no latest request is issued.",
+      "method": "static-semantic-prediction"
+    },
+    {
+      "name": "GREEN success downstream stale branch is explicit",
+      "pass": true,
+      "evidence": "Resolve stale A, await pending=false, retain current defaultModel, null error, false loading and exactly2 loadView calls.",
+      "method": "static-source-review"
+    },
+    {
+      "name": "GREEN both error downstream branches are explicit",
+      "pass": true,
+      "evidence": "Current error message and null diagnostics checked; stale A returns false and preserves null view, same error and false loading; exactly2 calls.",
+      "method": "static-source-review"
+    },
+    {
+      "name": "Existing beforeEach and afterEach remain complete",
+      "pass": true,
+      "evidence": "Root set unmount under act, roots.clear, delete electronAPI, clear body, reset directory cache and unstub globals are unchanged by exact inverse.",
+      "method": "static-source-review"
+    },
+    {
+      "name": "No new provider startup or package/config/setup edit in two postimages",
+      "pass": true,
+      "evidence": "Renderer only finite mocked view/directory promises; Node two actual-source fixtures only; exact original prefixes/inverse preserve all old imports and children.",
+      "method": "static-source-review"
+    },
+    {
+      "name": "Renderer per-test clock remains unchanged",
+      "pass": true,
+      "evidence": "No renderer timing override; published unchanged config15000ms and180s external primary remain future gates.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Node retains selected virtual P11 and actual waitRead fixtures",
+      "pass": true,
+      "evidence": "Unique ordered start/end markers, actual TypeScript fragment erasure, finite injected P11 clock and actual createDesktopUiControls.waitRead; no full driver evaluation by new fixtures.",
+      "method": "static-source-review"
+    },
+    {
+      "name": "P11 three late cases and composite control match R1",
+      "pass": true,
+      "evidence": "90000/90001 first outcomes and late second observation reject; original100ms cadence, error identity, currentness and timely controls remain explicit.",
+      "method": "static-source-review"
+    },
+    {
+      "name": "Review fixture authority variants and input traces match R1",
+      "pass": true,
+      "evidence": "null/object/false/nonboolean/array negatives plus direct/delayed authority and insertion-error positive branches; original30000 budget; selected5000 test caps.",
+      "method": "static-source-review"
+    },
+    {
+      "name": "Source extraction and setup errors cannot qualify as RED",
+      "pass": true,
+      "evidence": "Unexpected markers/syntax/import/observations fail outside intended semantic assertions; published R1 requires exact failure sites.",
+      "method": "static-source-review"
+    },
+    {
+      "name": "Full published R1 identity matches proposal",
+      "pass": true,
+      "evidence": {
+        "bytes": 77830,
+        "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+        "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+      },
+      "method": "inert-data"
+    },
+    {
+      "name": "Both actual R1 publication receipts fully fetched and rehashed",
+      "pass": true,
+      "evidence": "72db root and0669 independent full JSON bodies.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Publication receipts accept same exact cf6547/d52",
+      "pass": true,
+      "evidence": "Independent receipt72 checks pass; this review consumes those receipts and does not rewalk publication tree.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Recorded authorship follows closed R1 publication gate",
+      "pass": true,
+      "evidence": {
+        "authoredAtUtc": "2026-11-16T21:03:44.666Z",
+        "gateClosedAtUtc": "2026-11-16T21:02:37.102Z"
+      },
+      "method": "inert-data"
+    },
+    {
+      "name": "Proposal retains predictions as unobserved",
+      "pass": true,
+      "evidence": "No runtime result is inferred from this static review.",
+      "method": "inert-data"
+    },
+    {
+      "name": "Exact final proposal changed only renderer identity/adaptation",
+      "pass": true,
+      "evidence": [
+        "/tests/1/postimage/bytes",
+        "/tests/1/postimage/sha256",
+        "/tests/1/postimage/gitBlob",
+        "/tests/1/insertion/bytes",
+        "/tests/1/insertion/sha256",
+        "/tests/1/insertion/gitBlob",
+        "/tests/1/adaptation"
+      ],
+      "method": "inert-data"
+    },
+    {
+      "name": "No remaining test-postimage blocker",
+      "pass": true,
+      "evidence": "Original narrow success-error assertion gap closed; separate runner, publication, materialization and actual execution gates remain.",
+      "method": "review-verdict"
+    }
+  ],
+  "checkCount": 44,
+  "failedChecks": [],
+  "blockers": [],
+  "remainingGates": [
+    "Exact adapted runner and every new binding require independent complete R2 review; this report approves no unseen code.",
+    "Root must compose/publish exact tests plus accepted runner/bindings and obtain complete actual publication/readback before materialization or execution.",
+    "Both full test postimages must be identical in RED and GREEN. Whole primaries ordered Node139 then renderer85; no filters/skips/config/install changes and no deadline increase.",
+    "Accepted actual combined RED, per-primary semantics/lifetimes, package full fresh before/after census and outer0 plus required publication/readback must precede any of the three producer postimages.",
+    "GREEN must reach all downstream assertions/variant branches and require139P and85P, with all actual input and cleanup evidence; predictions here do not close those gates."
+  ],
+  "preservedBoundaries": {
+    "noProducerPostimagesAuthoredOrSelectedByReviewer": true,
+    "fixedFourProducersUnchanged": true,
+    "exactNineRowsRemainR1": true,
+    "ordinaryProductionCap": 800,
+    "productionFiles": 5020,
+    "frozenExceptions": 141,
+    "hookException": 2068,
+    "separateWaitReadDeadlineProposalSelected": false,
+    "windowsDarwinNativeOrLiveGuiQualification": false,
+    "canonicalBuildTypecheckQualified": false,
+    "wholeE2E": "OPEN",
+    "realClaudeCodexRun": false,
+    "frozenPrs": [
+      1206,
+      1207,
+      1208,
+      1211,
+      1212,
+      1213
+    ],
+    "frozenPrsAndTerminalCiChanged": false
+  },
+  "retainedCompleteFinalProposal": {
+    "schema": "c714-combined-test-r2-proposal-v1",
+    "authoredAtUtc": "2026-11-16T21:03:44.666Z",
+    "gate": {
+      "closedAtUtc": "2026-11-16T21:02:37.102Z",
+      "r1": {
+        "bytes": 77830,
+        "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+        "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+      },
+      "publishedCommit": "cf6547aa79cc903a5833fa950a2de3178194c429",
+      "root": {
+        "bytes": 25481,
+        "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+        "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+      },
+      "independent": {
+        "bytes": 80224,
+        "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+        "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+      },
+      "scope": "New exact two tests and narrowly adapted runner/bindings; producers remain forbidden until accepted actual combined RED."
+    },
+    "sourceR1": {
+      "bytes": 77830,
+      "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+      "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+    },
+    "authoredBy": "root",
+    "repository": "777genius/agent-teams-ai",
+    "parentPublication": "cf6547aa79cc903a5833fa950a2de3178194c429",
+    "tests": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "preimage": {
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+          "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+        },
+        "postimage": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        "append": {
+          "bytes": 9542,
+          "sha256": "e0900d02f3294294c63f97c85eb073d635007635b5e9f70e60faa09a490312e3",
+          "gitBlob": "52b16c18eca119b8eb104257c870c37a26496a4d"
+        },
+        "completeOldBodyIsExactPrefix": true,
+        "oldCases": 133,
+        "addedCases": 6,
+        "totalCases": 139,
+        "names": [
+          "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+          "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+          "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+          "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+          "isolated shell fixture emits the actual framed environment and refuses shell effects",
+          "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+          "Task attachment comment waits for its original focused owner after one click before inserting text",
+          "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+          "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+          "original desktop click waits for stable target geometry, without repeating input",
+          "original Task hover waits through layout and unavailability before its one physical move",
+          "original desktop click refuses a constantly moving target before dispatch",
+          "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+          "login failure facts retain only bounded original attempts and confirmed milestones",
+          "finite readiness failure summaries keep only bounded states and never private snapshot data",
+          "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+          "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+          "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+          "installer CDP and cleanup projection retains only exact finite observations",
+          "Selection target summaries retain the exact original phase and six closed facts",
+          "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+          "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+          "original desktop click refuses a target unavailable during the final ownership check",
+          "original desktop click refuses a target moved during the final ownership check",
+          "original default scroll preserves a disabled control before its readiness wait",
+          "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+          "original desktop click rechecks owner after its pending final target read",
+          "original desktop click rechecks cutoff after its pending final target read",
+          "original clarification lookup admits its retained read without completing the assignment prerequisite",
+          "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+          "original owner availability admits three captured A Teams through its actual first DOM read",
+          "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+          "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+          "original owner availability refuses invalid captured discovery before navigation",
+          "owner availability admits every captured A Team through the actual first observation",
+          "owner availability refuses healthy B in unavailable A rows",
+          "owner availability refuses captured foreign owner in unavailable A rows",
+          "owner availability refuses unknown Team in unavailable A rows",
+          "owner availability refuses malformed Team in unavailable A rows",
+          "owner availability refuses missing selected A before original navigation",
+          "owner availability refuses non-string A handle before original navigation",
+          "owner availability refuses empty A handle before original navigation",
+          "owner availability refuses duplicate A handle before original navigation",
+          "owner availability refuses over-bound capture before original navigation",
+          "passive input keeps its actual Team target and three separate original navigation samples",
+          "passive navigation preserves non-card events, the original ring bounds and null or non-Team state",
+          "passive navigation refuses malformed target and store facts without losing original callbacks",
+          "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure",
+          "passive navigation uses only the callable store own method and ignores unrelated card surfaces",
+          "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+          "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority",
+          "every present provider implementation digest must be valid and both recognized fields must agree",
+          "provider receipt shape, package selection and original file or JSON errors remain strict",
+          "saved Launch uses three stable actual DOM samples before its original settings action",
+          "saved Launch resets exact geometry when the original button shifts by a quarter pixel",
+          "saved Launch restarts its three samples after changed identity",
+          "saved Launch restarts its three samples after changed expanded state",
+          "saved Launch restarts its three samples after changed horizontal position",
+          "saved Launch restarts its three samples after changed width",
+          "saved Launch restarts its three samples after changed height",
+          "saved Launch resets its original readiness after absent target",
+          "saved Launch resets its original readiness after ambiguous target",
+          "saved Launch resets its original readiness after wrong model",
+          "saved Launch resets its original readiness after absent identity",
+          "saved Launch resets its original readiness after empty identity",
+          "saved Launch resets its original readiness after invalid expansion",
+          "saved Launch resets its original readiness after missing owning dialog",
+          "saved Launch resets its original readiness after nonfinite x",
+          "saved Launch resets its original readiness after nonfinite y",
+          "saved Launch resets its original readiness after zero width",
+          "saved Launch resets its original readiness after negative height",
+          "saved Launch resets its original readiness after running own animation",
+          "saved Launch resets its original readiness after paused own animation",
+          "saved Launch resets its original readiness after pending own animation",
+          "saved Launch allows finished own animation without inspecting descendant spinners or model status",
+          "saved Launch allows idle own animation without inspecting descendant spinners or model status",
+          "saved Launch exhausts its one original deadline with no matching model and no settings action",
+          "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action",
+          "original conversation waits for its own reply before one click at the hydrated coordinates",
+          "default conversation click retains its original final geometry refusal without a preview predicate",
+          "original conversation refuses body-only reply within its unchanged first read deadline",
+          "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+          "original conversation refuses different required reply within its unchanged first read deadline",
+          "original conversation refuses empty preview within its unchanged first read deadline",
+          "original conversation refuses missing target within its unchanged first read deadline",
+          "original conversation refuses zero-size target within its unchanged first read deadline",
+          "original conversation refuses disabled target within its unchanged first read deadline",
+          "original conversation refuses covered target within its unchanged first read deadline",
+          "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+          "original conversation serializes its required preview as literal data",
+          "original conversation rereads a revoked preview at unchanged final coordinates before input",
+          "original conversation still refuses final owner despite a ready preview",
+          "original conversation still refuses final movement despite a ready preview",
+          "actual openChat forwards TEST boot ready for alice",
+          "actual openChat forwards TEST stream partial for alice",
+          "actual openChat forwards TEST boot ready for team-lead",
+          "actual openChat forwards TEST stream partial for team-lead",
+          "original Cross Close target admits the ready cleared Task when canResolveClarification is false",
+          "original Cross Close target refuses retained user clarification",
+          "original Cross Close target refuses retained external clarification",
+          "original Cross Close target refuses null clarification",
+          "original Cross Close target refuses full-detail refreshPending",
+          "original Cross Close target refuses full-detail loading",
+          "original Cross Close target refuses current detail error",
+          "original Cross Close target refuses current deletionIntent",
+          "original Cross Close target refuses full Task deletedAt",
+          "original Cross Close target refuses full Task deleted status",
+          "original Cross Close target refuses non-ready full-detail phase",
+          "original Cross Close target refuses foreign full Task ID",
+          "original Cross Close target refuses foreign detail identity",
+          "original Cross Close target refuses changed active context",
+          "original Cross Close target refuses different selected Team",
+          "original Cross Close target refuses rebound controller surface",
+          "original Cross Close target refuses missing stored session",
+          "original Cross Close target refuses different stored session owner surface",
+          "original Cross Close target refuses changed stored owner revision",
+          "original Cross Close target refuses current canEditNow false",
+          "original Cross Close target refuses non-owning controller",
+          "original Cross Close target refuses scoped Team refresh",
+          "original Cross Close target refuses unavailable accepted Team metadata",
+          "original Cross Close target refuses disabled assignment control",
+          "original Cross Close target refuses expanded assignment control",
+          "original Cross Close target refuses another assignee",
+          "original Cross Close target refuses missing assignment control",
+          "original Cross Close target refuses duplicate assignment controls",
+          "actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates",
+          "actual original Cross Close retains the first-read deadline while renderer readiness is pending",
+          "actual original Cross Close cannot use a foreign dialog or an absent ineligible own control",
+          "actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing",
+          "actual original Cross Close refuses disabled covered and absent-hit controls",
+          "actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates",
+          "actual original Cross Close preserves final renderer ownership refusal without a press",
+          "actual original Cross Close preserves final exact geometry refusal without replay",
+          "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+          "P11 keeps the original 90-second cutoff for first result after the cutoff",
+          "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+          "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+          "original review correction refuses missing or false live edit authority before any input action",
+          "original review correction admits current authority with one original insertion and submit"
+        ],
+        "adaptation": "Only two incoming actual-source fixtures, no new imports. Added explicit finish>start checks after unique extraction markers. Mutable virtual P11 clock and actual controls.waitRead Review fixture; original100ms/90s/30s, no new child startup."
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "preimage": {
+          "bytes": 180091,
+          "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+          "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+        },
+        "postimage": {
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        },
+        "insertion": {
+          "bytes": 7799,
+          "sha256": "97709ff796be1678dae58cee0ca2fc34f9f59a12b75ea0ad3237d59185f640bc",
+          "gitBlob": "3ed3c02182c07da18e9a67a12b74d878884d243a",
+          "offsetUtf16": 180087,
+          "offsetBytes": 180087
+        },
+        "exactInverseRecoversWholeOldBody": true,
+        "oldCases": 80,
+        "addedCases": 5,
+        "totalCases": 85,
+        "names": [
+          "refreshes shared provider metadata after filtered connect (null, full=false)",
+          "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=false)",
+          "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=true)",
+          "refreshes shared provider metadata after filtered forget (null, full=false)",
+          "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=false)",
+          "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=true)",
+          "skips unsupported shared directory reads after connect without a refresh warning",
+          "skips unsupported shared directory reads after forget without a refresh warning",
+          "cancels all active probe attempts when startConnect closes the picker",
+          "cancels all active probe attempts when startReconnect closes the picker",
+          "cancels all active probe attempts when closeModelPicker closes the picker",
+          "cancels all active probe attempts when switchProvider closes the picker",
+          "stops only one probe and ignores its late response after immediate restart",
+          "keeps the probe running when stop is rejected",
+          "uses a clicked model as the app default for new teams without a global success banner",
+          "opens only the public GitHub device-login URL from OAuth progress",
+          "passes projectPath to the runtime provider management API",
+          "defers the full managed view until explicitly requested",
+          "opens a deep-linked provider setup after the directory row is ready",
+          "reloads a requested Models view when native runtime identity settles",
+          "reopens a pending deep-linked Connect when native runtime identity settles",
+          "hydrates the full provider directory without a catalog refresh",
+          "keeps summary providers when the full catalog comes back empty",
+          "paints same-scope curated cache while summary IPC is pending and retains errors",
+          "never emits a previous-project provider in the transition render",
+          "does not project cached summary credentials into another project or global scope",
+          "recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+          "ignores a pre-mutation directory response without changing the project",
+          "masks cached rows and ignores pending responses when the OpenCode binary changes",
+          "reopens a cached full catalog without flashing the 16-provider summary",
+          "does not replace the cached full catalog with search results",
+          "reuses setup while preserving the connected auth method for reconnect",
+          "keeps provider search local until full-catalog search is explicitly requested",
+          "clears structured errors and stale provider state when disabled",
+          "ignores pending directory and setup-form responses after being disabled",
+          "ignores stale provider views after project context changes",
+          "reissues a requested view after temporary project-context hydration",
+          "restarts provider directory loading when project context changes while loading",
+          "drops stale model probe results after project context changes",
+          "drops stale set-default responses after project context changes",
+          "clears pending provider save state after project context changes",
+          "refreshes view and catalog after forgetting managed auth while local auth remains",
+          "refreshes the view and catalog after a confirmed connection",
+          "keeps provider data visible during catalog refresh",
+          "lazy-loads provider directory and ignores stale search responses",
+          "keeps the API key draft when provider connect fails",
+          "explains Copilot model access separately from GitHub authentication",
+          "keeps setup form diagnostics available when submit is attempted after form load failure",
+          "submits a supported setup form without a secret as a null API key",
+          "keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+          "keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+          "keeps setup open when the backend does not confirm a connected provider",
+          "keeps the actual API credential hint when xAI refresh fails after connect",
+          "refreshes provider status after a cancelled OAuth child settles",
+          "preserves the full slow model-picker allowance: complete",
+          "preserves the full slow model-picker allowance: timeout",
+          "clears model loading when switching from model picker to setup form",
+          "debounces provider model search and groups superseded picker requests",
+          "keeps Test results across a debounced catalog search reload",
+          "appends paged provider models without duplicates",
+          "tracks concurrent model probes independently",
+          "drops stale model probe results after leaving the model picker",
+          "refreshes global provider status after a current model test (ok=true)",
+          "refreshes global provider status after a current model test (ok=false)",
+          "records an empty model test response as a row failure and refreshes provider status",
+          "preserves successful model verification when its global status refresh rejects",
+          "does not refresh global status from a model test after project change",
+          "does not refresh global status from a model test after unmount",
+          "keeps failed model probes scoped to the model result instead of a global success banner",
+          "keeps structured runtime endpoint diagnostics on the model result",
+          "keeps the model-test UI watchdog outside the runtime probe transport budget",
+          "promotes structured model probe failures to the global diagnostics alert state",
+          "keeps successful model probes scoped to the model card instead of a global success banner",
+          "saves a default without probing or fabricating verified model state",
+          "keeps the effective project default selected when an all-projects default is shadowed",
+          "preserves project-scoped access evidence after a neutral all-projects probe",
+          "does not clear a project override before the bundled runtime supports scoped defaults",
+          "clears a valid project override with a compatible bundled runtime",
+          "keeps the clear-project watchdog beyond the 300-second main-process timeout",
+          "does not clear project B while its view is still refreshing after switching from A",
+          "clears loading for the current silent refresh and refuses a stale response",
+          "clears pending loading when the current silent refresh ends with response-error",
+          "clears pending loading when the current silent refresh ends with rejection",
+          "keeps a silent view completion inert after newer-request",
+          "keeps a silent view completion inert after unmounted"
+        ],
+        "adaptation": "Only functional incoming three registration blocks (1 +2+2 expanded cases), inside existing outer describe before final closing. Removed captureViewLoadDiagnostics wrappers and their diagnostic assertions; reused all existing imports/harness/mocks/cleanup. First case name updated exactly to selected R1. Every original byte is recovered by removing the one insertion. The added block uses the surrounding multiline object/callback formatting; no old byte is reformatted. Review correction: success case explicitly asserts null error after current success and after stale completion, matching R1 error-preservation contract."
+      }
+    ],
+    "expectedRed": {
+      "node": {
+        "pass": 134,
+        "fail": 5
+      },
+      "renderer": {
+        "pass": 82,
+        "fail": 3
+      },
+      "observed": false
+    },
+    "expectedGreen": {
+      "node": 139,
+      "renderer": 85,
+      "observed": false
+    },
+    "producers": "All three exact preimages remain unmodified/un-authored; four fixed producer overlays unchanged. No producer postimage exists.",
+    "runtime": "No staged/materialized source or execution yet; exact test+runner R2/publication/readback still required."
+  },
+  "retainedCompleteRendererInsertion": "\n  it('clears loading for the current silent refresh and refuses a stale response', async () => {\n    let resolve!: (response: RuntimeProviderManagementViewResponse) => void;\n    const first = new Promise<RuntimeProviderManagementViewResponse>((done) => {\n      resolve = done;\n    });\n    const currentView = { ...createRuntimeView(), defaultModel: 'TEST-current-silent-model' };\n    let calls = 0;\n    const loadView = vi.fn(() => {\n      calls++;\n      return calls === 1\n        ? first\n        : Promise.resolve({\n            schemaVersion: 1 as const,\n            runtimeId: 'opencode' as const,\n            view: currentView,\n          });\n    });\n    Object.defineProperty(window, 'electronAPI', {\n      configurable: true,\n      value: {\n        runtimeProviderManagement: {\n          loadView,\n          loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()),\n        },\n      } as unknown as ElectronAPI,\n    });\n    const root = createRoot(host);\n    await act(async () => {\n      root.render(\n        React.createElement(ConfigurableHarness, { enabled: true, loadViewOnEnable: false })\n      );\n    });\n    let pending!: Promise<boolean>;\n    await act(async () => {\n      pending = actions!.refresh();\n    });\n    expect(state?.loading).toBe(true);\n    await act(async () => {\n      await actions!.refreshDirectory();\n    });\n    expect(loadView).toHaveBeenCalledTimes(2);\n    expect(state?.view?.defaultModel).toBe(currentView.defaultModel);\n    expect(state?.error).toBeNull();\n    expect(state?.loading).toBe(false);\n    await act(async () => {\n      resolve({\n        schemaVersion: 1,\n        runtimeId: 'opencode',\n        view: { ...createRuntimeView(), defaultModel: 'TEST-stale-model' },\n      });\n      expect(await pending).toBe(false);\n    });\n    expect(state?.view?.defaultModel).toBe(currentView.defaultModel);\n    expect(state?.error).toBeNull();\n    // The stale completion cannot restore the loading state cleared by the current request.\n    expect(state?.loading).toBe(false);\n    expect(loadView).toHaveBeenCalledTimes(2);\n  });\n\n  it.each(['response-error', 'rejection'] as const)(\n    'clears pending loading when the current silent refresh ends with %s',\n    async (outcome) => {\n      let resolveFirst!: (response: RuntimeProviderManagementViewResponse) => void;\n      const first = new Promise<RuntimeProviderManagementViewResponse>((resolve) => {\n        resolveFirst = resolve;\n      });\n      const failure = new Error('TEST-current-silent-view-error');\n      const failedResponse: RuntimeProviderManagementViewResponse = {\n        schemaVersion: 1,\n        runtimeId: 'opencode',\n        error: { code: 'runtime-misconfigured', message: failure.message, recoverable: true },\n      };\n      let calls = 0;\n      const loadView = vi.fn(() => {\n        calls++;\n        if (calls === 1) return first;\n        return outcome === 'rejection' ? Promise.reject(failure) : Promise.resolve(failedResponse);\n      });\n      Object.defineProperty(window, 'electronAPI', {\n        configurable: true,\n        value: {\n          runtimeProviderManagement: {\n            loadView,\n            loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()),\n          },\n        } as unknown as ElectronAPI,\n      });\n      const root = createRoot(host);\n      await act(async () => {\n        root.render(\n          React.createElement(ConfigurableHarness, { enabled: true, loadViewOnEnable: false })\n        );\n      });\n      let pendingFirst!: Promise<boolean>;\n      await act(async () => {\n        pendingFirst = actions!.refresh();\n      });\n      expect(state?.loading).toBe(true);\n      await act(async () => {\n        await actions!.refreshDirectory();\n      });\n      expect(loadView).toHaveBeenCalledTimes(2);\n      expect(state?.loading).toBe(false);\n      expect(state?.view).toBeNull();\n      expect(state?.error).toBe(failure.message);\n      expect(state?.errorDiagnostics).toBeNull();\n      await act(async () => {\n        resolveFirst({\n          schemaVersion: 1,\n          runtimeId: 'opencode',\n          view: { ...createRuntimeView(), defaultModel: 'TEST-stale-after-silent-error' },\n        });\n        expect(await pendingFirst).toBe(false);\n      });\n      expect(state?.loading).toBe(false);\n      expect(state?.view).toBeNull();\n      expect(state?.error).toBe(failure.message);\n      expect(loadView).toHaveBeenCalledTimes(2);\n    }\n  );\n\n  it.each(['newer-request', 'unmounted'] as const)(\n    'keeps a silent view completion inert after %s',\n    async (outcome) => {\n      let resolveFirst!: (response: RuntimeProviderManagementViewResponse) => void;\n      let resolveSilent!: (response: RuntimeProviderManagementViewResponse) => void;\n      let resolveLatest!: (response: RuntimeProviderManagementViewResponse) => void;\n      const first = new Promise<RuntimeProviderManagementViewResponse>((resolve) => {\n        resolveFirst = resolve;\n      });\n      const silent = new Promise<RuntimeProviderManagementViewResponse>((resolve) => {\n        resolveSilent = resolve;\n      });\n      const latest = new Promise<RuntimeProviderManagementViewResponse>((resolve) => {\n        resolveLatest = resolve;\n      });\n      let calls = 0;\n      const loadView = vi.fn(() => {\n        calls++;\n        return calls === 1 ? first : calls === 2 ? silent : latest;\n      });\n      Object.defineProperty(window, 'electronAPI', {\n        configurable: true,\n        value: {\n          runtimeProviderManagement: {\n            loadView,\n            loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()),\n          },\n        } as unknown as ElectronAPI,\n      });\n      const root = createRoot(host);\n      await act(async () => {\n        root.render(\n          React.createElement(ConfigurableHarness, { enabled: true, loadViewOnEnable: false })\n        );\n      });\n      let pendingFirst!: Promise<boolean>;\n      let pendingSilent!: Promise<void>;\n      let pendingLatest!: Promise<boolean>;\n      await act(async () => {\n        pendingFirst = actions!.refresh();\n      });\n      await act(async () => {\n        pendingSilent = actions!.refreshDirectory();\n      });\n      expect(state?.loading).toBe(true);\n      const beforeUnmount = state;\n      if (outcome === 'newer-request') {\n        await act(async () => {\n          pendingLatest = actions!.refresh();\n        });\n      } else {\n        await act(async () => {\n          root.unmount();\n        });\n      }\n      await act(async () => {\n        resolveSilent({\n          schemaVersion: 1,\n          runtimeId: 'opencode',\n          view: { ...createRuntimeView(), defaultModel: 'TEST-refused-silent-view' },\n        });\n        await pendingSilent;\n      });\n      expect(loadView).toHaveBeenCalledTimes(outcome === 'newer-request' ? 3 : 2);\n      expect(state?.loading).toBe(true);\n      expect(state?.view).toBeNull();\n      if (outcome === 'unmounted') expect(state).toBe(beforeUnmount);\n      await act(async () => {\n        resolveFirst({\n          schemaVersion: 1,\n          runtimeId: 'opencode',\n          view: createRuntimeView(),\n        });\n        expect(await pendingFirst).toBe(false);\n      });\n      expect(state?.loading).toBe(true);\n      if (outcome === 'newer-request') {\n        await act(async () => {\n          resolveLatest({\n            schemaVersion: 1,\n            runtimeId: 'opencode',\n            view: { ...createRuntimeView(), defaultModel: 'TEST-latest-view' },\n          });\n          expect(await pendingLatest).toBe(true);\n        });\n        expect(state?.loading).toBe(false);\n        expect(state?.view?.defaultModel).toBe('TEST-latest-view');\n      } else {\n        expect(state).toBe(beforeUnmount);\n      }\n      expect(loadView).toHaveBeenCalledTimes(outcome === 'newer-request' ? 3 : 2);\n    }\n  );\n",
+  "retainedCompleteNodeAppend": "\nasync function originalLiveMembershipPoll() {\n  const { stripTypeScriptTypes } = await import('node:module');\n  const source = (await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\\r\\n/gu, '\\n');\n  const begin = '  const poll = async <T>(', end = \"  const workspace = join(fixture.root, 'workspace');\";\n  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original P11 poll boundary');\n  const start = source.indexOf(begin), finish = source.indexOf(end);\n  assert.ok(finish > start, 'original source boundaries are ordered');\n  const actual = stripTypeScriptTypes(source.slice(start, finish));\n  const makePoll = Function('environment', `'use strict';\n    const {assert,current,Date,setTimeout}=environment;\n    ${actual}\n    return poll;`) as (environment: Record<string, unknown>) =>\n      (observe: () => Promise<boolean>, accepts: (value: boolean) => boolean, label: string) => Promise<boolean>;\n  return (observations: { at: number; value?: boolean; error?: Error }[], guardError?: Error) => {\n    let now = 0, reads = 0;\n    const trace: string[] = [], delays: number[] = [];\n    const poll = makePoll({ assert, Date: { now: () => now },\n      current() { trace.push('guard'); if (guardError) throw guardError; },\n      setTimeout(done: () => void, delay: number) {\n        assert.equal(delay, 100); delays.push(delay); now += delay; done();\n      },\n    });\n    return { trace, delays, reads: () => reads,\n      run: (label: string) => poll(async () => {\n        const observation = observations[reads++]; assert.ok(observation, 'no unplanned observation');\n        trace.push('read'); assert.ok(observation.at >= now); now = observation.at;\n        if (observation.error) throw observation.error;\n        assert.equal(typeof observation.value, 'boolean'); return observation.value!;\n      }, value => value, label),\n    };\n  };\n}\n\nfor (const scenario of [\n  { name: 'first result at the exact cutoff', values: [{ at: 90_000, value: true }], reads: 1, trace: ['read'], delays: [] },\n  { name: 'first result after the cutoff', values: [{ at: 90_001, value: true }], reads: 1, trace: ['read'], delays: [] },\n  { name: 'polled result after the cutoff', values: [{ at: 0, value: false }, { at: 90_001, value: true }], reads: 2,\n    trace: ['read', 'guard', 'read'], delays: [100] },\n]) test('P11 keeps the original 90-second cutoff for ' + scenario.name, async () => {\n  const make = await originalLiveMembershipPoll(), f = make(scenario.values), label = 'TEST original P11 deadline';\n  await assert.rejects(f.run(label), error => error instanceof assert.AssertionError && error.message.includes(label));\n  assert.equal(f.reads(), scenario.reads); assert.deepEqual(f.trace, scenario.trace); assert.deepEqual(f.delays, scenario.delays);\n});\n\ntest('P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity', async () => {\n  const make = await originalLiveMembershipPoll(), label = 'TEST original P11 observation';\n  const immediate = make([{ at: 89_999, value: true }]);\n  assert.equal(await immediate.run(label), true); assert.equal(immediate.reads(), 1);\n  assert.deepEqual(immediate.trace, ['read']); assert.deepEqual(immediate.delays, []);\n  const later = make([{ at: 0, value: false }, { at: 101, value: true }]);\n  assert.equal(await later.run(label), true); assert.equal(later.reads(), 2);\n  assert.deepEqual(later.trace, ['read', 'guard', 'read']); assert.deepEqual(later.delays, [100]);\n  const refusal = new Error('TEST original observation failure'), failed = make([{ at: 90_001, error: refusal }]);\n  await assert.rejects(failed.run(label), error => error === refusal);\n  assert.equal(failed.reads(), 1); assert.deepEqual(failed.trace, ['read']); assert.deepEqual(failed.delays, []);\n  const stale = new Error('TEST original currentness failure'), guarded = make([{ at: 0, value: false }], stale);\n  await assert.rejects(guarded.run(label), error => error === stale);\n  assert.equal(guarded.reads(), 1); assert.deepEqual(guarded.trace, ['read', 'guard']); assert.deepEqual(guarded.delays, []);\n  const noReady = make([{ at: 90_000, value: false }]);\n  await assert.rejects(noReady.run(label), assert.AssertionError);\n  assert.equal(noReady.reads(), 1); assert.deepEqual(noReady.trace, ['read']); assert.deepEqual(noReady.delays, []);\n});\n\nasync function originalReviewCorrectionStage(observations: unknown[], insertFailure?: Error) {\n  const { stripTypeScriptTypes } = await import('node:module');\n  const source = (await readFile(new URL('./desktop-task-review-cycle-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\\r\\n/gu, '\\n');\n  const begin = '  const commentTarget = record(', end = \"  await snapshotStage(await newReceipt(commentBefore, 'task.comment'), 'in_progress');\";\n  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original correction input boundary');\n  const start = source.indexOf(begin), finish = source.indexOf(end);\n  assert.ok(finish > start, 'original source boundaries are ordered');\n  const actual = stripTypeScriptTypes(source.slice(start, finish));\n  const selector = '[role=\"dialog\"] textarea[id=\"TEST-original-correction-input\"]';\n  const original = { selector, canEditNow: true }, trace: string[] = [], budgets: number[] = [];\n  let reads = 0;\n  const cdp = {\n    async evaluate(expression: string) {\n      assert.equal(expression, 'TEST-original-current-correction-expression');\n      assert.ok(reads < observations.length, 'no unplanned currentness observation');\n      const value = observations[reads++]; trace.push('read');\n      if (value instanceof Error) throw value;\n      return value === 'current' ? original : value && typeof value === 'object' && !Array.isArray(value)\n        ? { selector, ...value } : value;\n    },\n    async send(method: string, params?: Record<string, unknown>) {\n      assert.equal(method, 'Input.insertText');\n      assert.deepEqual(params, { text: 'TEST original correction text' });\n      trace.push('insert');\n      if (insertFailure) throw insertFailure;\n      return {};\n    },\n  };\n  const controls = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });\n  const ui = {\n    ...controls,\n    waitRead: ((expression: string, label: string, timeoutMs = 30_000, accepts?: (value: unknown) => boolean) => {\n      assert.equal(label, 'exact current correction Task/owner/surface');\n      budgets.push(timeoutMs);\n      return controls.waitRead(expression, label, timeoutMs, accepts);\n    }) as typeof controls.waitRead,\n    async scrollTo(target: string, label: string) {\n      assert.equal(target, selector); assert.equal(label, 'existing Task comment composer'); trace.push('scroll');\n    },\n    async click(target: string, label: string, text?: string) {\n      if (label === 'focus existing correction comment') {\n        assert.equal(target, selector); assert.equal(text, undefined); trace.push('focus');\n      } else {\n        assert.equal(target, '[role=\"dialog\"] button.message-composer-send-button');\n        assert.equal(label, 'original correction Comment once'); assert.equal(text, 'Comment'); trace.push('submit');\n      }\n    },\n  };\n  const run = Function('environment', `'use strict';\n    const {assert,record,ui,cdp,options,taskId,commentText,desktopTaskCommentInputExpression}=environment;\n    return (async()=>{${actual}})();`) as (environment: Record<string, unknown>) => Promise<void>;\n  return { trace, budgets, reads: () => reads, run: () => run({ assert, ui, cdp,\n    record(value: unknown) { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value; },\n    options: { handleId: 'TEST-original-correction-owner' }, taskId: 'TEST-original-correction-task',\n    commentText: 'TEST original correction text',\n    desktopTaskCommentInputExpression(handleId: string, taskId: string) {\n      assert.equal(handleId, 'TEST-original-correction-owner'); assert.equal(taskId, 'TEST-original-correction-task');\n      return 'TEST-original-current-correction-expression';\n    },\n  }) };\n}\n\ntest('original review correction refuses missing or false live edit authority before any input action', { timeout: 5000 }, async () => {\n  for (const observation of [null, {}, { canEditNow: false }, { canEditNow: 1 }, [{ canEditNow: true }]]) {\n    const refusal = new Error('TEST original currentness read failed');\n    const f = await originalReviewCorrectionStage([observation, refusal]);\n    await assert.rejects(f.run(), error => error === refusal);\n    assert.deepEqual(f.trace, ['read', 'read']); assert.deepEqual(f.budgets, [30_000]);\n    assert.equal(f.reads(), 2);\n  }\n});\n\ntest('original review correction admits current authority with one original insertion and submit', { timeout: 5000 }, async () => {\n  for (const observations of [['current'], [{ canEditNow: false }, 'current']]) {\n    const f = await originalReviewCorrectionStage(observations);\n    await f.run();\n    assert.deepEqual(f.trace, [...observations.map(() => 'read'), 'scroll', 'focus', 'insert', 'submit']);\n    assert.deepEqual(f.budgets, [30_000]); assert.equal(f.reads(), observations.length);\n  }\n  const failure = new Error('TEST original insertion response failed');\n  const refused = await originalReviewCorrectionStage(['current'], failure);\n  await assert.rejects(refused.run(), error => error === failure);\n  assert.deepEqual(refused.trace, ['read', 'scroll', 'focus', 'insert']);\n  assert.deepEqual(refused.budgets, [30_000]); assert.equal(refused.reads(), 1);\n});\n",
+  "reviewerActions": {
+    "gitReadOnly": true,
+    "bareReportOnly": true,
+    "shell": false,
+    "targetRuntime": false,
+    "targetSourceEvaluation": false,
+    "sourceOrTestEdits": false,
+    "producerOrRunnerAuthorship": false,
+    "refCommitPrMutation": false,
+    "ci": false
+  }
+}

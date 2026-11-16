@@ -188,3 +188,8 @@ Original session 81561 remains INCOMPLETE/SPENT/UNKNOWN. No runtime replay follo
 ## Combined Node139 / renderer85 scope selected prospectively — 2026-11-16
 
 R1 d52bf425109d265914631ddea62f2d67e979cff5 selects the three narrow P11/Review/loading fixes and two whole finite suites, retaining all 133+80 previous cases and four fixed producers. New test/runner authorship waits for complete actual R1 publication readback; producer authorship waits for complete accepted combined RED. RED 134/5 + 82/3 and GREEN 139+85 are requirements, not observed results. Separate 180-second primary clocks, whole fresh package input boundaries, Node no-temp-debt admission and captured cleanup remain intact. Four separate validation commands follow accepted GREEN. No new postimage or runtime was created by this checkpoint. Wider GUI/native/platform, typing/build, integration and whole E2E remain OPEN.
+
+
+## Exact whole139 / whole85 tests published; execution pending
+
+Test R2 proposal061cb054 is accepted by Guard4d3004a5 and renderer6580a4f4. Node896c587 retains all133 old cases plus6, and renderer76495189 retains all80 old cases plus5 by exact inverse. Only the two test sources change in this checkpoint. No local materialization, runtime or producer postimage occurs. Exact runner/binding R2 and complete publication readback still precede execution; actual combined RED still precedes every producer fix. All broader E2E gates remain OPEN.
