@@ -1,0 +1,30 @@
+{
+  "before": {
+    "path": "/workspace/scratch/20ba97c23d57/w05-owner-loss-proposal/revision1/plan.md",
+    "sha256": "db211045e3fed2c4aec5da48109cfb6016478cf8740d146b860a6d9b84256435",
+    "gitBlob": "ae767cf0cfb5604f02dfc6589845660dde749e71",
+    "bytes": 18221,
+    "physicalLines": 78
+  },
+  "after": {
+    "path": "/workspace/scratch/20ba97c23d57/w05-owner-loss-proposal/plan.md",
+    "sha256": "129d5b1215c6bc12f29a38afac422d257130b746bcc05ab1493aa0ce93e9c09d",
+    "gitBlob": "b550f33385a1da00915548047fa814743fcd5324",
+    "bytes": 18528,
+    "physicalLines": 78
+  },
+  "diff": [
+    "--- revision1/plan.md\n",
+    "+++ plan.md\n",
+    "@@ -1,2 +1,2 @@\n",
+    "-# 65. Windows finite owner loss after installation and before physical Resume",
+    "+# 67. Windows finite owner loss after installation and before physical Resume",
+    " ",
+    "@@ -45,3 +45,3 @@\n",
+    " 4. Hold only the **first original Resume on A's exact attachment and exact already prepared capability**. Require that its allocation, preparation and native root match; reject any ambiguity or extra capability. Hold before `original.handle(call)` and never fabricate a successful result. Receipt counters distinguish the one original Resume request, its zero forwarding/physical success, and later explicit negative probes. Arrival at this seam proves completed installation by the unchanged production order, not by a synthetic TEST marker inside `installOwner`.",
+    "-5. While held, independently read the original Runtime journal under its existing fence: opening, custody unknown, original binding/generation, fingerprint and recorded Runtime incarnation. Require no finite peer startup, business input or effect, original HANDLE still alive, and the unrelated sentinel alive. Write the existing crash marker once. Await the captured A child exit and attachment abort through their original promises; retain the original pending-open failure as an unknown transport result. Settle the held callback without forwarding Resume or sending a false ACK. Remove the marker only after confirmed A exit, before the one successor starts.",
+    "+5. While held, independently read the original Runtime journal under its existing fence: opening, custody unknown, original binding/generation, fingerprint and recorded Runtime incarnation. Require no finite peer startup, business input or effect, original HANDLE still alive, and the unrelated sentinel alive. Immediately before writing the crash marker, require that the original open promise is still pending and A's attachment is not aborted. Write the existing crash marker once. Await the captured A child exit and attachment abort through their original promises. Require the original open to reject with the exact existing `HostClientError('transport-closed', 'unknown')` outcome; `request-timeout`, `not-dispatched`, an earlier settled request or any other failure cannot satisfy this induced-loss oracle. Settle the held callback without forwarding Resume or sending a false ACK. Remove the marker only after confirmed A exit, before the one successor starts.",
+    " 6. Start exactly one Host B on the same Main epoch, exact profile and captured inputs. Confirm a new handshake `hostIncarnation` and a distinct captured child epoch. The marker birth log contains only `pid/parentPid`; it is corroborating fixture chronology, **not** native creation-time identity, and no PID-inequality assertion substitutes for the original child/exit/handshake proof. The Runtime journal's `hostIncarnation` is a separately captured field; do not assume it equals the hello value."
+  ],
+  "noSourceAfterimages": true
+}

@@ -1,0 +1,261 @@
+{
+  "kind": "INDEPENDENT_PLAN67_EXACT_DOCUMENT_PROSPECTIVE_R2",
+  "status": "ACCEPT_EXACT_REVISION2_DOCUMENT",
+  "plan": {
+    "path": "w05-owner-loss-proposal/plan.md",
+    "bytes": 18528,
+    "sha256": "129d5b1215c6bc12f29a38afac422d257130b746bcc05ab1493aa0ce93e9c09d",
+    "gitBlob": "b550f33385a1da00915548047fa814743fcd5324"
+  },
+  "authorR1": {
+    "path": "w05-owner-loss-proposal/r1.json",
+    "bytes": 5153,
+    "sha256": "6595aa70d8fb35c0d21e35402d01f4e88e36e9331067ff01d2d3b4c27d904995",
+    "gitBlob": "985196033f9ada54bc5b04cd851e569514477420"
+  },
+  "sourceBindingsPacket": {
+    "path": "w05-owner-loss-proposal/source-bindings.json",
+    "bytes": 11751,
+    "sha256": "8b4e6067d7fdc892ed148c09c67003da20803b37ad18aa6295aa1d54ef41d90d",
+    "gitBlob": "8c68778497b8360076e740bff27db0fa03c50101"
+  },
+  "revision1Plan": {
+    "path": "w05-owner-loss-proposal/revision1/plan.md",
+    "bytes": 18221,
+    "sha256": "db211045e3fed2c4aec5da48109cfb6016478cf8740d146b860a6d9b84256435",
+    "gitBlob": "ae767cf0cfb5604f02dfc6589845660dde749e71"
+  },
+  "revision1R1": {
+    "path": "w05-owner-loss-proposal/revision1/r1.json",
+    "bytes": 4208,
+    "sha256": "4028453d129b5115b890b373705a69aee7251d43ed3006830cf7c2a4d39eed65",
+    "gitBlob": "18cde2298747174a9a3551fe8575a1bd26cac26a"
+  },
+  "revision2Proof": {
+    "path": "w05-owner-loss-proposal/revision2-doc-proof.json",
+    "bytes": 3639,
+    "sha256": "cde3f1f498f08f03e08ecbfef59948186476cb9b895d3492e25e35045dda739f",
+    "gitBlob": "4ff0e28cb49ad280fdc5a08fa518dd714922ef76"
+  },
+  "priorSourceFeasibilityR2": {
+    "path": "installer-proposal/w05-prospective-r2/prospective-r2.json",
+    "bytes": 35169,
+    "sha256": "cb6b0b2c46aaad97494333cf410f4125f00908d049ea6581cd9742a4188eed39",
+    "gitBlob": "8ebb54bfaa2d159df77777d519ebe6c777f779a1"
+  },
+  "blockingFindings": [],
+  "resolvedFinding": {
+    "problem": "An original request-timeout also has outcome unknown and would not establish the selected induced Host loss.",
+    "source": {
+      "path": "native-proposal/w05-completed-install-r1/source/src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "bytes": 32706,
+      "sha256": "33e65a4aa30e2edce5eba2e7354c55f89700e15c437611f42c5d06f49cf74b87",
+      "gitBlob": "c4389ac113de03138fd6a9b4b0c6070fb2f06d86"
+    },
+    "evidence": "Original request timer rejects request-timeout/unknown at341–347; child-close/stdout-end fail transport-closed/unknown at198–201/209.",
+    "resolution": "Before marker: pending original open and nonaborted A. After loss: exact transport-closed/unknown plus captured A exit/abort. Earlier settled, timeout and not-dispatched outcomes refuse. No new timer, API, native action or path."
+  },
+  "fullDocumentReview": {
+    "scope": "Five existing TEST/build/workflow paths plus one new TEST helper. Production, provider contracts, ordinary successful source scenario, source caps and native APIs stay unchanged.",
+    "identity": "Exact A attachment/capability barrier. Captured Host epochs use their own hello incarnation; Runtime journal incarnation is compared to its own pre-crash value. PID markers provide chronology only.",
+    "receipts": "Initialize ownerLoss before the first Gate await, retain partial measured facts through errors and write the original external receipt before sandbox deletion.",
+    "cleanup": "Require original Main stop/drain/release and original HANDLE absence. Preserve driverless held/unknown debt including legitimate sealing; no Host provider-cleanup or runtime.closed claim.",
+    "timing": "Original clocks remain. Future exact-head Windows jobs must establish fit within the controller ceiling; source review supplies no timing success.",
+    "coexistence": "Plan62 lint-six and Plan64 W07 additions remain part of the immediate-parent ordered prefix. Actual final parent counts/hashes control, not predictions.",
+    "qualification": "Completed-install/pre-physical-Resume is a finite Windows contribution, not broader W05, W07, Desktop, genuine provider, P09 or release qualification."
+  },
+  "preimages": [
+    {
+      "repositoryPath": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "path": "w05-owner-loss-proposal/before/tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "bytes": 7926,
+      "sha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+      "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d"
+    },
+    {
+      "repositoryPath": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "path": "w05-owner-loss-proposal/before/tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "bytes": 15213,
+      "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+      "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf"
+    },
+    {
+      "repositoryPath": "tools/owned-process-broker/tsconfig.json",
+      "path": "w05-owner-loss-proposal/before/tools/owned-process-broker/tsconfig.json",
+      "bytes": 593,
+      "sha256": "d503beb57a0e2e41d81c89a73349acbecd1f7e1c958b3d732db4500bd532fb21",
+      "gitBlob": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9"
+    },
+    {
+      "repositoryPath": ".github/workflows/host-process-acceptance.yml",
+      "path": "w05-owner-loss-proposal/before/.github/workflows/host-process-acceptance.yml",
+      "bytes": 32370,
+      "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e",
+      "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524"
+    },
+    {
+      "repositoryPath": ".github/workflows/host-emulated-acceptance.yml",
+      "path": "w05-owner-loss-proposal/before/.github/workflows/host-emulated-acceptance.yml",
+      "bytes": 141809,
+      "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88",
+      "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b"
+    }
+  ],
+  "checks": [
+    {
+      "check": "Exact frozen final Plan67 bytes",
+      "pass": true
+    },
+    {
+      "check": "Exact final R1 descriptor",
+      "pass": true
+    },
+    {
+      "check": "Original revision1 plan preserved",
+      "pass": true
+    },
+    {
+      "check": "Original revision1 descriptor preserved",
+      "pass": true
+    },
+    {
+      "check": "Original source feasibility R2 retained",
+      "pass": true
+    },
+    {
+      "check": "Source-binding packet unchanged",
+      "pass": true
+    },
+    {
+      "check": "Only heading and step5 changed",
+      "pass": true
+    },
+    {
+      "check": "Plan renumber67 with unchanged six-path scope",
+      "pass": true
+    },
+    {
+      "check": "Five preimages bound to Plan64 docs",
+      "pass": true
+    },
+    {
+      "check": "Exact beforeimage tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "pass": true
+    },
+    {
+      "check": "Exact beforeimage tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "pass": true
+    },
+    {
+      "check": "Exact beforeimage tools/owned-process-broker/tsconfig.json",
+      "pass": true
+    },
+    {
+      "check": "Exact beforeimage .github/workflows/host-process-acceptance.yml",
+      "pass": true
+    },
+    {
+      "check": "Exact beforeimage .github/workflows/host-emulated-acceptance.yml",
+      "pass": true
+    },
+    {
+      "check": "New helper absent in retained immutable directory",
+      "pass": true
+    },
+    {
+      "check": "Precise fault boundary",
+      "pass": true
+    },
+    {
+      "check": "Exact A and capability barrier",
+      "pass": true
+    },
+    {
+      "check": "Failure receipt before first await",
+      "pass": true
+    },
+    {
+      "check": "Pending and live attachment before marker",
+      "pass": true
+    },
+    {
+      "check": "Exact transport-loss outcome",
+      "pass": true
+    },
+    {
+      "check": "Observed original exit/abort",
+      "pass": true
+    },
+    {
+      "check": "No false ACK",
+      "pass": true
+    },
+    {
+      "check": "Independent Runtime and hello incarnations",
+      "pass": true
+    },
+    {
+      "check": "No PID-based birth authority",
+      "pass": true
+    },
+    {
+      "check": "Original durable provenance and no replay",
+      "pass": true
+    },
+    {
+      "check": "Physical cleanup is not logical release",
+      "pass": true
+    },
+    {
+      "check": "No false observer Stop count",
+      "pass": true
+    },
+    {
+      "check": "Source oracle and cap retained",
+      "pass": true
+    },
+    {
+      "check": "Original clocks retained",
+      "pass": true
+    },
+    {
+      "check": "Failure artifact retained before deletion",
+      "pass": true
+    },
+    {
+      "check": "Measured fields required",
+      "pass": true
+    },
+    {
+      "check": "Neighbor prefix preservation",
+      "pass": true
+    },
+    {
+      "check": "Compiler and roster closure",
+      "pass": true
+    },
+    {
+      "check": "Publication/source GO still required",
+      "pass": true
+    },
+    {
+      "check": "No source afterimages",
+      "pass": true
+    },
+    {
+      "check": "Specific timeout versus loss discriminator in actual source",
+      "pass": true
+    }
+  ],
+  "checkCount": 36,
+  "afterimages": false,
+  "execution": {
+    "sourceOrProject": false,
+    "tests": false,
+    "compiler": false,
+    "nativeOrProvider": false,
+    "GUI": false,
+    "CIpolling": false,
+    "remoteMutation": false
+  }
+}

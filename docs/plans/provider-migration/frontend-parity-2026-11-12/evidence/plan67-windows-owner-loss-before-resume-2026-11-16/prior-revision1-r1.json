@@ -1,0 +1,124 @@
+{
+  "kind": "TEST_W05_EXACT_PLAN65_R1",
+  "status": "PROSPECTIVE_PLAN_FROZEN_NOT_SOURCE_AUTHORIZATION",
+  "plan": {
+    "path": "/workspace/scratch/20ba97c23d57/w05-owner-loss-proposal/plan.md",
+    "sha256": "db211045e3fed2c4aec5da48109cfb6016478cf8740d146b860a6d9b84256435",
+    "gitBlob": "ae767cf0cfb5604f02dfc6589845660dde749e71",
+    "bytes": 18221,
+    "physicalLines": 78
+  },
+  "preparedSourceHead": "2a03bbf362abb224fa53519a248fb0ead59b8902",
+  "sourceBindings": {
+    "path": "/workspace/scratch/20ba97c23d57/w05-owner-loss-proposal/source-bindings.json",
+    "sha256": "8b4e6067d7fdc892ed148c09c67003da20803b37ad18aa6295aa1d54ef41d90d",
+    "gitBlob": "8c68778497b8360076e740bff27db0fa03c50101",
+    "bytes": 11751,
+    "physicalLines": 319
+  },
+  "originalR1": {
+    "path": "/workspace/scratch/20ba97c23d57/native-proposal/w05-completed-install-r1/review.json",
+    "sha256": "2bd905c217c95750a5549a9f0b6a16599b3e15fad04962e8e84c92c0b5ddf8f2",
+    "gitBlob": "bdea28b6bb02235dc9f99c4cd365475a486de860",
+    "bytes": 31651,
+    "physicalLines": 651
+  },
+  "originalIndependentProspectiveR2": {
+    "path": "installer-proposal/w05-prospective-r2/prospective-r2.json",
+    "sha256": "cb6b0b2c46aaad97494333cf410f4125f00908d049ea6581cd9742a4188eed39"
+  },
+  "scope": {
+    "existingPaths": 5,
+    "newTestHelper": 1,
+    "productionPaths": 0,
+    "providerProtocolChanges": 0,
+    "sourceScenarioChanges": 0,
+    "newRoutesOrJobs": 0
+  },
+  "bindingClarifications": [
+    "Original captured Host child and hello hostIncarnation distinguish epochs; wrapper pid/parentPid chronology is not native birth identity.",
+    "RuntimeOwner journal hostIncarnation is compared to its own pre-crash record, not to hello.",
+    "Exact A attachment and prepared capability identify the one held original Resume before forwarding.",
+    "OwnerLoss object exists before first Gate await, is retained on any failure, and is written to external original receipt before sandbox deletion.",
+    "Physical Main close/HANDLE absence does not erase durable UNKNOWN or prove Host provider custody completed.",
+    "Existing successful SourceScenario resumed cleanup remains unchanged;800-line/Gate231 errata explicit.",
+    "Immediate parent must preserve selected Plan62 six lint operands and W07 helper/exclusion if landed before this source."
+  ],
+  "checks": [
+    {
+      "check": "All five preimages rebind after selected Plan64 docs",
+      "passed": true
+    },
+    {
+      "check": "Exact unchanged source tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact unchanged source tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact unchanged source tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "Exact unchanged source .github/workflows/host-process-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Exact unchanged source .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "New helper absent at selected current parent",
+      "passed": true
+    },
+    {
+      "check": "Original R1 MD preserved",
+      "passed": true
+    },
+    {
+      "check": "Original R1 JSON preserved",
+      "passed": true
+    },
+    {
+      "check": "No source afterimages",
+      "passed": true
+    },
+    {
+      "check": "Explicit source line-count errata",
+      "passed": true
+    },
+    {
+      "check": "Exact A attachment and capability match",
+      "passed": true
+    },
+    {
+      "check": "Partial receipt initialized before first await",
+      "passed": true
+    },
+    {
+      "check": "Distinct Runtime incarnation retained independently",
+      "passed": true
+    },
+    {
+      "check": "Neighbor lint/exclusion work preserved",
+      "passed": true
+    },
+    {
+      "check": "Original physical cleanup and durable debt separate",
+      "passed": true
+    }
+  ],
+  "checkCount": 16,
+  "executed": {
+    "project": false,
+    "compiler": false,
+    "tests": false,
+    "providers": false,
+    "gui": false,
+    "ci": false,
+    "sourceAfterimages": false,
+    "remoteMutation": false
+  }
+}

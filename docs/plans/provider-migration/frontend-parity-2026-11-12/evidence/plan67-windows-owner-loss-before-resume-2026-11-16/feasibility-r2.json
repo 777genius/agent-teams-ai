@@ -1,0 +1,724 @@
+{
+  "kind": "INDEPENDENT_W05_COMPLETED_INSTALL_PROSPECTIVE_R2",
+  "status": "ACCEPT_PROSPECTIVE_SCOPE_WITH_PRECISION_ERRATA",
+  "notSourceOrRuntimeAcceptance": true,
+  "reviewedDocuments": {
+    "r1": {
+      "path": "native-proposal/w05-completed-install-r1/r1.md",
+      "bytes": 9099,
+      "sha256": "29b19ff22580442c9c9b7a3c868d113199bd5f6cb14a384bffa6c909110308f1",
+      "gitBlob": "2a4bfcea89b59513a1659d493c1a34cfb99543f0"
+    },
+    "machineR1": {
+      "path": "native-proposal/w05-completed-install-r1/review.json",
+      "bytes": 31651,
+      "sha256": "2bd905c217c95750a5549a9f0b6a16599b3e15fad04962e8e84c92c0b5ddf8f2",
+      "gitBlob": "bdea28b6bb02235dc9f99c4cd365475a486de860"
+    }
+  },
+  "decision": "A bounded TEST composition is supported by existing source; root may select a corrected prospective plan. No afterimage, actual-source acceptance, provider behavior qualification or complete W05 claim is supplied.",
+  "substantiveBlockingFindings": [],
+  "precisionErrata": [
+    {
+      "item": "SourceScenario cap",
+      "originalText": "799-line SourceScenario limit",
+      "correction": "Current b1f0e95c has exactly 800 physical lines; cap remains 800. Do not edit or extract it for this independent phase.",
+      "effect": "Prose-only correction in selected plan; sealed R1 remains immutable."
+    },
+    {
+      "item": "Host birth terminology",
+      "originalText": "distinct original Host births",
+      "correction": "Two original CapturedHostClient child epochs and actual handshake hostIncarnation values, with A exit and abort observed before B attaches. The existing wrapper ledger contains pid/parentPid only; do not claim native creation-time Host birth or infer authority from PID inequality. Provider root birth and HANDLE remain the original native identity.",
+      "authorConfirmed": true
+    },
+    {
+      "item": "Gate line estimate",
+      "correction": "Bound source metadata is 231 physical lines; prose says 230. This does not change scope/cap and should not be used as a source-byte qualification."
+    }
+  ],
+  "validatedDesign": {
+    "barrier": "The observed matching Host resume request occurs after WindowsCapturedProcess.installOwner set the exact original prepared allocation installed, and after HostWindowsLaunch awaited that callback. Holding the request before original.handle prevents the selected physical Resume from being forwarded. This proves completed-install/pre-Resume, not interruption inside the callback.",
+    "scope": "Use one finite Codex profile, one Main owner, two captured Host attachments, one original capability/prepared root and an independent original HANDLE. A closed TEST loss selector enables existing wrapper code without activating packaged lead/storage behavior.",
+    "pendingReply": "After actual A exit the held callback must reject/finish without forwarding or constructing an ACK. CapturedHostClient already turns private port rejection into UNKNOWN and ignores replies after transport sealing.",
+    "durability": "Original prepareSessionOpen persists opening/custody-unknown, fingerprint and incarnation before driverFactory allocation. Cold public reconcile writes held/unknown and unready without replacing those identity fields or adopting a driver. Original claimed Team attempt and Runtime open fingerprint both fence replay.",
+    "negatives": "Stale A attachment and B noncleanup input/Resume for the original allocation are rejected by existing Main ownership checks; unknown numeric PID in ordinary Runtime payload is rejected by strict schema. These prove those boundaries, not a fresh-generation launch.",
+    "cleanup": "Main.close must confirm original stop/drain/release and HANDLE absence. Cold Host shutdown confirms only its child exit; durable unresolved Runtime debt must remain held/unknown and may become sealed. Physical absence is not runtime.closed or complete Host provider cleanup.",
+    "oldOracles": "Existing wrappers, ordinary Codex/V1 provider journey counters and all successful SourceScenario resumed/stopped/drained/released/HANDLE predicates remain exact. New intentional unresumed evidence is separate."
+  },
+  "implementationObligations": [
+    "Bind the held first Resume to captured A context/mainEpoch/profile and exact original capability/root; fail closed on unexpected operations or duplicates. Do not hold unrelated requests.",
+    "Keep original received/forwarded/successful operation facts distinguishable; negative probe counters must be separate from the single intercepted original Resume and zero successful physical resumes.",
+    "Retain the separate fault evidence object in the outer receipt before awaiting the phase, or an equivalent original failure-preserving finally; a failing helper must not lose the measured partial receipt when controller cleanup deletes its sandbox.",
+    "Use the original FileRuntimeStore fenced get only. Never put/write Runtime or Team state from TEST code. Compare immutable identity/fingerprint fields while allowing original reconcile/sealing transitions.",
+    "Require one original parent sentinel to survive the fault and targeted cleanup, then preserve its existing normal outer cleanup and controller drained/rootExit0/activeProcesses0 oracle.",
+    "Original finite peer connection/effect absence alone is not a generic proof that no machine instruction executed; bind the pre-physical-Resume claim to the held original request and original prepared/suspended broker contract.",
+    "Preserve all original clocks and callback/admission checks; no increased timeout, native action replay, new producer pin, or blanket cleanup success.",
+    "Rebind all six paths to actual publication parent and preserve intervening W07/other accepted changes, particularly the Plan62 low-level config exclusion. Exact actual-source/inverse review and original resulting-head Windows x64/ARM execution remain required."
+  ],
+  "closure": {
+    "inventory": [
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+        "kind": "new TEST helper",
+        "before": null,
+        "estimatedNaturalLines": [
+          300,
+          420
+        ],
+        "role": "One separate completed-install/pre-physical-Resume fault/recovery/physical-cleanup scenario; no protocol or server implementation."
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+        "kind": "existing TEST fixture",
+        "before": {
+          "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+          "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+          "localPath": "native-proposal/w05-completed-install-r1/source/tools/owned-process-broker/nativeEmulatedProfile.ts",
+          "bytes": 7926,
+          "lines": 105,
+          "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+          "sha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+          "provenance": "independent official immutable file read"
+        },
+        "estimatedNetLines": [
+          3,
+          7
+        ],
+        "role": "One closed optional TEST loss selector enables already existing pinned crash/birth wrapper before profile capture. No changed ordinary/packaged behavior."
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+        "kind": "existing TEST gate",
+        "before": {
+          "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+          "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+          "localPath": "native-proposal/w05-completed-install-r1/source/tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+          "bytes": 15213,
+          "lines": 231,
+          "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+          "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+          "provenance": "retained source snapshot from independently bound published source"
+        },
+        "estimatedNetLines": [
+          8,
+          18
+        ],
+        "role": "Append separate named fault helper and receipt after existing normal providers. Original source-provider branch and old journey counters remain unchanged."
+      },
+      {
+        "path": "tools/owned-process-broker/tsconfig.json",
+        "kind": "existing TEST build",
+        "before": {
+          "gitBlob": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9",
+          "provenance": "Published Plan62 postimage, root to rebind actual current parent"
+        },
+        "estimatedNetLines": [
+          0,
+          0
+        ],
+        "role": "Append only new helper exclusion; retain62 helper, all other exclusions, flags and retained-host config."
+      },
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "kind": "existing validation",
+        "before": {
+          "path": ".github/workflows/host-process-acceptance.yml",
+          "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+          "localPath": "native-proposal/w05-completed-install-r1/source/.github/workflows/host-process-acceptance.yml",
+          "bytes": 32370,
+          "lines": 419,
+          "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524",
+          "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e",
+          "provenance": "independent official immutable file read"
+        },
+        "estimatedNetLines": [
+          18,
+          30
+        ],
+        "role": "Append closed fault-specific receipt checks in current Windows aggregate; preserve all original source/provider oracles, steps, matrix, budgets and artifact directory."
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "kind": "existing validation",
+        "before": {
+          "path": ".github/workflows/host-emulated-acceptance.yml",
+          "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+          "localPath": "native-proposal/w05-completed-install-r1/source/.github/workflows/host-emulated-acceptance.yml",
+          "bytes": 141809,
+          "lines": 1767,
+          "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b",
+          "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88",
+          "provenance": "retained source snapshot from independently bound published source"
+        },
+        "estimatedNetLines": [
+          3,
+          3
+        ],
+        "role": "Append Profile/Gate/new-helper to existing scoped lint operands, preserve old ordering; no routing/activation."
+      }
+    ],
+    "compiler": "Existing retained-host config includes nativeEmulatedProviderGate.ts and follows its new static import. Only the low-level broker config gains the new helper exclusion; strict flags and Plan62 helper exclusion remain.",
+    "lint": "Append only the three missing Profile/Gate/new-helper operands in the existing scoped list. No job, matrix or route is required.",
+    "artifacts": "The existing process-acceptance-evidence directory retains the separate fault receipt within the normal provider result; no Desktop source roster is needed for a process-gate-only helper.",
+    "hashes": "Before/after capture must bind the actual consumed helper/fixture source, generated profile/wrapper and original selected binaries. This is not a claimed independent all-repository or all-compiled-transitive rehash."
+  },
+  "budgets": {
+    "controllerMs": 120000,
+    "controllerQuietMs": 3000,
+    "controllerEmergencyMs": 10000,
+    "jobMinutes": 30,
+    "hostStartupMs": 10000,
+    "hostRequestMs": 15000,
+    "hostWriteMs": 5000,
+    "hostProfileShutdownMs": 1000,
+    "hostGracefulDisposal": "unchanged max(profile.shutdownTimeoutMs, hello.disposeTimeoutMs+1000), then original TERM/KILL boundaries",
+    "mainQuitStopMs": 10000,
+    "mainQuitDrainMs": 3000,
+    "existingCrashMarkerPollMs": 25,
+    "newIndependentPolicyBudget": false
+  },
+  "qualificationLimits": [
+    "Prospective source feasibility only; no selected plan or afterimage authorization is made here.",
+    "This is completed-install/pre-physical-Resume. It does not cover a crash inside installOwner, post-tool effects, W07 fresh Launch or full P08.",
+    "Finite Node-peer Windows evidence does not qualify genuine Claude, Codex, V1, Desktop or product release.",
+    "Source review does not establish that the new phase fits the unchanged 120-second controller. That requires the original exact-head Windows jobs.",
+    "The test must reject emergency cleanup as PASS and preserve the ordinary source jobs strict successful Resume oracle."
+  ],
+  "sourceBindings": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/.github/workflows/host-emulated-acceptance.yml",
+      "bytes": 141809,
+      "lines": 1767,
+      "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b",
+      "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88",
+      "provenance": "retained source snapshot from independently bound published source"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/.github/workflows/host-process-acceptance.yml",
+      "bytes": 32370,
+      "lines": 419,
+      "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524",
+      "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts",
+      "bytes": 9559,
+      "lines": 179,
+      "gitBlob": "b63b0c2b97bc196d0c1c87c0f106c2e2346e3de9",
+      "sha256": "07f000974d765d3608924302865e27ba638bba64b47ca4303a359c33c0dd47c8",
+      "provenance": "retained source snapshot from independently bound published source"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/runtime/FileRuntimeStore.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/adapters/runtime/FileRuntimeStore.ts",
+      "bytes": 12625,
+      "lines": 325,
+      "gitBlob": "60873a7a750aacfd4affbff90b21e1a739f127d4",
+      "sha256": "b33e3d6a60c0af5b84aa2c90e307f2fccffb659c57458bf056dc289cb09dde4b",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "bytes": 35008,
+      "lines": 800,
+      "gitBlob": "0f5e2258b2af33c55673aa0fdc4c660e3629e784",
+      "sha256": "1d86d1616645c2c0169806777415097e1523e294322b047699294ddfac03f1e0",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeHostMethods.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/composition/createRuntimeHostMethods.ts",
+      "bytes": 2723,
+      "lines": 69,
+      "gitBlob": "552a0319b25be43cc64dd17098d174eb03198f1c",
+      "sha256": "6cb3cd08afaff21382882887cfebdd8065f8b0d99ea0d6530d3b2c35e9204727",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeLifecyclePorts.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/composition/createRuntimeLifecyclePorts.ts",
+      "bytes": 4284,
+      "lines": 82,
+      "gitBlob": "2353eb333b3cc5b91c03c8ae78624b8fd8948c55",
+      "sha256": "ed7564367d572c10cc65108e2a680b37752485f8877187d99bd5f6b7c4762b33",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/executeCapturedRuntimeControl.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/composition/executeCapturedRuntimeControl.ts",
+      "bytes": 14590,
+      "lines": 311,
+      "gitBlob": "76a6cc219ac606a44e9b26f0198be85096f6a34a",
+      "sha256": "10f619093d48565df2ca372d8e1a62a8116601826588cc04e2c815ce4d5dcb04",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "bytes": 3398,
+      "lines": 77,
+      "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+      "sha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/restoreNativeRuntimeEntries.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/composition/restoreNativeRuntimeEntries.ts",
+      "bytes": 4326,
+      "lines": 85,
+      "gitBlob": "c31e53c113faef53e220189e3ec158100c3fda0e",
+      "sha256": "966d888f0768acaba30e7c686e6b1c9d04ecf8659ba81d602fa45be20a9e0e58",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeControlValues.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/composition/runtimeControlValues.ts",
+      "bytes": 1404,
+      "lines": 43,
+      "gitBlob": "2415f5141bd1607f9b6d0ef938c1ff9ec8cab6a4",
+      "sha256": "70765b2aad5966c6b8b402dda769349cd6f77159f41160bd21daec4b13a2a746",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "bytes": 22408,
+      "lines": 581,
+      "gitBlob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+      "sha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+      "provenance": "retained source snapshot from independently bound published source"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+      "bytes": 20070,
+      "lines": 522,
+      "gitBlob": "10e1a457bb65a136128eb1db5176a4701d2fe4e2",
+      "sha256": "cd06debca46ae13d02935268f4905b2ade7f3a5c8c4ed8a81139dde99de5c117",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/processFacade.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/owned-process/processFacade.ts",
+      "bytes": 7201,
+      "lines": 169,
+      "gitBlob": "76ad8e4e7ed91619be875cbff4b65b8811495e05",
+      "sha256": "63971263561baf601e576cd4e5b71d16673e44f3b3afa7291c6cdebc2b432d57",
+      "provenance": "retained source snapshot from independently bound published source"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "bytes": 30469,
+      "lines": 757,
+      "gitBlob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/prepareSessionOpen.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/runtime/prepareSessionOpen.ts",
+      "bytes": 1964,
+      "lines": 48,
+      "gitBlob": "f02e7aaa2b12d337c43c25aec58a1c113b96728b",
+      "sha256": "d481256476fc8b28f9c677f0f7560bd4946fee2d6fb130235a2db3c3c0c96833",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts",
+      "bytes": 36114,
+      "lines": 800,
+      "gitBlob": "c069249fdaef5ee789ed5e8445b6222bd5fc2238",
+      "sha256": "2e1751eeabd373b1b52432a662255d1c092f64a42a1a1eee7dcd581b8efe6c86",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/host-custody-recovery.test.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/tests/host-custody-recovery.test.ts",
+      "bytes": 12363,
+      "lines": 207,
+      "gitBlob": "1d789db5229276aa98535c76cbe17c9e4ee3cdc2",
+      "sha256": "7d5e7d1eea09f3feb70ad4f767295aebbd7ec714ffa41f456b17431bda7227d2",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-owner.test.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/tests/runtime-owner.test.ts",
+      "bytes": 33069,
+      "lines": 810,
+      "gitBlob": "db52890e4bf4835b461fd4f4da70c76fc3a133b4",
+      "sha256": "39c6c8442d4c5c8e3437f304dfc454f749e26d29d01fe6142378d5105e8b65a7",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "bytes": 32706,
+      "lines": 800,
+      "gitBlob": "c4389ac113de03138fd6a9b4b0c6070fb2f06d86",
+      "sha256": "33e65a4aa30e2edce5eba2e7354c55f89700e15c437611f42c5d06f49cf74b87",
+      "provenance": "retained source snapshot from independently bound published source"
+    },
+    {
+      "path": "tools/owned-process-broker/gateController.cpp",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/tools/owned-process-broker/gateController.cpp",
+      "bytes": 5935,
+      "lines": 108,
+      "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+      "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "bytes": 7926,
+      "lines": 105,
+      "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+      "sha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "bytes": 15213,
+      "lines": 231,
+      "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+      "provenance": "retained source snapshot from independently bound published source"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/tools/owned-process-broker/nativeGateContext.ts",
+      "bytes": 7278,
+      "lines": 192,
+      "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+      "provenance": "independent official immutable file read"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "localPath": "native-proposal/w05-completed-install-r1/source/tools/owned-process-broker/tsconfig.json",
+      "bytes": 557,
+      "lines": 6,
+      "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+      "provenance": "independent official immutable file read"
+    }
+  ],
+  "additionalBindings": [
+    {
+      "path": "retained-provider-proposal/source/after/tools/owned-process-broker/tsconfig.json",
+      "bytes": 593,
+      "sha256": "d503beb57a0e2e41d81c89a73349acbecd1f7e1c958b3d732db4500bd532fb21",
+      "gitBlob": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9",
+      "provenance": "accepted and published Plan62 exact afterimage; current parent must preserve it"
+    },
+    {
+      "path": "native-proposal/w07-prospective-r2/source/tools/owned-process-broker/tsconfig.retained-host.json",
+      "bytes": 393,
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+      "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "sourceHead": "946488197cf45a9012e84c7a45b402c4eef17a90",
+      "provenance": "reuse independent official immutable native-agent W07 read; original response retained in W07 official-extra-readbacks.json"
+    },
+    {
+      "path": "process-75cf-winarm64/source/tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 59461,
+      "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436",
+      "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "provenance": "previous independently bound official ARM process audit source"
+    },
+    {
+      "path": "process-75cf-winarm64/source/tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "bytes": 9609,
+      "sha256": "6434d3246aaee59b4c3c485e2a943be344006120327f9731f1afe8be7673b4b9",
+      "gitBlob": "00c0bbf1b31fea46a19920f38ff347f5ede025da",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "provenance": "previous independently bound official ARM process audit source"
+    }
+  ],
+  "checks": [
+    {
+      "check": "Frozen prospective R1 exact MD",
+      "pass": true
+    },
+    {
+      "check": "Frozen prospective R1 exact JSON",
+      "pass": true
+    },
+    {
+      "check": "Original source binding .github/workflows/host-emulated-acceptance.yml",
+      "pass": true
+    },
+    {
+      "check": "Original source binding .github/workflows/host-process-acceptance.yml",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/adapters/runtime/FileRuntimeStore.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/composition/createRuntimeHostMethods.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/composition/createRuntimeLifecyclePorts.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/composition/executeCapturedRuntimeControl.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/composition/restoreNativeRuntimeEntries.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/composition/runtimeControlValues.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/owned-process/processFacade.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/runtime/prepareSessionOpen.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/tests/host-custody-recovery.test.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding packages/legacy-agent-host/tests/runtime-owner.test.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding tools/owned-process-broker/gateController.cpp",
+      "pass": true
+    },
+    {
+      "check": "Original source binding tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding tools/owned-process-broker/nativeGateContext.ts",
+      "pass": true
+    },
+    {
+      "check": "Original source binding tools/owned-process-broker/tsconfig.json",
+      "pass": true
+    },
+    {
+      "check": "Host original installation marks exact prepared allocation once",
+      "pass": true
+    },
+    {
+      "check": "Original resume wire occurs only after installOwner resolves",
+      "pass": true
+    },
+    {
+      "check": "Facade preserves currentness around original installOwner",
+      "pass": true
+    },
+    {
+      "check": "Main attach requires exact profile/epoch and old abort plus exit",
+      "pass": true
+    },
+    {
+      "check": "Host abort keeps physical custody retained",
+      "pass": true
+    },
+    {
+      "check": "Old and successor noncleanup input cannot retarget allocation",
+      "pass": true
+    },
+    {
+      "check": "Actual native Resume retains its admission callback",
+      "pass": true
+    },
+    {
+      "check": "Original pending callback can reject after Host loss without false completed reply",
+      "pass": true
+    },
+    {
+      "check": "Opening intent/fingerprint/incarnation precede allocation",
+      "pass": true
+    },
+    {
+      "check": "Same persisted Runtime fingerprint cannot reallocate",
+      "pass": true
+    },
+    {
+      "check": "Original Team attempt claim also prevents ordinary open replay",
+      "pass": true
+    },
+    {
+      "check": "Reconcile retains original identity while recording UNKNOWN",
+      "pass": true
+    },
+    {
+      "check": "Existing public runtime.reconcile dispatch is available",
+      "pass": true
+    },
+    {
+      "check": "Original strict Runtime payload excludes arbitrary PID",
+      "pass": true
+    },
+    {
+      "check": "Durable observations can use original fenced read",
+      "pass": true
+    },
+    {
+      "check": "Cold Host cleanup can seal but must not invent release",
+      "pass": true
+    },
+    {
+      "check": "Captured Host shutdown attests child exit only",
+      "pass": true
+    },
+    {
+      "check": "Original Main close requires stop drain release",
+      "pass": true
+    },
+    {
+      "check": "Existing fixture crash marker is bounded and profile-pinned",
+      "pass": true
+    },
+    {
+      "check": "Packaged fixture changes unrelated semantics and is not an acceptable shortcut",
+      "pass": true
+    },
+    {
+      "check": "Existing Host marker is PID/parent only, not native birth",
+      "pass": true
+    },
+    {
+      "check": "Original controller deadlines and emergency refusal remain",
+      "pass": true
+    },
+    {
+      "check": "Original workflow typechecks both relevant compiler graphs",
+      "pass": true
+    },
+    {
+      "check": "Original process invocation and receipts remain on existing normal branch",
+      "pass": true
+    },
+    {
+      "check": "Original successful source Resume predicate remains strict",
+      "pass": true
+    },
+    {
+      "check": "Existing artifact directory already retains the new named outer receipt",
+      "pass": true
+    },
+    {
+      "check": "Exactly three requested lint operands absent before cut",
+      "pass": true
+    },
+    {
+      "check": "Prospective inventory remains exactly five existing and one new TEST path",
+      "pass": true
+    },
+    {
+      "check": "Published Plan62 low-level preimage retains helper and strict flags",
+      "pass": true
+    },
+    {
+      "check": "Existing retained-host config follows new Gate import without change",
+      "pass": true
+    },
+    {
+      "check": "Current SourceScenario is exactly 800 physical lines",
+      "pass": true
+    },
+    {
+      "check": "Current finite peer has original connection and effect observation",
+      "pass": true
+    }
+  ],
+  "checkCount": 59,
+  "execution": {
+    "sourceCode": false,
+    "project": false,
+    "tests": false,
+    "compiler": false,
+    "providers": false,
+    "native": false,
+    "GUI": false,
+    "CIpolling": false,
+    "remoteMutation": false,
+    "newDownloads": 0
+  },
+  "afterimages": false
+}
