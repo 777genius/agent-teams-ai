@@ -319,6 +319,22 @@ describe('native next prompt UX in the actual feature hook + row', () => {
     expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).not.toBeNull();
   });
 
+  it('keeps the old send dismissed through a transient empty inbox', () => {
+    const x = fixture();
+    act(() => x.getHook()?.invalidateForSend());
+    // A new message is still pending; an empty read is not a new message.
+    x.emit(origin);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+    x.input.latestDirectMessageId = null;
+    x.render();
+    x.input.latestDirectMessageId = origin.messageId;
+    x.render();
+    // A late offer for the previous human message must stay dismissed.
+    x.emit(origin);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+    expect(x.onInsert).not.toHaveBeenCalled();
+  });
+
   it('keeps a legitimate early offer when no edit occurs during send readback', () => {
     const x = fixture();
     const next = {

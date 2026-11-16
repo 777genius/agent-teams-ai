@@ -77,7 +77,7 @@ export function useNativeNextPrompt(input: {
         invalidatedMessageIdRef.current = null;
       }
       pendingSendRef.current = null;
-    } else if (invalidatedMessageIdRef.current !== input.latestDirectMessageId) {
+    } else if (!pending && invalidatedMessageIdRef.current !== input.latestDirectMessageId) {
       invalidatedMessageIdRef.current = null;
     }
   }, [input.latestDirectMessageId, input.localEditCounter]);
