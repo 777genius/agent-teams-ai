@@ -1,0 +1,448 @@
+{
+  "schemaVersion": 1,
+  "repository": "777genius/agent-teams-ai",
+  "authorization": {
+    "publishedCommit": "e3c1887a46569cd63a951510f45a0daf98efe188",
+    "publishedTree": "097a84734f906a72a711bec282372e1319ed4d76",
+    "r1Blob": "bd97e2e7a4f9321d222f13d5291ab394c3d2cd23",
+    "rootFullR1AndPublicationReadback": true,
+    "independentFullPublicationReadbacks": [
+      "pr_graph",
+      "parity_audit"
+    ]
+  },
+  "source": {
+    "baseCommit": "0b3fa6117b1856b947d799f95bae7aae0238061c",
+    "baseTree": "6c697970d954f2ef4534e01487b2faf54d2a14e0",
+    "headCommit": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "headTree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+    "headParent": [
+      "5e604214ab04da67125eb28963b3da5347964c3a"
+    ],
+    "baseLeaves": 9677,
+    "headLeaves": 9809,
+    "ahead": 26,
+    "behind": 0,
+    "changedLeaves": 194,
+    "docs": 122,
+    "otherPaths": 72,
+    "modified": 62,
+    "added": 132,
+    "deletions": 0,
+    "modeChanges": 0
+  },
+  "preconditions": {
+    "freshReadTime": "2026-11-16 02:12:47 UTC",
+    "baseAbsent404": {
+      "content": [
+        {
+          "type": "text",
+          "text": "GitHub API error 404: {\"message\":\"Not Found\",\"documentation_url\":\"https://docs.github.com/rest/git/refs#get-a-reference\",\"status\":\"404\"}"
+        }
+      ],
+      "structuredContent": {
+        "error": "GitHub API error 404: {\"message\":\"Not Found\",\"documentation_url\":\"https://docs.github.com/rest/git/refs#get-a-reference\",\"status\":\"404\"}",
+        "error_code": "NOT_FOUND",
+        "error_data": {
+          "message": "Not Found",
+          "documentation_url": "https://docs.github.com/rest/git/refs#get-a-reference",
+          "status": "404"
+        }
+      },
+      "isError": true
+    },
+    "headAbsent404": {
+      "content": [
+        {
+          "type": "text",
+          "text": "GitHub API error 404: {\"message\":\"Not Found\",\"documentation_url\":\"https://docs.github.com/rest/git/refs#get-a-reference\",\"status\":\"404\"}"
+        }
+      ],
+      "structuredContent": {
+        "error": "GitHub API error 404: {\"message\":\"Not Found\",\"documentation_url\":\"https://docs.github.com/rest/git/refs#get-a-reference\",\"status\":\"404\"}",
+        "error_code": "NOT_FOUND",
+        "error_data": {
+          "message": "Not Found",
+          "documentation_url": "https://docs.github.com/rest/git/refs#get-a-reference",
+          "status": "404"
+        }
+      },
+      "isError": true
+    },
+    "matchingPrs": [],
+    "preexistingPrs": [
+      {
+        "number": 1192,
+        "state": "open",
+        "draft": true,
+        "head": {
+          "ref": "fix/frontend-parity-completion-20261113",
+          "sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+        },
+        "base": {
+          "ref": "feat/provider-host-frontend-parity-20261112",
+          "sha": "def734338f13bcc3209e78079a0cedbc48f05a5b"
+        }
+      },
+      {
+        "number": 1206,
+        "state": "open",
+        "draft": true,
+        "head": {
+          "ref": "ci/frontend-parity-capacity-c714-20261115",
+          "sha": "9efaecc566af48ecb0b9a8249795266192b18f09"
+        },
+        "base": {
+          "ref": "ci/frontend-parity-capacity-base-c714-20261115",
+          "sha": "22078dc88a1118b2134388743ec41dd72fd73563"
+        }
+      },
+      {
+        "number": 1207,
+        "state": "open",
+        "draft": true,
+        "head": {
+          "ref": "ci/frontend-parity-capacity-green-c714-20261115",
+          "sha": "9b56f07cfc6a5a72dc2e32f523bdb4e210e1ae5e"
+        },
+        "base": {
+          "ref": "ci/frontend-parity-capacity-base-c714-20261115",
+          "sha": "22078dc88a1118b2134388743ec41dd72fd73563"
+        }
+      },
+      {
+        "number": 1208,
+        "state": "open",
+        "draft": true,
+        "head": {
+          "ref": "ci/frontend-parity-native-desktop-green-c714-20261115",
+          "sha": "6e222b57f700832cfd78a934a3b6a205a5764761"
+        },
+        "base": {
+          "ref": "ci/frontend-parity-native-desktop-base-c714-20261115",
+          "sha": "58c14e5fbe6188aea70307e2b0734b125d899a03"
+        }
+      }
+    ]
+  },
+  "actions": [
+    {
+      "action": "create_branch",
+      "branch": "ci/frontend-parity-logs-native-base-c714-20261116",
+      "sha": "0b3fa6117b1856b947d799f95bae7aae0238061c",
+      "result": {
+        "branch": "ci/frontend-parity-logs-native-base-c714-20261116"
+      },
+      "time": "2026-11-16 02:13:14 UTC"
+    },
+    {
+      "action": "create_branch",
+      "branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+      "result": {
+        "branch": "ci/frontend-parity-logs-native-green-c714-20261116"
+      },
+      "time": "2026-11-16 02:13:15 UTC"
+    },
+    {
+      "action": "create_pull_request",
+      "args": {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "base": "ci/frontend-parity-logs-native-base-c714-20261116",
+        "head": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "title": "ci: qualify Host Logs and native lifecycle on frozen source",
+        "body": "## Purpose\n\nRun the unchanged original acceptance workflows on the reviewed Host Logs/Thinking/stderr and native lifecycle source, including its published stderr privacy repair, loaded-CDP source pin and passive Team-navigation diagnostics. Keep primary PR1192 and frozen venues1206/1207/1208 unchanged.\n\n## Exact frozen source\n\nBase: `ci/frontend-parity-logs-native-base-c714-20261116` at `0b3fa6117b1856b947d799f95bae7aae0238061c`, tree `6c697970d954f2ef4534e01487b2faf54d2a14e0`.\nHead: `ci/frontend-parity-logs-native-green-c714-20261116` at `2abcf83fddacbc1efedee83f9c1d203d12ed656e`, tree `0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103`.\n\nThe complete comparison is ahead26/behind0 with194 changed files:72 outside docs and122 docs/evidence,62 modified and132 added, no deletion or mode change. Seventeen incoming commits, the a3a9 integration merge and eight later own commits remain reachable. Original15-second Process readiness, distinct P08 deadlines and all custody/cleanup gates remain selected. The519-file later incoming evidence/history reconciliation stays outside this frozen head.\n\n## Existing evidence and remaining qualification\n\nSource-bound earlier local results retain170 whole-file Node,59 Vitest and41 Desktop-observation PASS; the original closure serializer refusal and its sole LF correction remain recorded. The privacy repair separately passed47 whole-file cases after its actual22PASS/5FAIL regression stage. The CDP pin passed its three scoped static checks.\n\nOn this exact2ab head, the complete desktop-team-ui smoke file passed49/49 (44 original plus five observer cases), with scoped two-file lint, source-size, provisioning, source diff and source closure all0: six commands total, no new build or compiler. These results do not establish GUI/native/platform qualification or a historical navigation cause.\n\nThe original resulting-source CI must retain full logs/API/artifacts for eighteen Desktop journeys, four safe shards, five Process tuples, five packaged tuples, nine Stage1 jobs and three Teams Create-page journeys, including original types and physical cleanup. Failed, skipped, cancelled and unreached work remains unqualified.\n\n## Automatic workflow scope\n\nAll42 reviewed workflow definitions and the full194-file range were reviewed:21 definitions match opened; six are entirely Draft-skipped. Matched landing/updater routes retain original static/quality checks and exclude PR deployment/native-updater execution through existing guards. Actual Claude/Codex commands, including versions, remain excluded. Existing pinned OpenCode/local TEST fixtures remain allowed.\n\nGeneral CI keeps Draft fast feedback and its original full-qualification refusal. This PR stays Draft. No label/Ready conversion, workflow edit, manual dispatch/rerun/cancel, primary-head move, release or provider ref action is requested. Both new refs remain frozen; their new PR concurrency cannot cancel another PR's cohort.",
+        "draft": true,
+        "maintainer_can_modify": false
+      },
+      "result": {
+        "url": "https://github.com/777genius/agent-teams-ai/pull/1211",
+        "number": 1211,
+        "state": "open",
+        "merged": false,
+        "mergeable": false,
+        "draft": true,
+        "body": "## Purpose\n\nRun the unchanged original acceptance workflows on the reviewed Host Logs/Thinking/stderr and native lifecycle source, including its published stderr privacy repair, loaded-CDP source pin and passive Team-navigation diagnostics. Keep primary PR1192 and frozen venues1206/1207/1208 unchanged.\n\n## Exact frozen source\n\nBase: `ci/frontend-parity-logs-native-base-c714-20261116` at `0b3fa6117b1856b947d799f95bae7aae0238061c`, tree `6c697970d954f2ef4534e01487b2faf54d2a14e0`.\nHead: `ci/frontend-parity-logs-native-green-c714-20261116` at `2abcf83fddacbc1efedee83f9c1d203d12ed656e`, tree `0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103`.\n\nThe complete comparison is ahead26/behind0 with194 changed files:72 outside docs and122 docs/evidence,62 modified and132 added, no deletion or mode change. Seventeen incoming commits, the a3a9 integration merge and eight later own commits remain reachable. Original15-second Process readiness, distinct P08 deadlines and all custody/cleanup gates remain selected. The519-file later incoming evidence/history reconciliation stays outside this frozen head.\n\n## Existing evidence and remaining qualification\n\nSource-bound earlier local results retain170 whole-file Node,59 Vitest and41 Desktop-observation PASS; the original closure serializer refusal and its sole LF correction remain recorded. The privacy repair separately passed47 whole-file cases after its actual22PASS/5FAIL regression stage. The CDP pin passed its three scoped static checks.\n\nOn this exact2ab head, the complete desktop-team-ui smoke file passed49/49 (44 original plus five observer cases), with scoped two-file lint, source-size, provisioning, source diff and source closure all0: six commands total, no new build or compiler. These results do not establish GUI/native/platform qualification or a historical navigation cause.\n\nThe original resulting-source CI must retain full logs/API/artifacts for eighteen Desktop journeys, four safe shards, five Process tuples, five packaged tuples, nine Stage1 jobs and three Teams Create-page journeys, including original types and physical cleanup. Failed, skipped, cancelled and unreached work remains unqualified.\n\n## Automatic workflow scope\n\nAll42 reviewed workflow definitions and the full194-file range were reviewed:21 definitions match opened; six are entirely Draft-skipped. Matched landing/updater routes retain original static/quality checks and exclude PR deployment/native-updater execution through existing guards. Actual Claude/Codex commands, including versions, remain excluded. Existing pinned OpenCode/local TEST fixtures remain allowed.\n\nGeneral CI keeps Draft fast feedback and its original full-qualification refusal. This PR stays Draft. No label/Ready conversion, workflow edit, manual dispatch/rerun/cancel, primary-head move, release or provider ref action is requested. Both new refs remain frozen; their new PR concurrency cannot cancel another PR's cohort.",
+        "title": "ci: qualify Host Logs and native lifecycle on frozen source",
+        "base": "ci/frontend-parity-logs-native-base-c714-20261116",
+        "base_sha": "0b3fa6117b1856b947d799f95bae7aae0238061c",
+        "head": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "head_repo_id": 1163183284,
+        "head_repo_full_name": "777genius/agent-teams-ai",
+        "merge_commit_sha": null,
+        "user": {
+          "login": "777genius",
+          "name": "777genius",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+          "id": 13103045
+        },
+        "requested_reviewers": null,
+        "requested_team_reviewers": null,
+        "diff": null,
+        "comments": null,
+        "created_at": "2026-11-16T02:13:17Z",
+        "updated_at": "2026-11-16T02:13:17Z",
+        "closed_at": null,
+        "merged_at": null,
+        "commits": 26,
+        "changed_files": 194,
+        "additions": 82410,
+        "deletions": 766,
+        "display_url": "https://github.com/777genius/agent-teams-ai/pull/1211",
+        "display_title": "ci: qualify Host Logs and native lifecycle on frozen source"
+      },
+      "time": "2026-11-16 02:13:18 UTC"
+    }
+  ],
+  "postconditions": {
+    "pr": 1211,
+    "url": "https://github.com/777genius/agent-teams-ai/pull/1211",
+    "state": "open",
+    "draft": true,
+    "maintainerCanModify": false,
+    "exactAuthoredTitle": true,
+    "exactAuthoredBody": true,
+    "authoredBodyBytes": 2938,
+    "authoredBodySHA256": "cd821ff6b6378ef9436bd3ea058b5800f80fd5f3df2124f76c479c21e1690da1",
+    "baseRef": {
+      "ref": "refs/heads/ci/frontend-parity-logs-native-base-c714-20261116",
+      "node_id": "REF_kwDORVTEtNoAPHJlZnMvaGVhZHMvY2kvZnJvbnRlbmQtcGFyaXR5LWxvZ3MtbmF0aXZlLWJhc2UtYzcxNC0yMDI2MTExNg",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/ci/frontend-parity-logs-native-base-c714-20261116",
+      "object": {
+        "sha": "0b3fa6117b1856b947d799f95bae7aae0238061c",
+        "type": "commit",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/0b3fa6117b1856b947d799f95bae7aae0238061c"
+      }
+    },
+    "headRef": {
+      "ref": "refs/heads/ci/frontend-parity-logs-native-green-c714-20261116",
+      "node_id": "REF_kwDORVTEtNoAPXJlZnMvaGVhZHMvY2kvZnJvbnRlbmQtcGFyaXR5LWxvZ3MtbmF0aXZlLWdyZWVuLWM3MTQtMjAyNjExMTY",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/ci/frontend-parity-logs-native-green-c714-20261116",
+      "object": {
+        "sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "type": "commit",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+      }
+    },
+    "completeHeadInventoryEqualsAcceptedTree": true
+  },
+  "actualOriginalRouting": {
+    "runsJoined": 21,
+    "allHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "allEvent": "pull_request",
+    "allAttempt": 1,
+    "initialGlobalHeadListCount": 20,
+    "remainingRun": 43790825827,
+    "remainingRunJoinedFromCheckRun": 133048605063,
+    "globalListDoesNotEstablishAbsence": true,
+    "sourcePredictionMatchedAfterDirectRunJoin": true,
+    "runSummary": [
+      {
+        "id": 43790825942,
+        "path": ".github/workflows/landing.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825963,
+        "path": ".github/workflows/updater-native-feasibility.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825860,
+        "path": ".github/workflows/dependency-review.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825782,
+        "path": ".github/workflows/updater-windows.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825821,
+        "path": ".github/workflows/updater-windows-ota.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825981,
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825919,
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825857,
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825753,
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825790,
+        "path": ".github/workflows/ci.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825873,
+        "path": ".github/workflows/updater-linux-packages.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825845,
+        "path": ".github/workflows/landing-hetzner-release.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825906,
+        "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "completed",
+        "conclusionAtOriginalRead": "skipped"
+      },
+      {
+        "id": 43790825830,
+        "path": ".github/workflows/codeql.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "completed",
+        "conclusionAtOriginalRead": "skipped"
+      },
+      {
+        "id": 43790825796,
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825768,
+        "path": ".github/workflows/windows-backfill-diagnostic.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "completed",
+        "conclusionAtOriginalRead": "skipped"
+      },
+      {
+        "id": 43790825771,
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "completed",
+        "conclusionAtOriginalRead": "skipped"
+      },
+      {
+        "id": 43790825784,
+        "path": ".github/workflows/sentry-owned-process-native.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "completed",
+        "conclusionAtOriginalRead": "skipped"
+      },
+      {
+        "id": 43790825935,
+        "path": ".github/workflows/anthropic-env-portability.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "completed",
+        "conclusionAtOriginalRead": "skipped"
+      },
+      {
+        "id": 43790825705,
+        "path": ".github/workflows/announcements-content.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      },
+      {
+        "id": 43790825827,
+        "path": ".github/workflows/prepare-updater-native-inputs.yml",
+        "event": "pull_request",
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "attempt": 1,
+        "statusAtOriginalRead": "queued",
+        "conclusionAtOriginalRead": null
+      }
+    ],
+    "sixGuardedDefinitions": 6,
+    "guardedJobs": 8,
+    "allGuardedJobsSkippedWithZeroSteps": true,
+    "prepareNativeJob": {
+      "id": 133048606513,
+      "conclusion": "skipped",
+      "steps": 0
+    }
+  },
+  "limits": [
+    "Three root creations only; no manual dispatch, rerun, cancellation, Ready/label edit, source change, merge/release/provider action.",
+    "Both new CI refs stay frozen. Other PRs' binding/state readbacks remain unchanged.",
+    "Initial queued/running states are not qualification. All original resulting-source gates, artifacts and physical cleanup remain to inspect.",
+    "General CI Draft merge-qualification refusal remains expected; no whole General CI green claim.",
+    "No actual Claude/Codex execution including version is authorized; permitted finite peers and pinned OpenCode retain their reviewed scope."
+  ]
+}

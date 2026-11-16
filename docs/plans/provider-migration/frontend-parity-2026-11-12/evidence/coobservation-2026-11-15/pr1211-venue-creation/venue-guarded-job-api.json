@@ -1,0 +1,242 @@
+{
+  "43790825906": {
+    "total_count": 1,
+    "jobs": [
+      {
+        "id": 133048606786,
+        "run_id": 43790825906,
+        "workflow_name": "Kanban Table Desktop E2E",
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825906",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAe-lCgQg",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606786",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825906/job/133048606786",
+        "status": "completed",
+        "conclusion": "skipped",
+        "created_at": "2026-11-16T02:13:22Z",
+        "started_at": "2026-11-16T02:13:22Z",
+        "completed_at": "2026-11-16T02:13:21Z",
+        "name": "table-desktop",
+        "steps": [],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606786",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "runner_id": null,
+        "runner_name": null,
+        "runner_group_id": null,
+        "runner_group_name": null
+      }
+    ]
+  },
+  "43790825830": {
+    "total_count": 1,
+    "jobs": [
+      {
+        "id": 133048605995,
+        "run_id": 43790825830,
+        "workflow_name": "CodeQL",
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825830",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAe-lCdKw",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605995",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825830/job/133048605995",
+        "status": "completed",
+        "conclusion": "skipped",
+        "created_at": "2026-11-16T02:13:21Z",
+        "started_at": "2026-11-16T02:13:21Z",
+        "completed_at": "2026-11-16T02:13:21Z",
+        "name": "Analyze (${{ matrix.language }})",
+        "steps": [],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605995",
+        "labels": [
+          "ubuntu-24.04"
+        ],
+        "runner_id": null,
+        "runner_name": null,
+        "runner_group_id": null,
+        "runner_group_name": null
+      }
+    ]
+  },
+  "43790825771": {
+    "total_count": 1,
+    "jobs": [
+      {
+        "id": 133048605900,
+        "run_id": 43790825771,
+        "workflow_name": "Codex Runtime Smoke",
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825771",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAe-lCczA",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605900",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825771/job/133048605900",
+        "status": "completed",
+        "conclusion": "skipped",
+        "created_at": "2026-11-16T02:13:21Z",
+        "started_at": "2026-11-16T02:13:21Z",
+        "completed_at": "2026-11-16T02:13:21Z",
+        "name": "Install Codex runtime (${{ matrix.os }})",
+        "steps": [],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605900",
+        "labels": [],
+        "runner_id": null,
+        "runner_name": null,
+        "runner_group_id": null,
+        "runner_group_name": null
+      }
+    ]
+  },
+  "43790825784": {
+    "total_count": 3,
+    "jobs": [
+      {
+        "id": 133048606063,
+        "run_id": 43790825784,
+        "workflow_name": "Sentry owned process native gates",
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825784",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAe-lCdbw",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606063",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825784/job/133048606063",
+        "status": "completed",
+        "conclusion": "skipped",
+        "created_at": "2026-11-16T02:13:21Z",
+        "started_at": "2026-11-16T02:13:21Z",
+        "completed_at": "2026-11-16T02:13:21Z",
+        "name": "registered ABI (linux x64 glibc2.28 and older kernel)",
+        "steps": [],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606063",
+        "labels": [
+          "ubuntu-22.04"
+        ],
+        "runner_id": null,
+        "runner_name": null,
+        "runner_group_id": null,
+        "runner_group_name": null
+      },
+      {
+        "id": 133048606509,
+        "run_id": 43790825784,
+        "workflow_name": "Sentry owned process native gates",
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825784",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAe-lCfLQ",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606509",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825784/job/133048606509",
+        "status": "completed",
+        "conclusion": "skipped",
+        "created_at": "2026-11-16T02:13:21Z",
+        "started_at": "2026-11-16T02:13:21Z",
+        "completed_at": "2026-11-16T02:13:21Z",
+        "name": "owned native (${{ matrix.arch }})",
+        "steps": [],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606509",
+        "labels": [],
+        "runner_id": null,
+        "runner_name": null,
+        "runner_group_id": null,
+        "runner_group_name": null
+      },
+      {
+        "id": 133048638429,
+        "run_id": 43790825784,
+        "workflow_name": "Sentry owned process native gates",
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825784",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAe-lEb3Q",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048638429",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825784/job/133048638429",
+        "status": "completed",
+        "conclusion": "skipped",
+        "created_at": "2026-11-16T02:13:28Z",
+        "started_at": "2026-11-16T02:13:28Z",
+        "completed_at": "2026-11-16T02:13:21Z",
+        "name": "registered native (linux x64 pidfs)",
+        "steps": [],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048638429",
+        "labels": [
+          "ubuntu-24.04"
+        ],
+        "runner_id": null,
+        "runner_name": null,
+        "runner_group_id": null,
+        "runner_group_name": null
+      }
+    ]
+  },
+  "43790825768": {
+    "total_count": 1,
+    "jobs": [
+      {
+        "id": 133048605916,
+        "run_id": 43790825768,
+        "workflow_name": "Windows packaged backfill diagnostic",
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825768",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAe-lCc3A",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605916",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825768/job/133048605916",
+        "status": "completed",
+        "conclusion": "skipped",
+        "created_at": "2026-11-16T02:13:21Z",
+        "started_at": "2026-11-16T02:13:21Z",
+        "completed_at": "2026-11-16T02:13:21Z",
+        "name": "packaged-backfill",
+        "steps": [],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605916",
+        "labels": [
+          "windows-latest"
+        ],
+        "runner_id": null,
+        "runner_name": null,
+        "runner_group_id": null,
+        "runner_group_name": null
+      }
+    ]
+  },
+  "43790825935": {
+    "total_count": 1,
+    "jobs": [
+      {
+        "id": 133048606068,
+        "run_id": 43790825935,
+        "workflow_name": "Anthropic environment portability",
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825935",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAe-lCddA",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606068",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825935/job/133048606068",
+        "status": "completed",
+        "conclusion": "skipped",
+        "created_at": "2026-11-16T02:13:21Z",
+        "started_at": "2026-11-16T02:13:21Z",
+        "completed_at": "2026-11-16T02:13:21Z",
+        "name": "Anthropic env (${{ matrix.os }})",
+        "steps": [],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606068",
+        "labels": [],
+        "runner_id": null,
+        "runner_name": null,
+        "runner_group_id": null,
+        "runner_group_name": null
+      }
+    ]
+  }
+}

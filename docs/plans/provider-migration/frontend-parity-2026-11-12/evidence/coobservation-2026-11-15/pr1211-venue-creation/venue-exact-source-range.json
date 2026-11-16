@@ -1,0 +1,1621 @@
+{
+  "base": "0b3fa6117b1856b947d799f95bae7aae0238061c",
+  "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "mergeBase": "0b3fa6117b1856b947d799f95bae7aae0238061c",
+  "ahead": 26,
+  "behind": 0,
+  "changes": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "status": "modified",
+      "sha": "a93ff6ba1e5656523668694bca24910a468aebc7",
+      "additions": 7,
+      "deletions": 7
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "status": "modified",
+      "sha": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "additions": 1,
+      "deletions": 1
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "status": "modified",
+      "sha": "8e3c22c70571d238dc0ee41e6f03084bdfa2c3c2",
+      "additions": 368,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/canonical-provider-delivery-ci-evidence-20261116.md",
+      "status": "added",
+      "sha": "628f0e0ea99348abff15efddcbb78a7957936609",
+      "additions": 23,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci-pr1208-original/desktop-installer-darwin-arm64.log",
+      "status": "added",
+      "sha": "4e18b4d75a0afa00060bc0e39fd23b3dec4b9ad0",
+      "additions": 1751,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci-pr1208-original/manifest.json",
+      "status": "added",
+      "sha": "02e56495cc8cdf05862cb393afcc9977bc459a72",
+      "additions": 202,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci-pr1208-original/original-source-job-artifact-api.json",
+      "status": "added",
+      "sha": "6ab705f72237705e7727eae2391ac666836d87b7",
+      "additions": 1910,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci-pr1208-original/pr1208-original-packaged-cancelled-assessment.json",
+      "status": "added",
+      "sha": "44f8e4d15d455e3645949d33601802d273f808b4",
+      "additions": 62,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci-pr1208-original/pr1208-original-packaged-jobs-api.json",
+      "status": "added",
+      "sha": "b311efde2d8ffc8f59dd9f3d1ca7a7a7e397d62c",
+      "additions": 1,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci-pr1208-original/pr1208-original-packaged-run-api.json",
+      "status": "added",
+      "sha": "d7da21357b339c4a193526f0addb88a32425e533",
+      "additions": 1,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci-pr1208-original/process-darwin-arm64.log",
+      "status": "added",
+      "sha": "080ef1569cdc1ff16a7a70b8113526f3e3108649",
+      "additions": 1179,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci-pr1208-original/process-darwin-x64.log",
+      "status": "added",
+      "sha": "cd53f4203a50af9d9e094c026cfee9f1ebfd1170",
+      "additions": 1388,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci-pr1208-original/process-win32-arm64.log",
+      "status": "added",
+      "sha": "cdf1000640bb32ab12e973c0b031e39fb6cd3131",
+      "additions": 1304,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci-pr1208-original/process-win32-x64.log",
+      "status": "added",
+      "sha": "57be5b299bd51c340bb5c169b96233458bd77798",
+      "additions": 1056,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/held-stderr-redaction-order-r1-20261116.md",
+      "status": "added",
+      "sha": "421049be77ca0924173a81e7b53fb182b85457aa",
+      "additions": 62,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/installer-team-navigation-observation-r1-20261116.md",
+      "status": "added",
+      "sha": "c01c4fe1926487a1d6489345c70dce4ec57fd062",
+      "additions": 96,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs-9e-combined69-source-review-20261115.json",
+      "status": "added",
+      "sha": "9e126cba5b15cfb93793269fc32ebcfbe988423f",
+      "additions": 1463,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local-qualification.md",
+      "status": "added",
+      "sha": "11fb306d7040f6adad87a5c3ec77fccc2c444325",
+      "additions": 15,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-desktop-observations.log",
+      "status": "added",
+      "sha": "f2e172c811b82382b3335647117363553e4455dd",
+      "additions": 49,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-frozen-install.log",
+      "status": "added",
+      "sha": "dbf09bd6e5462f744e5085de13719a823beed1fd",
+      "additions": 19,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-host-build.log",
+      "status": "added",
+      "sha": "d7724909302502a19004cf707ff5c03ec76ff684",
+      "additions": 3,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-local-manifest.json",
+      "status": "added",
+      "sha": "e440b7701a63d68f2020487246176cfb22964a64",
+      "additions": 412,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-node-ten-files.log",
+      "status": "added",
+      "sha": "9f18d1852ba8dde8793523a38c96eebe1f481c2d",
+      "additions": 189,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-provisioning.log",
+      "status": "added",
+      "sha": "60470b032e09b95bed40e09c267d2edacb0ad35d",
+      "additions": 2,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-root-byte-review.json",
+      "status": "added",
+      "sha": "4600f51155447180c4215639c8f541787c2876b8",
+      "additions": 455,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-scoped-lint.log",
+      "status": "added",
+      "sha": "289838a5abaab3462c63cd696f76fbd267352344",
+      "additions": 15,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-source-closure-corrected-manifest.json",
+      "status": "added",
+      "sha": "dfbdf4bdcdac6e3644172fae2ecfeffba0f0f6b3",
+      "additions": 38,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-source-closure-corrected.log",
+      "status": "added",
+      "sha": "91bef7e1aff1bd6167e58f05030677e554b371b0",
+      "additions": 3,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-source-closure.log",
+      "status": "added",
+      "sha": "103102f17c516d6d30904b9733d0bd96099ee836",
+      "additions": 24,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-source-diff.log",
+      "status": "added",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-source-size.log",
+      "status": "added",
+      "sha": "399a78f77777d0669218be2d4dae5360657308fa",
+      "additions": 3,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/logs69-local/logs69-vitest-six-files.log",
+      "status": "added",
+      "sha": "9057b5cf7effe54b820680a9c747553baa47f08a",
+      "additions": 25,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/packaged-cdp-pin-local-qualification-20261116.md",
+      "status": "added",
+      "sha": "c9b809d79a071403ef3d4f23b93a3ecfe7b3328b",
+      "additions": 17,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/packaged-cdp-pin-local/packaged-cdp-pin-closure.log",
+      "status": "added",
+      "sha": "d1c1f76f6f176a1ce37e5df63b3a04b499e00c35",
+      "additions": 3,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/packaged-cdp-pin-local/packaged-cdp-pin-diff.log",
+      "status": "added",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/packaged-cdp-pin-local/packaged-cdp-pin-lint.log",
+      "status": "added",
+      "sha": "52ab42c7d172ffc4570d5a2912e8ee4825403278",
+      "additions": 1,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/packaged-cdp-pin-local/packaged-cdp-pin-local-manifest.json",
+      "status": "added",
+      "sha": "9e699d466616a212ea6bff15c113a635e664860a",
+      "additions": 61,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/packaged-relaunch-cdp-source-pin-r1-20261116.md",
+      "status": "added",
+      "sha": "6598021a57e78c0668713b6ac765d1bba0b56c79",
+      "additions": 41,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary0660-installer/archive/archive-manifest.json",
+      "status": "added",
+      "sha": "9dd404119a4b270537132b2db06dc10407128220",
+      "additions": 188,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary0660-installer/archive/desktop-app.log",
+      "status": "added",
+      "sha": "86ef5fac5abef5bed65f6043dfab7c4b732301c9",
+      "additions": 233,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary0660-installer/archive/desktop-backend-receipt.json",
+      "status": "added",
+      "sha": "9e05e1b7e71a7012b4f169efbd94c81038095ee1",
+      "additions": 26586,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary0660-installer/archive/host-emulated-emulated-installer-ui.log",
+      "status": "added",
+      "sha": "c51b196cce71f65d587909e0a00dad1f316d7844",
+      "additions": 24,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary0660-installer/archive/ui-failure.png",
+      "status": "added",
+      "sha": "b132a2e5f496284ce25004cca7a8fda222485393",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary0660-installer/original/host-installer-0660-artifacts-api.json",
+      "status": "added",
+      "sha": "18d5882ff279e51cfb7cb3eec280aef8ff79538d",
+      "additions": 1,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary0660-installer/original/host-installer-0660-job.log",
+      "status": "added",
+      "sha": "e60b871a82cc8cfc1757da368b2c29c3acfc13e6",
+      "additions": 1813,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary0660-installer/original/host-installer-0660-jobs-api.json",
+      "status": "added",
+      "sha": "6fe494ce682c18424a08caea93dff68d97de8ce8",
+      "additions": 1,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary0660-installer/original/host-installer-0660-manifest.json",
+      "status": "added",
+      "sha": "3de3774f17d7b1bb42e4f5856ef5d401e629be29",
+      "additions": 568,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary0660-installer/original/host-installer-0660-run-api.json",
+      "status": "added",
+      "sha": "be4e42e61d18361820e72eaacb0ca3c97f55d597",
+      "additions": 1,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary0660-installer/root-byte-review.json",
+      "status": "added",
+      "sha": "7d071bc78bbd19f06d372c84492d425b12fd5392",
+      "additions": 41,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary1f-process/process-win32-arm64.log",
+      "status": "added",
+      "sha": "3f96e55695968503570bd7aebdd39ef61b61198b",
+      "additions": 2503,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary1f-process/process-win32-x64.log",
+      "status": "added",
+      "sha": "9a8daa24b5d2aa5b03942322b119bf2b45841b2a",
+      "additions": 2317,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/primary1f-process/source-and-scope.json",
+      "status": "added",
+      "sha": "50e3a4a2b841b238814858d783adac016fe95196",
+      "additions": 509,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/root-byte-review.json",
+      "status": "added",
+      "sha": "9c69c0dd91e754892464b7fc8243b68bfa57c42d",
+      "additions": 389,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/safe/canonical-ci-api.json",
+      "status": "added",
+      "sha": "d012c8e95e7f46e1ab0f44dcd7fa711b376e4715",
+      "additions": 16,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/safe/canonical-ci-manifest.json",
+      "status": "added",
+      "sha": "566584a0c8aebf4f446083fc01ca31600758321c",
+      "additions": 130,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/safe/canonical-ci-node24.log",
+      "status": "added",
+      "sha": "830dcf2d59d0e884fdb68e00ae640be90837da40",
+      "additions": 923,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/safe/canonical-ci-node26.log",
+      "status": "added",
+      "sha": "f7c21ec0e6a0e1605d899809cd1541e1a3d89883",
+      "additions": 869,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/canonical-v2-api.json",
+      "status": "added",
+      "sha": "784bd1a47d1cd79b73fc3f1a772ee7dc1f124b64",
+      "additions": 11,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/canonical-v2-manifest.json",
+      "status": "added",
+      "sha": "4c524459856b0f5117d05ffcca75e68efeae6aee",
+      "additions": 3451,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104671.log",
+      "status": "added",
+      "sha": "0d915af0e764ad1fc1019225671a831303303e50",
+      "additions": 313,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104819.log",
+      "status": "added",
+      "sha": "ccf76f31724eced759fb2dd42d80b2d39e6b73d0",
+      "additions": 350,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104878.log",
+      "status": "added",
+      "sha": "7c9031818910759aabe75c4c0f3f5c342f828624",
+      "additions": 348,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104893.log",
+      "status": "added",
+      "sha": "36e91daaf41a1a46c28489d011ed4ca1691a6d71",
+      "additions": 494,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104899.log",
+      "status": "added",
+      "sha": "5f4ad9229a2affed2020b4c0b1a5f6a0c1c458f4",
+      "additions": 504,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104900.log",
+      "status": "added",
+      "sha": "f543a4d43ad844399345100688f747f8a11a6ed1",
+      "additions": 327,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104911.log",
+      "status": "added",
+      "sha": "8cb943523e8ae56fd36f37cb1705897218fac53c",
+      "additions": 491,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104923.log",
+      "status": "added",
+      "sha": "840dcaba7ef2405dd6752444269f8dd7c8f23f8e",
+      "additions": 322,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104931.log",
+      "status": "added",
+      "sha": "125faeef06b2978126317b41e31e8b05ff6cf47a",
+      "additions": 322,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104935.log",
+      "status": "added",
+      "sha": "a5032c8d42682c09fcba59a9e33a7d6fab6825c8",
+      "additions": 328,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104942.log",
+      "status": "added",
+      "sha": "b65add3762bc5e189a0c4b5f70dbbbce6ceaadfb",
+      "additions": 331,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104943.log",
+      "status": "added",
+      "sha": "b63880443075e474f4368ca0332649503a6dd122",
+      "additions": 327,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104952.log",
+      "status": "added",
+      "sha": "e28036f2d27a49a8315ea31ab087f4eabcc69196",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104963.log",
+      "status": "added",
+      "sha": "33d2e2baaac2c8d7073ba235afb113c8d597b553",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104980.log",
+      "status": "added",
+      "sha": "837487e4130d3d951d72ee07a5c700b66303e6f4",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104988.log",
+      "status": "added",
+      "sha": "500a1f5dcacb512e4f6839ee407612cd22ae8b2a",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104990.log",
+      "status": "added",
+      "sha": "46edc40a40b6b04300dbe64c236cc4ae77d0be45",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019104997.log",
+      "status": "added",
+      "sha": "3192ac9aab1cacd9371b7986e6bd9e830ab67970",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105000.log",
+      "status": "added",
+      "sha": "b9e9d60208f7007454192e90912bbcf2fd4c7fa6",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105016.log",
+      "status": "added",
+      "sha": "16daf95c1c566e0251f4fc743505897175673495",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105021.log",
+      "status": "added",
+      "sha": "4e62b99fcea279d13a4e6d2fb89abc3722fc69a1",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105025.log",
+      "status": "added",
+      "sha": "0bdb31ceb0b50e2b5ea803392a7df10716a39ed4",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105036.log",
+      "status": "added",
+      "sha": "11f983b5b5b47c222b7db511045503de9295fa4d",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105054.log",
+      "status": "added",
+      "sha": "1459786c98e39ceda2ed3579298e82ab7afe08ae",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105066.log",
+      "status": "added",
+      "sha": "5e1afd56aac36e7037874df7f795ad4abdc737b9",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105070.log",
+      "status": "added",
+      "sha": "6832f9a3077466c94f08bbfad543078db39ecff4",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105085.log",
+      "status": "added",
+      "sha": "ba66225cde41f35a892eac8095c9010c17e35f7f",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105087.log",
+      "status": "added",
+      "sha": "a88c201accddb533d4e2efacb5c14cf604dc74c0",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105099.log",
+      "status": "added",
+      "sha": "bdd3f71faaf711a6b5fc815f2c737b821a952b57",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105100.log",
+      "status": "added",
+      "sha": "e4aece6644b97ea7ddfa168906883fc8d1ff4f3a",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105106.log",
+      "status": "added",
+      "sha": "a666ad2eb86e5def89161a1f72a174758d087261",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105110.log",
+      "status": "added",
+      "sha": "83dde586cca06991fc6d661f1bf7ad6388cbeebd",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105123.log",
+      "status": "added",
+      "sha": "7b8ffecca6b932298caadad5e86b01c6e836fb22",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105124.log",
+      "status": "added",
+      "sha": "33b3ddcf9431f2753668c98c9d81ce863777f84e",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105130.log",
+      "status": "added",
+      "sha": "4a0b481f634427b3503ebb5ebeab051d1a298f49",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105138.log",
+      "status": "added",
+      "sha": "9c742b54beea317a9249ebe20ee20a1491e1b5b4",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105141.log",
+      "status": "added",
+      "sha": "b40ee7d7f3b2bbf641c1d8cb15efd21ecb5a21bc",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105147.log",
+      "status": "added",
+      "sha": "b3ed90cab33b05d45b469dee9eea96830d1fc95a",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105192.log",
+      "status": "added",
+      "sha": "f512660367bc65b8c2e2631edd00271313f1ce80",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105203.log",
+      "status": "added",
+      "sha": "44d30e8a509ba731e1fa186301e141b74c283e48",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105207.log",
+      "status": "added",
+      "sha": "ea30a926b12e756412bd9373f35fd81e8bcae73a",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105222.log",
+      "status": "added",
+      "sha": "98cd0809e2a63e6a8fcd9cead8c23b6dcadfad4e",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105228.log",
+      "status": "added",
+      "sha": "c2cbba5a891f7854136a232fc2cb12ee8a639302",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105235.log",
+      "status": "added",
+      "sha": "d5b2715f87fdd2a83a8433511242e5329498f4f4",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105237.log",
+      "status": "added",
+      "sha": "7251affed8ffa5e571153dffb09a35d837a6e81e",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105268.log",
+      "status": "added",
+      "sha": "5d60ee82f57c3e95e85296281db7dccc8de72add",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105274.log",
+      "status": "added",
+      "sha": "25e337e850c1ac55aa3e5c54bd4016badb73d73c",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105276.log",
+      "status": "added",
+      "sha": "e12308c7fc03927d9de87ebb2efd3b3b53b27b67",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105277.log",
+      "status": "added",
+      "sha": "4345d4034228c5f1c38e9bd21a6f70b0acc4535f",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105312.log",
+      "status": "added",
+      "sha": "5eaecb9725a53e459ff3baa3fd1dbfdb1f6a1ab0",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105321.log",
+      "status": "added",
+      "sha": "da534656265293f0ab3d1cb3f5f5a1a403903f6d",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105368.log",
+      "status": "added",
+      "sha": "297edeb4f34ac89c87d043eb344dc78a1c379344",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-c79-canonical-ci/v2/jobs/133019105428.log",
+      "status": "added",
+      "sha": "5ad7699d3fab721217261096836796fe4f38f792",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-canonical-delivery-action.json",
+      "status": "added",
+      "sha": "00a3cccc1edaf730c63128717949121b03eed338",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/provider-canonical-repair-delivery-r1.md",
+      "status": "added",
+      "sha": "ce5582c745f36b771b34c327678341818f70a411",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/stderr-privacy-local-qualification.md",
+      "status": "added",
+      "sha": "253c6cff6f8431b906a3a7d2a674fe4dfadccd73",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/stderr-privacy-local/stderr-privacy-diff-check.log",
+      "status": "added",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/stderr-privacy-local/stderr-privacy-green-manifest.json",
+      "status": "added",
+      "sha": "669ff7789b6beaa7004900a9dc0cf12f2c037319",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/stderr-privacy-local/stderr-privacy-green-three-files.log",
+      "status": "added",
+      "sha": "007b95cf1ff27347090c6754256f3f869d3541d4",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/stderr-privacy-local/stderr-privacy-host-build.log",
+      "status": "added",
+      "sha": "d7724909302502a19004cf707ff5c03ec76ff684",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/stderr-privacy-local/stderr-privacy-original-build-preflight.json",
+      "status": "added",
+      "sha": "ae02d6f4fda4f53bf040f9713c3c625ad44f94f6",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/stderr-privacy-local/stderr-privacy-original-red-manifest.json",
+      "status": "added",
+      "sha": "7c55b3b4f3cf3aed1adc02c7033f52f9cfb12ae7",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/stderr-privacy-local/stderr-privacy-original-red.log",
+      "status": "added",
+      "sha": "a607ad76cadb6c0027886d3d869755b3b4a0b8fc",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/stderr-privacy-local/stderr-privacy-scoped-lint.log",
+      "status": "added",
+      "sha": "14021f298657e7b2848bc63d06cd76cb6a2eb78f",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/stderr-privacy-local/stderr-privacy-static-closure.json",
+      "status": "added",
+      "sha": "dff1f3f1d4feabb7772c8375bcd309a99702b48d",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "status": "modified",
+      "sha": "42093f5cb1be431e383a2bbf97223a2bd8d54b49",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "status": "modified",
+      "sha": "a2158e62d439c0ee0b29ffd28df64cf848cee99f",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "status": "modified",
+      "sha": "2fe449639596cdb07bf5ef39d8040c65d9d6538c",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "status": "modified",
+      "sha": "1fc098d27f67825b7cf48318329d1a809e41e1f4",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "status": "modified",
+      "sha": "186171f456cc99a18e12f0b87c4bd508936d6243",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "status": "modified",
+      "sha": "e6861511417070c9202458253a16a3ffb20216ae",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "status": "added",
+      "sha": "6ea373c48119c94b796e28209a03602d0a438e86",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "status": "modified",
+      "sha": "13fd4d190e0a50267a295cb75cbf50320fa36d5a",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "status": "modified",
+      "sha": "0f5e2258b2af33c55673aa0fdc4c660e3629e784",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "status": "modified",
+      "sha": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+      "status": "modified",
+      "sha": "f6243d55f628833ef797cce0afa2e1339a01e609",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+      "status": "modified",
+      "sha": "4a7d1e5330d4de65f95c9cd2cfc5c87e8027b773",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "status": "modified",
+      "sha": "46613a43c30311321280f11129ed02df18ef527a",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "status": "added",
+      "sha": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "status": "added",
+      "sha": "b82e437c1e8f04726982af5d50fc54394725f138",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "status": "added",
+      "sha": "49183056d50b7815bde238e758c47c13302117f3",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "status": "modified",
+      "sha": "ba90e3e6895bf7f85d7ca3de7d9608fe433fcadf",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "status": "modified",
+      "sha": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "status": "modified",
+      "sha": "d6a001c625d4369147811ee4d97b9853ff1c86c1",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "status": "modified",
+      "sha": "338f38de5b4ee60d5fa982aa895dd2f71fde981b",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+      "status": "modified",
+      "sha": "d0ee6a31ded14c9af572a12ecc2dee4352f4eacf",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "status": "modified",
+      "sha": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "status": "modified",
+      "sha": "414525958b459ccb9d4c20e4b185e03d71d46867",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "status": "modified",
+      "sha": "c640bd2a538f3f063b764174b71d365574925345",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "status": "modified",
+      "sha": "d13aa0c846dbf97aff99786e1165aa214aab93c7",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "status": "added",
+      "sha": "2891a53b464c400c64ab41dd99674ac6c463b39a",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "status": "modified",
+      "sha": "011875b3a5bcab4d6f0775fdbc419157e0d48cba",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "status": "modified",
+      "sha": "aadc051d5514773ee81d76758c6bbd40c705df5e",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "status": "modified",
+      "sha": "b19c8ff5a815a2c2034358f102e2af2cedc212e6",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "status": "modified",
+      "sha": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "status": "modified",
+      "sha": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "status": "modified",
+      "sha": "26871fb59d09594beff568994b85cf6cb5a00b00",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "status": "modified",
+      "sha": "dbbd17b11db24a9dc3fb989e0266101847f0a778",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "status": "modified",
+      "sha": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "status": "modified",
+      "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "status": "modified",
+      "sha": "a049a862742a85ba77faafea329fc221b3e500e4",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "status": "modified",
+      "sha": "797cf587243a6c6ba1cd466ed105d5bb6d81772e",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "status": "modified",
+      "sha": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "status": "modified",
+      "sha": "d52680f4d848e58dee54f8a9a4beae9435c2b14c",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "status": "modified",
+      "sha": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "status": "modified",
+      "sha": "b52876e3215910eba3a3a24756f61c289a0965f9",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "status": "modified",
+      "sha": "a78bfc7d0d656cd2a785aeb0a9bdd59a7262769e",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "status": "modified",
+      "sha": "1e94339df46ef3bb963555fc3cc7253055766a78",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/features/agent-backend/contracts/operations.ts",
+      "status": "modified",
+      "sha": "788c1ff6bb4a2a737c0a8d1399ffd43e134e6a38",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "status": "modified",
+      "sha": "dbeb14ba7d4a0de1ae97662e74d2929a51f9106c",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+      "status": "added",
+      "sha": "4df980788dc6b990fcd555439c53bb4a329cef36",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+      "status": "modified",
+      "sha": "8a35885a868140481e0b9d374fd3bd07f2742083",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/renderer/components/team/ClaudeLogsPanel.tsx",
+      "status": "modified",
+      "sha": "5255eb491789a5e2fd0cf11c338934b46ac7ae7b",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/renderer/components/team/ClaudeLogsSection.tsx",
+      "status": "modified",
+      "sha": "06245cd010f4bdcca1ad0ed1177163c743343a3b",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "status": "modified",
+      "sha": "b0095b83b3544988b7b6d5ba10163c93411868f5",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+      "status": "modified",
+      "sha": "65f23ad13df71b514a11a97152b3d3324f0da5c5",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "status": "modified",
+      "sha": "9aa14dbd08d23f75c91ceb38d25ce5161fc6be37",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/shared/types/teamActivity.ts",
+      "status": "modified",
+      "sha": "4bd34ac1435cab2472104203c00ecc4be3889630",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/shared/utils/diagnosticsRedaction.ts",
+      "status": "modified",
+      "sha": "2e345624c752ebac3024d579c1501dff7fe84a9e",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/shared/utils/redactDiagnosticAssignments.ts",
+      "status": "modified",
+      "sha": "0a1bd348ab98e6f33af2577cad33e9f2be44e745",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "src/shared/utils/runtimeDiagnosticText.ts",
+      "status": "modified",
+      "sha": "1410cd6d6d9accf6f3c29802884b8acd58dc0568",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+      "status": "modified",
+      "sha": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "status": "modified",
+      "sha": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "test/features/agent-backend/tsconfig.json",
+      "status": "modified",
+      "sha": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "status": "modified",
+      "sha": "f60ad1bca4efa3af874080c6acd8cfc7a46745ac",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+      "status": "modified",
+      "sha": "27610578158b6eb0b810e1a79e9624e8da6e53a4",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "status": "modified",
+      "sha": "95bfc28a93043836fc08811dc129fb34492fe0a5",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "status": "modified",
+      "sha": "a367866923405e4d584fac1145b56fe27bf37b5a",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "status": "modified",
+      "sha": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "status": "modified",
+      "sha": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/README.md",
+      "status": "added",
+      "sha": "6e94db07c6ef01f38458abbdcba067f766229be9",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+      "status": "added",
+      "sha": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "status": "added",
+      "sha": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/checked-artifact-receipt.json",
+      "status": "added",
+      "sha": "2136bb2a37863e4182ff264bf012220a8ae1bc13",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/source-receipt.json",
+      "status": "added",
+      "sha": "a78d8a6619a358c79f88fc66886754eb2b6de9b2",
+      "additions": 0,
+      "deletions": 0
+    }
+  ],
+  "workflows": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "sha": "d7d1c6fde200971f29defe95c2c0436a0318b499",
+      "route": "No path filter",
+      "boundary": "Content check."
+    },
+    {
+      "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+      "sha": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2",
+      "route": "0 matching paths",
+      "boundary": "Unmatched; Draft guard retained."
+    },
+    {
+      "path": ".github/workflows/anthropic-env-portability.yml",
+      "sha": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a",
+      "route": "2 matching paths",
+      "boundary": "Matched; sole job Draft-skipped."
+    },
+    {
+      "path": ".github/workflows/build-linux-windows-draft.yml",
+      "sha": "919dc9d816a5f7441783af22a286da9b1e4f6f8a",
+      "route": "No opened-PR route",
+      "boundary": "Manual only."
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha": "a93ff6ba1e5656523668694bca24910a468aebc7",
+      "route": "No path filter",
+      "boundary": "Draft fast feedback; full merge qualification refuses (§5)."
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "sha": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1",
+      "route": "58 matching paths",
+      "boundary": "Matched; analyze Draft-skipped."
+    },
+    {
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "sha": "cef44447c47e39a7da678f37e2518952e218da08",
+      "route": "2 matching paths",
+      "boundary": "Matched; install/native-version job Draft-skipped."
+    },
+    {
+      "path": ".github/workflows/dependency-review.yml",
+      "sha": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6",
+      "route": "3 matching paths",
+      "boundary": "Dependency review."
+    },
+    {
+      "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+      "sha": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361",
+      "route": "0 matching paths",
+      "boundary": "Unmatched."
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "sha": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+      "route": "No path filter",
+      "boundary": "Classifier selects full five-platform matrix."
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "sha": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "route": "59 matching paths",
+      "boundary": "Eighteen Desktop +four safe shards +aggregate."
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "sha": "70202d22a5840401a00025cd60b797c514f3e455",
+      "route": "50 matching paths",
+      "boundary": "Five original process tuples."
+    },
+    {
+      "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+      "sha": "95d681fe04abd838dd11799d7791fa59444c6e32",
+      "route": "1 matching paths",
+      "boundary": "Matched; table job Draft-skipped."
+    },
+    {
+      "path": ".github/workflows/landing-hetzner-release.yml",
+      "sha": "4b54f229156f9d347e1a33da0d83b3374acc4078",
+      "route": "2 matching paths",
+      "boundary": "Static build/validation/artifact upload; no deployment step."
+    },
+    {
+      "path": ".github/workflows/landing.yml",
+      "sha": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5",
+      "route": "2 matching paths",
+      "boundary": "Build only; deploy/live smoke require non-PR main."
+    },
+    {
+      "path": ".github/workflows/macos-signing-qualification.yml",
+      "sha": "d63bddd51302a5c0380762bf22171f43c38a39b0",
+      "route": "No opened-PR route",
+      "boundary": "Manual only."
+    },
+    {
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "sha": "3d2a90a0e335155d435bd4eae4f2bd2842425983",
+      "route": "0 matching paths",
+      "boundary": "Unmatched; Draft guard retained."
+    },
+    {
+      "path": ".github/workflows/opencode-native-windows-e2e.yml",
+      "sha": "f5a2a472b752acf37399fc9e11f63f6d45bdb297",
+      "route": "No opened-PR route",
+      "boundary": "Reusable/manual; no reachable opened-Draft caller."
+    },
+    {
+      "path": ".github/workflows/opencode-packaged-e2e.yml",
+      "sha": "458e165ef020a1f8b05806b9ae7edc839134e1b4",
+      "route": "0 matching paths",
+      "boundary": "Unmatched; manual/reusable native routes not invoked."
+    },
+    {
+      "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+      "sha": "be6a9ae5a88efadca344773ed4aa962d42823d28",
+      "route": "0 matching paths",
+      "boundary": "Unmatched; Draft guard retained."
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "sha": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "route": "48 matching paths",
+      "boundary": "Nine original static/local-model/native OpenCode TEST jobs."
+    },
+    {
+      "path": ".github/workflows/prepare-updater-native-inputs.yml",
+      "sha": "51beb92ade4931fe04336c7d3908bacfc932269e",
+      "route": "1 matching paths",
+      "boundary": "PR quality/types/finite tests/read-only release metadata; native producer manual only."
+    },
+    {
+      "path": ".github/workflows/provider-real-runtime-e2e.yml",
+      "sha": "4ee30807aa18f043fe53d090bfb6211bb5458ce0",
+      "route": "0 matching paths",
+      "boundary": "Unmatched; Draft guard retained."
+    },
+    {
+      "path": ".github/workflows/publish-carried-release.yml",
+      "sha": "371ed6d3b2cf4e41c012da287a295783c39c426e",
+      "route": "No opened-PR route",
+      "boundary": "Manual only."
+    },
+    {
+      "path": ".github/workflows/recover-existing-draft-payloads.yml",
+      "sha": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65",
+      "route": "No opened-PR route",
+      "boundary": "Manual only."
+    },
+    {
+      "path": ".github/workflows/release-publication-guard.yml",
+      "sha": "10b7abd2992cc740084a5c51ace7f3fe025220f9",
+      "route": "No opened-PR route",
+      "boundary": "Release-published only."
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "sha": "d28bee6dea87ec191f0d40670f3e68c48251d049",
+      "route": "No opened-PR route",
+      "boundary": "Manual only."
+    },
+    {
+      "path": ".github/workflows/reviewrouter-interaction.yml",
+      "sha": "edb68c51f54ad4a792eb29f1f557aad48e3a6218",
+      "route": "No opened-PR route",
+      "boundary": "Comment/review-interaction/manual only; no such action proposed."
+    },
+    {
+      "path": ".github/workflows/reviewrouter-review.yml",
+      "sha": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b",
+      "route": "No opened-PR route",
+      "boundary": "Manual only."
+    },
+    {
+      "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+      "sha": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44",
+      "route": "0 matching paths",
+      "boundary": "Unmatched; Draft guard retained."
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "sha": "1188fa5b89d59b739d927082d1b6954a57181819",
+      "route": "4 matching paths",
+      "boundary": "Matched; all three jobs Draft-skipped."
+    },
+    {
+      "path": ".github/workflows/stage-existing-partial-draft.yml",
+      "sha": "295dbf212e13b15505696d997ec7c45b4ee3cfa9",
+      "route": "No opened-PR route",
+      "boundary": "Manual only."
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "sha": "ef939f224a1642cb596906324c8d61441780ccc7",
+      "route": "5 matching paths",
+      "boundary": "Three-OS Electron journey with finite deny-by-default CLI peers."
+    },
+    {
+      "path": ".github/workflows/updater-linux-packages.yml",
+      "sha": "60d214756c640b7925cfe11ba45ed4009f27ca3c",
+      "route": "1 matching paths",
+      "boundary": "PR quality/types/finite tests; native input/execution manual only."
+    },
+    {
+      "path": ".github/workflows/updater-mac-manual-migration.yml",
+      "sha": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e",
+      "route": "No opened-PR route",
+      "boundary": "Manual only."
+    },
+    {
+      "path": ".github/workflows/updater-mac-old-updater.yml",
+      "sha": "067a25687f36caefe156b0446c5056d230d27c62",
+      "route": "No opened-PR route",
+      "boundary": "Manual only."
+    },
+    {
+      "path": ".github/workflows/updater-mac-source.yml",
+      "sha": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94",
+      "route": "No opened-PR route",
+      "boundary": "Manual only."
+    },
+    {
+      "path": ".github/workflows/updater-mac-updater.yml",
+      "sha": "950f95892277ae303772ac699915250f0f4f66af",
+      "route": "No opened-PR route",
+      "boundary": "Manual only."
+    },
+    {
+      "path": ".github/workflows/updater-native-feasibility.yml",
+      "sha": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada",
+      "route": "1 matching paths",
+      "boundary": "PR quality/types/lint; native manual only."
+    },
+    {
+      "path": ".github/workflows/updater-windows-ota.yml",
+      "sha": "10ffcd79e48a71346df7545af638208ce039ad83",
+      "route": "1 matching paths",
+      "boundary": "PR quality/types/finite tests; native requires successful manual-only producer."
+    },
+    {
+      "path": ".github/workflows/updater-windows.yml",
+      "sha": "a4e9375cb95c4129c503f1d7be82de1e3926ea62",
+      "route": "1 matching paths",
+      "boundary": "PR quality/types/finite tests; native requires successful manual-only producer."
+    },
+    {
+      "path": ".github/workflows/windows-backfill-diagnostic.yml",
+      "sha": "44bec5d82998468d48ac539f3624d0c2de1c6648",
+      "route": "2 matching paths",
+      "boundary": "Matched; sole job Draft-skipped."
+    }
+  ]
+}

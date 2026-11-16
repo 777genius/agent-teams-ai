@@ -5723,3 +5723,147 @@ General CI keeps Draft fast feedback and its original full-qualification refusal
 ```
 
 This is an immutable documentation proposal until root publishes it and independent full readback accepts it. No child agent has created either ref/PR, modified metadata or performed runtime/CI execution for this venue. The proposal reuses the completed source/evidence review; it creates no source postimage.
+
+
+## Frozen PR1211: actual venue creation and initial routing — 16 November 2026
+
+Root published the reviewed venue authorization bd97e2e7a4f9321d222f13d5291ab394c3d2cd23 in owne3c1887a46569cd63a951510f45a0daf98efe188 / tree097a84734f906a72a711bec282372e1319ed4d76. Root, graph and parity completed full publication readbacks before action. Fresh nontruncated source inventories, complete194-file comparison, all42 workflow identities, seven prior branch bindings, existing PR states/active cohorts, two404 ref checks and an empty matching-PR collection satisfied the reviewed preconditions.
+
+Exactly three creations followed: the new base ref ci/frontend-parity-logs-native-base-c714-20261116 at0b3fa6117b1856b947d799f95bae7aae0238061c, the new head ref ci/frontend-parity-logs-native-green-c714-20261116 at2abcf83fddacbc1efedee83f9c1d203d12ed656e, and Draft PR1211, created2026-11-16T02:13:17Z:
+
+https://github.com/777genius/agent-teams-ai/pull/1211
+
+Root and independent readback confirmed open/Draft, maintainer_can_modify=false, exact base/head refs, exact0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103 head tree,26 commits/194 changed files and the reviewed title/body. The submitted body is2,938 ASCII bytes, SHA256cd821ff6b6378ef9436bd3ea058b5800f80fd5f3df2124f76c479c21e1690da1; the formatting LF before the R1's closing code fence is not part of it. No platform-added body text was present at the original post-creation read. Main PR1192 and frozen PR1206/1207/1208 remained open Draft on their prior exact head/base bindings.
+
+The complete six-payload action/API/range checkpoint is tree6c7fa31fd7e744b234c0531df5f6982fac306961, with action receipt2799406b627ca0fcfb3c5a7e1b19d33c81b3031e. All six uploaded payloads were read back completely and matched their original bytes. No source commit, merge, Ready/label/comment edit, manual dispatch, rerun, cancellation, release or provider action occurred in these three creations.
+
+The initial global head-run API returned20 ordinary runs. Direct check-run133048605063 joined the remaining prepare-updater-native-inputs workflow to run43790825827; direct run/jobs APIs prove the same2ab head, ordinary pull_request event and attempt1. The resulting initial census therefore contains all21 expected definitions. The global list's omission is retained as an observation, with no inferred platform cause. Eight jobs across the six Draft-guarded definitions were actually skipped with zero steps. The separate manual-only prepare-windows-inputs job133048606513 was also skipped with zero steps; its PR quality sibling remained queued. These are exclusions, not successful executions.
+
+Useful runtime work was initially queued or running. This checkpoint qualifies the reviewed venue creation and its initial routing only. It supplies no GUI, native, compiler, packaged, cleanup or full-General-CI PASS. General CI's Draft merge-qualification refusal remains expected. Original fifteen-second Process readiness, P08, Darwin P09 and historical UI failures still require their actual original resulting-source assertions. Both CI refs remain frozen at0b/2ab while later own-branch history/documentation is reviewed separately.
+
+
+## R1 — preserve incoming 0660 history after freezing the 2ab CI venue (2026-11-16)
+
+### 1. Status, purpose and exact authorization boundary
+
+This is a documentation-only reconciliation R1. It preserves contributor history and original evidence while retaining every non-documentation byte of the actual own publication descendant. It does not select incoming executable code. The independent read-only inspection basis is own commit `e3c1887a46569cd63a951510f45a0daf98efe188`, tree `097a84734f906a72a711bec282372e1319ed4d76`, on `fix/frontend-parity-coobservation-c714-20261115`; its 9,842 blob leaves include the published Installer observer and its later qualification/venue documentation. The frozen incoming parent is `0660c748f88675063e3051fb0f8b2022e8f6f056`, tree `e70ccffc6d55ad42c2249518bf142e2ed32ddf91`. The documentary comparison anchor is `9e542899f36c47598a88c764c9e6745589fea3e1`, tree `dc7e07838cef3f0b6bf83ffce8b5a34f6e7484e4`.
+
+Root may publish this R1 with the already reviewed venue-action receipt and factual qualification on the current own branch. Only after independent full published readback may root prepare the bounded documentation/evidence reconciliation postimages below. An independently reviewed final tree may then be committed as an ordinary two-parent merge and immediately pushed to that same own branch with a fresh expected-head lease. The first parent must be the actual reviewed publication descendant captured at that later stage, including this R1 and the action receipt; no future SHA is invented here. The second parent is exactly frozen 0660. Preserve all histories and all already published own files. No force push, squash, reset, source replacement, primary/provider/canonical/CI-ref movement, PR metadata change, Ready/PR-merge/default/release activation, dispatch, rerun or cancellation is authorized. No child agent performs those actions.
+
+This R1 is not a build, compiler, test, runtime or CI venue grant. No exhausted local attempt allowance is reset. There is no meaningful executable test-first RED for copying immutable historical evidence, and none is fabricated. Independent object, history, inventory, exact-prefix and source-preservation review is the acceptance boundary.
+
+### 2. The CI venue is already frozen and remains independent
+
+Root created ordinary Draft PR1211 at 2026-11-16T02:13:17Z: `ci/frontend-parity-logs-native-base-c714-20261116` points to `0b3fa6117b1856b947d799f95bae7aae0238061c`; `ci/frontend-parity-logs-native-green-c714-20261116` points to `2abcf83fddacbc1efedee83f9c1d203d12ed656e`, tree `0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103`. The exact reviewed base-to-head range is 26 commits ahead and 194 changed leaves, below the 300-file path-filter boundary. The 519 incoming evidence additions were intentionally deferred until after these frozen refs and the PR existed. This reconciliation changes neither ref, PR1211, its source tree nor its useful original cohort. It also leaves PR1192 and the earlier frozen PR1206/1207/1208 unchanged.
+
+The initial global head-runs response listed 20 ordinary runs. The subsequently joined original check run `producer-quality` job `133048605063` identifies direct run `43790825827` for `.github/workflows/prepare-updater-native-inputs.yml`, with exact 2ab head, pull_request event and attempt 1. This closes the actual 21-route census; the initial listing remains an observation, not a missing-workflow finding. Root verified the six Draft-guarded workflows' eight skipped jobs with zero steps. Root's six-file action checkpoint is review tree `6c7fa31fd7e744b234c0531df5f6982fac306961`, receipt blob `2799406b627ca0fcfb3c5a7e1b19d33c81b3031e`; its publication/readback remains a separate evidence step.
+
+The exact title and submitted 2,938-byte body were verified at creation. A later API read, updated at 02:25:25Z, retains that entire body as a prefix and appends a 753-byte CodeRabbit-generated section; whole body 3,691 bytes, SHA-256 `8e62676428ff501eed118bb066d2cd1c0af23dc21c5f622d04acb4ca64c742c3`. Head, base, title, Draft state and `maintainer_can_modify=false` remain exact. Root reports no later metadata edit, and this child made none; the observed appendix identifies itself as CodeRabbit-generated. Preserve the distinction rather than claim all post-opening metadata remained byte-identical or infer a concurrency cause.
+
+All future results remain bound to their actual source/run/attempt. A 2ab platform result does not become a runtime execution of the later docs merge. Conversely, the later archive does not qualify the frozen cohort. Original 15-second Process readiness, distinct P08 budgets, Darwin P09 and remaining resulting-source platform/UI gates retain their existing contracts; no old expanded-budget success closes them.
+
+### 3. Full tree and graph inventory, including the non-linear history
+
+Full nontruncated trees, not the capped compare-file list, give 641 changed leaves from 9e to 0660: 629 under `docs/` and 12 outside it, with zero deletions and no mode changes. Against own e3, the 629 documentary leaves classify as exactly 519 absent additions, 108 already identical path/mode/blob entries, and two conflicting plans. The 519 additions contain 37,202,161 payload bytes and all use mode `100644`. Their extensions are 339 JSON, 48 Markdown, 17 patch, 16 TXT, 65 log, 28 ZIP, one proposed file, two Python, one YAML and two TypeScript files. They are not all text and are not all freshly inspected archives.
+
+The graph comparison 9e to 0660 contains 27 reachable commits and seven merge commits, not a linear 27-commit chain. Six of those commits are already reachable from own history via 97c. At e3, the own-to-incoming comparison is diverged, with 21 incoming-only and 50 own-only commits. Those last counts are a checkpoint, not predicted counts for the later publication descendant. The ordinary merge must retain both complete parent histories; it must not recreate the 27 commits, drop shared history, or count repeated evidence as new executions.
+
+The canonical selection ledgers use `JSON.stringify(rows) + "\n"`, with rows sorted by full path using JavaScript string `<` comparison, each row `[path, mode, type, sha, size]`. The exact 519-entry ledger is 105,681 bytes, SHA-256 `f4ea16b871e01f97a589668b134cc4aa08bdf7833314c9e5cd1689b10d0c1853`; the 108-entry already-identical ledger is 19,735 bytes, SHA-256 `41e0e705726fda0fef8af10be755906ffdbf42415abdbb74276083cebe2a47fe`. Selection means only incoming docs leaves changed relative to 9e and absent from the actual own publication descendant. The reviewed 519 set must remain exact after a fresh collision check. If a future own publication introduces a collision or changes classification, stop at a reviewed inventory amendment rather than overwrite either version.
+
+Preserve each selected archive/evidence path, blob and mode exactly. Do not unzip, execute, normalize line endings, trim raw log whitespace, reserialize JSON, apply patches, replace a proposed file, unpack nested packages, or substitute prose for original bytes. Git identity proves preservation of the existing object; it does not establish a new ZIP CRC/path check, binary execution, source validity or runtime PASS. Retain prior root byte/ZIP qualifications only with their original artifact/head scope. Duplicate context and repeated historical reports remain provenance and must not be added to success totals.
+
+### 4. Resolve the two plans by full-prefix preservation and exact attributed imports
+
+The affected paths are:
+
+- `docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md`
+- `docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md`
+
+At e3, own Plan29 is blob `018fb64c9ad425c8f4d8ffcbd5efd828179d964c`, 1,219,446 characters / 1,220,025 UTF-8 bytes, SHA-256 `61957c98811e6c22429de29a9a207f8399d94ee01b3e22c7cda991ed0ae99ad4`; own Plan30 is `51580d2495a5bc8ac58fcbcc5777482c27adbb41`, 204,065 characters / 204,109 bytes, SHA-256 `b544ea02f903b15072bbe12e8485d2de1497fafa8c0bf04d3a001c837b65d05b`. These are inspection identities. Before any merge postimage is authored, fetch and fully capture both plans from the actual later own first parent, including the newly published R1/action materials. Preserve those whole contents as exact prefixes; never use the older e3 blobs to overwrite a later append.
+
+Incoming Plan29 is `22f00c40d0da9b6b2b1354424270d78b1484af63` against 9e blob `8361210618ffe71d4a1fc8785d717d318563e274`. Its difference is four inserted blocks, totaling 1,897 lines, 538,593 characters and 539,092 bytes, with zero base deletions. It is not a simple trailing suffix. Full reconstruction by inserting the four blocks at the stated original-base positions produces the incoming blob; removing those exact insertions recovers the base byte-for-byte.
+
+| Block | Before original base line | Base character offset | Added lines | Characters / UTF-8 bytes | SHA-256 of exact block |
+|---|---:|---:|---:|---:|---|
+| 1 | 3554 | 726191 | 719 | 218776 / 218934 | `d4457881e1eb525b4903c1c502e43aeaa6c073afa8313bd6ad8689f7fb2c0ceb` |
+| 2 | 3619 | 730494 | 411 | 123091 / 123269 | `6ca0faff63fd46727657f41eec0939c5a725b51f3474add971e5945360485df3` |
+| 3 | 3734 | 738010 | 271 | 63757 / 63825 | `18673743ddaf0ac530d01101755a228f6af48dc064e37c1dca0d43920c1e1ef1` |
+| 4 | 3756 | 739487 | 496 | 132969 / 133064 | `936207733581b35dd641bb178cc8201a9fedebc98f994534fac309ff91c6bcc5` |
+
+Append those four exact blocks once each, in their original order, to the newly appended range of own Plan29, with explicit provenance headings/separators outside the imported bytes. Do not insert them into the middle of the current own plan. The new tail must name 9e/0660 and each original block hash and state that imported instructions/results are historical records. Preserve any pre-existing duplicate content in the own prefix. “Once” concerns each new import in this append, not an unsupported assertion that the same historical prose never appeared elsewhere.
+
+The first block records prior d382/9a34 evidence, caller-diagnostic work and historical capacity/budget decisions; the second records c28/76a/a02/4dc outcomes and adoption decisions; the third records native SDK/Logs stages; the fourth records later stage failures/successes, old 1f/9e results and scheduled/stderr staging. These records include source variants with expanded Windows readiness and prior diagnostic proposals. Their retention does not adopt those variants, reopen withdrawn proposals, grant experiments, or relabel partial, cancelled, skipped, not-run and failed outcomes as PASS. Preserve exact old wording and attach this current disposition rather than silently edit historical text.
+
+Incoming Plan30 `eb68d2643eb11527594d546d8a5088f48f8e2865` has exact base prefix `6cb630bb666ea806e9f8bbcd253f5f68a44326ef` and one 9,961-byte ASCII suffix, SHA-256 `35e92b72297e338659886b5a75ca6ad53720d1ac78a5ef870c0f3c081a00184e`. Append that exact suffix once after the full actual own Plan30 prefix with provenance outside its bytes. It retains the historical 217 test obligations and earlier 4ede/platform/compiler results; it does not replace the stronger own 076f union, authorize a compiler retry or transfer native/GUI qualification. Full incoming-base-prefix and suffix equality are required, independently of own-prefix preservation.
+
+Only short factual provenance/current-disposition separators may accompany these imports. Their complete proposed text and both final plan blobs require R2 before the merge. No existing own paragraph is deleted, reordered or rewritten.
+
+### 5. Keep all executable/configuration inputs; the twelve overlaps are an explicit subset
+
+The controlling rule is equality of every non-`docs/` leaf in the final tree with the actual own publication descendant, including path, type, mode and blob. At e3/2ab this set has 8,798 leaves. Its canonical fingerprint is `JSON.stringify(sorted [path,mode,type,sha] rows) + "\n"`, 1,104,133 bytes, SHA-256 `45a072230ccac3d44cdfc2761c118d4c48eab76955ff317de0308691172d5ff9`; use the same lexical path ordering. Recompute against the actual first parent rather than assume an older source cut if root has made another separately authorized publication.
+
+The twelve incoming overlap dispositions below explain known differences. They do not limit the full-tree equality rule.
+
+| Existing path | Incoming 0660 blob | Own e3/2ab blob retained | Disposition |
+|---|---|---|---|
+| `.github/workflows/host-emulated-acceptance.yml` | `dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6` | `9ec6dfb68e98480a12224528e2637153f4274a6b` | Keep the reviewed original Team ten-file Node invocation, complete type/lint scopes and all other workflow bytes. Import no incoming command, timeout or lint-policy change. |
+| `packages/legacy-agent-host/tests/member-process-stderr.test.ts` | `0727339627757c3a96d54da2933eb7c1b60685f7` | `2891a53b464c400c64ab41dd99674ac6c463b39a` | The complete incoming 072733 prefix is already present in own 2891, followed by two escaped-form cases and the post-mask overflow case. Keep the 27-case union and own repaired helper 6ea373; original five privacy failures and later 47-case scoped GREEN remain separately source-bound. |
+| `packages/legacy-agent-host/tests/runtime-team-host.test.ts` | `c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79` | `26871fb59d09594beff568994b85cf6cb5a00b00` | Keep the own reservation-cleanup tests and complete 119-line scheduled/coordination union. Do not replace the full file with the incoming variant or discard physical-HANDLE and no-local-dispatch negatives. |
+| `scripts/legacy-agent-host/desktop-backend-observations.test.ts` | `b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33` | `b47e3a6e0227e2c3521a4e0124074ce6ec94bae8` | Keep all eight own empty-state journal negatives and the complete 41-case observer suite. No incoming replacement may remove those guards. |
+| `scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts` | `a9d725fbe11278dd98611b49d570c19d80684087` | `7b5edfbd4967debe454387c7a8b6246e67216dc8` | Keep unconditional original effects-journal validation, the explicitly reviewed three-second peer-sampling budget, and the final absolute-deadline assertion. The earlier 8728 missing-late-empty-refusal claim was false: own line 268 already rejects the late return. That unpublished proposal was withdrawn; no manufactured RED or new deadline/order change enters this merge. |
+| `scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts` | `1bde37adb7cba710ad77784eedbbe0d6c6e556df` | `d52680f4d848e58dee54f8a9a4beae9435c2b14c` | Keep the 791-line combined file, including rich same-evaluation Task-title/identity corrections and all 9e proof additions. Do not roll these back to the incoming variant. |
+| `scripts/legacy-agent-host/desktop-emulated-selection-ui.ts` | `cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d` | `85ff3d3927c2691fb1894d332cb3f27e8e36c831` | Retain the current own file. Incoming stronger final-Stopped convergence is separate future proof work requiring review under the original 75-second window, without repeated Stop or extra writes; it is neither adopted nor qualified here. |
+| `scripts/legacy-agent-host/desktop-native-process-ui.test.ts` | `217b189f231af2ea39b290d70568a1ae42379a53` | `076fbd26bac85c4195312a83c1ae78067a8d742e` | Keep the 620-line complete own union: co-observation, bounded catch/timing, strict/CRLF extraction, no-value, sibling and frozen-record controls. Distinct incoming 217 oracles are already retained; do not restore the smaller historical file. |
+| `scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts` | `dd53c5b6c019dbe034dcde5375f03123b9b3e10a` | `6b37b6e264a086c1dc4cca06d65f9cc77118a422` | Keep the 182-line own script. The genuine missing local CDP pin was separately reviewed, published and statically qualified in 6b37, together with the existing version helper, capture array and final-freeze reuse. No whole incoming replacement is needed. |
+| `scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts` | `f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d` | `b52876e3215910eba3a3a24756f61c289a0965f9` | Keep current order and set. Incoming only reorders eight existing entries; it adds no missing source. Retain common 1757, Windows 1798 and packaged 1760. |
+| `scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts` | `c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4` | `a78bfc7d0d656cd2a785aeb0a9bdd59a7262769e` | Keep complete cc200 Cross union plus 199-line observer suffix, including Teams/selected-A to B/B to A/A and explicit zero getter counters. Actual 49-case result is scoped to 2ab. Incoming Selection literal assertion is not a new product RED and is not adopted. |
+| `tools/owned-process-broker/nativeEmulatedSourceScenario.ts` | `296e4ccab2d1aea5d9eb88629c1fdf56a9c88329` | `60548e4b0477924fd2c068283b9372f21946b198` | Keep the 787-line own original absolute 15-second readiness and receipt-bound reservation cleanup. Useful absolute-deadline handoff already exists in 60548. Import no 60/90-second windows, deadline reanchoring, fresh authority-read reuse or relaxed physical cleanup. |
+
+In addition to that table, preserve the complete reviewed privacy producer, controls `1e94339df46ef3bb963555fc3cc7253055766a78`, native/SDK corrections, original source profile and Scenario deadlines, all prior twelve-path corrections, the repaired c79 provider pair and executable dependency pins, original physical Job/HANDLE witnesses/cleanup, and all 42 root workflow blobs. Preserve every unlisted source, test, config, manifest, lock, binary and resource byte. No historical command or proposed patch in imported documents overrides this rule. Source closure remains common 1757, Windows 1798 and packaged 1760; unchanged sets do not require a new compiler/runtime execution to prove a docs-only merge.
+
+### 6. Code-shaped archives remain archival data, with bounded discovery claims
+
+The selected 519 additions contain these five code-shaped paths, all mode `100644`:
+
+| Archived path | Exact blob | Bytes |
+|---|---|---:|
+| `docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-j-prospective-adoption-2026-11-15/run_check.py` | `b0c938c0ab371c624ad6dcb05c92a5431bc5c8f9` | 8592 |
+| `docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-prospective-adoption-2026-11-15/corrected-v2/candidate/.github/workflows/host-emulated-acceptance.yml` | `ae2e48f5dc013c8c2dd2ce6021dba2afd4ad66d5` | 97517 |
+| `docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-prospective-adoption-2026-11-15/corrected-v2/candidate/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts` | `069111cf2e035c084d54caa0bf3753b47c86b5ba` | 57268 |
+| `docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-prospective-adoption-2026-11-15/corrected-v2/candidate/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts` | `47d1d9520e794ea9048cd98d997e54fa70bfc4b6` | 20446 |
+| `docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-prospective-adoption-2026-11-15/validation/run_check.py` | `7766822c39ed7581c1f8d883d34e33069e3170ac` | 21172 |
+
+The nested YAML is under an evidence candidate directory, not root `.github/workflows/`, and it does not become a new GitHub workflow. The two TS files are not copied to active `scripts/`; the Python files are not run. Preserve their names and contents as evidence without treating them as new candidate applications. The same restriction covers the proposed file, patches and ZIP payloads.
+
+The following current entry-point/configuration identities were read for this scope:
+
+| Surface | Path | Blob |
+|---|---|---|
+| ESLint full | `eslint.config.js` | `7ca4b71fe3a357c00c110c9b75d3034e06e4b22c` |
+| ESLint fast | `eslint.fast.config.js` | `8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb` |
+| Package entry points | `package.json` | `f80ec83172d0aec0dec8a8ab055426b4fca4a1f7` |
+| Workspace package selection | `pnpm-workspace.yaml` | `a049a862742a85ba77faafea329fc221b3e500e4` |
+| Pre-commit entry | `.husky/pre-commit` | `9ee4389c3a958171c00ac59a1ed89da20e3af414` |
+| Root TypeScript | `tsconfig.json` | `568952f5025a88c16b0568c7279d8e85a4288b43` |
+| Node TypeScript | `tsconfig.node.json` | `c94c942012bef62695dc3b22b1a2b7229d047f59` |
+| Vitest discovery | `vitest.config.ts` | `c57faa53a1bb869b4379bf888194806ef7e228e3` |
+| Production source-size guard | `scripts/ci/check-source-file-size.mjs` | `65775f7889470056ef7cd91ad6c56d9351e6cdfc` |
+
+Root TypeScript includes `src/`, `test/` and named root tooling; Node TypeScript includes the app/build source scopes. Neither includes these archived paths. Vitest discovery is rooted in `test/**/*.test.ts(x)` and `src/**/*.test.ts(x)`. The production source-size guard explicitly excludes root `docs/`. This is existing configuration, not a new ignore added to avoid a gate.
+
+Neither ESLint configuration globally ignores `docs/`; the fast configuration's broad TS file pattern could select a documentation TS path if explicitly supplied. This R1 therefore does not claim that all arbitrary ESLint invocations ignore archives. Actual root `lint`, `lint:fast` and `lint:fix` entry points target `src/`; `lint:ci:files` and `lint:fast:files` accept caller-selected paths, and current General CI shard paths and the Host Team explicit list contain no documentation archives. The pre-commit hook runs lint-staged, whose two patterns are confined to `src/`. No lint/config change or extra gate is needed or authorized.
+
+The workspace selects exactly `agent-teams-controller`, `mcp-server`, `landing`, `packages/agent-graph`, `packages/legacy-agent-host` and `packages/task-change-ledger`. No archived evidence candidate is a workspace package. The current root's 103 script entries contain no docs/evidence/run_check/Python entry point. This confirms the inspected normal discovery/entry paths; it is not a universal promise about unreviewed manual commands or future configuration. Archival material must never be executed, compiled, imported, unpacked into active inputs or used as a source-freeze replacement under this R1.
+
+### 7. Staged composition, independent review and publication gates
+
+1. Root publishes this R1 and separately reviewed action evidence on its own branch, with immediate push and a fresh lease. An independent reviewer fully reads the published R1 and confirms that no merge/source application occurred before that gate.
+2. Capture the actual resulting own commit/tree, all blob entries and full Plan29/30 preimages. Confirm pinned incoming 0660 and the full 9e-to-0660 inventory. Recheck that the 519 additions, 108 identities and two plan conflicts are unchanged; any different collision or unexpected source change requires bounded review before postimages.
+3. Author only the 519 exact documentary additions and two append-only plan resolutions. Expected delta relative to that actual first parent is exactly 521 docs/evidence leaves: 519 additions and two modifications, zero deletion or mode change. R1/action evidence already in the first parent is not copied again. Do not add an extra evidence manifest to the merge unless its path/content is separately included in the reviewed composition.
+4. Independent R2 inspects the entire resulting tree: exact 519 path/blob/mode/size identities; all 108 unchanged entries; both complete own prefixes; four exact Plan29 blocks and exact Plan30 suffix in the newly appended ranges; historical source/budget attribution and both parent histories. Replay the original four-block forward/inverse and Plan30 prefix/suffix checks. Require equality of every other leaf, especially the full non-doc fingerprint and all 42 workflows. Do not normalize raw whitespace to make a whole-history diff check green.
+5. Root obtains a fresh expected-ref lease, creates the reviewed ordinary merge with ordered parents `[actual reviewed own publication descendant, 0660c748f88675063e3051fb0f8b2022e8f6f056]`, immediately pushes to the same own branch, and performs full commit/parent/tree/ref readback. An independent reviewer verifies the published complete tree and full plan append compositions. If the lease is stale, stop before commit/ref mutation and preserve new own history; rebuild only after fresh review.
+6. Leave all frozen CI refs and useful jobs intact. There is no new workflow definition, flag, command, manual run, cancellation, source fix, native experiment, real Claude/Codex execution or platform PASS claim. Preserve earlier failure/skip/cancellation records and actual original source/cutoff identities. Any later primary integration, CI venue or non-documentation change needs its own concrete review and authorization.
+
+### 8. Review outcome claimed by this R1
+
+The read-only work proves exact graph/inventory and archival composition feasibility, including four non-suffix Plan29 insertions, one Plan30 suffix and complete own-source retention. It does not claim the merge exists, copied archives were newly executed or unpacked, or pending platform/UI gates passed. At this drafting point no merged postimage, commit, ref movement or PR action has been performed by this child. This R1 can be accepted for the bounded future documentation/history merge while all runtime qualifications remain attached to their original source and evidence.
