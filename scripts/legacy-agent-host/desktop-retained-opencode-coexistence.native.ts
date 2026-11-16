@@ -71,7 +71,37 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
   const v1 = await realpath(process.env.OPENCODE_V1_V2_RETAINED_BINARY!);
   const fork = await realpath(process.env.OPENCODE_V1_V2_RETAINED_RUNTIME!);
   const bun = await realpath(process.env.OPENCODE_V2_EMBEDDED_BUN!);
-  const lock = await json(join(repo, 'runtime.lock.json'));
+  const retainedRoot = await realpath(process.env.OPENCODE_V1_V2_RETAINED_REPO!);
+  assert.equal(retainedRoot, join(await realpath(repo), '.runtime-download/TEST-retained-release-158'));
+  assert.equal(fork, join(retainedRoot, 'resources/runtime/claude-multimodel'));
+  const appGit = (args: string[]) => execFileSync('git', args,
+    { cwd: retainedRoot, encoding: 'utf8', timeout: 5000 }).trim();
+  const verifyRetainedApp = () => {
+    assert.equal(appGit(['rev-parse', '--show-toplevel']), retainedRoot);
+    assert.equal(appGit(['rev-parse', 'HEAD']), '1d0f97f55de566036c970eab4f36b84620afdb3f');
+    assert.equal(appGit(['rev-parse', 'HEAD^{tree}']), 'ec540290c86af9755c94e52ac795aeda8586a98f');
+    assert.equal(appGit(['diff', '--name-only', 'HEAD']), '');
+    assert.equal(appGit(['ls-files', '--others', '--exclude-standard']), '');
+  };
+  verifyRetainedApp();
+  for (const path of [
+    'runtime.lock.json', 'scripts/stage-runtime.mjs',
+    'resources/runtime/COMMIT_SHA', 'resources/runtime/VERSION',
+  ])
+    assert.equal(await realpath(join(retainedRoot, path)), join(retainedRoot, path));
+  const appSource = { root: retainedRoot, commit: appGit(['rev-parse', 'HEAD']),
+    tree: appGit(['rev-parse', 'HEAD^{tree}']), lockSha256: await fileDigest(join(retainedRoot, 'runtime.lock.json')),
+    stageScriptSha256: await fileDigest(join(retainedRoot, 'scripts/stage-runtime.mjs')) };
+  assert.equal(appSource.lockSha256, '1311acf34215a47950dd071a23669a69ed866d4825bcde5d21db41302a71d29d');
+  assert.equal(appSource.stageScriptSha256, '7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be');
+  const lock = await json(join(retainedRoot, 'runtime.lock.json'));
+  const archiveSha256 = record(record(lock.assets)['linux-x64']).sha256;
+  assert.equal(archiveSha256, '4c106fcebab79de525aa7c9bb7636aa91fa43e76b4d567a00f98b2e6650ab29d');
+  const retainedInputsPath = process.env.OPENCODE_V1_V2_INPUTS_RECEIPT!;
+  assert.ok(retainedInputsPath && isAbsolute(retainedInputsPath));
+  const retainedInputs = await json(retainedInputsPath);
+  assert.equal(retainedInputs.kind, 'TEST_RETAINED_V1_HOST_V2_INPUTS');
+  assert.equal(retainedInputs.status, 'READY'); assert.equal(retainedInputs.sourceHead, head);
   for (const [path, expected] of [[v1, process.env.OPENCODE_V1_V2_RETAINED_BINARY_SHA256],
     [fork, process.env.OPENCODE_V1_V2_RETAINED_RUNTIME_SHA256], [bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256]]) {
     assert.match(expected ?? '', /^[a-f0-9]{64}$/); assert.equal(await fileDigest(path!), expected);
@@ -82,10 +112,17 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
   assert.match(retainedCommit, /^[a-f0-9]{40}$/);
   assert.equal(retainedCommit, record(record(lock.opencodeV2Delivery)['linux-x64']).sourceCommit);
   assert.equal(lock.version, '0.0.158');
+  assert.equal((await readFile(join(dirname(fork), 'VERSION'), 'utf8')).trim(), '0.0.158');
+  assert.equal(process.env.OPENCODE_V1_V2_RETAINED_RUNTIME_SHA256,
+    'b9b4c9f786238922cad49f46e5ac147b4e361b182bd250e5fbb47571571059cd');
+  assert.deepEqual(retainedInputs.retainedRuntime, { version: lock.version, path: fork,
+    sha256: process.env.OPENCODE_V1_V2_RETAINED_RUNTIME_SHA256, sourceCommit: retainedCommit,
+    appSource, archiveSha256 });
   const helperSource = await realpath(process.env.OPENCODE_V1_V2_RETAINED_CUSTODY_SOURCE!);
   const helperGit = (args: string[]) => execFileSync('git', args,
     { cwd: helperSource, encoding: 'utf8', timeout: 5000 }).trim();
   const verifyRetainedSource = () => {
+    verifyRetainedApp();
     assert.equal(helperGit(['rev-parse', 'HEAD']), retainedCommit);
     assert.equal(helperGit(['diff', '--name-only', 'HEAD']), '');
     assert.equal(helperGit(['ls-files', '--others', '--exclude-standard']), '');
@@ -176,7 +213,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     assert.ok(version.includes(String(lock.cliVersion)), 'retained runtime release matches existing lock');
     proof.inputs = { v1: { version: '1.19.4', sha256: await fileDigest(v1) },
       retainedRuntime: { version: lock.version, cliVersion: version, sourceCommit: retainedCommit,
-        sha256: await fileDigest(fork), sourceBuiltRetainedHelper },
+        sha256: await fileDigest(fork), sourceBuiltRetainedHelper, appSource, archiveSha256 },
       v2: { version: '2.1.4', bunSha256: await fileDigest(bun) }, profileSha256: digest(profileBytes),
       descriptorSha256: digest(descriptorBytes), nodeSha256: await fileDigest(node) };
     await save(); source();

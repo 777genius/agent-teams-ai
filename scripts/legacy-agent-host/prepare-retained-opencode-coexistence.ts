@@ -330,12 +330,40 @@ try {
       for (const value of Object.values(values)) assert.ok(!/[\r\n\0]/.test(value));
       await appendFile(process.env.GITHUB_ENV!, Object.entries(values).map(([key, value]) => key + '=' + value + '\n').join(''));
     } else {
-      const lock = await readJson(join(repo, 'runtime.lock.json'));
+      const retainedRoot = await realpath(process.env.OPENCODE_V1_V2_RETAINED_REPO!);
+      assert.equal(retainedRoot, join(await realpath(repo), '.runtime-download/TEST-retained-release-158'));
+      const appGit = (args: string[]) => execFileSync('git', args,
+        { cwd: retainedRoot, encoding: 'utf8', timeout: 5000 }).trim();
+      const verifyRetainedApp = () => {
+        assert.equal(appGit(['rev-parse', '--show-toplevel']), retainedRoot);
+        assert.equal(appGit(['rev-parse', 'HEAD']), '1d0f97f55de566036c970eab4f36b84620afdb3f');
+        assert.equal(appGit(['rev-parse', 'HEAD^{tree}']), 'ec540290c86af9755c94e52ac795aeda8586a98f');
+        assert.equal(appGit(['diff', '--name-only', 'HEAD']), '');
+        assert.equal(appGit(['ls-files', '--others', '--exclude-standard']), '');
+      };
+      verifyRetainedApp();
+      const lockPin = await pin(join(retainedRoot, 'runtime.lock.json'));
+      const stagePin = await pin(join(retainedRoot, 'scripts/stage-runtime.mjs'));
+      assert.equal(lockPin.path, join(retainedRoot, 'runtime.lock.json'));
+      assert.equal(stagePin.path, join(retainedRoot, 'scripts/stage-runtime.mjs'));
+      const appSource = { root: retainedRoot, commit: appGit(['rev-parse', 'HEAD']),
+        tree: appGit(['rev-parse', 'HEAD^{tree}']), lockSha256: lockPin.sha256, stageScriptSha256: stagePin.sha256 };
+      assert.equal(appSource.lockSha256, '1311acf34215a47950dd071a23669a69ed866d4825bcde5d21db41302a71d29d');
+      assert.equal(appSource.stageScriptSha256, '7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be');
+      const lock = await readJson(lockPin.path);
       assert.equal(lock.version, '0.0.158');
       assert.equal(lock.sourceRepository, '777genius/agent_teams_orchestrator');
-      const release = await pin(join(repo, 'resources/runtime/claude-multimodel'));
+      const asset = (lock.assets as Record<string, Record<string, unknown>>)['linux-x64']!;
+      assert.equal(asset.sha256, '4c106fcebab79de525aa7c9bb7636aa91fa43e76b4d567a00f98b2e6650ab29d');
+      const runtimeRoot = join(retainedRoot, 'resources/runtime');
+      assert.equal(await realpath(runtimeRoot), runtimeRoot);
+      for (const name of ['COMMIT_SHA', 'VERSION'])
+        assert.equal(await realpath(join(runtimeRoot, name)), join(runtimeRoot, name));
+      const release = await pin(join(runtimeRoot, 'claude-multimodel'));
+      assert.equal(release.path, join(runtimeRoot, 'claude-multimodel'));
       assert.equal(release.sha256, 'b9b4c9f786238922cad49f46e5ac147b4e361b182bd250e5fbb47571571059cd');
-      const commit = (await readFile(join(repo, 'resources/runtime/COMMIT_SHA'), 'utf8')).trim();
+      const commit = (await readFile(join(runtimeRoot, 'COMMIT_SHA'), 'utf8')).trim();
+      assert.equal((await readFile(join(runtimeRoot, 'VERSION'), 'utf8')).trim(), '0.0.158');
       const delivery = (lock.opencodeV2Delivery as Record<string, Record<string, unknown>>)['linux-x64']!;
       assert.equal(commit, delivery.sourceCommit); assert.match(commit, /^[a-f0-9]{40}$/);
       const helperSource = await realpath(process.env.OPENCODE_V1_V2_RETAINED_CUSTODY_SOURCE!);
@@ -355,7 +383,8 @@ try {
       assert.ok(process.env.GITHUB_ENV);
       for (const value of Object.values(values)) assert.ok(!/[\r\n\0]/.test(value));
       evidence.v1 = { version: '1.19.4', ...binary };
-      evidence.retainedRuntime = { version: lock.version, ...release, sourceCommit: commit };
+      evidence.retainedRuntime = { version: lock.version, ...release, sourceCommit: commit,
+        appSource, archiveSha256: asset.sha256 };
       evidence.sourceBuiltHelper = { sourceCommit: commit, sourceTree: git(['rev-parse', 'HEAD^{tree}']),
         source: await pin(join(helperSource, 'native/opencode-custody/linux.c')),
         buildScript: await pin(join(helperSource, 'scripts/stage-opencode-custody.mts')),
@@ -364,6 +393,7 @@ try {
       evidence.corepack = { version: '0.36.0', ...corepack };
       evidence.packageLock = await pin(join(packages, 'pnpm-lock.yaml'));
       evidence.donor = await captureDonorInputs();
+      verifyRetainedApp();
       assertNativeV1Source(repo, sourceHead);
       await appendFile(process.env.GITHUB_ENV!, Object.entries(values).map(([key, value]) => `${key}=${value}\n`).join(''));
     }

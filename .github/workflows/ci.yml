@@ -570,6 +570,7 @@ jobs:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
       OPENCODE_V2_TEST_PLATFORM: linux-x64
+      OPENCODE_V1_V2_RETAINED_REPO: ${{ github.workspace }}/.runtime-download/TEST-retained-release-158
       OPENCODE_V1_V2_RETAINED_CUSTODY_SOURCE: ${{ github.workspace }}/.runtime-download/TEST-retained-runtime-source
       OPENCODE_V1_V2_DONOR_REPO: ${{ github.workspace }}/.runtime-download/TEST-donor-4a
       OPENCODE_V1_V2_DONOR_CUSTODY_SOURCE: ${{ github.workspace }}/.runtime-download/TEST-donor-runtime-source
@@ -600,7 +601,7 @@ jobs:
         run: |
           node -e "require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')"
           pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1
-      - name: Build existing Host and stage checksum-pinned retained release
+      - name: Build existing Host and stage checksum-pinned current V2 base
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -619,13 +620,49 @@ jobs:
             scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts
       - name: Prepare existing verified V2 graph and original Bun
         run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+      - name: Checkout the immutable historical retained release inputs
+        uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent-teams-ai
+          ref: 1d0f97f55de566036c970eab4f36b84620afdb3f
+          path: .runtime-download/TEST-retained-release-158
+          persist-credentials: false
+      - name: Stage the original checksum-pinned retained 0.0.158 separately
+        working-directory: .runtime-download/TEST-retained-release-158
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          verify_retained_source() {
+            test "$(pwd -P)" = "$OPENCODE_V1_V2_RETAINED_REPO"
+            test "$(git rev-parse --show-toplevel)" = "$OPENCODE_V1_V2_RETAINED_REPO"
+            test "$(git rev-parse HEAD)" = '1d0f97f55de566036c970eab4f36b84620afdb3f'
+            test "$(git rev-parse 'HEAD^{tree}')" = 'ec540290c86af9755c94e52ac795aeda8586a98f'
+            test -z "$(git diff --name-only HEAD)"
+            test -z "$(git ls-files --others --exclude-standard)"
+          }
+          verify_retained_source
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFileSync } from 'node:fs';
+          for (const [path, expected] of [
+            ['runtime.lock.json', '1311acf34215a47950dd071a23669a69ed866d4825bcde5d21db41302a71d29d'],
+            ['scripts/stage-runtime.mjs', '7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be'],
+          ]) assert.equal(createHash('sha256').update(readFileSync(path)).digest('hex'), expected);
+          NODE
+          node scripts/stage-runtime.mjs --platform linux-x64
+          verify_retained_source
       - name: Verify the retained release matches the pinned stock helper source
+        working-directory: .runtime-download/TEST-retained-release-158
         run: |
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import { readFileSync } from 'node:fs';
           const lock = JSON.parse(readFileSync('runtime.lock.json', 'utf8'));
           const commit = readFileSync('resources/runtime/COMMIT_SHA', 'utf8').trim();
+          assert.equal(lock.version, '0.0.158');
+          assert.equal(readFileSync('resources/runtime/VERSION', 'utf8').trim(), '0.0.158');
           assert.equal(lock.sourceRepository, '777genius/agent_teams_orchestrator');
           assert.equal(commit, lock.opencodeV2Delivery['linux-x64'].sourceCommit);
           assert.equal(commit, 'f5c69c2e9024ffc36a5db5eafe30f53539b52f62');
@@ -894,6 +931,20 @@ jobs:
           const donorInputs = JSON.parse(readFileSync(process.env.OPENCODE_V1_V2_INPUTS_RECEIPT, 'utf8'));
           assert.equal(donorInputs.kind, 'TEST_RETAINED_V1_HOST_V2_INPUTS');
           assert.equal(donorInputs.status, 'READY'); assert.equal(donorInputs.sourceHead, r.sourceHead);
+          const retained = r.inputs.retainedRuntime;
+          const retainedRoot = realpathSync(process.env.OPENCODE_V1_V2_RETAINED_REPO);
+          assert.equal(retainedRoot, join(realpathSync('.'), '.runtime-download/TEST-retained-release-158'));
+          assert.deepEqual(retained.appSource, { root: retainedRoot,
+            commit: '1d0f97f55de566036c970eab4f36b84620afdb3f', tree: 'ec540290c86af9755c94e52ac795aeda8586a98f',
+            lockSha256: '1311acf34215a47950dd071a23669a69ed866d4825bcde5d21db41302a71d29d',
+            stageScriptSha256: '7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be' });
+          assert.equal(retained.version, '0.0.158');
+          assert.equal(retained.sourceCommit, 'f5c69c2e9024ffc36a5db5eafe30f53539b52f62');
+          assert.equal(retained.sha256, 'b9b4c9f786238922cad49f46e5ac147b4e361b182bd250e5fbb47571571059cd');
+          assert.equal(retained.archiveSha256, '4c106fcebab79de525aa7c9bb7636aa91fa43e76b4d567a00f98b2e6650ab29d');
+          assert.deepEqual(donorInputs.retainedRuntime, { version: retained.version,
+            path: join(retainedRoot, 'resources/runtime/claude-multimodel'), sha256: retained.sha256,
+            sourceCommit: retained.sourceCommit, appSource: retained.appSource, archiveSha256: retained.archiveSha256 });
           const d = r.donorHistory;
           assert.equal(d.kind, 'TEST_DONOR_4A_NATIVE_HISTORY'); assert.equal(d.status, 'PASS');
           assert.equal(d.cleanup, true); assert.deepEqual(d.cleanupFailures, []);
