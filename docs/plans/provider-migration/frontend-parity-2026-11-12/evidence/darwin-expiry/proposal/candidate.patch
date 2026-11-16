@@ -1,0 +1,60 @@
+--- a/test/features/agent-backend/capturedHostClient.test.ts
++++ b/test/features/agent-backend/capturedHostClient.test.ts
+@@ -349,7 +349,7 @@
+       } };
+     } };
+     const transport = client(profile, owner); await transport.start();
+-    const gate = retainedNativeInputCompletionGate(transport);
++    const gate = retainedNativeInputCompletionGate(transport, expire);
+     try {
+       const requested = transport.request('TEST.blocked-native', {expire,payload:'x'.repeat(1024*1024-2048)});
+       await Promise.race([gate.blocked, requested.then(()=>{ throw new Error('TEST missing original write barrier'); })]);
+--- a/test/features/agent-backend/fixtures/retainedNativeCustody.ts
++++ b/test/features/agent-backend/fixtures/retainedNativeCustody.ts
+@@ -293,7 +293,7 @@
+ }
+ 
+ /** Hold only the original Main callback, after its real child stdin write completes. */
+-export function retainedNativeInputCompletionGate(client: object) {
++export function retainedNativeInputCompletionGate(client: object, expire = false) {
+   const captured: unknown = Object.getOwnPropertyDescriptor(client, 'child')?.value;
+   if (!(captured instanceof ChildProcess) || !captured.stdin) throw new Error('TEST original Host missing');
+   const pending: unknown = Object.getOwnPropertyDescriptor(client, 'nativePending')?.value;
+@@ -301,8 +301,24 @@
+   const entries: Map<unknown, unknown> = pending, originalSet = entries.set;
+   let admitted!: () => void;
+   const queued = new Promise<void>(resolve => { admitted = resolve; });
++  let expiryCapped = false;
+   const trackedSet: typeof entries.set = (key, value) => {
+-    const result = originalSet.call(entries, key, value); admitted(); return result;
++    const result = originalSet.call(entries, key, value);
++    if (expire && !expiryCapped) {
++      if (entries.get(key) !== value || typeof value !== 'object' || value === null ||
++        !('call' in value) || !('deadline' in value) || typeof value.deadline !== 'number' ||
++        !Number.isFinite(value.deadline) || !('reserved' in value) || value.reserved !== false)
++        throw new Error('TEST original Main admission entry missing');
++      const call: unknown = value.call;
++      if (typeof call !== 'object' || call === null || !('operation' in call) ||
++        call.operation !== 'write' || !('capability' in call) || call.capability !== 'TEST-original' ||
++        !('bytes' in call) || call.bytes !== 'YQ==')
++        throw new Error('TEST original Main write entry missing');
++      // Cap only this admitted TEST entry, before Main installs its original timer and pumps.
++      value.deadline = Math.min(value.deadline, performance.now() + 20);
++      expiryCapped = true;
++    }
++    admitted(); return result;
+   };
+   entries.set = trackedSet;
+   const stream = captured.stdin, original = stream.write, write = original.bind(stream);
+@@ -350,9 +366,8 @@
+     import { createHostServer } from ${JSON.stringify(serverUrl)};
+     const server=createHostServer({input:process.stdin,output:process.stdout,buildId:'TEST-host-v1',
+       nativeCustody:{timeoutMs:2000},methods:{
+-        'TEST.blocked-native':{lane:'work',handle:params=>server.nativeCustody.request(
+-          {operation:'write',capability:'TEST-original',bytes:'YQ=='},
+-          params.expire?performance.now()+20:undefined)},
++        'TEST.blocked-native':{lane:'work',handle:()=>server.nativeCustody.request(
++          {operation:'write',capability:'TEST-original',bytes:'YQ=='})},
+         'TEST.control':{lane:'control',handle:()=>server.nativeCustody.request(
+           {operation:'observe',capability:'TEST-original'})},
+         'TEST.missing-budget':{lane:'control',handle:params=>{

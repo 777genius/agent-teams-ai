@@ -1,0 +1,42 @@
+{
+  "kind": "original-E1-terminal-byte-retention-only",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "artifactId": 14203956752,
+  "archive": {
+    "bytes": 317740,
+    "blob": "891547517df19ed9562cf6311c329f7989c953f7",
+    "sha256": "58c2f8f667ff43a2ed586932403903856aa2491402ae19be9ab13cb541d3f6b5"
+  },
+  "safeUniquePaths": true,
+  "crcAllMembers": true,
+  "memberCount": 2,
+  "pngCount": 0,
+  "members": [
+    {
+      "path": "host-offline-tests-4.json",
+      "bytes": 2329390,
+      "blob": "7d053971411b3ba00775e0d665336c3eae366ef2",
+      "sha256": "8e9f4628575912f10e3652dff0267b38f0c29faaafd2a65b5613247d70ef44cc",
+      "crc32": "353a7ecd"
+    },
+    {
+      "path": "host-offline-tests-4.log",
+      "bytes": 116994,
+      "blob": "438ad72fd566a59771db2340c550d720ae741c02",
+      "sha256": "92ebda4c7646318bb433062b9f2d41ccf23d63fcc09a97f7c4325b4fe6a4a2f1",
+      "crc32": "3c9870c9"
+    }
+  ],
+  "semanticReview": "pending",
+  "visuallyReviewedImages": [],
+  "originalResponse": {
+    "bytes": 235805,
+    "blob": "7f5e459479d17ad4c6d8c5425a973cd6c21875ab",
+    "sha256": "44956b1a98d570b39c9455176d68c7f1090d3e71515339f743a46ae797d50a98"
+  },
+  "rawJobLog": {
+    "bytes": 191999,
+    "blob": "7a6f49d16a45b1943f3344e2f4b121c1f406887c",
+    "sha256": "15165c8f89c4c7d783435484efad2c328a4d1c2ad91e9dc605c87513eece3fde"
+  }
+}

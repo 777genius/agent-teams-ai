@@ -1,0 +1,1822 @@
+{
+  "schema": "Darwin-Main-expiry-docs-and-two-source-manifest/v1",
+  "createdAtUTC": "2026-11-16T07:18:13.959854+00:00",
+  "base": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+  "baseTree": "763d943372c79c8d82ad2634b04861da81308fee",
+  "expectedTree": "732bfd36a3f6a00029c385effe1f8efb59abc23b",
+  "sourceOnlyTree": "991da6020ab4ea2b22bfb80512647516a1c57d91",
+  "files": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-docs.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-docs.json",
+      "mode": "100644",
+      "bytes": 128271,
+      "blob": "939893c9cca1b1038933a204747ba7eb143e2c20",
+      "sha256": "7929b80ec4fdc56a7d4910524cd08dbd6a5bc110e9cc4dfad828cf3f9c69316c",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/root-actual-docs-readback.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-docs.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-docs.json",
+      "mode": "100644",
+      "bytes": 133692,
+      "blob": "6726acaa92491a73d3d70927bf72b875afaf1ec2",
+      "sha256": "bae0826097ed2390745621cacd999834ca0dcc23b92109a8e5ae2a7cdcc94900",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-independent-actual-docs-readback.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-source.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-source.json",
+      "mode": "100644",
+      "bytes": 119279,
+      "blob": "bc7e064b679043de90f1c3b19866f88b487ec794",
+      "sha256": "e7594f319c82a63f065a64b2cd7fa7fb7042137b073f3affec19cac3e1da3e0f",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/root-actual-source-readback.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-source.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-source.json",
+      "mode": "100644",
+      "bytes": 124558,
+      "blob": "5cc76016f0d792f65493a3463742790329f39fe8",
+      "sha256": "06f760ad3db577d6eee8164637fbefefcc1bf1e655f624d36359145c4ad8bd2b",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-independent-actual-source-readback.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-prepublication.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-prepublication.json",
+      "mode": "100644",
+      "bytes": 12859,
+      "blob": "35e2995427865771d37fc984e190553b1976cf5a",
+      "sha256": "cefbbd811f39677693f02e49df8319c6bd5ebe2d7183d433079a89c753bd38e8",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication-independent-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-byte-tree-proof.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-byte-tree-proof.json",
+      "mode": "100644",
+      "bytes": 121082,
+      "blob": "a611b1a35f10603557001f19ab4d0b556f60a739",
+      "sha256": "ca3cd58ae33d32d8e5afb667558c785bfdfe15195fbfe5f18c382bb8f17f3e6a",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication-independent-byte-tree-proof.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-prepublication.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-prepublication.json",
+      "mode": "100644",
+      "bytes": 26862,
+      "blob": "6064501cae149e90585db8264f320dc57b881f0e",
+      "sha256": "0c4dcc3bfd5b676f512b8441d85033d1116c9a88fd488d9a5a4a9e856359ff65",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/root-prepublication-byte-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-remote-tree.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-remote-tree.json",
+      "mode": "100644",
+      "bytes": 600,
+      "blob": "3c82d4778cc7115ef620c4f7ed9e021e05474c87",
+      "sha256": "c7500b4fa806958e3c4a7f8b9204a06899d84208a6aa2788ca94a8301566d88f",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/root-remote-tree-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-docs-commit-response.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-docs-commit-response.json",
+      "mode": "100644",
+      "bytes": 717,
+      "blob": "28569ad00fcbee6f0471f14fe11ccefd06ee455e",
+      "sha256": "b618c3c16848a26f4a98c09aec64644da0f9abae9dee22cb9587ebb0542a36fc",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/created-docs-commit-response.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-docs-commit-immutable-readback.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-docs-commit-immutable-readback.json",
+      "mode": "100644",
+      "bytes": 3736,
+      "blob": "b0614f131434102d01e1809820c1d418fb0ba778",
+      "sha256": "07d6b367e2ff5c676e37ce92c2fd967e89520c1df085dff2e8af0a4bcd51bd9b",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/created-docs-commit-immutable-readback.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/ordinary-docs-push-response.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/ordinary-docs-push-response.json",
+      "mode": "100644",
+      "bytes": 566,
+      "blob": "8ac20154c1fb15cf85f3a921f2eff3a516a23359",
+      "sha256": "c6519427477fd1dd59730009ef6f16e15dd2b1d6609a79f6f6eabccfedada87a",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/ordinary-docs-push-response.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/post-docs-push-readback.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/post-docs-push-readback.json",
+      "mode": "100644",
+      "bytes": 175321,
+      "blob": "ef685b4028b8e767bc93b120e65f9fbc9a0bdd5b",
+      "sha256": "16fede68c6a1d9c6adf5c95ca36a4f7488c35b5f5853f700b2e34f563de8a05a",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/post-docs-push-readback.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/fresh-docs-precommit-guards.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/fresh-docs-precommit-guards.json",
+      "mode": "100644",
+      "bytes": 176376,
+      "blob": "1129c957a8bcc4cdf5f52339e6122a7724c5ff8a",
+      "sha256": "e876755f0167da08e978cc5abdea3c7329fd6fd0cffbea411032e6045662230d",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/fresh-docs-precommit-guards.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-source-commit-response.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-source-commit-response.json",
+      "mode": "100644",
+      "bytes": 695,
+      "blob": "bb64e78eb88b2d9621feb37326c78fbfe19e86bb",
+      "sha256": "ea104bd290ddc3f99e31846b925e63d48321bf16c26442999c93a704bdb953be",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/created-source-commit-response.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-source-commit-immutable-readback.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-source-commit-immutable-readback.json",
+      "mode": "100644",
+      "bytes": 3692,
+      "blob": "06191dda55d6ff5e962669f5192925c090c9b617",
+      "sha256": "88b681dc49c41f4c492305554a3c7e0c0dd9dc7e9b161e03ae1f9fb3740ecc95",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/created-source-commit-immutable-readback.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/ordinary-source-push-response.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/ordinary-source-push-response.json",
+      "mode": "100644",
+      "bytes": 565,
+      "blob": "0b6e43b71b65d7544800212efca71e6bba2d81ba",
+      "sha256": "ee85792b499ed0fc7856d3754eef797f93cca8f50016042855fc5706cfb8a688",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/ordinary-source-push-response.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/post-source-push-readback.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/post-source-push-readback.json",
+      "mode": "100644",
+      "bytes": 175321,
+      "blob": "def3756ed3845fc8036677702c4584e06d3150bf",
+      "sha256": "b3e9d44072665165d0f44c347e95002a89fb8cc2bbadf7739f9c906f4f0d73fc",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/post-source-push-readback.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/fresh-source-precommit-guards.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/fresh-source-precommit-guards.json",
+      "mode": "100644",
+      "bytes": 175268,
+      "blob": "8525b7e31cdd929cfbcf60773ae094df37edf37a",
+      "sha256": "b627b6457843ad076ca90420bf9ab35189f4f3547e14c6916f44bb98c388fd7d",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/fresh-source-precommit-guards.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-appendix.md",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-appendix.md",
+      "mode": "100644",
+      "bytes": 13583,
+      "blob": "97810fb7cb19b2a34a8c6b83009e869ec4082409",
+      "sha256": "f32af083ac05d666bf86f1bd8e1b1167916060745094dcae93135cdc37238c37",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/R1-appendix.md"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate.patch",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate.patch",
+      "mode": "100644",
+      "bytes": 3674,
+      "blob": "b898bd9032cec5a0d2815c4d4e268d13a088f762",
+      "sha256": "6127e13f8ed30c9edc36e04730cea8c2a42ff26dbe5721c91d1c18dcfe378a58",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate.patch"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-metadata.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-metadata.json",
+      "mode": "100644",
+      "bytes": 5822,
+      "blob": "28b5c02baa4551f7d41116c33f7ceb4912f840e4",
+      "sha256": "a6fe9d6500df27cced7ae51ef8669ada1914f97b1ef9ad8a20f3345eedaaa6e8",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate-metadata.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/original-failure-and-source-analysis.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/original-failure-and-source-analysis.json",
+      "mode": "100644",
+      "bytes": 3299,
+      "blob": "d62cac555dfc92e9b3da154cd85e9992d70b884e",
+      "sha256": "7698708ab02126d824b0122c8db02daaa767076cf86c0d1c29b0b61e8ebf5480",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/original-failure-and-source-analysis.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/source-and-venue-pins.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/source-and-venue-pins.json",
+      "mode": "100644",
+      "bytes": 12520,
+      "blob": "b900529a659806a0bf5fea1cd61a2b4264d6b875",
+      "sha256": "476ef0e33c55a1a0d5e742567d668213861f5c98157c3d2db74654b2f282af91",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/source-and-venue-pins.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/independent-source-r1-review.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/independent-source-r1-review.json",
+      "mode": "100644",
+      "bytes": 24849,
+      "blob": "cc5e52d57151a27733620ab9801e900139f2c72b",
+      "sha256": "bc10d2e0b1e6bf6a5b00a9a9f7be75c847499072c44e47d837687bb2abdbef44",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/independent-source-r1-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/preimage-capturedHostClient.test.ts.txt",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/preimage-capturedHostClient.test.ts.txt",
+      "mode": "100644",
+      "bytes": 51981,
+      "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+      "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/preimage/test/features/agent-backend/capturedHostClient.test.ts"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-capturedHostClient.test.ts.txt",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-capturedHostClient.test.ts.txt",
+      "mode": "100644",
+      "bytes": 51989,
+      "blob": "4e8a47af47549d22df0b7199a58a2511d8ecfda0",
+      "sha256": "34106dc02e8d38f0be8dffe3b0c734972ec0e7d8e0833f1bfc5757c430194f62",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate/test/features/agent-backend/capturedHostClient.test.ts"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/preimage-retainedNativeCustody.ts.txt",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/preimage-retainedNativeCustody.ts.txt",
+      "mode": "100644",
+      "bytes": 29798,
+      "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+      "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/preimage/test/features/agent-backend/fixtures/retainedNativeCustody.ts"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-retainedNativeCustody.ts.txt",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-retainedNativeCustody.ts.txt",
+      "mode": "100644",
+      "bytes": 30715,
+      "blob": "2726155997717ed0f22c1d2f71d0adf5a42c190c",
+      "sha256": "1555d38eaecd485f501b366e9a2a27b5f0f0c610d51079a88b8ada506e80794a",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate/test/features/agent-backend/fixtures/retainedNativeCustody.ts"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/current-preimages.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/current-preimages.json",
+      "mode": "100644",
+      "bytes": 10136,
+      "blob": "37172195e343a833e8fd36fc343debb7fe45e1de",
+      "sha256": "d7bb1f31d5e9537fa576d966239376b556736864b85cdde641fa3d4b892a7ea9",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/current-preimages.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-root-ordered-selection.md",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-root-ordered-selection.md",
+      "mode": "100644",
+      "bytes": 11301,
+      "blob": "d0df968462614a31d8ab5cc43ac3b09ebc6aa9fd",
+      "sha256": "c4e74225de6fb9059793f46c93f09583448649492cfffce33693a4edc5bae52d",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/R1-root-ordered-selection.md"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/darwin-original/independent-process-darwin-x64-failure-review.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/darwin-original/independent-process-darwin-x64-failure-review.json",
+      "mode": "100644",
+      "bytes": 26323,
+      "blob": "46d38413787b525f23600f398076e50e5ee9963e",
+      "sha256": "0c7cc934c3bf40fa830d2db5d7ccdaeec56ab09a68cd36f0f1cbbf0e2c135587",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/independent-process-darwin-x64-failure-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/job-original-response.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/job-original-response.json",
+      "mode": "100644",
+      "bytes": 235805,
+      "blob": "7f5e459479d17ad4c6d8c5425a973cd6c21875ab",
+      "sha256": "44956b1a98d570b39c9455176d68c7f1090d3e71515339f743a46ae797d50a98",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/job-original-response.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/job.log",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/job.log",
+      "mode": "100644",
+      "bytes": 191999,
+      "blob": "7a6f49d16a45b1943f3344e2f4b121c1f406887c",
+      "sha256": "15165c8f89c4c7d783435484efad2c328a4d1c2ad91e9dc605c87513eece3fde",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/job.log"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/artifact-14203956752.zip",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/artifact-14203956752.zip",
+      "mode": "100644",
+      "bytes": 317740,
+      "blob": "891547517df19ed9562cf6311c329f7989c953f7",
+      "sha256": "58c2f8f667ff43a2ed586932403903856aa2491402ae19be9ab13cb541d3f6b5",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/artifact-14203956752.zip"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/archive-retention.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/archive-retention.json",
+      "mode": "100644",
+      "bytes": 1356,
+      "blob": "2ce796313e71fed484b61702fde7b29c6d693e48",
+      "sha256": "649a6e2c656422b6b25af0dd3ab13b13561e733e18433d41ab073269e5185bba",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/archive-retention.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/official-host-artifacts-0702.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/official-host-artifacts-0702.json",
+      "mode": "100644",
+      "bytes": 2959,
+      "blob": "e1f6f9f0ef0cb0e3efc4eda7cb87c0fa2a639387",
+      "sha256": "2894018dbf71df54e0bb8456f7a2c7d8e1a3089377e8ee43e72a276d196c6793",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/official-host-artifacts-0702.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/owned-jobs-0700.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/owned-jobs-0700.json",
+      "mode": "100644",
+      "bytes": 36811,
+      "blob": "9887db5797c7e4ca901e8f684852204d125d1f02",
+      "sha256": "93fa2619c1e6fa0c2881607ed90029571db3bc43b6e061daada7d160c345574c",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/owned-jobs-0700.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/source-and-case-proof.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/source-and-case-proof.json",
+      "mode": "100644",
+      "bytes": 228982,
+      "blob": "c84353d66250bd53be5473829447447ab0a8ba28",
+      "sha256": "fae0223af31b9235ed7d01cf08dd4c3e882c763ce26358faf83f590b7ce59217",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/source-and-case-proof.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/audit.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/audit.json",
+      "mode": "100644",
+      "bytes": 7711,
+      "blob": "ab7105a2ce0a35dfd15c280a573d5f194785048a",
+      "sha256": "83f728902caf58b0030f1c674b7e57f64028dd731ef58dfdcf17a284c905ead2",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/audit.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/Plan29-appendix.md",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/Plan29-appendix.md",
+      "mode": "100644",
+      "bytes": 2137,
+      "blob": "3b32dc144a4e8ddd7ac572d7ee7af6febd125725",
+      "sha256": "1fa40ebaa73dd64d01a4d72ca08ee95d7161460880f6688774b8374a13d8dbe4",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/Plan29-appendix.md"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/checkpoint.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/checkpoint.json",
+      "mode": "100644",
+      "bytes": 2777,
+      "blob": "bf2e6620e90e2822250e378fc7492ba47eab144a",
+      "sha256": "2269800df9bcc8a99a9cc0d94dbdadf00a8ff424a35d2a149c55399056025416",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/checkpoint.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/independent-original-review.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/independent-original-review.json",
+      "mode": "100644",
+      "bytes": 18799,
+      "blob": "abbc5d5cf7fc6f7fa5c78f29ab0856e6f3c51794",
+      "sha256": "daf7915fcd8e7e9aaaae8378974dce5f56082d869f29287c8d4518cc2ce5f3bb",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/independent-original-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/independent-byte-source-proof.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/independent-byte-source-proof.json",
+      "mode": "100644",
+      "bytes": 201524,
+      "blob": "94722bf72ae119002368ac96fd1defdccd3468bf",
+      "sha256": "486ca5a0985aa2c924ec81972df72e2b09c3b797f76fa952e82085f571b96650",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/independent-byte-source-proof.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "bytes": 1994546,
+      "blob": "f4696f07178f3067f61e24c13c0dc2043dc73297",
+      "sha256": "4c7240b04de05e7e5af4ff893a402ea33c86aaa0fc4ecadc35b43d205618614d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/publication-index.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/publication-index.json",
+      "mode": "100644",
+      "bytes": 44991,
+      "blob": "b4db5ddfa90f374f2391fc523d32130fd0aa2c06",
+      "sha256": "170bf11f4b54dffccb88937cc16e2ebb3847db254f7e4f89a981dc698edf4571"
+    }
+  ],
+  "fileCount": 45,
+  "newPayloadBytes": 4943587,
+  "groups": [
+    {
+      "name": "Completed actual I386 documentation and one-header publication",
+      "scope": "Exact publication custody and readbacks only; no resulting-source native result.",
+      "files": [
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-docs.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-docs.json",
+          "mode": "100644",
+          "bytes": 128271,
+          "blob": "939893c9cca1b1038933a204747ba7eb143e2c20",
+          "sha256": "7929b80ec4fdc56a7d4910524cd08dbd6a5bc110e9cc4dfad828cf3f9c69316c",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/root-actual-docs-readback.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-docs.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-docs.json",
+          "mode": "100644",
+          "bytes": 133692,
+          "blob": "6726acaa92491a73d3d70927bf72b875afaf1ec2",
+          "sha256": "bae0826097ed2390745621cacd999834ca0dcc23b92109a8e5ae2a7cdcc94900",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-independent-actual-docs-readback.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-source.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-source.json",
+          "mode": "100644",
+          "bytes": 119279,
+          "blob": "bc7e064b679043de90f1c3b19866f88b487ec794",
+          "sha256": "e7594f319c82a63f065a64b2cd7fa7fb7042137b073f3affec19cac3e1da3e0f",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/root-actual-source-readback.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-source.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-source.json",
+          "mode": "100644",
+          "bytes": 124558,
+          "blob": "5cc76016f0d792f65493a3463742790329f39fe8",
+          "sha256": "06f760ad3db577d6eee8164637fbefefcc1bf1e655f624d36359145c4ad8bd2b",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-independent-actual-source-readback.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-prepublication.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-prepublication.json",
+          "mode": "100644",
+          "bytes": 12859,
+          "blob": "35e2995427865771d37fc984e190553b1976cf5a",
+          "sha256": "cefbbd811f39677693f02e49df8319c6bd5ebe2d7183d433079a89c753bd38e8",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication-independent-review.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-byte-tree-proof.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-byte-tree-proof.json",
+          "mode": "100644",
+          "bytes": 121082,
+          "blob": "a611b1a35f10603557001f19ab4d0b556f60a739",
+          "sha256": "ca3cd58ae33d32d8e5afb667558c785bfdfe15195fbfe5f18c382bb8f17f3e6a",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication-independent-byte-tree-proof.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-prepublication.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-prepublication.json",
+          "mode": "100644",
+          "bytes": 26862,
+          "blob": "6064501cae149e90585db8264f320dc57b881f0e",
+          "sha256": "0c4dcc3bfd5b676f512b8441d85033d1116c9a88fd488d9a5a4a9e856359ff65",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/root-prepublication-byte-review.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-remote-tree.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-remote-tree.json",
+          "mode": "100644",
+          "bytes": 600,
+          "blob": "3c82d4778cc7115ef620c4f7ed9e021e05474c87",
+          "sha256": "c7500b4fa806958e3c4a7f8b9204a06899d84208a6aa2788ca94a8301566d88f",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/root-remote-tree-review.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-docs-commit-response.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-docs-commit-response.json",
+          "mode": "100644",
+          "bytes": 717,
+          "blob": "28569ad00fcbee6f0471f14fe11ccefd06ee455e",
+          "sha256": "b618c3c16848a26f4a98c09aec64644da0f9abae9dee22cb9587ebb0542a36fc",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/created-docs-commit-response.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-docs-commit-immutable-readback.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-docs-commit-immutable-readback.json",
+          "mode": "100644",
+          "bytes": 3736,
+          "blob": "b0614f131434102d01e1809820c1d418fb0ba778",
+          "sha256": "07d6b367e2ff5c676e37ce92c2fd967e89520c1df085dff2e8af0a4bcd51bd9b",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/created-docs-commit-immutable-readback.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/ordinary-docs-push-response.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/ordinary-docs-push-response.json",
+          "mode": "100644",
+          "bytes": 566,
+          "blob": "8ac20154c1fb15cf85f3a921f2eff3a516a23359",
+          "sha256": "c6519427477fd1dd59730009ef6f16e15dd2b1d6609a79f6f6eabccfedada87a",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/ordinary-docs-push-response.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/post-docs-push-readback.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/post-docs-push-readback.json",
+          "mode": "100644",
+          "bytes": 175321,
+          "blob": "ef685b4028b8e767bc93b120e65f9fbc9a0bdd5b",
+          "sha256": "16fede68c6a1d9c6adf5c95ca36a4f7488c35b5f5853f700b2e34f563de8a05a",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/post-docs-push-readback.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/fresh-docs-precommit-guards.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/fresh-docs-precommit-guards.json",
+          "mode": "100644",
+          "bytes": 176376,
+          "blob": "1129c957a8bcc4cdf5f52339e6122a7724c5ff8a",
+          "sha256": "e876755f0167da08e978cc5abdea3c7329fd6fd0cffbea411032e6045662230d",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/fresh-docs-precommit-guards.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-source-commit-response.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-source-commit-response.json",
+          "mode": "100644",
+          "bytes": 695,
+          "blob": "bb64e78eb88b2d9621feb37326c78fbfe19e86bb",
+          "sha256": "ea104bd290ddc3f99e31846b925e63d48321bf16c26442999c93a704bdb953be",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/created-source-commit-response.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-source-commit-immutable-readback.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-source-commit-immutable-readback.json",
+          "mode": "100644",
+          "bytes": 3692,
+          "blob": "06191dda55d6ff5e962669f5192925c090c9b617",
+          "sha256": "88b681dc49c41f4c492305554a3c7e0c0dd9dc7e9b161e03ae1f9fb3740ecc95",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/created-source-commit-immutable-readback.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/ordinary-source-push-response.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/ordinary-source-push-response.json",
+          "mode": "100644",
+          "bytes": 565,
+          "blob": "0b6e43b71b65d7544800212efca71e6bba2d81ba",
+          "sha256": "ee85792b499ed0fc7856d3754eef797f93cca8f50016042855fc5706cfb8a688",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/ordinary-source-push-response.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/post-source-push-readback.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/post-source-push-readback.json",
+          "mode": "100644",
+          "bytes": 175321,
+          "blob": "def3756ed3845fc8036677702c4584e06d3150bf",
+          "sha256": "b3e9d44072665165d0f44c347e95002a89fb8cc2bbadf7739f9c906f4f0d73fc",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/post-source-push-readback.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/fresh-source-precommit-guards.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/fresh-source-precommit-guards.json",
+          "mode": "100644",
+          "bytes": 175268,
+          "blob": "8525b7e31cdd929cfbcf60773ae094df37edf37a",
+          "sha256": "b627b6457843ad076ca90420bf9ab35189f4f3547e14c6916f44bb98c388fd7d",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/fresh-source-precommit-guards.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        }
+      ]
+    },
+    {
+      "name": "Exact two-file Main TEST admission expiry selection",
+      "scope": "Complete prospective R1/R2, candidates/inverses and fresh31-pin actual00d749 rebind; no application or execution.",
+      "files": [
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-appendix.md",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-appendix.md",
+          "mode": "100644",
+          "bytes": 13583,
+          "blob": "97810fb7cb19b2a34a8c6b83009e869ec4082409",
+          "sha256": "f32af083ac05d666bf86f1bd8e1b1167916060745094dcae93135cdc37238c37",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/R1-appendix.md",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate.patch",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate.patch",
+          "mode": "100644",
+          "bytes": 3674,
+          "blob": "b898bd9032cec5a0d2815c4d4e268d13a088f762",
+          "sha256": "6127e13f8ed30c9edc36e04730cea8c2a42ff26dbe5721c91d1c18dcfe378a58",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate.patch",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-metadata.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-metadata.json",
+          "mode": "100644",
+          "bytes": 5822,
+          "blob": "28b5c02baa4551f7d41116c33f7ceb4912f840e4",
+          "sha256": "a6fe9d6500df27cced7ae51ef8669ada1914f97b1ef9ad8a20f3345eedaaa6e8",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate-metadata.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/original-failure-and-source-analysis.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/original-failure-and-source-analysis.json",
+          "mode": "100644",
+          "bytes": 3299,
+          "blob": "d62cac555dfc92e9b3da154cd85e9992d70b884e",
+          "sha256": "7698708ab02126d824b0122c8db02daaa767076cf86c0d1c29b0b61e8ebf5480",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/original-failure-and-source-analysis.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/source-and-venue-pins.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/source-and-venue-pins.json",
+          "mode": "100644",
+          "bytes": 12520,
+          "blob": "b900529a659806a0bf5fea1cd61a2b4264d6b875",
+          "sha256": "476ef0e33c55a1a0d5e742567d668213861f5c98157c3d2db74654b2f282af91",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/source-and-venue-pins.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/independent-source-r1-review.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/independent-source-r1-review.json",
+          "mode": "100644",
+          "bytes": 24849,
+          "blob": "cc5e52d57151a27733620ab9801e900139f2c72b",
+          "sha256": "bc10d2e0b1e6bf6a5b00a9a9f7be75c847499072c44e47d837687bb2abdbef44",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/independent-source-r1-review.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/preimage-capturedHostClient.test.ts.txt",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/preimage-capturedHostClient.test.ts.txt",
+          "mode": "100644",
+          "bytes": 51981,
+          "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+          "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/preimage/test/features/agent-backend/capturedHostClient.test.ts",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-capturedHostClient.test.ts.txt",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-capturedHostClient.test.ts.txt",
+          "mode": "100644",
+          "bytes": 51989,
+          "blob": "4e8a47af47549d22df0b7199a58a2511d8ecfda0",
+          "sha256": "34106dc02e8d38f0be8dffe3b0c734972ec0e7d8e0833f1bfc5757c430194f62",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate/test/features/agent-backend/capturedHostClient.test.ts",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/preimage-retainedNativeCustody.ts.txt",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/preimage-retainedNativeCustody.ts.txt",
+          "mode": "100644",
+          "bytes": 29798,
+          "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+          "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/preimage/test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-retainedNativeCustody.ts.txt",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-retainedNativeCustody.ts.txt",
+          "mode": "100644",
+          "bytes": 30715,
+          "blob": "2726155997717ed0f22c1d2f71d0adf5a42c190c",
+          "sha256": "1555d38eaecd485f501b366e9a2a27b5f0f0c610d51079a88b8ada506e80794a",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate/test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/current-preimages.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/current-preimages.json",
+          "mode": "100644",
+          "bytes": 10136,
+          "blob": "37172195e343a833e8fd36fc343debb7fe45e1de",
+          "sha256": "d7bb1f31d5e9537fa576d966239376b556736864b85cdde641fa3d4b892a7ea9",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/current-preimages.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-root-ordered-selection.md",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-root-ordered-selection.md",
+          "mode": "100644",
+          "bytes": 11301,
+          "blob": "d0df968462614a31d8ab5cc43ac3b09ebc6aa9fd",
+          "sha256": "c4e74225de6fb9059793f46c93f09583448649492cfffce33693a4edc5bae52d",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/R1-root-ordered-selection.md",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        }
+      ]
+    },
+    {
+      "name": "Original E1 Darwin x64 actual failure and later independent R2",
+      "scope": "Complete retained actual failure with source-order counterexample and unknown historical branch; no timing-cause or positive cleanup claim.",
+      "files": [
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929324-original-response.json",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929324-original-response.json",
+          "mode": "100644",
+          "bytes": 104782,
+          "blob": "655b182d2a0d1ee449ef8184ffbb94ae989e7013",
+          "sha256": "1a632d2cf5e110466c603ed09c335b0dd14a90a90955f4d7c14bc803e8479730",
+          "reuseIdenticalPublishedPayload": true,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929324.log",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929324.log",
+          "mode": "100644",
+          "bytes": 99531,
+          "blob": "0a1daaf057b77571deaac25dffdbe70f86475744",
+          "sha256": "27e6fa59194a32898ca1761ccf4358e4f4ef1d1c14b1bc7f4e5806b9e0fc0eb1",
+          "reuseIdenticalPublishedPayload": true,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202660278.zip",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/artifact-14202660278.zip",
+          "mode": "100644",
+          "bytes": 11052,
+          "blob": "b85149194d6ac77e819ef97ec216b12a4ed9862f",
+          "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039",
+          "reuseIdenticalPublishedPayload": true,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-darwin-x64-archive-audit.json",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-darwin-x64-archive-audit.json",
+          "mode": "100644",
+          "bytes": 1465,
+          "blob": "57446cc55810771e542ac236766fd8424c6195b4",
+          "sha256": "f6c4e446bc24ccea3f8ab911c2ff9534396a54b1261966fc6333fab572d872f3",
+          "reuseIdenticalPublishedPayload": true,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-artifacts-response-0623.json",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-artifacts-response-0623.json",
+          "mode": "100644",
+          "bytes": 2961,
+          "blob": "075a3efb3b36e51ef0eae543b6d2ed65b874099a",
+          "sha256": "4608a345218b7e8989001ac1847a9b1da9041399c16f8b44f786296405d0f880",
+          "reuseIdenticalPublishedPayload": true,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-darwin-x64-failure-audit.json",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-darwin-x64-failure-audit.json",
+          "mode": "100644",
+          "bytes": 59276,
+          "blob": "ac18ebf884a19796712648d81a030d98c696361d",
+          "sha256": "8c5b462682f503509753fc73503e0eda4046a70681d6da48ace45f77a3d45221",
+          "reuseIdenticalPublishedPayload": true,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/darwin-original/independent-process-darwin-x64-failure-review.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/darwin-original/independent-process-darwin-x64-failure-review.json",
+          "mode": "100644",
+          "bytes": 26323,
+          "blob": "46d38413787b525f23600f398076e50e5ee9963e",
+          "sha256": "0c7cc934c3bf40fa830d2db5d7ccdaeec56ab09a68cd36f0f1cbbf0e2c135587",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/independent-process-darwin-x64-failure-review.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/owned-process-jobs-response-0623.json",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b/owned-process-jobs-response-0623.json",
+          "mode": "100644",
+          "bytes": 22566,
+          "blob": "5fa927cc20de9b03ea5c3dba15bf8c1c096d57a4",
+          "sha256": "189273a1f1fce97683d00afc7b0252b39ebcf18d62fca7c9e8df0801131d1a5f",
+          "reuseIdenticalPublishedPayload": true,
+          "reuseIdenticalNewPayload": false
+        }
+      ]
+    },
+    {
+      "name": "Original E1 frontend shard4 only, complete actual R2",
+      "scope": "6614PASS/7SKIP in one original Linux frontend shard; source-bound capturedHostClient33PASS contrast only. Other three shards and proposed-amendment success are not qualified.",
+      "files": [
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/job-original-response.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/job-original-response.json",
+          "mode": "100644",
+          "bytes": 235805,
+          "blob": "7f5e459479d17ad4c6d8c5425a973cd6c21875ab",
+          "sha256": "44956b1a98d570b39c9455176d68c7f1090d3e71515339f743a46ae797d50a98",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/job-original-response.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/job.log",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/job.log",
+          "mode": "100644",
+          "bytes": 191999,
+          "blob": "7a6f49d16a45b1943f3344e2f4b121c1f406887c",
+          "sha256": "15165c8f89c4c7d783435484efad2c328a4d1c2ad91e9dc605c87513eece3fde",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/job.log",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/artifact-14203956752.zip",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/artifact-14203956752.zip",
+          "mode": "100644",
+          "bytes": 317740,
+          "blob": "891547517df19ed9562cf6311c329f7989c953f7",
+          "sha256": "58c2f8f667ff43a2ed586932403903856aa2491402ae19be9ab13cb541d3f6b5",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/artifact-14203956752.zip",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/archive-retention.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/archive-retention.json",
+          "mode": "100644",
+          "bytes": 1356,
+          "blob": "2ce796313e71fed484b61702fde7b29c6d693e48",
+          "sha256": "649a6e2c656422b6b25af0dd3ab13b13561e733e18433d41ab073269e5185bba",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/archive-retention.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/official-host-artifacts-0702.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/official-host-artifacts-0702.json",
+          "mode": "100644",
+          "bytes": 2959,
+          "blob": "e1f6f9f0ef0cb0e3efc4eda7cb87c0fa2a639387",
+          "sha256": "2894018dbf71df54e0bb8456f7a2c7d8e1a3089377e8ee43e72a276d196c6793",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/official-host-artifacts-0702.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/owned-jobs-0700.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/owned-jobs-0700.json",
+          "mode": "100644",
+          "bytes": 36811,
+          "blob": "9887db5797c7e4ca901e8f684852204d125d1f02",
+          "sha256": "93fa2619c1e6fa0c2881607ed90029571db3bc43b6e061daada7d160c345574c",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/owned-jobs-0700.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/source-and-case-proof.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/source-and-case-proof.json",
+          "mode": "100644",
+          "bytes": 228982,
+          "blob": "c84353d66250bd53be5473829447447ab0a8ba28",
+          "sha256": "fae0223af31b9235ed7d01cf08dd4c3e882c763ce26358faf83f590b7ce59217",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/source-and-case-proof.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/audit.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/audit.json",
+          "mode": "100644",
+          "bytes": 7711,
+          "blob": "ab7105a2ce0a35dfd15c280a573d5f194785048a",
+          "sha256": "83f728902caf58b0030f1c674b7e57f64028dd731ef58dfdcf17a284c905ead2",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/audit.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/Plan29-appendix.md",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/Plan29-appendix.md",
+          "mode": "100644",
+          "bytes": 2137,
+          "blob": "3b32dc144a4e8ddd7ac572d7ee7af6febd125725",
+          "sha256": "1fa40ebaa73dd64d01a4d72ca08ee95d7161460880f6688774b8374a13d8dbe4",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/Plan29-appendix.md",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/checkpoint.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/checkpoint.json",
+          "mode": "100644",
+          "bytes": 2777,
+          "blob": "bf2e6620e90e2822250e378fc7492ba47eab144a",
+          "sha256": "2269800df9bcc8a99a9cc0d94dbdadf00a8ff424a35d2a149c55399056025416",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/checkpoint.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/independent-original-review.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/independent-original-review.json",
+          "mode": "100644",
+          "bytes": 18799,
+          "blob": "abbc5d5cf7fc6f7fa5c78f29ab0856e6f3c51794",
+          "sha256": "daf7915fcd8e7e9aaaae8378974dce5f56082d869f29287c8d4518cc2ce5f3bb",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/independent-original-review.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/independent-byte-source-proof.json",
+          "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/independent-byte-source-proof.json",
+          "mode": "100644",
+          "bytes": 201524,
+          "blob": "94722bf72ae119002368ac96fd1defdccd3468bf",
+          "sha256": "486ca5a0985aa2c924ec81972df72e2b09c3b797f76fa952e82085f571b96650",
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/frontend4/independent-byte-source-proof.json",
+          "reuseIdenticalPublishedPayload": false,
+          "reuseIdenticalNewPayload": false
+        }
+      ]
+    }
+  ],
+  "allPreservedPayloadReferenceCount": 50,
+  "archives": [
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/artifact-14203956752.zip",
+      "bytes": 317740,
+      "blob": "891547517df19ed9562cf6311c329f7989c953f7",
+      "sha256": "58c2f8f667ff43a2ed586932403903856aa2491402ae19be9ab13cb541d3f6b5",
+      "members": [
+        {
+          "path": "host-offline-tests-4.json",
+          "bytes": 2329390,
+          "blob": "7d053971411b3ba00775e0d665336c3eae366ef2",
+          "sha256": "8e9f4628575912f10e3652dff0267b38f0c29faaafd2a65b5613247d70ef44cc",
+          "crc32": "353a7ecd"
+        },
+        {
+          "path": "host-offline-tests-4.log",
+          "bytes": 116994,
+          "blob": "438ad72fd566a59771db2340c550d720ae741c02",
+          "sha256": "92ebda4c7646318bb433062b9f2d41ccf23d63fcc09a97f7c4325b4fe6a4a2f1",
+          "crc32": "3c9870c9"
+        }
+      ],
+      "memberCount": 2,
+      "uncompressedBytes": 2446384,
+      "alreadyPublished": false
+    },
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202660278.zip",
+      "bytes": 11052,
+      "blob": "b85149194d6ac77e819ef97ec216b12a4ed9862f",
+      "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039",
+      "members": [
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20799,
+          "blob": "2a6e7df8e767ea97c7989415e0ec7d43ba68fa02",
+          "sha256": "fb385c2bcee56a31ede4bde2bd0d315deb9e38fb52ad3f4677cfcc70c585a20c",
+          "crc32": "70f642d3"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 772,
+          "blob": "9ff3a45e91cb855f0aab059687b0210f174ebcc2",
+          "sha256": "c15f61fc7d9a55696f91eb9129b17eeff7f8fe7cc4a6f870b140b4ffa920c48a",
+          "crc32": "b248c9c7"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 12202,
+          "blob": "91c26284ce8066bcff47b789072912e94636c2a0",
+          "sha256": "ee75fec9a697cb348ad7207b23322bf5f5f65562680b2b2bb42b4e34d2ffeb07",
+          "crc32": "d9e7977c"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "bytes": 41,
+          "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+          "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+          "crc32": "4b15b81c"
+        }
+      ],
+      "memberCount": 4,
+      "uncompressedBytes": 33814,
+      "alreadyPublished": true
+    }
+  ],
+  "archiveCount": 2,
+  "archiveMemberCount": 6,
+  "fullLeafCount": 11194,
+  "unchangedOriginalLeaves": 11149,
+  "nonDocumentationLeafCount": 8798,
+  "nonDocumentationMapSha256": "94deeed545664749a234f724e5a59304ba6499760817630cac2fcf2bb618d199",
+  "sourceOnlyNonDocumentationMapSha256": "040257d58a98bb330b746872e970009cd55ea498d4a4ea04232fc3cc2721263d",
+  "sourceChanges": [
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 51981,
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+      },
+      "candidate": {
+        "bytes": 51989,
+        "blob": "4e8a47af47549d22df0b7199a58a2511d8ecfda0",
+        "sha256": "34106dc02e8d38f0be8dffe3b0c734972ec0e7d8e0833f1bfc5757c430194f62"
+      },
+      "candidateScratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate/test/features/agent-backend/capturedHostClient.test.ts"
+    },
+    {
+      "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 29798,
+        "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+        "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7"
+      },
+      "candidate": {
+        "bytes": 30715,
+        "blob": "2726155997717ed0f22c1d2f71d0adf5a42c190c",
+        "sha256": "1555d38eaecd485f501b366e9a2a27b5f0f0c610d51079a88b8ada506e80794a"
+      },
+      "candidateScratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate/test/features/agent-backend/fixtures/retainedNativeCustody.ts"
+    }
+  ],
+  "sourceOnlyTreeElements": [
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4e8a47af47549d22df0b7199a58a2511d8ecfda0"
+    },
+    {
+      "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2726155997717ed0f22c1d2f71d0adf5a42c190c"
+    }
+  ],
+  "maximumRelativePathCharacters": 216,
+  "preservedExactMoves": [
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/DESIGN-R1-draft-v2.md",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/DESIGN-R1-draft-v2.md",
+      "mode": "100644",
+      "oldRelativeCharacters": 166,
+      "newRelativeCharacters": 114,
+      "bytes": 22937,
+      "blob": "99c9c114eb6ba6b31d21550f94f617a1e377d1da",
+      "sha256": "df8e2c7e72ce93e4b1eab7a5f0a3c1827a4270e407012583681b80acfee4147f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/DESIGN-R1-draft.md",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/DESIGN-R1-draft.md",
+      "mode": "100644",
+      "oldRelativeCharacters": 163,
+      "newRelativeCharacters": 111,
+      "bytes": 20995,
+      "blob": "0f834435fdaad97c817bfad8ce4598ef176b205a",
+      "sha256": "924aa5c6a12948642106a67b5121c39c8bc6b51201d8556e045f9a42d5b57722"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/R1-v2-wording-only-metadata.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/R1-v2-wording-only-metadata.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 177,
+      "newRelativeCharacters": 125,
+      "bytes": 5746,
+      "blob": "6e8f4cb7adb58d22deb4f82e9f4994699b06b8e8",
+      "sha256": "943e4b4bff70f79112825c0057cb74086fb9e67679b6aa7030156cf4e7448c0e"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/R1-v2-wording-only.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/R1-v2-wording-only.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 169,
+      "newRelativeCharacters": 117,
+      "bytes": 12870,
+      "blob": "1cf30db5a7bc1dd5b9d376005512ab0f3c55c5d8",
+      "sha256": "921178599daf32cfe625517c2dc15ea243c5bf934bcc636080c0d401fed95aba"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 171,
+      "newRelativeCharacters": 119,
+      "bytes": 72151,
+      "blob": "d342940e4f50f95aaf38f8df578698b955bfb4da",
+      "sha256": "ef0e8eabf254c3284ce1ebc7d7c56030414a307e5b47847f677f9df7a22c0b4c"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/.github/workflows/host-emulated-acceptance.yml.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/.github/workflows/host-emulated-acceptance.yml.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 216,
+      "newRelativeCharacters": 164,
+      "bytes": 103848,
+      "blob": "74c5964e1b28e02df2fd5649d9d67931889cd7a8",
+      "sha256": "8fd4f1edd2473382655d1fbb0850b60be890764460bdf4fdfd158637f8594a9f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 220,
+      "newRelativeCharacters": 168,
+      "bytes": 55759,
+      "blob": "4eabaf832901bf3ea82bc9761f1208207343b8a0",
+      "sha256": "1ded076e942640f4306af7ee6d5f1e4c49d7b9095d6aaeba4f59826e794863bd"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 233,
+      "newRelativeCharacters": 181,
+      "bytes": 15874,
+      "blob": "6205acf48ae31051ae3b4dcb4d66c47286022ba4",
+      "sha256": "1663c2db6b7229472ec45529202053023d7cb33cd1affc333547105979e6b6ca"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 231,
+      "newRelativeCharacters": 179,
+      "bytes": 47589,
+      "blob": "de958fcbd9c1aef20ec843904dd89a6fec62568d",
+      "sha256": "e748025e727b8b6f96e4521496907e469058603610ac7024b600d8174300faf8"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 227,
+      "newRelativeCharacters": 175,
+      "bytes": 34186,
+      "blob": "3313bd7ea5f707a930f87322f8ec4fdaed86a527",
+      "sha256": "23e1e8651bdef907a525cb8918986623760444f685938942882571a3f695cbd5"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 234,
+      "newRelativeCharacters": 182,
+      "bytes": 21133,
+      "blob": "868b7c7121cc85925b86fee641064493dc099785",
+      "sha256": "c2feed93785e08604a92db4cacb224164cd926b2b8d2826b502d408d16bdba71"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 225,
+      "newRelativeCharacters": 173,
+      "bytes": 114321,
+      "blob": "f25095fc93559fc8f84d159b946e89d729956f4c",
+      "sha256": "5ed2a20f03ef72fe2ea272bed84c4f38326f2ab0f6a90b2dc65ece615662b34f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 232,
+      "newRelativeCharacters": 180,
+      "bytes": 13985,
+      "blob": "d725e255682b0c092e7b05970622e732c1124580",
+      "sha256": "99f37883c6c0096ac75f7c53ee1f02680dd5a402260b067cdb136fd696287b3a"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-poll-green.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 173,
+      "newRelativeCharacters": 121,
+      "bytes": 727,
+      "blob": "8161a1b342e71ed0c46ea0f40cb70bdfdb01846d",
+      "sha256": "80fb75f384686fcabc2bf076069d3e9864204f86a4ba04f43ae15528eddc7890"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 233,
+      "newRelativeCharacters": 181,
+      "bytes": 45795,
+      "blob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 244,
+      "newRelativeCharacters": 192,
+      "bytes": 47589,
+      "blob": "de958fcbd9c1aef20ec843904dd89a6fec62568d",
+      "sha256": "e748025e727b8b6f96e4521496907e469058603610ac7024b600d8174300faf8"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/current-79-phase-a-compatibility-review.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/current-79-phase-a-compatibility-review.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 189,
+      "newRelativeCharacters": 137,
+      "bytes": 20696,
+      "blob": "ee5e06447f5bd0bed01dcba64443369b64e41e07",
+      "sha256": "06d3da72ab7b9d6311925b4b28860015e59befc95cddc4b59f30ee1c19c5ed6e"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/independent-source-design-review-v1.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/independent-source-design-review-v1.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 185,
+      "newRelativeCharacters": 133,
+      "bytes": 22609,
+      "blob": "71d3072dffafdf4016bef204da9a42d9a0da1ee2",
+      "sha256": "9e8e090834cb1d4f228d1170bddeb13cbfcb7c37d1c48db7312b969ae7783402"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/independent-wording-review-v2.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/independent-wording-review-v2.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 179,
+      "newRelativeCharacters": 127,
+      "bytes": 3550,
+      "blob": "f12678c8cde90693552bef9c805e47be96fa8b41",
+      "sha256": "5b33453c918e6ac9c781a7293a5c011047486afa1e0981e4fea476de7e6aaf47"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/phase-c-after-reviewed-poll-green.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/phase-c-after-reviewed-poll-green.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 184,
+      "newRelativeCharacters": 132,
+      "bytes": 67227,
+      "blob": "205f56d04b6d565cd95dd49f782dfe06dd926eac",
+      "sha256": "6c59741c42728b4883b9d42f277f19a4c2faf30d6e06ee0ca11fc8f107b7323e"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/poll-candidate-metadata.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/poll-candidate-metadata.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 173,
+      "newRelativeCharacters": 121,
+      "bytes": 2250,
+      "blob": "9f16dddff316a2479cc614fd796e22e7a92ed9c9",
+      "sha256": "70b8e86daa5112a7d071ed411d9d4f5bb609e4d7964f0f72bfe41e7726101b18"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/poll-red-test.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/poll-red-test.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 164,
+      "newRelativeCharacters": 112,
+      "bytes": 4670,
+      "blob": "5f2fe94dddd0c378f63502cefdb0f715b0ce0a75",
+      "sha256": "383e11424f6dbbdd58d9ddc03700499d23dcf0a97b083ab6b0a46bf5107d47d2"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/.github/workflows/host-emulated-acceptance.yml.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/.github/workflows/host-emulated-acceptance.yml.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 204,
+      "newRelativeCharacters": 152,
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 208,
+      "newRelativeCharacters": 156,
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 219,
+      "newRelativeCharacters": 167,
+      "bytes": 45707,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 215,
+      "newRelativeCharacters": 163,
+      "bytes": 33161,
+      "blob": "426c45f6236a3aaf8b3f5e14b4cf21e4ce000c8f",
+      "sha256": "1e495ee7b244fa471f2a6a4039d7110db6ff2760260c23f89123703810d0bfad"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 222,
+      "newRelativeCharacters": 170,
+      "bytes": 20996,
+      "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+      "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 213,
+      "newRelativeCharacters": 161,
+      "bytes": 103573,
+      "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+      "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/.github/workflows/host-emulated-acceptance.yml.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/.github/workflows/host-emulated-acceptance.yml.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 203,
+      "newRelativeCharacters": 151,
+      "bytes": 103848,
+      "blob": "74c5964e1b28e02df2fd5649d9d67931889cd7a8",
+      "sha256": "8fd4f1edd2473382655d1fbb0850b60be890764460bdf4fdfd158637f8594a9f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 207,
+      "newRelativeCharacters": 155,
+      "bytes": 55759,
+      "blob": "4eabaf832901bf3ea82bc9761f1208207343b8a0",
+      "sha256": "1ded076e942640f4306af7ee6d5f1e4c49d7b9095d6aaeba4f59826e794863bd"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 220,
+      "newRelativeCharacters": 168,
+      "bytes": 15874,
+      "blob": "6205acf48ae31051ae3b4dcb4d66c47286022ba4",
+      "sha256": "1663c2db6b7229472ec45529202053023d7cb33cd1affc333547105979e6b6ca"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 218,
+      "newRelativeCharacters": 166,
+      "bytes": 47501,
+      "blob": "3fafe379fa85edf20aef44eeb4f544ca691d05d4",
+      "sha256": "0ec44f25649005b961bb7b5b81545de23953e2b055b1ee762cae30bc899cf9d3"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 214,
+      "newRelativeCharacters": 162,
+      "bytes": 34186,
+      "blob": "3313bd7ea5f707a930f87322f8ec4fdaed86a527",
+      "sha256": "23e1e8651bdef907a525cb8918986623760444f685938942882571a3f695cbd5"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 221,
+      "newRelativeCharacters": 169,
+      "bytes": 21133,
+      "blob": "868b7c7121cc85925b86fee641064493dc099785",
+      "sha256": "c2feed93785e08604a92db4cacb224164cd926b2b8d2826b502d408d16bdba71"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 212,
+      "newRelativeCharacters": 160,
+      "bytes": 114321,
+      "blob": "f25095fc93559fc8f84d159b946e89d729956f4c",
+      "sha256": "5ed2a20f03ef72fe2ea272bed84c4f38326f2ab0f6a90b2dc65ece615662b34f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 219,
+      "newRelativeCharacters": 167,
+      "bytes": 13985,
+      "blob": "d725e255682b0c092e7b05970622e732c1124580",
+      "sha256": "99f37883c6c0096ac75f7c53ee1f02680dd5a402260b067cdb136fd696287b3a"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/proposal-metadata.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/proposal-metadata.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 167,
+      "newRelativeCharacters": 115,
+      "bytes": 27500,
+      "blob": "1458fe354a53b6b4929fb7db4dd8f8cf5fed1e41",
+      "sha256": "b9e8fc1a3198bc9c2b45a6059270ff8a330b126e68d9b2248f972575c26d9bbc"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/red/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/red/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 208,
+      "newRelativeCharacters": 156,
+      "bytes": 107837,
+      "blob": "a6c8df59b6fabc013b3570762d6b19a396e32c9e",
+      "sha256": "d8bfcea3677773bb7d9fd800f958728719f292c7e01a9e4a0ead4fd746276cf9"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/route-test-suffix.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/route-test-suffix.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 166,
+      "newRelativeCharacters": 114,
+      "bytes": 6484,
+      "blob": "556be3495f497c3a01326823a242d8d4874fe4d3",
+      "sha256": "c1edda7303a2af84c1ce1a6586693074ab08adc2d41dfd8a779cc533efe56a56"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/workflow-design-metadata.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/workflow-design-metadata.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 174,
+      "newRelativeCharacters": 122,
+      "bytes": 14057,
+      "blob": "cda62462d31540d9c4407083e519909b96917c10",
+      "sha256": "d66117c42c3a45772b6e209d8dac06e98563dd245a25be7edb0150bcc051ef23"
+    }
+  ],
+  "fullPlanPrefix": {
+    "bytes": 1969658,
+    "blob": "a6860c298a8ef6bb3d806d93758ff01624dbee03",
+    "sha256": "c76b7f205110c1dbda54a38c5f3008aa6bd20e8162252b69df37343afed0ff99"
+  },
+  "fullPlanResult": {
+    "bytes": 1994546,
+    "blob": "f4696f07178f3067f61e24c13c0dc2043dc73297",
+    "sha256": "4c7240b04de05e7e5af4ff893a402ea33c86aaa0fc4ecadc35b43d205618614d"
+  },
+  "planSegments": [
+    {
+      "label": "Exact prospective Main admission TEST source R1",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-appendix.md",
+      "bytes": 13583,
+      "blob": "97810fb7cb19b2a34a8c6b83009e869ec4082409",
+      "sha256": "f32af083ac05d666bf86f1bd8e1b1167916060745094dcae93135cdc37238c37",
+      "separatorOffset": 1969658,
+      "contentOffset": 1969660
+    },
+    {
+      "label": "Root ordered selection governs last",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-root-ordered-selection.md",
+      "bytes": 11301,
+      "blob": "d0df968462614a31d8ab5cc43ac3b09ebc6aa9fd",
+      "sha256": "c4e74225de6fb9059793f46c93f09583448649492cfffce33693a4edc5bae52d",
+      "separatorOffset": 1983243,
+      "contentOffset": 1983245
+    }
+  ],
+  "publicationIndex": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/publication-index.json",
+    "bytes": 44991,
+    "blob": "b4db5ddfa90f374f2391fc523d32130fd0aa2c06",
+    "sha256": "170bf11f4b54dffccb88937cc16e2ebb3847db254f7e4f89a981dc698edf4571"
+  },
+  "documentationDirectoryCountIncludingRoot": 1688,
+  "sourceDirectoryCountIncludingRoot": 1688,
+  "priorI386Header": "952ed2d3436708addf656109dc513270ea33ce22",
+  "sourceChangeInDocumentationCommit": false,
+  "phaseAAppliedInEitherTree": false,
+  "geometryAppliedInEitherTree": false,
+  "primaryAdvanced": false,
+  "treeElements": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-docs.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "939893c9cca1b1038933a204747ba7eb143e2c20"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-docs.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6726acaa92491a73d3d70927bf72b875afaf1ec2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-source.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bc7e064b679043de90f1c3b19866f88b487ec794"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-source.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5cc76016f0d792f65493a3463742790329f39fe8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-prepublication.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "35e2995427865771d37fc984e190553b1976cf5a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-byte-tree-proof.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a611b1a35f10603557001f19ab4d0b556f60a739"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-prepublication.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6064501cae149e90585db8264f320dc57b881f0e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-remote-tree.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3c82d4778cc7115ef620c4f7ed9e021e05474c87"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-docs-commit-response.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "28569ad00fcbee6f0471f14fe11ccefd06ee455e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-docs-commit-immutable-readback.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b0614f131434102d01e1809820c1d418fb0ba778"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/ordinary-docs-push-response.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8ac20154c1fb15cf85f3a921f2eff3a516a23359"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/post-docs-push-readback.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ef685b4028b8e767bc93b120e65f9fbc9a0bdd5b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/fresh-docs-precommit-guards.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1129c957a8bcc4cdf5f52339e6122a7724c5ff8a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-source-commit-response.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bb64e78eb88b2d9621feb37326c78fbfe19e86bb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-source-commit-immutable-readback.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "06191dda55d6ff5e962669f5192925c090c9b617"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/ordinary-source-push-response.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0b6e43b71b65d7544800212efca71e6bba2d81ba"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/post-source-push-readback.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "def3756ed3845fc8036677702c4584e06d3150bf"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/fresh-source-precommit-guards.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8525b7e31cdd929cfbcf60773ae094df37edf37a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-appendix.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "97810fb7cb19b2a34a8c6b83009e869ec4082409"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate.patch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b898bd9032cec5a0d2815c4d4e268d13a088f762"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-metadata.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "28b5c02baa4551f7d41116c33f7ceb4912f840e4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/original-failure-and-source-analysis.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d62cac555dfc92e9b3da154cd85e9992d70b884e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/source-and-venue-pins.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b900529a659806a0bf5fea1cd61a2b4264d6b875"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/independent-source-r1-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cc5e52d57151a27733620ab9801e900139f2c72b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/preimage-capturedHostClient.test.ts.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-capturedHostClient.test.ts.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4e8a47af47549d22df0b7199a58a2511d8ecfda0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/preimage-retainedNativeCustody.ts.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c2a23405f8e90face1927707d741cd8f462e35b8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-retainedNativeCustody.ts.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2726155997717ed0f22c1d2f71d0adf5a42c190c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/current-preimages.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "37172195e343a833e8fd36fc343debb7fe45e1de"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-root-ordered-selection.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d0df968462614a31d8ab5cc43ac3b09ebc6aa9fd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/darwin-original/independent-process-darwin-x64-failure-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "46d38413787b525f23600f398076e50e5ee9963e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/job-original-response.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7f5e459479d17ad4c6d8c5425a973cd6c21875ab"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/job.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7a6f49d16a45b1943f3344e2f4b121c1f406887c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/artifact-14203956752.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "891547517df19ed9562cf6311c329f7989c953f7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/archive-retention.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2ce796313e71fed484b61702fde7b29c6d693e48"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/official-host-artifacts-0702.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e1f6f9f0ef0cb0e3efc4eda7cb87c0fa2a639387"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/owned-jobs-0700.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9887db5797c7e4ca901e8f684852204d125d1f02"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/source-and-case-proof.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c84353d66250bd53be5473829447447ab0a8ba28"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ab7105a2ce0a35dfd15c280a573d5f194785048a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/Plan29-appendix.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3b32dc144a4e8ddd7ac572d7ee7af6febd125725"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/checkpoint.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bf2e6620e90e2822250e378fc7492ba47eab144a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/independent-original-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "abbc5d5cf7fc6f7fa5c78f29ab0856e6f3c51794"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/independent-byte-source-proof.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "94722bf72ae119002368ac96fd1defdccd3468bf"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f4696f07178f3067f61e24c13c0dc2043dc73297"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/publication-index.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b4db5ddfa90f374f2391fc523d32130fd0aa2c06"
+    }
+  ]
+}

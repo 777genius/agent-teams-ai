@@ -1,0 +1,258 @@
+{
+  "job": {
+    "id": 133120929407,
+    "name": "Embedded V2.1.4 original Host (win32-x64)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43813731517,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Require immutable source HEAD and record actual runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install exact source workspace dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build original Host and its pinned provider implementation",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Check original graph and custody boundaries",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Prepare exact Bun, engine graph and original-process artifact",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Prove actual Darwin executable custody and adversarial cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Prove original Windows Job custody and surviving descendant cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14
+      },
+      {
+        "name": "Require exact Windows original-process evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Check original Desktop private recipe composition",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17
+      },
+      {
+        "name": "Exercise Windows automatic approval and cold Host Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18
+      },
+      {
+        "name": "Exercise native catalog and model probe without tool allocation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise effective permissions and active Stop with a surviving sibling",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise captured external MCP and app-only through the native Host",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Require complete native management and permission evidence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Require product-path Host proof after exact candidate qualification",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Preserve exact native evidence or candidate HOLD",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 50
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 51
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 52
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 53
+      }
+    ]
+  },
+  "run": {
+    "id": 43813731517,
+    "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "event": "pull_request",
+    "run_attempt": 1,
+    "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+    "head_branch": "fix/frontend-parity-completion-20261113"
+  },
+  "artifact": {
+    "id": 14201408897,
+    "name": "opencode-v2-embedded-native-win32-x64",
+    "size_in_bytes": 13339,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14201408897",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14201408897/zip",
+    "expired": false,
+    "created_at": "2026-11-16T06:13:02Z",
+    "expires_at": "2026-11-23T06:13:01Z",
+    "updated_at": "2026-11-16T06:13:02Z",
+    "digest": "sha256:38ef268f1e40f88299f91faf38a7087c6281efbf5305a492962049f00acb3450",
+    "workflow_run": {
+      "id": 43813731517,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+    }
+  },
+  "archivePin": {
+    "bytes": 13339,
+    "sha256": "38ef268f1e40f88299f91faf38a7087c6281efbf5305a492962049f00acb3450",
+    "gitBlob": "c1cdb716a330d1d12ff140619efeb0272f60dff1"
+  },
+  "logPin": {
+    "bytes": 92290,
+    "sha256": "6feb2e5b3ad4680f48afb6ca70878fde1b5e1a72236a52ec1634e80ccb4f564d",
+    "gitBlob": "51a9f01e90c63e44b7765b94d02c8fadf115c474"
+  },
+  "entries": [
+    {
+      "path": "opencode-v2-embedded-inputs.json",
+      "bytes": 780,
+      "sha256": "97555f26595e7138397d9e19dfa13397ac863fadfbd887461dd892a56341bbb2",
+      "gitBlob": "bd3a423621f126cdca8d589f6106f88de4cc390b"
+    },
+    {
+      "path": "opencode-v2-windows-custody.json",
+      "bytes": 907,
+      "sha256": "13da1994d1a044109b88ee7a13d6fb9d7f24c591a7233e9c15cbb70db61da714",
+      "gitBlob": "6620a55e7b66425ebfbebb530ffca5975a1fe2dd"
+    },
+    {
+      "path": "opencode-v2-embedded-host-auto.json",
+      "bytes": 94918,
+      "sha256": "807f273753eae50d50f26f6d13df61150f1a8c4c62f685cc028a9356e2347727",
+      "gitBlob": "3ef12d3985c85e898e7aadcfb4638eaa731a1053"
+    },
+    {
+      "path": "opencode-v2-embedded-host.json",
+      "bytes": 95115,
+      "sha256": "b7cfbbb033a75f4143dac94ab836cd7184fed480e526ead49adc8ac0f43121f7",
+      "gitBlob": "17e7897b4af1d7860f17685bd7744903b14866e3"
+    }
+  ],
+  "archiveCrcValid": true,
+  "downloadCount": 1,
+  "projectExecution": false
+}

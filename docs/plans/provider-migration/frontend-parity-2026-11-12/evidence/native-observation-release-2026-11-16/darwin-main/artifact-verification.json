@@ -1,0 +1,27 @@
+{
+  "id": 14202660278,
+  "source": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "run": 43813731530,
+  "job": 133120929324,
+  "attempt": 1,
+  "bytes": 11052,
+  "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039",
+  "members": [
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20799
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "bytes": 772
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 12202
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41
+    }
+  ]
+}

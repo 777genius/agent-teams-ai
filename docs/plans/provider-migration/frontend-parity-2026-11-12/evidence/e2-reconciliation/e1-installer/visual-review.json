@@ -1,0 +1,117 @@
+{
+  "createdAtUTC": "2026-11-16T06:44:28.294630+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "method": "Eleven original PNGs actually opened one at a time; byte/IHDR identities checked, not a composed image or new capture.",
+  "images": [
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-before.png",
+      "bytes": 73405,
+      "blob": "df66d3cd626f7a1217cb70f781262e911d088746",
+      "sha256": "c92677a3662a34dcef430e33fbe0fd04f30217a0a04fa5deec0d1c596622ce8e",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Update available dialog explicitly shows Codex v0.162.0 to v0.169.0 with its Update button over the original Create page."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-ready.png",
+      "bytes": 67264,
+      "blob": "6ef1e492faebdcc988a7599ca1c92e2bcf87ebfb",
+      "sha256": "815cb3c504e6297188ddacf41465f10a39aaf31518bdaa4711c8ffeeb4b2b4c8",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Update Ready dialog explicitly shows Codex v0.169.0,100percent and ready for new launches. This is TEST package UI, not vendor compatibility."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-page.png",
+      "bytes": 87018,
+      "blob": "1b5074921c3e9df287cceb587f3d46dfeaeb9219",
+      "sha256": "7b2f8073954fe97283a74567ed4bf2f656b91956bc76d038bea96e837c5b2b8a",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Providers settings page is visible; current viewport shows OpenCode needs attention and backend routing unavailable. Codex card is outside this captured viewport; no visible Codex version or all-provider-health claim."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-dialog.png",
+      "bytes": 91558,
+      "blob": "5a4326f77fab729a3d0ef3de193d5f51d002e838",
+      "sha256": "343cca845370f5b6682734b71ce0caf72dc698ea81d7eab7050bbc5bc4564f76",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Provider Settings dialog has Codex selected, Auto connection selected, custom endpoint off and empty placeholder credential fields. This frame does not visibly show the installed binary version or native credential verification."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-selected.png",
+      "bytes": 70747,
+      "blob": "4f3b61385b747254c3003f96d25a560aaaf28361",
+      "sha256": "f3abb87dcd3ed36df0e2a92630330aee9293bafcd7c2fa41fb933c7a9cb768bd",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Create Team shows TEST next model selected, High effort selected and the Create button. The save-only checkbox/source assertions are separate; no screenshot-only durable-save inference."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-reloaded.png",
+      "bytes": 76076,
+      "blob": "057631010378bf8c1a9667c15cc9fc9143dfd749",
+      "sha256": "b274516d12708ac6b3b08d59c81ad370b3a6f3aa8f63e60b0c1c180aef83b53a",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Original launch dialog after reload shows TEST_UI_BOOT, unchecked auto-approve, selected model TEST-model-next verified and an enabled Launch team. The footer also has Codex Needs attention while all selected providers are ready; preserve both visible facts."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-a-launch.png",
+      "bytes": 88663,
+      "blob": "57ebaad7e4e49e816053529b735208ccacec7c3f",
+      "sha256": "953e28f0915a8f9fa56f6b5c61528336771699160b69f4f2251bccb2cc883a66",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Original A Alice conversation contains TEST_UI_BOOT and TEST boot ready; completed green launch progress and seeded Task are visible."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-b-launch.png",
+      "bytes": 84983,
+      "blob": "720af42fd38c36916c0b287ee6451ea93a0905d9",
+      "sha256": "f1806aeebd3ad2a21e8e2fd5bb5f2646a880b8ae554df76e24085acafdf5b326",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Original B test-selection-next-team is selected; lead conversation contains TEST_UI_BOOT and TEST boot ready, TEST-model-next is shown, and its Task count is zero."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-a-survived.png",
+      "bytes": 103824,
+      "blob": "1037dcc16b2d49451bdc70dfc6ac00b24b18f95e",
+      "sha256": "8e853947a7f076750b7fdfb4b5c400a625c76ad99e568962eb08779b4e1ae273",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "A is selected with Running and Stop, original TEST_UI_STREAM and partial response; no complete response in this frame. Same-runtime custody/survival comes from receipt/source checks separately."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-completed.png",
+      "bytes": 108178,
+      "blob": "561ed886081cdee0da7712de7dd34d01a199c9f5",
+      "sha256": "b4bed05f99db30dd30490af8507832db3e3f4998379076f3d703e2771b320664",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "A conversation visibly contains TEST stream partial complete, with A still Running. It does not independently prove the later Stop."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-stopped.png",
+      "bytes": 95285,
+      "blob": "9ad227205c5787f7ff91c3589a75f385d936e613",
+      "sha256": "25421f2566e44a32fe3a870fcb2dd1f028a26ea5163f5928132a074200e92b81",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "A displays Team is offline with Launch and Alice offline; the previous green launch progress is absent from this frame. Completed conversation and seeded Task remain. This is a later screenshot after the original bounded same-run stopped projection/DOM conjunction, not an atomic store/process/frame capture."
+    }
+  ]
+}

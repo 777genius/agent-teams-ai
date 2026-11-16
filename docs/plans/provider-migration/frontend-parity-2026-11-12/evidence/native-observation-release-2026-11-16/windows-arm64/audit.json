@@ -1,0 +1,1108 @@
+{
+  "status": "ORIGINAL_CURRENT_SOURCE_FAILURE_NATIVE_QUALIFICATION_INCOMPLETE",
+  "reviewedAtUtc": "2026-11-16T06:35:43.203202+00:00",
+  "source": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "tree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "run": 43813731530,
+  "job": 133120929619,
+  "attempt": 1,
+  "rawJobLog": {
+    "bytes": 174851,
+    "blob": "2a599f79761d88b41ef9e21b7269d4ed42c7e004",
+    "sha256": "f411924081a9dfde45ccbf57944a78761fd24fe9bc7d0f7c5f8acb7d7d458814",
+    "utf8Bom": true,
+    "crlfCount": 1532
+  },
+  "artifactVerification": {
+    "bytes": 836,
+    "blob": "92d0f2d28aa248de0da72c7b44d6f3c26ee8fca2",
+    "sha256": "f05d8db6b7657b98f0c044eed82d7ce16b64709cb61703aa40f62e9a7c60e6a0"
+  },
+  "sourcePinAudit": {
+    "bytes": 5682,
+    "blob": "08305a37ce19c820edae620cb900da9f4ec27e2c",
+    "sha256": "62913847a450611c40a5f83e90bbdf108763108d63ba3ab61e2696014aead26f"
+  },
+  "failedStep": {
+    "name": "Qualify original Windows Job and control under Host Node",
+    "status": "completed",
+    "conclusion": "failure",
+    "number": 17
+  },
+  "firstFailure": {
+    "assertion": "Actual I386 child completion and observations must precede broker cleanup",
+    "code": "ERR_ASSERTION",
+    "actual": "undefined",
+    "expected": true,
+    "frame": "tools/owned-process-broker/nativeDebugServiceScenario.ts:105:14",
+    "callbackFrame": "tools/owned-process-broker/nativeGateEvents.ts:22:11",
+    "observation": {
+      "status": "unknown"
+    },
+    "rawBrokerSlot": 11,
+    "rawBrokerExit": {
+      "code": 0,
+      "signal": null
+    },
+    "phase": "broker-exit",
+    "noNativeReadinessDeadlineFailure": true,
+    "observationRecord": {
+      "line": 1445,
+      "timestamp": "2026-11-16T06:19:35.1192797Z",
+      "data": {
+        "nativeI386ChildObservation": {
+          "status": "unknown"
+        }
+      }
+    }
+  },
+  "qualifiedPriorPrerequisites": {
+    "checkoutBeforeSourceLongpaths": true,
+    "hostContracts": {
+      "total": 167,
+      "pass": 164,
+      "fail": 0,
+      "skip": 3
+    },
+    "protocolGroup": {
+      "files": 3,
+      "pass": 54,
+      "fail": 0
+    },
+    "unchangedNativeGateEventsCasesWithinProtocol": 4,
+    "retainedMain": {
+      "files": 8,
+      "pass": 81,
+      "fail": 0
+    },
+    "sameSourceWindowsARM64AndWin32FixtureBuild": true
+  },
+  "earlierCompletedNativeScenarioLabels": [
+    "sentinel",
+    "pre-resume-cancel",
+    "facade-stdio",
+    "facade-cancel",
+    "capture-claude",
+    "capture-codex",
+    "capture-opencode",
+    "capture-root-first",
+    "debug-service-cancel"
+  ],
+  "debugServicePhases": [
+    {
+      "line": 1417,
+      "timestamp": "2026-11-16T06:19:33.7400507Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "start",
+          "elapsedMs": 878
+        }
+      }
+    },
+    {
+      "line": 1418,
+      "timestamp": "2026-11-16T06:19:33.7452524Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "prepare",
+          "elapsedMs": 884
+        }
+      }
+    },
+    {
+      "line": 1419,
+      "timestamp": "2026-11-16T06:19:33.7564045Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "capture-root",
+          "elapsedMs": 895
+        }
+      }
+    },
+    {
+      "line": 1420,
+      "timestamp": "2026-11-16T06:19:33.7803723Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "resume",
+          "elapsedMs": 918
+        }
+      }
+    },
+    {
+      "line": 1421,
+      "timestamp": "2026-11-16T06:19:33.7804777Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "child-lines",
+          "elapsedMs": 919
+        }
+      }
+    },
+    {
+      "line": 1422,
+      "timestamp": "2026-11-16T06:19:34.6850865Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "capture-descendants",
+          "elapsedMs": 1823
+        }
+      }
+    },
+    {
+      "line": 1423,
+      "timestamp": "2026-11-16T06:19:34.7511712Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "service-capture",
+          "elapsedMs": 1889
+        }
+      }
+    },
+    {
+      "line": 1424,
+      "timestamp": "2026-11-16T06:19:34.7534180Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "service-query-lifetime",
+          "elapsedMs": 1892
+        }
+      }
+    },
+    {
+      "line": 1425,
+      "timestamp": "2026-11-16T06:19:35.0406006Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "service-effect-retirement",
+          "elapsedMs": 2179
+        }
+      }
+    },
+    {
+      "line": 1426,
+      "timestamp": "2026-11-16T06:19:35.0582217Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "expired-service-stop",
+          "elapsedMs": 2197
+        }
+      }
+    },
+    {
+      "line": 1427,
+      "timestamp": "2026-11-16T06:19:35.0592861Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "stop",
+          "elapsedMs": 2198
+        }
+      }
+    },
+    {
+      "line": 1434,
+      "timestamp": "2026-11-16T06:19:35.0781941Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "witness-exits",
+          "elapsedMs": 2217
+        }
+      }
+    },
+    {
+      "line": 1435,
+      "timestamp": "2026-11-16T06:19:35.0941434Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "stop",
+          "elapsedMs": 2233
+        }
+      }
+    },
+    {
+      "line": 1436,
+      "timestamp": "2026-11-16T06:19:35.1101312Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "witness-exits",
+          "elapsedMs": 2249
+        }
+      }
+    },
+    {
+      "line": 1441,
+      "timestamp": "2026-11-16T06:19:35.1152207Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "target-drain",
+          "elapsedMs": 2253
+        }
+      }
+    },
+    {
+      "line": 1442,
+      "timestamp": "2026-11-16T06:19:35.1152819Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "release-ack",
+          "elapsedMs": 2253
+        }
+      }
+    },
+    {
+      "line": 1443,
+      "timestamp": "2026-11-16T06:19:35.1153692Z",
+      "data": {
+        "nativePhase": {
+          "scenario": "debug-service",
+          "phase": "broker-exit",
+          "elapsedMs": 2253
+        }
+      }
+    }
+  ],
+  "sourceBoundInference": {
+    "servicePairCompletionAssertionsReached": true,
+    "basis": "After the original child-lines await, exact one TEST_I386_CHILD marker machine332/exit0/nonzeroPIDbirth was validated and i386Child assigned before capture-descendants. These values are not printed or present in the retained artifact.",
+    "notClaimed": [
+      "actual decoded I386 event-code/order/disposition rows",
+      "closed four-row I386 qualification",
+      "full native policy qualification",
+      "direct I386 root late-handler qualification"
+    ]
+  },
+  "sourceProvenPersistenceRace": {
+    "bufferOnlyFlushAfterDebugLoop": "debugServiceTest.h:152-153",
+    "loopMayWait100msBeforeCheckingEmpty": "serviceDebugLoop.h:29-34",
+    "independentSuccessExit": "broker.cpp:94-99,112-139,479-526",
+    "result": "Main/writer success can terminate the process before the admission thread flush; no join/flush ordering is present.",
+    "actualArtifactAttribution": "Not established: unknown conflates read failure, empty/short/invalid/overflow/decode failure; raw trace and decode category are not retained.",
+    "overflowNotAssumed": "Only existing startup.wow64 children are observed (serviceScopes.h:305); native-architecture80-child churn is excluded."
+  },
+  "cleanup": {
+    "records": [
+      {
+        "line": 1448,
+        "timestamp": "2026-11-16T06:19:35.1234489Z",
+        "data": {
+          "cleanupObservation": "before-private-abandon",
+          "helperCount": 17,
+          "retainedCount": 3,
+          "helpers": [
+            {
+              "slot": 0,
+              "role": "sentinel",
+              "scenario": "sentinel",
+              "errorObserved": false,
+              "closed": false,
+              "cleanupRequested": false,
+              "stdoutEnded": false,
+              "stderrEnded": false,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 1,
+              "role": "witness",
+              "scenario": "pre-resume-cancel",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 2,
+              "role": "witness",
+              "scenario": "facade-stdio",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 3,
+              "role": "witness",
+              "scenario": "facade-cancel",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 4,
+              "role": "witness",
+              "scenario": "capture-root-first",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 5,
+              "role": "witness",
+              "scenario": "capture-root-first",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 6,
+              "role": "witness",
+              "scenario": "capture-root-first",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 7,
+              "role": "witness",
+              "scenario": "capture-root-first",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 8,
+              "role": "witness",
+              "scenario": "capture-root-first",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 9,
+              "role": "raw-broker",
+              "scenario": "debug-service-cancel",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 10,
+              "role": "witness",
+              "scenario": "debug-service-cancel",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 11,
+              "role": "raw-broker",
+              "scenario": "debug-service",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 12,
+              "role": "witness",
+              "scenario": "debug-service",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 13,
+              "role": "witness",
+              "scenario": "debug-service",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 14,
+              "role": "witness",
+              "scenario": "debug-service",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 15,
+              "role": "witness",
+              "scenario": "debug-service",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 16,
+              "role": "witness",
+              "scenario": "debug-service",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            }
+          ],
+          "retainedCapabilities": [
+            {
+              "slot": 0,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 1,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 2,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "line": 1453,
+        "timestamp": "2026-11-16T06:19:35.2730298Z",
+        "data": {
+          "cleanupObservation": "after-helper-wait",
+          "helperCount": 17,
+          "retainedCount": 3,
+          "helpers": [
+            {
+              "slot": 0,
+              "role": "sentinel",
+              "scenario": "sentinel",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": true,
+              "exit": {
+                "code": null,
+                "signal": "SIGTERM"
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 1,
+              "role": "witness",
+              "scenario": "pre-resume-cancel",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 2,
+              "role": "witness",
+              "scenario": "facade-stdio",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 3,
+              "role": "witness",
+              "scenario": "facade-cancel",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 4,
+              "role": "witness",
+              "scenario": "capture-root-first",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 5,
+              "role": "witness",
+              "scenario": "capture-root-first",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 6,
+              "role": "witness",
+              "scenario": "capture-root-first",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 7,
+              "role": "witness",
+              "scenario": "capture-root-first",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 8,
+              "role": "witness",
+              "scenario": "capture-root-first",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 9,
+              "role": "raw-broker",
+              "scenario": "debug-service-cancel",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 10,
+              "role": "witness",
+              "scenario": "debug-service-cancel",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 11,
+              "role": "raw-broker",
+              "scenario": "debug-service",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 12,
+              "role": "witness",
+              "scenario": "debug-service",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 13,
+              "role": "witness",
+              "scenario": "debug-service",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 14,
+              "role": "witness",
+              "scenario": "debug-service",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 15,
+              "role": "witness",
+              "scenario": "debug-service",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            },
+            {
+              "slot": 16,
+              "role": "witness",
+              "scenario": "debug-service",
+              "errorObserved": false,
+              "closed": true,
+              "cleanupRequested": false,
+              "exit": {
+                "code": 0,
+                "signal": null
+              },
+              "stdoutEnded": true,
+              "stderrEnded": true,
+              "stdoutBuffered": 0,
+              "stderrBuffered": 0
+            }
+          ],
+          "retainedCapabilities": [
+            {
+              "slot": 0,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 1,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            },
+            {
+              "slot": 2,
+              "diagnostics": {
+                "writeCompleted": true,
+                "brokerExit": {
+                  "code": 0,
+                  "signal": null
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "controller": {
+      "line": 1473,
+      "timestamp": "2026-11-16T06:19:35.2862618Z",
+      "data": {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      }
+    },
+    "all17Closed": true,
+    "sixteenNonSentinelsExitZero": true,
+    "sentinelExplicitSigterm": true,
+    "retainedCapabilities": [
+      {
+        "slot": 0,
+        "diagnostics": {
+          "writeCompleted": true,
+          "brokerExit": {
+            "code": 0,
+            "signal": null
+          }
+        }
+      },
+      {
+        "slot": 1,
+        "diagnostics": {
+          "writeCompleted": true,
+          "brokerExit": {
+            "code": 0,
+            "signal": null
+          }
+        }
+      },
+      {
+        "slot": 2,
+        "diagnostics": {
+          "writeCompleted": true,
+          "brokerExit": {
+            "code": 0,
+            "signal": null
+          }
+        }
+      }
+    ],
+    "rawBrokerExit": [
+      {
+        "line": 1444,
+        "timestamp": "2026-11-16T06:19:35.1168682Z",
+        "data": {
+          "nativeHelper": {
+            "slot": 11,
+            "role": "raw-broker",
+            "scenario": "debug-service",
+            "errorObserved": false,
+            "closed": false,
+            "cleanupRequested": false,
+            "exit": {
+              "code": 0,
+              "signal": null
+            },
+            "event": "exit",
+            "duringScenario": "debug-service",
+            "phase": "broker-exit"
+          }
+        }
+      }
+    ],
+    "interpretation": "Complete retained cleanup does not replace failed I386 child/native qualification."
+  },
+  "binaryHashesFromOriginalArtifactOnly": [
+    {
+      "file": "owned-process-broker-accounting-failure.exe",
+      "sha256": "4108e99b293f0aa1be09f556a5e982ebf3d584a7a511efa627e3e242cc9be322"
+    },
+    {
+      "file": "owned-process-broker-birth-failure.exe",
+      "sha256": "63dcc8a5984cfe0225699e341a593fb08ce658c18b16bcc32afb3c84336d91b8"
+    },
+    {
+      "file": "owned-process-broker-debug-service.exe",
+      "sha256": "ab8926a5b0f9d41e0aaa2c752d5d47b29e74b1aab98fa04f037aa944911cf467"
+    },
+    {
+      "file": "owned-process-broker-release-delay.exe",
+      "sha256": "6a4af76b5013910fa1ffa0585a1f0a05b9ed96ef3fba988f28a873834709c739"
+    },
+    {
+      "file": "owned-process-broker-service-scopes.exe",
+      "sha256": "9174a4b79ef3c1f5a5dabdc59f8df2b8f09ca606a2e0be2e94d6a710c352c6eb"
+    },
+    {
+      "file": "owned-process-broker.exe",
+      "sha256": "049992ba5a22c5d4efe3e2b9b3e7e48562d05cc456152a9235a12de4e679f07b"
+    },
+    {
+      "file": "owned-process-fixture-i386.exe",
+      "sha256": "63ec0bf049777c464263babb3aaaa831fa29ab01aade476bc9971759471c1bcf"
+    },
+    {
+      "file": "owned-process-fixture.exe",
+      "sha256": "c9d8889ab19b53b3cfb599118b62cd0b3dfee45be6b7bb26d5c5bab99a728057"
+    },
+    {
+      "file": "owned-process-gate-controller.exe",
+      "sha256": "71da85ab0b83c83c61efae46823c56840b7b89a896410f2d0283c2da326fd41b"
+    },
+    {
+      "file": "owned-process-pending-write-fixture.exe",
+      "sha256": "f8e836eab9aa725e4ec7390008011685fd8e3fcd8d70257c2f5d1cfad4715018"
+    }
+  ],
+  "productManifest": {
+    "schema": 1,
+    "platform": "win32",
+    "arch": "arm64",
+    "file": "owned-process-broker.exe",
+    "sha256": "049992ba5a22c5d4efe3e2b9b3e7e48562d05cc456152a9235a12de4e679f07b",
+    "protocol": 1
+  },
+  "scopedManifest": {
+    "schema": 2,
+    "platform": "win32",
+    "arch": "arm64",
+    "file": "owned-process-broker.exe",
+    "sha256": "9174a4b79ef3c1f5a5dabdc59f8df2b8f09ca606a2e0be2e94d6a710c352c6eb",
+    "protocol": 1,
+    "capability": "service-scopes-v1"
+  },
+  "laterSkippedWindowsSteps": [
+    {
+      "name": "Qualify original Windows Job and control under Electron Node",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 18
+    },
+    {
+      "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 19
+    },
+    {
+      "name": "Qualify original codex source A B with TEST peer",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 20
+    },
+    {
+      "name": "Qualify original claude source A B with TEST peer",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 21
+    },
+    {
+      "name": "Qualify original opencode source A B with TEST peer",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 22
+    },
+    {
+      "name": "Require completed original platform receipts and unchanged source",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 23
+    }
+  ],
+  "limits": [
+    "No Electron Node native gate or wrapper/Main source A/B readiness/cold path ran after this refusal.",
+    "No resulting-source original15s Windows provider qualification acquired.",
+    "P08, P09, full I386 policy and direct-root-late-handler holds remain.",
+    "No local project/native/provider/GUI execution, Actions changes, source application or duplicate download."
+  ],
+  "nextSelectedPreparationOnly": "Revised inert two-C++-file TEST persistence proposal with complete acquired-prefix write refusal before ACK; no source application or policy/deadline change.",
+  "comparisonToOriginalX64": {
+    "sameSource": true,
+    "sameFirstRefusalAndUnknownObservation": true,
+    "rawBrokerExitZeroBeforeRefusalBoth": true,
+    "helpersAndControllerCleanupEquivalent": true,
+    "differentArchAndBinaryHashesRetained": true,
+    "noCausalAttributionFromSameFailure": true
+  }
+}

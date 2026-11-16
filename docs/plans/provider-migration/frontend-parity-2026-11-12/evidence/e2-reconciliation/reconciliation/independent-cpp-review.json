@@ -1,0 +1,166 @@
+{
+  "kind": "Independent source/R1 review of incoming E2 TEST I386 prefix persistence",
+  "reviewer": "/root/native_failures",
+  "createdAt": "2026-11-16T07:40:37.195257+00:00",
+  "decision": "APPROVE_EXACT_TWO_CPP_SOURCE_AND_AUTHORITY_FOR_FRESH_ROOT_RECONCILIATION; NO_NATIVE_QUALIFICATION",
+  "findings": [],
+  "scope": {
+    "incoming": "57885c055a18b27c180c304762643eac632513ad",
+    "incomingDocsParent": "f3948bee8f5e14b0e7332bd266fd197b44228d32",
+    "e1Preimage": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "currentSeparateFollowup": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+    "selectedCpp": [
+      {
+        "path": "tools/owned-process-broker/debugServiceTest.h",
+        "e1": {
+          "bytes": 9009,
+          "gitBlob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+          "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8",
+          "physicalLines": 186
+        },
+        "followup00d": {
+          "bytes": 8822,
+          "gitBlob": "952ed2d3436708addf656109dc513270ea33ce22",
+          "sha256": "cb3ed3eaebb0f59aa968a285ddd85522181292a289a9bed7c59a6adf0feabf65",
+          "physicalLines": 182
+        },
+        "incoming578": {
+          "bytes": 9097,
+          "gitBlob": "a72b32fa7eda34d473463099f7df151f359a8559",
+          "sha256": "121bcbb444822e6e45b76dbcbf170cda0eecfce60bb5a222a7c6316b23c953f8",
+          "physicalLines": 188
+        },
+        "e1EqualsIncoming": false,
+        "followupEqualsIncoming": false
+      },
+      {
+        "path": "tools/owned-process-broker/broker.cpp",
+        "e1": {
+          "bytes": 25929,
+          "gitBlob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+          "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3",
+          "physicalLines": 530
+        },
+        "followup00d": {
+          "bytes": 25929,
+          "gitBlob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+          "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3",
+          "physicalLines": 530
+        },
+        "incoming578": {
+          "bytes": 26160,
+          "gitBlob": "a4912d809aacc1fd4a949267fa0120d324b41be4",
+          "sha256": "54d754c150a9edf5c82107ca6bbe725057b90e28dc4585533a88bc4cb0854814",
+          "physicalLines": 534
+        },
+        "e1EqualsIncoming": false,
+        "followupEqualsIncoming": false
+      }
+    ],
+    "thirdIncomingTestDiagnostic": "Root owns separate review of capturedHostClient.test.ts d285d22 ->272e7c3; it is recorded as the only other non-doc delta, not independently qualified here.",
+    "application": false,
+    "projectOrNativeExecution": false,
+    "refOrCIAction": false
+  },
+  "independentByteProof": {
+    "path": "external-primary-0722/independent-incoming-i386-source-byte-proof.json",
+    "bytes": 29315,
+    "gitBlob": "362c9ec1912349f43febf83d105afef5565d587f",
+    "sha256": "994459769f7dd65fc2a630d0e7186476d98a4e0541a86a4218df426e5ee1f1f6"
+  },
+  "inputsRead": {
+    "fullSourceBodies": [
+      "tools/owned-process-broker/debugServiceTest.h",
+      "tools/owned-process-broker/broker.cpp",
+      "tools/owned-process-broker/serviceDebugLoop.h",
+      "tools/owned-process-broker/serviceScopes.h",
+      "tools/owned-process-broker/protocol.h",
+      "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "tools/owned-process-broker/nativeGateEvents.ts",
+      "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "tools/owned-process-broker/CMakeLists.txt",
+      "tools/owned-process-broker/vitest.config.ts"
+    ],
+    "additionalPinnedContext": "27 complete immutable Git byte identities in the supporting proof; nativeGate/context/output/controller/build and workflow interpreted where they determine caller, cleanup, source, build and execution boundaries. Identity equality of other dependencies is not a claim to have exhaustively re-reviewed every unrelated line.",
+    "authority": "Complete incoming 126-line Plan29 suffix, including root selection/order, the exact embedded 11,694-byte I386 R1 cdb80b09890e3c814d10a13af906a68d3b0cdac9 and its unchanged validation/synchronization/migration records.",
+    "historicalActualBasis": "Previously retained E1 x64 source-bound failure and independent aa06b828 report; both Windows historical failures are described in incoming R1. This source review does not perform a new archive audit or promote their cause."
+  },
+  "sourceAndHistory": {
+    "documentBeforeSource": "Immutable Git proves E1 -> f3948bee documentation-only ->57885c exactly three non-doc source paths. The incoming R1 is not retroactively treated as having preceded our separate per-event proposal.",
+    "exactInverse": "Removing only the four-line TEST Release hook returns all 25,929 original broker bytes. Reversing only the atomic include/declaration, observer publication, flush-return and moved call returns all 9,009 E1 header bytes. Independently reconstructed plain unified patch equals incoming dc6042c54626c60580f694b93d301d95abf40f1b (3,480 bytes).",
+    "limits": "Header 188 and broker534 physical lines remain below800. CMake, macro selections, workflows, source roster, native decoder/qualifier/fixture/tests/dependencies and all other non-doc leaves except the separately reviewed Main diagnostic are unchanged from E1.",
+    "separateFollowupDisposition": "Our00d header952ed2d3436708addf656109dc513270ea33ce22 performs per-event writes. Incoming a72b32fa instead selects atomic in-memory publication and one checked Release-path flush. Selecting incoming explicitly supersedes that source choice and its event-write authority; preserve both histories and exact prior reports. Do not silently graft the incoming broker hook onto952 or claim the old per-event R1 authorizes the new Release behavior."
+  },
+  "concurrencyAndPrefix": [
+    {
+      "source": "debugServiceTest.h21-33;serviceScopes.h298-310;serviceDebugLoop.h10-76",
+      "finding": "The existing creating/admission/debug thread is the only callback producer. Scopes calls it after the existing startup.accept result and only for its already captured WOW64 child record. No additional startup decision, exception, read, HANDLE query or ContinueDebugEvent is introduced."
+    },
+    {
+      "source": "debugServiceTest.h25-33,45-50",
+      "finding": "Producer selects its next index by relaxed count load, initializes that complete eight-DWORD slot, then release-stores index+1. Rows below each published count are never reused or mutated. The one consumer acquire-loads count and reads only [0,count). Reading a release-published count makes all earlier row writes visible. A producer writing a later slot outside that prefix does not change the selected bytes."
+    },
+    {
+      "source": "debugServiceTest.h35-43,139-154;serviceDebugLoop.h25;broker.cpp195,249,492-499",
+      "finding": "Output HANDLE configuration occurs while the original broker state lock is still held, before runDebugLoop unlocks it. The original main Release branch acquires that same lock. Handle state is immutable afterward. The distinct Scopes mutex is not falsely used as the broker-state fence for row bytes; atomic count publication supplies that row relation."
+    },
+    {
+      "source": "debugServiceTest.h21,26-33,46-50",
+      "finding": "Count cannot exceed16. Each row is eight DWORDs/32 bytes, so the selected write is at most512 bytes. Slots0..14 retain ordinary type1 fields; slot15 retains reserved overflow type2 and its original sequence. At cap no later row is published. The same decoder refuses an observed overflow record."
+    },
+    {
+      "source": "debugServiceTest.h45-50",
+      "finding": "Only the acquired prefix is attested. There is no promise that the load includes every possible later observation or that all debug events have completed. Disabled observer or acquired count0 performs no I/O and returns true; enabled empty trace still fails the unchanged TS observation assertion. An omitted future overflow or later row is not proved absent by this prefix."
+    }
+  ],
+  "releaseAndErrorOrder": [
+    {
+      "source": "broker.cpp492-510",
+      "finding": "Original state acquisition, confirmed absence, no Stop busy, original Job CloseHandle and releaseAccepted assignment precede the new hook. The hook precedes construction/enqueueing of Released. One ordinary Release exits the command loop; there is no added read or repeat flush. Existing refused Release requests before those prerequisites remain refused."
+    },
+    {
+      "source": "debugServiceTest.h45-50;broker.cpp497-500",
+      "finding": "The one synchronous WriteFile must return true AND written==requested. A false result or short count takes existing abandon(wire::WriteFailure) before any Released success is enqueued. No retry, secondary write or new record/protocol is added. This closes the old row-aligned short-prefix acceptance gap for the requested prefix, without asserting whole-trace completeness or fsync."
+    },
+    {
+      "source": "broker.cpp72-76,94-100,113-140,514-533;protocol.h terminal-choice helpers",
+      "finding": "Both successful ExitProcess paths require the complete Released ACK and original terminal success selection. Those cannot precede this main-thread flush and reply enqueue. abandon takes no state/reply mutex, seals and invokes unchanged first-failure termination. Existing first failure wins; otherwise new WriteFailure73 may become first. A failed/short write is a native TEST failure even if some bytes were written. The existing callback code==0 assertion and guarded first-error retention remain unchanged."
+    },
+    {
+      "source": "broker.cpp494-499;debugServiceTest.h153-154",
+      "finding": "Original target/Job absence checks and original Job closure precede the TEST write. No new custody signal or process authority is acquired. Removing the old after-debug-loop flush means a refusal before accepted Release may leave buffered observations unpersisted. No failure-path flush is added; this loss of best-effort failure output is explicit in the incoming R1."
+    },
+    {
+      "source": "broker.cpp115-140,514-533;nativeDebugServiceScenario.ts request/exit waits",
+      "finding": "The bounded byte count does not establish bounded write latency. New synchronous write and atomic operations consume the existing external scenario/controller budget; they have no free-cost or startup-performance guarantee. The writer ACK deadline is created in the original writer path after dequeue, so it is not a newly proved timeout around the preceding synchronous file write. No timeout constant or native command is changed."
+    }
+  ],
+  "unchangedQualification": {
+    "fd5AndInput": "Only original service-pair with the same-source I386 fixture opens the fresh wx trace and passes its original descriptor as stdio5. Parent closes only its own descriptor copy after spawn. Existing TEST environment exact value1 and in-child disk-handle check remain unchanged; no alternate file or authority is supplied.",
+    "decoder": "Same >0, <=512, multiple32, type1, strict sequence, nonzero PID/birth, closed exception/firstChance/handled fields. Read/decoder exceptions remain unknown. A valid but foreign or incorrectly counted matching child proceeds to the unchanged later qualifier and is refused there; unknown is not equivalent to zero bytes.",
+    "fourRows": "Exact original child PID+birth selects precisely four records; first two startup codes/dispositions/order remain fixed, two late first-chance observations remain forwarded. Existing recorded late code translation allowance is unchanged. Other child rows are permitted but not promoted into a new cmd-child oracle.",
+    "sourceAndChild": "The existing PE I386 check, fixture filename/directory/SHA before and after, child completion marker, original HANDLE witnesses, service Stop/Settle/retirement, adjacent/provider survival, whole root Stop, original root birth, drain, Release ACK, broker exit and sentinel checks all remain.",
+    "cleanup": "nativeGateEvents first-error latch, original outer scenario catch/finally and controller cleanup are unchanged. Source review proves no removal or shortcut; it does not claim those future paths ran or that future cleanup will pass.",
+    "productMacro": "New include/header state exists only in OWNED_PROCESS_TEST_DEBUG_SERVICE; the new hook uses the same macro. Ordinary and OWNED_PROCESS_SERVICE_SCOPES builds do not compile the hook. The mutual exclusion and CMake macro wiring remain unchanged. Production exception/Stop policy is not broadened."
+  },
+  "executionAndAuthority": {
+    "onlyVenue": "Original automatic resulting-source CI; no local project/build/compiler/lint/native command, manual dispatch or rerun selected by this review.",
+    "literalCommands": [
+      "node --test packages/legacy-agent-host/tests/claude-management-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts packages/legacy-agent-host/tests/management-model-probe.test.ts packages/legacy-agent-host/tests/saved-team-model-probe.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log",
+      "node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log",
+      "node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log",
+      "& $controller $node $runner $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$build\\Release\\owned-process-broker-debug-service.exe\" 2>&1 | Tee-Object process-acceptance-evidence/windows-node24.log",
+      "& $controller $electron $runner $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$build\\Release\\owned-process-broker-debug-service.exe\" 2>&1 | Tee-Object process-acceptance-evidence/windows-electron.log"
+    ],
+    "finiteMeaning": "Existing complete broker Vitest config includes protocol, nativeGateEvents and nativeGateContext. Four unchanged nativeGateEvents cases are three actual callback failure/cleanup cases plus the actual private I386 decoder/qualifier extraction. They remain preservation coverage, not a synthetic C++ race RED or synchronization measurement. No selected single-file replacement or setup failure is accepted as native proof.",
+    "nativeRequired": "Both original Windows x64 and ARM64, same-source Win32 fixture and full original Host Node AND Electron controller gates must retain actual matching child rows, original release/cleanup and unchanged source receipt; subsequent wrapper/Main/provider A/B steps also remain required. Source review and currently separate V2/static successes do not substitute for those outcomes.",
+    "rootReconciliationRequired": "The historical incoming docs/source order is valid as Git history. Our00d followup has separately published per-event source and additional documentation. Root must select the exact incoming two leaves in a fresh complete reconciliation R1, preserve both histories and complete old/fresh plan context, then obtain actual published-byte review. This report performs none of those writes."
+  },
+  "historicalAndCurrentLimits": [
+    "E1 Windows x64 and ARM actual status unknown after raw broker exit0 remains FAILURE. Raw FD5 contents are not retained in those archives, so missing/empty/partial/invalid/overflow/read-refusal alternatives are not resolved. The source ordering gap is demonstrated; its responsibility for either historical run is unproved.",
+    "The earlier after-debug-loop flush had no success-exit ordering edge; new prefix flush closes that source publication gap for the acquired bytes. It does not promise new native success, complete debugger trace, disk durability or direct I386-root late-handler qualification.",
+    "The three new E2 terminal V2/static logs retained at07:35:53 are separate lanes. E2 Windows Process gates were not terminal in that snapshot; this report does not invent their results.",
+    "No full I386 production policy, P08 three-HANDLE/two-Stop/Quit, P09 writer/consumed-image custody, P11, genuine M16, real Claude/Codex, release, default activation, Ready, merge or Stage2 approval follows."
+  ],
+  "reviewBoundary": "No source/R1 correction required for the exact incoming two-C++ images. Approval is for their bounded prospective reconciliation with the explicit limits above, not retrospective causality or execution qualification."
+}

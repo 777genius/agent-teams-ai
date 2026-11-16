@@ -1,0 +1,1237 @@
+﻿2026-11-16T06:02:04.7402030Z Current runner version: '2.338.2'
+2026-11-16T06:02:04.7426352Z ##[group]Runner Image Provisioner
+2026-11-16T06:02:04.7427061Z Hosted Compute Agent
+2026-11-16T06:02:04.7427537Z Version: 20261103.629
+2026-11-16T06:02:04.7428052Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-16T06:02:04.7428666Z Build Date: 2026-11-03T17:26:59Z
+2026-11-16T06:02:04.7429233Z Worker ID: {7f5aa1ee-55d7-49bf-91dd-12da67283e76}
+2026-11-16T06:02:04.7429828Z Region: northcentralus
+2026-11-16T06:02:04.7430280Z Cloud: Azure
+2026-11-16T06:02:04.7430700Z ##[endgroup]
+2026-11-16T06:02:04.7432007Z ##[group]Operating System
+2026-11-16T06:02:04.7432556Z Microsoft Windows Server 2022
+2026-11-16T06:02:04.7433065Z 10.0.20348
+2026-11-16T06:02:04.7433467Z Datacenter
+2026-11-16T06:02:04.7433866Z ##[endgroup]
+2026-11-16T06:02:04.7434286Z ##[group]Runner Image
+2026-11-16T06:02:04.7434757Z Image: windows-2022
+2026-11-16T06:02:04.7435199Z Version: 20261112.366.7
+2026-11-16T06:02:04.7436580Z Included Software: https://github.com/actions/runner-images/blob/win22/20261112.366/images/windows/Windows2022-Readme.md
+2026-11-16T06:02:04.7437933Z Image Release: https://github.com/actions/runner-images/releases/tag/win22%2F20261112.366
+2026-11-16T06:02:04.7438749Z ##[endgroup]
+2026-11-16T06:02:04.7439671Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T06:02:04.7441643Z Contents: read
+2026-11-16T06:02:04.7442144Z Metadata: read
+2026-11-16T06:02:04.7442626Z ##[endgroup]
+2026-11-16T06:02:04.7444624Z Secret source: Actions
+2026-11-16T06:02:04.7445396Z Cache mode: write
+2026-11-16T06:02:04.7445965Z Prepare workflow directory
+2026-11-16T06:02:04.8055372Z Prepare all required actions
+2026-11-16T06:02:04.8108647Z Getting action download info
+2026-11-16T06:02:05.0239551Z Download action repository 'actions/checkout@v7.0.1' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+2026-11-16T06:02:05.1619408Z Download action repository 'actions/setup-node@v7.0.0' (SHA:820762786026740c76f36085b0efc47a31fe5020)
+2026-11-16T06:02:05.3074252Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-16T06:02:05.6438756Z Complete job name: Host process fixtures (win32-x64)
+2026-11-16T06:02:05.8227271Z ##[group]Run git config --global core.longpaths true
+2026-11-16T06:02:05.8228197Z [36;1mgit config --global core.longpaths true[0m
+2026-11-16T06:02:05.8368593Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-11-16T06:02:05.8369581Z env:
+2026-11-16T06:02:05.8370022Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:02:05.8370713Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:02:05.8371427Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:02:05.8371920Z ##[endgroup]
+2026-11-16T06:02:06.6805762Z ##[group]Run actions/checkout@v7.0.1
+2026-11-16T06:02:06.6807005Z with:
+2026-11-16T06:02:06.6807916Z   ref: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:02:06.6809176Z   persist-credentials: false
+2026-11-16T06:02:06.6810257Z   repository: 777genius/agent-teams-ai
+2026-11-16T06:02:06.6819004Z   token: ***
+2026-11-16T06:02:06.6819907Z   ssh-strict: true
+2026-11-16T06:02:06.6820782Z   ssh-user: git
+2026-11-16T06:02:06.6821593Z   clean: true
+2026-11-16T06:02:06.6822468Z   sparse-checkout-cone-mode: true
+2026-11-16T06:02:06.6823517Z   fetch-depth: 1
+2026-11-16T06:02:06.6824349Z   fetch-tags: false
+2026-11-16T06:02:06.6825217Z   show-progress: true
+2026-11-16T06:02:06.6826082Z   lfs: false
+2026-11-16T06:02:06.6826882Z   submodules: false
+2026-11-16T06:02:06.6827750Z   set-safe-directory: true
+2026-11-16T06:02:06.6828757Z   allow-unsafe-pr-checkout: false
+2026-11-16T06:02:06.6829780Z env:
+2026-11-16T06:02:06.6830605Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:02:06.6832099Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:02:06.6833589Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:02:06.6834651Z ##[endgroup]
+2026-11-16T06:02:06.8290996Z Syncing repository: 777genius/agent-teams-ai
+2026-11-16T06:02:06.8296870Z ##[group]Getting Git version info
+2026-11-16T06:02:06.8298285Z Working directory is 'D:\a\agent-teams-ai\agent-teams-ai'
+2026-11-16T06:02:06.9195167Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-11-16T06:02:06.9487660Z git version 2.56.1.windows.1
+2026-11-16T06:02:06.9533696Z ##[endgroup]
+2026-11-16T06:02:06.9544510Z Copying 'C:\Users\runneradmin\.gitconfig' to 'D:\a\_temp\a0d7ff04-1057-4089-8788-48ac5edd4bd4\.gitconfig'
+2026-11-16T06:02:06.9567443Z Temporarily overriding HOME='D:\a\_temp\a0d7ff04-1057-4089-8788-48ac5edd4bd4' before making global git config changes
+2026-11-16T06:02:06.9570221Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T06:02:06.9578549Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\agent-teams-ai\agent-teams-ai
+2026-11-16T06:02:06.9888153Z Deleting the contents of 'D:\a\agent-teams-ai\agent-teams-ai'
+2026-11-16T06:02:06.9892648Z ##[group]Determining repository object format
+2026-11-16T06:02:06.9894790Z ##[endgroup]
+2026-11-16T06:02:06.9896198Z ##[group]Initializing the repository
+2026-11-16T06:02:06.9904140Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\agent-teams-ai\agent-teams-ai
+2026-11-16T06:02:07.0778203Z Initialized empty Git repository in D:/a/agent-teams-ai/agent-teams-ai/.git/
+2026-11-16T06:02:07.0821381Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/777genius/agent-teams-ai
+2026-11-16T06:02:07.1423717Z ##[endgroup]
+2026-11-16T06:02:07.1425250Z ##[group]Disabling automatic garbage collection
+2026-11-16T06:02:07.1433120Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+2026-11-16T06:02:07.1758996Z ##[endgroup]
+2026-11-16T06:02:07.1760405Z ##[group]Setting up auth
+2026-11-16T06:02:07.1761524Z Removing SSH command configuration
+2026-11-16T06:02:07.1772339Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T06:02:07.2115975Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-11-16T06:02:08.5816148Z Removing HTTP extra header
+2026-11-16T06:02:08.5827014Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T06:02:08.6137938Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-11-16T06:02:09.1449018Z Removing includeIf entries pointing to credentials config files
+2026-11-16T06:02:09.1458534Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T06:02:09.1808274Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-11-16T06:02:09.7047224Z [command]"C:\Program Files\Git\bin\git.exe" config --file D:\a\_temp\git-credentials-f979d7db-0da2-495d-880b-4a90f812b29b.config http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+2026-11-16T06:02:09.7363161Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git.path D:\a\_temp\git-credentials-f979d7db-0da2-495d-880b-4a90f812b29b.config
+2026-11-16T06:02:09.7668229Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path D:\a\_temp\git-credentials-f979d7db-0da2-495d-880b-4a90f812b29b.config
+2026-11-16T06:02:09.8127335Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-f979d7db-0da2-495d-880b-4a90f812b29b.config
+2026-11-16T06:02:09.8430574Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-f979d7db-0da2-495d-880b-4a90f812b29b.config
+2026-11-16T06:02:09.8725291Z ##[endgroup]
+2026-11-16T06:02:09.8725678Z ##[group]Fetching the repository
+2026-11-16T06:02:09.8737198Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:02:23.9094966Z From https://github.com/777genius/agent-teams-ai
+2026-11-16T06:02:23.9095982Z  * branch            e1d14b9cd0fa1d7896b58e513f9040639e9e4940 -> FETCH_HEAD
+2026-11-16T06:02:23.9151470Z [command]"C:\Program Files\Git\bin\git.exe" rev-parse --verify --quiet e1d14b9cd0fa1d7896b58e513f9040639e9e4940^{object}
+2026-11-16T06:02:23.9448011Z e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:02:23.9478943Z ##[endgroup]
+2026-11-16T06:02:23.9479593Z ##[group]Determining the checkout info
+2026-11-16T06:02:23.9515186Z ##[endgroup]
+2026-11-16T06:02:23.9515926Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+2026-11-16T06:02:23.9931466Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+2026-11-16T06:02:24.0224521Z ##[group]Checking out the ref
+2026-11-16T06:02:24.0232711Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:02:25.1393753Z Updating files:  16% (1804/10931)
+2026-11-16T06:02:25.2477659Z Updating files:  17% (1859/10931)
+2026-11-16T06:02:25.3116792Z Updating files:  18% (1968/10931)
+2026-11-16T06:02:25.3993769Z Updating files:  19% (2077/10931)
+2026-11-16T06:02:25.5863457Z Updating files:  20% (2187/10931)
+2026-11-16T06:02:25.6309545Z Updating files:  21% (2296/10931)
+2026-11-16T06:02:25.6324925Z Updating files:  22% (2405/10931)
+2026-11-16T06:02:25.6326015Z warning: created file symlink 'landing/dist' pointing to '\Users\belief\dev\projects\claude\claude_team\landing\.output\public';
+2026-11-16T06:02:25.6327336Z set the `symlink` gitattribute to `dir` if a directory symlink is required
+2026-11-16T06:02:25.6912462Z Updating files:  23% (2515/10931)
+2026-11-16T06:02:25.7400610Z Updating files:  24% (2624/10931)
+2026-11-16T06:02:25.7627796Z Updating files:  25% (2733/10931)
+2026-11-16T06:02:25.7833816Z Updating files:  26% (2843/10931)
+2026-11-16T06:02:25.8047723Z Updating files:  27% (2952/10931)
+2026-11-16T06:02:25.8241351Z Updating files:  28% (3061/10931)
+2026-11-16T06:02:25.8459975Z Updating files:  29% (3170/10931)
+2026-11-16T06:02:25.8674193Z Updating files:  30% (3280/10931)
+2026-11-16T06:02:25.9219196Z Updating files:  31% (3389/10931)
+2026-11-16T06:02:25.9511904Z Updating files:  32% (3498/10931)
+2026-11-16T06:02:25.9743922Z Updating files:  33% (3608/10931)
+2026-11-16T06:02:26.0212227Z Updating files:  34% (3717/10931)
+2026-11-16T06:02:26.0484916Z Updating files:  35% (3826/10931)
+2026-11-16T06:02:26.0732696Z Updating files:  36% (3936/10931)
+2026-11-16T06:02:26.0797643Z Updating files:  37% (4045/10931)
+2026-11-16T06:02:26.1003580Z Updating files:  37% (4072/10931)
+2026-11-16T06:02:26.1275499Z Updating files:  38% (4154/10931)
+2026-11-16T06:02:26.1511689Z Updating files:  39% (4264/10931)
+2026-11-16T06:02:26.1708511Z Updating files:  40% (4373/10931)
+2026-11-16T06:02:26.1912936Z Updating files:  41% (4482/10931)
+2026-11-16T06:02:26.2139583Z Updating files:  42% (4592/10931)
+2026-11-16T06:02:26.2376535Z Updating files:  43% (4701/10931)
+2026-11-16T06:02:26.2633568Z Updating files:  44% (4810/10931)
+2026-11-16T06:02:26.3182745Z Updating files:  45% (4919/10931)
+2026-11-16T06:02:26.3662108Z Updating files:  46% (5029/10931)
+2026-11-16T06:02:26.3865735Z Updating files:  47% (5138/10931)
+2026-11-16T06:02:26.4053242Z Updating files:  48% (5247/10931)
+2026-11-16T06:02:26.4291258Z Updating files:  49% (5357/10931)
+2026-11-16T06:02:26.4542570Z Updating files:  50% (5466/10931)
+2026-11-16T06:02:26.4771258Z Updating files:  51% (5575/10931)
+2026-11-16T06:02:26.4985362Z Updating files:  52% (5685/10931)
+2026-11-16T06:02:26.5197208Z Updating files:  53% (5794/10931)
+2026-11-16T06:02:26.5424204Z Updating files:  54% (5903/10931)
+2026-11-16T06:02:26.5658609Z Updating files:  55% (6013/10931)
+2026-11-16T06:02:26.5879456Z Updating files:  56% (6122/10931)
+2026-11-16T06:02:26.6117935Z Updating files:  57% (6231/10931)
+2026-11-16T06:02:26.6352932Z Updating files:  58% (6340/10931)
+2026-11-16T06:02:26.6601779Z Updating files:  59% (6450/10931)
+2026-11-16T06:02:26.6842931Z Updating files:  60% (6559/10931)
+2026-11-16T06:02:26.7077356Z Updating files:  61% (6668/10931)
+2026-11-16T06:02:26.7309104Z Updating files:  62% (6778/10931)
+2026-11-16T06:02:26.7532540Z Updating files:  63% (6887/10931)
+2026-11-16T06:02:26.7760047Z Updating files:  64% (6996/10931)
+2026-11-16T06:02:26.7994878Z Updating files:  65% (7106/10931)
+2026-11-16T06:02:26.8240425Z Updating files:  66% (7215/10931)
+2026-11-16T06:02:26.8486901Z Updating files:  67% (7324/10931)
+2026-11-16T06:02:26.8701934Z Updating files:  68% (7434/10931)
+2026-11-16T06:02:26.8955580Z Updating files:  69% (7543/10931)
+2026-11-16T06:02:26.9173927Z Updating files:  70% (7652/10931)
+2026-11-16T06:02:26.9410971Z Updating files:  71% (7762/10931)
+2026-11-16T06:02:26.9653558Z Updating files:  72% (7871/10931)
+2026-11-16T06:02:26.9871105Z Updating files:  73% (7980/10931)
+2026-11-16T06:02:27.0071163Z Updating files:  74% (8089/10931)
+2026-11-16T06:02:27.0315593Z Updating files:  75% (8199/10931)
+2026-11-16T06:02:27.0540622Z Updating files:  76% (8308/10931)
+2026-11-16T06:02:27.0745968Z Updating files:  77% (8417/10931)
+2026-11-16T06:02:27.0807198Z Updating files:  78% (8527/10931)
+2026-11-16T06:02:27.0957615Z Updating files:  78% (8558/10931)
+2026-11-16T06:02:27.1185817Z Updating files:  79% (8636/10931)
+2026-11-16T06:02:27.1391584Z Updating files:  80% (8745/10931)
+2026-11-16T06:02:27.1585386Z Updating files:  81% (8855/10931)
+2026-11-16T06:02:27.1786017Z Updating files:  82% (8964/10931)
+2026-11-16T06:02:27.2030048Z Updating files:  83% (9073/10931)
+2026-11-16T06:02:27.2286714Z Updating files:  84% (9183/10931)
+2026-11-16T06:02:27.3303252Z Updating files:  85% (9292/10931)
+2026-11-16T06:02:27.3560767Z Updating files:  86% (9401/10931)
+2026-11-16T06:02:27.3828811Z Updating files:  87% (9510/10931)
+2026-11-16T06:02:27.4116789Z Updating files:  88% (9620/10931)
+2026-11-16T06:02:27.4404860Z Updating files:  89% (9729/10931)
+2026-11-16T06:02:27.4764134Z Updating files:  90% (9838/10931)
+2026-11-16T06:02:27.5116812Z Updating files:  91% (9948/10931)
+2026-11-16T06:02:27.5346530Z Updating files:  92% (10057/10931)
+2026-11-16T06:02:27.5635625Z Updating files:  93% (10166/10931)
+2026-11-16T06:02:27.5882262Z Updating files:  94% (10276/10931)
+2026-11-16T06:02:27.6141698Z Updating files:  95% (10385/10931)
+2026-11-16T06:02:27.6415538Z Updating files:  96% (10494/10931)
+2026-11-16T06:02:27.6646248Z Updating files:  97% (10604/10931)
+2026-11-16T06:02:27.6915556Z Updating files:  98% (10713/10931)
+2026-11-16T06:02:27.7260815Z Updating files:  99% (10822/10931)
+2026-11-16T06:02:27.7261356Z Updating files: 100% (10931/10931)
+2026-11-16T06:02:27.7261664Z Updating files: 100% (10931/10931), done.
+2026-11-16T06:02:27.7500692Z Note: switching to 'e1d14b9cd0fa1d7896b58e513f9040639e9e4940'.
+2026-11-16T06:02:27.7501034Z 
+2026-11-16T06:02:27.7501241Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T06:02:27.7501710Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T06:02:27.7502187Z state without impacting any branches by switching back to a branch.
+2026-11-16T06:02:27.7502462Z 
+2026-11-16T06:02:27.7502676Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T06:02:27.7503107Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T06:02:27.7503345Z 
+2026-11-16T06:02:27.7503443Z   git switch -c <new-branch-name>
+2026-11-16T06:02:27.7503945Z 
+2026-11-16T06:02:27.7504053Z Or undo this operation with:
+2026-11-16T06:02:27.7504207Z 
+2026-11-16T06:02:27.7504280Z   git switch -
+2026-11-16T06:02:27.7504393Z 
+2026-11-16T06:02:27.7504594Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T06:02:27.7504898Z 
+2026-11-16T06:02:27.7505128Z HEAD is now at e1d14b9 Merge reviewed migration continuation and fix Windows checkouts
+2026-11-16T06:02:27.7738330Z ##[endgroup]
+2026-11-16T06:02:27.8080126Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+2026-11-16T06:02:27.8364981Z e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:02:27.8403952Z ##[group]Removing auth
+2026-11-16T06:02:27.8404269Z Removing SSH command configuration
+2026-11-16T06:02:27.8413070Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T06:02:27.8730753Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-11-16T06:02:28.4126078Z Removing HTTP extra header
+2026-11-16T06:02:28.4136112Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T06:02:28.4457905Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-11-16T06:02:28.9442521Z Removing includeIf entries pointing to credentials config files
+2026-11-16T06:02:28.9450969Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T06:02:28.9718059Z includeif.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T06:02:28.9718777Z includeif.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T06:02:28.9719407Z includeif.gitdir:/github/workspace/.git.path
+2026-11-16T06:02:28.9719808Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T06:02:28.9756833Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T06:02:29.0023841Z D:\a\_temp\git-credentials-f979d7db-0da2-495d-880b-4a90f812b29b.config
+2026-11-16T06:02:29.0067593Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git.path D\:\\a\\_temp\\git\-credentials\-f979d7db\-0da2\-495d\-880b\-4a90f812b29b\.config
+2026-11-16T06:02:29.0389934Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T06:02:29.0651570Z D:\a\_temp\git-credentials-f979d7db-0da2-495d-880b-4a90f812b29b.config
+2026-11-16T06:02:29.0688638Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path D\:\\a\\_temp\\git\-credentials\-f979d7db\-0da2\-495d\-880b\-4a90f812b29b\.config
+2026-11-16T06:02:29.1010404Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-16T06:02:29.1283471Z /github/runner_temp/git-credentials-f979d7db-0da2-495d-880b-4a90f812b29b.config
+2026-11-16T06:02:29.1321297Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-f979d7db\-0da2\-495d\-880b\-4a90f812b29b\.config
+2026-11-16T06:02:29.1635402Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T06:02:29.1897128Z /github/runner_temp/git-credentials-f979d7db-0da2-495d-880b-4a90f812b29b.config
+2026-11-16T06:02:29.1933398Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-f979d7db\-0da2\-495d\-880b\-4a90f812b29b\.config
+2026-11-16T06:02:29.2235284Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-11-16T06:02:29.7123019Z Removing credentials config 'D:\a\_temp\git-credentials-f979d7db-0da2-495d-880b-4a90f812b29b.config'
+2026-11-16T06:02:29.7134783Z ##[endgroup]
+2026-11-16T06:02:29.7440771Z ##[group]Run actions/setup-node@v7.0.0
+2026-11-16T06:02:29.7441118Z with:
+2026-11-16T06:02:29.7441302Z   node-version: 24.21.0
+2026-11-16T06:02:29.7441531Z   package-manager-cache: false
+2026-11-16T06:02:29.7441781Z   check-latest: false
+2026-11-16T06:02:29.7444151Z   token: ***
+2026-11-16T06:02:29.7444326Z env:
+2026-11-16T06:02:29.7444504Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:02:29.7444849Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:02:29.7445213Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:02:29.7445442Z ##[endgroup]
+2026-11-16T06:02:29.9012795Z Attempting to download 24.21.0...
+2026-11-16T06:02:30.5875490Z Acquiring 24.21.0 - x64 from https://github.com/actions/node-versions/releases/download/24.21.0-34304089047/node-24.21.0-win32-x64.7z
+2026-11-16T06:02:30.9331329Z Extracting ...
+2026-11-16T06:02:32.7654959Z Adding to the cache ...
+2026-11-16T06:02:36.3091114Z ##[group]Environment details
+2026-11-16T06:02:38.0417714Z node: v24.21.0
+2026-11-16T06:02:38.0418002Z npm: 11.19.0
+2026-11-16T06:02:38.0418207Z yarn: 1.22.22
+2026-11-16T06:02:38.0418696Z ##[endgroup]
+2026-11-16T06:02:38.0687744Z ##[group]Run set -euo pipefail
+2026-11-16T06:02:38.0688157Z [36;1mset -euo pipefail[0m
+2026-11-16T06:02:38.0688464Z [36;1mtest "$(corepack --version)" = 0.36.0[0m
+2026-11-16T06:02:38.0688803Z [36;1mcorepack enable[0m
+2026-11-16T06:02:38.0689094Z [36;1mcorepack install --global pnpm@11.22.0[0m
+2026-11-16T06:02:38.0689460Z [36;1mtest "$(pnpm --version)" = 11.22.0[0m
+2026-11-16T06:02:38.0710914Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-11-16T06:02:38.0711311Z env:
+2026-11-16T06:02:38.0711509Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:02:38.0711856Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:02:38.0712209Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:02:38.0712437Z ##[endgroup]
+2026-11-16T06:02:39.0836274Z Installing pnpm@11.22.0...
+2026-11-16T06:02:47.0115411Z ##[group]Run actions/setup-node@v7.0.0
+2026-11-16T06:02:47.0115858Z with:
+2026-11-16T06:02:47.0116131Z   node-version: 24.21.0
+2026-11-16T06:02:47.0116393Z   cache: pnpm
+2026-11-16T06:02:47.0116643Z   check-latest: false
+2026-11-16T06:02:47.0119131Z   token: ***
+2026-11-16T06:02:47.0119395Z   package-manager-cache: true
+2026-11-16T06:02:47.0119702Z env:
+2026-11-16T06:02:47.0119938Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:02:47.0120354Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:02:47.0120810Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:02:47.0121098Z ##[endgroup]
+2026-11-16T06:02:47.2009760Z Found in cache @ C:\hostedtoolcache\windows\node\24.21.0\x64
+2026-11-16T06:02:47.2016020Z ##[group]Environment details
+2026-11-16T06:02:47.6714482Z [warning]This project is configured to use pnpm because D:\a\agent-teams-ai\agent-teams-ai\package.json has a "packageManager" field
+2026-11-16T06:02:47.6715458Z 
+2026-11-16T06:02:47.8536817Z node: v24.21.0
+2026-11-16T06:02:47.8537669Z npm: 11.19.0
+2026-11-16T06:02:47.8538268Z yarn: 
+2026-11-16T06:02:47.8539071Z ##[endgroup]
+2026-11-16T06:02:47.9723832Z [command]C:\Windows\system32\cmd.exe /D /S /C "C:\hostedtoolcache\windows\node\24.21.0\x64\pnpm.CMD store path --silent"
+2026-11-16T06:02:48.5735796Z D:\.pnpm-store\v11
+2026-11-16T06:02:48.8673057Z Cache hit for: node-cache-Windows-x64-pnpm-2aff00bf8bb88ad1d9614af462b68bca9fc511140b961deecf13f3e9b249b63c
+2026-11-16T06:02:50.0331662Z Received 134217728 of 497647954 (27.0%), 124.3 MBs/sec
+2026-11-16T06:02:51.0545627Z Received 297795584 of 497647954 (59.8%), 138.3 MBs/sec
+2026-11-16T06:02:52.0642348Z Received 493453650 of 497647954 (99.2%), 153.6 MBs/sec
+2026-11-16T06:02:52.2069829Z Received 497647954 of 497647954 (100.0%), 148.1 MBs/sec
+2026-11-16T06:02:52.2073315Z Cache Size: ~475 MB (497647954 B)
+2026-11-16T06:02:52.2108874Z [command]"C:\Program Files\Git\usr\bin\tar.exe" -xf D:/a/_temp/97fc867d-c3d5-41a4-83f9-68b59917e59b/cache.tzst -P -C D:/a/agent-teams-ai/agent-teams-ai --force-local --use-compress-program "zstd -d"
+2026-11-16T06:03:19.7503438Z Cache restored successfully
+2026-11-16T06:03:19.7750572Z Cache restored from key: node-cache-Windows-x64-pnpm-2aff00bf8bb88ad1d9614af462b68bca9fc511140b961deecf13f3e9b249b63c
+2026-11-16T06:03:19.8017463Z ##[group]Run set -euo pipefail
+2026-11-16T06:03:19.8017856Z [36;1mset -euo pipefail[0m
+2026-11-16T06:03:19.8018190Z [36;1mtest "$(git rev-parse HEAD)" = "$HOST_PROCESS_SOURCE_HEAD"[0m
+2026-11-16T06:03:19.8019128Z [36;1mnode --input-type=module -e "import assert from 'node:assert/strict'; assert.equal(process.version,'v24.21.0'); assert.equal(process.platform+'-'+process.arch,process.env.HOST_PROCESS_PLATFORM)"[0m
+2026-11-16T06:03:19.8019984Z [36;1mmkdir process-acceptance-evidence[0m
+2026-11-16T06:03:19.8020372Z [36;1mgit rev-parse HEAD > process-acceptance-evidence/source-head.txt[0m
+2026-11-16T06:03:19.8034680Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-11-16T06:03:19.8035078Z env:
+2026-11-16T06:03:19.8035272Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:03:19.8035634Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:03:19.8035995Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:03:19.8036265Z ##[endgroup]
+2026-11-16T06:03:20.1832234Z ##[group]Run node scripts/ci/install-dependencies-with-retry.mjs
+2026-11-16T06:03:20.1833615Z [36;1mnode scripts/ci/install-dependencies-with-retry.mjs[0m
+2026-11-16T06:03:20.1856734Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-11-16T06:03:20.1857211Z env:
+2026-11-16T06:03:20.1857461Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:03:20.1857867Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:03:20.1858299Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:03:20.1858629Z ##[endgroup]
+2026-11-16T06:03:20.3042502Z (node:5200) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+2026-11-16T06:03:20.3044563Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T06:03:20.9212392Z Scope: all 7 workspace projects
+2026-11-16T06:03:21.1679390Z ? Verifying lockfile against supply-chain policies (2533 entries)...
+2026-11-16T06:03:21.4067942Z Lockfile is up to date, resolution step is skipped
+2026-11-16T06:03:21.7752800Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T06:03:22.0799016Z Packages: +2298
+2026-11-16T06:03:22.0802551Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-16T06:03:22.7788311Z Progress: resolved 2298, reused 111, downloaded 0, added 0
+2026-11-16T06:03:23.7810154Z Progress: resolved 2298, reused 301, downloaded 0, added 0
+2026-11-16T06:03:24.7881618Z Progress: resolved 2298, reused 471, downloaded 0, added 0
+2026-11-16T06:03:25.7900312Z Progress: resolved 2298, reused 759, downloaded 0, added 0
+2026-11-16T06:03:26.7904366Z Progress: resolved 2298, reused 968, downloaded 0, added 0
+2026-11-16T06:03:27.8054977Z Progress: resolved 2298, reused 1309, downloaded 0, added 0
+2026-11-16T06:03:28.7960063Z Progress: resolved 2298, reused 1650, downloaded 0, added 0
+2026-11-16T06:03:29.3795002Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-11-16T06:03:29.3796278Z   Content-addressable store is at: D:\.pnpm-store\v11
+2026-11-16T06:03:29.3797687Z   Virtual store is at:             node_modules/.pnpm
+2026-11-16T06:03:29.8024020Z Progress: resolved 2298, reused 2283, downloaded 0, added 48
+2026-11-16T06:03:30.8132437Z Progress: resolved 2298, reused 2283, downloaded 0, added 71
+2026-11-16T06:03:31.9374798Z Progress: resolved 2298, reused 2283, downloaded 0, added 76
+2026-11-16T06:03:32.7043573Z ✓ Lockfile passes supply-chain policies (2533 entries in 11.5s)
+2026-11-16T06:03:32.9498132Z Progress: resolved 2298, reused 2283, downloaded 0, added 78
+2026-11-16T06:03:33.9514078Z Progress: resolved 2298, reused 2283, downloaded 0, added 117
+2026-11-16T06:03:34.9514771Z Progress: resolved 2298, reused 2283, downloaded 0, added 126
+2026-11-16T06:03:35.9554837Z Progress: resolved 2298, reused 2283, downloaded 0, added 168
+2026-11-16T06:03:36.9630290Z Progress: resolved 2298, reused 2283, downloaded 0, added 192
+2026-11-16T06:03:37.9671615Z Progress: resolved 2298, reused 2283, downloaded 0, added 231
+2026-11-16T06:03:38.9675640Z Progress: resolved 2298, reused 2283, downloaded 0, added 315
+2026-11-16T06:03:39.9697680Z Progress: resolved 2298, reused 2283, downloaded 0, added 327
+2026-11-16T06:03:40.9699633Z Progress: resolved 2298, reused 2283, downloaded 0, added 373
+2026-11-16T06:03:41.9758745Z Progress: resolved 2298, reused 2283, downloaded 0, added 471
+2026-11-16T06:03:42.9787577Z Progress: resolved 2298, reused 2283, downloaded 0, added 518
+2026-11-16T06:03:43.9805417Z Progress: resolved 2298, reused 2283, downloaded 0, added 673
+2026-11-16T06:03:44.9825559Z Progress: resolved 2298, reused 2283, downloaded 0, added 801
+2026-11-16T06:03:45.9837610Z Progress: resolved 2298, reused 2283, downloaded 0, added 853
+2026-11-16T06:03:46.9844006Z Progress: resolved 2298, reused 2283, downloaded 0, added 967
+2026-11-16T06:03:47.9865814Z Progress: resolved 2298, reused 2283, downloaded 0, added 1008
+2026-11-16T06:03:48.9865192Z Progress: resolved 2298, reused 2283, downloaded 0, added 1253
+2026-11-16T06:03:49.9913582Z Progress: resolved 2298, reused 2283, downloaded 0, added 1276
+2026-11-16T06:03:50.9915026Z Progress: resolved 2298, reused 2283, downloaded 0, added 1449
+2026-11-16T06:03:51.9938996Z Progress: resolved 2298, reused 2283, downloaded 0, added 1571
+2026-11-16T06:03:52.9969661Z Progress: resolved 2298, reused 2283, downloaded 0, added 1797
+2026-11-16T06:03:54.0016582Z Progress: resolved 2298, reused 2283, downloaded 0, added 2129
+2026-11-16T06:03:54.7455650Z Progress: resolved 2298, reused 2283, downloaded 0, added 2298, done
+2026-11-16T06:03:57.6361074Z [WARN] Failed to create bin at D:\a\agent-teams-ai\agent-teams-ai\node_modules\.bin\legacy-agent-host. ENOENT: no such file or directory, stat 'D:\a\agent-teams-ai\agent-teams-ai\packages\legacy-agent-host\dist\cli.js.EXE'
+2026-11-16T06:03:57.8290849Z 
+2026-11-16T06:03:57.8291454Z dependencies:
+2026-11-16T06:03:57.8292335Z + @agent-teams/legacy-agent-host 0.1.0 <- packages\legacy-agent-host
+2026-11-16T06:03:57.8293298Z + @agent-teams/task-change-ledger 0.1.0 <- packages\task-change-ledger
+2026-11-16T06:03:57.8294153Z + @claude-teams/agent-graph 0.1.0 <- packages\agent-graph
+2026-11-16T06:03:57.8294780Z + @codemirror/autocomplete 6.20.0
+2026-11-16T06:03:57.8295254Z + @codemirror/commands 6.10.2
+2026-11-16T06:03:57.8295687Z + @codemirror/lang-cpp 6.0.3
+2026-11-16T06:03:57.8296110Z + @codemirror/lang-css 6.3.1
+2026-11-16T06:03:57.8296519Z + @codemirror/lang-go 6.0.1
+2026-11-16T06:03:57.8296959Z + @codemirror/lang-html 6.4.11
+2026-11-16T06:03:57.8297392Z + @codemirror/lang-java 6.0.2
+2026-11-16T06:03:57.8297882Z + @codemirror/lang-javascript 6.2.4
+2026-11-16T06:03:57.8298346Z + @codemirror/lang-json 6.0.2
+2026-11-16T06:03:57.8298760Z + @codemirror/lang-less 6.0.2
+2026-11-16T06:03:57.8299231Z + @codemirror/lang-markdown 6.5.0
+2026-11-16T06:03:57.8299703Z + @codemirror/lang-php 6.0.2
+2026-11-16T06:03:57.8300173Z + @codemirror/lang-python 6.2.1
+2026-11-16T06:03:57.8300624Z + @codemirror/lang-rust 6.0.2
+2026-11-16T06:03:57.8301469Z + @codemirror/lang-sass 6.0.2
+2026-11-16T06:03:57.8301889Z + @codemirror/lang-sql 6.10.0
+2026-11-16T06:03:57.8302300Z + @codemirror/lang-xml 6.1.0
+2026-11-16T06:03:57.8302722Z + @codemirror/lang-yaml 6.1.2
+2026-11-16T06:03:57.8303137Z + @codemirror/language 6.12.1
+2026-11-16T06:03:57.8303594Z + @codemirror/language-data 6.5.2
+2026-11-16T06:03:57.8304046Z + @codemirror/lint 6.9.5
+2026-11-16T06:03:57.8304440Z + @codemirror/merge 6.12.0
+2026-11-16T06:03:57.8304838Z + @codemirror/search 6.6.0
+2026-11-16T06:03:57.8305241Z + @codemirror/state 6.5.4
+2026-11-16T06:03:57.8305682Z + @codemirror/theme-one-dark 6.1.3
+2026-11-16T06:03:57.8306130Z + @codemirror/view 6.39.15
+2026-11-16T06:03:57.8306526Z + @daypicker/react 10.0.1
+2026-11-16T06:03:57.8306904Z + @dnd-kit/core 6.3.1
+2026-11-16T06:03:57.8307344Z + @dnd-kit/sortable 10.0.0
+2026-11-16T06:03:57.8307788Z + @dnd-kit/utilities 3.2.2
+2026-11-16T06:03:57.8308175Z + @fastify/cors 11.2.0
+2026-11-16T06:03:57.8308542Z + @fastify/static 10.1.2
+2026-11-16T06:03:57.8308994Z + @file-viewer/preset-office 3.1.2
+2026-11-16T06:03:57.8309449Z + @file-viewer/react 3.1.2
+2026-11-16T06:03:57.8309841Z + @floating-ui/dom 1.7.6
+2026-11-16T06:03:57.8310227Z + @headless-tree/core 1.7.0
+2026-11-16T06:03:57.8310644Z + @headless-tree/react 1.7.0
+2026-11-16T06:03:57.8311078Z + @openuidev/lang-core 0.3.2
+2026-11-16T06:03:57.8311535Z + @openuidev/react-headless 0.17.0
+2026-11-16T06:03:57.8311990Z + @openuidev/react-lang 0.3.2
+2026-11-16T06:03:57.8312407Z + @openuidev/react-ui 0.17.0
+2026-11-16T06:03:57.8312878Z + @radix-ui/react-alert-dialog 1.1.15
+2026-11-16T06:03:57.8313404Z + @radix-ui/react-checkbox 1.3.3
+2026-11-16T06:03:57.8313911Z + @radix-ui/react-collapsible 1.1.12
+2026-11-16T06:03:57.8314429Z + @radix-ui/react-context-menu 2.2.16
+2026-11-16T06:03:57.8314920Z + @radix-ui/react-dialog 1.1.15
+2026-11-16T06:03:57.8317278Z + @radix-ui/react-dropdown-menu 2.1.16
+2026-11-16T06:03:57.8317932Z + @radix-ui/react-hover-card 1.1.15
+2026-11-16T06:03:57.8318404Z + @radix-ui/react-label 2.1.8
+2026-11-16T06:03:57.8318885Z + @radix-ui/react-popover 1.1.15
+2026-11-16T06:03:57.8319367Z + @radix-ui/react-presence 1.1.5
+2026-11-16T06:03:57.8319841Z + @radix-ui/react-select 2.2.6
+2026-11-16T06:03:57.8320364Z + @radix-ui/react-slot 1.2.4
+2026-11-16T06:03:57.8320817Z + @radix-ui/react-switch 1.3.7
+2026-11-16T06:03:57.8321261Z + @radix-ui/react-tabs 1.1.13
+2026-11-16T06:03:57.8321720Z + @radix-ui/react-tooltip 1.2.8
+2026-11-16T06:03:57.8322160Z + @sentry/electron 7.10.0
+2026-11-16T06:03:57.8322556Z + @sentry/react 10.45.0
+2026-11-16T06:03:57.8322939Z + @tanstack/react-table 9.3.1
+2026-11-16T06:03:57.8323385Z + @tanstack/react-virtual 3.13.24
+2026-11-16T06:03:57.8323896Z + @terminal-platform/design-tokens 0.1.0
+2026-11-16T06:03:57.8324437Z + @terminal-platform/foundation 0.1.0
+2026-11-16T06:03:57.8325005Z + @terminal-platform/runtime-types 0.1.0
+2026-11-16T06:03:57.8325683Z + @terminal-platform/workspace-adapter-websocket 0.1.0
+2026-11-16T06:03:57.8326389Z + @terminal-platform/workspace-contracts 0.1.0
+2026-11-16T06:03:57.8327021Z + @terminal-platform/workspace-core 0.1.0
+2026-11-16T06:03:57.8327622Z + @terminal-platform/workspace-elements 0.1.0
+2026-11-16T06:03:57.8328272Z + @terminal-platform/workspace-gateway-node 0.1.0
+2026-11-16T06:03:57.8328910Z + @terminal-platform/workspace-react 0.1.0
+2026-11-16T06:03:57.8329484Z + @tiptap/extension-placeholder 3.30.5
+2026-11-16T06:03:57.8329973Z + @tiptap/markdown 3.30.5
+2026-11-16T06:03:57.8330367Z + @tiptap/pm 3.30.5
+2026-11-16T06:03:57.8330730Z + @tiptap/react 3.30.5
+2026-11-16T06:03:57.8331114Z + @tiptap/starter-kit 3.30.5
+2026-11-16T06:03:57.8331531Z + @xterm/addon-fit 0.11.0
+2026-11-16T06:03:57.8331949Z + @xterm/addon-web-links 0.12.0
+2026-11-16T06:03:57.8332351Z + @xterm/xterm 6.0.0
+2026-11-16T06:03:57.8332896Z + agent-teams-controller 1.0.0 <- agent-teams-controller
+2026-11-16T06:03:57.8333462Z + better-sqlite3 12.11.1
+2026-11-16T06:03:57.8333865Z + builder-util-runtime 9.7.0
+2026-11-16T06:03:57.8335404Z + chokidar 4.0.3
+2026-11-16T06:03:57.8335821Z + class-variance-authority 0.7.1
+2026-11-16T06:03:57.8336224Z + clsx 2.1.1
+2026-11-16T06:03:57.8336503Z + cmdk 1.0.4
+2026-11-16T06:03:57.8336795Z + croner 10.0.1
+2026-11-16T06:03:57.8337123Z + cronstrue 3.13.0
+2026-11-16T06:03:57.8337434Z + date-fns 3.6.0
+2026-11-16T06:03:57.8337742Z + diff 8.0.3
+2026-11-16T06:03:57.8338050Z + dompurify 3.4.17
+2026-11-16T06:03:57.8338387Z + drizzle-orm 0.45.2
+2026-11-16T06:03:57.8338751Z + electron-updater 6.8.9
+2026-11-16T06:03:57.8339164Z + fast-json-stringify 6.4.0
+2026-11-16T06:03:57.8339566Z + fastify 5.12.5
+2026-11-16T06:03:57.8339909Z + highlight.js 11.11.1
+2026-11-16T06:03:57.8340252Z + i18next 26.2.0
+2026-11-16T06:03:57.8340577Z + idb-keyval 6.2.2
+2026-11-16T06:03:57.8340914Z + isbinaryfile 6.0.0
+2026-11-16T06:03:57.8341360Z + json-schema-ref-resolver 3.0.0
+2026-11-16T06:03:57.8341799Z + jsonc-parser 3.3.1
+2026-11-16T06:03:57.8342151Z + lucide-react 0.577.0
+2026-11-16T06:03:57.8342535Z + mdast-util-to-hast 13.2.1
+2026-11-16T06:03:57.8342933Z + mermaid 11.15.0
+2026-11-16T06:03:57.8343238Z + motion 12.38.0
+2026-11-16T06:03:57.8343557Z + node-diff3 3.2.0
+2026-11-16T06:03:57.8343874Z + node-pty 1.1.0
+2026-11-16T06:03:57.8344190Z + pica 9.0.1
+2026-11-16T06:03:57.8344488Z + pidusage 4.0.1
+2026-11-16T06:03:57.8344823Z + posthog-js 1.396.6
+2026-11-16T06:03:57.8345140Z + react 19.2.4
+2026-11-16T06:03:57.8345454Z + react-dom 19.2.4
+2026-11-16T06:03:57.8345801Z + react-grid-layout 2.2.2
+2026-11-16T06:03:57.8346184Z + react-i18next 17.0.8
+2026-11-16T06:03:57.8346542Z + react-markdown 10.1.0
+2026-11-16T06:03:57.8346905Z + react-modal-sheet 5.6.0
+2026-11-16T06:03:57.8347294Z + react-resizable 3.1.3
+2026-11-16T06:03:57.8347687Z + rehype-highlight 7.0.2
+2026-11-16T06:03:57.8348062Z + rehype-raw 7.0.0
+2026-11-16T06:03:57.8348656Z + rehype-sanitize 6.0.0
+2026-11-16T06:03:57.8349041Z + remark-gfm 4.0.1
+2026-11-16T06:03:57.8349378Z + remark-parse 11.0.0
+2026-11-16T06:03:57.8349731Z + simple-git 4.0.2
+2026-11-16T06:03:57.8350078Z + ssh-config 5.0.4
+2026-11-16T06:03:57.8350380Z + ssh2 1.17.0
+2026-11-16T06:03:57.8350705Z + strip-markdown 6.0.0
+2026-11-16T06:03:57.8351081Z + tailwind-merge 3.5.0
+2026-11-16T06:03:57.8351467Z + tailwindcss-animate 1.0.7
+2026-11-16T06:03:57.8352506Z + terminal-platform-node terminal-platform-node@file:vendor/terminal-platform/terminal-platform-node-stub
+2026-11-16T06:03:57.8353449Z + unified 11.0.5
+2026-11-16T06:03:57.8353738Z + ws 8.21.0
+2026-11-16T06:03:57.8354013Z + yaml 2.9.0
+2026-11-16T06:03:57.8354408Z + yet-another-react-lightbox 3.29.1
+2026-11-16T06:03:57.8354835Z + zod 4.6.7
+2026-11-16T06:03:57.8355113Z + zustand 4.5.7
+2026-11-16T06:03:57.8355309Z 
+2026-11-16T06:03:57.8355436Z devDependencies:
+2026-11-16T06:03:57.8355802Z + @electron/rebuild 4.2.0
+2026-11-16T06:03:57.8356398Z + @eslint-community/eslint-plugin-eslint-comments 4.6.0
+2026-11-16T06:03:57.8356969Z + @eslint/js 9.39.2
+2026-11-16T06:03:57.8357364Z + @file-viewer/vite-plugin 3.1.2
+2026-11-16T06:03:57.8357850Z + @sentry/vite-plugin 5.1.1
+2026-11-16T06:03:57.8358291Z + @tailwindcss/typography 0.5.19
+2026-11-16T06:03:57.8359136Z + @types/better-sqlite3 7.6.13
+2026-11-16T06:03:57.8359562Z + @types/hast 3.0.4
+2026-11-16T06:03:57.8359888Z + @types/mdast 4.0.4
+2026-11-16T06:03:57.8360237Z + @types/node 24.12.4
+2026-11-16T06:03:57.8360599Z + @types/pidusage 2.0.5
+2026-11-16T06:03:57.8360968Z + @types/react 19.2.14
+2026-11-16T06:03:57.8361340Z + @types/react-dom 19.2.3
+2026-11-16T06:03:57.8361730Z + @types/ssh2 1.15.5
+2026-11-16T06:03:57.8362164Z + @typescript/native <- typescript 7.0.2
+2026-11-16T06:03:57.8362659Z + @vitejs/plugin-react 4.7.0
+2026-11-16T06:03:57.8363100Z + @vitest/coverage-v8 3.2.6
+2026-11-16T06:03:57.8363497Z + autoprefixer 10.4.23
+2026-11-16T06:03:57.8363989Z + better-sqlite3-node <- better-sqlite3 12.10.1
+2026-11-16T06:03:57.8364515Z + electron 44.10.1
+2026-11-16T06:03:57.8364882Z + electron-builder 26.17.0
+2026-11-16T06:03:57.8365280Z + electron-vite 5.0.0
+2026-11-16T06:03:57.8365884Z + eslint 9.39.4
+2026-11-16T06:03:57.8366296Z + eslint-config-prettier 10.1.8
+2026-11-16T06:03:57.8366834Z + eslint-import-resolver-typescript 4.4.4
+2026-11-16T06:03:57.8367377Z + eslint-plugin-boundaries 5.3.1
+2026-11-16T06:03:57.8367811Z + eslint-plugin-import 2.32.0
+2026-11-16T06:03:57.8368281Z + eslint-plugin-jsx-a11y 6.10.2
+2026-11-16T06:03:57.8368725Z + eslint-plugin-react 7.37.5
+2026-11-16T06:03:57.8369188Z + eslint-plugin-react-hooks 7.0.1
+2026-11-16T06:03:57.8369696Z + eslint-plugin-react-refresh 0.4.26
+2026-11-16T06:03:57.8370211Z + eslint-plugin-security 3.0.1
+2026-11-16T06:03:57.8370731Z + eslint-plugin-simple-import-sort 12.1.1
+2026-11-16T06:03:57.8371247Z + eslint-plugin-sonarjs 3.0.6
+2026-11-16T06:03:57.8371726Z + eslint-plugin-tailwindcss 3.18.2
+2026-11-16T06:03:57.8372171Z + fake-indexeddb 6.2.5
+2026-11-16T06:03:57.8372510Z + globals 17.2.0
+2026-11-16T06:03:57.8372838Z + happy-dom 21.0.4
+2026-11-16T06:03:57.8373143Z + husky 9.1.7
+2026-11-16T06:03:57.8373447Z + i18next-cli 1.58.0
+2026-11-16T06:03:57.8373783Z + knip 5.82.1
+2026-11-16T06:03:57.8374094Z + lint-staged 16.2.7
+2026-11-16T06:03:57.8374406Z + oxfmt 0.72.0
+2026-11-16T06:03:57.8374705Z + oxlint 1.87.0
+2026-11-16T06:03:57.8375007Z + postcss 8.5.28
+2026-11-16T06:03:57.8375314Z + prettier 3.8.1
+2026-11-16T06:03:57.8375726Z + prettier-plugin-tailwindcss 0.7.2
+2026-11-16T06:03:57.8376210Z + tailwindcss 3.4.19
+2026-11-16T06:03:57.8376530Z + tsx 4.23.15
+2026-11-16T06:03:57.8376841Z + typescript 5.9.3
+2026-11-16T06:03:57.8377226Z + typescript-eslint 8.54.0
+2026-11-16T06:03:57.8377597Z + vite 6.4.4
+2026-11-16T06:03:57.8377887Z + vitest 3.2.6
+2026-11-16T06:03:57.8378069Z 
+2026-11-16T06:03:57.8640807Z landing postinstall$ node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/transitive-security.ts --apply
+2026-11-16T06:03:57.9223341Z landing postinstall: [landing postinstall] skipped npm layout patch; pnpm patchedDependencies handles compatibility
+2026-11-16T06:03:58.1565578Z landing postinstall: Verified braces security backport in 1 package(s)
+2026-11-16T06:03:58.2874658Z landing postinstall: Verified http-cache-semantics security backport in 1 package(s)
+2026-11-16T06:03:58.2972168Z landing postinstall: Done
+2026-11-16T06:03:58.3829339Z [WARN] Failed to create bin at D:\a\agent-teams-ai\agent-teams-ai\node_modules\.bin\legacy-agent-host. ENOENT: no such file or directory, stat 'D:\a\agent-teams-ai\agent-teams-ai\node_modules\@agent-teams\legacy-agent-host\dist\cli.js.EXE'
+2026-11-16T06:03:58.4334226Z . preinstall$ node ./scripts/ci/enforce-pnpm-install.mjs
+2026-11-16T06:03:58.4857640Z . preinstall: Done
+2026-11-16T06:03:58.4860146Z . postinstall$ node ./scripts/postinstall-electron.cjs
+2026-11-16T06:03:58.5437215Z . postinstall: Done
+2026-11-16T06:03:58.5440064Z . prepare$ husky
+2026-11-16T06:03:58.6461770Z . prepare: Done
+2026-11-16T06:03:58.6757941Z Done in 38.2s using pnpm v11.22.0
+2026-11-16T06:03:58.7627485Z ##[group]Run set -euo pipefail
+2026-11-16T06:03:58.7627904Z [36;1mset -euo pipefail[0m
+2026-11-16T06:03:58.7628438Z [36;1mnode node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json[0m
+2026-11-16T06:03:58.7629049Z [36;1mnode agent-teams-controller/scripts/build.mjs[0m
+2026-11-16T06:03:58.7629634Z [36;1mnode node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json[0m
+2026-11-16T06:03:58.7630409Z [36;1mnode node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json[0m
+2026-11-16T06:03:58.7631348Z [36;1mnode node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json[0m
+2026-11-16T06:03:58.7632373Z [36;1mnode node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json[0m
+2026-11-16T06:03:58.7647490Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-11-16T06:03:58.7648142Z env:
+2026-11-16T06:03:58.7648357Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:03:58.7648898Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:03:58.7649252Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:03:58.7649489Z ##[endgroup]
+2026-11-16T06:04:09.7427103Z ##[group]Run set -euo pipefail
+2026-11-16T06:04:09.7427511Z [36;1mset -euo pipefail[0m
+2026-11-16T06:04:09.7432853Z [36;1mnode --test packages/legacy-agent-host/tests/claude-management-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts packages/legacy-agent-host/tests/management-model-probe.test.ts packages/legacy-agent-host/tests/saved-team-model-probe.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log[0m
+2026-11-16T06:04:09.7438968Z [36;1mnode node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log[0m
+2026-11-16T06:04:09.7442055Z [36;1mnode node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log[0m
+2026-11-16T06:04:09.7460395Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-11-16T06:04:09.7460796Z env:
+2026-11-16T06:04:09.7460989Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:04:09.7461335Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:04:09.7461698Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:04:09.7461929Z ##[endgroup]
+2026-11-16T06:04:10.5276463Z ✔ close caches one owned stop before entering a reentrant custody port (23.545ms)
+2026-11-16T06:04:10.5919778Z legacy-agent-host: claude-management {"profileHash":"68c91f8bffd9ec48a473fef8a3d57fbd97b55eece93675655de0302d92b476ea","namespaceHash":"1b01d8da2d50211e928864c99a3f285d32b8637a0756745e56f108fd8f1bfc9f","commandHash":null,"stage":"host-metadata","code":"claude.metadata.cleanup-unconfirmed"}
+2026-11-16T06:04:10.5924131Z legacy-agent-host: claude-management {"profileHash":"68c91f8bffd9ec48a473fef8a3d57fbd97b55eece93675655de0302d92b476ea","namespaceHash":"1b01d8da2d50211e928864c99a3f285d32b8637a0756745e56f108fd8f1bfc9f","commandHash":null,"stage":"host-cleanup","code":"cleanup-unconfirmed"}
+2026-11-16T06:04:10.6071852Z legacy-agent-host: claude-management {"profileHash":"68c91f8bffd9ec48a473fef8a3d57fbd97b55eece93675655de0302d92b476ea","namespaceHash":"0df74c9500a634478c8699de42d30510ee82dafcdaadf016fb4de2ae2d85ba5a","commandHash":null,"stage":"host-metadata","code":"claude.metadata.cleanup-unconfirmed"}
+2026-11-16T06:04:10.6082045Z legacy-agent-host: claude-management {"profileHash":"68c91f8bffd9ec48a473fef8a3d57fbd97b55eece93675655de0302d92b476ea","namespaceHash":"0df74c9500a634478c8699de42d30510ee82dafcdaadf016fb4de2ae2d85ba5a","commandHash":null,"stage":"host-cleanup","code":"unavailable"}
+2026-11-16T06:04:10.6139885Z legacy-agent-host: claude-management {"profileHash":"68c91f8bffd9ec48a473fef8a3d57fbd97b55eece93675655de0302d92b476ea","namespaceHash":"0df74c9500a634478c8699de42d30510ee82dafcdaadf016fb4de2ae2d85ba5a","commandHash":null,"stage":"host-cleanup","code":"cleanup-unconfirmed"}
+2026-11-16T06:04:10.6143240Z ✔ finite metadata cleanup settles original custody before SDK forwarded abort, including false and throw (68.2463ms)
+2026-11-16T06:04:10.6215567Z ✔ model probe retains normalized pre-mask failure while its public result and owned cleanup remain held/confirmed (15.8654ms)
+2026-11-16T06:04:10.6370612Z ✔ coordinator current guard is observed before Host creation without changing its error or cleanup (13.5947ms)
+2026-11-16T06:04:11.4508383Z ✔ actual pinned SDK reads metadata and probes only the finite Node stream-JSON peer under original cleanup (817.1723ms)
+2026-11-16T06:04:11.9486538Z ✔ destructive lifecycle inspects original process receipt after metadata unregister, without signalling or trusting metadata stop (293.5708ms)
+2026-11-16T06:04:11.9489083Z ✔ actual purge preflight persists natural Windows absence without a list or Stop; cold original purge uses the same durable proof (1142.4157ms)
+2026-11-16T06:04:11.9826772Z ✔ Windows receipt mode bits do not impersonate POSIX permissions; original bytes/digest remain required (56.591ms)
+2026-11-16T06:04:11.9828807Z ✔ POSIX readable-by-others management receipts remain held (14.6044ms)
+2026-11-16T06:04:11.9837358Z ✔ Windows no-follow fallback still refuses a valid symlink receipt without touching its target (18.2298ms)
+2026-11-16T06:04:11.9839624Z ✔ Windows receipt replacement is held at before-open and closes the original FD (14.1131ms)
+2026-11-16T06:04:11.9862559Z ✔ Windows receipt replacement is held at after-open and closes the original FD (16.9977ms)
+2026-11-16T06:04:11.9864946Z ✔ Windows receipt replacement is held at disappeared-before-open and closes the original FD (12.0062ms)
+2026-11-16T06:04:20.7575786Z ✔ a Team model probe binds its context and cannot publish a result after its captured authority is revoked (118.7418ms)
+2026-11-16T06:04:20.7578529Z ✔ model probe claims before native work and returns original result without a second model request on replay (9206.0646ms)
+2026-11-16T06:04:21.0867237Z ✔ typed Thinking cannot replace the original coordination answer or bypass provenance and budgets (129.1795ms)
+2026-11-16T06:04:21.0869504Z ✔ cancel retains auth namespace until physical close and a late model response cannot publish success (66.5839ms)
+2026-11-16T06:04:21.0871767Z ✔ cold pending probe is held and never reruns inference; unknown physical cleanup holds the account (130.4851ms)
+2026-11-16T06:04:21.1331196Z ✔ explicit cancellation settles held observations only after native custody is released (54.3271ms)
+2026-11-16T06:04:21.2426401Z ✔ expiry and orderly shutdown cancel only their original probe (114.5213ms)
+2026-11-16T06:04:21.3364708Z ✔ failed initial claim allocates nothing; writer revocation or target change cannot publish a completed model proof (41.122ms)
+2026-11-16T06:04:21.3368243Z ✔ cancelled probe receipts cannot claim confirmed cancellation while retaining unknown process custody (38.8221ms)
+2026-11-16T06:04:21.3520974Z ✔ model limit identity is durable: changed limits conflict and invalid bounds never reach native (33.3866ms)
+2026-11-16T06:04:21.3834896Z ✔ early SDK write and EOF wait for native owner installation and resume, with backpressure (10.5511ms)
+2026-11-16T06:04:21.3838049Z ✔ abort-during-prepare never resumes native code or flushes queued input (3.3546ms)
+2026-11-16T06:04:21.3839851Z ✔ authority-loss-during-install never resumes native code or flushes queued input (1.6879ms)
+2026-11-16T06:04:21.3841711Z ✔ target exit before resume acknowledgement preserves its native code and final stdout/stderr (6.5394ms)
+2026-11-16T06:04:21.3843996Z ✔ prepare/control failure requests original cleanup once and never invents target termination (3.0395ms)
+2026-11-16T06:04:21.3847831Z ﹣ Linux builder refuses an existing or linked output leaf before any compiler dispatch (1.363ms) # SKIP
+2026-11-16T06:04:21.3849969Z ✔ new native-qualified OS builds admit only the architecture with measured custody evidence (13.0454ms)
+2026-11-16T06:04:21.3852315Z ✔ manifest selects one exact known build; unknown tuples and a mismatched loaded build fail closed (30.3302ms)
+2026-11-16T06:04:21.3854328Z ✔ saved historical records remain readable; control requires root, target, selected and actual builds to match (19.1867ms)
+2026-11-16T06:04:21.3859678Z ✔ builder keeps unknown candidates out of product admission and refuses changed hosts (49.468ms)
+2026-11-16T06:04:21.3861785Z ✔ native executable observations reuse the original captured child and reject changed bytes or birth (17.6776ms)
+2026-11-16T06:04:21.3864606Z ✔ x64 selects only its own finite OS artifact; this synthetic boundary is not a native qualification (15.9763ms)
+2026-11-16T06:04:21.3867593Z ✔ Linux pidfs records preserve original identity; reading Darwin v1/v2 never rewrites their bytes (2.2119ms)
+2026-11-16T06:04:21.3869352Z ✔ v1 same-session remains compatible; cross-session needs an explicit private v2 admission (0.5095ms)
+2026-11-16T06:04:21.3871024Z ✔ warm records are strict owner-local references and never accept serialized pidfd authority (0.5436ms)
+2026-11-16T06:04:21.3872981Z ✔ existing registry is cold-readable; metadata stop does not signal or claim native exit (39.6742ms)
+2026-11-16T06:04:21.3875197Z ✔ requested-before-native survives lost result/cold reopen and never redispatches (12.9646ms)
+2026-11-16T06:04:21.3876961Z ✔ stale exact row, corrupt registry and revoked authority fail before any signal (3.9613ms)
+2026-11-16T06:04:21.3879334Z ✔ finite Host route strips native authority and refuses PID or caller-supplied token selection (3.9903ms)
+2026-11-16T06:04:21.3883325Z ✔ metadata PID unregister preserves canonical all-history removal and never invokes OS signal (2.3897ms)
+2026-11-16T06:04:21.3885044Z ✔ same existing command namespace validates original fingerprints and generic pending phases (3.6959ms)
+2026-11-16T06:04:21.3886881Z ✔ explicit live-ancestry receipt cold-reads original target; same-token SID uncertainty holds custody without recapture or signal (9.5276ms)
+2026-11-16T06:04:21.3889144Z ✔ cold warm history requires completed absence of the full original capture, never a signal or another owner (16.7117ms)
+2026-11-16T06:04:21.3893190Z ✔ Windows lost capture ACK uses original receipt on cold lookup and async MCP strips private capability (51.1577ms)
+2026-11-16T06:04:21.3896057Z ✔ Windows original input is checked outside Team fence after capture await and before any policy effect (3.447ms)
+2026-11-16T06:04:21.3898399Z ✔ Windows expired capture retains evidence without policy; a later saved-capture lookup still checks original source (29.6154ms)
+2026-11-16T06:04:21.3900907Z ✔ Windows uncertain original policy writes never register twice and only exact attached row can complete (12.7482ms)
+2026-11-16T06:04:21.3902932Z ✔ Windows Stop uncertainty survives metadata removal and replacement; cold absence belongs to full original scope (96.2346ms)
+2026-11-16T06:04:21.3904898Z ✔ Windows natural absence stays on one original register across principals and cold reads, without a Stop (28.2288ms)
+2026-11-16T06:04:21.3908338Z ✔ lifecycle settles the original completed Windows Stop before purge without repeating its signal (80.5335ms)
+2026-11-16T06:04:21.3910421Z ✔ Windows natural settlement preserves pre-dispatch and lost-ACK uncertainty; only later proven no-dispatch may retry (51.6787ms)
+2026-11-16T06:04:21.3914095Z ✔ Windows natural evidence cannot cross a changed source, grant, deadline, capture or concurrent original Stop (61.4616ms)
+2026-11-16T06:04:21.3916474Z ✔ bounded warm sweep releases only native-absent descriptors, including orphaned descendants, and keeps original proofs (34.8474ms)
+2026-11-16T06:04:21.3919888Z ✔ warm absence acknowledgement is exact, already-absent only, and refuses foreign or stale authority (3.3961ms)
+2026-11-16T06:04:21.3921880Z ✔ purged Team retirement is atomic, binding-scoped, and retains every unknown or live original (1.668ms)
+2026-11-16T06:04:21.3923688Z ✔ more than 10000 sequential acknowledged Stops and purged Teams do not exhaust the warm owner lifetime (672.8631ms)
+2026-11-16T06:04:21.3925684Z ✔ Stop persists original absence before acknowledgement, recovers failed acknowledgement, and keeps reads inert (630.5968ms)
+2026-11-16T06:04:21.3928411Z ✔ natural warm history survives reads and failed purge, then actual durable Host purge retires it without a Stop (880.7559ms)
+2026-11-16T06:04:21.3930436Z ✔ exact deleted purge replay retries private cleanup without replaying publication or filesystem work (551.5296ms)
+2026-11-16T06:04:21.3932147Z ﹣ Linux original executable compares signed Node and unsigned native inode bits exactly (1.5067ms) # SKIP
+2026-11-16T06:04:21.3934969Z ✔ real controller registry and existing command scanner cold-recover original requested stop without redispatch (730.3464ms)
+2026-11-16T06:04:21.3937305Z ✔ actual bound MCP catalog preserves PID/id metadata semantics and excludes all OS termination tools (246.3365ms)
+2026-11-16T06:04:21.3940083Z ✔ real process composition accepts full stored binding and refuses wrong original owner/scope/extra selectors before native reads (156.0756ms)
+2026-11-16T06:04:21.3942464Z ✔ codex ordinary equal-profile probe origins survive the original metadata wait without retargeting (193.0916ms)
+2026-11-16T06:04:21.3944579Z ✔ codex prepared equal-profile probe origins survive the original metadata wait without retargeting (120.6875ms)
+2026-11-16T06:04:21.3946699Z ✔ claude ordinary equal-profile probe origins survive the original metadata wait without retargeting (116.0198ms)
+2026-11-16T06:04:21.3948832Z ✔ claude prepared equal-profile probe origins survive the original metadata wait without retargeting (129.1828ms)
+2026-11-16T06:04:21.3950459Z ✔ V1 equal-profile cache retirement releases only the original before B (88.2771ms)
+2026-11-16T06:04:21.3951917Z ✔ V1 equal-profile cache retirement holds B after unconfirmed original cleanup (65.4612ms)
+2026-11-16T06:04:21.3953503Z ✔ V1 catalog rechecks the actual model fence after awaiting original same-profile retirement (84.8226ms)
+2026-11-16T06:04:21.3955039Z ✔ Main read-only source observation creates no index, journal or native work (21.381ms)
+2026-11-16T06:04:21.3956646Z ✔ original released A and B remain eligible after publication and cold read; no latest substitution (307.4194ms)
+2026-11-16T06:04:21.3958394Z ✔ changed original seed becomes unavailable and corrupt or dangling successful history is held (158.1914ms)
+2026-11-16T06:04:21.3959939Z ✔ only explicit recovery reads an original prepared never-allocated snapshot (116.7566ms)
+2026-11-16T06:04:21.3961484Z ✔ configuration version check uses its exact published predecessor or original prepared snapshot (185.2411ms)
+2026-11-16T06:04:21.3963472Z ✔ complete original Team scopes and member references produce private exact origins without changing retained bytes (381.6177ms)
+2026-11-16T06:04:21.3965359Z ✔ live member retains its own original source and rejects a capture from another configuration (243.8346ms)
+2026-11-16T06:04:21.3969203Z ✔ source origin preserves original whole-job admission without manufacturing Main ownership (148.4314ms)
+2026-11-16T06:04:21.3970976Z ✔ source origin preserves original main admission without manufacturing Main ownership (125.0829ms)
+2026-11-16T06:04:21.3972764Z ✔ source origin preserves original scoped-without-main admission without manufacturing Main ownership (129.4987ms)
+2026-11-16T06:04:30.2077525Z ✔ saved model evidence follows the published source and cannot authorize a later source revision (1106.8091ms)
+2026-11-16T06:04:30.2079727Z ✔ saved no-draft and same-provider draft probes retain their source origin outside original profile and journal bytes (1524.0795ms)
+2026-11-16T06:04:30.2082471Z ✔ never-captured saved/imported lead and Alice resolve explicit private recipes without any product/runtime writes (303.6253ms)
+2026-11-16T06:04:30.2084476Z ✔ missing/ambiguous templates, changed source and stale owner refuse without authorizing a new launch (230.4318ms)
+2026-11-16T06:04:30.2086481Z ✔ existing probe journal retains original intents and exact claude cleanup after roster without native Team allocation (545.6335ms)
+2026-11-16T06:04:30.2088600Z ✔ existing probe journal retains original intents and exact claude cleanup after revoke without native Team allocation (418.3746ms)
+2026-11-16T06:04:30.2090710Z ✔ existing probe journal retains original intents and exact claude cleanup after recipe without native Team allocation (508.2603ms)
+2026-11-16T06:04:30.2092804Z ✔ existing probe journal retains original intents and exact codex cleanup after roster without native Team allocation (508.8804ms)
+2026-11-16T06:04:30.2095001Z ✔ existing probe journal retains original intents and exact codex cleanup after revoke without native Team allocation (404.0395ms)
+2026-11-16T06:04:30.2097107Z ✔ existing probe journal retains original intents and exact codex cleanup after recipe without native Team allocation (423.4492ms)
+2026-11-16T06:04:30.2099186Z ✔ existing probe journal retains original intents and exact opencode cleanup after roster without native Team allocation (4721.827ms)
+2026-11-16T06:04:30.2101137Z ✔ existing probe journal retains original intents and exact opencode cleanup after revoke without native Team allocation (416.8215ms)
+2026-11-16T06:04:30.2102307Z ✔ existing probe journal retains original intents and exact opencode cleanup after recipe without native Team allocation (429.5084ms)
+2026-11-16T06:04:30.2103402Z ✔ operator grant revocation invalidates saved source evidence even when the roster and template remain identical (154.4712ms)
+2026-11-16T06:04:35.9959742Z ✔ Team probe read rejects completed evidence after physical config-directory replacement while exact contextual cleanup remains addressable (5663.8271ms)
+2026-11-16T06:04:36.4022242Z ✔ saved Launch draft codex/lead selects only its explicit private recipe and retains original cancellation after template change (295.3476ms)
+2026-11-16T06:04:36.6996919Z ✔ saved Launch draft codex/new-member selects only its explicit private recipe and retains original cancellation after template change (416.0539ms)
+2026-11-16T06:04:36.9814151Z ✔ saved Launch draft opencode/lead selects only its explicit private recipe and retains original cancellation after template change (285.298ms)
+2026-11-16T06:04:39.0475398Z ✔ saved Launch draft opencode/new-member selects only its explicit private recipe and retains original cancellation after template change (298.916ms)
+2026-11-16T06:04:39.0477262Z ✔ saved workspace projection distinguishes canonical inheritance from an explicit member cwd (118.5158ms)
+2026-11-16T06:04:39.0478946Z ✔ codex model preflight preserves private default native options and binds explicit effort without rewriting the source (167.7413ms)
+2026-11-16T06:04:39.0480858Z ✔ opencode model preflight preserves private default native options and binds explicit effort without rewriting the source (190.4635ms)
+2026-11-16T06:04:39.0482763Z ✔ claude explicit UI Default low resets only model/effort from the same private recipe while absent choices retain captured values (179.5238ms)
+2026-11-16T06:04:39.0484683Z ✔ claude explicit UI Default undefined resets only model/effort from the same private recipe while absent choices retain captured values (161.4828ms)
+2026-11-16T06:04:39.0486705Z ✔ codex explicit UI Default low resets only model/effort from the same private recipe while absent choices retain captured values (194.4446ms)
+2026-11-16T06:04:39.0488715Z ✔ codex explicit UI Default undefined resets only model/effort from the same private recipe while absent choices retain captured values (207.9823ms)
+2026-11-16T06:04:39.0490675Z ✔ opencode explicit UI Default low resets only model/effort from the same private recipe while absent choices retain captured values (214.9936ms)
+2026-11-16T06:04:39.0494557Z ✔ opencode explicit UI Default undefined resets only model/effort from the same private recipe while absent choices retain captured values (203.879ms)
+2026-11-16T06:04:39.0496349Z ✔ V1 saved Default rebases only its proven limit overlay and resets the native provider/model pair (266.483ms)
+2026-11-16T06:04:39.0497767Z ✔ V2 draft Default preserves the native session model and rejects drifted private defaults (116.6179ms)
+2026-11-16T06:04:39.0787663Z ✔ finite Host run keeps scheduled choices, one input and original outcome across replay and cold restart (2822.2659ms)
+2026-11-16T06:04:39.0789979Z ✔ cancel before start and during native open never submit; original physical cleanup releases the pending factory (884.7111ms)
+2026-11-16T06:04:39.0792097Z ✔ original scheduled stderr is retained before SessionRef even when opening fails, without an input or replay (1272.1508ms)
+2026-11-16T06:04:39.0793687Z ✔ scheduled diagnostics refuse replaced selection, Team authority, workspace, writer and Host seal (1029.0656ms)
+2026-11-16T06:04:39.0794965Z ✔ scheduled stderr keeps the first 16 KiB on UTF-8 boundaries and one warning across cold reads (1790.0621ms)
+2026-11-16T06:04:39.0796114Z ✔ unknown cleanup is retained and cannot authorize replay or another native occurrence (3143.3401ms)
+2026-11-16T06:04:39.0797177Z ✔ independent schedules run concurrently and cancelling one preserves the original neighbor (1543.7927ms)
+2026-11-16T06:04:39.0798798Z ﹣ actual pinned SDK standalone run completes, cancels and survives cold replay without mutating the Team recipe (0.3729ms) # POSIX TEST shebang; actual Windows custody has its separate native gate
+2026-11-16T06:04:39.0801552Z legacy-agent-host: claude-management {"profileHash":"68c91f8bffd9ec48a473fef8a3d57fbd97b55eece93675655de0302d92b476ea","namespaceHash":"5dc0d810f023e8fbd23c0607a358692870258160b2e5d4c3f39e746f05b1c61c","commandHash":"ebd580a991341f41273f096fb6ac67f9ca7b912ca1eb23deca15ce0097cb4c62","stage":"probe-host","code":"unavailable"}
+2026-11-16T06:04:39.0803617Z ✔ codex metadata reaches its original finite process factory (33.2439ms)
+2026-11-16T06:04:39.0804326Z ✔ codex login reaches its original finite process factory (36.6475ms)
+2026-11-16T06:04:39.0805001Z ✔ codex probe reaches its original finite process factory (21.1674ms)
+2026-11-16T06:04:39.0805712Z ✔ claude metadata reaches its original finite process factory (17.7452ms)
+2026-11-16T06:04:39.0806429Z ✔ claude auth-status reaches its original finite process factory (22.2917ms)
+2026-11-16T06:04:39.0807052Z ✔ claude login reaches its original finite process factory (24.835ms)
+2026-11-16T06:04:39.0807669Z ✔ claude probe reaches its original finite process factory (20.3487ms)
+2026-11-16T06:04:39.0808288Z ✔ opencode catalog reaches its original finite process factory (23.414ms)
+2026-11-16T06:04:39.0808980Z ✔ claude schedule receives Main custody without Team service authority (10.7134ms)
+2026-11-16T06:04:39.0809702Z ✔ codex schedule receives Main custody without Team service authority (6.9337ms)
+2026-11-16T06:04:39.0810480Z ✔ Codex MCP read receives its original finite Main port before metadata execution (8.0183ms)
+2026-11-16T06:04:39.0811383Z ✔ source-version composition uses the same original Main port with only filtered captured environment (135.55ms)
+2026-11-16T06:04:39.0812344Z ✔ original Windows handles retain birth and executable identity without any later PID lookup (21.5913ms)
+2026-11-16T06:04:39.0813223Z ✔ same-name executable replacement cannot satisfy retained Windows process custody (10.4394ms)
+2026-11-16T06:04:39.0814124Z ✔ Windows job owns descendants after root exit and closes both handles only after complete absence (6.9791ms)
+2026-11-16T06:04:39.0815044Z ✔ native Windows errors and malformed accounting stay unknown and do not replay termination (6.8457ms)
+2026-11-16T06:04:39.0815886Z ✔ a failed native close never retries a possibly recycled handle or claims cleanup (9.304ms)
+2026-11-16T06:04:39.0817932Z ✔ failed Windows job assignment rejects original capture and never adopts the PID on retry (4.7132ms)
+2026-11-16T06:04:39.0819022Z ✔ kernel32 binding uses noninheritable opaque handles and a non-breakaway job with native accounting (1.7474ms)
+2026-11-16T06:04:39.0819962Z ✔ required tree capture fails before private stdin and retains the failed original child as unknown (3846.9049ms)
+2026-11-16T06:04:39.0822785Z ✔ fresh observations of a retained original tree use owned lifetime, not the allocation gate (377.9716ms)
+2026-11-16T06:04:39.0824408Z ✔ retained Windows executable checks distinguish file IDs above the safe integer range (8.704ms)
+2026-11-16T06:04:39.0825306Z ✔ native binding rejects unattested-bytes-before-load without admitting a kernel (48.0471ms)
+2026-11-16T06:04:39.0826193Z ✔ native binding rejects lossy-file-id-after-load without admitting a kernel (35.7356ms)
+2026-11-16T06:04:39.0827133Z ✔ long Windows argument runs retain literal backslashes, quotes and the original time bound (24.6073ms)
+2026-11-16T06:04:39.0828178Z ✔ known wrapper pins original, selected interpreter and script; later PATH never changes its argv (7.7089ms)
+2026-11-16T06:04:39.0829139Z ✔ captured fallback preserves the shared shell policy and pins its actual cmd image (2.6475ms)
+2026-11-16T06:04:39.0829980Z ✔ captured batch recipe rejects shell suffixes outside its encoded arguments (1.7717ms)
+2026-11-16T06:04:39.0830810Z ✔ captured shell recipe preserves quoted arguments and rejects malformed suffixes (3.2877ms)
+2026-11-16T06:04:39.0831711Z ✔ captured passthrough recipe preserves quoted arguments and rejects malformed suffixes (2.4056ms)
+2026-11-16T06:04:39.0832656Z ✔ captured direct-wrapper recipe preserves quoted arguments and rejects malformed suffixes (4.1402ms)
+2026-11-16T06:04:39.0833592Z ✔ known wrapper rejects ambiguous captured PATH and a changed original before selection (1.0706ms)
+2026-11-16T06:04:39.0834469Z ✔ direct native image selection preserves its independent command-line contract (0.2933ms)
+2026-11-16T06:04:39.0836232Z ✔ retained Windows port shares one immutable original selection only with its exact native profile (5.0874ms)
+2026-11-16T06:04:39.0837501Z ✔ retained Windows launch refuses changed original C:\TEST\provider.cmd (3.6983ms)
+2026-11-16T06:04:39.0838239Z ✔ retained Windows launch refuses changed original C:\Captured\node.exe (2.9275ms)
+2026-11-16T06:04:39.0838910Z ✔ retained Windows launch refuses changed original C:\TEST\cli.cjs (2.6564ms)
+2026-11-16T06:04:39.0839601Z ✔ retained Windows prepare refuses changed original C:\TEST\provider.cmd (4.6592ms)
+2026-11-16T06:04:39.0840307Z ✔ retained Windows prepare refuses changed original C:\Captured\node.exe (4.7357ms)
+2026-11-16T06:04:39.0840964Z ✔ retained Windows prepare refuses changed original C:\TEST\cli.cjs (4.145ms)
+2026-11-16T06:04:39.0841885Z ✔ retained Windows install-owner refuses changed original C:\TEST\provider.cmd (4.2657ms)
+2026-11-16T06:04:39.0842669Z ✔ retained Windows install-owner refuses changed original C:\Captured\node.exe (4.0805ms)
+2026-11-16T06:04:39.0843414Z ✔ retained Windows install-owner refuses changed original C:\TEST\cli.cjs (5.4439ms)
+2026-11-16T06:04:39.0844524Z ✔ ordinary Windows ports still capture their own original recipe without a retained facet (5.5279ms)
+2026-11-16T06:04:39.0846029Z ✔ codex forwards only its scoped original Windows service intent (39.8909ms)
+2026-11-16T06:04:39.0847252Z ✔ opencode forwards only its scoped original Windows service intent (21.4178ms)
+2026-11-16T06:04:39.0847773Z ℹ tests 167
+2026-11-16T06:04:39.0847981Z ℹ suites 0
+2026-11-16T06:04:39.0848189Z ℹ pass 164
+2026-11-16T06:04:39.0848391Z ℹ fail 0
+2026-11-16T06:04:39.0848594Z ℹ cancelled 0
+2026-11-16T06:04:39.0848817Z ℹ skipped 3
+2026-11-16T06:04:39.0849014Z ℹ todo 0
+2026-11-16T06:04:39.0849241Z ℹ duration_ms 29239.1831
+2026-11-16T06:04:39.7989350Z 
+2026-11-16T06:04:39.7990787Z [1m[46m RUN [49m[22m [36mv3.2.6 [39m[90mD:/a/agent-teams-ai/agent-teams-ai[39m
+2026-11-16T06:04:39.7992687Z 
+2026-11-16T06:04:41.6932284Z  [32m✓[39m tools/owned-process-broker/protocol.test.ts [2m([22m[2m47 tests[22m[2m)[22m[32m 141[2mms[22m[39m
+2026-11-16T06:04:42.5533577Z  [32m✓[39m tools/owned-process-broker/nativeGateEvents.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+2026-11-16T06:04:43.0380992Z  [32m✓[39m tools/owned-process-broker/nativeGateContext.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 192[2mms[22m[39m
+2026-11-16T06:04:43.0534911Z 
+2026-11-16T06:04:43.0537181Z [2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+2026-11-16T06:04:43.0538346Z [2m      Tests [22m [1m[32m54 passed[39m[22m[90m (54)[39m
+2026-11-16T06:04:43.0539131Z [2m   Start at [22m 06:04:39
+2026-11-16T06:04:43.0540334Z [2m   Duration [22m 3.26s[2m (transform 518ms, setup 0ms, collect 1.90s, tests 359ms, environment 1ms, prepare 500ms)[22m
+2026-11-16T06:04:43.0541183Z 
+2026-11-16T06:04:43.8205919Z 
+2026-11-16T06:04:43.8207704Z [1m[46m RUN [49m[22m [36mv3.2.6 [39m[90mD:/a/agent-teams-ai/agent-teams-ai[39m
+2026-11-16T06:04:43.8208145Z 
+2026-11-16T06:04:54.6339289Z [90mstdout[2m | test/features/agent-backend/desktopBackendFeature.test.ts
+2026-11-16T06:04:54.6340105Z [22m[39mDownloading Electron binary...
+2026-11-16T06:04:54.6340325Z 
+2026-11-16T06:05:05.5005683Z {"kind":"TEST_LAZY_HOST_STARTUP_OBSERVATION","point":"case-finally","observations":[{"phase":"profile-validation-start","kind":"handshake","elapsedMs":19840},{"phase":"profile-validation-complete","kind":"handshake","elapsedMs":20036},{"phase":"child-captured","kind":"handshake","elapsedMs":20038},{"phase":"request-admitted","kind":"handshake","elapsedMs":20038},{"phase":"response-accepted","kind":"handshake","elapsedMs":21418},{"phase":"ready","kind":"handshake","elapsedMs":21418}],"dropped":0,"pending":{"state":"resolved-failure","code":"forbidden","outcome":"not-dispatched"}}
+2026-11-16T06:05:06.3607707Z  [32m✓[39m test/features/agent-backend/desktopBackendFeature.test.ts [2m([22m[2m16 tests[22m[2m)[22m[33m 8108[2mms[22m[39m
+2026-11-16T06:05:06.3609270Z    [33m[2m✓[22m[39m captures global and exact project provider scopes without Team handles or default-owner fallback [33m 910[2mms[22m[39m
+2026-11-16T06:05:06.3610633Z    [33m[2m✓[22m[39m routes paired facade sends through the original captured owner with both immutable bindings [33m 511[2mms[22m[39m
+2026-11-16T06:05:06.3611952Z    [33m[2m✓[22m[39m uses two lazily captured subprocess hosts and captured context grants for finite IPC operations [33m 1173[2mms[22m[39m
+2026-11-16T06:05:06.3613397Z    [33m[2m✓[22m[39m connection discovery ignores renderer context claims and denies navigation/context changes during initialization [33m 439[2mms[22m[39m
+2026-11-16T06:05:06.3614674Z    [33m[2m✓[22m[39m keeps healthy owner discovery available after original transport loss [33m 933[2mms[22m[39m
+2026-11-16T06:05:06.3615783Z    [33m[2m✓[22m[39m keeps malformed registry, binding conflicts and stale discovery context fatal [33m 873[2mms[22m[39m
+2026-11-16T06:05:06.3616994Z    [33m[2m✓[22m[39m HTTP discovery uses the same captured context and rejects client context overrides [33m 520[2mms[22m[39m
+2026-11-16T06:05:06.3618528Z    [33m[2m✓[22m[39m rechecks captured context after lazy host startup before dispatching a finite command [33m 1619[2mms[22m[39m
+2026-11-16T06:05:06.3620343Z    [33m[2m✓[22m[39m rejects a lazy startup marker when the original selected Host closes first [33m 335[2mms[22m[39m
+2026-11-16T06:05:06.3622279Z    [33m[2m✓[22m[39m native health starts only the granted default owner and reports actual handshake without provider or Team work [33m 500[2mms[22m[39m
+2026-11-16T06:05:32.7323236Z  [32m✓[39m test/features/agent-backend/capturedHostClient.test.ts [2m([22m[2m33 tests[22m[2m)[22m[33m 23332[2mms[22m[39m
+2026-11-16T06:05:32.7327102Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mkeeps the original service intent and scope through late ACK and a successor Host [33m 950[2mms[22m[39m
+2026-11-16T06:05:32.7332482Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mderives retained service absence only from the original whole-Job proof: job-membership [33m 544[2mms[22m[39m
+2026-11-16T06:05:32.7334661Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mderives retained service absence only from the original whole-Job proof: no-local-dispatch [33m 471[2mms[22m[39m
+2026-11-16T06:05:32.7336379Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mretains Main launch/stdio/receipt ownership across graceful Host close [33m 911[2mms[22m[39m
+2026-11-16T06:05:32.7338675Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mretains Main launch/stdio/receipt ownership across crash Host close [33m 978[2mms[22m[39m
+2026-11-16T06:05:32.7342348Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mqueues multi-member launch and graceful cleanup without caching capacity refusals [33m 593[2mms[22m[39m
+2026-11-16T06:05:32.7344432Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mqueues multi-member launch and expired cleanup without caching capacity refusals [33m 613[2mms[22m[39m
+2026-11-16T06:05:32.7346259Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mholds Main reply bytes before native effect, expiry=false [33m 429[2mms[22m[39m
+2026-11-16T06:05:32.7347638Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mholds Main reply bytes before native effect, expiry=true [33m 480[2mms[22m[39m
+2026-11-16T06:05:32.7349252Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mkeeps the original TEST physical owner across Host loss, without replaying an unacknowledged write [33m 907[2mms[22m[39m
+2026-11-16T06:05:32.7350812Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mreserves native control under full reverse request and shared reply-byte budgets [33m 471[2mms[22m[39m
+2026-11-16T06:05:32.7352327Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mstarts the actual public CLI with the selected standalone Node artifact [33m 374[2mms[22m[39m
+2026-11-16T06:05:32.7354437Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mhandshakes with the packed host, serves two inputs, then confirms scoped close [33m 508[2mms[22m[39m
+2026-11-16T06:05:32.7355848Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mkeeps a committed effect unknown after response loss and never replays it [33m 406[2mms[22m[39m
+2026-11-16T06:05:32.7358813Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mdoes not turn a generic remote exception after an effect into a rejection receipt [33m 453[2mms[22m[39m
+2026-11-16T06:05:32.7361525Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects malformed frames before treating them as successful responses [33m 416[2mms[22m[39m
+2026-11-16T06:05:32.7364231Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects oversized frames before treating them as successful responses [33m 427[2mms[22m[39m
+2026-11-16T06:05:32.7366904Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects invalid UTF8 frames before treating them as successful responses [33m 463[2mms[22m[39m
+2026-11-16T06:05:32.7369566Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects a handshake with 8 priority slots that cannot admit work [33m 409[2mms[22m[39m
+2026-11-16T06:05:32.7373148Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects a handshake with 7 priority slots that cannot admit work [33m 440[2mms[22m[39m
+2026-11-16T06:05:32.7374590Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mkeeps one work output slot alongside the full control reserve [33m 438[2mms[22m[39m
+2026-11-16T06:05:32.7375920Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mreserves request capacity for control while work requests wait [33m 419[2mms[22m[39m
+2026-11-16T06:05:32.7377332Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrequest timeout retains unknown outcome while independent control remains available [33m 543[2mms[22m[39m
+2026-11-16T06:05:32.7378738Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mbounds notifications and exposes a gap without blocking responses [33m 418[2mms[22m[39m
+2026-11-16T06:05:32.7379978Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects mismatched host build identity [33m 6641[2mms[22m[39m
+2026-11-16T06:05:32.7381189Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mseals pending startup before validation can spawn the host [33m 834[2mms[22m[39m
+2026-11-16T06:05:32.7382442Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mshutdown does not kill an unrelated captured test child [33m 465[2mms[22m[39m
+2026-11-16T06:05:32.7383753Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mwaits for advertised cleanup budget 200 before signaling the original Host [33m 526[2mms[22m[39m
+2026-11-16T06:05:32.7385122Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mwaits for advertised cleanup budget 6000 before signaling the original Host [33m 531[2mms[22m[39m
+2026-11-16T06:05:32.7386598Z    [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mkeeps finite Host cleanup timeout distinct from confirmed child exit and provider release [33m 469[2mms[22m[39m
+2026-11-16T06:05:42.9029819Z  [32m✓[39m test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 7860[2mms[22m[39m
+2026-11-16T06:05:42.9032466Z    [33m[2m✓[22m[39m pending original custody stays UNKNOWN after the existing drain bound and late release [33m 7180[2mms[22m[39m
+2026-11-16T06:05:45.4992625Z  [32m✓[39m test/features/agent-backend/capturedWindowsSourceHistory.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 315[2mms[22m[39m
+2026-11-16T06:05:46.8598717Z  [32m✓[39m test/features/agent-backend/capturedWindowsSelection.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 99[2mms[22m[39m
+2026-11-16T06:05:47.9857150Z  [32m✓[39m test/features/agent-backend/fileTeamModelProbeIntents.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 332[2mms[22m[39m
+2026-11-16T06:05:49.2845927Z  [32m✓[39m test/features/agent-backend/capturedWindowsSourcePending.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+2026-11-16T06:05:50.1297347Z  [32m✓[39m test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T06:05:50.1451550Z 
+2026-11-16T06:05:50.1452417Z [2m Test Files [22m [1m[32m8 passed[39m[22m[90m (8)[39m
+2026-11-16T06:05:50.1453011Z [2m      Tests [22m [1m[32m81 passed[39m[22m[90m (81)[39m
+2026-11-16T06:05:50.1453452Z [2m   Start at [22m 06:04:43
+2026-11-16T06:05:50.1454179Z [2m   Duration [22m 66.33s[2m (transform 5.75s, setup 3.68s, collect 19.86s, tests 40.11s, environment 2ms, prepare 858ms)[22m
+2026-11-16T06:05:50.1454632Z 
+2026-11-16T06:05:50.4651227Z ##[group]Run set -euo pipefail
+2026-11-16T06:05:50.4651789Z [36;1mset -euo pipefail[0m
+2026-11-16T06:05:50.4652118Z [36;1mnode scripts/ensure-electron-install.cjs --strict[0m
+2026-11-16T06:05:50.4653048Z [36;1mnode --input-type=module -e "import assert from 'node:assert/strict'; import {createRequire} from 'node:module'; assert.equal(createRequire(import.meta.url)('electron/package.json').version,'44.10.1')"[0m
+2026-11-16T06:05:50.4667696Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-11-16T06:05:50.4668098Z env:
+2026-11-16T06:05:50.4668292Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:05:50.4668637Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:05:50.4668993Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:05:50.4669235Z ##[endgroup]
+2026-11-16T06:05:50.6391220Z ##[group]Run $build = Join-Path $env:RUNNER_TEMP 'TEST-process-build-x64'
+2026-11-16T06:05:50.6391863Z [36;1m$build = Join-Path $env:RUNNER_TEMP 'TEST-process-build-x64'[0m
+2026-11-16T06:05:50.6392336Z [36;1m$stage = Join-Path $env:RUNNER_TEMP 'TEST-process-stage-x64'[0m
+2026-11-16T06:05:50.6392804Z [36;1m$scoped = Join-Path $env:RUNNER_TEMP 'TEST-process-scoped-stage-x64'[0m
+2026-11-16T06:05:50.6393271Z [36;1m$cmake = (Get-Command cmake.exe -ErrorAction Stop).Source[0m
+2026-11-16T06:05:50.6393861Z [36;1mnode node_modules/tsx/dist/cli.mjs scripts/build/buildOwnedProcessBroker.ts 'x64' $build $stage $cmake[0m
+2026-11-16T06:05:50.6394541Z [36;1mif ($LASTEXITCODE -ne 0) { throw 'Native fixture build or product staging failed' }[0m
+2026-11-16T06:05:50.6395100Z [36;1m$staged = @(Get-ChildItem -File $stage | Select-Object -ExpandProperty Name)[0m
+2026-11-16T06:05:50.6395834Z [36;1mif ((($staged | Sort-Object) -join ',') -ne 'manifest.json,owned-process-broker.exe') { throw 'Unexpected staged fixture' }[0m
+2026-11-16T06:05:50.6396460Z [36;1m"HOST_PROCESS_NATIVE_BUILD=$build" >> $env:GITHUB_ENV[0m
+2026-11-16T06:05:50.6396841Z [36;1m"HOST_PROCESS_NATIVE_STAGE=$stage" >> $env:GITHUB_ENV[0m
+2026-11-16T06:05:50.6397341Z [36;1mCopy-Item "$stage\manifest.json" process-acceptance-evidence/windows-manifest.json[0m
+2026-11-16T06:05:50.6398106Z [36;1mnode node_modules/tsx/dist/cli.mjs scripts/build/buildOwnedProcessBroker.ts 'x64' $build $scoped $cmake service-scopes-v1[0m
+2026-11-16T06:05:50.6398877Z [36;1mif ($LASTEXITCODE -ne 0) { throw 'Scoped native fixture build or product staging failed' }[0m
+2026-11-16T06:05:50.6399482Z [36;1m$scopedFiles = @(Get-ChildItem -File $scoped | Select-Object -ExpandProperty Name)[0m
+2026-11-16T06:05:50.6400240Z [36;1mif ((($scopedFiles | Sort-Object) -join ',') -ne 'manifest.json,owned-process-broker.exe') { throw 'Unexpected scoped stage fixture' }[0m
+2026-11-16T06:05:50.6400908Z [36;1m"HOST_PROCESS_SCOPED_STAGE=$scoped" >> $env:GITHUB_ENV[0m
+2026-11-16T06:05:50.6401427Z [36;1mCopy-Item "$scoped\manifest.json" process-acceptance-evidence/windows-scoped-manifest.json[0m
+2026-11-16T06:05:50.6401915Z [36;1m$i386Build = "$build-i386"[0m
+2026-11-16T06:05:50.6402300Z [36;1m$i386Target = Join-Path $build 'Release\owned-process-fixture-i386.exe'[0m
+2026-11-16T06:05:50.6402845Z [36;1mif (Test-Path -LiteralPath $i386Target) { throw 'I386 TEST target must be fresh' }[0m
+2026-11-16T06:05:50.6403274Z [36;1m$compileI386 = @'[0m
+2026-11-16T06:05:50.6403543Z [36;1mimport { spawnSync } from 'node:child_process';[0m
+2026-11-16T06:05:50.6403914Z [36;1mconst [cmake, source, build] = process.argv.slice(1);[0m
+2026-11-16T06:05:50.6404312Z [36;1mfor (const args of [['-S', source, '-B', build, '-A', 'Win32'],[0m
+2026-11-16T06:05:50.6404798Z [36;1m  ['--build', build, '--config', 'Release', '--target', 'owned-process-fixture']]) {[0m
+2026-11-16T06:05:50.6405335Z [36;1m  const result = spawnSync(cmake, args, { stdio: 'inherit', timeout: 120000 });[0m
+2026-11-16T06:05:50.6405954Z [36;1m  if (result.error || result.status !== 0) throw new Error('Same-source TEST Win32 fixture build failed');[0m
+2026-11-16T06:05:50.6406635Z [36;1m}[0m
+2026-11-16T06:05:50.6406802Z [36;1m'@[0m
+2026-11-16T06:05:50.6407219Z [36;1mnode --input-type=module -e $compileI386 $cmake (Join-Path $PWD 'tools\owned-process-broker') $i386Build[0m
+2026-11-16T06:05:50.6407859Z [36;1mif ($LASTEXITCODE -ne 0) { throw 'Same-source TEST Win32 fixture build failed' }[0m
+2026-11-16T06:05:50.6408390Z [36;1m$i386Built = Join-Path $i386Build 'Release\owned-process-fixture.exe'[0m
+2026-11-16T06:05:50.6408920Z [36;1mCopy-Item -LiteralPath $i386Built -Destination $i386Target -ErrorAction Stop[0m
+2026-11-16T06:05:50.6409670Z [36;1mif ((Get-FileHash -LiteralPath $i386Built -Algorithm SHA256).Hash -cne (Get-FileHash -LiteralPath $i386Target -Algorithm SHA256).Hash) {[0m
+2026-11-16T06:05:50.6411891Z [36;1m  throw 'I386 TEST fixture copy changed bytes'[0m
+2026-11-16T06:05:50.6412243Z [36;1m}[0m
+2026-11-16T06:05:50.6412531Z [36;1m"HOST_PROCESS_NATIVE_I386_FIXTURE=$i386Target" >> $env:GITHUB_ENV[0m
+2026-11-16T06:05:50.6413334Z [36;1mGet-ChildItem -File "$build\Release\*.exe" | Get-FileHash -Algorithm SHA256 | Format-List | Out-File process-acceptance-evidence/windows-binary-sha256.txt[0m
+2026-11-16T06:05:50.6414180Z [36;1mNew-Item -ItemType Directory -Path native-evidence | Out-Null[0m
+2026-11-16T06:05:50.6414807Z [36;1mCopy-Item process-acceptance-evidence/windows-binary-sha256.txt native-evidence/binary-sha256.txt[0m
+2026-11-16T06:05:50.6456745Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-11-16T06:05:50.6457102Z env:
+2026-11-16T06:05:50.6457304Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:05:50.6457657Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:05:50.6458020Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:05:50.6458263Z ##[endgroup]
+2026-11-16T06:05:52.1408124Z -- Building for: Visual Studio 17 2022
+2026-11-16T06:05:52.3359960Z -- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.20348.
+2026-11-16T06:06:02.2864539Z -- The CXX compiler identification is MSVC 19.44.35230.0
+2026-11-16T06:06:02.4653311Z -- Detecting CXX compiler ABI info
+2026-11-16T06:06:03.5265080Z -- Detecting CXX compiler ABI info - done
+2026-11-16T06:06:03.5408848Z -- Check for working CXX compiler: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+2026-11-16T06:06:03.5425551Z -- Detecting CXX compile features
+2026-11-16T06:06:03.5441208Z -- Detecting CXX compile features - done
+2026-11-16T06:06:03.5630713Z -- Configuring done (11.4s)
+2026-11-16T06:06:03.6181350Z -- Generating done (0.1s)
+2026-11-16T06:06:03.6189457Z -- Build files have been written to: D:/a/_temp/TEST-process-build-x64
+2026-11-16T06:06:03.7381923Z MSBuild version 17.14.60+43b635718 for .NET Framework
+2026-11-16T06:06:03.7697609Z 
+2026-11-16T06:06:04.1267521Z   1>Checking Build System
+2026-11-16T06:06:04.2838675Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:04.4114301Z   broker.cpp
+2026-11-16T06:06:10.1094194Z   owned-process-broker.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-broker.exe
+2026-11-16T06:06:10.1781365Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:10.2497833Z   broker.cpp
+2026-11-16T06:06:12.1195878Z   owned-process-broker-accounting-failure.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-broker-accounting-failure.exe
+2026-11-16T06:06:12.1838390Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:12.2498334Z   broker.cpp
+2026-11-16T06:06:14.0801723Z   owned-process-broker-birth-failure.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-broker-birth-failure.exe
+2026-11-16T06:06:14.1472789Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:14.2140349Z   broker.cpp
+2026-11-16T06:06:16.5564508Z   owned-process-broker-debug-service.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-broker-debug-service.exe
+2026-11-16T06:06:16.6198514Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:16.6926733Z   broker.cpp
+2026-11-16T06:06:18.5667601Z   owned-process-broker-release-delay.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-broker-release-delay.exe
+2026-11-16T06:06:18.6320116Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:18.6986807Z   broker.cpp
+2026-11-16T06:06:20.9540615Z   owned-process-broker-service-scopes.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-broker-service-scopes.exe
+2026-11-16T06:06:21.0219437Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:21.0901680Z   nativeFixture.cpp
+2026-11-16T06:06:22.4422599Z   owned-process-fixture.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-fixture.exe
+2026-11-16T06:06:22.5073462Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:22.5794174Z   gateController.cpp
+2026-11-16T06:06:24.0960859Z   owned-process-gate-controller.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-gate-controller.exe
+2026-11-16T06:06:24.1641677Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:24.2316326Z   pendingWriteFixture.cpp
+2026-11-16T06:06:25.2656518Z   owned-process-pending-write-fixture.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-pending-write-fixture.exe
+2026-11-16T06:06:25.3135302Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:25.6711144Z -- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.20348.
+2026-11-16T06:06:25.6818418Z -- Configuring done (0.0s)
+2026-11-16T06:06:25.7257937Z -- Generating done (0.0s)
+2026-11-16T06:06:25.7265093Z -- Build files have been written to: D:/a/_temp/TEST-process-build-x64
+2026-11-16T06:06:25.8472722Z MSBuild version 17.14.60+43b635718 for .NET Framework
+2026-11-16T06:06:25.8844137Z 
+2026-11-16T06:06:26.2291061Z   1>Checking Build System
+2026-11-16T06:06:26.3506973Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:26.4923560Z   owned-process-broker.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-broker.exe
+2026-11-16T06:06:26.5640747Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:26.6020309Z   owned-process-broker-accounting-failure.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-broker-accounting-failure.exe
+2026-11-16T06:06:26.6764362Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:26.7150739Z   owned-process-broker-birth-failure.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-broker-birth-failure.exe
+2026-11-16T06:06:26.7809837Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:26.8178707Z   owned-process-broker-debug-service.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-broker-debug-service.exe
+2026-11-16T06:06:26.8829396Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:26.9215962Z   owned-process-broker-release-delay.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-broker-release-delay.exe
+2026-11-16T06:06:26.9865348Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:27.0225668Z   owned-process-broker-service-scopes.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-broker-service-scopes.exe
+2026-11-16T06:06:27.0858642Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:27.1237278Z   owned-process-fixture.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-fixture.exe
+2026-11-16T06:06:27.1890992Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:27.2240742Z   owned-process-gate-controller.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-gate-controller.exe
+2026-11-16T06:06:27.2899990Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:27.3261014Z   owned-process-pending-write-fixture.vcxproj -> D:\a\_temp\TEST-process-build-x64\Release\owned-process-pending-write-fixture.exe
+2026-11-16T06:06:27.3791667Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:27.5548402Z -- Building for: Visual Studio 17 2022
+2026-11-16T06:06:27.5678461Z -- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.20348.
+2026-11-16T06:06:30.5247806Z -- The CXX compiler identification is MSVC 19.44.35230.0
+2026-11-16T06:06:30.5742619Z -- Detecting CXX compiler ABI info
+2026-11-16T06:06:31.3663287Z -- Detecting CXX compiler ABI info - done
+2026-11-16T06:06:31.3810813Z -- Check for working CXX compiler: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x86/cl.exe - skipped
+2026-11-16T06:06:31.3815241Z -- Detecting CXX compile features
+2026-11-16T06:06:31.3823909Z -- Detecting CXX compile features - done
+2026-11-16T06:06:31.3855923Z -- Configuring done (3.8s)
+2026-11-16T06:06:31.4403030Z -- Generating done (0.1s)
+2026-11-16T06:06:31.4410522Z -- Build files have been written to: D:/a/_temp/TEST-process-build-x64-i386
+2026-11-16T06:06:31.5487355Z MSBuild version 17.14.60+43b635718 for .NET Framework
+2026-11-16T06:06:31.5802928Z 
+2026-11-16T06:06:31.8796761Z   1>Checking Build System
+2026-11-16T06:06:31.9783795Z   Building Custom Rule D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/CMakeLists.txt
+2026-11-16T06:06:32.1031928Z   nativeFixture.cpp
+2026-11-16T06:06:35.4857140Z   owned-process-fixture.vcxproj -> D:\a\_temp\TEST-process-build-x64-i386\Release\owned-process-fixture.exe
+2026-11-16T06:06:35.6512461Z ##[group]Run if (-not $env:HOST_PROCESS_NATIVE_I386_FIXTURE) { throw 'Original Windows fixture gate requires its built I386 TEST target' }
+2026-11-16T06:06:35.6513540Z [36;1mif (-not $env:HOST_PROCESS_NATIVE_I386_FIXTURE) { throw 'Original Windows fixture gate requires its built I386 TEST target' }[0m
+2026-11-16T06:06:35.6514159Z [36;1m$build = $env:HOST_PROCESS_NATIVE_BUILD[0m
+2026-11-16T06:06:35.6514577Z [36;1m$controller = "$build\Release\owned-process-gate-controller.exe"[0m
+2026-11-16T06:06:35.6515039Z [36;1m$node = (Get-Command node.exe -ErrorAction Stop).Source[0m
+2026-11-16T06:06:35.6515473Z [36;1m$runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'[0m
+2026-11-16T06:06:35.6515919Z [36;1m$gate = Join-Path $PWD 'tools\owned-process-broker\nativeGate.ts'[0m
+2026-11-16T06:06:35.6517792Z [36;1m& $controller $node $runner $gate "$env:HOST_PROCESS_NATIVE_STAGE\owned-process-broker.exe" "$build\Release\owned-process-fixture.exe" "$build\Release\owned-process-broker-birth-failure.exe" "$build\Release\owned-process-broker-accounting-failure.exe" "$build\Release\owned-process-broker-release-delay.exe" "$build\Release\owned-process-broker-debug-service.exe" 2>&1 | Tee-Object process-acceptance-evidence/windows-node24.log[0m
+2026-11-16T06:06:35.6519716Z [36;1mif ($LASTEXITCODE -ne 0) { throw 'Original Node fixture controller did not confirm cleanup' }[0m
+2026-11-16T06:06:35.6560878Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-11-16T06:06:35.6561244Z env:
+2026-11-16T06:06:35.6561453Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:06:35.6561818Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:06:35.6562393Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:06:35.6562725Z   HOST_PROCESS_NATIVE_BUILD: D:\a\_temp\TEST-process-build-x64
+2026-11-16T06:06:35.6563128Z   HOST_PROCESS_NATIVE_STAGE: D:\a\_temp\TEST-process-stage-x64
+2026-11-16T06:06:35.6563573Z   HOST_PROCESS_SCOPED_STAGE: D:\a\_temp\TEST-process-scoped-stage-x64
+2026-11-16T06:06:35.6564161Z   HOST_PROCESS_NATIVE_I386_FIXTURE: D:\a\_temp\TEST-process-build-x64\Release\owned-process-fixture-i386.exe
+2026-11-16T06:06:35.6564658Z ##[endgroup]
+2026-11-16T06:06:36.0006131Z gate-owned-sandbox:C:\Users\RUNNER~1\AppData\Local\Temp\opg58D1.tmp
+2026-11-16T06:06:36.9324694Z {"nativePhase":{"scenario":"sentinel","phase":"start","elapsedMs":0}}
+2026-11-16T06:06:36.9384071Z {"nativePhase":{"scenario":"sentinel","phase":"sentinel-ready","elapsedMs":7}}
+2026-11-16T06:06:36.9716435Z {"nativePhase":{"scenario":"sentinel","phase":"complete","elapsedMs":40}}
+2026-11-16T06:06:36.9719265Z {"nativePhase":{"scenario":"pre-resume-cancel","phase":"start","elapsedMs":40}}
+2026-11-16T06:06:36.9723393Z {"nativePhase":{"scenario":"pre-resume-cancel","phase":"prepare","elapsedMs":41}}
+2026-11-16T06:06:36.9988193Z {"nativePhase":{"scenario":"pre-resume-cancel","phase":"capture-root","elapsedMs":67}}
+2026-11-16T06:06:37.0190703Z {"nativePhase":{"scenario":"pre-resume-cancel","phase":"stop","elapsedMs":87}}
+2026-11-16T06:06:37.0222658Z {"nativeHelper":{"slot":1,"role":"witness","scenario":"pre-resume-cancel","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"pre-resume-cancel","phase":"stop"}}
+2026-11-16T06:06:37.0225770Z {"nativeHelper":{"slot":1,"role":"witness","scenario":"pre-resume-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"pre-resume-cancel","phase":"stop"}}
+2026-11-16T06:06:37.0387263Z {"nativePhase":{"scenario":"pre-resume-cancel","phase":"witness-exits","elapsedMs":107}}
+2026-11-16T06:06:37.0389658Z {"nativePhase":{"scenario":"pre-resume-cancel","phase":"target-drain","elapsedMs":108}}
+2026-11-16T06:06:37.0393862Z {"nativePhase":{"scenario":"pre-resume-cancel","phase":"release-ack","elapsedMs":108}}
+2026-11-16T06:06:37.0419954Z {"nativePhase":{"scenario":"pre-resume-cancel","phase":"broker-exit","elapsedMs":110}}
+2026-11-16T06:06:37.0427723Z {"nativePhase":{"scenario":"pre-resume-cancel","phase":"complete","elapsedMs":112}}
+2026-11-16T06:06:37.0430354Z {"nativePhase":{"scenario":"facade-stdio","phase":"start","elapsedMs":112}}
+2026-11-16T06:06:37.0433704Z {"nativePhase":{"scenario":"facade-stdio","phase":"prepare","elapsedMs":112}}
+2026-11-16T06:06:37.0713326Z {"nativePhase":{"scenario":"facade-stdio","phase":"capture-root","elapsedMs":140}}
+2026-11-16T06:06:37.0896924Z {"nativePhase":{"scenario":"facade-stdio","phase":"resume","elapsedMs":158}}
+2026-11-16T06:06:37.1077529Z {"nativePhase":{"scenario":"facade-stdio","phase":"root-exit","elapsedMs":176}}
+2026-11-16T06:06:37.1105856Z {"nativeHelper":{"slot":2,"role":"witness","scenario":"facade-stdio","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"facade-stdio","phase":"root-exit"}}
+2026-11-16T06:06:37.1108957Z {"nativeHelper":{"slot":2,"role":"witness","scenario":"facade-stdio","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"facade-stdio","phase":"root-exit"}}
+2026-11-16T06:06:37.1168293Z {"nativePhase":{"scenario":"facade-stdio","phase":"stop","elapsedMs":186}}
+2026-11-16T06:06:37.1177803Z {"nativePhase":{"scenario":"facade-stdio","phase":"witness-exits","elapsedMs":186}}
+2026-11-16T06:06:37.1179625Z {"nativePhase":{"scenario":"facade-stdio","phase":"target-drain","elapsedMs":186}}
+2026-11-16T06:06:37.1182516Z {"nativePhase":{"scenario":"facade-stdio","phase":"release-ack","elapsedMs":187}}
+2026-11-16T06:06:37.1192890Z {"nativePhase":{"scenario":"facade-stdio","phase":"broker-exit","elapsedMs":188}}
+2026-11-16T06:06:37.1195025Z {"nativePhase":{"scenario":"facade-stdio","phase":"complete","elapsedMs":188}}
+2026-11-16T06:06:37.1197141Z {"nativePhase":{"scenario":"facade-cancel","phase":"start","elapsedMs":188}}
+2026-11-16T06:06:37.1198984Z {"nativePhase":{"scenario":"facade-cancel","phase":"prepare","elapsedMs":188}}
+2026-11-16T06:06:37.1411477Z {"nativePhase":{"scenario":"facade-cancel","phase":"capture-root","elapsedMs":210}}
+2026-11-16T06:06:37.1622403Z {"nativePhase":{"scenario":"facade-cancel","phase":"stop","elapsedMs":230}}
+2026-11-16T06:06:37.1688429Z {"nativePhase":{"scenario":"facade-cancel","phase":"stop","elapsedMs":237}}
+2026-11-16T06:06:37.1694329Z {"nativeHelper":{"slot":3,"role":"witness","scenario":"facade-cancel","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"facade-cancel","phase":"stop"}}
+2026-11-16T06:06:37.1697976Z {"nativeHelper":{"slot":3,"role":"witness","scenario":"facade-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"facade-cancel","phase":"stop"}}
+2026-11-16T06:06:37.1795013Z {"nativePhase":{"scenario":"facade-cancel","phase":"witness-exits","elapsedMs":248}}
+2026-11-16T06:06:37.1798627Z {"nativePhase":{"scenario":"facade-cancel","phase":"target-drain","elapsedMs":248}}
+2026-11-16T06:06:37.1802133Z {"nativePhase":{"scenario":"facade-cancel","phase":"release-ack","elapsedMs":248}}
+2026-11-16T06:06:37.1815792Z {"nativePhase":{"scenario":"facade-cancel","phase":"broker-exit","elapsedMs":250}}
+2026-11-16T06:06:37.1818201Z {"nativePhase":{"scenario":"facade-cancel","phase":"complete","elapsedMs":250}}
+2026-11-16T06:06:37.1820199Z {"nativePhase":{"scenario":"capture-claude","phase":"start","elapsedMs":250}}
+2026-11-16T06:06:37.1886678Z {"nativePhase":{"scenario":"capture-claude","phase":"prepare","elapsedMs":257}}
+2026-11-16T06:06:37.2039653Z {"nativePhase":{"scenario":"capture-claude","phase":"root-exit","elapsedMs":273}}
+2026-11-16T06:06:37.2734304Z {"nativePhase":{"scenario":"capture-claude","phase":"stop","elapsedMs":342}}
+2026-11-16T06:06:37.2757819Z {"nativePhase":{"scenario":"capture-claude","phase":"complete","elapsedMs":344}}
+2026-11-16T06:06:37.2760598Z {"nativePhase":{"scenario":"capture-codex","phase":"start","elapsedMs":345}}
+2026-11-16T06:06:37.2809443Z {"nativePhase":{"scenario":"capture-codex","phase":"prepare","elapsedMs":350}}
+2026-11-16T06:06:37.2862496Z {"nativePhase":{"scenario":"capture-codex","phase":"root-exit","elapsedMs":355}}
+2026-11-16T06:06:37.3517938Z {"nativePhase":{"scenario":"capture-codex","phase":"stop","elapsedMs":420}}
+2026-11-16T06:06:37.3553244Z {"nativePhase":{"scenario":"capture-codex","phase":"complete","elapsedMs":423}}
+2026-11-16T06:06:37.3555126Z {"nativePhase":{"scenario":"capture-opencode","phase":"start","elapsedMs":423}}
+2026-11-16T06:06:37.3601837Z {"nativePhase":{"scenario":"capture-opencode","phase":"prepare","elapsedMs":429}}
+2026-11-16T06:06:37.3655216Z {"nativePhase":{"scenario":"capture-opencode","phase":"root-exit","elapsedMs":434}}
+2026-11-16T06:06:37.4300082Z {"nativePhase":{"scenario":"capture-opencode","phase":"stop","elapsedMs":498}}
+2026-11-16T06:06:37.4319553Z {"nativePhase":{"scenario":"capture-opencode","phase":"complete","elapsedMs":501}}
+2026-11-16T06:06:37.4321466Z {"nativePhase":{"scenario":"capture-root-first","phase":"start","elapsedMs":501}}
+2026-11-16T06:06:37.4371382Z {"nativePhase":{"scenario":"capture-root-first","phase":"prepare","elapsedMs":506}}
+2026-11-16T06:06:37.4419068Z {"nativePhase":{"scenario":"capture-root-first","phase":"child-lines","elapsedMs":511}}
+2026-11-16T06:06:37.5076671Z {"nativePhase":{"scenario":"capture-root-first","phase":"capture-descendants","elapsedMs":576}}
+2026-11-16T06:06:37.5478191Z {"nativePhase":{"scenario":"capture-root-first","phase":"root-exit","elapsedMs":616}}
+2026-11-16T06:06:37.5507526Z {"nativeHelper":{"slot":4,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"capture-root-first","phase":"root-exit"}}
+2026-11-16T06:06:37.5509776Z {"nativeHelper":{"slot":4,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"capture-root-first","phase":"root-exit"}}
+2026-11-16T06:06:37.5544296Z {"nativePhase":{"scenario":"capture-root-first","phase":"stop","elapsedMs":623}}
+2026-11-16T06:06:37.5598496Z {"nativeHelper":{"slot":5,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"capture-root-first","phase":"stop"}}
+2026-11-16T06:06:37.5601794Z {"nativeHelper":{"slot":5,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"capture-root-first","phase":"stop"}}
+2026-11-16T06:06:37.5608991Z {"nativeHelper":{"slot":7,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"capture-root-first","phase":"stop"}}
+2026-11-16T06:06:37.5613298Z {"nativeHelper":{"slot":7,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"capture-root-first","phase":"stop"}}
+2026-11-16T06:06:37.5622642Z {"nativeHelper":{"slot":8,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"capture-root-first","phase":"stop"}}
+2026-11-16T06:06:37.5625343Z {"nativeHelper":{"slot":8,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"capture-root-first","phase":"stop"}}
+2026-11-16T06:06:37.5627873Z {"nativeHelper":{"slot":6,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"capture-root-first","phase":"stop"}}
+2026-11-16T06:06:37.5629628Z {"nativeHelper":{"slot":6,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"capture-root-first","phase":"stop"}}
+2026-11-16T06:06:37.5717351Z {"nativePhase":{"scenario":"capture-root-first","phase":"witness-exits","elapsedMs":641}}
+2026-11-16T06:06:37.5719875Z {"nativePhase":{"scenario":"capture-root-first","phase":"complete","elapsedMs":641}}
+2026-11-16T06:06:37.5721409Z {"nativePhase":{"scenario":"debug-service-cancel","phase":"start","elapsedMs":641}}
+2026-11-16T06:06:37.5781219Z {"nativePhase":{"scenario":"debug-service-cancel","phase":"prepare","elapsedMs":647}}
+2026-11-16T06:06:37.5834712Z {"nativePhase":{"scenario":"debug-service-cancel","phase":"capture-root","elapsedMs":652}}
+2026-11-16T06:06:37.6024714Z {"nativePhase":{"scenario":"debug-service-cancel","phase":"stop","elapsedMs":671}}
+2026-11-16T06:06:37.6172772Z {"nativePhase":{"scenario":"debug-service-cancel","phase":"witness-exits","elapsedMs":686}}
+2026-11-16T06:06:37.6194321Z {"nativeHelper":{"slot":10,"role":"witness","scenario":"debug-service-cancel","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"debug-service-cancel","phase":"witness-exits"}}
+2026-11-16T06:06:37.6199180Z {"nativeHelper":{"slot":10,"role":"witness","scenario":"debug-service-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"debug-service-cancel","phase":"witness-exits"}}
+2026-11-16T06:06:37.6201597Z {"nativePhase":{"scenario":"debug-service-cancel","phase":"target-drain","elapsedMs":688}}
+2026-11-16T06:06:37.6202404Z {"nativePhase":{"scenario":"debug-service-cancel","phase":"release-ack","elapsedMs":688}}
+2026-11-16T06:06:37.6203268Z {"nativePhase":{"scenario":"debug-service-cancel","phase":"broker-exit","elapsedMs":688}}
+2026-11-16T06:06:37.6210200Z {"nativeHelper":{"slot":9,"role":"raw-broker","scenario":"debug-service-cancel","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"debug-service-cancel","phase":"broker-exit"}}
+2026-11-16T06:06:37.6215216Z {"nativeHelper":{"slot":9,"role":"raw-broker","scenario":"debug-service-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"debug-service-cancel","phase":"broker-exit"}}
+2026-11-16T06:06:37.6217385Z {"nativePhase":{"scenario":"debug-service-cancel","phase":"complete","elapsedMs":690}}
+2026-11-16T06:06:37.6218291Z {"nativePhase":{"scenario":"debug-service","phase":"start","elapsedMs":690}}
+2026-11-16T06:06:37.6250728Z {"nativePhase":{"scenario":"debug-service","phase":"prepare","elapsedMs":694}}
+2026-11-16T06:06:37.6292252Z {"nativePhase":{"scenario":"debug-service","phase":"capture-root","elapsedMs":698}}
+2026-11-16T06:06:37.6477430Z {"nativePhase":{"scenario":"debug-service","phase":"resume","elapsedMs":716}}
+2026-11-16T06:06:37.6478564Z {"nativePhase":{"scenario":"debug-service","phase":"child-lines","elapsedMs":717}}
+2026-11-16T06:06:38.1599722Z {"nativePhase":{"scenario":"debug-service","phase":"capture-descendants","elapsedMs":1228}}
+2026-11-16T06:06:38.2054202Z {"nativePhase":{"scenario":"debug-service","phase":"service-capture","elapsedMs":1274}}
+2026-11-16T06:06:38.2076157Z {"nativePhase":{"scenario":"debug-service","phase":"service-query-lifetime","elapsedMs":1276}}
+2026-11-16T06:06:38.4921783Z {"nativePhase":{"scenario":"debug-service","phase":"service-effect-retirement","elapsedMs":1561}}
+2026-11-16T06:06:38.5100602Z {"nativePhase":{"scenario":"debug-service","phase":"expired-service-stop","elapsedMs":1579}}
+2026-11-16T06:06:38.5111243Z {"nativePhase":{"scenario":"debug-service","phase":"stop","elapsedMs":1580}}
+2026-11-16T06:06:38.5154781Z {"nativeHelper":{"slot":13,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"debug-service","phase":"stop"}}
+2026-11-16T06:06:38.5158456Z {"nativeHelper":{"slot":13,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"debug-service","phase":"stop"}}
+2026-11-16T06:06:38.5161461Z {"nativeHelper":{"slot":14,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"debug-service","phase":"stop"}}
+2026-11-16T06:06:38.5163212Z {"nativeHelper":{"slot":14,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"debug-service","phase":"stop"}}
+2026-11-16T06:06:38.5164884Z {"nativeHelper":{"slot":15,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"debug-service","phase":"stop"}}
+2026-11-16T06:06:38.5166523Z {"nativeHelper":{"slot":15,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"debug-service","phase":"stop"}}
+2026-11-16T06:06:38.5256135Z {"nativePhase":{"scenario":"debug-service","phase":"witness-exits","elapsedMs":1594}}
+2026-11-16T06:06:38.5411498Z {"nativePhase":{"scenario":"debug-service","phase":"stop","elapsedMs":1610}}
+2026-11-16T06:06:38.5570324Z {"nativePhase":{"scenario":"debug-service","phase":"witness-exits","elapsedMs":1626}}
+2026-11-16T06:06:38.5594648Z {"nativeHelper":{"slot":12,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"debug-service","phase":"witness-exits"}}
+2026-11-16T06:06:38.5598518Z {"nativeHelper":{"slot":12,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"debug-service","phase":"witness-exits"}}
+2026-11-16T06:06:38.5616489Z {"nativeHelper":{"slot":16,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"debug-service","phase":"witness-exits"}}
+2026-11-16T06:06:38.5619443Z {"nativeHelper":{"slot":16,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"debug-service","phase":"witness-exits"}}
+2026-11-16T06:06:38.5621260Z {"nativePhase":{"scenario":"debug-service","phase":"target-drain","elapsedMs":1630}}
+2026-11-16T06:06:38.5622323Z {"nativePhase":{"scenario":"debug-service","phase":"release-ack","elapsedMs":1630}}
+2026-11-16T06:06:38.5623370Z {"nativePhase":{"scenario":"debug-service","phase":"broker-exit","elapsedMs":1630}}
+2026-11-16T06:06:38.5635412Z {"nativeHelper":{"slot":11,"role":"raw-broker","scenario":"debug-service","errorObserved":false,"closed":false,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"exit","duringScenario":"debug-service","phase":"broker-exit"}}
+2026-11-16T06:06:38.5665854Z {"nativeI386ChildObservation":{"status":"unknown"}}
+2026-11-16T06:06:38.5673657Z {"nativeHelper":{"slot":11,"role":"raw-broker","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"event":"close","duringScenario":"debug-service","phase":"broker-exit"}}
+2026-11-16T06:06:38.5686819Z {"nativePhase":{"scenario":"cleanup","phase":"abandon-control","elapsedMs":1638}}
+2026-11-16T06:06:38.6849193Z [31;1m{"gateFailure":{"scenario":"debug-service","phase":"broker-exit","helperCount":17,"retainedCount":3,"helpers":[{"slot":0,"role":"sentinel","scenario":"sentinel","errorObserved":false,"closed":false,"cleanupRequested":false,"stdoutEnded":false,"stderrEnded":false,"stdoutBuffered":0,"stderrBuffered":0},{"slot":1,"role":"witness","scenario":"pre-resume-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":2,"role":"witness","scenario":"facade-stdio","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":3,"role":"witness","scenario":"facade-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":4,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":5,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":6,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":7,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":8,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":9,"role":"raw-broker","scenario":"debug-service-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":10,"role":"witness","scenario":"debug-service-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":11,"role":"raw-broker","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":12,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":13,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":14,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":15,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":16,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0}],"retainedCapabilities":[{"slot":0,"diagnostics":{"writeCompleted":true,"brokerExit":{"code":0,"signal":null}}},{"slot":1,"diagnostics":{"writeCompleted":true,"brokerExit":{"code":0,"signal":null}}},{"slot":2,"diagnostics":{"writeCompleted":true,"brokerExit":{"code":0,"signal":null}}}]}}[0m
+2026-11-16T06:06:38.6882664Z {"cleanupObservation":"before-private-abandon","helperCount":17,"retainedCount":3,"helpers":[{"slot":0,"role":"sentinel","scenario":"sentinel","errorObserved":false,"closed":false,"cleanupRequested":false,"stdoutEnded":false,"stderrEnded":false,"stdoutBuffered":0,"stderrBuffered":0},{"slot":1,"role":"witness","scenario":"pre-resume-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":2,"role":"witness","scenario":"facade-stdio","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":3,"role":"witness","scenario":"facade-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":4,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":5,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":6,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":7,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":8,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":9,"role":"raw-broker","scenario":"debug-service-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":10,"role":"witness","scenario":"debug-service-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":11,"role":"raw-broker","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":12,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":13,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":14,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":15,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":16,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0}],"retainedCapabilities":[{"slot":0,"diagnostics":{"writeCompleted":true,"brokerExit":{"code":0,"signal":null}}},{"slot":1,"diagnostics":{"writeCompleted":true,"brokerExit":{"code":0,"signal":null}}},{"slot":2,"diagnostics":{"writeCompleted":true,"brokerExit":{"code":0,"signal":null}}}]}
+2026-11-16T06:06:38.6898124Z {"nativePhase":{"scenario":"cleanup","phase":"helper-exits","elapsedMs":1638}}
+2026-11-16T06:06:38.6899361Z {"nativeHelper":{"slot":0,"role":"sentinel","scenario":"sentinel","errorObserved":false,"closed":false,"cleanupRequested":true,"exit":{"code":null,"signal":"SIGTERM"},"event":"exit","duringScenario":"cleanup","phase":"helper-exits"}}
+2026-11-16T06:06:38.6901214Z {"nativeHelper":{"slot":0,"role":"sentinel","scenario":"sentinel","errorObserved":false,"closed":true,"cleanupRequested":true,"exit":{"code":null,"signal":"SIGTERM"},"event":"close","duringScenario":"cleanup","phase":"helper-exits"}}
+2026-11-16T06:06:38.6919835Z {"cleanupObservation":"after-helper-wait","helperCount":17,"retainedCount":3,"helpers":[{"slot":0,"role":"sentinel","scenario":"sentinel","errorObserved":false,"closed":true,"cleanupRequested":true,"exit":{"code":null,"signal":"SIGTERM"},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":1,"role":"witness","scenario":"pre-resume-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":2,"role":"witness","scenario":"facade-stdio","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":3,"role":"witness","scenario":"facade-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":4,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":5,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":6,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":7,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":8,"role":"witness","scenario":"capture-root-first","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":9,"role":"raw-broker","scenario":"debug-service-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":10,"role":"witness","scenario":"debug-service-cancel","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":11,"role":"raw-broker","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":12,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":13,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":14,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":15,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0},{"slot":16,"role":"witness","scenario":"debug-service","errorObserved":false,"closed":true,"cleanupRequested":false,"exit":{"code":0,"signal":null},"stdoutEnded":true,"stderrEnded":true,"stdoutBuffered":0,"stderrBuffered":0}],"retainedCapabilities":[{"slot":0,"diagnostics":{"writeCompleted":true,"brokerExit":{"code":0,"signal":null}}},{"slot":1,"diagnostics":{"writeCompleted":true,"brokerExit":{"code":0,"signal":null}}},{"slot":2,"diagnostics":{"writeCompleted":true,"brokerExit":{"code":0,"signal":null}}}]}
+2026-11-16T06:06:38.6935472Z [31;1mnode:internal/modules/run_main:107[0m
+2026-11-16T06:06:38.6935886Z [31;1m    triggerUncaughtException([0m
+2026-11-16T06:06:38.6936190Z [31;1m    ^[0m
+2026-11-16T06:06:38.6936429Z [31;1m[0m
+2026-11-16T06:06:38.6937059Z [31;1mAssertionError [ERR_ASSERTION]: Actual I386 child completion and observations must precede broker cleanup[0m
+2026-11-16T06:06:38.6938111Z [31;1m    at <anonymous> (D:\a\agent-teams-ai\agent-teams-ai\tools\owned-process-broker\nativeDebugServiceScenario.ts:105:14)[0m
+2026-11-16T06:06:38.6939200Z [31;1m    at ChildProcess.<anonymous> (D:\a\agent-teams-ai\agent-teams-ai\tools\owned-process-broker\nativeGateEvents.ts:22:11)[0m
+2026-11-16T06:06:38.6941103Z [31;1m    at ChildProcess.wrapper (node:events:639:12)[0m
+2026-11-16T06:06:38.6941597Z [31;1m    at ChildProcess.emit (node:events:526:24)[0m
+2026-11-16T06:06:38.6942201Z [31;1m    at ChildProcess._handle.onexit (node:internal/child_process:295:12) {[0m
+2026-11-16T06:06:38.6942713Z [31;1m  generatedMessage: false,[0m
+2026-11-16T06:06:38.6943047Z [31;1m  code: 'ERR_ASSERTION',[0m
+2026-11-16T06:06:38.6943374Z [31;1m  actual: undefined,[0m
+2026-11-16T06:06:38.6943676Z [31;1m  expected: true,[0m
+2026-11-16T06:06:38.6943968Z [31;1m  operator: '==',[0m
+2026-11-16T06:06:38.6946272Z [31;1m  diff: 'simple'[0m
+2026-11-16T06:06:38.6951911Z [31;1m}[0m
+2026-11-16T06:06:38.6957387Z [31;1m[0m
+2026-11-16T06:06:38.6963003Z [31;1mNode.js v24.21.0[0m
+2026-11-16T06:06:38.6963696Z {"gateController":"drained","rootExitCode":1,"activeProcesses":0}
+2026-11-16T06:06:38.8284608Z [31;1mException: [0mD:\a\_temp\eb3c0525-684c-44f8-807f-f2bcaaa4a72c.ps1:9[0m
+2026-11-16T06:06:38.8285201Z [31;1m[0m[36;1mLine |[0m
+2026-11-16T06:06:38.8286151Z [31;1m[0m[36;1m[36;1m   9 | [0m … DE -ne 0) { [36;1mthrow 'Original Node fixture controller did not confirm c[0m …[0m
+2026-11-16T06:06:38.8287676Z [31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+2026-11-16T06:06:38.8288622Z [31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mOriginal Node fixture controller did not confirm cleanup[0m
+2026-11-16T06:06:38.8761022Z ##[error]Process completed with exit code 1.
+2026-11-16T06:06:38.8950424Z ##[group]Run actions/upload-artifact@v4
+2026-11-16T06:06:38.8950783Z with:
+2026-11-16T06:06:38.8951138Z   name: host-process-fixtures-win32-x64-e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:06:38.8951566Z   retention-days: 14
+2026-11-16T06:06:38.8951773Z   if-no-files-found: error
+2026-11-16T06:06:38.8952420Z   path: native-evidence/
+process-acceptance-evidence/
+D:\a\_temp/TEST-process-node24-43813731530/
+D:\a\_temp/TEST-process-electron-43813731530/
+
+2026-11-16T06:06:38.8953069Z   compression-level: 6
+2026-11-16T06:06:38.8953264Z   overwrite: false
+2026-11-16T06:06:38.8953458Z   include-hidden-files: false
+2026-11-16T06:06:38.8953681Z env:
+2026-11-16T06:06:38.8953853Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T06:06:38.8954189Z   HOST_PROCESS_SOURCE_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940
+2026-11-16T06:06:38.8954542Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T06:06:38.8954863Z   HOST_PROCESS_NATIVE_BUILD: D:\a\_temp\TEST-process-build-x64
+2026-11-16T06:06:38.8955282Z   HOST_PROCESS_NATIVE_STAGE: D:\a\_temp\TEST-process-stage-x64
+2026-11-16T06:06:38.8955698Z   HOST_PROCESS_SCOPED_STAGE: D:\a\_temp\TEST-process-scoped-stage-x64
+2026-11-16T06:06:38.8956281Z   HOST_PROCESS_NATIVE_I386_FIXTURE: D:\a\_temp\TEST-process-build-x64\Release\owned-process-fixture-i386.exe
+2026-11-16T06:06:38.8956776Z ##[endgroup]
+2026-11-16T06:06:39.0886329Z (node:6568) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T06:06:39.0887228Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T06:06:39.0994019Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-11-16T06:06:39.0998242Z The least common ancestor is D:\a. This will be the root directory of the artifact
+2026-11-16T06:06:39.0999212Z With the provided path, there will be 9 files uploaded
+2026-11-16T06:06:39.1004254Z Artifact name is valid!
+2026-11-16T06:06:39.1007028Z Root directory input is valid!
+2026-11-16T06:06:39.3508461Z Beginning upload of artifact content to blob storage
+2026-11-16T06:06:39.3901014Z (node:6568) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-16T06:06:39.4780147Z Uploaded bytes 15043
+2026-11-16T06:06:39.5190368Z Finished uploading artifact content to blob storage!
+2026-11-16T06:06:39.5192461Z SHA256 digest of uploaded artifact zip is b5d26672269fc6bbf7ab6e13adddf62b65bd5295de28590df44ebdc547d74e86
+2026-11-16T06:06:39.5194161Z Finalizing artifact upload
+2026-11-16T06:06:39.8453785Z Artifact host-process-fixtures-win32-x64-e1d14b9cd0fa1d7896b58e513f9040639e9e4940.zip successfully finalized. Artifact ID 14201916494
+2026-11-16T06:06:39.8456206Z Artifact host-process-fixtures-win32-x64-e1d14b9cd0fa1d7896b58e513f9040639e9e4940 has been successfully uploaded! Final size is 15043 bytes. Artifact ID is 14201916494
+2026-11-16T06:06:39.8464287Z Artifact download URL: https://github.com/777genius/agent-teams-ai/actions/runs/43813731530/artifacts/14201916494
+2026-11-16T06:06:39.8796685Z Post job cleanup.
+2026-11-16T06:06:40.0738086Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-11-16T06:06:40.1027422Z git version 2.56.1.windows.1
+2026-11-16T06:06:40.1077217Z Copying 'C:\Users\runneradmin\.gitconfig' to 'D:\a\_temp\fddb225a-5dc4-4365-a1f1-000cb0b28c7c\.gitconfig'
+2026-11-16T06:06:40.1098301Z Temporarily overriding HOME='D:\a\_temp\fddb225a-5dc4-4365-a1f1-000cb0b28c7c' before making global git config changes
+2026-11-16T06:06:40.1100010Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T06:06:40.1109952Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\agent-teams-ai\agent-teams-ai
+2026-11-16T06:06:40.1398580Z Removing SSH command configuration
+2026-11-16T06:06:40.1409261Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T06:06:40.1705664Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-11-16T06:06:40.6462548Z Removing HTTP extra header
+2026-11-16T06:06:40.6472842Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T06:06:40.6765006Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-11-16T06:06:41.2147207Z Removing includeIf entries pointing to credentials config files
+2026-11-16T06:06:41.2162275Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T06:06:41.2462143Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-11-16T06:06:41.7495085Z Cleaning up orphan processes
+2026-11-16T06:06:41.7665218Z Terminate orphan process: pid (3340) (vctip)
+2026-11-16T06:06:41.7763430Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

@@ -1,0 +1,24 @@
+{
+  "singleWriter": "The same original creating/admission/debug thread alone calls observeBreakpoint through Scopes::firstBreakpoint.",
+  "originalObserverScopeUnchanged": "serviceScopes.h still checks startup.wow64 under its original mutex; no callback/decision/identity changes.",
+  "rowPublication": "Rows at index<count are immutable; writer stores count with release only after all8 DWORDs of that row are complete. Main reads count with acquire before reading exactly that prefix.",
+  "noConcurrentFlush": "The sole after-loop flush is removed. Only the existing main Release branch invokes the flush once before enqueueing Released; that branch breaks and performs no next control read.",
+  "outputHandleLifetime": "Configuration occurs while the original state lock is held, before runDebugLoop unlocks; the original Release state lock acquisition orders visibility of the configured immutable handle. Parent closes only its own inherited descriptor copy.",
+  "successExitOrdering": "Both successful ExitProcess paths require the full Released ACK/terminal CAS, which cannot occur before the main thread completes flush and enqueues that same ACK. Failure exits remain failure and may leave partial/unknown evidence.",
+  "memoryBound": "16rows×8DWORD×4bytes=512bytes;15normal rows+reserved overflow. Existing count cap and record layout unchanged.",
+  "io": "Exactly one existing WriteFile for the acquired prefix. A false result or unequal written/requested byte count returns false, and main takes existing abandon(WriteFailure) before Released is enqueued; no retry or additional I/O.",
+  "writeLimit": "The whole acquired prefix is required before success. No attestation of later/unobserved rows, durable fsync or whole trace completeness. Disabled/zero-count cases retain original no-I/O path; an enabled empty trace still fails unchanged TS qualification.",
+  "productExclusion": "debugServiceTest.h is included only in OWNED_PROCESS_TEST_DEBUG_SERVICE; new broker hook is inside that same existing TEST define. The mutually exclusive product branch is unchanged.",
+  "unchanged": [
+    "nativeDebugServiceScenario.ts",
+    "nativeGateEvents.test.ts",
+    "serviceScopes.h",
+    "serviceDebugLoop.h",
+    "nativeFixture.cpp",
+    "CMakeLists.txt",
+    "workflow",
+    "64helper limit",
+    "all original deadlines/Stop/custody/exception and4row qualification"
+  ],
+  "firstFailure": "The original terminal first-failure CAS is unchanged. An earlier latched failure wins; an incomplete observation write can now become the first TEST failure before any Released success."
+}

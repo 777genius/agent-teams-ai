@@ -1,0 +1,4107 @@
+{
+  "schemaVersion": 1,
+  "reviewedAtUTC": "2026-11-16T06:48:23.938842+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "sourceTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "runId": 43813731227,
+  "jobId": 133120928959,
+  "artifactId": 14203081582,
+  "result": "ORIGINAL_INSTALLER_LANE_PASS",
+  "qualification": {
+    "selectedInstallerAndSelectionSequence": true,
+    "currentTeamContracts": false,
+    "currentCompleteTypesOrTypedLint": false,
+    "nativeProviders": false,
+    "vendorAuth": false,
+    "release": false,
+    "otherDesktopLanes": false,
+    "historicalFailureCauseProven": false,
+    "independentR2": "pending"
+  },
+  "method": "Read-only original full MCP/log/API/ZIP/receipt/source and 11 single-image inspections; pure evidence hash/JSON joins only, no project or provider execution.",
+  "rawInputs": [
+    {
+      "path": "ci-e1d14b9/installer/original-job-133120928959-response.json",
+      "bytes": 187694,
+      "blob": "bb286bb8294fe952f27c2c2384015c23d552583a",
+      "sha256": "aa74feec812d89b68cf1f1e7836f2d6a219de87774f020c412906beb8452c447"
+    },
+    {
+      "path": "ci-e1d14b9/installer/job-133120928959.log",
+      "bytes": 177873,
+      "blob": "565ec78fd2fefcc147dc22082cb2788025252478",
+      "sha256": "1886ac9743d34ea3fce9e8e9d000a1a84b2e2432ec2e2e85fe64ecc40fe210e6"
+    },
+    {
+      "path": "ci-e1d14b9/installer/artifact-14203081582.zip",
+      "bytes": 1146605,
+      "blob": "28d8fe149dd76de01d8c7d1f30e0f9a5a187acf9",
+      "sha256": "54f412ddcedf16276dd055b63a3f7be7c4d3e9f43371422e5082c11ea8118be1"
+    },
+    {
+      "path": "ci-e1d14b9/installer/archive-retention.json",
+      "bytes": 11436,
+      "blob": "77de961fd868496226ec2db33194449081a96601",
+      "sha256": "342facae4b127b0e55b55f258a74de999625d65d7c93a06d6c2f66a0ec727f8a"
+    },
+    {
+      "path": "ci-e1d14b9/installer/source-pin-audit.json",
+      "bytes": 527764,
+      "blob": "d655fee7b64eb88e94c865aa0262aed405bd6b6e",
+      "sha256": "dfd3edbda78177da4df12be841499500e59f10cca53882cac18c1e93dc2dc2bd"
+    },
+    {
+      "path": "ci-e1d14b9/installer/visual-review.json",
+      "bytes": 6391,
+      "blob": "e082ce6852f0477ae61c29487b4336f091d51318",
+      "sha256": "3264546820ac1e7f92e5999514d3a5cbf4913fc52ad019cb63b5cc7f88565696"
+    },
+    {
+      "path": "external-e1d-integration/initial-api-responses.json",
+      "bytes": 2088356,
+      "blob": "0b4a4b435bfa0d1968961c29694ff740871917b4",
+      "sha256": "d9e448811262792814becd020fdde0dbf0622d4750462e5c45a34026c8790bda"
+    },
+    {
+      "path": "ci-e1d14b9/owned-jobs-0643.json",
+      "bytes": 24262,
+      "blob": "b29f9985ca2b699bf5a90c70f4731863499aeccc",
+      "sha256": "5c3bf79b0669ca6580c073c8b4b0e4d9d1f9a934e776cb4066b1ec97acdc8f35"
+    },
+    {
+      "path": "ci-e1d14b9/official-host-artifacts-0638.json",
+      "bytes": 1103,
+      "blob": "c7dedc60b6d0bbefdf192dce529835bd1706ae07",
+      "sha256": "7e0ea15923fcf1f20fac102d89ee3f37e4689fb06b5d56acf37f315d4d7d4fbf"
+    }
+  ],
+  "originalRun": {
+    "id": 43813731227,
+    "name": "Host Emulated Acceptance",
+    "node_id": "WFR_kwLORVTEtM8AAAAKM4B7mw",
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "display_title": "fix: complete Host frontend parity with emulated provider checks",
+    "run_number": 90,
+    "event": "pull_request",
+    "status": "queued",
+    "conclusion": null,
+    "workflow_id": 417564953,
+    "check_suite_id": 118610994536,
+    "check_suite_node_id": "CS_kwDORVTEtM8AAAAbncQlaA",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43813731227",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43813731227",
+    "pull_requests": [
+      {
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1192",
+        "id": 5299966773,
+        "number": 1192,
+        "head": {
+          "ref": "fix/frontend-parity-completion-20261113",
+          "sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        },
+        "base": {
+          "ref": "feat/provider-host-frontend-parity-20261112",
+          "sha": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        }
+      }
+    ],
+    "created_at": "2026-11-16T05:59:11Z",
+    "updated_at": "2026-11-16T05:59:13Z",
+    "actor": {
+      "login": "777genius",
+      "id": 13103045,
+      "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/777genius",
+      "html_url": "https://github.com/777genius",
+      "followers_url": "https://api.github.com/users/777genius/followers",
+      "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+      "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+      "organizations_url": "https://api.github.com/users/777genius/orgs",
+      "repos_url": "https://api.github.com/users/777genius/repos",
+      "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/777genius/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "run_attempt": 1,
+    "referenced_workflows": [],
+    "run_started_at": "2026-11-16T05:59:11Z",
+    "triggering_actor": {
+      "login": "777genius",
+      "id": 13103045,
+      "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/777genius",
+      "html_url": "https://github.com/777genius",
+      "followers_url": "https://api.github.com/users/777genius/followers",
+      "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+      "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+      "organizations_url": "https://api.github.com/users/777genius/orgs",
+      "repos_url": "https://api.github.com/users/777genius/repos",
+      "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/777genius/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43813731227/jobs",
+    "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43813731227/logs",
+    "check_suite_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-suites/118610994536",
+    "artifacts_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43813731227/artifacts",
+    "cancel_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43813731227/cancel",
+    "rerun_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43813731227/rerun",
+    "previous_attempt_url": null,
+    "workflow_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/workflows/417564953",
+    "head_commit": {
+      "id": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "tree_id": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+      "message": "Merge reviewed migration continuation and fix Windows checkouts\n\nPreserve both histories, all incoming evidence and the prepared frontend/native test fixes. Enable Windows long paths before checkout in six existing job definitions, keeping all original commands, matrices, deadlines and acceptance gates.",
+      "timestamp": "2026-11-16T05:29:53Z",
+      "author": {
+        "name": "Илия",
+        "email": "iliyazelenkog@gmail.com"
+      },
+      "committer": {
+        "name": "Илия",
+        "email": "iliyazelenkog@gmail.com"
+      }
+    },
+    "repository": {
+      "id": 1163183284,
+      "node_id": "R_kgDORVTEtA",
+      "name": "agent-teams-ai",
+      "full_name": "777genius/agent-teams-ai",
+      "private": false,
+      "owner": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/777genius/agent-teams-ai",
+      "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+      "fork": false,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+      "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+      "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+      "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+      "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+      "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+      "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+      "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+      "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+      "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+      "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+      "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+      "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+      "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+      "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments"
+    },
+    "head_repository": {
+      "id": 1163183284,
+      "node_id": "R_kgDORVTEtA",
+      "name": "agent-teams-ai",
+      "full_name": "777genius/agent-teams-ai",
+      "private": false,
+      "owner": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/777genius/agent-teams-ai",
+      "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+      "fork": false,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+      "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+      "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+      "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+      "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+      "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+      "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+      "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+      "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+      "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+      "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+      "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+      "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+      "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+      "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments"
+    }
+  },
+  "originalJob": {
+    "id": 133120928959,
+    "name": "Offline Host Desktop (darwin-arm64, installer)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43813731227,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "officialArtifact": {
+    "id": 14203081582,
+    "name": "host-emulated-darwin-arm64-e1d14b9cd0fa1d7896b58e513f9040639e9e4940-installer",
+    "size_in_bytes": 1146605,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14203081582",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14203081582/zip",
+    "expired": false,
+    "created_at": "2026-11-16T06:33:56Z",
+    "expires_at": "2026-11-30T06:33:55Z",
+    "updated_at": "2026-11-16T06:33:56Z",
+    "digest": "sha256:54f412ddcedf16276dd055b63a3f7be7c4d3e9f43371422e5082c11ea8118be1",
+    "workflow_run": {
+      "id": 43813731227,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+    }
+  },
+  "rawTransport": {
+    "fullResponseContentEqualsRawUTF8": true,
+    "teeLines": 2,
+    "teeFirstRawLine": 957,
+    "teeComparison": "Exact line bytes after removing only original job timestamp prefixes; no ANSI removal for tee.",
+    "rawFirstTimestamp": "﻿2026-11-16T06:26:41.1541270Z",
+    "rawLastTimestamp": "2026-11-16T06:34:02.0272310Z"
+  },
+  "archive": {
+    "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "artifactId": 14203081582,
+    "archive": {
+      "file": "artifact-14203081582.zip",
+      "bytes": 1146605,
+      "blob": "28d8fe149dd76de01d8c7d1f30e0f9a5a187acf9",
+      "sha256": "54f412ddcedf16276dd055b63a3f7be7c4d3e9f43371422e5082c11ea8118be1"
+    },
+    "officialMetadata": "../official-host-artifacts-0638.json",
+    "officialDigestEqual": true,
+    "allSafeUniquePaths": true,
+    "allCRCsValid": true,
+    "members": [
+      {
+        "path": "TEST-desktop-backend-F7twGS/TEST-codex-install/registry.ndjson",
+        "bytes": 1652,
+        "blob": "5f50706cd6758c63e2bf6ccab46d56a6d7e59a1e",
+        "sha256": "eac7818f8e2b5e85e77d5f9aa0e22f472f35bc58429be829a3653e12ef207ae4",
+        "crc32": "93a3772d",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/TEST-codex-install/invocations.ndjson",
+        "bytes": 15842,
+        "blob": "f858fe1165ff35a490a1b6065807c1e371b01cb4",
+        "sha256": "f28304642bb9e6865399354c76e11d4704b8e28b7262fbee263c3ff6dcac58dd",
+        "crc32": "14563182",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/TEST-peer-codex-scope/effects.ndjson",
+        "bytes": 16328,
+        "blob": "823b933e374ca00275ac9156ad9bac647f28f1a5",
+        "sha256": "e2c0a509b0532c6e2dccd89aa438e44868c828010c7509689976cf0a08dcc544",
+        "crc32": "5c5c4f9e",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/desktop-app.log",
+        "bytes": 21323,
+        "blob": "e101889a854504f78ba002fd5f7e53cf7bf60a34",
+        "sha256": "ceeed6d4b7e71a07c0727a933e07e083e453d2c03ea969c6afd0425c25571afd",
+        "crc32": "7d3afa32",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/desktop-backend-receipt.json",
+        "bytes": 859227,
+        "blob": "c78f35fe1bee7bc338a7824fbbf0485fe478a4ca",
+        "sha256": "4a89c65c3c9937958723d82ae67675efc0550a7fecd762a459627d65160f5801",
+        "crc32": "df12f210",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/desktop-descriptor.json",
+        "bytes": 2664,
+        "blob": "3e1f6f3228eb8edce81da4919dd5c98da346f4e3",
+        "sha256": "1adf8f5a4bac9d01485cf4b2c1b3f716baf33feb363c12f32d7d8987e37bf638",
+        "crc32": "910a48ca",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/host-profile.json",
+        "bytes": 7471,
+        "blob": "caa7e7af06b557e36bd94863d99c273050842afa",
+        "sha256": "2dd851235b768f5d52b7a238f44c9b94c05c4c3fffc2ee8f31190f2bdad3506e",
+        "crc32": "761b31b7",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/management-commands/0ffdd8f79c4612414ce68e2d4916d82d9cd390b61a2d11b29bd9427c22f6eb01.json",
+        "bytes": 904,
+        "blob": "0a529e2aa1ca43565235bceb4fe7f733fe700e81",
+        "sha256": "e2fe7b4daeb4185c2317d5ef0d42bda6aec81cf9c0df481184829b02f413203a",
+        "crc32": "1dfb0ab9",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/management-commands/2f84d964ad3cd4715ec8dcf75bd546ae5fdb505e7103d943ce13c2faffa14882.json",
+        "bytes": 929,
+        "blob": "cb8dfaa1fc47146a88dd6b3798f0db5ac82f9a4f",
+        "sha256": "cd1401a959518eb5ff49e54aaf0f103509386447233735c6084be81561d1e57c",
+        "crc32": "b5e9827b",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/management-commands/9cd0f552b44bb741a1435c9eaca359c6ad34f5b7e3bbd1e6923592f5c7f6249d.json",
+        "bytes": 923,
+        "blob": "e4e813d1f41ca5431c748ddb1507ac9cbbb6bf82",
+        "sha256": "67eee3aa8c64a1ae38266616733ae63a36e5aa4faab92f99f84b261a0f8e5b8e",
+        "crc32": "e247c95d",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/management-commands/b836a4d04c98c09a65fe63a5f4c3051c6d9b5b3e802a941119c596229a1b288d.json",
+        "bytes": 2297,
+        "blob": "16cf5e14a809856ffaf55a03c6c4ec64ae8db82b",
+        "sha256": "44370a090033ba9b7082ac177c5d14e974aede5393f474cabf01ee5bba34c6ce",
+        "crc32": "7e90548a",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/runtime-checkpoints/cp1-2999bd8f54b3f159097734fed78d05bf1e4901e03025d493c61cd090d6e67581.json",
+        "bytes": 2319,
+        "blob": "03740b9a9b47cd486a8ea26ebadd8185626062b3",
+        "sha256": "c66efc68a695033a8dc6ef9dd8d87cac6ef3b85f3ca7c8e333c839f298c18507",
+        "crc32": "352362b1",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/runtime-checkpoints/cp1-d481ace7c442a794887f32b07d237ce932bf1f56f727ef9c2232d43866c40438.json",
+        "bytes": 1895,
+        "blob": "0a3e014ee688491c875f7fc8e8e3334a42b01e83",
+        "sha256": "4b8830d9ebb828a3007b85883a62d6eaa4eefed2f94d9a43520ff3e2932a0487",
+        "crc32": "76785e29",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/runtime-sources/index.json",
+        "bytes": 1687,
+        "blob": "782ce599ce8c16e67da5407d749b787f60c09a9e",
+        "sha256": "07ef1960269fd6922ecc0d4c87980bca30acfae6ccbbba50ce6627d74b5703ed",
+        "crc32": "2fb9de5a",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+        "bytes": 453,
+        "blob": "4f86262aaa64cd90d37101f4f1f6da7aaf3cb53a",
+        "sha256": "92ba1102b951de2f1d3fcbb93ff4b07b6a75ba37d30badc6f1e2ca4fcec8869c",
+        "crc32": "e7c7c946",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/teams/test-selection-next-team/inboxes/team-lead.json",
+        "bytes": 202,
+        "blob": "743695a56a5984ba0dbbf2895b5d74c2254f8985",
+        "sha256": "16026037ec11ea2d6591f67174b87027ccf11354c59fe9d0da524b94771c2f9e",
+        "crc32": "029a042e",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/sentinel-invocations.ndjson",
+        "bytes": 96,
+        "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+        "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+        "crc32": "9fc3bdb4",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-a-launch.png",
+        "bytes": 88663,
+        "blob": "57ebaad7e4e49e816053529b735208ccacec7c3f",
+        "sha256": "953e28f0915a8f9fa56f6b5c61528336771699160b69f4f2251bccb2cc883a66",
+        "crc32": "def96747",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-a-survived.png",
+        "bytes": 103824,
+        "blob": "1037dcc16b2d49451bdc70dfc6ac00b24b18f95e",
+        "sha256": "8e853947a7f076750b7fdfb4b5c400a625c76ad99e568962eb08779b4e1ae273",
+        "crc32": "830c2bb7",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-b-launch.png",
+        "bytes": 84983,
+        "blob": "720af42fd38c36916c0b287ee6451ea93a0905d9",
+        "sha256": "f1806aeebd3ad2a21e8e2fd5bb5f2646a880b8ae554df76e24085acafdf5b326",
+        "crc32": "8f9155a6",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-completed.png",
+        "bytes": 108178,
+        "blob": "561ed886081cdee0da7712de7dd34d01a199c9f5",
+        "sha256": "b4bed05f99db30dd30490af8507832db3e3f4998379076f3d703e2771b320664",
+        "crc32": "c9a8911a",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-effects.json",
+        "bytes": 23162,
+        "blob": "6d98193edf4d04f622563afe08169dc33d85f2a7",
+        "sha256": "7e85ad4881cc7be30d4e8b011065b7b251e2d1a4904b2bf4378b8370e9d49642",
+        "crc32": "f04695c5",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-before.png",
+        "bytes": 73405,
+        "blob": "df66d3cd626f7a1217cb70f781262e911d088746",
+        "sha256": "c92677a3662a34dcef430e33fbe0fd04f30217a0a04fa5deec0d1c596622ce8e",
+        "crc32": "3cb43ff9",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-dialog.png",
+        "bytes": 91558,
+        "blob": "5a4326f77fab729a3d0ef3de193d5f51d002e838",
+        "sha256": "343cca845370f5b6682734b71ce0caf72dc698ea81d7eab7050bbc5bc4564f76",
+        "crc32": "5205996f",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-ready.png",
+        "bytes": 67264,
+        "blob": "6ef1e492faebdcc988a7599ca1c92e2bcf87ebfb",
+        "sha256": "815cb3c504e6297188ddacf41465f10a39aaf31518bdaa4711c8ffeeb4b2b4c8",
+        "crc32": "70e46ed5",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-page.png",
+        "bytes": 87018,
+        "blob": "1b5074921c3e9df287cceb587f3d46dfeaeb9219",
+        "sha256": "7b2f8073954fe97283a74567ed4bf2f656b91956bc76d038bea96e837c5b2b8a",
+        "crc32": "f4344cf1",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-reloaded.png",
+        "bytes": 76076,
+        "blob": "057631010378bf8c1a9667c15cc9fc9143dfd749",
+        "sha256": "b274516d12708ac6b3b08d59c81ad370b3a6f3aa8f63e60b0c1c180aef83b53a",
+        "crc32": "676849cf",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-selected.png",
+        "bytes": 70747,
+        "blob": "4f3b61385b747254c3003f96d25a560aaaf28361",
+        "sha256": "f3abb87dcd3ed36df0e2a92630330aee9293bafcd7c2fa41fb933c7a9cb768bd",
+        "crc32": "1463c36c",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-stopped.png",
+        "bytes": 95285,
+        "blob": "9ad227205c5787f7ff91c3589a75f385d936e613",
+        "sha256": "25421f2566e44a32fe3a870fcb2dd1f028a26ea5163f5928132a074200e92b81",
+        "crc32": "2791f970",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-seed-receipt.json",
+        "bytes": 2335,
+        "blob": "ae9a5985e512600d6a6f18245b719f3514c13b4b",
+        "sha256": "9db1b8eca78de8a30534dc6984d2883c495a753b138c527ea65a4bf937856e16",
+        "crc32": "a575f9fc",
+        "directory": false
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/current.json",
+        "bytes": 502,
+        "blob": "5130a485ad5a7304871e0f4e027f21e5562e4d9d",
+        "sha256": "b164969685c6134805429c014b832c8a29a3ccba4049ef7430d8bd86e1b8020d",
+        "crc32": "50e92c84",
+        "directory": false
+      },
+      {
+        "path": "host-emulated-emulated-installer-ui.log",
+        "bytes": 227,
+        "blob": "b27e8a34b42b19a28c6ee282a0244c475e1e0a20",
+        "sha256": "136331accd0612c97edf5c772730957d806d8f066ab1ee066032ed902bee02ad",
+        "crc32": "32e5fe8a",
+        "directory": false
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "bytes": 1055,
+        "blob": "5b436b2ac2ab67c32cdaa3036bb4791acafc129c",
+        "sha256": "07e4630a689cdc3056a1515002bd4d8079fc571434e32483a03e04a2f4e21c43",
+        "crc32": "8f5bab62",
+        "directory": false
+      },
+      {
+        "path": "host-emulated-summary.json",
+        "bytes": 1355,
+        "blob": "030047aa69314c2d62b36fb5b09cbdcd61f2b776",
+        "sha256": "1057542c76eff3cf373e379719a6b24cfe474d037f622d686fe234055ab42098",
+        "crc32": "1e8473ba",
+        "directory": false
+      }
+    ],
+    "executedArtifact": false,
+    "visualReview": "not yet performed",
+    "semanticReview": "raw retention only; not yet author-qualified"
+  },
+  "source": {
+    "fullSelectedProof": {
+      "path": "ci-e1d14b9/installer/source-pin-audit.json",
+      "bytes": 527764,
+      "blob": "d655fee7b64eb88e94c865aa0262aed405bd6b6e",
+      "sha256": "dfd3edbda78177da4df12be841499500e59f10cca53882cac18c1e93dc2dc2bd"
+    },
+    "count": 1757,
+    "freshGitSelectedBytes": 20343408,
+    "orderedBeforeAfter": true,
+    "selectedHostSourceLeaves": 586,
+    "notCompleteHostSourceCensus": true,
+    "relevantLeaves": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "gitBlob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "bytes": 101741,
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "inOriginalSelectedArrays": false
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "gitBlob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+        "bytes": 26261,
+        "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-codex-installer-ui.ts",
+        "gitBlob": "f049194429d74ab3e3a6808abd7c16d9772d5606",
+        "bytes": 16522,
+        "sha256": "19b78ef8d3dd637d5ae9b71c57d1b4dcd7175be344932afb8e55c53a33f8ba9d",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-codex-installer-fixture.ts",
+        "gitBlob": "b68eabb08c71dc31d2f9d4205cff265498fefe1f",
+        "bytes": 12137,
+        "sha256": "1818787c244d71ed8c8540ffa9acc6e749eaa8403e32f0a356d23ec99237d9b8",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "gitBlob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "bytes": 22082,
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "gitBlob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "bytes": 27188,
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "bytes": 49613,
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "bytes": 54778,
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-resume-records.ts",
+        "gitBlob": "0ca117bd5e84ae6368278a3a0a1cda40b5ec680b",
+        "bytes": 11685,
+        "sha256": "fe69bc8ed0208727811e53fbf7f1c92de27732181db6afb63de96d49f6a174ff",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/identity.ts",
+        "gitBlob": "d4e5631330f08ccc4138353f6e2b5f49f7cac01f",
+        "bytes": 709,
+        "sha256": "a795125fbf639552833eb3730d971b9de16437ed3507be303a5b42d541ba8bb7",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+        "gitBlob": "d3068dcabf3ea7334a252967b43931f8751f7d58",
+        "bytes": 7965,
+        "sha256": "58bb413b06a3d442f1916cba3d7afcf0e44679f679810459409a53881900f1da",
+        "inOriginalSelectedArrays": true
+      }
+    ],
+    "helperFileGitJoins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "gitBlob": "e2b96672feefb924a39e20131514e0db5e347311",
+        "bytes": 53683,
+        "sha256": "ba36a5c01c6f670bcba92e6a155683385cd3eb33c871f94b8191b378b226f9d9",
+        "inOriginalSelectedArrays": false
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "gitBlob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "bytes": 111672,
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+        "gitBlob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+        "bytes": 8676,
+        "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+        "gitBlob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+        "bytes": 20305,
+        "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+        "gitBlob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+        "bytes": 3804,
+        "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+        "gitBlob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+        "bytes": 2115,
+        "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21",
+        "inOriginalSelectedArrays": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+        "gitBlob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+        "bytes": 20040,
+        "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e",
+        "inOriginalSelectedArrays": false
+      },
+      {
+        "path": "test/scripts/installDependenciesWithRetry.test.mjs",
+        "gitBlob": "c1c0232d09e5cd898d7acabcc48b87bab58f3c82",
+        "bytes": 4939,
+        "sha256": "3aab9d6568157c883993c43b8057193175e69c16c31129ce3867a14e686a8f00",
+        "inOriginalSelectedArrays": false
+      }
+    ],
+    "compiledDigestsRecordedOnly": [
+      {
+        "path": "main/chunks/index-D9GX0Q6a.cjs",
+        "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+      },
+      {
+        "path": "main/chunks/index-yaJFGvjB.cjs",
+        "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+      },
+      {
+        "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+        "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+      },
+      {
+        "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+        "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+      },
+      {
+        "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+        "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+      },
+      {
+        "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+        "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+      },
+      {
+        "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+        "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+      },
+      {
+        "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+        "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+      },
+      {
+        "path": "main/index.cjs",
+        "sha256": "6c4026b6a9ca512c75bfc90eb4f84b90fc150b8111310bf49a82227e3907880c"
+      },
+      {
+        "path": "main/internal-storage-worker.cjs",
+        "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+      },
+      {
+        "path": "main/task-change-worker.cjs",
+        "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+      },
+      {
+        "path": "main/team-data-worker.cjs",
+        "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+      },
+      {
+        "path": "main/team-fs-worker.cjs",
+        "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+      },
+      {
+        "path": "preload/index.js",
+        "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+      }
+    ],
+    "bundleProvenance": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild",
+    "runtimePins": {
+      "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+      "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+      "pnpmStubSha256": "51e5afa0d043872f06d385aae61afb9eed59f110c414d2d1deae6ccf164acac7",
+      "profileSha256": "2dd851235b768f5d52b7a238f44c9b94c05c4c3fffc2ee8f31190f2bdad3506e",
+      "descriptorSha256": "1adf8f5a4bac9d01485cf4b2c1b3f716baf33feb363c12f32d7d8987e37bf638",
+      "sentinelSha256": "30754aa3eea7297407c8ce0be33480d52d7c6f83e14ffc49bb5d9e5b83dc68ca",
+      "shellProbeSha256": "34a3838c7a0044e344b2b1291ca3e58f50aba25620c2335ac987e996b22fa94a",
+      "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "electronSha256": "8c6ba2a581b0de90f0fa1a3743c3caecaa2f81a203491f92f774ab9bfb2dcd26",
+      "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+    },
+    "originalInputEnvelope": {
+      "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "nativeProviders": "forbidden",
+      "values": {
+        "LEGACY_DESKTOP_BACKEND_GO": "1",
+        "LEGACY_DESKTOP_EMULATED_ONLY": "1",
+        "LEGACY_DESKTOP_COREPACK_HOME": "/Users/runner/work/_temp/TEST-emulated-ui-inputs-QebeQz/cache",
+        "LEGACY_DESKTOP_NODE_SHA256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+        "LEGACY_DESKTOP_HOST_ENTRY_SHA256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "LEGACY_DESKTOP_PNPM_PATH": "/Users/runner/work/_temp/TEST-emulated-ui-inputs-QebeQz/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "LEGACY_DESKTOP_PNPM_SHA256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+        "LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+        "LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e"
+      }
+    },
+    "originalSummary": {
+      "status": "PASS",
+      "scope": "selected lane only",
+      "lane": "installer",
+      "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "completed": [
+        {
+          "mode": "emulated-installer-ui",
+          "receipt": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/desktop-backend-receipt.json",
+          "screenshots": [
+            "953e28f0915a8f9fa56f6b5c61528336771699160b69f4f2251bccb2cc883a66",
+            "f3abb87dcd3ed36df0e2a92630330aee9293bafcd7c2fa41fb933c7a9cb768bd",
+            "b274516d12708ac6b3b08d59c81ad370b3a6f3aa8f63e60b0c1c180aef83b53a",
+            "f1806aeebd3ad2a21e8e2fd5bb5f2646a880b8ae554df76e24085acafdf5b326",
+            "8e853947a7f076750b7fdfb4b5c400a625c76ad99e568962eb08779b4e1ae273",
+            "b4bed05f99db30dd30490af8507832db3e3f4998379076f3d703e2771b320664",
+            "25421f2566e44a32fe3a870fcb2dd1f028a26ea5163f5928132a074200e92b81",
+            "c92677a3662a34dcef430e33fbe0fd04f30217a0a04fa5deec0d1c596622ce8e",
+            "815cb3c504e6297188ddacf41465f10a39aaf31518bdaa4711c8ffeeb4b2b4c8",
+            "7b2f8073954fe97283a74567ed4bf2f656b91956bc76d038bea96e837c5b2b8a",
+            "343cca845370f5b6682734b71ce0caf72dc698ea81d7eab7050bbc5bc4564f76"
+          ]
+        }
+      ],
+      "nativeProviders": "not executed",
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "visualReview": "original screenshots retained for independent inspection"
+    }
+  },
+  "originalCI": {
+    "node": "24.21.0",
+    "electron": "44.10.1",
+    "platform": "darwin-arm64",
+    "sourceGuard": "Successful original checkout/runner verification step5 explicitly compared Git HEAD to HOST_EMULATED_SOURCE_HEAD and platform tuple.",
+    "installCommands": [
+      "set -euo pipefail",
+      "node scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1",
+      "node scripts/ensure-electron-install.cjs --strict",
+      "node -e \"require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')\"",
+      "pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1"
+    ],
+    "buildCommands": [
+      "pnpm --filter @agent-teams/legacy-agent-host build",
+      "pnpm --filter agent-teams-controller build",
+      "pnpm --filter agent-teams-mcp build"
+    ],
+    "testCommands": [
+      "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "node --test test/scripts/installDependenciesWithRetry.test.mjs"
+    ],
+    "helperCases": [
+      {
+        "line": 712,
+        "raw": "✔ offline Desktop admission refuses inherited native selections before preparing a fixture (23.627834ms)"
+      },
+      {
+        "line": 713,
+        "raw": "✔ TEST management admission retains only the exact direct detached Host peer without signaling (5.708625ms)"
+      },
+      {
+        "line": 714,
+        "raw": "﹣ Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder (0.310667ms) # SKIP"
+      },
+      {
+        "line": 715,
+        "raw": "✔ Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error (5.179167ms)"
+      },
+      {
+        "line": 716,
+        "raw": "✔ the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads (4.078ms)"
+      },
+      {
+        "line": 717,
+        "raw": "✔ read-only discovery survives navigation during the actual IPC read, then reads the new context (0.459334ms)"
+      },
+      {
+        "line": 718,
+        "raw": "✔ unregistered initial discovery waits, but owner failures are never hidden as navigation (0.421833ms)"
+      },
+      {
+        "line": 719,
+        "raw": "✔ initial discovery passes only its remaining captured budget to the IPC await (0.369709ms)"
+      },
+      {
+        "line": 720,
+        "raw": "✔ exhausted initial observation never dispatches the backend IPC (0.410208ms)"
+      },
+      {
+        "line": 721,
+        "raw": "✔ other discovery callers retain the default CDP budget (0.204083ms)"
+      },
+      {
+        "line": 722,
+        "raw": "✔ an explicit IPC observation budget lets the same read settle after30s within60s (0.798ms)"
+      },
+      {
+        "line": 723,
+        "raw": "✔ default CDP evaluations still reject at30s without a resend (0.706916ms)"
+      },
+      {
+        "line": 724,
+        "raw": "✔ macOS original Node zombie is the same unreaped harness child, never a changed live command (1.595042ms)"
+      },
+      {
+        "line": 725,
+        "raw": "✔ live stat can become original defunct before the guard; only original child reap and whole-group absence settle it (1.336167ms)"
+      },
+      {
+        "line": 726,
+        "raw": "✔ changed command/start, wrong child/group and initial descendants never authorize a recovery observation (0.165041ms)"
+      },
+      {
+        "line": 727,
+        "raw": "✔ an already observed original natural exit still requires fresh group and captured Host absence (0.151458ms)"
+      },
+      {
+        "line": 728,
+        "raw": "✔ original crash/signal and process-table failures remain debt (0.124083ms)"
+      },
+      {
+        "line": 729,
+        "raw": "✔ the original deadline is not renewed after initial settlement consumed it (0.123708ms)"
+      },
+      {
+        "line": 730,
+        "raw": "✔ numeric group absence without this original child exit observation expires within the remaining original budget (0.214917ms)"
+      },
+      {
+        "line": 731,
+        "raw": "✔ a process-table read that crosses the original deadline cannot qualify natural exit (0.089791ms)"
+      },
+      {
+        "line": 732,
+        "raw": "✔ an already reaped original child waits for actual descendant and original Host absence (0.422666ms)"
+      },
+      {
+        "line": 733,
+        "raw": "✔ an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget (0.689334ms)"
+      },
+      {
+        "line": 734,
+        "raw": "✔ absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities (0.458667ms)"
+      },
+      {
+        "line": 735,
+        "raw": "✔ a reused leader PID and unavailable full process census retain debt without signaling (0.199ms)"
+      },
+      {
+        "line": 736,
+        "raw": "✔ absent leader observation never renews the original deadline or accepts a late census (0.226958ms)"
+      },
+      {
+        "line": 737,
+        "raw": "✔ original peer observation accepts later-row only with its retained launch row (32.053708ms)"
+      },
+      {
+        "line": 738,
+        "raw": "✔ original peer observation accepts exit only with its retained launch row (8.024ms)"
+      },
+      {
+        "line": 739,
+        "raw": "✔ original peer observation refuses reuse without admitting the census PID (6.535584ms)"
+      },
+      {
+        "line": 740,
+        "raw": "✔ original peer observation refuses reparent without admitting the census PID (5.635167ms)"
+      },
+      {
+        "line": 741,
+        "raw": "✔ original peer observation refuses argv without admitting the census PID (5.66275ms)"
+      },
+      {
+        "line": 742,
+        "raw": "✔ original peer observation refuses duplicate without admitting the census PID (5.5955ms)"
+      },
+      {
+        "line": 743,
+        "raw": "✔ original peer observation refuses missing without admitting the census PID (5.526417ms)"
+      },
+      {
+        "line": 744,
+        "raw": "✔ original peer observation refuses late without admitting the census PID (4.755333ms)"
+      },
+      {
+        "line": 745,
+        "raw": "✔ original peer observation accepts a valid empty journal with no current children (5.489292ms)"
+      },
+      {
+        "line": 746,
+        "raw": "✔ original peer observation validates no-child-failure before returning without children (5.942834ms)"
+      },
+      {
+        "line": 747,
+        "raw": "✔ original peer observation validates no-child-malformed before returning without children (4.978041ms)"
+      },
+      {
+        "line": 748,
+        "raw": "✔ original peer observation validates no-child-late before returning without children (5.127209ms)"
+      },
+      {
+        "line": 749,
+        "raw": "✔ empty peer census refuses no-child-provider-mismatch through the original journal oracle (4.850125ms)"
+      },
+      {
+        "line": 750,
+        "raw": "✔ empty peer census refuses zero-host-failure through the original journal oracle (5.749084ms)"
+      },
+      {
+        "line": 751,
+        "raw": "✔ empty peer census validates its journal with no current Host before the first Team read (5.373084ms)"
+      },
+      {
+        "line": 752,
+        "raw": "✔ requested Quit lets the original child report its natural exit before the cleanup census (620.298625ms)"
+      },
+      {
+        "line": 753,
+        "raw": "✔ finite Codex exact native MCP catalog exits with empty inventory without allocating a Runtime (236.46125ms)"
+      },
+      {
+        "line": 754,
+        "raw": "✔ finite Codex catalog refuses changed argv, Runtime authority and nonempty selected configuration (539.325917ms)"
+      },
+      {
+        "line": 755,
+        "raw": "✔ finite Codex answers the original D managed config before connecting its selected Team on thread start (552.959625ms)"
+      },
+      {
+        "line": 756,
+        "raw": "✔ finite managed Codex policy refuses alternate syntax, extra servers and enabled apps before connection (288.6885ms)"
+      },
+      {
+        "line": 757,
+        "raw": "✔ runtime-derived Codex ordinary model probe (default) completes through original Host/D once (250.306958ms)"
+      },
+      {
+        "line": 758,
+        "raw": "✔ runtime-derived Codex ordinary model probe (low) completes through original Host/D once (157.065042ms)"
+      },
+      {
+        "line": 759,
+        "raw": "✔ finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread (157.7675ms)"
+      },
+      {
+        "line": 760,
+        "raw": "✔ finite Codex standalone refuses Team authority, persistent threads and unselected thread work (797.1405ms)"
+      },
+      {
+        "line": 761,
+        "raw": "✔ extensions Settings peer exposes only isolated auth status through original custody (465.028333ms)"
+      },
+      {
+        "line": 762,
+        "raw": "✔ saved-import Settings peer exposes only isolated auth status through original custody (454.742709ms)"
+      },
+      {
+        "line": 763,
+        "raw": "✔ finite extension status uses the original Host auth command and retains its exact private namespace (137.764042ms)"
+      },
+      {
+        "line": 764,
+        "raw": "✔ finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay (847.930958ms)"
+      },
+      {
+        "line": 765,
+        "raw": "✔ finite extension CLI refuses changed names/scopes and does not overwrite selected config (542.739583ms)"
+      },
+      {
+        "line": 766,
+        "raw": "✔ saved-import finite metadata and actual original probe receipt preserve model/effort with no extra input on lookup (3449.675125ms)"
+      },
+      {
+        "line": 767,
+        "raw": "✔ saved-import peer refuses a business input without producing a probe or touching Host receipts (886.188584ms)"
+      },
+      {
+        "line": 768,
+        "raw": "✔ receipt summaries retain only the original nested mixed Settings owner (3.966333ms)"
+      },
+      {
+        "line": 769,
+        "raw": "✔ retained c226 original rejected-key receipt joins its published seed and exact observed native probe (38.457ms)"
+      },
+      {
+        "line": 770,
+        "raw": "✔ V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable (16.019667ms)"
+      },
+      {
+        "line": 771,
+        "raw": "✔ V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable (4.139667ms)"
+      },
+      {
+        "line": 772,
+        "raw": "✔ V2 source history accounts for every publication and the exact retained current chain (19.98775ms)"
+      },
+      {
+        "line": 773,
+        "raw": "✔ original Host rejects old other-project cwd and accepts only its separate exact private-account seed (2.799209ms)"
+      },
+      {
+        "line": 774,
+        "raw": "✔ archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal (4.632416ms)"
+      },
+      {
+        "line": 775,
+        "raw": "✔ original V2 default intent joins its selected saving row within the same receipt deadline (14.908792ms)"
+      },
+      {
+        "line": 776,
+        "raw": "✔ published receipt reads survive the real controller writer before its atomic rename (56.775417ms)"
+      },
+      {
+        "line": 777,
+        "raw": "✔ receipt reads reject foreign staging names, directories and symbolic links (66.001625ms)"
+      },
+      {
+        "line": 778,
+        "raw": "✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (214.957167ms)"
+      },
+      {
+        "line": 779,
+        "raw": "✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (502.330416ms)"
+      },
+      {
+        "line": 780,
+        "raw": "✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (5.586334ms)"
+      },
+      {
+        "line": 781,
+        "raw": "✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (4.996208ms)"
+      },
+      {
+        "line": 782,
+        "raw": "✔ isolated shell fixture emits the actual framed environment and refuses shell effects (415.4155ms)"
+      },
+      {
+        "line": 783,
+        "raw": "✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (66.140791ms)"
+      },
+      {
+        "line": 784,
+        "raw": "✔ Task attachment comment waits for its original focused owner after one click before inserting text (228.983625ms)"
+      },
+      {
+        "line": 785,
+        "raw": "✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (3.815875ms)"
+      },
+      {
+        "line": 786,
+        "raw": "✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (4.652ms)"
+      },
+      {
+        "line": 787,
+        "raw": "✔ original desktop click waits for stable target geometry, without repeating input (307.647334ms)"
+      },
+      {
+        "line": 788,
+        "raw": "✔ original Task hover waits through layout and unavailability before its one physical move (611.308958ms)"
+      },
+      {
+        "line": 789,
+        "raw": "✔ original desktop click refuses a constantly moving target before dispatch (1540.605417ms)"
+      },
+      {
+        "line": 790,
+        "raw": "✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (308.120917ms)"
+      },
+      {
+        "line": 791,
+        "raw": "✔ login failure facts retain only bounded original attempts and confirmed milestones (1.850458ms)"
+      },
+      {
+        "line": 792,
+        "raw": "✔ finite readiness failure summaries keep only bounded states and never private snapshot data (1.255417ms)"
+      },
+      {
+        "line": 793,
+        "raw": "✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (1.599791ms)"
+      },
+      {
+        "line": 794,
+        "raw": "✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (2.05425ms)"
+      },
+      {
+        "line": 795,
+        "raw": "✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (0.63225ms)"
+      },
+      {
+        "line": 796,
+        "raw": "✔ installer CDP and cleanup projection retains only exact finite observations (0.941167ms)"
+      },
+      {
+        "line": 797,
+        "raw": "✔ Selection target summaries retain the exact original phase and six closed facts (0.791792ms)"
+      },
+      {
+        "line": 798,
+        "raw": "✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (0.516375ms)"
+      },
+      {
+        "line": 799,
+        "raw": "✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (1.295416ms)"
+      },
+      {
+        "line": 800,
+        "raw": "✔ original desktop click refuses a target unavailable during the final ownership check (203.801375ms)"
+      },
+      {
+        "line": 801,
+        "raw": "✔ original desktop click refuses a target moved during the final ownership check (206.342583ms)"
+      },
+      {
+        "line": 802,
+        "raw": "✔ original default scroll preserves a disabled control before its readiness wait (3.195ms)"
+      },
+      {
+        "line": 803,
+        "raw": "✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (104.671625ms)"
+      },
+      {
+        "line": 804,
+        "raw": "✔ original desktop click rechecks owner after its pending final target read (207.144959ms)"
+      },
+      {
+        "line": 805,
+        "raw": "✔ original desktop click rechecks cutoff after its pending final target read (204.697041ms)"
+      },
+      {
+        "line": 806,
+        "raw": "✔ original clarification lookup admits its retained read without completing the assignment prerequisite (3.983375ms)"
+      },
+      {
+        "line": 807,
+        "raw": "✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (28.03125ms)"
+      },
+      {
+        "line": 808,
+        "raw": "✔ original owner availability admits three captured A Teams through its actual first DOM read (3.185375ms)"
+      },
+      {
+        "line": 809,
+        "raw": "✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (2.88875ms)"
+      },
+      {
+        "line": 810,
+        "raw": "✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (28.674167ms)"
+      },
+      {
+        "line": 811,
+        "raw": "✔ original owner availability refuses invalid captured discovery before navigation (0.59575ms)"
+      },
+      {
+        "line": 812,
+        "raw": "✔ owner availability admits every captured A Team through the actual first observation (0.575125ms)"
+      },
+      {
+        "line": 813,
+        "raw": "✔ owner availability refuses healthy B in unavailable A rows (1.537083ms)"
+      },
+      {
+        "line": 814,
+        "raw": "✔ owner availability refuses captured foreign owner in unavailable A rows (0.281625ms)"
+      },
+      {
+        "line": 815,
+        "raw": "✔ owner availability refuses unknown Team in unavailable A rows (0.386584ms)"
+      },
+      {
+        "line": 816,
+        "raw": "✔ owner availability refuses malformed Team in unavailable A rows (0.311667ms)"
+      },
+      {
+        "line": 817,
+        "raw": "✔ owner availability refuses missing selected A before original navigation (0.2555ms)"
+      },
+      {
+        "line": 818,
+        "raw": "✔ owner availability refuses non-string A handle before original navigation (0.175708ms)"
+      },
+      {
+        "line": 819,
+        "raw": "✔ owner availability refuses empty A handle before original navigation (0.16325ms)"
+      },
+      {
+        "line": 820,
+        "raw": "✔ owner availability refuses duplicate A handle before original navigation (0.261625ms)"
+      },
+      {
+        "line": 821,
+        "raw": "✔ owner availability refuses over-bound capture before original navigation (0.164292ms)"
+      },
+      {
+        "line": 824,
+        "raw": "✔ original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget (15.740958ms)"
+      },
+      {
+        "line": 825,
+        "raw": "✔ Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget (27.836625ms)"
+      },
+      {
+        "line": 826,
+        "raw": "✔ the existing passive click recorder distinguishes the actual Team from later navigation without new actions (8.543125ms)"
+      },
+      {
+        "line": 827,
+        "raw": "✔ ordinary Node imports and synchronous observations remain inert (1.320917ms)"
+      },
+      {
+        "line": 828,
+        "raw": "✔ constructor subscription observes the original async child after pid assignment (48.930209ms)"
+      },
+      {
+        "line": 829,
+        "raw": "✔ the observer preserves an actual unhandled child-process error (151.862667ms)"
+      },
+      {
+        "line": 830,
+        "raw": "✔ failed reads, writes and unknown child fields cannot change the original operation (1.881875ms)"
+      },
+      {
+        "line": 831,
+        "raw": "✔ the original TEST helper path exposes only its closed requested target class (1.211ms)"
+      },
+      {
+        "line": 832,
+        "raw": "✔ event and pending-child bounds explicitly preserve incomplete coverage (1.537083ms)"
+      }
+    ],
+    "installerCases": [
+      {
+        "line": 841,
+        "raw": "✔ original frozen install retains its lockfile and selects only the explicit serial lifecycle option (204.285041ms)"
+      },
+      {
+        "line": 842,
+        "raw": "✔ unknown or duplicate frozen-install options refuse before any TEST installer is allocated (104.936541ms)"
+      },
+      {
+        "line": 843,
+        "raw": "✔ long unfinished engine warning does not turn a transient 503 into a terminal failure (1.066834ms)"
+      },
+      {
+        "line": 844,
+        "raw": "✔ next fatal engine line is not masked by a prior long warning (0.130875ms)"
+      },
+      {
+        "line": 845,
+        "raw": "✔ 404 marker fragmented across chunks within one stream is terminal (0.786375ms)"
+      },
+      {
+        "line": 846,
+        "raw": "✔ separate output streams cannot fabricate a 404 marker (0.195708ms)"
+      },
+      {
+        "line": 847,
+        "raw": "✔ whole-output classifier distinguishes long warning from fatal engine (0.126666ms)"
+      }
+    ],
+    "counts": [
+      {
+        "tests": 119,
+        "pass": 118,
+        "fail": 0,
+        "skipped": 1,
+        "cancelled": 0
+      },
+      {
+        "tests": 7,
+        "pass": 7,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0
+      }
+    ],
+    "originalSkip": "Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder",
+    "TeamStep9": "SKIPPED",
+    "CompleteTypesAndTypedLintStep10": "SKIPPED",
+    "DesktopStep25": "SUCCESS",
+    "VerifierStep30": "SUCCESS",
+    "scope": "The original lane builds and exercises these exact eight complete helper files plus seven installer cases; no independent rebuild or coverage transfer to Team177/24/static/C++/packaged/native.",
+    "warnings": "Original raw includes the unchanged experimental stripTypeScriptTypes warning and app dependency-layout warning; no warning-free claim."
+  },
+  "business": {
+    "status": "PASS",
+    "scope": "Original stock Codex Update, save-only model/effort selection, renderer reload, next launch and scoped Team Stop while the prior captured runtime remains alive",
+    "excluded": [
+      "vendor model compatibility",
+      "native provider qualification",
+      "replacement of existing provider conversation journeys"
+    ],
+    "stepsCount": 122,
+    "stepActionCounts": {
+      "mouseMoved": 55,
+      "mouseClick": 55,
+      "passive-observation": 1,
+      "mouseWheel": 11
+    },
+    "businessClickCounts": {
+      "launch original selection once": 2,
+      "stop original selected Team once": 2,
+      "install original Codex package exactly once": 1,
+      "save original second selection once": 1,
+      "send original held stream once": 1
+    },
+    "installer": {
+      "status": "PASS",
+      "nativeQualification": false,
+      "scope": "One original Update from TEST A0.162 to TEST B0.169 through stock package download/extraction/version check, manifest and Host publication while A stays alive",
+      "beforeScreenshot": {
+        "path": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-before.png",
+        "sha256": "c92677a3662a34dcef430e33fbe0fd04f30217a0a04fa5deec0d1c596622ce8e"
+      },
+      "readyScreenshot": {
+        "path": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-ready.png",
+        "sha256": "815cb3c504e6297188ddacf41465f10a39aaf31518bdaa4711c8ffeeb4b2b4c8"
+      },
+      "initialStatus": {
+        "installed": true,
+        "version": "0.162.0",
+        "latestVersion": "0.169.0",
+        "updateAvailable": true,
+        "source": "captured-host",
+        "state": "ready",
+        "sourceRevision": "1c318d9b6e32e15e1cb3f2d3f459584b1e2f07325f2eb9af7a434218ef2e1d5f"
+      },
+      "installedStatus": {
+        "installed": true,
+        "version": "0.169.0",
+        "latestVersion": "0.169.0",
+        "updateAvailable": false,
+        "source": "app-managed",
+        "state": "ready",
+        "sourceRevision": "dabfb8f80e796cf836d76813620a1230bd7fb3262898b0a18576487a6845d9e9",
+        "progress": {
+          "phase": "ready",
+          "percent": 100,
+          "detail": "Codex is ready for new launches."
+        }
+      },
+      "readbackStatus": {
+        "installed": true,
+        "version": "0.169.0",
+        "latestVersion": "0.169.0",
+        "updateAvailable": false,
+        "source": "app-managed",
+        "state": "ready",
+        "sourceRevision": "dabfb8f80e796cf836d76813620a1230bd7fb3262898b0a18576487a6845d9e9"
+      },
+      "installed": {
+        "manifest": {
+          "schemaVersion": 1,
+          "rootVersion": "0.169.0",
+          "platformVersion": "0.169.0-darwin-arm64",
+          "platformTarget": "aarch64-apple-darwin",
+          "binaryPath": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex",
+          "integrity": "sha512-UaAZ3KYpHt8vUGaFGQoNr4xacXrspMFsUnxOJE4pkBqvfDf3/2gtcvypfe1J+RN0GCm6hU9Gu9P3Lq1gUVOEuw==",
+          "installedAt": "2026-11-16T06:32:51.081Z"
+        },
+        "manifestPath": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/current.json",
+        "manifestSha256": "b164969685c6134805429c014b832c8a29a3ccba4049ef7430d8bd86e1b8020d",
+        "installation": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc",
+        "executable": {
+          "path": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex",
+          "sha256": "5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641"
+        },
+        "packageFiles": [
+          {
+            "relativePath": "codex/codex",
+            "sha256": "5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641",
+            "mode": 448
+          },
+          {
+            "relativePath": "path/rg",
+            "sha256": "850c97e31cc412edab3dbead7389ec6b2b9ebbf17f7a9a7ee9d0224b4d44e1ee",
+            "mode": 448
+          },
+          {
+            "relativePath": "codex/TEST-package.json",
+            "sha256": "e264a378d5f2e44588bf42f7e690b06c52b10b1fc6efb8ce0f15faffff598c2b",
+            "mode": 384
+          }
+        ]
+      },
+      "publication": {
+        "revision": "dabfb8f80e796cf836d76813620a1230bd7fb3262898b0a18576487a6845d9e9",
+        "previousRevision": "1c318d9b6e32e15e1cb3f2d3f459584b1e2f07325f2eb9af7a434218ef2e1d5f",
+        "commandId": "5d905ef5-1461-46cb-b003-f60cefe1d4a9",
+        "grant": {
+          "targetId": "8e1bca05981e16b6356d7bcb5807f0ea42ace25357b67ff2754af32b04dab002",
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "ownerRevision": "TEST-desktop-revision-1",
+          "contextId": "local",
+          "projectPath": null,
+          "runtimeId": "codex",
+          "profileId": "TEST-emulated-codex-management",
+          "configRevision": "TEST-emulated-codex-management",
+          "teamScopes": [
+            {
+              "teamId": "TEST-desktop-team",
+              "projectId": "TEST-project-TEST-desktop-backend-F7twGS",
+              "workspaceId": "TEST-workspace-TEST-desktop-backend-F7twGS"
+            }
+          ]
+        },
+        "candidate": {
+          "sourceKind": "app-managed",
+          "executable": {
+            "path": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex",
+            "sha256": "5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641"
+          },
+          "nativeCli": {
+            "executable": {
+              "path": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex",
+              "sha256": "5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641"
+            },
+            "version": "0.169.0"
+          }
+        }
+      },
+      "command": {
+        "schemaVersion": 1,
+        "commandId": "5d905ef5-1461-46cb-b003-f60cefe1d4a9",
+        "profileId": "TEST-emulated-codex-management",
+        "configRevision": "TEST-emulated-codex-management",
+        "providerId": "codex",
+        "fingerprint": "167ada0fe8aaaf8e38acb96b179c44d5185c5dadb3be1d956be14f1c2c4ebc0a",
+        "selectionDigest": "1c318d9b6e32e15e1cb3f2d3f459584b1e2f07325f2eb9af7a434218ef2e1d5f",
+        "resourceId": "8e1bca05981e16b6356d7bcb5807f0ea42ace25357b67ff2754af32b04dab002",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "8e1bca05981e16b6356d7bcb5807f0ea42ace25357b67ff2754af32b04dab002",
+        "revision": "dabfb8f80e796cf836d76813620a1230bd7fb3262898b0a18576487a6845d9e9",
+        "expectedRevision": "1c318d9b6e32e15e1cb3f2d3f459584b1e2f07325f2eb9af7a434218ef2e1d5f",
+        "nativeVersion": "0.169.0",
+        "publicationJson": "{\"grant\":{\"targetId\":\"8e1bca05981e16b6356d7bcb5807f0ea42ace25357b67ff2754af32b04dab002\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-F7twGS\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":null,\"runtimeId\":\"codex\",\"profileId\":\"TEST-emulated-codex-management\",\"configRevision\":\"TEST-emulated-codex-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-F7twGS\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-F7twGS\"}]},\"commandId\":\"5d905ef5-1461-46cb-b003-f60cefe1d4a9\",\"expectedRevision\":\"1c318d9b6e32e15e1cb3f2d3f459584b1e2f07325f2eb9af7a434218ef2e1d5f\",\"candidate\":{\"sourceKind\":\"app-managed\",\"executable\":{\"path\":\"/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex\",\"sha256\":\"5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641\"},\"nativeCli\":{\"executable\":{\"path\":\"/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex\",\"sha256\":\"5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641\"},\"version\":\"0.169.0\"}}}",
+        "digest": "04d639e4f3893e8f2153719e0c039d51675dc25e5305cf20fbbe4dfb97d2cf81"
+      },
+      "sourceWrites": 1,
+      "updateClicks": 1,
+      "downloads": 1,
+      "initialGetSourceWrites": 0,
+      "finalGetSourceWrites": 0,
+      "originalRuntimeRetained": true,
+      "registry": [
+        {
+          "pid": 8988,
+          "event": "armed",
+          "processType": "browser",
+          "electron": "44.10.1",
+          "fixtureSha256": "3a1381bb855b3b34e5903d6143cef6a3be1477a226f9482c1cad01531512aedc"
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 1,
+          "sha256": "310f77099596db4c27f84d0b858ef6a1072977ea742d1e4fa5a952c877c4859e",
+          "bytes": 358
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 2,
+          "sha256": "310f77099596db4c27f84d0b858ef6a1072977ea742d1e4fa5a952c877c4859e",
+          "bytes": 358
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 3,
+          "sha256": "310f77099596db4c27f84d0b858ef6a1072977ea742d1e4fa5a952c877c4859e",
+          "bytes": 358
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "platform",
+          "sequence": 4,
+          "sha256": "f30769c302fce42677179984db06990b44b9c7c2ebc27ee5381583bc8658fb9f",
+          "bytes": 276
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "tarball",
+          "sequence": 5,
+          "sha256": "e0ee57de640e4de787c5ca5c04a7b771e935107f7934f5171c664f69f64fcbbd",
+          "bytes": 1293
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 6,
+          "sha256": "310f77099596db4c27f84d0b858ef6a1072977ea742d1e4fa5a952c877c4859e",
+          "bytes": 358
+        }
+      ],
+      "invocations": [
+        {
+          "event": "invoke",
+          "pid": 12513,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 12515,
+          "parentPid": 8988,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "version"
+        },
+        {
+          "event": "invoke",
+          "pid": 13352,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13382,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13413,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13542,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13564,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13575,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13623,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13632,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13633,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13638,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13692,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13716,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13823,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13828,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13829,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13830,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13836,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13837,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13838,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 13849,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14259,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14333,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14335,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14502,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14955,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14960,
+          "parentPid": 8988,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "version"
+        },
+        {
+          "event": "invoke",
+          "pid": 14973,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14974,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15023,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15065,
+          "parentPid": 8988,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/installing-8988-693430f3-cc87-4659-8e8d-f60cf8cfc369/codex/codex",
+          "version": "0.169.0",
+          "kind": "version"
+        },
+        {
+          "event": "invoke",
+          "pid": 15082,
+          "parentPid": 8988,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex",
+          "version": "0.169.0",
+          "kind": "version"
+        },
+        {
+          "event": "invoke",
+          "pid": 15095,
+          "parentPid": 9741,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex",
+          "version": "0.169.0",
+          "kind": "version"
+        }
+      ],
+      "fixturePins": {
+        "package": "TEST finite package, not an official Codex distribution",
+        "aVersion": "0.162.0",
+        "bVersion": "0.169.0",
+        "aSha256": "a8fe445abbb37b68512375b9919bd94492dc7c504c0fe742d3bf406c96a6abe5",
+        "bSha256": "5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641",
+        "packageSha256": "e0ee57de640e4de787c5ca5c04a7b771e935107f7934f5171c664f69f64fcbbd",
+        "integrity": "sha512-UaAZ3KYpHt8vUGaFGQoNr4xacXrspMFsUnxOJE4pkBqvfDf3/2gtcvypfe1J+RN0GCm6hU9Gu9P3Lq1gUVOEuw==",
+        "preloadSha256": "1ed00e251e232ccc4ed3582b4e53e9c1d239d43aeb5474b9c4d8df6d72a086fe",
+        "pathAlias": {
+          "path": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/claude/local/node_modules/.bin/codex",
+          "target": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+          "sha256": "a8fe445abbb37b68512375b9919bd94492dc7c504c0fe742d3bf406c96a6abe5"
+        }
+      },
+      "settings": {
+        "status": "PASS",
+        "scope": "Settings Providers and Codex Manage show the healthy installed runtime; exact version is read through original getStatus",
+        "visibleVersionClaimed": false,
+        "providerReady": true,
+        "accountHealthy": true,
+        "manageOpened": true,
+        "installActionAbsent": true,
+        "finalStatus": {
+          "installed": true,
+          "version": "0.169.0",
+          "latestVersion": "0.169.0",
+          "updateAvailable": false,
+          "source": "app-managed",
+          "state": "ready",
+          "sourceRevision": "dabfb8f80e796cf836d76813620a1230bd7fb3262898b0a18576487a6845d9e9"
+        },
+        "sourceWrites": 0,
+        "extraDownloads": 0,
+        "originalRuntimesRetained": true,
+        "pageScreenshot": {
+          "path": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-page.png",
+          "sha256": "7b2f8073954fe97283a74567ed4bf2f656b91956bc76d038bea96e837c5b2b8a"
+        },
+        "dialogScreenshot": {
+          "path": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-dialog.png",
+          "sha256": "343cca845370f5b6682734b71ce0caf72dc698ea81d7eab7050bbc5bc4564f76"
+        }
+      }
+    },
+    "a": {
+      "capture": {
+        "commandId": "capture:launch:roster:18135d1d-2c89-469d-baad-8df6e296435e",
+        "configurationRevision": "2894e37f324a1272cbefd1baad18eb93c367543879114c419c9c43bcf2a30429",
+        "launchId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+        "members": [
+          {
+            "memberId": "alice-id",
+            "principalId": "agent:5faa999b-f28e-5c10-bfd0-e80f273e6f4c",
+            "delivery": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+              "teamId": "TEST-desktop-team",
+              "teamName": "test-desktop-backend",
+              "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+              "memberId": "alice-id",
+              "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+            }
+          }
+        ],
+        "principalId": "TEST-human",
+        "fingerprint": "38b6d72ac03d7476aa7127ac6d9e13b332935b680620b622a1967dd183432e10"
+      },
+      "definition": {
+        "launchId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+        "rosterRevision": "8d4d44fc0cc3a9c43e62b8d187cfd63ce1787810fafbe88a863f0840ec218bba",
+        "rosterScope": {
+          "projectId": "TEST-project-TEST-desktop-backend-F7twGS",
+          "workspaceId": "TEST-workspace-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "TEST-run-TEST-desktop-backend-F7twGS",
+          "memberId": "human",
+          "generation": "1"
+        },
+        "capture": {
+          "commandId": "capture:launch:roster:18135d1d-2c89-469d-baad-8df6e296435e",
+          "rosterCommandId": "roster:18135d1d-2c89-469d-baad-8df6e296435e",
+          "configurationRevision": "2894e37f324a1272cbefd1baad18eb93c367543879114c419c9c43bcf2a30429",
+          "mcpCaptureVersion": 1,
+          "mcpRecipeReferences": [
+            {
+              "memberId": "alice-id",
+              "digest": "156426a23520828fb650ae39971dc8110122393bb41941dc3014d7953a313955"
+            }
+          ],
+          "savedSettings": {
+            "cwd": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/workspace",
+            "prompt": "TEST_UI_BOOT",
+            "providerId": "codex",
+            "providerBackendId": "codex-native",
+            "model": "TEST-model",
+            "effort": "low",
+            "fastMode": "inherit",
+            "syncModelsWithLead": true,
+            "limitContext": false,
+            "skipPermissions": false,
+            "allowExperimentalLocalModels": false
+          },
+          "members": [
+            {
+              "memberId": "alice-id",
+              "name": "alice",
+              "role": "lead",
+              "settings": {},
+              "recipeDigest": "23f51a11d3a6d4fdd6fa5d0d6a96bbca5f430a65599e08bfeb3110ca4827ab0f"
+            }
+          ]
+        },
+        "members": [
+          {
+            "memberId": "alice-id",
+            "binding": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+              "teamId": "TEST-desktop-team",
+              "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+              "memberId": "alice-id",
+              "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+            },
+            "configurationDigest": "f0d8dafd602831677894626c4da8213f1af75dbe6fafa0f26f3d3b80c5574681",
+            "contextDigest": "1202b133ad0c361d9134abf3a03f5e5a561025f8614c97311815e54d164d9a14",
+            "configRevision": "capture-0e9bb2fe49a67ae7fb8a1017295f23a394aa2e9071f50f1ed86a5330c1c1faa8",
+            "skipped": false,
+            "timeoutMs": 90000,
+            "runtimeGeneration": 2,
+            "baseConfigurationDigest": "f0d8dafd602831677894626c4da8213f1af75dbe6fafa0f26f3d3b80c5574681"
+          }
+        ]
+      },
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-13829",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      }
+    },
+    "b": {
+      "capture": {
+        "commandId": "capture:launch:roster:a284071c-77a5-4c03-9e1f-04519b6bcc36",
+        "configurationRevision": "c67f05f1f06adc435a48f36819bb77c34288295f3ee8c8c01a63ddc616d2b79f",
+        "launchId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+        "members": [
+          {
+            "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+            "principalId": "agent:eadea9e8-d4a7-5119-8ddc-19d502d2ab8f",
+            "delivery": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+              "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+              "teamName": "test-selection-next-team",
+              "runId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+              "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+              "generation": "capture-355c615d-f592-58de-892a-bad3e3cb5ab1"
+            }
+          }
+        ],
+        "principalId": "TEST-human",
+        "fingerprint": "4809fb5f19dd212890ee1a03cf7bdba3bb567fea825620983dbce81c0af9672a"
+      },
+      "definition": {
+        "launchId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+        "rosterRevision": "18660adcd73eac9c7f4be0f8b5766ad926a47c6b82807150df521cbee8890e54",
+        "rosterScope": {
+          "projectId": "local",
+          "workspaceId": "local",
+          "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+          "runId": "81c10def-2b96-5e77-a8aa-920906434551",
+          "memberId": "user",
+          "generation": "1"
+        },
+        "capture": {
+          "commandId": "capture:launch:roster:a284071c-77a5-4c03-9e1f-04519b6bcc36",
+          "rosterCommandId": "roster:a284071c-77a5-4c03-9e1f-04519b6bcc36",
+          "configurationRevision": "c67f05f1f06adc435a48f36819bb77c34288295f3ee8c8c01a63ddc616d2b79f",
+          "mcpCaptureVersion": 1,
+          "mcpRecipeReferences": [
+            {
+              "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+              "digest": "2e5164605b1f300df2da898dfc0dd263dcd19b46e4665aad2c343c5d1a1bdc9e"
+            }
+          ],
+          "recipeSources": [
+            {
+              "sourceId": "8e1bca05981e16b6356d7bcb5807f0ea42ace25357b67ff2754af32b04dab002",
+              "revision": "dabfb8f80e796cf836d76813620a1230bd7fb3262898b0a18576487a6845d9e9",
+              "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2"
+            }
+          ],
+          "savedSettings": {
+            "cwd": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/workspace",
+            "prompt": "TEST_UI_BOOT",
+            "providerId": "codex",
+            "providerBackendId": "codex-native",
+            "model": "TEST-model-next",
+            "effort": "high",
+            "fastMode": "off",
+            "syncModelsWithLead": true,
+            "limitContext": false,
+            "skipPermissions": false,
+            "allowExperimentalLocalModels": false
+          },
+          "members": [
+            {
+              "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+              "name": "team-lead",
+              "role": "lead",
+              "settings": {},
+              "recipeDigest": "2f925494e397c5154caa4cbc74bbfd912933e0c61b6a6b7320ec36805b0eed35"
+            }
+          ]
+        },
+        "members": [
+          {
+            "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+            "binding": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+              "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+              "runId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+              "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+              "generation": "capture-355c615d-f592-58de-892a-bad3e3cb5ab1"
+            },
+            "configurationDigest": "40851128d4a11d51094ce293f08d85943ad1f3db8238b4265f2bb4c6203a8239",
+            "contextDigest": "1a06a70d5218c7cb39a8d73408f3ea7112536461c7c0728612402b663048a81e",
+            "configRevision": "capture-cbc40755e027e989e155daa11182ccc5f7861eb9ed2abcaa545d7f7b045e913d",
+            "skipped": false,
+            "timeoutMs": 90000,
+            "runtimeGeneration": 2,
+            "baseConfigurationDigest": "40851128d4a11d51094ce293f08d85943ad1f3db8238b4265f2bb4c6203a8239"
+          }
+        ]
+      },
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-16444",
+        "model": "TEST-model-next",
+        "effort": "high",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 16444
+      }
+    },
+    "aInvocation": {
+      "event": "invoke",
+      "pid": 13829,
+      "parentPid": 9741,
+      "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/TEST-codex-install/bin/codex",
+      "version": "0.162.0",
+      "kind": "app-server"
+    },
+    "bInvocation": {
+      "event": "invoke",
+      "pid": 16444,
+      "parentPid": 9741,
+      "executable": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex",
+      "version": "0.169.0",
+      "kind": "app-server"
+    },
+    "bSource": {
+      "sourceId": "8e1bca05981e16b6356d7bcb5807f0ea42ace25357b67ff2754af32b04dab002",
+      "revision": "dabfb8f80e796cf836d76813620a1230bd7fb3262898b0a18576487a6845d9e9",
+      "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2"
+    },
+    "creationEmbeddedOnly": {
+      "schemaVersion": 1,
+      "ownerId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+      "profileId": "TEST-desktop-profile-TEST-desktop-backend-F7twGS",
+      "principalId": "TEST-human",
+      "commandId": "68a63185-2b7a-466c-9912-325a135e1b4b",
+      "fingerprint": "c99264dda197767a35e29b490832c09c9b52cfd2036d33f9104a500c669dbfae",
+      "intent": {
+        "contextId": "local",
+        "teamName": "test-selection-next-team",
+        "savedSettings": {
+          "cwd": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/workspace",
+          "providerId": "codex",
+          "providerBackendId": "codex-native",
+          "model": "TEST-model-next",
+          "effort": "high",
+          "fastMode": "off",
+          "syncModelsWithLead": true,
+          "limitContext": false,
+          "skipPermissions": false
+        },
+        "members": []
+      },
+      "definition": {
+        "scope": {
+          "projectId": "local",
+          "workspaceId": "local",
+          "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+          "runId": "81c10def-2b96-5e77-a8aa-920906434551",
+          "memberId": "user",
+          "generation": "1"
+        },
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+          "teamName": "test-selection-next-team"
+        },
+        "savedSettings": {
+          "cwd": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/workspace",
+          "providerId": "codex",
+          "providerBackendId": "codex-native",
+          "model": "TEST-model-next",
+          "effort": "high",
+          "fastMode": "off",
+          "syncModelsWithLead": true,
+          "limitContext": false,
+          "skipPermissions": false
+        },
+        "members": [
+          {
+            "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+            "name": "team-lead",
+            "role": "lead"
+          }
+        ],
+        "grants": [
+          {
+            "principalId": "TEST-human",
+            "memberName": "user",
+            "permissions": [
+              "read",
+              "task.write",
+              "message.write",
+              "process.write",
+              "admin"
+            ]
+          }
+        ]
+      },
+      "record": {
+        "contextId": "local",
+        "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+        "teamName": "test-selection-next-team",
+        "members": [
+          {
+            "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+            "label": "team-lead"
+          }
+        ],
+        "binding": {
+          "schemaVersion": 1,
+          "handleId": "b7c17648-1f85-5c25-b560-2c97408f48a0",
+          "scope": {
+            "projectId": "local",
+            "workspaceId": "local",
+            "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+            "runId": "81c10def-2b96-5e77-a8aa-920906434551",
+            "memberId": "user",
+            "generation": "1"
+          }
+        }
+      },
+      "phase": "published",
+      "bootstrapPublished": true
+    },
+    "savedSelection": {
+      "cwd": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/workspace",
+      "providerId": "codex",
+      "providerBackendId": "codex-native",
+      "model": "TEST-model-next",
+      "effort": "high",
+      "fastMode": "off",
+      "syncModelsWithLead": true,
+      "limitContext": false,
+      "skipPermissions": false
+    },
+    "selectionRetainedAfterReload": true,
+    "observations": [
+      {
+        "phase": "before-create",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "before-original-installer-update",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-original-installer-ready",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-save-only",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-reload-before-next-launch",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-next-launch",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "before-original-installer-settings",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "before-original-installer-settings",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+          "runId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+          "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+          "generation": "capture-355c615d-f592-58de-892a-bad3e3cb5ab1"
+        },
+        "sessionRef": "c3188697-18d7-5c60-8b00-a6203643c257",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-16444",
+          "model": "TEST-model-next",
+          "effort": "high",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 16444
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-original-installer-settings",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-original-installer-settings",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+          "runId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+          "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+          "generation": "capture-355c615d-f592-58de-892a-bad3e3cb5ab1"
+        },
+        "sessionRef": "c3188697-18d7-5c60-8b00-a6203643c257",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-16444",
+          "model": "TEST-model-next",
+          "effort": "high",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 16444
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-b-stop-during-a-input",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": false
+      }
+    ],
+    "stream": {
+      "commandId": "70ab1934-04d7-4501-936a-31d22d5dbd29",
+      "inputId": "782139da-e03b-525a-81a3-db3b11052f73",
+      "terminal": "succeeded",
+      "survivedBStop": true
+    },
+    "aStop": {
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "TEST-desktop-team",
+        "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+        "memberId": "alice-id",
+        "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+      },
+      "phase": "closed",
+      "custody": "released",
+      "originalPid": 13829,
+      "absent": true
+    },
+    "bStop": {
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+        "runId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+        "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+        "generation": "capture-355c615d-f592-58de-892a-bad3e3cb5ab1"
+      },
+      "phase": "closed",
+      "custody": "released",
+      "originalPid": 16444,
+      "absent": true
+    },
+    "stoppedConvergence": "Exact selected Team key and opaque runtime/provisioning run IDs, disconnected accepted progress, unique visible owner banner with Offline/enabled Launch and empty direct progress wrapper plus physical A absence are required by unchanged cd4 final-A stop. Uses the same original 75s/100ms poll, remaining-capped CDP and post-await cutoff. Successful source path establishes acceptance; no separate full store sample is retained and the later PNG is non-atomic.",
+    "observerLimit": "Only the initial sidebar passive event snapshot is embedded in proof.steps (7 rows); its trusted click has teamNavigation:null. No completed navigation-transition ledger or explanation of historical M failure is inferred."
+  },
+  "durability": {
+    "sourceIndex": {
+      "file": {
+        "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/runtime-sources/index.json",
+        "bytes": 1687,
+        "blob": "782ce599ce8c16e67da5407d749b787f60c09a9e",
+        "sha256": "07ef1960269fd6922ecc0d4c87980bca30acfae6ccbbba50ce6627d74b5703ed"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "records": [
+          {
+            "revision": "dabfb8f80e796cf836d76813620a1230bd7fb3262898b0a18576487a6845d9e9",
+            "previousRevision": "1c318d9b6e32e15e1cb3f2d3f459584b1e2f07325f2eb9af7a434218ef2e1d5f",
+            "commandId": "5d905ef5-1461-46cb-b003-f60cefe1d4a9",
+            "grant": {
+              "targetId": "8e1bca05981e16b6356d7bcb5807f0ea42ace25357b67ff2754af32b04dab002",
+              "ownerId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+              "ownerRevision": "TEST-desktop-revision-1",
+              "contextId": "local",
+              "projectPath": null,
+              "runtimeId": "codex",
+              "profileId": "TEST-emulated-codex-management",
+              "configRevision": "TEST-emulated-codex-management",
+              "teamScopes": [
+                {
+                  "teamId": "TEST-desktop-team",
+                  "projectId": "TEST-project-TEST-desktop-backend-F7twGS",
+                  "workspaceId": "TEST-workspace-TEST-desktop-backend-F7twGS"
+                }
+              ]
+            },
+            "candidate": {
+              "sourceKind": "app-managed",
+              "executable": {
+                "path": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex",
+                "sha256": "5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641"
+              },
+              "nativeCli": {
+                "executable": {
+                  "path": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex",
+                  "sha256": "5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641"
+                },
+                "version": "0.169.0"
+              }
+            }
+          }
+        ],
+        "current": [
+          {
+            "sourceId": "8e1bca05981e16b6356d7bcb5807f0ea42ace25357b67ff2754af32b04dab002",
+            "revision": "dabfb8f80e796cf836d76813620a1230bd7fb3262898b0a18576487a6845d9e9",
+            "commandId": "5d905ef5-1461-46cb-b003-f60cefe1d4a9"
+          }
+        ],
+        "digest": "eda0b6c63cc1cb6bf8d114d1fabc2d603ef1fe2e204ffc24c9590d1b1c242af4"
+      },
+      "orderedBodyDigestVerified": true,
+      "singlePublishedAndCurrentJoins": true
+    },
+    "managementJournals": [
+      {
+        "file": {
+          "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/management-commands/0ffdd8f79c4612414ce68e2d4916d82d9cd390b61a2d11b29bd9427c22f6eb01.json",
+          "bytes": 904,
+          "blob": "0a529e2aa1ca43565235bceb4fe7f733fe700e81",
+          "sha256": "e2fe7b4daeb4185c2317d5ef0d42bda6aec81cf9c0df481184829b02f413203a"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "team-preflight-29a527e4f0f09ece6a0c0e174a8330320e7d46794d4ca5184f784dcba0d43650",
+          "profileId": "team-probe-fa0578f69aceb53e041be0361685c80fecfc9c6b99f54d0721090324b059f916",
+          "configRevision": "team-probe-fa0578f69aceb53e041be0361685c80fecfc9c6b99f54d0721090324b059f916",
+          "providerId": "codex",
+          "fingerprint": "c66c0582af1eadff5f384d25f7a9c11e0fad62581d1ebf6db6caa40c20576679",
+          "selectionDigest": "434ed883e378d3ae5944df8bb229f3a356dd1a6cf89cee9a98f6ad3f1f1221f1",
+          "resourceId": "6fed3d9ac49fb9b6d080bec551e9a0976b76729923a35509b1cafd0cdba40aa8",
+          "resourceHeld": false,
+          "kind": "model.probe",
+          "modelId": "TEST-model",
+          "context": "564f2cde25bf5109051f57287745875cfb94e59499cad901caf12d60a0c0402c",
+          "phase": "completed",
+          "expiresAt": 1794810833902,
+          "ok": true,
+          "digest": "5b672ee719e00341b34f76d641bd20b24587e2fe8b09d3f2547726bbe2aa015a"
+        },
+        "canonicalSortedBodyDigestVerified": true,
+        "filenameCommandDigestVerified": true
+      },
+      {
+        "file": {
+          "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/management-commands/2f84d964ad3cd4715ec8dcf75bd546ae5fdb505e7103d943ce13c2faffa14882.json",
+          "bytes": 929,
+          "blob": "cb8dfaa1fc47146a88dd6b3798f0db5ac82f9a4f",
+          "sha256": "cd1401a959518eb5ff49e54aaf0f103509386447233735c6084be81561d1e57c"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "team-preflight-03540d9c40514f8f71965d84d08450a3f1a0d15c1665b75091911f0bdaf02496",
+          "profileId": "team-probe-f9fb06f9c894881528e1c8fd1e55431324cde5ec7339a951426866565bae845f",
+          "configRevision": "team-probe-f9fb06f9c894881528e1c8fd1e55431324cde5ec7339a951426866565bae845f",
+          "providerId": "codex",
+          "fingerprint": "7706b78c944fc6448bda808c53cb4f06245eef8b0e488df7e809f040ee758a29",
+          "selectionDigest": "63d4eeadecfe48739f4628a4f52fe1cca662e1c6bf42c4d1a8be6d761f648f50",
+          "resourceId": "6fed3d9ac49fb9b6d080bec551e9a0976b76729923a35509b1cafd0cdba40aa8",
+          "resourceHeld": false,
+          "kind": "model.probe",
+          "modelId": "TEST-model-next",
+          "effort": "high",
+          "context": "9644dc534b02782064d34bfbd8d856107a1445c12a0e0e2059467088de2023ca",
+          "phase": "completed",
+          "expiresAt": 1794810880132,
+          "ok": true,
+          "digest": "d7dfc8f15d7ee9c2388c1757f1ebebc5118795fd2d6cabb6148ce65c6c900837"
+        },
+        "canonicalSortedBodyDigestVerified": true,
+        "filenameCommandDigestVerified": true
+      },
+      {
+        "file": {
+          "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/management-commands/9cd0f552b44bb741a1435c9eaca359c6ad34f5b7e3bbd1e6923592f5c7f6249d.json",
+          "bytes": 923,
+          "blob": "e4e813d1f41ca5431c748ddb1507ac9cbbb6bf82",
+          "sha256": "67eee3aa8c64a1ae38266616733ae63a36e5aa4faab92f99f84b261a0f8e5b8e"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "team-preflight-c728ea2619ec0611a0e3c728e80858dbc01b310f79de60f4ac8b27f97887a574",
+          "profileId": "team-probe-c143b77108fde8c31bef474a3a868ce28805ed6a604d909a537f202c69e2fc89",
+          "configRevision": "team-probe-c143b77108fde8c31bef474a3a868ce28805ed6a604d909a537f202c69e2fc89",
+          "providerId": "codex",
+          "fingerprint": "b1b9ce937f4184175bd62588636ceac1729c1474d00b9687add98e7eddf814df",
+          "selectionDigest": "d837ab9a04d20df1380f864382e2a676839c346810d01181b7d2c7e9ccac05d1",
+          "resourceId": "6fed3d9ac49fb9b6d080bec551e9a0976b76729923a35509b1cafd0cdba40aa8",
+          "resourceHeld": false,
+          "kind": "model.probe",
+          "modelId": "TEST-model",
+          "effort": "low",
+          "context": "86622d29467fca34af184becb994b3af5348e6bca93cc70f9999ae6137d0279c",
+          "phase": "completed",
+          "expiresAt": 1794810837745,
+          "ok": true,
+          "digest": "b54fd5b569634780593a9053867276b035aaf1c603eb0aa306bb043691b0106c"
+        },
+        "canonicalSortedBodyDigestVerified": true,
+        "filenameCommandDigestVerified": true
+      },
+      {
+        "file": {
+          "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/management-commands/b836a4d04c98c09a65fe63a5f4c3051c6d9b5b3e802a941119c596229a1b288d.json",
+          "bytes": 2297,
+          "blob": "16cf5e14a809856ffaf55a03c6c4ec64ae8db82b",
+          "sha256": "44370a090033ba9b7082ac177c5d14e974aede5393f474cabf01ee5bba34c6ce"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "5d905ef5-1461-46cb-b003-f60cefe1d4a9",
+          "profileId": "TEST-emulated-codex-management",
+          "configRevision": "TEST-emulated-codex-management",
+          "providerId": "codex",
+          "fingerprint": "167ada0fe8aaaf8e38acb96b179c44d5185c5dadb3be1d956be14f1c2c4ebc0a",
+          "selectionDigest": "1c318d9b6e32e15e1cb3f2d3f459584b1e2f07325f2eb9af7a434218ef2e1d5f",
+          "resourceId": "8e1bca05981e16b6356d7bcb5807f0ea42ace25357b67ff2754af32b04dab002",
+          "resourceHeld": false,
+          "kind": "runtime.source",
+          "phase": "published",
+          "sourceId": "8e1bca05981e16b6356d7bcb5807f0ea42ace25357b67ff2754af32b04dab002",
+          "revision": "dabfb8f80e796cf836d76813620a1230bd7fb3262898b0a18576487a6845d9e9",
+          "expectedRevision": "1c318d9b6e32e15e1cb3f2d3f459584b1e2f07325f2eb9af7a434218ef2e1d5f",
+          "nativeVersion": "0.169.0",
+          "publicationJson": "{\"grant\":{\"targetId\":\"8e1bca05981e16b6356d7bcb5807f0ea42ace25357b67ff2754af32b04dab002\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-F7twGS\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":null,\"runtimeId\":\"codex\",\"profileId\":\"TEST-emulated-codex-management\",\"configRevision\":\"TEST-emulated-codex-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-F7twGS\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-F7twGS\"}]},\"commandId\":\"5d905ef5-1461-46cb-b003-f60cefe1d4a9\",\"expectedRevision\":\"1c318d9b6e32e15e1cb3f2d3f459584b1e2f07325f2eb9af7a434218ef2e1d5f\",\"candidate\":{\"sourceKind\":\"app-managed\",\"executable\":{\"path\":\"/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex\",\"sha256\":\"5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641\"},\"nativeCli\":{\"executable\":{\"path\":\"/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex\",\"sha256\":\"5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641\"},\"version\":\"0.169.0\"}}}",
+          "digest": "04d639e4f3893e8f2153719e0c039d51675dc25e5305cf20fbbe4dfb97d2cf81"
+        },
+        "canonicalSortedBodyDigestVerified": true,
+        "filenameCommandDigestVerified": true
+      }
+    ],
+    "runtimeCheckpoints": [
+      {
+        "file": {
+          "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/runtime-checkpoints/cp1-2999bd8f54b3f159097734fed78d05bf1e4901e03025d493c61cd090d6e67581.json",
+          "bytes": 2319,
+          "blob": "03740b9a9b47cd486a8ea26ebadd8185626062b3",
+          "sha256": "c66efc68a695033a8dc6ef9dd8d87cac6ef3b85f3ca7c8e333c839f298c18507"
+        },
+        "team": "a",
+        "record": {
+          "schemaVersion": 1,
+          "reference": "cp1-2999bd8f54b3f159097734fed78d05bf1e4901e03025d493c61cd090d6e67581",
+          "checkpointId": "stop-094b16bc55a1f436639031858e10c6e19a2b6d89b612e8d137f6c48a6af27c94",
+          "fingerprint": "31a7b4ae3d7b8d10f1d12ad16281d2c6636a8f4ea178a8613738eeb8031576ba",
+          "sourceBinding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+            "teamId": "TEST-desktop-team",
+            "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+            "memberId": "alice-id",
+            "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+          },
+          "profileId": "TEST-desktop-profile-TEST-desktop-backend-F7twGS",
+          "sourceConfig": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+            "projectId": "TEST-project-TEST-desktop-backend-F7twGS",
+            "sessionId": "b97a0828-831c-598a-a1d6-aa6cced38273",
+            "generation": 2,
+            "configRevision": "capture-0e9bb2fe49a67ae7fb8a1017295f23a394aa2e9071f50f1ed86a5330c1c1faa8",
+            "requiredCapabilities": [
+              "text",
+              "tools"
+            ]
+          },
+          "sourceSessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+          "historyDigest": "c97d4e51c3b7a50557946fab3db1c13d648fc9b4feac2cca9b82dc1379eff36e",
+          "completedOperations": [
+            {
+              "inputId": "7d814d53-8abf-5ca9-95e8-9d1506d98114",
+              "operationRef": "9295cbdd-8f4a-47d7-8c2f-662e8fc2c057",
+              "fingerprint": "92572042abf8812d402cd0e75f1ec3dd36c46a446d595666395b4a8551dcdbcd",
+              "outcome": "succeeded"
+            },
+            {
+              "inputId": "782139da-e03b-525a-81a3-db3b11052f73",
+              "operationRef": "fe0cb5f2-fb10-434d-a9cb-6e649eb6c13a",
+              "fingerprint": "1ca8b248228cd528377aa394dc987c3034ff322ecab9511144f05ccbd1303ece",
+              "outcome": "succeeded"
+            }
+          ],
+          "opaque": {
+            "version": 2,
+            "engine": "codex-app-server",
+            "nativeThreadId": "TEST-thread-13829",
+            "compatibility": "cc02cadc1cd42e4691c9ce07e4ed336287b4029f7e683d60167233e5e122eb3c",
+            "itemOwners": [
+              [
+                "TEST-message-1",
+                "f2e1abbb-e6c0-4719-ac90-db298ad27222"
+              ],
+              [
+                "TEST-message-2",
+                "159fda06-4447-41dc-8afc-4d34f12754f7"
+              ],
+              [
+                "TEST-message-2-final",
+                "159fda06-4447-41dc-8afc-4d34f12754f7"
+              ]
+            ],
+            "legacyItemsExhausted": false
+          },
+          "digest": "ecd0e586a12a3e1f0c9c0de0ccbc1afc6468ed929c51576a2566ec2f32fc1129"
+        },
+        "orderedBodyDigestVerified": true,
+        "referenceAndHistoryDigestsVerified": true
+      },
+      {
+        "file": {
+          "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/runtime-checkpoints/cp1-d481ace7c442a794887f32b07d237ce932bf1f56f727ef9c2232d43866c40438.json",
+          "bytes": 1895,
+          "blob": "0a3e014ee688491c875f7fc8e8e3334a42b01e83",
+          "sha256": "4b8830d9ebb828a3007b85883a62d6eaa4eefed2f94d9a43520ff3e2932a0487"
+        },
+        "team": "b",
+        "record": {
+          "schemaVersion": 1,
+          "reference": "cp1-d481ace7c442a794887f32b07d237ce932bf1f56f727ef9c2232d43866c40438",
+          "checkpointId": "stop-6f87af07de7d8a67eaeebb6702acf1460ca8475fa5ffa48f901b4a844dec1d20",
+          "fingerprint": "b99836547711e91b5c72565eb7fb865114a105e01db17fcfc3ed1df5bf98bad5",
+          "sourceBinding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+            "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+            "runId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+            "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+            "generation": "capture-355c615d-f592-58de-892a-bad3e3cb5ab1"
+          },
+          "profileId": "TEST-desktop-profile-TEST-desktop-backend-F7twGS",
+          "sourceConfig": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+            "projectId": "local",
+            "sessionId": "c3188697-18d7-5c60-8b00-a6203643c257",
+            "generation": 2,
+            "configRevision": "capture-cbc40755e027e989e155daa11182ccc5f7861eb9ed2abcaa545d7f7b045e913d",
+            "requiredCapabilities": [
+              "text",
+              "tools"
+            ]
+          },
+          "sourceSessionRef": "c3188697-18d7-5c60-8b00-a6203643c257",
+          "historyDigest": "77658fd4947ad42b7a5bc70b6bc36c558f725d4a82192bc24e3dc32c40d943a8",
+          "completedOperations": [
+            {
+              "inputId": "591bbe55-54dd-594e-87b9-8f4c80620993",
+              "operationRef": "81ca5a4f-a3ec-4234-a009-4748f7bac2a3",
+              "fingerprint": "031af95bc640286c3c3f6b5a70c3ced66fcdbbdc027ed855927024add2885b00",
+              "outcome": "succeeded"
+            }
+          ],
+          "opaque": {
+            "version": 2,
+            "engine": "codex-app-server",
+            "nativeThreadId": "TEST-thread-16444",
+            "compatibility": "143d36ef9ee2b47b69973135cdf9c1861b18095e02c8a1cb97e1b7fb36519be8",
+            "itemOwners": [
+              [
+                "TEST-message-1",
+                "d32009f0-67aa-4972-9f87-373ada2e9dd6"
+              ]
+            ],
+            "legacyItemsExhausted": false
+          },
+          "digest": "f97071792192d249f27377bbd42fa8121b87727e6c3f417f86caac68fab38372"
+        },
+        "orderedBodyDigestVerified": true,
+        "referenceAndHistoryDigestsVerified": true
+      }
+    ],
+    "manifestEmbedded": {
+      "manifest": {
+        "schemaVersion": 1,
+        "rootVersion": "0.169.0",
+        "platformVersion": "0.169.0-darwin-arm64",
+        "platformTarget": "aarch64-apple-darwin",
+        "binaryPath": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex",
+        "integrity": "sha512-UaAZ3KYpHt8vUGaFGQoNr4xacXrspMFsUnxOJE4pkBqvfDf3/2gtcvypfe1J+RN0GCm6hU9Gu9P3Lq1gUVOEuw==",
+        "installedAt": "2026-11-16T06:32:51.081Z"
+      },
+      "manifestPath": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/current.json",
+      "manifestSha256": "b164969685c6134805429c014b832c8a29a3ccba4049ef7430d8bd86e1b8020d",
+      "installation": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc",
+      "executable": {
+        "path": "/Users/runner/work/_temp/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-c4012f8f-49c4-4de0-996c-09bfef03f4fc/codex/codex",
+        "sha256": "5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641"
+      },
+      "packageFiles": [
+        {
+          "relativePath": "codex/codex",
+          "sha256": "5fcbb26ba1057aa1dc5bfa345fbc441bcfa0e7cd9a6057123932c89cfa382641",
+          "mode": 448
+        },
+        {
+          "relativePath": "path/rg",
+          "sha256": "850c97e31cc412edab3dbead7389ec6b2b9ebbf17f7a9a7ee9d0224b4d44e1ee",
+          "mode": 448
+        },
+        {
+          "relativePath": "codex/TEST-package.json",
+          "sha256": "e264a378d5f2e44588bf42f7e690b06c52b10b1fc6efb8ce0f15faffff598c2b",
+          "mode": 384
+        }
+      ]
+    },
+    "limits": [
+      "Original current.json bytes, installed executable/package/tarball bytes and independent complete launch/owner/source history files are not in this ZIP; their original source-checked receipt hashes/objects are retained.",
+      "Four canonical management journals, one source index and two checkpoints are actual archived bytes with independently recomputed digest/name/binding joins.",
+      "No crash/restart durability beyond the original recorded renderer reload and Stop sequence."
+    ]
+  },
+  "effects": {
+    "rawFile": {
+      "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 16328,
+      "blob": "823b933e374ca00275ac9156ad9bac647f28f1a5",
+      "sha256": "e2c0a509b0532c6e2dccd89aa438e44868c828010c7509689976cf0a08dcc544"
+    },
+    "fourCopiesEqual": true,
+    "rows": 151,
+    "counts": {
+      "launch": 61,
+      "exit": 48,
+      "thread-selection": 5,
+      "input": 6,
+      "terminal": 6,
+      "mcp-catalog": 13,
+      "managed-configuration-read": 9,
+      "connected": 2,
+      "partial": 1
+    },
+    "launchPids": [
+      12513,
+      13352,
+      13382,
+      13413,
+      13542,
+      13564,
+      13575,
+      13623,
+      13632,
+      13633,
+      13638,
+      13692,
+      13716,
+      13823,
+      13828,
+      13829,
+      13830,
+      13836,
+      13837,
+      13838,
+      13849,
+      14259,
+      14333,
+      14335,
+      14502,
+      14955,
+      14973,
+      14974,
+      15023,
+      15122,
+      15131,
+      15164,
+      15209,
+      15717,
+      15910,
+      15937,
+      15965,
+      16048,
+      16138,
+      16173,
+      16249,
+      16259,
+      16262,
+      16263,
+      16357,
+      16385,
+      16431,
+      16444,
+      16456,
+      16487,
+      16492,
+      16493,
+      16522,
+      16911,
+      16945,
+      17019,
+      17024,
+      17135,
+      17520,
+      17536,
+      17752
+    ],
+    "explicitExitRows": [
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 12513
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 13352
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 13382
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 13413
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13542
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 13564
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 13575
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 13623
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 13632
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 13633
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 13638
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13692
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 13716
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 13838
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14259
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14333
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14335
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14502
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14955
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14973
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14974
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15023
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15122
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15131
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15164
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15209
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15717
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15910
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15937
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15965
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 16048
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16138
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16173
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16249
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16259
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16262
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16263
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16357
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16522
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16911
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16945
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17019
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17024
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17135
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17536
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 16444
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17752
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      }
+    ],
+    "onlyTwoRuntimeMcpTeamThreads": [
+      {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-13829",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      },
+      {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-16444",
+        "model": "TEST-model-next",
+        "effort": "high",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 16444
+      }
+    ],
+    "inputRows": [
+      {
+        "event": "input",
+        "marker": "TEST_MODEL_PROBE",
+        "turnId": "TEST-turn-13542-1",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13542
+      },
+      {
+        "event": "input",
+        "marker": "TEST_MODEL_PROBE",
+        "turnId": "TEST-turn-13692-1",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13692
+      },
+      {
+        "event": "input",
+        "marker": "TEST_UI_BOOT",
+        "turnId": "TEST-turn-13829-1",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      },
+      {
+        "event": "input",
+        "marker": "TEST_MODEL_PROBE",
+        "turnId": "TEST-turn-16048-1",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 16048
+      },
+      {
+        "event": "input",
+        "marker": "TEST_UI_BOOT",
+        "turnId": "TEST-turn-16444-1",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 16444
+      },
+      {
+        "event": "input",
+        "marker": "TEST_UI_STREAM",
+        "turnId": "TEST-turn-13829-2",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      }
+    ],
+    "registry": {
+      "file": {
+        "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/TEST-codex-install/registry.ndjson",
+        "bytes": 1652,
+        "blob": "5f50706cd6758c63e2bf6ccab46d56a6d7e59a1e",
+        "sha256": "eac7818f8e2b5e85e77d5f9aa0e22f472f35bc58429be829a3653e12ef207ae4"
+      },
+      "rawRows": [
+        {
+          "pid": 8988,
+          "event": "armed",
+          "processType": "browser",
+          "electron": "44.10.1",
+          "fixtureSha256": "3a1381bb855b3b34e5903d6143cef6a3be1477a226f9482c1cad01531512aedc"
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 1,
+          "sha256": "310f77099596db4c27f84d0b858ef6a1072977ea742d1e4fa5a952c877c4859e",
+          "bytes": 358
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 2,
+          "sha256": "310f77099596db4c27f84d0b858ef6a1072977ea742d1e4fa5a952c877c4859e",
+          "bytes": 358
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 3,
+          "sha256": "310f77099596db4c27f84d0b858ef6a1072977ea742d1e4fa5a952c877c4859e",
+          "bytes": 358
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "platform",
+          "sequence": 4,
+          "sha256": "f30769c302fce42677179984db06990b44b9c7c2ebc27ee5381583bc8658fb9f",
+          "bytes": 276
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "tarball",
+          "sequence": 5,
+          "sha256": "e0ee57de640e4de787c5ca5c04a7b771e935107f7934f5171c664f69f64fcbbd",
+          "bytes": 1293
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 6,
+          "sha256": "310f77099596db4c27f84d0b858ef6a1072977ea742d1e4fa5a952c877c4859e",
+          "bytes": 358
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 7,
+          "sha256": "310f77099596db4c27f84d0b858ef6a1072977ea742d1e4fa5a952c877c4859e",
+          "bytes": 358
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 8,
+          "sha256": "310f77099596db4c27f84d0b858ef6a1072977ea742d1e4fa5a952c877c4859e",
+          "bytes": 358
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 9,
+          "sha256": "310f77099596db4c27f84d0b858ef6a1072977ea742d1e4fa5a952c877c4859e",
+          "bytes": 358
+        },
+        {
+          "pid": 8988,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 10,
+          "sha256": "310f77099596db4c27f84d0b858ef6a1072977ea742d1e4fa5a952c877c4859e",
+          "bytes": 358
+        }
+      ],
+      "retainedUpdatePrefixRows": 7,
+      "onePlatformOneTarball": true,
+      "extraLatestReadsAfterUpdate": 4
+    },
+    "invocations": {
+      "file": {
+        "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/TEST-codex-install/invocations.ndjson",
+        "bytes": 15842,
+        "blob": "f858fe1165ff35a490a1b6065807c1e371b01cb4",
+        "sha256": "f28304642bb9e6865399354c76e11d4704b8e28b7262fbee263c3ff6dcac58dd"
+      },
+      "rawRows": 67,
+      "retainedUpdatePrefixRows": 34,
+      "counts": [
+        {
+          "event": "invoke",
+          "kind": "app-server",
+          "version": "0.162.0",
+          "count": 30
+        },
+        {
+          "event": "invoke",
+          "kind": "version",
+          "version": "0.162.0",
+          "count": 2
+        },
+        {
+          "event": "invoke",
+          "kind": "version",
+          "version": "0.169.0",
+          "count": 4
+        },
+        {
+          "event": "invoke",
+          "kind": "app-server",
+          "version": "0.169.0",
+          "count": 31
+        }
+      ],
+      "aAndBMatchOriginalRuntimePids": true
+    }
+  },
+  "cleanup": {
+    "app": {
+      "pid": 7965,
+      "processGroup": 7965,
+      "identity": "Mon Nov 16 06:29:48 2026     /Users/runner/hostedtoolcache/node/24.21.0/arm64/bin/node /Users/runner/work/_temp/TEST-emulated-ui-inputs-QebeQz/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222",
+      "invocation": [
+        "/Users/runner/hostedtoolcache/node/24.21.0/arm64/bin/node",
+        "/Users/runner/work/_temp/TEST-emulated-ui-inputs-QebeQz/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222"
+      ]
+    },
+    "hostChild": {
+      "pid": 9741,
+      "ppid": 8988,
+      "pgid": 7965,
+      "command": "/Users/runner/hostedtoolcache/node/24.21.0/arm64/bin/node /Users/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "observedBeforeShutdown": true
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "initialGroupMembers": [
+      {
+        "pid": 8014,
+        "ppid": 1,
+        "pgid": 7965
+      }
+    ],
+    "originalExitedGroup": {
+      "settled": true,
+      "reason": "original-natural-exit-and-fresh-absence",
+      "initialMembers": [
+        {
+          "pid": 8014,
+          "ppid": 1,
+          "pgid": 7965
+        }
+      ],
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "capturedDescendantsAbsent": true,
+      "appExitCode": 0,
+      "appSignalCode": null
+    },
+    "final": {
+      "processGroup": 7965,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "peerPids": [
+      12513,
+      13352,
+      13382,
+      13413,
+      13542,
+      13564,
+      13575,
+      13623,
+      13632,
+      13633,
+      13638,
+      13692,
+      13716,
+      13823,
+      13828,
+      13829,
+      13830,
+      13836,
+      13837,
+      13838,
+      13849,
+      14259,
+      14333,
+      14335,
+      14502,
+      14955,
+      14973,
+      14974,
+      15023,
+      15122,
+      15131,
+      15164,
+      15209,
+      15717,
+      15910,
+      15937,
+      15965,
+      16048,
+      16138,
+      16173,
+      16249,
+      16259,
+      16262,
+      16263,
+      16357,
+      16385,
+      16431,
+      16444,
+      16456,
+      16487,
+      16492,
+      16493,
+      16522,
+      16911,
+      16945,
+      17019,
+      17024,
+      17135,
+      17520,
+      17536,
+      17752
+    ],
+    "all61PidsAbsent": true,
+    "explicitPeerExitRows": 48,
+    "peerExitCodesAllZero": true,
+    "sentinel": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": 1,
+      "postQuitOrCleanupInvocations": [],
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    },
+    "limits": [
+      "Initial orphan row8014/PPID1/PGID7965 is retained before the original source-qualified natural-exit/fresh absence observation. It is not relabeled as Host or a zombie.",
+      "Fresh originalExitedGroup confirms group/Host9741/captured descendants absent; wrapper7965 original exit is0/null. No cleanup signal/replay needed on that path.",
+      "All61finite-peer PIDs absent does not create13missing peer exit-code rows. Dedicated Host exit code is not exposed by this receipt; no TEST_MAIN_CHILD_PROCESS trace was retained in this app log.",
+      "No global process-table, native broker custody certificate or vendor qualification inferred."
+    ]
+  },
+  "images": [
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-before.png",
+      "bytes": 73405,
+      "blob": "df66d3cd626f7a1217cb70f781262e911d088746",
+      "sha256": "c92677a3662a34dcef430e33fbe0fd04f30217a0a04fa5deec0d1c596622ce8e",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Update available dialog explicitly shows Codex v0.162.0 to v0.169.0 with its Update button over the original Create page."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-ready.png",
+      "bytes": 67264,
+      "blob": "6ef1e492faebdcc988a7599ca1c92e2bcf87ebfb",
+      "sha256": "815cb3c504e6297188ddacf41465f10a39aaf31518bdaa4711c8ffeeb4b2b4c8",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Update Ready dialog explicitly shows Codex v0.169.0,100percent and ready for new launches. This is TEST package UI, not vendor compatibility."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-page.png",
+      "bytes": 87018,
+      "blob": "1b5074921c3e9df287cceb587f3d46dfeaeb9219",
+      "sha256": "7b2f8073954fe97283a74567ed4bf2f656b91956bc76d038bea96e837c5b2b8a",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Providers settings page is visible; current viewport shows OpenCode needs attention and backend routing unavailable. Codex card is outside this captured viewport; no visible Codex version or all-provider-health claim."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-dialog.png",
+      "bytes": 91558,
+      "blob": "5a4326f77fab729a3d0ef3de193d5f51d002e838",
+      "sha256": "343cca845370f5b6682734b71ce0caf72dc698ea81d7eab7050bbc5bc4564f76",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Provider Settings dialog has Codex selected, Auto connection selected, custom endpoint off and empty placeholder credential fields. This frame does not visibly show the installed binary version or native credential verification."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-selected.png",
+      "bytes": 70747,
+      "blob": "4f3b61385b747254c3003f96d25a560aaaf28361",
+      "sha256": "f3abb87dcd3ed36df0e2a92630330aee9293bafcd7c2fa41fb933c7a9cb768bd",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Create Team shows TEST next model selected, High effort selected and the Create button. The save-only checkbox/source assertions are separate; no screenshot-only durable-save inference."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-reloaded.png",
+      "bytes": 76076,
+      "blob": "057631010378bf8c1a9667c15cc9fc9143dfd749",
+      "sha256": "b274516d12708ac6b3b08d59c81ad370b3a6f3aa8f63e60b0c1c180aef83b53a",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Original launch dialog after reload shows TEST_UI_BOOT, unchecked auto-approve, selected model TEST-model-next verified and an enabled Launch team. The footer also has Codex Needs attention while all selected providers are ready; preserve both visible facts."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-a-launch.png",
+      "bytes": 88663,
+      "blob": "57ebaad7e4e49e816053529b735208ccacec7c3f",
+      "sha256": "953e28f0915a8f9fa56f6b5c61528336771699160b69f4f2251bccb2cc883a66",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Original A Alice conversation contains TEST_UI_BOOT and TEST boot ready; completed green launch progress and seeded Task are visible."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-b-launch.png",
+      "bytes": 84983,
+      "blob": "720af42fd38c36916c0b287ee6451ea93a0905d9",
+      "sha256": "f1806aeebd3ad2a21e8e2fd5bb5f2646a880b8ae554df76e24085acafdf5b326",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "Original B test-selection-next-team is selected; lead conversation contains TEST_UI_BOOT and TEST boot ready, TEST-model-next is shown, and its Task count is zero."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-a-survived.png",
+      "bytes": 103824,
+      "blob": "1037dcc16b2d49451bdc70dfc6ac00b24b18f95e",
+      "sha256": "8e853947a7f076750b7fdfb4b5c400a625c76ad99e568962eb08779b4e1ae273",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "A is selected with Running and Stop, original TEST_UI_STREAM and partial response; no complete response in this frame. Same-runtime custody/survival comes from receipt/source checks separately."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-completed.png",
+      "bytes": 108178,
+      "blob": "561ed886081cdee0da7712de7dd34d01a199c9f5",
+      "sha256": "b4bed05f99db30dd30490af8507832db3e3f4998379076f3d703e2771b320664",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "A conversation visibly contains TEST stream partial complete, with A still Running. It does not independently prove the later Stop."
+    },
+    {
+      "file": "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-stopped.png",
+      "bytes": 95285,
+      "blob": "9ad227205c5787f7ff91c3589a75f385d936e613",
+      "sha256": "25421f2566e44a32fe3a870fcb2dd1f028a26ea5163f5928132a074200e92b81",
+      "width": 1024,
+      "height": 681,
+      "actuallyViewedSingly": true,
+      "scope": "A displays Team is offline with Launch and Alice offline; the previous green launch progress is absent from this frame. Completed conversation and seeded Task remain. This is a later screenshot after the original bounded same-run stopped projection/DOM conjunction, not an atomic store/process/frame capture."
+    }
+  ],
+  "historicalComparison": {
+    "selectionBlob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+    "installerUiBlob": "f049194429d74ab3e3a6808abd7c16d9772d5606",
+    "bothEqualOriginalN608": true,
+    "controlsE1Blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+    "scope": "E1 original completed its full selection/update sequence. Earlier M navigation failure and N success remain separate originals; this success neither identifies their cause nor proves the passive diagnostic repaired navigation."
+  }
+}

@@ -1,0 +1,716 @@
+{
+  "kind": "independent incoming E2 I386 two-C++ source and immutable-history proof",
+  "createdAt": "2026-11-16T07:39:13.679187+00:00",
+  "source": "57885c055a18b27c180c304762643eac632513ad",
+  "e1": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "followup": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+  "documentationCommit": "f3948bee8f5e14b0e7332bd266fd197b44228d32",
+  "sourceOnly": true,
+  "noProjectExecution": true,
+  "sourcePaths": [
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "e1": {
+        "bytes": 9009,
+        "gitBlob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+        "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8",
+        "physicalLines": 186
+      },
+      "followup00d": {
+        "bytes": 8822,
+        "gitBlob": "952ed2d3436708addf656109dc513270ea33ce22",
+        "sha256": "cb3ed3eaebb0f59aa968a285ddd85522181292a289a9bed7c59a6adf0feabf65",
+        "physicalLines": 182
+      },
+      "incoming578": {
+        "bytes": 9097,
+        "gitBlob": "a72b32fa7eda34d473463099f7df151f359a8559",
+        "sha256": "121bcbb444822e6e45b76dbcbf170cda0eecfce60bb5a222a7c6316b23c953f8",
+        "physicalLines": 188
+      },
+      "e1EqualsIncoming": false,
+      "followupEqualsIncoming": false
+    },
+    {
+      "path": "tools/owned-process-broker/broker.cpp",
+      "e1": {
+        "bytes": 25929,
+        "gitBlob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+        "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3",
+        "physicalLines": 530
+      },
+      "followup00d": {
+        "bytes": 25929,
+        "gitBlob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+        "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3",
+        "physicalLines": 530
+      },
+      "incoming578": {
+        "bytes": 26160,
+        "gitBlob": "a4912d809aacc1fd4a949267fa0120d324b41be4",
+        "sha256": "54d754c150a9edf5c82107ca6bbe725057b90e28dc4585533a88bc4cb0854814",
+        "physicalLines": 534
+      },
+      "e1EqualsIncoming": false,
+      "followupEqualsIncoming": false
+    },
+    {
+      "path": "tools/owned-process-broker/serviceDebugLoop.h",
+      "e1": {
+        "bytes": 4891,
+        "gitBlob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+        "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3",
+        "physicalLines": 93
+      },
+      "followup00d": {
+        "bytes": 4891,
+        "gitBlob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+        "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3",
+        "physicalLines": 93
+      },
+      "incoming578": {
+        "bytes": 4891,
+        "gitBlob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+        "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3",
+        "physicalLines": 93
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "e1": {
+        "bytes": 16379,
+        "gitBlob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+        "sha256": "88aea669b33d0bb1e60cf80ed5b3c11f6c1ce5f9a14499f421be9d563daadcf9",
+        "physicalLines": 386
+      },
+      "followup00d": {
+        "bytes": 16379,
+        "gitBlob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+        "sha256": "88aea669b33d0bb1e60cf80ed5b3c11f6c1ce5f9a14499f421be9d563daadcf9",
+        "physicalLines": 386
+      },
+      "incoming578": {
+        "bytes": 16379,
+        "gitBlob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+        "sha256": "88aea669b33d0bb1e60cf80ed5b3c11f6c1ce5f9a14499f421be9d563daadcf9",
+        "physicalLines": 386
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/protocol.h",
+      "e1": {
+        "bytes": 11700,
+        "gitBlob": "8301cd73299220be2c5c9d95d87745f2937dc715",
+        "sha256": "f33e5f48373336dee460a5829c38f51ae0238f92477b7c26c528ab1e91598289",
+        "physicalLines": 234
+      },
+      "followup00d": {
+        "bytes": 11700,
+        "gitBlob": "8301cd73299220be2c5c9d95d87745f2937dc715",
+        "sha256": "f33e5f48373336dee460a5829c38f51ae0238f92477b7c26c528ab1e91598289",
+        "physicalLines": 234
+      },
+      "incoming578": {
+        "bytes": 11700,
+        "gitBlob": "8301cd73299220be2c5c9d95d87745f2937dc715",
+        "sha256": "f33e5f48373336dee460a5829c38f51ae0238f92477b7c26c528ab1e91598289",
+        "physicalLines": 234
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "e1": {
+        "bytes": 25009,
+        "gitBlob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+        "sha256": "a11c6fcc322cd240bf396ee7e7bf0fc9d009869fe9e2b94cc9c969a4f7bbb1b1",
+        "physicalLines": 390
+      },
+      "followup00d": {
+        "bytes": 25009,
+        "gitBlob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+        "sha256": "a11c6fcc322cd240bf396ee7e7bf0fc9d009869fe9e2b94cc9c969a4f7bbb1b1",
+        "physicalLines": 390
+      },
+      "incoming578": {
+        "bytes": 25009,
+        "gitBlob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+        "sha256": "a11c6fcc322cd240bf396ee7e7bf0fc9d009869fe9e2b94cc9c969a4f7bbb1b1",
+        "physicalLines": 390
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "e1": {
+        "bytes": 1367,
+        "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+        "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+        "physicalLines": 39
+      },
+      "followup00d": {
+        "bytes": 1367,
+        "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+        "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+        "physicalLines": 39
+      },
+      "incoming578": {
+        "bytes": 1367,
+        "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+        "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+        "physicalLines": 39
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "e1": {
+        "bytes": 7387,
+        "gitBlob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+        "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a",
+        "physicalLines": 124
+      },
+      "followup00d": {
+        "bytes": 7387,
+        "gitBlob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+        "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a",
+        "physicalLines": 124
+      },
+      "incoming578": {
+        "bytes": 7387,
+        "gitBlob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+        "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a",
+        "physicalLines": 124
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "e1": {
+        "bytes": 22330,
+        "gitBlob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+        "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197",
+        "physicalLines": 586
+      },
+      "followup00d": {
+        "bytes": 22330,
+        "gitBlob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+        "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197",
+        "physicalLines": 586
+      },
+      "incoming578": {
+        "bytes": 22330,
+        "gitBlob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+        "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197",
+        "physicalLines": 586
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "e1": {
+        "bytes": 7278,
+        "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+        "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+        "physicalLines": 192
+      },
+      "followup00d": {
+        "bytes": 7278,
+        "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+        "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+        "physicalLines": 192
+      },
+      "incoming578": {
+        "bytes": 7278,
+        "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+        "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+        "physicalLines": 192
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateOutput.ts",
+      "e1": {
+        "bytes": 1842,
+        "gitBlob": "f9e5bb809cc4ae03485e1c55c7d7010322b63ae1",
+        "sha256": "ec40aeff9e713d30af99aed2c0936a2c8fc2a3094e57207c21f55da3970f17c8",
+        "physicalLines": 46
+      },
+      "followup00d": {
+        "bytes": 1842,
+        "gitBlob": "f9e5bb809cc4ae03485e1c55c7d7010322b63ae1",
+        "sha256": "ec40aeff9e713d30af99aed2c0936a2c8fc2a3094e57207c21f55da3970f17c8",
+        "physicalLines": 46
+      },
+      "incoming578": {
+        "bytes": 1842,
+        "gitBlob": "f9e5bb809cc4ae03485e1c55c7d7010322b63ae1",
+        "sha256": "ec40aeff9e713d30af99aed2c0936a2c8fc2a3094e57207c21f55da3970f17c8",
+        "physicalLines": 46
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "e1": {
+        "bytes": 19357,
+        "gitBlob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+        "sha256": "a509a625e9e1ab1ccb96040b81d2c2fd1f00c0c23e74677e7002b7c8a4b7b84f",
+        "physicalLines": 355
+      },
+      "followup00d": {
+        "bytes": 19357,
+        "gitBlob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+        "sha256": "a509a625e9e1ab1ccb96040b81d2c2fd1f00c0c23e74677e7002b7c8a4b7b84f",
+        "physicalLines": 355
+      },
+      "incoming578": {
+        "bytes": 19357,
+        "gitBlob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+        "sha256": "a509a625e9e1ab1ccb96040b81d2c2fd1f00c0c23e74677e7002b7c8a4b7b84f",
+        "physicalLines": 355
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/gateController.cpp",
+      "e1": {
+        "bytes": 5935,
+        "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+        "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+        "physicalLines": 108
+      },
+      "followup00d": {
+        "bytes": 5935,
+        "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+        "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+        "physicalLines": 108
+      },
+      "incoming578": {
+        "bytes": 5935,
+        "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+        "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+        "physicalLines": 108
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/CMakeLists.txt",
+      "e1": {
+        "bytes": 2160,
+        "gitBlob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+        "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e",
+        "physicalLines": 27
+      },
+      "followup00d": {
+        "bytes": 2160,
+        "gitBlob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+        "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e",
+        "physicalLines": 27
+      },
+      "incoming578": {
+        "bytes": 2160,
+        "gitBlob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+        "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e",
+        "physicalLines": 27
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/vitest.config.ts",
+      "e1": {
+        "bytes": 342,
+        "gitBlob": "cd03a73404a7b2548c15234743c24c1093b554af",
+        "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e",
+        "physicalLines": 13
+      },
+      "followup00d": {
+        "bytes": 342,
+        "gitBlob": "cd03a73404a7b2548c15234743c24c1093b554af",
+        "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e",
+        "physicalLines": 13
+      },
+      "incoming578": {
+        "bytes": 342,
+        "gitBlob": "cd03a73404a7b2548c15234743c24c1093b554af",
+        "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e",
+        "physicalLines": 13
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "e1": {
+        "bytes": 557,
+        "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+        "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+        "physicalLines": 6
+      },
+      "followup00d": {
+        "bytes": 557,
+        "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+        "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+        "physicalLines": 6
+      },
+      "incoming578": {
+        "bytes": 557,
+        "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+        "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+        "physicalLines": 6
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "e1": {
+        "bytes": 393,
+        "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+        "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+        "physicalLines": 6
+      },
+      "followup00d": {
+        "bytes": 393,
+        "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+        "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+        "physicalLines": 6
+      },
+      "incoming578": {
+        "bytes": 393,
+        "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+        "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+        "physicalLines": 6
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "scripts/build/buildOwnedProcessBroker.ts",
+      "e1": {
+        "bytes": 3476,
+        "gitBlob": "90499776e145f9ffaba230b280d5d9da9e15a8e0",
+        "sha256": "4db8137541af5f78d821d55f70b1f3a497b79a3e82bfa700e09d4237b3d97682",
+        "physicalLines": 58
+      },
+      "followup00d": {
+        "bytes": 3476,
+        "gitBlob": "90499776e145f9ffaba230b280d5d9da9e15a8e0",
+        "sha256": "4db8137541af5f78d821d55f70b1f3a497b79a3e82bfa700e09d4237b3d97682",
+        "physicalLines": 58
+      },
+      "incoming578": {
+        "bytes": 3476,
+        "gitBlob": "90499776e145f9ffaba230b280d5d9da9e15a8e0",
+        "sha256": "4db8137541af5f78d821d55f70b1f3a497b79a3e82bfa700e09d4237b3d97682",
+        "physicalLines": 58
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "e1": {
+        "bytes": 32248,
+        "gitBlob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+        "physicalLines": 418
+      },
+      "followup00d": {
+        "bytes": 32248,
+        "gitBlob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+        "physicalLines": 418
+      },
+      "incoming578": {
+        "bytes": 32248,
+        "gitBlob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+        "physicalLines": 418
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "package.json",
+      "e1": {
+        "bytes": 26839,
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "physicalLines": 580
+      },
+      "followup00d": {
+        "bytes": 26839,
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "physicalLines": 580
+      },
+      "incoming578": {
+        "bytes": 26839,
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "physicalLines": 580
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "e1": {
+        "bytes": 956788,
+        "gitBlob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+        "physicalLines": 26665
+      },
+      "followup00d": {
+        "bytes": 956788,
+        "gitBlob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+        "physicalLines": 26665
+      },
+      "incoming578": {
+        "bytes": 956788,
+        "gitBlob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+        "physicalLines": 26665
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "e1": {
+        "bytes": 12355,
+        "gitBlob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+        "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+        "physicalLines": 304
+      },
+      "followup00d": {
+        "bytes": 12355,
+        "gitBlob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+        "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+        "physicalLines": 304
+      },
+      "incoming578": {
+        "bytes": 12355,
+        "gitBlob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+        "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+        "physicalLines": 304
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "e1": {
+        "bytes": 174,
+        "gitBlob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+        "physicalLines": 9
+      },
+      "followup00d": {
+        "bytes": 174,
+        "gitBlob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+        "physicalLines": 9
+      },
+      "incoming578": {
+        "bytes": 174,
+        "gitBlob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+        "physicalLines": 9
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/contracts.ts",
+      "e1": {
+        "bytes": 5570,
+        "gitBlob": "5d5743e8728ff3f16dcc09ad822804e4952632e1",
+        "sha256": "c9c5686a8f6ccf6abfe2518edf713d34f48641b79ede32f070048c46c0ae4b3d",
+        "physicalLines": 169
+      },
+      "followup00d": {
+        "bytes": 5570,
+        "gitBlob": "5d5743e8728ff3f16dcc09ad822804e4952632e1",
+        "sha256": "c9c5686a8f6ccf6abfe2518edf713d34f48641b79ede32f070048c46c0ae4b3d",
+        "physicalLines": 169
+      },
+      "incoming578": {
+        "bytes": 5570,
+        "gitBlob": "5d5743e8728ff3f16dcc09ad822804e4952632e1",
+        "sha256": "c9c5686a8f6ccf6abfe2518edf713d34f48641b79ede32f070048c46c0ae4b3d",
+        "physicalLines": 169
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+      "e1": {
+        "bytes": 21129,
+        "gitBlob": "af69d8430ffd473d471a5e663606fcaea640d2e5",
+        "sha256": "ae2bc6fe45b4dded8cff67b13daf01e8a5f5c4fc3e835ce7eb98a8c58adaf435",
+        "physicalLines": 472
+      },
+      "followup00d": {
+        "bytes": 21129,
+        "gitBlob": "af69d8430ffd473d471a5e663606fcaea640d2e5",
+        "sha256": "ae2bc6fe45b4dded8cff67b13daf01e8a5f5c4fc3e835ce7eb98a8c58adaf435",
+        "physicalLines": 472
+      },
+      "incoming578": {
+        "bytes": 21129,
+        "gitBlob": "af69d8430ffd473d471a5e663606fcaea640d2e5",
+        "sha256": "ae2bc6fe45b4dded8cff67b13daf01e8a5f5c4fc3e835ce7eb98a8c58adaf435",
+        "physicalLines": 472
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "e1": {
+        "bytes": 32767,
+        "gitBlob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+        "physicalLines": 800
+      },
+      "followup00d": {
+        "bytes": 32767,
+        "gitBlob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+        "physicalLines": 800
+      },
+      "incoming578": {
+        "bytes": 32767,
+        "gitBlob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+        "physicalLines": 800
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    },
+    {
+      "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+      "e1": {
+        "bytes": 29798,
+        "gitBlob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+        "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+        "physicalLines": 603
+      },
+      "followup00d": {
+        "bytes": 29798,
+        "gitBlob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+        "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+        "physicalLines": 603
+      },
+      "incoming578": {
+        "bytes": 29798,
+        "gitBlob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+        "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+        "physicalLines": 603
+      },
+      "e1EqualsIncoming": true,
+      "followupEqualsIncoming": true
+    }
+  ],
+  "fullSourceDiffNonDocs": [
+    "test/features/agent-backend/capturedHostClient.test.ts",
+    "tools/owned-process-broker/broker.cpp",
+    "tools/owned-process-broker/debugServiceTest.h"
+  ],
+  "allOtherNonDocsExact": true,
+  "twoCppPatch": {
+    "bytes": 3480,
+    "gitBlob": "dc6042c54626c60580f694b93d301d95abf40f1b",
+    "sha256": "54246aa82e71f194e539b8a4a526adeffecea48bc7cc2e32efa2fa7f8fed6352",
+    "physicalLines": 72
+  },
+  "inverseHeaderExact": true,
+  "inverseBrokerExact": true,
+  "newCppPhysicalLineCounts": [
+    188,
+    534
+  ],
+  "original800LineCapPreserved": true,
+  "planPrefix": {
+    "bytes": 1875442,
+    "gitBlob": "4decf2aa39aba619f90103a77dd8467e37c50cfb",
+    "sha256": "fdd95b0c679e81b04a9b217eab21abc76e538937ed24e7fbab007224154ecf7c",
+    "physicalLines": 8104
+  },
+  "plan": {
+    "bytes": 1902427,
+    "gitBlob": "49587b36ed3bebbd9a766215ba0e00842db1b5a1",
+    "sha256": "fdb0d07f9850ffe364a13c6cc06c705a2314abe7c7e1d4857c1acbd9e3123bf6",
+    "physicalLines": 8230
+  },
+  "appendedAuthority": {
+    "bytes": 26985,
+    "gitBlob": "c39f65dccc88d8f84a4eb8b4581643f050db9552",
+    "sha256": "41423291c0c2b190a536a42f2a36aa4e2e0763ce3dee034240199e30ec7e251d",
+    "physicalLines": 126
+  },
+  "embeddedI386R1": {
+    "bytes": 11694,
+    "gitBlob": "cdb80b09890e3c814d10a13af906a68d3b0cdac9",
+    "sha256": "95c633cbc081e18a9c24eca715e3568eb5765f6562b609e9b479be708cce9fc2",
+    "physicalLines": 44
+  },
+  "docsBeforeSourceActualGitHistory": true,
+  "incomingProposals": {
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-observation-release-2026-11-16/i386-proposal/candidate.patch": {
+      "bytes": 3480,
+      "gitBlob": "dc6042c54626c60580f694b93d301d95abf40f1b",
+      "sha256": "54246aa82e71f194e539b8a4a526adeffecea48bc7cc2e32efa2fa7f8fed6352",
+      "physicalLines": 72
+    },
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-observation-release-2026-11-16/i386-proposal/migration-r2.json": {
+      "bytes": 6196,
+      "gitBlob": "fef595d28d3d2012ca1c7ae9f1b94e021af4cb35",
+      "sha256": "3f98c764c09980a9129b6c521e5d1fd0d100e9d08bfcbeffa901fa49bd54ecb6",
+      "physicalLines": 144
+    },
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-observation-release-2026-11-16/i386-proposal/synchronization-review.json": {
+      "bytes": 2590,
+      "gitBlob": "f520e1a948fd7147f57fa6d91ad555779e1ceed0",
+      "sha256": "c4b53cc399ae2035ae1badaa3ed5eacc92ae711fb1bd725f46f2ddd31fbb82df",
+      "physicalLines": 24
+    },
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-observation-release-2026-11-16/i386-proposal/validation-proposal.json": {
+      "bytes": 2136,
+      "gitBlob": "1dbc0f9169f67cad7e6325695eca14817e030e0b",
+      "sha256": "89ddbce557430a2180cb4d76d2dd2824c962b7dc006fcdc808975cb87390a771",
+      "physicalLines": 63
+    }
+  },
+  "literalOriginalSelectedCommands": [
+    "node --test packages/legacy-agent-host/tests/claude-management-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts packages/legacy-agent-host/tests/management-model-probe.test.ts packages/legacy-agent-host/tests/saved-team-model-probe.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log",
+    "node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log",
+    "node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log",
+    "& $controller $node $runner $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$build\\Release\\owned-process-broker-debug-service.exe\" 2>&1 | Tee-Object process-acceptance-evidence/windows-node24.log",
+    "& $controller $electron $runner $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$build\\Release\\owned-process-broker-debug-service.exe\" 2>&1 | Tee-Object process-acceptance-evidence/windows-electron.log"
+  ],
+  "result": "source review only; no new qualification",
+  "limitations": [
+    "first analysis compared plain unified author patch to Git full-index wrapper and refused before producing any report; this completed proof compares the exact independently reconstructed plain unified bytes",
+    "No archive or result claim is added by this source proof."
+  ],
+  "signedDownloadUrls": false
+}

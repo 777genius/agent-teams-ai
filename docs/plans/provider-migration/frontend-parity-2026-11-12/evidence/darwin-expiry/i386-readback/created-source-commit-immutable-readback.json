@@ -1,0 +1,22 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "content": "{\"sha\":\"00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d\",\"node_id\":\"C_kwDORVTEtNoAKDAwZDc0OTdiM2E2MjBmZTM2MGEzZmVkZDZkOWI5NTViN2ZiOWFlMmQ\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T07:07:20Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T07:07:20Z\"},\"tree\":{\"sha\":\"763d943372c79c8d82ad2634b04861da81308fee\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/763d943372c79c8d82ad2634b04861da81308fee\"},\"message\":\"fix(test): publish I386 observations before debug continuation\\n\\nWrite each bounded TEST observation row to the existing FD5 handle before continuing its event. Preserve the original decoder, qualifier, exception decisions and cleanup budgets.\",\"parents\":[{\"sha\":\"3d751d52bedf983cbac223ddf25ce08ca7af27b8\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/3d751d52bedf983cbac223ddf25ce08ca7af27b8\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/3d751d52bedf983cbac223ddf25ce08ca7af27b8\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+    "title": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+    "modified_date": null,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+    "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+    "display_title": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+    "structuredContent": {
+      "title": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+      "content": "{\"sha\":\"00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d\",\"node_id\":\"C_kwDORVTEtNoAKDAwZDc0OTdiM2E2MjBmZTM2MGEzZmVkZDZkOWI5NTViN2ZiOWFlMmQ\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T07:07:20Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T07:07:20Z\"},\"tree\":{\"sha\":\"763d943372c79c8d82ad2634b04861da81308fee\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/763d943372c79c8d82ad2634b04861da81308fee\"},\"message\":\"fix(test): publish I386 observations before debug continuation\\n\\nWrite each bounded TEST observation row to the existing FD5 handle before continuing its event. Preserve the original decoder, qualifier, exception decisions and cleanup budgets.\",\"parents\":[{\"sha\":\"3d751d52bedf983cbac223ddf25ce08ca7af27b8\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/3d751d52bedf983cbac223ddf25ce08ca7af27b8\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/3d751d52bedf983cbac223ddf25ce08ca7af27b8\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d"
+    }
+  },
+  "isError": false
+}

@@ -1,0 +1,1479 @@
+{
+  "schema": "independent-original-E1-Installer-complete-review/v2",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T07:08:04.360132+00:00",
+  "result": "APPROVE",
+  "blockingFindings": [],
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "sourceTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "runId": 43813731227,
+  "jobId": 133120928959,
+  "artifactId": 14203081582,
+  "originalOutcome": "SUCCESS; original finite Installer/Selection lane only",
+  "canonicalAuthorInputs": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/audit-v2.json",
+      "bytes": 165272,
+      "blob": "76667fab95b24ae45ff2273426f025bb5694463f",
+      "sha256": "e7c3c61b4f003c4364b6ff7179d883f27b1eac14148161299158415ee340bc91"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/Plan29-appendix-v2.md",
+      "bytes": 9773,
+      "blob": "865f74f3fbfce9b5a0a6d6f7d51844aad587f44d",
+      "sha256": "c21ed910c7678900f4a1091b266aeb84a07ed2450eeb231299fac908e6d32a89"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/checkpoint-v2.json",
+      "bytes": 5957,
+      "blob": "244c31785c26668393f3d7e897558297611af960",
+      "sha256": "46e70e41cf31d40014bd921b9c0d7f1ee6db81e2be59fd501db9c8ba80b8d2b3"
+    }
+  ],
+  "preservedV1Inputs": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/audit.json",
+      "bytes": 164534,
+      "blob": "7e515b77550733513670ea2ac591c35b3f2ea68f",
+      "sha256": "c5758f8bfa33512c150a0dde4fe41fbd0c5c2b3770c0fa4ad38a5296daa0c011"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/Plan29-appendix.md",
+      "bytes": 9548,
+      "blob": "12c17a1f0eef3570114e30e45fdca55627dcac08",
+      "sha256": "148c68d4cce27f800bfefa709aefce655321f7dfec90713b7d217ecc532e81c3"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/checkpoint.json",
+      "bytes": 4460,
+      "blob": "dbd2203b9981c3aed135fcdecfc04e11f1e729d8",
+      "sha256": "0961cdce26690a5903005c94ba8c7063f58541c3961a940e4dd7bc48d3c6367d"
+    }
+  ],
+  "independentFoundation": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/independent-installer-byte-source-foundation.json",
+    "bytes": 43504,
+    "blob": "b3e6ab533db0409134e8d3c9f78296928ba36198",
+    "sha256": "033587c8144e49653dccfdfb52d5b82e1704ac73247d35eef5c6293854a6ed60"
+  },
+  "independentSemanticJoins": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/independent-installer-semantic-joins.json",
+    "bytes": 21981,
+    "blob": "42103f8f769c68d81073c7512ff914986f73e11b",
+    "sha256": "008c52fe7b15528aa44a96142aecfed894997b397f5f56c66687daeb7b540449"
+  },
+  "proseCorrection": {
+    "foundByReviewer": true,
+    "description": "Original v1 incorrectly included current.json among files not archived. The original ZIP contains all502 bytes, whose JSON and SHA256 match the installed manifest in the receipt.",
+    "auditInverseFullBytesExact": true,
+    "auditOnlyChanges": [
+      "durability.limits[0]",
+      "durability.manifestArtifact"
+    ],
+    "appendixInverseFullBytesExact": true,
+    "appendixOnlyChange": "Replace the one inaccurate unarchived-files sentence with the two scoped current.json/binary-package-tarball sentences.",
+    "checkpointPriorFieldsAndPayloadsPreserved": true,
+    "v1Untouched": true,
+    "acceptedV2": true
+  },
+  "payloads": [
+    {
+      "path": "ci-e1d14b9/installer/original-job-133120928959-response.json",
+      "bytes": 187694,
+      "blob": "bb286bb8294fe952f27c2c2384015c23d552583a",
+      "sha256": "aa74feec812d89b68cf1f1e7836f2d6a219de87774f020c412906beb8452c447"
+    },
+    {
+      "path": "ci-e1d14b9/installer/job-133120928959.log",
+      "bytes": 177873,
+      "blob": "565ec78fd2fefcc147dc22082cb2788025252478",
+      "sha256": "1886ac9743d34ea3fce9e8e9d000a1a84b2e2432ec2e2e85fe64ecc40fe210e6"
+    },
+    {
+      "path": "ci-e1d14b9/installer/artifact-14203081582.zip",
+      "bytes": 1146605,
+      "blob": "28d8fe149dd76de01d8c7d1f30e0f9a5a187acf9",
+      "sha256": "54f412ddcedf16276dd055b63a3f7be7c4d3e9f43371422e5082c11ea8118be1"
+    },
+    {
+      "path": "ci-e1d14b9/installer/archive-retention.json",
+      "bytes": 11436,
+      "blob": "77de961fd868496226ec2db33194449081a96601",
+      "sha256": "342facae4b127b0e55b55f258a74de999625d65d7c93a06d6c2f66a0ec727f8a"
+    },
+    {
+      "path": "ci-e1d14b9/installer/source-pin-audit.json",
+      "bytes": 527764,
+      "blob": "d655fee7b64eb88e94c865aa0262aed405bd6b6e",
+      "sha256": "dfd3edbda78177da4df12be841499500e59f10cca53882cac18c1e93dc2dc2bd"
+    },
+    {
+      "path": "ci-e1d14b9/installer/visual-review.json",
+      "bytes": 6391,
+      "blob": "e082ce6852f0477ae61c29487b4336f091d51318",
+      "sha256": "3264546820ac1e7f92e5999514d3a5cbf4913fc52ad019cb63b5cc7f88565696"
+    },
+    {
+      "path": "external-e1d-integration/initial-api-responses.json",
+      "bytes": 2088356,
+      "blob": "0b4a4b435bfa0d1968961c29694ff740871917b4",
+      "sha256": "d9e448811262792814becd020fdde0dbf0622d4750462e5c45a34026c8790bda"
+    },
+    {
+      "path": "ci-e1d14b9/owned-jobs-0643.json",
+      "bytes": 24262,
+      "blob": "b29f9985ca2b699bf5a90c70f4731863499aeccc",
+      "sha256": "5c3bf79b0669ca6580c073c8b4b0e4d9d1f9a934e776cb4066b1ec97acdc8f35"
+    },
+    {
+      "path": "ci-e1d14b9/official-host-artifacts-0638.json",
+      "bytes": 1103,
+      "blob": "c7dedc60b6d0bbefdf192dce529835bd1706ae07",
+      "sha256": "7e0ea15923fcf1f20fac102d89ee3f37e4689fb06b5d56acf37f315d4d7d4fbf"
+    },
+    {
+      "path": "ci-e1d14b9/installer/audit-v2.json",
+      "bytes": 165272,
+      "blob": "76667fab95b24ae45ff2273426f025bb5694463f",
+      "sha256": "e7c3c61b4f003c4364b6ff7179d883f27b1eac14148161299158415ee340bc91"
+    },
+    {
+      "path": "ci-e1d14b9/installer/Plan29-appendix-v2.md",
+      "bytes": 9773,
+      "blob": "865f74f3fbfce9b5a0a6d6f7d51844aad587f44d",
+      "sha256": "c21ed910c7678900f4a1091b266aeb84a07ed2450eeb231299fac908e6d32a89"
+    },
+    {
+      "path": "ci-e1d14b9/installer/audit.json",
+      "bytes": 164534,
+      "blob": "7e515b77550733513670ea2ac591c35b3f2ea68f",
+      "sha256": "c5758f8bfa33512c150a0dde4fe41fbd0c5c2b3770c0fa4ad38a5296daa0c011"
+    },
+    {
+      "path": "ci-e1d14b9/installer/Plan29-appendix.md",
+      "bytes": 9548,
+      "blob": "12c17a1f0eef3570114e30e45fdca55627dcac08",
+      "sha256": "148c68d4cce27f800bfefa709aefce655321f7dfec90713b7d217ecc532e81c3"
+    },
+    {
+      "path": "ci-e1d14b9/installer/checkpoint.json",
+      "bytes": 4460,
+      "blob": "dbd2203b9981c3aed135fcdecfc04e11f1e729d8",
+      "sha256": "0961cdce26690a5903005c94ba8c7063f58541c3961a940e4dd7bc48d3c6367d"
+    }
+  ],
+  "payloadCount": 14,
+  "payloadBytes": 4525071,
+  "fullOriginalRawAndMCPJoined": true,
+  "originalRawBytes": 177873,
+  "originalMCPBytes": 187694,
+  "rawLines": 1775,
+  "originalTeeMatchesRawLines": [
+    957,
+    958
+  ],
+  "archive": {
+    "original": {
+      "path": "ci-e1d14b9/installer/artifact-14203081582.zip",
+      "bytes": 1146605,
+      "blob": "28d8fe149dd76de01d8c7d1f30e0f9a5a187acf9",
+      "sha256": "54f412ddcedf16276dd055b63a3f7be7c4d3e9f43371422e5082c11ea8118be1"
+    },
+    "memberCount": 34,
+    "safeUniquePaths": true,
+    "allCRCAndExtractedBytesExact": true,
+    "members": [
+      {
+        "path": "TEST-desktop-backend-F7twGS/TEST-codex-install/registry.ndjson",
+        "bytes": 1652,
+        "blob": "5f50706cd6758c63e2bf6ccab46d56a6d7e59a1e",
+        "sha256": "eac7818f8e2b5e85e77d5f9aa0e22f472f35bc58429be829a3653e12ef207ae4",
+        "crc32": "93a3772d"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/TEST-codex-install/invocations.ndjson",
+        "bytes": 15842,
+        "blob": "f858fe1165ff35a490a1b6065807c1e371b01cb4",
+        "sha256": "f28304642bb9e6865399354c76e11d4704b8e28b7262fbee263c3ff6dcac58dd",
+        "crc32": "14563182"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/TEST-peer-codex-scope/effects.ndjson",
+        "bytes": 16328,
+        "blob": "823b933e374ca00275ac9156ad9bac647f28f1a5",
+        "sha256": "e2c0a509b0532c6e2dccd89aa438e44868c828010c7509689976cf0a08dcc544",
+        "crc32": "5c5c4f9e"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/desktop-app.log",
+        "bytes": 21323,
+        "blob": "e101889a854504f78ba002fd5f7e53cf7bf60a34",
+        "sha256": "ceeed6d4b7e71a07c0727a933e07e083e453d2c03ea969c6afd0425c25571afd",
+        "crc32": "7d3afa32"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/desktop-backend-receipt.json",
+        "bytes": 859227,
+        "blob": "c78f35fe1bee7bc338a7824fbbf0485fe478a4ca",
+        "sha256": "4a89c65c3c9937958723d82ae67675efc0550a7fecd762a459627d65160f5801",
+        "crc32": "df12f210"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/desktop-descriptor.json",
+        "bytes": 2664,
+        "blob": "3e1f6f3228eb8edce81da4919dd5c98da346f4e3",
+        "sha256": "1adf8f5a4bac9d01485cf4b2c1b3f716baf33feb363c12f32d7d8987e37bf638",
+        "crc32": "910a48ca"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/host-profile.json",
+        "bytes": 7471,
+        "blob": "caa7e7af06b557e36bd94863d99c273050842afa",
+        "sha256": "2dd851235b768f5d52b7a238f44c9b94c05c4c3fffc2ee8f31190f2bdad3506e",
+        "crc32": "761b31b7"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/management-commands/0ffdd8f79c4612414ce68e2d4916d82d9cd390b61a2d11b29bd9427c22f6eb01.json",
+        "bytes": 904,
+        "blob": "0a529e2aa1ca43565235bceb4fe7f733fe700e81",
+        "sha256": "e2fe7b4daeb4185c2317d5ef0d42bda6aec81cf9c0df481184829b02f413203a",
+        "crc32": "1dfb0ab9"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/management-commands/2f84d964ad3cd4715ec8dcf75bd546ae5fdb505e7103d943ce13c2faffa14882.json",
+        "bytes": 929,
+        "blob": "cb8dfaa1fc47146a88dd6b3798f0db5ac82f9a4f",
+        "sha256": "cd1401a959518eb5ff49e54aaf0f103509386447233735c6084be81561d1e57c",
+        "crc32": "b5e9827b"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/management-commands/9cd0f552b44bb741a1435c9eaca359c6ad34f5b7e3bbd1e6923592f5c7f6249d.json",
+        "bytes": 923,
+        "blob": "e4e813d1f41ca5431c748ddb1507ac9cbbb6bf82",
+        "sha256": "67eee3aa8c64a1ae38266616733ae63a36e5aa4faab92f99f84b261a0f8e5b8e",
+        "crc32": "e247c95d"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/management-commands/b836a4d04c98c09a65fe63a5f4c3051c6d9b5b3e802a941119c596229a1b288d.json",
+        "bytes": 2297,
+        "blob": "16cf5e14a809856ffaf55a03c6c4ec64ae8db82b",
+        "sha256": "44370a090033ba9b7082ac177c5d14e974aede5393f474cabf01ee5bba34c6ce",
+        "crc32": "7e90548a"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/runtime-checkpoints/cp1-2999bd8f54b3f159097734fed78d05bf1e4901e03025d493c61cd090d6e67581.json",
+        "bytes": 2319,
+        "blob": "03740b9a9b47cd486a8ea26ebadd8185626062b3",
+        "sha256": "c66efc68a695033a8dc6ef9dd8d87cac6ef3b85f3ca7c8e333c839f298c18507",
+        "crc32": "352362b1"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/runtime-checkpoints/cp1-d481ace7c442a794887f32b07d237ce932bf1f56f727ef9c2232d43866c40438.json",
+        "bytes": 1895,
+        "blob": "0a3e014ee688491c875f7fc8e8e3334a42b01e83",
+        "sha256": "4b8830d9ebb828a3007b85883a62d6eaa4eefed2f94d9a43520ff3e2932a0487",
+        "crc32": "76785e29"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/runtime-sources/index.json",
+        "bytes": 1687,
+        "blob": "782ce599ce8c16e67da5407d749b787f60c09a9e",
+        "sha256": "07ef1960269fd6922ecc0d4c87980bca30acfae6ccbbba50ce6627d74b5703ed",
+        "crc32": "2fb9de5a"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+        "bytes": 453,
+        "blob": "4f86262aaa64cd90d37101f4f1f6da7aaf3cb53a",
+        "sha256": "92ba1102b951de2f1d3fcbb93ff4b07b6a75ba37d30badc6f1e2ca4fcec8869c",
+        "crc32": "e7c7c946"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/hoststore/teams/test-selection-next-team/inboxes/team-lead.json",
+        "bytes": 202,
+        "blob": "743695a56a5984ba0dbbf2895b5d74c2254f8985",
+        "sha256": "16026037ec11ea2d6591f67174b87027ccf11354c59fe9d0da524b94771c2f9e",
+        "crc32": "029a042e"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/sentinel-invocations.ndjson",
+        "bytes": 96,
+        "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+        "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+        "crc32": "9fc3bdb4"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-a-launch.png",
+        "bytes": 88663,
+        "blob": "57ebaad7e4e49e816053529b735208ccacec7c3f",
+        "sha256": "953e28f0915a8f9fa56f6b5c61528336771699160b69f4f2251bccb2cc883a66",
+        "crc32": "def96747"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-a-survived.png",
+        "bytes": 103824,
+        "blob": "1037dcc16b2d49451bdc70dfc6ac00b24b18f95e",
+        "sha256": "8e853947a7f076750b7fdfb4b5c400a625c76ad99e568962eb08779b4e1ae273",
+        "crc32": "830c2bb7"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-b-launch.png",
+        "bytes": 84983,
+        "blob": "720af42fd38c36916c0b287ee6451ea93a0905d9",
+        "sha256": "f1806aeebd3ad2a21e8e2fd5bb5f2646a880b8ae554df76e24085acafdf5b326",
+        "crc32": "8f9155a6"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-completed.png",
+        "bytes": 108178,
+        "blob": "561ed886081cdee0da7712de7dd34d01a199c9f5",
+        "sha256": "b4bed05f99db30dd30490af8507832db3e3f4998379076f3d703e2771b320664",
+        "crc32": "c9a8911a"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-effects.json",
+        "bytes": 23162,
+        "blob": "6d98193edf4d04f622563afe08169dc33d85f2a7",
+        "sha256": "7e85ad4881cc7be30d4e8b011065b7b251e2d1a4904b2bf4378b8370e9d49642",
+        "crc32": "f04695c5"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-before.png",
+        "bytes": 73405,
+        "blob": "df66d3cd626f7a1217cb70f781262e911d088746",
+        "sha256": "c92677a3662a34dcef430e33fbe0fd04f30217a0a04fa5deec0d1c596622ce8e",
+        "crc32": "3cb43ff9"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-dialog.png",
+        "bytes": 91558,
+        "blob": "5a4326f77fab729a3d0ef3de193d5f51d002e838",
+        "sha256": "343cca845370f5b6682734b71ce0caf72dc698ea81d7eab7050bbc5bc4564f76",
+        "crc32": "5205996f"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-ready.png",
+        "bytes": 67264,
+        "blob": "6ef1e492faebdcc988a7599ca1c92e2bcf87ebfb",
+        "sha256": "815cb3c504e6297188ddacf41465f10a39aaf31518bdaa4711c8ffeeb4b2b4c8",
+        "crc32": "70e46ed5"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-page.png",
+        "bytes": 87018,
+        "blob": "1b5074921c3e9df287cceb587f3d46dfeaeb9219",
+        "sha256": "7b2f8073954fe97283a74567ed4bf2f656b91956bc76d038bea96e837c5b2b8a",
+        "crc32": "f4344cf1"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-reloaded.png",
+        "bytes": 76076,
+        "blob": "057631010378bf8c1a9667c15cc9fc9143dfd749",
+        "sha256": "b274516d12708ac6b3b08d59c81ad370b3a6f3aa8f63e60b0c1c180aef83b53a",
+        "crc32": "676849cf"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-selected.png",
+        "bytes": 70747,
+        "blob": "4f3b61385b747254c3003f96d25a560aaaf28361",
+        "sha256": "f3abb87dcd3ed36df0e2a92630330aee9293bafcd7c2fa41fb933c7a9cb768bd",
+        "crc32": "1463c36c"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-stopped.png",
+        "bytes": 95285,
+        "blob": "9ad227205c5787f7ff91c3589a75f385d936e613",
+        "sha256": "25421f2566e44a32fe3a870fcb2dd1f028a26ea5163f5928132a074200e92b81",
+        "crc32": "2791f970"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/ui-seed-receipt.json",
+        "bytes": 2335,
+        "blob": "ae9a5985e512600d6a6f18245b719f3514c13b4b",
+        "sha256": "9db1b8eca78de8a30534dc6984d2883c495a753b138c527ea65a4bf937856e16",
+        "crc32": "a575f9fc"
+      },
+      {
+        "path": "TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/current.json",
+        "bytes": 502,
+        "blob": "5130a485ad5a7304871e0f4e027f21e5562e4d9d",
+        "sha256": "b164969685c6134805429c014b832c8a29a3ccba4049ef7430d8bd86e1b8020d",
+        "crc32": "50e92c84"
+      },
+      {
+        "path": "host-emulated-emulated-installer-ui.log",
+        "bytes": 227,
+        "blob": "b27e8a34b42b19a28c6ee282a0244c475e1e0a20",
+        "sha256": "136331accd0612c97edf5c772730957d806d8f066ab1ee066032ed902bee02ad",
+        "crc32": "32e5fe8a"
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "bytes": 1055,
+        "blob": "5b436b2ac2ab67c32cdaa3036bb4791acafc129c",
+        "sha256": "07e4630a689cdc3056a1515002bd4d8079fc571434e32483a03e04a2f4e21c43",
+        "crc32": "8f5bab62"
+      },
+      {
+        "path": "host-emulated-summary.json",
+        "bytes": 1355,
+        "blob": "030047aa69314c2d62b36fb5b09cbdcd61f2b776",
+        "sha256": "1057542c76eff3cf373e379719a6b24cfe474d037f622d686fe234055ab42098",
+        "crc32": "1e8473ba"
+      }
+    ],
+    "currentJson": {
+      "archiveMember": "TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/current.json",
+      "bytes": 502,
+      "blob": "5130a485ad5a7304871e0f4e027f21e5562e4d9d",
+      "sha256": "b164969685c6134805429c014b832c8a29a3ccba4049ef7430d8bd86e1b8020d",
+      "crc32": "50e92c84",
+      "fullParsedInstalledManifestAndReceiptHashExact": true
+    }
+  },
+  "source": {
+    "selectedOrderedBeforeAfterRows": 1757,
+    "selectedGitBytes": 20343408,
+    "selectedHostSourceLeaves": 586,
+    "wholeHostTreeClaimed": false,
+    "originalSourceAndOrderedRowsFreshlyJoinedDuringThisReview": true,
+    "selectedCanonicalRowsSHA256": "5db5b1251b47fe875bd46b22aa8a6c6899d5b965821fe03cb2020e0e32511581",
+    "additionalTwentyClaimAndHelperLeaves": [
+      {
+        "path": "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+        "bytes": 8676,
+        "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+        "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-resume-records.ts",
+        "bytes": 11685,
+        "blob": "0ca117bd5e84ae6368278a3a0a1cda40b5ec680b",
+        "sha256": "fe69bc8ed0208727811e53fbf7f1c92de27732181db6afb63de96d49f6a174ff",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 27188,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+        "bytes": 7965,
+        "blob": "d3068dcabf3ea7334a252967b43931f8751f7d58",
+        "sha256": "58bb413b06a3d442f1916cba3d7afcf0e44679f679810459409a53881900f1da",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/identity.ts",
+        "bytes": 709,
+        "blob": "d4e5631330f08ccc4138353f6e2b5f49f7cac01f",
+        "sha256": "a795125fbf639552833eb3730d971b9de16437ed3507be303a5b42d541ba8bb7",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 54778,
+        "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "bytes": 49613,
+        "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "bytes": 26261,
+        "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+        "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 111672,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "bytes": 22082,
+        "blob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "bytes": 24968,
+        "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+        "bytes": 20305,
+        "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+        "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+        "bytes": 3804,
+        "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+        "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+        "bytes": 2115,
+        "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+        "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-codex-installer-fixture.ts",
+        "bytes": 12137,
+        "blob": "b68eabb08c71dc31d2f9d4205cff265498fefe1f",
+        "sha256": "1818787c244d71ed8c8540ffa9acc6e749eaa8403e32f0a356d23ec99237d9b8",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-codex-installer-ui.ts",
+        "bytes": 16522,
+        "blob": "f049194429d74ab3e3a6808abd7c16d9772d5606",
+        "sha256": "19b78ef8d3dd637d5ae9b71c57d1b4dcd7175be344932afb8e55c53a33f8ba9d",
+        "mode": "100644",
+        "inSelected": true
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "mode": "100644",
+        "inSelected": false
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "bytes": 53683,
+        "blob": "e2b96672feefb924a39e20131514e0db5e347311",
+        "sha256": "ba36a5c01c6f670bcba92e6a155683385cd3eb33c871f94b8191b378b226f9d9",
+        "mode": "100644",
+        "inSelected": false
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+        "bytes": 20040,
+        "blob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+        "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e",
+        "mode": "100644",
+        "inSelected": false
+      },
+      {
+        "path": "test/scripts/installDependenciesWithRetry.test.mjs",
+        "bytes": 4939,
+        "blob": "c1c0232d09e5cd898d7acabcc48b87bab58f3c82",
+        "sha256": "3aab9d6568157c883993c43b8057193175e69c16c31129ce3867a14e686a8f00",
+        "mode": "100644",
+        "inSelected": false
+      }
+    ],
+    "additionalFiveInterpretationLeaves": [
+      {
+        "path": "packages/legacy-agent-host/src/adapters/profile/FileRuntimeSourceIndex.ts",
+        "bytes": 7202,
+        "blob": "cf01a4b31ad0ac5f74baffb0f265dee8961bfd81",
+        "sha256": "b4e798ba922c921a7efb83eb9eaf592b4dcbb5811848b0000201c923ed949302"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/runtime/FileCheckpointStorage.ts",
+        "bytes": 5029,
+        "blob": "587eb73bd2d2c519b55b33756e87c84806e3b405",
+        "sha256": "67c2285793b0432054c8c302f39d67f12944f3b25e0b9e38d1abfe06730c4a36"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/checkpointIdentity.ts",
+        "bytes": 2102,
+        "blob": "6d0e6a8e95707df6fa960acccb771449080b11e6",
+        "sha256": "b68b40e5fe2d912c71f09bb7e39f9acd6680f227612724ba6629aa129b5da82c"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/identity.ts",
+        "bytes": 1184,
+        "blob": "e2b5fc6216637c1d78ff807bf0e11c63d5ec5f63",
+        "sha256": "e42ca92261537a5882e2bd9ec456e257042f9ad42bbc465fb5bc020c2ac4cc3c"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "bytes": 33173,
+        "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+        "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23"
+      }
+    ],
+    "workflowAndThreeOriginalHelperOperandsOutsideSelectedRosterExplicit": true,
+    "compiledBundleHashCount": 14,
+    "compiledBytesInArchive": false,
+    "independentRebuildClaimed": false
+  },
+  "actualOriginalCommands": {
+    "node": "24.21.0",
+    "electron": "44.10.1",
+    "platform": "darwin-arm64",
+    "originalEightFileHelperCommand": {
+      "cases": 119,
+      "passed": 118,
+      "failed": 0,
+      "skipped": 1,
+      "cancelled": 0,
+      "todo": 0,
+      "durationMs": 13791.294125,
+      "skip": "Original Linux CDP descriptor case on macOS"
+    },
+    "originalInstallerRetryTest": {
+      "path": "test/scripts/installDependenciesWithRetry.test.mjs",
+      "cases": 7,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "durationMs": 393.744333
+    },
+    "all126IndividualRowsVerified": true,
+    "originalTeamStep9": "SKIPPED",
+    "originalWholeWorkspaceTypesAndTypedLintStep10": "SKIPPED",
+    "originalInstallerStep25": "SUCCESS",
+    "originalVerifierStep30": "SUCCESS",
+    "originalInstallElectronAndFreshBuildStepsSucceeded": true,
+    "originalWarningsPreserved": true
+  },
+  "business": {
+    "journalSteps": 122,
+    "stepKinds": {
+      "mouseMoved": 55,
+      "mouseClick": 55,
+      "passive-observation": 1,
+      "mouseWheel": 11
+    },
+    "businessClickCounts": {
+      "launch original selection once": 2,
+      "stop original selected Team once": 2,
+      "install original Codex package exactly once": 1,
+      "save original second selection once": 1,
+      "send original held stream once": 1
+    },
+    "passiveRows": 7,
+    "oneUpdate": true,
+    "oneSaveOnlyBAndOriginalRendererReload": true,
+    "twoLaunchesTwoStops": true,
+    "oneHeldStreamAndOneRelease": true,
+    "originalA": {
+      "pid": 13829,
+      "model": "TEST-model",
+      "effort": "low",
+      "originalRuntimePreservedThroughBStop": true
+    },
+    "originalB": {
+      "pid": 16444,
+      "model": "TEST-model-next",
+      "effort": "high",
+      "capturedSourceEqualsNewPublication": true
+    },
+    "allElevenOriginalBindingSessionThreadObservations": [
+      {
+        "phase": "before-create",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "before-original-installer-update",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-original-installer-ready",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-save-only",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-reload-before-next-launch",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-next-launch",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "before-original-installer-settings",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "before-original-installer-settings",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+          "runId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+          "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+          "generation": "capture-355c615d-f592-58de-892a-bad3e3cb5ab1"
+        },
+        "sessionRef": "c3188697-18d7-5c60-8b00-a6203643c257",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-16444",
+          "model": "TEST-model-next",
+          "effort": "high",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 16444
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-original-installer-settings",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-original-installer-settings",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+          "runId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+          "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+          "generation": "capture-355c615d-f592-58de-892a-bad3e3cb5ab1"
+        },
+        "sessionRef": "c3188697-18d7-5c60-8b00-a6203643c257",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-16444",
+          "model": "TEST-model-next",
+          "effort": "high",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 16444
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-b-stop-during-a-input",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-13829",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 13829
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": false
+      }
+    ],
+    "originalInputOrderAndNoReplayChecked": true,
+    "finalAStopSource": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+    "finalAStopConjunction": "Separate original custody-release wait; then within original75s/100ms physical-absence poll, exact selected Team plus both opaque run pins, disconnected accepted progress, unique visible Offline/enabled Launch and empty direct progress wrapper. Existing CDP remaining-budget cap and postread cutoff retained.",
+    "fullReturnedStoreObservationArchived": false,
+    "laterScreenshotAtomicWithStoreOrProcess": false
+  },
+  "durability": {
+    "fourManagementJournals": [
+      {
+        "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/management-commands/0ffdd8f79c4612414ce68e2d4916d82d9cd390b61a2d11b29bd9427c22f6eb01.json",
+        "bytes": 904,
+        "blob": "0a529e2aa1ca43565235bceb4fe7f733fe700e81",
+        "sha256": "e2fe7b4daeb4185c2317d5ef0d42bda6aec81cf9c0df481184829b02f413203a",
+        "commandId": "team-preflight-29a527e4f0f09ece6a0c0e174a8330320e7d46794d4ca5184f784dcba0d43650",
+        "kind": "model.probe",
+        "phase": "completed",
+        "bodyAndNameDigestsExact": true
+      },
+      {
+        "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/management-commands/2f84d964ad3cd4715ec8dcf75bd546ae5fdb505e7103d943ce13c2faffa14882.json",
+        "bytes": 929,
+        "blob": "cb8dfaa1fc47146a88dd6b3798f0db5ac82f9a4f",
+        "sha256": "cd1401a959518eb5ff49e54aaf0f103509386447233735c6084be81561d1e57c",
+        "commandId": "team-preflight-03540d9c40514f8f71965d84d08450a3f1a0d15c1665b75091911f0bdaf02496",
+        "kind": "model.probe",
+        "phase": "completed",
+        "bodyAndNameDigestsExact": true
+      },
+      {
+        "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/management-commands/9cd0f552b44bb741a1435c9eaca359c6ad34f5b7e3bbd1e6923592f5c7f6249d.json",
+        "bytes": 923,
+        "blob": "e4e813d1f41ca5431c748ddb1507ac9cbbb6bf82",
+        "sha256": "67eee3aa8c64a1ae38266616733ae63a36e5aa4faab92f99f84b261a0f8e5b8e",
+        "commandId": "team-preflight-c728ea2619ec0611a0e3c728e80858dbc01b310f79de60f4ac8b27f97887a574",
+        "kind": "model.probe",
+        "phase": "completed",
+        "bodyAndNameDigestsExact": true
+      },
+      {
+        "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/management-commands/b836a4d04c98c09a65fe63a5f4c3051c6d9b5b3e802a941119c596229a1b288d.json",
+        "bytes": 2297,
+        "blob": "16cf5e14a809856ffaf55a03c6c4ec64ae8db82b",
+        "sha256": "44370a090033ba9b7082ac177c5d14e974aede5393f474cabf01ee5bba34c6ce",
+        "commandId": "5d905ef5-1461-46cb-b003-f60cefe1d4a9",
+        "kind": "runtime.source",
+        "phase": "published",
+        "bodyAndNameDigestsExact": true
+      }
+    ],
+    "sourceIndexOrderedDigestAndPublicationCurrentPointerJoins": true,
+    "twoCheckpointBodyNameOrderedDigestHistoryFingerprintAndBindingJoins": [
+      {
+        "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/runtime-checkpoints/cp1-2999bd8f54b3f159097734fed78d05bf1e4901e03025d493c61cd090d6e67581.json",
+        "bytes": 2319,
+        "blob": "03740b9a9b47cd486a8ea26ebadd8185626062b3",
+        "sha256": "c66efc68a695033a8dc6ef9dd8d87cac6ef3b85f3ca7c8e333c839f298c18507",
+        "team": "a",
+        "bodyReferenceHistoryFingerprintAllExact": true,
+        "record": {
+          "schemaVersion": 1,
+          "reference": "cp1-2999bd8f54b3f159097734fed78d05bf1e4901e03025d493c61cd090d6e67581",
+          "checkpointId": "stop-094b16bc55a1f436639031858e10c6e19a2b6d89b612e8d137f6c48a6af27c94",
+          "fingerprint": "31a7b4ae3d7b8d10f1d12ad16281d2c6636a8f4ea178a8613738eeb8031576ba",
+          "sourceBinding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+            "teamId": "TEST-desktop-team",
+            "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+            "memberId": "alice-id",
+            "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+          },
+          "profileId": "TEST-desktop-profile-TEST-desktop-backend-F7twGS",
+          "sourceConfig": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+            "projectId": "TEST-project-TEST-desktop-backend-F7twGS",
+            "sessionId": "b97a0828-831c-598a-a1d6-aa6cced38273",
+            "generation": 2,
+            "configRevision": "capture-0e9bb2fe49a67ae7fb8a1017295f23a394aa2e9071f50f1ed86a5330c1c1faa8",
+            "requiredCapabilities": [
+              "text",
+              "tools"
+            ]
+          },
+          "sourceSessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+          "historyDigest": "c97d4e51c3b7a50557946fab3db1c13d648fc9b4feac2cca9b82dc1379eff36e",
+          "completedOperations": [
+            {
+              "inputId": "7d814d53-8abf-5ca9-95e8-9d1506d98114",
+              "operationRef": "9295cbdd-8f4a-47d7-8c2f-662e8fc2c057",
+              "fingerprint": "92572042abf8812d402cd0e75f1ec3dd36c46a446d595666395b4a8551dcdbcd",
+              "outcome": "succeeded"
+            },
+            {
+              "inputId": "782139da-e03b-525a-81a3-db3b11052f73",
+              "operationRef": "fe0cb5f2-fb10-434d-a9cb-6e649eb6c13a",
+              "fingerprint": "1ca8b248228cd528377aa394dc987c3034ff322ecab9511144f05ccbd1303ece",
+              "outcome": "succeeded"
+            }
+          ],
+          "opaque": {
+            "version": 2,
+            "engine": "codex-app-server",
+            "nativeThreadId": "TEST-thread-13829",
+            "compatibility": "cc02cadc1cd42e4691c9ce07e4ed336287b4029f7e683d60167233e5e122eb3c",
+            "itemOwners": [
+              [
+                "TEST-message-1",
+                "f2e1abbb-e6c0-4719-ac90-db298ad27222"
+              ],
+              [
+                "TEST-message-2",
+                "159fda06-4447-41dc-8afc-4d34f12754f7"
+              ],
+              [
+                "TEST-message-2-final",
+                "159fda06-4447-41dc-8afc-4d34f12754f7"
+              ]
+            ],
+            "legacyItemsExhausted": false
+          },
+          "digest": "ecd0e586a12a3e1f0c9c0de0ccbc1afc6468ed929c51576a2566ec2f32fc1129"
+        }
+      },
+      {
+        "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/runtime-checkpoints/cp1-d481ace7c442a794887f32b07d237ce932bf1f56f727ef9c2232d43866c40438.json",
+        "bytes": 1895,
+        "blob": "0a3e014ee688491c875f7fc8e8e3334a42b01e83",
+        "sha256": "4b8830d9ebb828a3007b85883a62d6eaa4eefed2f94d9a43520ff3e2932a0487",
+        "team": "b",
+        "bodyReferenceHistoryFingerprintAllExact": true,
+        "record": {
+          "schemaVersion": 1,
+          "reference": "cp1-d481ace7c442a794887f32b07d237ce932bf1f56f727ef9c2232d43866c40438",
+          "checkpointId": "stop-6f87af07de7d8a67eaeebb6702acf1460ca8475fa5ffa48f901b4a844dec1d20",
+          "fingerprint": "b99836547711e91b5c72565eb7fb865114a105e01db17fcfc3ed1df5bf98bad5",
+          "sourceBinding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+            "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+            "runId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+            "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+            "generation": "capture-355c615d-f592-58de-892a-bad3e3cb5ab1"
+          },
+          "profileId": "TEST-desktop-profile-TEST-desktop-backend-F7twGS",
+          "sourceConfig": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+            "projectId": "local",
+            "sessionId": "c3188697-18d7-5c60-8b00-a6203643c257",
+            "generation": 2,
+            "configRevision": "capture-cbc40755e027e989e155daa11182ccc5f7861eb9ed2abcaa545d7f7b045e913d",
+            "requiredCapabilities": [
+              "text",
+              "tools"
+            ]
+          },
+          "sourceSessionRef": "c3188697-18d7-5c60-8b00-a6203643c257",
+          "historyDigest": "77658fd4947ad42b7a5bc70b6bc36c558f725d4a82192bc24e3dc32c40d943a8",
+          "completedOperations": [
+            {
+              "inputId": "591bbe55-54dd-594e-87b9-8f4c80620993",
+              "operationRef": "81ca5a4f-a3ec-4234-a009-4748f7bac2a3",
+              "fingerprint": "031af95bc640286c3c3f6b5a70c3ced66fcdbbdc027ed855927024add2885b00",
+              "outcome": "succeeded"
+            }
+          ],
+          "opaque": {
+            "version": 2,
+            "engine": "codex-app-server",
+            "nativeThreadId": "TEST-thread-16444",
+            "compatibility": "143d36ef9ee2b47b69973135cdf9c1861b18095e02c8a1cb97e1b7fb36519be8",
+            "itemOwners": [
+              [
+                "TEST-message-1",
+                "d32009f0-67aa-4972-9f87-373ada2e9dd6"
+              ]
+            ],
+            "legacyItemsExhausted": false
+          },
+          "digest": "f97071792192d249f27377bbd42fa8121b87727e6c3f417f86caac68fab38372"
+        }
+      }
+    ],
+    "runtimeCurrentJsonArchived": true,
+    "binaryPlatformPackageTarballContentArchived": false,
+    "registryFinalRows": 11,
+    "earlierRegistryPrefix": 7,
+    "invocationsFinalRows": 67,
+    "earlierInvocationPrefix": 34,
+    "newSourcePublicationCount": 1,
+    "platformResponses": 1,
+    "tarballResponses": 1,
+    "notOfficialVendorDistributionOrRealAuth": true
+  },
+  "effects": {
+    "allFourCopiesExact": true,
+    "rows": 151,
+    "counts": {
+      "launch": 61,
+      "exit": 48,
+      "thread-selection": 5,
+      "input": 6,
+      "terminal": 6,
+      "mcp-catalog": 13,
+      "managed-configuration-read": 9,
+      "connected": 2,
+      "partial": 1
+    },
+    "launchPids": [
+      12513,
+      13352,
+      13382,
+      13413,
+      13542,
+      13564,
+      13575,
+      13623,
+      13632,
+      13633,
+      13638,
+      13692,
+      13716,
+      13823,
+      13828,
+      13829,
+      13830,
+      13836,
+      13837,
+      13838,
+      13849,
+      14259,
+      14333,
+      14335,
+      14502,
+      14955,
+      14973,
+      14974,
+      15023,
+      15122,
+      15131,
+      15164,
+      15209,
+      15717,
+      15910,
+      15937,
+      15965,
+      16048,
+      16138,
+      16173,
+      16249,
+      16259,
+      16262,
+      16263,
+      16357,
+      16385,
+      16431,
+      16444,
+      16456,
+      16487,
+      16492,
+      16493,
+      16522,
+      16911,
+      16945,
+      17019,
+      17024,
+      17135,
+      17520,
+      17536,
+      17752
+    ],
+    "explicitZeroExitPids": [
+      12513,
+      13352,
+      13382,
+      13413,
+      13542,
+      13564,
+      13575,
+      13623,
+      13632,
+      13633,
+      13638,
+      13692,
+      13716,
+      13829,
+      13838,
+      14259,
+      14333,
+      14335,
+      14502,
+      14955,
+      14973,
+      14974,
+      15023,
+      15122,
+      15131,
+      15164,
+      15209,
+      15717,
+      15910,
+      15937,
+      15965,
+      16048,
+      16138,
+      16173,
+      16249,
+      16259,
+      16262,
+      16263,
+      16357,
+      16444,
+      16522,
+      16911,
+      16945,
+      17019,
+      17024,
+      17135,
+      17536,
+      17752
+    ],
+    "missingExitRecordPids": [
+      13823,
+      13828,
+      13830,
+      13836,
+      13837,
+      13849,
+      16385,
+      16431,
+      16456,
+      16487,
+      16492,
+      16493,
+      17520
+    ],
+    "all61OriginalPidsAbsent": true,
+    "absenceDoesNotSupplyThirteenExitCodes": true
+  },
+  "cleanup": {
+    "wrapperPid": 7965,
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "originalExitedGroup": {
+      "settled": true,
+      "reason": "original-natural-exit-and-fresh-absence",
+      "initialMembers": [
+        {
+          "pid": 8014,
+          "ppid": 1,
+          "pgid": 7965
+        }
+      ],
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "capturedDescendantsAbsent": true,
+      "appExitCode": 0,
+      "appSignalCode": null
+    },
+    "final": {
+      "processGroup": 7965,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "capturedHostPid": 9741,
+    "dedicatedHostExitCodeRetained": false,
+    "separatePassiveMainChildCallbackRetained": false,
+    "initial8014Ppid1Pgid7965NotIdentifiedAsHostOrZombie": true,
+    "noCleanupSignalOnAcceptedNaturalExitPath": true,
+    "sentinelAdmittedVersionInvocations": 1,
+    "sentinelRefusedOrPostQuitAdditions": 0
+  },
+  "independentImageViews": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-before.png",
+      "archiveMember": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-before.png",
+      "bytes": 73405,
+      "blob": "df66d3cd626f7a1217cb70f781262e911d088746",
+      "sha256": "c92677a3662a34dcef430e33fbe0fd04f30217a0a04fa5deec0d1c596622ce8e",
+      "width": 1024,
+      "height": 681,
+      "independentlyActuallyViewedSingly": true,
+      "independentVisibleInterpretation": "Update available TEST Codex0.162.0 to0.169.0, Later/Update over Create Team."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-ready.png",
+      "archiveMember": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-ready.png",
+      "bytes": 67264,
+      "blob": "6ef1e492faebdcc988a7599ca1c92e2bcf87ebfb",
+      "sha256": "815cb3c504e6297188ddacf41465f10a39aaf31518bdaa4711c8ffeeb4b2b4c8",
+      "width": 1024,
+      "height": 681,
+      "independentlyActuallyViewedSingly": true,
+      "independentVisibleInterpretation": "Update Ready TEST0.169.0,100%, ready for new launches and Close."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-page.png",
+      "archiveMember": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-page.png",
+      "bytes": 87018,
+      "blob": "1b5074921c3e9df287cceb587f3d46dfeaeb9219",
+      "sha256": "7b2f8073954fe97283a74567ed4bf2f656b91956bc76d038bea96e837c5b2b8a",
+      "width": 1024,
+      "height": 681,
+      "independentlyActuallyViewedSingly": true,
+      "independentVisibleInterpretation": "OpenCode attention/backend-routing unavailable; Codex card is offscreen, so no visible version or account-health proof."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-dialog.png",
+      "archiveMember": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-dialog.png",
+      "bytes": 91558,
+      "blob": "5a4326f77fab729a3d0ef3de193d5f51d002e838",
+      "sha256": "343cca845370f5b6682734b71ce0caf72dc698ea81d7eab7050bbc5bc4564f76",
+      "width": 1024,
+      "height": 681,
+      "independentlyActuallyViewedSingly": true,
+      "independentVisibleInterpretation": "Codex connection Auto/ChatGPT/API-key choices and custom endpoint off; no image-only installed version or credential validity inference."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-selected.png",
+      "archiveMember": "TEST-desktop-backend-F7twGS/ui-emulated-selection-selected.png",
+      "bytes": 70747,
+      "blob": "4f3b61385b747254c3003f96d25a560aaaf28361",
+      "sha256": "f3abb87dcd3ed36df0e2a92630330aee9293bafcd7c2fa41fb933c7a9cb768bd",
+      "width": 1024,
+      "height": 681,
+      "independentlyActuallyViewedSingly": true,
+      "independentVisibleInterpretation": "TEST next model/High selected, save-only Create with Run command unchecked."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-reloaded.png",
+      "archiveMember": "TEST-desktop-backend-F7twGS/ui-emulated-selection-reloaded.png",
+      "bytes": 76076,
+      "blob": "057631010378bf8c1a9667c15cc9fc9143dfd749",
+      "sha256": "b274516d12708ac6b3b08d59c81ad370b3a6f3aa8f63e60b0c1c180aef83b53a",
+      "width": 1024,
+      "height": 681,
+      "independentlyActuallyViewedSingly": true,
+      "independentVisibleInterpretation": "TEST_UI_BOOT and TEST-model-next verified; both Needs attention and All selected providers ready appear. Preserve both."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-a-launch.png",
+      "archiveMember": "TEST-desktop-backend-F7twGS/ui-emulated-selection-a-launch.png",
+      "bytes": 88663,
+      "blob": "57ebaad7e4e49e816053529b735208ccacec7c3f",
+      "sha256": "953e28f0915a8f9fa56f6b5c61528336771699160b69f4f2251bccb2cc883a66",
+      "width": 1024,
+      "height": 681,
+      "independentlyActuallyViewedSingly": true,
+      "independentVisibleInterpretation": "A Alice TEST boot ready, TEST-model and green Team-launched progress."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-b-launch.png",
+      "archiveMember": "TEST-desktop-backend-F7twGS/ui-emulated-selection-b-launch.png",
+      "bytes": 84983,
+      "blob": "720af42fd38c36916c0b287ee6451ea93a0905d9",
+      "sha256": "f1806aeebd3ad2a21e8e2fd5bb5f2646a880b8ae554df76e24085acafdf5b326",
+      "width": 1024,
+      "height": 681,
+      "independentlyActuallyViewedSingly": true,
+      "independentVisibleInterpretation": "B Lead TEST boot ready, TEST-model-next and its separate Team tab."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-a-survived.png",
+      "archiveMember": "TEST-desktop-backend-F7twGS/ui-emulated-selection-a-survived.png",
+      "bytes": 103824,
+      "blob": "1037dcc16b2d49451bdc70dfc6ac00b24b18f95e",
+      "sha256": "8e853947a7f076750b7fdfb4b5c400a625c76ad99e568962eb08779b4e1ae273",
+      "width": 1024,
+      "height": 681,
+      "independentlyActuallyViewedSingly": true,
+      "independentVisibleInterpretation": "A Running/Stop and retained original TEST_UI_STREAM partial while B tab remains."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-completed.png",
+      "archiveMember": "TEST-desktop-backend-F7twGS/ui-emulated-selection-completed.png",
+      "bytes": 108178,
+      "blob": "561ed886081cdee0da7712de7dd34d01a199c9f5",
+      "sha256": "b4bed05f99db30dd30490af8507832db3e3f4998379076f3d703e2771b320664",
+      "width": 1024,
+      "height": 681,
+      "independentlyActuallyViewedSingly": true,
+      "independentVisibleInterpretation": "A partial complete conversation, still Running before later Stop."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-stopped.png",
+      "archiveMember": "TEST-desktop-backend-F7twGS/ui-emulated-selection-stopped.png",
+      "bytes": 95285,
+      "blob": "9ad227205c5787f7ff91c3589a75f385d936e613",
+      "sha256": "25421f2566e44a32fe3a870fcb2dd1f028a26ea5163f5928132a074200e92b81",
+      "width": 1024,
+      "height": 681,
+      "independentlyActuallyViewedSingly": true,
+      "independentVisibleInterpretation": "A offline/Launch, Alice offline and no earlier green launch progress. Later image is not atomic with original process/store read."
+    }
+  ],
+  "independentImagesActuallyViewed": 11,
+  "qualificationLimits": [
+    "Exact original e1d finite Installer and retained A/B selection/update/Stop evidence only; no transfer to another source, current I386 header, PhaseA or future source.",
+    "No Team177/stderr24, whole workspace types, typed lint, full frontend or other Desktop qualification from this lane; originalsteps9/10 skipped.",
+    "No native provider, vendor authentication, official package distribution, C++ gate, packaged platform or release qualification.",
+    "No cause or repair inference for prior M navigation failures; the later E1 success does not prove passive diagnostics fixed navigation.",
+    "Selected1757inputs contain586Host source leaves, not a completeHosttree.14compiledhashes and installedbinary/package/tarballhashes are original observations, without independent payload/rebuild verification.",
+    "The502-byte current.json is independently archived/recovered; that exception does not supply binaries/package/tarball or all independent owner/source-history files.",
+    "Physicalabsence and wrapper0/null are separate from missing13peerexitrows and unexposedHostexitcode; no global native custody claim.",
+    "PNG observations are later non-atomic frames; neither Settingsframe alone proves visible Codexversion/authhealth."
+  ],
+  "reviewerActions": {
+    "projectOrProviderExecutions": 0,
+    "CIPollsOrDownloads": 0,
+    "sourceRefOrTrackedChanges": 0,
+    "authorFrozenFileEdits": 0,
+    "originalGitPayloadSourceReaders": true,
+    "actualPNGViews": 11,
+    "onlyNewIndependentScratchReports": true
+  }
+}

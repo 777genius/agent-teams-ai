@@ -1,0 +1,20 @@
+{
+  "request": {
+    "repository_full_name": "777genius/agent-teams-ai",
+    "parent_sha": "3d751d52bedf983cbac223ddf25ce08ca7af27b8",
+    "tree_sha": "763d943372c79c8d82ad2634b04861da81308fee",
+    "message": "fix(test): publish I386 observations before debug continuation\n\nWrite each bounded TEST observation row to the existing FD5 handle before continuing its event. Preserve the original decoder, qualifier, exception decisions and cleanup budgets."
+  },
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "sha": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d"
+    },
+    "isError": false
+  }
+}

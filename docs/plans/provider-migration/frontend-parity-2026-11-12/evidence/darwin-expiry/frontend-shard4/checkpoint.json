@@ -1,0 +1,79 @@
+{
+  "kind": "E1 frontend shard4 only author checkpoint",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "jobId": 133120928662,
+  "payloadCount": 9,
+  "payloadBytes": 1025500,
+  "payloads": [
+    {
+      "path": "ci-e1d14b9/frontend4/job-original-response.json",
+      "bytes": 235805,
+      "blob": "7f5e459479d17ad4c6d8c5425a973cd6c21875ab",
+      "sha256": "44956b1a98d570b39c9455176d68c7f1090d3e71515339f743a46ae797d50a98"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/job.log",
+      "bytes": 191999,
+      "blob": "7a6f49d16a45b1943f3344e2f4b121c1f406887c",
+      "sha256": "15165c8f89c4c7d783435484efad2c328a4d1c2ad91e9dc605c87513eece3fde"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/artifact-14203956752.zip",
+      "bytes": 317740,
+      "blob": "891547517df19ed9562cf6311c329f7989c953f7",
+      "sha256": "58c2f8f667ff43a2ed586932403903856aa2491402ae19be9ab13cb541d3f6b5"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/archive-retention.json",
+      "bytes": 1356,
+      "blob": "2ce796313e71fed484b61702fde7b29c6d693e48",
+      "sha256": "649a6e2c656422b6b25af0dd3ab13b13561e733e18433d41ab073269e5185bba"
+    },
+    {
+      "path": "ci-e1d14b9/official-host-artifacts-0702.json",
+      "bytes": 2959,
+      "blob": "e1f6f9f0ef0cb0e3efc4eda7cb87c0fa2a639387",
+      "sha256": "2894018dbf71df54e0bb8456f7a2c7d8e1a3089377e8ee43e72a276d196c6793"
+    },
+    {
+      "path": "ci-e1d14b9/owned-jobs-0700.json",
+      "bytes": 36811,
+      "blob": "9887db5797c7e4ca901e8f684852204d125d1f02",
+      "sha256": "93fa2619c1e6fa0c2881607ed90029571db3bc43b6e061daada7d160c345574c"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/source-and-case-proof.json",
+      "bytes": 228982,
+      "blob": "c84353d66250bd53be5473829447447ab0a8ba28",
+      "sha256": "fae0223af31b9235ed7d01cf08dd4c3e882c763ce26358faf83f590b7ce59217"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/audit.json",
+      "bytes": 7711,
+      "blob": "ab7105a2ce0a35dfd15c280a573d5f194785048a",
+      "sha256": "83f728902caf58b0030f1c674b7e57f64028dd731ef58dfdcf17a284c905ead2"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/Plan29-appendix.md",
+      "bytes": 2137,
+      "blob": "3b32dc144a4e8ddd7ac572d7ee7af6febd125725",
+      "sha256": "1fa40ebaa73dd64d01a4d72ca08ee95d7161460880f6688774b8374a13d8dbe4"
+    }
+  ],
+  "archiveMembers": 2,
+  "assertions": {
+    "totalAssertions": 6621,
+    "passedAssertions": 6614,
+    "skippedAssertions": 7,
+    "failedAssertions": 0,
+    "testFiles": 539,
+    "cliPassedFiles": 537,
+    "cliSkippedFiles": 2,
+    "jsonReportedTestResultPassedObjects": 539,
+    "jsonReportedTotalTestSuites": 1349,
+    "jsonReportedPassedTestSuites": 1349
+  },
+  "allFourShardsQualified": false,
+  "independentReview": "pending",
+  "originalBytesFrozen": true
+}

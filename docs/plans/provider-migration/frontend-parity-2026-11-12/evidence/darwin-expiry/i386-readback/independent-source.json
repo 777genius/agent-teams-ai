@@ -1,0 +1,2386 @@
+{
+  "schema": "independent-actual-I386-FD5-source-publication-readback/v1",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T07:08:35.523216+00:00",
+  "result": "APPROVE",
+  "independentReadbackExact": true,
+  "blockingFindings": [],
+  "head": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+  "tree": "763d943372c79c8d82ad2634b04861da81308fee",
+  "parents": [
+    "3d751d52bedf983cbac223ddf25ce08ca7af27b8"
+  ],
+  "actualRawCommit": {
+    "bytes": 458,
+    "blob": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+    "sha256": "a4777d535e1df7d34bc440e0595a5d69e9a6ee257f42622c3363ab122f334908"
+  },
+  "freshImmutableAPI": {
+    "path": "/workspace/scratch/82d3f9ba6b85/i386-fd5-independent-actual-source-commit-api.json",
+    "bytes": 1357,
+    "blob": "0a68ebd47ea491f65628ed3f0c2c382d347c6bee",
+    "sha256": "86c76d57581322e0954ddaed682761de9d7f833643650f4501bd9ab37f75322d",
+    "tupleExact": true
+  },
+  "manifest": {
+    "path": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/upload-manifest.json",
+    "bytes": 175909,
+    "blob": "3bb547dfcccd8b36ebdc63620090531a28b2c3d7",
+    "sha256": "3a5106e9130d7c8de483b44500ef1fb53552759ddc0f6db1c9e9c21edf1263cc"
+  },
+  "priorIndependentPrepublicationReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication-independent-review.json",
+    "bytes": 12859,
+    "blob": "35e2995427865771d37fc984e190553b1976cf5a",
+    "sha256": "cefbbd811f39677693f02e49df8319c6bd5ebe2d7183d433079a89c753bd38e8"
+  },
+  "wholeTree": {
+    "leafCount": 11150,
+    "directoriesIncludingRoot": 1683,
+    "reconstructedMerkleTree": "763d943372c79c8d82ad2634b04861da81308fee",
+    "allGitPreparedDirectoryHashesExact": true,
+    "allPreparedAndActualLeavesExact": true,
+    "wholeLeafMapSha256": "bd7563220b215df2956584b778ba63acae27ba9b5d4166640d2c85416ebd1d27",
+    "exactChangedPaths": [
+      "tools/owned-process-broker/debugServiceTest.h"
+    ],
+    "unchangedPriorLeaves": 11149,
+    "deletedPaths": 0,
+    "maximumRelativePathCharacters": 216
+  },
+  "payloads": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/root-docs.json",
+      "mode": "100644",
+      "bytes": 76135,
+      "blob": "4e10755962f27afd069ed164db340afd801d6eee",
+      "sha256": "ef128db94f06b7d30e530b8c4ec070e555def5f9303ef5c1a24cf1e376263e8c",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/independent-docs.json",
+      "mode": "100644",
+      "bytes": 110793,
+      "blob": "ee774cc1bfb6cdf42d2fb7c29965156aa823a1dc",
+      "sha256": "52ee45d15f8179bac6c45b1781042784c16e8a64959e93b3f2d544693e0005c2",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/root-source.json",
+      "mode": "100644",
+      "bytes": 87963,
+      "blob": "7d929b9e87a7251501f263026fdfec61a37bebfa",
+      "sha256": "a34f54564f78bc0977b6d3a5cbaca00cf7b97e52442826bddab13a8df202dbc2",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/independent-source.json",
+      "mode": "100644",
+      "bytes": 104720,
+      "blob": "ba880cee7d51cc18a9b1fc766aec2ed427ee8120",
+      "sha256": "a763215ee82e107c43497b730b3fcd9fc11535cf9ca9d6bba5b3ff3c549eeea0",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/docs-create.json",
+      "mode": "100644",
+      "bytes": 785,
+      "blob": "bf437458b9031d0185ad7633eb4766519650f2d4",
+      "sha256": "555146daced5270d7429c30e4d3c43a8f6538b89a83581d8e15446370060e4b0",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/docs-commit.json",
+      "mode": "100644",
+      "bytes": 3770,
+      "blob": "a4e0c759b64ea3c36072f9f05c595ca9fca6dc73",
+      "sha256": "69ae6932064dfd1113115ef890ab3a9d600d5162bf91ccb88e3ef5acf8ed84f4",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/docs-push.json",
+      "mode": "100644",
+      "bytes": 390,
+      "blob": "3518b203685ab6327e6fc87c65a83708fd3847c8",
+      "sha256": "1117a42852394c89d8e90ef8f198c6eac6e731c9ee7866e143327abd42ae13d9",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/docs-post-refs.json",
+      "mode": "100644",
+      "bytes": 175018,
+      "blob": "410811ccaf5cbe183e1ce93f98410e4a9be68d28",
+      "sha256": "0a18fabac114012508cd785d66f789122e6d374449964712a97409af41220ff4",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/docs-pre-refs.json",
+      "mode": "100644",
+      "bytes": 175925,
+      "blob": "d4a5dfd859bb9e2ba0bddc47a40235b90b38de1e",
+      "sha256": "709aedfcdf932560022a41e6fc936a5fd140298c5ed78053046f45b8fea53a78",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/source-create.json",
+      "mode": "100644",
+      "bytes": 743,
+      "blob": "ead2e7e7e57b649a6650d64891934cf955a59fe3",
+      "sha256": "13b9f00ca5ae4673e5d05346ac5b77a1c66c9c322b493e2eee276fe784b5dcce",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/source-commit.json",
+      "mode": "100644",
+      "bytes": 4178,
+      "blob": "cd7402379d71949de00244f9566f3032482339c1",
+      "sha256": "bc836eb3703542de36824bd0644bb7c01bc99ff2f36def43207c40f3560a707a",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/source-push.json",
+      "mode": "100644",
+      "bytes": 534,
+      "blob": "d4958d0ff44e604361f735ef253dc1431a5a8ad1",
+      "sha256": "7fc0b20872bffdd46a0283b168d921371b0f5a068fbd7b6212a61d602351feae",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/source-post-refs.json",
+      "mode": "100644",
+      "bytes": 175321,
+      "blob": "60886270c0110078bfc99a1a851432f2375809f8",
+      "sha256": "7a6c47ceb1dd8a799666b02eaf14d01e2cdfdf28f08b0e53716cbe715f42a1ef",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/source-pre-refs.json",
+      "mode": "100644",
+      "bytes": 176376,
+      "blob": "fe78ae0c4b5b152cf77562192f7ed95a8ade41d1",
+      "sha256": "7408bb206621d2ee21987d77698010472787978c16ada2253071753b7ea63016",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/R1-appendix.md",
+      "mode": "100644",
+      "bytes": 14109,
+      "blob": "2766f9aa1f592ec37e35f087f8e8244a53b9d84b",
+      "sha256": "91878159be7560edf466ec345c2ec51b521f9616912708d6b2494d493ec8b95a",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/candidate-debugServiceTest.h.txt",
+      "mode": "100644",
+      "bytes": 8822,
+      "blob": "952ed2d3436708addf656109dc513270ea33ce22",
+      "sha256": "cb3ed3eaebb0f59aa968a285ddd85522181292a289a9bed7c59a6adf0feabf65",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/preimage-debugServiceTest.h.txt",
+      "mode": "100644",
+      "bytes": 9009,
+      "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+      "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/candidate.patch",
+      "mode": "100644",
+      "bytes": 1543,
+      "blob": "58e02dcf66ad9a641ed9d33f16a8623114389fe4",
+      "sha256": "1e04a2ca9e1ef195873a79ee3574ed427a043f8c7c49a860abed66da6eff370c",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/candidate-metadata.json",
+      "mode": "100644",
+      "bytes": 1814,
+      "blob": "06168117ca966ff3cee01dfc1adc01dd6e45bfbb",
+      "sha256": "3a180d92d87081f6a6bc6f48200906bf3cb1e8806de67c5281584352ee65e880",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/source-and-venue.json",
+      "mode": "100644",
+      "bytes": 26838,
+      "blob": "43beabcac07f6640c6b61c9daf31544ec58f02fd",
+      "sha256": "5a5406ff3141d5537980c54d54f2894ea06495e203be39d7fcc8bb1a91cd019a",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/independent-source-r1-review.json",
+      "mode": "100644",
+      "bytes": 19474,
+      "blob": "bbbd3ea7374c89a57e8fed2ed75071b9a692db85",
+      "sha256": "e4316ff8fc70d101957c40be52d5117267b5ef22906524b8565f6fa605ffc8e3",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/current-preimages.json",
+      "mode": "100644",
+      "bytes": 5577,
+      "blob": "1cf439de4fa430850b36f82dcb2318a43fc87fb7",
+      "sha256": "5479324187530cdc40a6a3e00eeb5a1f6c0a6bc157ffec4c7896858467d56e7c",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/R1-root-ordered-selection.md",
+      "mode": "100644",
+      "bytes": 10354,
+      "blob": "d8274009cde085efb306fbcbef5f0f84c02178a7",
+      "sha256": "337d35fc9835f6e744a7e6ec86670b30a24dc0bfd831c337bfb4ae1ffb395198",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929105-original-response.json",
+      "mode": "100644",
+      "bytes": 108967,
+      "blob": "e88bf45a79794a2864dc996a97cff8bd3989fdcb",
+      "sha256": "d5cd8c8eb58bd3b081fd85ba7e1c313ad619e5fd1eca83f8a479c6bdccebf2a1",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929105.log",
+      "mode": "100644",
+      "bytes": 105062,
+      "blob": "b2e35a364b357a09cbde6bd8a5998d930684bbab",
+      "sha256": "2be17c99501fc1a105d04018ed556203eddc63162a0085ba24dd4b5f36c05c99",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/static-windows-qualification-audit.json",
+      "mode": "100644",
+      "bytes": 66310,
+      "blob": "7ab8c76f5c3677a2e1e45d3f3defddf0171a018c",
+      "sha256": "78c6dc712dfedbcab05eb5c0e2a18f7a233e56ed7f66a90258b970de83598609",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929324-original-response.json",
+      "mode": "100644",
+      "bytes": 104782,
+      "blob": "655b182d2a0d1ee449ef8184ffbb94ae989e7013",
+      "sha256": "1a632d2cf5e110466c603ed09c335b0dd14a90a90955f4d7c14bc803e8479730",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929324.log",
+      "mode": "100644",
+      "bytes": 99531,
+      "blob": "0a1daaf057b77571deaac25dffdbe70f86475744",
+      "sha256": "27e6fa59194a32898ca1761ccf4358e4f4ef1d1c14b1bc7f4e5806b9e0fc0eb1",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202660278.zip",
+      "mode": "100644",
+      "bytes": 11052,
+      "blob": "b85149194d6ac77e819ef97ec216b12a4ed9862f",
+      "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-darwin-x64-archive-audit.json",
+      "mode": "100644",
+      "bytes": 1465,
+      "blob": "57446cc55810771e542ac236766fd8424c6195b4",
+      "sha256": "f6c4e446bc24ccea3f8ab911c2ff9534396a54b1261966fc6333fab572d872f3",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929386-original-response.json",
+      "mode": "100644",
+      "bytes": 111288,
+      "blob": "2537e228865e35549438d92188b21bb18f3742f4",
+      "sha256": "84677de1e30993060c4cb1fa44607943e0f3ff52ffd4096e7eb48496e6f177b1",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929386.log",
+      "mode": "100644",
+      "bytes": 107051,
+      "blob": "b163e6a3a31a42ad258af2955601b0452cdec80a",
+      "sha256": "0fe4c57169b3d6e8efc8106fd42736cb686e3a69788e16f2ec7ad0a95449a186",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/v2-windows-arm64-qualification-audit.json",
+      "mode": "100644",
+      "bytes": 44040,
+      "blob": "f19b2e9e451e48d1e67dd303cf46b9d4ad096a25",
+      "sha256": "bf92118312405025e609d29d73f44c94c59a865f319ce121f529b45307abf095",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14201989395.zip",
+      "mode": "100644",
+      "bytes": 13456,
+      "blob": "be67c1142b8a6a3176d1f2e5419c3d30687bb9ee",
+      "sha256": "583f2900f6ba0764a4243e5b32dbaa98085769f2c7f47ee5e7d2440b87cfeeb2",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/v2-windows-arm64-archive-audit.json",
+      "mode": "100644",
+      "bytes": 1301,
+      "blob": "bb31ddcdfbd8fcf3f50e1293a6292350efdf9d7c",
+      "sha256": "c16ac2c7055a609b0c0b1423a19d3fb5bf4ccca3bd701bdbe2385f3f9a20fe74",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929407-original-response.json",
+      "mode": "100644",
+      "bytes": 96209,
+      "blob": "a9ad1aa77b28284f102168f5b832cf5f21557757",
+      "sha256": "0c66d2e97e3e6280b4d59218f8d3783b746fb065b50925bc3e13b16f4270eb80",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929407.log",
+      "mode": "100644",
+      "bytes": 92290,
+      "blob": "51a9f01e90c63e44b7765b94d02c8fadf115c474",
+      "sha256": "6feb2e5b3ad4680f48afb6ca70878fde1b5e1a72236a52ec1634e80ccb4f564d",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/v2-windows-x64-qualification-audit.json",
+      "mode": "100644",
+      "bytes": 43978,
+      "blob": "d587841055f2ce5d495190fc4dd7ba3f632cfbc5",
+      "sha256": "0e4f70368f04cc4cdda266d60284aef820eba1dfd379737ea8195b47224a5df7",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14201408897.zip",
+      "mode": "100644",
+      "bytes": 13339,
+      "blob": "c1cdb716a330d1d12ff140619efeb0272f60dff1",
+      "sha256": "38ef268f1e40f88299f91faf38a7087c6281efbf5305a492962049f00acb3450",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/v2-windows-x64-archive-audit.json",
+      "mode": "100644",
+      "bytes": 1270,
+      "blob": "99b5d6e114d58cfaba0c4c01f66a278e311657ad",
+      "sha256": "5fbe261c3800a7334507608c6d625ab32dfee5d9522036e5d71628d25c19df89",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929424-original-response.json",
+      "mode": "100644",
+      "bytes": 114456,
+      "blob": "4a86f9d413da622834f8bb41e617c59f20c11ded",
+      "sha256": "9be71d431e01116faaa9768869b16b4da5de052c070ac99dea9e8fcb10fe2127",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929424.log",
+      "mode": "100644",
+      "bytes": 112091,
+      "blob": "907a8263b7d72aace814479a1b01214f4024499e",
+      "sha256": "de953965a05ae16adbc9b3934bc2ba5b0bb604be4256616ce353b3aedbaad2c6",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/darwin-p09-original-failures-audit.json",
+      "mode": "100644",
+      "bytes": 59752,
+      "blob": "899e1b07bd2f38b1cbfc18cacea5b7032634b9be",
+      "sha256": "b02005b3837a97db51b88daff23aa075203bdd8d57dcf291aa45cabb946f3d69",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202625921.zip",
+      "mode": "100644",
+      "bytes": 10631,
+      "blob": "76dd5204a9636d80be1c4d10762c200e3c3083f5",
+      "sha256": "a3b3b0269ebd620138d5756959fd4dd9b8a9c4a287fd2db63db9e061f13d9171",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/p09-darwin-x64-archive-audit.json",
+      "mode": "100644",
+      "bytes": 1294,
+      "blob": "5f7e1fec4c9af86bf43114201a89a7af55783d93",
+      "sha256": "881ac4af974d17de151ea3dc9736f2ff2b629710f93e18949f7b4192624b5ac4",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929495-original-response.json",
+      "mode": "100644",
+      "bytes": 108689,
+      "blob": "09284e01816d65f136e3d9160d8a944ffdaadd58",
+      "sha256": "e5126198422cf28762db190d8923fc1b71dd5508e70c8394990f3ddc78b07d98",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929495.log",
+      "mode": "100644",
+      "bytes": 106404,
+      "blob": "59ecf6ca7fd558fb8d4021834ada5e4ca9b972ee",
+      "sha256": "5d1703477fb76b2f1f84fa1bc716e16d9ba233a49fe4413be459719d2a60224e",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14203040330.zip",
+      "mode": "100644",
+      "bytes": 10422,
+      "blob": "cb466c5c68c174d9b19e5ce7d4f75c01a224a91b",
+      "sha256": "946e50f7b3dfd44c12ee6df665b4b6ecce1d5c6c1b957d9f5f99e88563bf3b30",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/p09-darwin-arm64-archive-audit.json",
+      "mode": "100644",
+      "bytes": 1294,
+      "blob": "43844455525b24443aa3d5654438670bf6f898e3",
+      "sha256": "c973b404499c5988a6c0691aa9d2f5856e2ad70e97e6a54ccf5e2a4eff5cea81",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/independent-process-windows-x64-review.json",
+      "mode": "100644",
+      "bytes": 19746,
+      "blob": "aa06b828ff406a3adac11c313d8bcf5b2bf8ce52",
+      "sha256": "2f645d88c90c47d8e022c5327d01b594fec9b381325bab69f4eb4dc154294000",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/independent-process-windows-x64-byte-source-proof.json",
+      "mode": "100644",
+      "bytes": 56525,
+      "blob": "1c549757914dc64ea61a85ba283f4374059ee9aa",
+      "sha256": "430d1d68569042b397d8728aa520f7e7ffd150184bed2fde8d9ba44e03ee341d",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929614-original-response.json",
+      "mode": "100644",
+      "bytes": 115060,
+      "blob": "4bb41a146fa2634661d10710996382869afc9bdd",
+      "sha256": "6f15fce4f8b4b0e8ba73b4c760ded73566659925e2720746eadd4a267d6bc281",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929614.log",
+      "mode": "100644",
+      "bytes": 109620,
+      "blob": "91da7b6d3da2338c07be6f845ad96c2e6513dbcf",
+      "sha256": "9efb8720e211458046131cf1a2a76d1aa05c872f1011c1345044eb09b4b66e15",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-darwin-arm64-qualification-audit.json",
+      "mode": "100644",
+      "bytes": 18428,
+      "blob": "718324db2a0cee7b868e575f391644aaf630aa4a",
+      "sha256": "89006964a4915daecf8c098645a2c7bac39ef25f8228fde387833590ad9fc7d7",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202289527.zip",
+      "mode": "100644",
+      "bytes": 12690,
+      "blob": "de661aa46ff3fd55284e1a709375a5caa484fa34",
+      "sha256": "6f78cdc0f3429f4473288330221cb1f7df969d1da7853ddee0d0bd9883f24286",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-darwin-arm64-archive-audit.json",
+      "mode": "100644",
+      "bytes": 2104,
+      "blob": "64ea1bfc9156b3c7ab1d38e8ae4489a51ba5445a",
+      "sha256": "589c5f2225fd1818119177b2288188c743dabbb8757120be26ef252a2dfc90c0",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929619-original-response.json",
+      "mode": "100644",
+      "bytes": 187583,
+      "blob": "5d3b3d7d5718bc32ff80197be2e2ea37d48bac88",
+      "sha256": "1269fcd6fa771f612a09b1b3226063a658737b17ababaf1f63c42422172a254d",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929619.log",
+      "mode": "100644",
+      "bytes": 174851,
+      "blob": "2a599f79761d88b41ef9e21b7269d4ed42c7e004",
+      "sha256": "f411924081a9dfde45ccbf57944a78761fd24fe9bc7d0f7c5f8acb7d7d458814",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-windows-arm64-failure-audit.json",
+      "mode": "100644",
+      "bytes": 52740,
+      "blob": "bdef1a0e8295e7439534d3eaabeafc78f37dcb9d",
+      "sha256": "2fbb7243b5804bd15fcd5debdd6d0e656d6582b3f39ea9321fc4219a53d96d7f",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202148789.zip",
+      "mode": "100644",
+      "bytes": 15113,
+      "blob": "d0d30e9eb6849d03b2b091171c3e4f28e8808f27",
+      "sha256": "15e8fae1f1c5e3cbd86de1c54bc4b7c54528b25463cd3b28df00f794545fc82b",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-windows-arm64-archive-audit.json",
+      "mode": "100644",
+      "bytes": 2950,
+      "blob": "086cc70aaa7ddd26c0dd25a2d94ac62918e31e4a",
+      "sha256": "400273f83b6426974f9eefe3d4f0e23fd79f2fe7904a9869671c5d35c6c0cff1",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/owned-process-jobs-response-0641.json",
+      "mode": "100644",
+      "bytes": 22863,
+      "blob": "d49337529412d41ccfa1e2e6f5e4d4007f555634",
+      "sha256": "ec9a97f0f35e8aae6ca7467d2a78646acf4cbbcbfb1b5d2698f18e5078b69501",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/owned-v2-jobs-response-0641.json",
+      "mode": "100644",
+      "bytes": 29824,
+      "blob": "27a2612a00d53fb9f7ab75078c6b6a1f10a9723e",
+      "sha256": "1de993ac02abf93a55ef2430188701e62be1a98845e542b1055a465ee3f819ab",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/owned-process-jobs-response-0623.json",
+      "mode": "100644",
+      "bytes": 22566,
+      "blob": "5fa927cc20de9b03ea5c3dba15bf8c1c096d57a4",
+      "sha256": "189273a1f1fce97683d00afc7b0252b39ebcf18d62fca7c9e8df0801131d1a5f",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/owned-v2-jobs-response-0616.json",
+      "mode": "100644",
+      "bytes": 23421,
+      "blob": "89f079d23395a0d2906ee0b39c83a64ae8bf6636",
+      "sha256": "f2fbd7a8bf546a88972ceab78a043be9955a2255b5f8676740f2cb8839275a47",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-artifacts-response-0623.json",
+      "mode": "100644",
+      "bytes": 2961,
+      "blob": "075a3efb3b36e51ef0eae543b6d2ed65b874099a",
+      "sha256": "4608a345218b7e8989001ac1847a9b1da9041399c16f8b44f786296405d0f880",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-artifacts-response-0630.json",
+      "mode": "100644",
+      "bytes": 3895,
+      "blob": "1fe2a5550642439e9e087db4b57838558114b3c5",
+      "sha256": "a08d9c068b4d4893db613095bf16b23edf4ad640a6e26966e2cafc35ca0cf467",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/v2-artifacts-response-0616.json",
+      "mode": "100644",
+      "bytes": 1061,
+      "blob": "fbeb1a14ee8fdf9eb0cbe1da7abda8bd402ecc42",
+      "sha256": "7dbec1c19103b158f885d6d89576c85880110e7f1cf2242653c38dbd205fd788",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/v2-artifacts-response-0623.json",
+      "mode": "100644",
+      "bytes": 3755,
+      "blob": "985f72706445b6e368b221add62dbeb3711f2c56",
+      "sha256": "7e12932e32992cf93d0bb2dc21f9bf9197cf0d29b46472266053cedf1831efe4",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/initial-api-responses.json",
+      "mode": "100644",
+      "bytes": 2088356,
+      "blob": "0b4a4b435bfa0d1968961c29694ff740871917b4",
+      "sha256": "d9e448811262792814becd020fdde0dbf0622d4750462e5c45a34026c8790bda",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/host-source-E1e1d14b-git-audit.json",
+      "mode": "100644",
+      "bytes": 164149,
+      "blob": "f1b1e521612e44bf88d5d43ffe1039eda3ed094e",
+      "sha256": "d2c7c51237fc1d435035d2e70383215270accdf8534660dadbf52e9fd6c7691f",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/terminal-author-checkpoint-20261116-0641.json",
+      "mode": "100644",
+      "bytes": 115010,
+      "blob": "1b0861fbfffebe650c1ae9a8248650feb230230b",
+      "sha256": "6228d4c6338b490a5222859dc9ee3e878242df111c2bd5fa62ad3ab9a493fbfc",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-darwin-x64-failure-audit.json",
+      "mode": "100644",
+      "bytes": 59276,
+      "blob": "ac18ebf884a19796712648d81a030d98c696361d",
+      "sha256": "8c5b462682f503509753fc73503e0eda4046a70681d6da48ace45f77a3d45221",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "bytes": 1969658,
+      "blob": "a6860c298a8ef6bb3d806d93758ff01624dbee03",
+      "sha256": "c76b7f205110c1dbda54a38c5f3008aa6bd20e8162252b69df37343afed0ff99",
+      "allActualGitScratchOriginalBytesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/publication-index.json",
+      "mode": "100644",
+      "bytes": 81634,
+      "blob": "68c57f6075a8c4c29a87895f64028727d06205e5",
+      "sha256": "f5960e9c18efd0fec3d76272aa4c79942b31b21f737f040e30c80ba22541db9b",
+      "allActualGitScratchOriginalBytesExact": true
+    }
+  ],
+  "payloadCount": 75,
+  "payloadBytes": 8092454,
+  "allPreservedReferences": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/root-docs.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-publication/root-actual-docs-readback.json",
+      "bytes": 76135,
+      "blob": "4e10755962f27afd069ed164db340afd801d6eee",
+      "sha256": "ef128db94f06b7d30e530b8c4ec070e555def5f9303ef5c1a24cf1e376263e8c",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/independent-docs.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-independent-actual-docs-readback.json",
+      "bytes": 110793,
+      "blob": "ee774cc1bfb6cdf42d2fb7c29965156aa823a1dc",
+      "sha256": "52ee45d15f8179bac6c45b1781042784c16e8a64959e93b3f2d544693e0005c2",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/root-source.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-publication/root-actual-source-merge-readback.json",
+      "bytes": 87963,
+      "blob": "7d929b9e87a7251501f263026fdfec61a37bebfa",
+      "sha256": "a34f54564f78bc0977b6d3a5cbaca00cf7b97e52442826bddab13a8df202dbc2",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/independent-source.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-independent-actual-source-readback.json",
+      "bytes": 104720,
+      "blob": "ba880cee7d51cc18a9b1fc766aec2ed427ee8120",
+      "sha256": "a763215ee82e107c43497b730b3fcd9fc11535cf9ca9d6bba5b3ff3c549eeea0",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/docs-create.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-publication/created-docs-commit-response.json",
+      "bytes": 785,
+      "blob": "bf437458b9031d0185ad7633eb4766519650f2d4",
+      "sha256": "555146daced5270d7429c30e4d3c43a8f6538b89a83581d8e15446370060e4b0",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/docs-commit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-publication/created-docs-commit-immutable-readback.json",
+      "bytes": 3770,
+      "blob": "a4e0c759b64ea3c36072f9f05c595ca9fca6dc73",
+      "sha256": "69ae6932064dfd1113115ef890ab3a9d600d5162bf91ccb88e3ef5acf8ed84f4",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/docs-push.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-publication/ordinary-docs-push-response.json",
+      "bytes": 390,
+      "blob": "3518b203685ab6327e6fc87c65a83708fd3847c8",
+      "sha256": "1117a42852394c89d8e90ef8f198c6eac6e731c9ee7866e143327abd42ae13d9",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/docs-post-refs.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-publication/post-docs-push-readback.json",
+      "bytes": 175018,
+      "blob": "410811ccaf5cbe183e1ce93f98410e4a9be68d28",
+      "sha256": "0a18fabac114012508cd785d66f789122e6d374449964712a97409af41220ff4",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/docs-pre-refs.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-publication/fresh-precommit-guards.json",
+      "bytes": 175925,
+      "blob": "d4a5dfd859bb9e2ba0bddc47a40235b90b38de1e",
+      "sha256": "709aedfcdf932560022a41e6fc936a5fd140298c5ed78053046f45b8fea53a78",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/source-create.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-publication/created-source-merge-commit-response.json",
+      "bytes": 743,
+      "blob": "ead2e7e7e57b649a6650d64891934cf955a59fe3",
+      "sha256": "13b9f00ca5ae4673e5d05346ac5b77a1c66c9c322b493e2eee276fe784b5dcce",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/source-commit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-publication/created-source-merge-immutable-readback.json",
+      "bytes": 4178,
+      "blob": "cd7402379d71949de00244f9566f3032482339c1",
+      "sha256": "bc836eb3703542de36824bd0644bb7c01bc99ff2f36def43207c40f3560a707a",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/source-push.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-publication/ordinary-source-merge-push-response.json",
+      "bytes": 534,
+      "blob": "d4958d0ff44e604361f735ef253dc1431a5a8ad1",
+      "sha256": "7fc0b20872bffdd46a0283b168d921371b0f5a068fbd7b6212a61d602351feae",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/source-post-refs.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-publication/post-source-merge-push-readback.json",
+      "bytes": 175321,
+      "blob": "60886270c0110078bfc99a1a851432f2375809f8",
+      "sha256": "7a6c47ceb1dd8a799666b02eaf14d01e2cdfdf28f08b0e53716cbe715f42a1ef",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/source-pre-refs.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e1-reconciliation-publication/source-merge-fresh-precommit-guards.json",
+      "bytes": 176376,
+      "blob": "fe78ae0c4b5b152cf77562192f7ed95a8ade41d1",
+      "sha256": "7408bb206621d2ee21987d77698010472787978c16ada2253071753b7ea63016",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/R1-appendix.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-observation-publication-r1/R1-appendix.md",
+      "bytes": 14109,
+      "blob": "2766f9aa1f592ec37e35f087f8e8244a53b9d84b",
+      "sha256": "91878159be7560edf466ec345c2ec51b521f9616912708d6b2494d493ec8b95a",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/candidate-debugServiceTest.h.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-observation-publication-r1/candidate/tools/owned-process-broker/debugServiceTest.h",
+      "bytes": 8822,
+      "blob": "952ed2d3436708addf656109dc513270ea33ce22",
+      "sha256": "cb3ed3eaebb0f59aa968a285ddd85522181292a289a9bed7c59a6adf0feabf65",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/preimage-debugServiceTest.h.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-observation-publication-r1/preimage/tools/owned-process-broker/debugServiceTest.h",
+      "bytes": 9009,
+      "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+      "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/candidate.patch",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-observation-publication-r1/candidate.patch",
+      "bytes": 1543,
+      "blob": "58e02dcf66ad9a641ed9d33f16a8623114389fe4",
+      "sha256": "1e04a2ca9e1ef195873a79ee3574ed427a043f8c7c49a860abed66da6eff370c",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/candidate-metadata.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-observation-publication-r1/candidate-metadata.json",
+      "bytes": 1814,
+      "blob": "06168117ca966ff3cee01dfc1adc01dd6e45bfbb",
+      "sha256": "3a180d92d87081f6a6bc6f48200906bf3cb1e8806de67c5281584352ee65e880",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/source-and-venue.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-observation-publication-r1/source-and-venue.json",
+      "bytes": 26838,
+      "blob": "43beabcac07f6640c6b61c9daf31544ec58f02fd",
+      "sha256": "5a5406ff3141d5537980c54d54f2894ea06495e203be39d7fcc8bb1a91cd019a",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/independent-source-r1-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-observation-publication-r1/independent-source-r1-review.json",
+      "bytes": 19474,
+      "blob": "bbbd3ea7374c89a57e8fed2ed75071b9a692db85",
+      "sha256": "e4316ff8fc70d101957c40be52d5117267b5ef22906524b8565f6fa605ffc8e3",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/current-preimages.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/current-preimage-and-source-selection.json",
+      "bytes": 5577,
+      "blob": "1cf439de4fa430850b36f82dcb2318a43fc87fb7",
+      "sha256": "5479324187530cdc40a6a3e00eeb5a1f6c0a6bc157ffec4c7896858467d56e7c",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/R1-root-ordered-selection.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/R1-root-ordered-selection.md",
+      "bytes": 10354,
+      "blob": "d8274009cde085efb306fbcbef5f0f84c02178a7",
+      "sha256": "337d35fc9835f6e744a7e6ec86670b30a24dc0bfd831c337bfb4ae1ffb395198",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929105-original-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929105-original-response.json",
+      "bytes": 108967,
+      "blob": "e88bf45a79794a2864dc996a97cff8bd3989fdcb",
+      "sha256": "d5cd8c8eb58bd3b081fd85ba7e1c313ad619e5fd1eca83f8a479c6bdccebf2a1",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929105.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929105.log",
+      "bytes": 105062,
+      "blob": "b2e35a364b357a09cbde6bd8a5998d930684bbab",
+      "sha256": "2be17c99501fc1a105d04018ed556203eddc63162a0085ba24dd4b5f36c05c99",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/static-windows-qualification-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/static-windows-qualification-audit.json",
+      "bytes": 66310,
+      "blob": "7ab8c76f5c3677a2e1e45d3f3defddf0171a018c",
+      "sha256": "78c6dc712dfedbcab05eb5c0e2a18f7a233e56ed7f66a90258b970de83598609",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929324-original-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929324-original-response.json",
+      "bytes": 104782,
+      "blob": "655b182d2a0d1ee449ef8184ffbb94ae989e7013",
+      "sha256": "1a632d2cf5e110466c603ed09c335b0dd14a90a90955f4d7c14bc803e8479730",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929324.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929324.log",
+      "bytes": 99531,
+      "blob": "0a1daaf057b77571deaac25dffdbe70f86475744",
+      "sha256": "27e6fa59194a32898ca1761ccf4358e4f4ef1d1c14b1bc7f4e5806b9e0fc0eb1",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202660278.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/artifact-14202660278.zip",
+      "bytes": 11052,
+      "blob": "b85149194d6ac77e819ef97ec216b12a4ed9862f",
+      "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-darwin-x64-archive-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-darwin-x64-archive-audit.json",
+      "bytes": 1465,
+      "blob": "57446cc55810771e542ac236766fd8424c6195b4",
+      "sha256": "f6c4e446bc24ccea3f8ab911c2ff9534396a54b1261966fc6333fab572d872f3",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929386-original-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929386-original-response.json",
+      "bytes": 111288,
+      "blob": "2537e228865e35549438d92188b21bb18f3742f4",
+      "sha256": "84677de1e30993060c4cb1fa44607943e0f3ff52ffd4096e7eb48496e6f177b1",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929386.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929386.log",
+      "bytes": 107051,
+      "blob": "b163e6a3a31a42ad258af2955601b0452cdec80a",
+      "sha256": "0fe4c57169b3d6e8efc8106fd42736cb686e3a69788e16f2ec7ad0a95449a186",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/v2-windows-arm64-qualification-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/v2-windows-arm64-qualification-audit.json",
+      "bytes": 44040,
+      "blob": "f19b2e9e451e48d1e67dd303cf46b9d4ad096a25",
+      "sha256": "bf92118312405025e609d29d73f44c94c59a865f319ce121f529b45307abf095",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14201989395.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/artifact-14201989395.zip",
+      "bytes": 13456,
+      "blob": "be67c1142b8a6a3176d1f2e5419c3d30687bb9ee",
+      "sha256": "583f2900f6ba0764a4243e5b32dbaa98085769f2c7f47ee5e7d2440b87cfeeb2",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/v2-windows-arm64-archive-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/v2-windows-arm64-archive-audit.json",
+      "bytes": 1301,
+      "blob": "bb31ddcdfbd8fcf3f50e1293a6292350efdf9d7c",
+      "sha256": "c16ac2c7055a609b0c0b1423a19d3fb5bf4ccca3bd701bdbe2385f3f9a20fe74",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929407-original-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929407-original-response.json",
+      "bytes": 96209,
+      "blob": "a9ad1aa77b28284f102168f5b832cf5f21557757",
+      "sha256": "0c66d2e97e3e6280b4d59218f8d3783b746fb065b50925bc3e13b16f4270eb80",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929407.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929407.log",
+      "bytes": 92290,
+      "blob": "51a9f01e90c63e44b7765b94d02c8fadf115c474",
+      "sha256": "6feb2e5b3ad4680f48afb6ca70878fde1b5e1a72236a52ec1634e80ccb4f564d",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/v2-windows-x64-qualification-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/v2-windows-x64-qualification-audit.json",
+      "bytes": 43978,
+      "blob": "d587841055f2ce5d495190fc4dd7ba3f632cfbc5",
+      "sha256": "0e4f70368f04cc4cdda266d60284aef820eba1dfd379737ea8195b47224a5df7",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14201408897.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/artifact-14201408897.zip",
+      "bytes": 13339,
+      "blob": "c1cdb716a330d1d12ff140619efeb0272f60dff1",
+      "sha256": "38ef268f1e40f88299f91faf38a7087c6281efbf5305a492962049f00acb3450",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/v2-windows-x64-archive-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/v2-windows-x64-archive-audit.json",
+      "bytes": 1270,
+      "blob": "99b5d6e114d58cfaba0c4c01f66a278e311657ad",
+      "sha256": "5fbe261c3800a7334507608c6d625ab32dfee5d9522036e5d71628d25c19df89",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929424-original-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929424-original-response.json",
+      "bytes": 114456,
+      "blob": "4a86f9d413da622834f8bb41e617c59f20c11ded",
+      "sha256": "9be71d431e01116faaa9768869b16b4da5de052c070ac99dea9e8fcb10fe2127",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929424.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929424.log",
+      "bytes": 112091,
+      "blob": "907a8263b7d72aace814479a1b01214f4024499e",
+      "sha256": "de953965a05ae16adbc9b3934bc2ba5b0bb604be4256616ce353b3aedbaad2c6",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/darwin-p09-original-failures-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/darwin-p09-original-failures-audit.json",
+      "bytes": 59752,
+      "blob": "899e1b07bd2f38b1cbfc18cacea5b7032634b9be",
+      "sha256": "b02005b3837a97db51b88daff23aa075203bdd8d57dcf291aa45cabb946f3d69",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202625921.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/artifact-14202625921.zip",
+      "bytes": 10631,
+      "blob": "76dd5204a9636d80be1c4d10762c200e3c3083f5",
+      "sha256": "a3b3b0269ebd620138d5756959fd4dd9b8a9c4a287fd2db63db9e061f13d9171",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/p09-darwin-x64-archive-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/p09-darwin-x64-archive-audit.json",
+      "bytes": 1294,
+      "blob": "5f7e1fec4c9af86bf43114201a89a7af55783d93",
+      "sha256": "881ac4af974d17de151ea3dc9736f2ff2b629710f93e18949f7b4192624b5ac4",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929495-original-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929495-original-response.json",
+      "bytes": 108689,
+      "blob": "09284e01816d65f136e3d9160d8a944ffdaadd58",
+      "sha256": "e5126198422cf28762db190d8923fc1b71dd5508e70c8394990f3ddc78b07d98",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929495.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929495.log",
+      "bytes": 106404,
+      "blob": "59ecf6ca7fd558fb8d4021834ada5e4ca9b972ee",
+      "sha256": "5d1703477fb76b2f1f84fa1bc716e16d9ba233a49fe4413be459719d2a60224e",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14203040330.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/artifact-14203040330.zip",
+      "bytes": 10422,
+      "blob": "cb466c5c68c174d9b19e5ce7d4f75c01a224a91b",
+      "sha256": "946e50f7b3dfd44c12ee6df665b4b6ecce1d5c6c1b957d9f5f99e88563bf3b30",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/p09-darwin-arm64-archive-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/p09-darwin-arm64-archive-audit.json",
+      "bytes": 1294,
+      "blob": "43844455525b24443aa3d5654438670bf6f898e3",
+      "sha256": "c973b404499c5988a6c0691aa9d2f5856e2ad70e97e6a54ccf5e2a4eff5cea81",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e1-reconciliation/i386-first-original/job-133120929510-original-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929510-original-response.json",
+      "bytes": 154758,
+      "blob": "c344b7eead9203cc997439a4d211842d18b992d7",
+      "sha256": "0dd2df0b7d18402dae29a93525fe1da35cf4fcd83527cca130321827c1653450",
+      "reuseIdenticalPublishedPayload": true,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e1-reconciliation/i386-first-original/job-133120929510.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929510.log",
+      "bytes": 143153,
+      "blob": "e8c536e76fd86896858f74a4b471a9057a20f08f",
+      "sha256": "0d6e66f963303d739a75fe2d39110fc04ad7b61bdf78376d4ba77f7f0e7639ee",
+      "reuseIdenticalPublishedPayload": true,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e1-reconciliation/i386-first-original/process-windows-x64-failure-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-windows-x64-failure-audit.json",
+      "bytes": 51476,
+      "blob": "9757a1c800fe11b3805cc664ca85f7fe84563a80",
+      "sha256": "4af53a5903e056055192ca34572ba364738f193521de81318de40d92f65edd92",
+      "reuseIdenticalPublishedPayload": true,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e1-reconciliation/i386-first-original/artifact-14201916494.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/artifact-14201916494.zip",
+      "bytes": 15043,
+      "blob": "adf76542bf8ec1f143f3ddf9c26736490fe28fec",
+      "sha256": "b5d26672269fc6bbf7ab6e13adddf62b65bd5295de28590df44ebdc547d74e86",
+      "reuseIdenticalPublishedPayload": true,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e1-reconciliation/i386-first-original/process-windows-x64-archive-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-windows-x64-archive-audit.json",
+      "bytes": 2946,
+      "blob": "8f0d482f8f688a45e993a728114ed4a7d093c105",
+      "sha256": "47c31f72b53331b4bfbe800023302ff67aae277268ed7ff22fa93b1f067b97c2",
+      "reuseIdenticalPublishedPayload": true,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/independent-process-windows-x64-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/independent-process-windows-x64-review.json",
+      "bytes": 19746,
+      "blob": "aa06b828ff406a3adac11c313d8bcf5b2bf8ce52",
+      "sha256": "2f645d88c90c47d8e022c5327d01b594fec9b381325bab69f4eb4dc154294000",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/independent-process-windows-x64-byte-source-proof.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/independent-process-windows-x64-byte-source-proof.json",
+      "bytes": 56525,
+      "blob": "1c549757914dc64ea61a85ba283f4374059ee9aa",
+      "sha256": "430d1d68569042b397d8728aa520f7e7ffd150184bed2fde8d9ba44e03ee341d",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929614-original-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929614-original-response.json",
+      "bytes": 115060,
+      "blob": "4bb41a146fa2634661d10710996382869afc9bdd",
+      "sha256": "6f15fce4f8b4b0e8ba73b4c760ded73566659925e2720746eadd4a267d6bc281",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929614.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929614.log",
+      "bytes": 109620,
+      "blob": "91da7b6d3da2338c07be6f845ad96c2e6513dbcf",
+      "sha256": "9efb8720e211458046131cf1a2a76d1aa05c872f1011c1345044eb09b4b66e15",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-darwin-arm64-qualification-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-darwin-arm64-qualification-audit.json",
+      "bytes": 18428,
+      "blob": "718324db2a0cee7b868e575f391644aaf630aa4a",
+      "sha256": "89006964a4915daecf8c098645a2c7bac39ef25f8228fde387833590ad9fc7d7",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202289527.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/artifact-14202289527.zip",
+      "bytes": 12690,
+      "blob": "de661aa46ff3fd55284e1a709375a5caa484fa34",
+      "sha256": "6f78cdc0f3429f4473288330221cb1f7df969d1da7853ddee0d0bd9883f24286",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-darwin-arm64-archive-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-darwin-arm64-archive-audit.json",
+      "bytes": 2104,
+      "blob": "64ea1bfc9156b3c7ab1d38e8ae4489a51ba5445a",
+      "sha256": "589c5f2225fd1818119177b2288188c743dabbb8757120be26ef252a2dfc90c0",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929619-original-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929619-original-response.json",
+      "bytes": 187583,
+      "blob": "5d3b3d7d5718bc32ff80197be2e2ea37d48bac88",
+      "sha256": "1269fcd6fa771f612a09b1b3226063a658737b17ababaf1f63c42422172a254d",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/job-133120929619.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929619.log",
+      "bytes": 174851,
+      "blob": "2a599f79761d88b41ef9e21b7269d4ed42c7e004",
+      "sha256": "f411924081a9dfde45ccbf57944a78761fd24fe9bc7d0f7c5f8acb7d7d458814",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-windows-arm64-failure-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-windows-arm64-failure-audit.json",
+      "bytes": 52740,
+      "blob": "bdef1a0e8295e7439534d3eaabeafc78f37dcb9d",
+      "sha256": "2fbb7243b5804bd15fcd5debdd6d0e656d6582b3f39ea9321fc4219a53d96d7f",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202148789.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/artifact-14202148789.zip",
+      "bytes": 15113,
+      "blob": "d0d30e9eb6849d03b2b091171c3e4f28e8808f27",
+      "sha256": "15e8fae1f1c5e3cbd86de1c54bc4b7c54528b25463cd3b28df00f794545fc82b",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-windows-arm64-archive-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-windows-arm64-archive-audit.json",
+      "bytes": 2950,
+      "blob": "086cc70aaa7ddd26c0dd25a2d94ac62918e31e4a",
+      "sha256": "400273f83b6426974f9eefe3d4f0e23fd79f2fe7904a9869671c5d35c6c0cff1",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/owned-process-jobs-response-0641.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b/owned-process-jobs-response-0641.json",
+      "bytes": 22863,
+      "blob": "d49337529412d41ccfa1e2e6f5e4d4007f555634",
+      "sha256": "ec9a97f0f35e8aae6ca7467d2a78646acf4cbbcbfb1b5d2698f18e5078b69501",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/owned-v2-jobs-response-0641.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b/owned-v2-jobs-response-0641.json",
+      "bytes": 29824,
+      "blob": "27a2612a00d53fb9f7ab75078c6b6a1f10a9723e",
+      "sha256": "1de993ac02abf93a55ef2430188701e62be1a98845e542b1055a465ee3f819ab",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e1-reconciliation/i386-first-original/owned-process-jobs-response-0611.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b/owned-process-jobs-response-0611.json",
+      "bytes": 16872,
+      "blob": "82f169e12e3c7542356a7a6d164dbb9f9ffbdf24",
+      "sha256": "b383c9e25e95abc2169cf2ce1d5816d4337797b2256284df77c25515955d2036",
+      "reuseIdenticalPublishedPayload": true,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/owned-process-jobs-response-0623.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b/owned-process-jobs-response-0623.json",
+      "bytes": 22566,
+      "blob": "5fa927cc20de9b03ea5c3dba15bf8c1c096d57a4",
+      "sha256": "189273a1f1fce97683d00afc7b0252b39ebcf18d62fca7c9e8df0801131d1a5f",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/owned-process-jobs-response-0641.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b/owned-process-jobs-response-0629.json",
+      "bytes": 22863,
+      "blob": "d49337529412d41ccfa1e2e6f5e4d4007f555634",
+      "sha256": "ec9a97f0f35e8aae6ca7467d2a78646acf4cbbcbfb1b5d2698f18e5078b69501",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/owned-v2-jobs-response-0616.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b/owned-v2-jobs-response-0616.json",
+      "bytes": 23421,
+      "blob": "89f079d23395a0d2906ee0b39c83a64ae8bf6636",
+      "sha256": "f2fbd7a8bf546a88972ceab78a043be9955a2255b5f8676740f2cb8839275a47",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/owned-v2-jobs-response-0641.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b/owned-v2-jobs-response-0623.json",
+      "bytes": 29824,
+      "blob": "27a2612a00d53fb9f7ab75078c6b6a1f10a9723e",
+      "sha256": "1de993ac02abf93a55ef2430188701e62be1a98845e542b1055a465ee3f819ab",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e1-reconciliation/i386-first-original/process-artifacts-response-0611.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-artifacts-response-0611.json",
+      "bytes": 1096,
+      "blob": "7e5ef4493296f49c0ebc4784ec5ac312df78ae33",
+      "sha256": "28f7ba1f022b2e5d381f6a54963afe8be1c9f50d13fb5fa0232bec1466785210",
+      "reuseIdenticalPublishedPayload": true,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-artifacts-response-0623.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-artifacts-response-0623.json",
+      "bytes": 2961,
+      "blob": "075a3efb3b36e51ef0eae543b6d2ed65b874099a",
+      "sha256": "4608a345218b7e8989001ac1847a9b1da9041399c16f8b44f786296405d0f880",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-artifacts-response-0630.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-artifacts-response-0630.json",
+      "bytes": 3895,
+      "blob": "1fe2a5550642439e9e087db4b57838558114b3c5",
+      "sha256": "a08d9c068b4d4893db613095bf16b23edf4ad640a6e26966e2cafc35ca0cf467",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/v2-artifacts-response-0616.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/v2-artifacts-response-0616.json",
+      "bytes": 1061,
+      "blob": "fbeb1a14ee8fdf9eb0cbe1da7abda8bd402ecc42",
+      "sha256": "7dbec1c19103b158f885d6d89576c85880110e7f1cf2242653c38dbd205fd788",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/v2-artifacts-response-0623.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/v2-artifacts-response-0623.json",
+      "bytes": 3755,
+      "blob": "985f72706445b6e368b221add62dbeb3711f2c56",
+      "sha256": "7e12932e32992cf93d0bb2dc21f9bf9197cf0d29b46472266053cedf1831efe4",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/initial-api-responses.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/external-e1d-integration/initial-api-responses.json",
+      "bytes": 2088356,
+      "blob": "0b4a4b435bfa0d1968961c29694ff740871917b4",
+      "sha256": "d9e448811262792814becd020fdde0dbf0622d4750462e5c45a34026c8790bda",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/host-source-E1e1d14b-git-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/host-source-E1e1d14b-git-audit.json",
+      "bytes": 164149,
+      "blob": "f1b1e521612e44bf88d5d43ffe1039eda3ed094e",
+      "sha256": "d2c7c51237fc1d435035d2e70383215270accdf8534660dadbf52e9fd6c7691f",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/terminal-author-checkpoint-20261116-0641.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/terminal-author-checkpoint-20261116-0641.json",
+      "bytes": 115010,
+      "blob": "1b0861fbfffebe650c1ae9a8248650feb230230b",
+      "sha256": "6228d4c6338b490a5222859dc9ee3e878242df111c2bd5fa62ad3ab9a493fbfc",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/process-darwin-x64-failure-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/process-darwin-x64-failure-audit.json",
+      "bytes": 59276,
+      "blob": "ac18ebf884a19796712648d81a030d98c696361d",
+      "sha256": "8c5b462682f503509753fc73503e0eda4046a70681d6da48ace45f77a3d45221",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    }
+  ],
+  "preservedReferenceCount": 82,
+  "previouslyPublishedReuses": 7,
+  "newIdenticalReferenceReuses": 2,
+  "archives": [
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e1-reconciliation/i386-first-original/artifact-14201916494.zip",
+      "bytes": 15043,
+      "blob": "adf76542bf8ec1f143f3ddf9c26736490fe28fec",
+      "sha256": "b5d26672269fc6bbf7ab6e13adddf62b65bd5295de28590df44ebdc547d74e86",
+      "members": [
+        {
+          "path": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+          "bytes": 1909,
+          "blob": "6c9515cc0e2d12ab2cb7f4c1cae6304bbc31474d",
+          "sha256": "06e3fbe05bf444c076486dc7576a057cd4d251caa5410bc3f426492635082d4d",
+          "crc32": "0a43f014"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20525,
+          "blob": "f137d9c192d0a5ecb4a8bf5d6d72e445f1ff7690",
+          "sha256": "2c0bca7203d6019469ad3a49bf588aa9f1cab59fa498d23601619f4f4663e7ef",
+          "crc32": "e5494f7c"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 758,
+          "blob": "60a6ae01fed0b0bb9e26f7db1c29aaa0d6bd01a9",
+          "sha256": "72e03a94114673a19f536f016b8473f0fc06029e4990d09887a3ee6868671f9d",
+          "crc32": "626ebf31"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 9498,
+          "blob": "677a5a8cce9beb834861d232a8920bd231967ae5",
+          "sha256": "d8585bcc20f005bd1b38c790754960d338360261ba83275004143b7784c655bf",
+          "crc32": "81c53bff"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "bytes": 41,
+          "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+          "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+          "crc32": "4b15b81c"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+          "bytes": 1909,
+          "blob": "6c9515cc0e2d12ab2cb7f4c1cae6304bbc31474d",
+          "sha256": "06e3fbe05bf444c076486dc7576a057cd4d251caa5410bc3f426492635082d4d",
+          "crc32": "0a43f014"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+          "bytes": 193,
+          "blob": "72994084531d3afd617b4f0950e43a5c6c7079db",
+          "sha256": "235bb5b98a928f1c66b573e03ece5a6b9a86ae41b87ed6e3078b15d211494d3f",
+          "crc32": "c189ec05"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+          "bytes": 28803,
+          "blob": "5f61a8de7b6f9e72922fcbdc2af1df92188bd37c",
+          "sha256": "71524349dcdcff0209f8984017bd6aa283c52cd4a17f66247b8e75b0237088be",
+          "crc32": "80ddb500"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+          "bytes": 230,
+          "blob": "7ae7279a1b8f37c4b813b18fc2ca1e537cd9e1e1",
+          "sha256": "00f6f0b3e8c92e1551595636de99387d382960b0e512d279a182b78992711657",
+          "crc32": "a40945b9"
+        }
+      ],
+      "allCRCAndSafeUniqueNamesExact": true
+    },
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14201408897.zip",
+      "bytes": 13339,
+      "blob": "c1cdb716a330d1d12ff140619efeb0272f60dff1",
+      "sha256": "38ef268f1e40f88299f91faf38a7087c6281efbf5305a492962049f00acb3450",
+      "members": [
+        {
+          "path": "opencode-v2-embedded-inputs.json",
+          "bytes": 780,
+          "blob": "bd3a423621f126cdca8d589f6106f88de4cc390b",
+          "sha256": "97555f26595e7138397d9e19dfa13397ac863fadfbd887461dd892a56341bbb2",
+          "crc32": "3d63b8b6"
+        },
+        {
+          "path": "opencode-v2-windows-custody.json",
+          "bytes": 907,
+          "blob": "6620a55e7b66425ebfbebb530ffca5975a1fe2dd",
+          "sha256": "13da1994d1a044109b88ee7a13d6fb9d7f24c591a7233e9c15cbb70db61da714",
+          "crc32": "b5325740"
+        },
+        {
+          "path": "opencode-v2-embedded-host-auto.json",
+          "bytes": 94918,
+          "blob": "3ef12d3985c85e898e7aadcfb4638eaa731a1053",
+          "sha256": "807f273753eae50d50f26f6d13df61150f1a8c4c62f685cc028a9356e2347727",
+          "crc32": "9d86cb89"
+        },
+        {
+          "path": "opencode-v2-embedded-host.json",
+          "bytes": 95115,
+          "blob": "17e7897b4af1d7860f17685bd7744903b14866e3",
+          "sha256": "b7cfbbb033a75f4143dac94ab836cd7184fed480e526ead49adc8ac0f43121f7",
+          "crc32": "840badfa"
+        }
+      ],
+      "allCRCAndSafeUniqueNamesExact": true
+    },
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14201989395.zip",
+      "bytes": 13456,
+      "blob": "be67c1142b8a6a3176d1f2e5419c3d30687bb9ee",
+      "sha256": "583f2900f6ba0764a4243e5b32dbaa98085769f2c7f47ee5e7d2440b87cfeeb2",
+      "members": [
+        {
+          "path": "opencode-v2-embedded-inputs.json",
+          "bytes": 782,
+          "blob": "924d5d56da7e59817dd46dad35c3b8e3c8e0b803",
+          "sha256": "2c159e52fdbfb5159371f5f025beb010529abf8c9532fd67b7f5eac782e278d5",
+          "crc32": "7ddf23b5"
+        },
+        {
+          "path": "opencode-v2-windows-custody.json",
+          "bytes": 909,
+          "blob": "a7ddb5b34449b65ce24a64364eef06e13e6cb108",
+          "sha256": "f16bd878ee2dfc7848998053ec5b7c611b66877d3f39fc0319c294f43681daa2",
+          "crc32": "c85c3643"
+        },
+        {
+          "path": "opencode-v2-embedded-host.json",
+          "bytes": 95124,
+          "blob": "193cd0e724d88b841689a1e611f9344f6295d9f3",
+          "sha256": "756fa0e5a9b3c2e458529d4e0edb5cdee9de961067ec632f3bf60158bba02247",
+          "crc32": "348a8dbd"
+        },
+        {
+          "path": "opencode-v2-embedded-host-auto.json",
+          "bytes": 94929,
+          "blob": "d989b8d0cbe7605e4b500006d8ed098c125d0779",
+          "sha256": "168f4fe3a200097ce39ae134f17b723e4f79543bdcbf2f46883d06bf5ed8f4bc",
+          "crc32": "3760d410"
+        }
+      ],
+      "allCRCAndSafeUniqueNamesExact": true
+    },
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202148789.zip",
+      "bytes": 15113,
+      "blob": "d0d30e9eb6849d03b2b091171c3e4f28e8808f27",
+      "sha256": "15e8fae1f1c5e3cbd86de1c54bc4b7c54528b25463cd3b28df00f794545fc82b",
+      "members": [
+        {
+          "path": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+          "bytes": 1929,
+          "blob": "da560bcbb4d82918dae8b7c2aebe28fff442a1c3",
+          "sha256": "9db5a13ddaa8924b7763643ab90e2e32a3db3e7ea30b9ab5ddaac33476be8149",
+          "crc32": "47b0dd13"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20517,
+          "blob": "a073b14b75f2a221ae5b8431ea22aae59cc81a92",
+          "sha256": "d63aace2bdadfbe6afd413af6820bf1697ecd505513cdfaca5e275d1a0ff7834",
+          "crc32": "1ed8b5de"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 758,
+          "blob": "28da6615ba6014a342c36d976ea38565b20febd2",
+          "sha256": "d8583af225f7e006c058ced73bfe0d3f84991e20411318610707ecaf23b6a7f0",
+          "crc32": "b4d81fff"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 9885,
+          "blob": "7a3d5d98e2d79fa7ab7b146df439274b2381d655",
+          "sha256": "fa600c8da94637cba533d6cbbeb533dc2f595d52908a2fb5d2e2c39eceaccf19",
+          "crc32": "25bd6dea"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "bytes": 41,
+          "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+          "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+          "crc32": "4b15b81c"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+          "bytes": 1929,
+          "blob": "da560bcbb4d82918dae8b7c2aebe28fff442a1c3",
+          "sha256": "9db5a13ddaa8924b7763643ab90e2e32a3db3e7ea30b9ab5ddaac33476be8149",
+          "crc32": "47b0dd13"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+          "bytes": 195,
+          "blob": "dde8566a1d1043310d768c0f330a02de770ebd03",
+          "sha256": "f2f343e12e47d15a0d28ede10289bed66fa3d80fa5772f53ac85e20f600874a5",
+          "crc32": "d7e26c54"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+          "bytes": 28805,
+          "blob": "bb01510e798e4065c48c6d16692ef4463d76d18a",
+          "sha256": "6b4d7918c834ba9b81b671ee12abcb519ebb62e4498b86c093c4cf4418a342d1",
+          "crc32": "7021b095"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+          "bytes": 232,
+          "blob": "bc4f192339839229df9e3893b900329c3893cc8b",
+          "sha256": "09a50c88e3bb29d6a050f1b6f0fcea53b1baef543d83247a98fd867b82e0fc90",
+          "crc32": "4305adc6"
+        }
+      ],
+      "allCRCAndSafeUniqueNamesExact": true
+    },
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202289527.zip",
+      "bytes": 12690,
+      "blob": "de661aa46ff3fd55284e1a709375a5caa484fa34",
+      "sha256": "6f78cdc0f3429f4473288330221cb1f7df969d1da7853ddee0d0bd9883f24286",
+      "members": [
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20688,
+          "blob": "a58fc15c463e4140e2e82a8aabb2be2c6b6dbeb5",
+          "sha256": "5bf826eebf53024d4ceb2533dbea6b93ac9e9b51e97f22cbe711e4d2b9ce5c51",
+          "crc32": "92e726c8"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+          "bytes": 5168,
+          "blob": "304b795e0868c0d18588870ba503a4a7b8bc8174",
+          "sha256": "2e04794d4d82ce8e2d4611cef97b5e682ee4e488cf2cf8196aba08a6541faeb2",
+          "crc32": "07313693"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 772,
+          "blob": "fd0f15a96cdf45afca4d7efa9d82f31c5ac6ec89",
+          "sha256": "5525078150a6549d2e655f338ddec986f8c311f3f8353fa58050cf46f688a865",
+          "crc32": "d7bbeb11"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 7504,
+          "blob": "68561f50adc0872a3d1d70c9a9b90cb61f5b5f8b",
+          "sha256": "d4751444d7ae0d363eb1c07e632207a6c63cb22b90167c82f584723279eb1bd4",
+          "crc32": "b7b66930"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+          "bytes": 495,
+          "blob": "4e82a5650e32001b417d307096ab489cad85b8fa",
+          "sha256": "3b6fab27352121f440b5d6221a59c002e01fd42699b77d9afbff29de786abc33",
+          "crc32": "4a3bd520"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "bytes": 41,
+          "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+          "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+          "crc32": "4b15b81c"
+        }
+      ],
+      "allCRCAndSafeUniqueNamesExact": true
+    },
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202625921.zip",
+      "bytes": 10631,
+      "blob": "76dd5204a9636d80be1c4d10762c200e3c3083f5",
+      "sha256": "a3b3b0269ebd620138d5756959fd4dd9b8a9c4a287fd2db63db9e061f13d9171",
+      "members": [
+        {
+          "path": "opencode-v2-embedded-inputs.json",
+          "bytes": 2370,
+          "blob": "1c8e17d09d09b5cc8048d837e04df73b2b00d1f1",
+          "sha256": "cba125252076fa3b7620584299580c0525d1b08d834754e99747a55f506f8f7e",
+          "crc32": "03d9b550"
+        },
+        {
+          "path": "opencode-v2-darwin-custody.json",
+          "bytes": 1448,
+          "blob": "89beac1748eee15588061bc879bc573d2ad6303f",
+          "sha256": "0a58f5cb17f62f697b4ebb2227629f196d4cc5df09e771c8b05707e06a070c2c",
+          "crc32": "57f3c22c"
+        },
+        {
+          "path": "opencode-v2-embedded-host.json",
+          "bytes": 95143,
+          "blob": "81e6976b79813b998b0f318cf6425c68d1c6837f",
+          "sha256": "71d12e9da861791dccd514d93a6af098d423ef312913aa0598d619934a4df865",
+          "crc32": "c55181eb"
+        },
+        {
+          "path": "opencode-v2-posix-exec.json",
+          "bytes": 14545,
+          "blob": "7f22a16ee02deecfbffbd4ea2f794ac0cbfb3b1a",
+          "sha256": "9040ddc4913643ee862dfa14eb590c413b3c2d1b379253a2f6a620fc0d27512e",
+          "crc32": "d54e8fc6"
+        }
+      ],
+      "allCRCAndSafeUniqueNamesExact": true
+    },
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202660278.zip",
+      "bytes": 11052,
+      "blob": "b85149194d6ac77e819ef97ec216b12a4ed9862f",
+      "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039",
+      "members": [
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20799,
+          "blob": "2a6e7df8e767ea97c7989415e0ec7d43ba68fa02",
+          "sha256": "fb385c2bcee56a31ede4bde2bd0d315deb9e38fb52ad3f4677cfcc70c585a20c",
+          "crc32": "70f642d3"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 772,
+          "blob": "9ff3a45e91cb855f0aab059687b0210f174ebcc2",
+          "sha256": "c15f61fc7d9a55696f91eb9129b17eeff7f8fe7cc4a6f870b140b4ffa920c48a",
+          "crc32": "b248c9c7"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 12202,
+          "blob": "91c26284ce8066bcff47b789072912e94636c2a0",
+          "sha256": "ee75fec9a697cb348ad7207b23322bf5f5f65562680b2b2bb42b4e34d2ffeb07",
+          "crc32": "d9e7977c"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "bytes": 41,
+          "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+          "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+          "crc32": "4b15b81c"
+        }
+      ],
+      "allCRCAndSafeUniqueNamesExact": true
+    },
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14203040330.zip",
+      "bytes": 10422,
+      "blob": "cb466c5c68c174d9b19e5ce7d4f75c01a224a91b",
+      "sha256": "946e50f7b3dfd44c12ee6df665b4b6ecce1d5c6c1b957d9f5f99e88563bf3b30",
+      "members": [
+        {
+          "path": "opencode-v2-embedded-inputs.json",
+          "bytes": 2374,
+          "blob": "921a509cb8404b0b5be6ce47e7b19140afe5c708",
+          "sha256": "5460b395e84138baa74bc581f31ebc5fc7c7826984c31e808ab22965be6d9473",
+          "crc32": "fa528b4b"
+        },
+        {
+          "path": "opencode-v2-darwin-custody.json",
+          "bytes": 1442,
+          "blob": "88e426d2e07f18b7fbb8480a636bbedd3a6650d7",
+          "sha256": "4818b6b49ee0fbe5d3e23400bf2cb6228f63fae683ddc831e0089f056384030a",
+          "crc32": "a6a020c9"
+        },
+        {
+          "path": "opencode-v2-embedded-host.json",
+          "bytes": 94948,
+          "blob": "dc3ee7ef2d6e82f7a7ca1ff11744c1d336dcac7c",
+          "sha256": "3d5c2d418aaac42395d98bf47279d7d96e78c8803a7f56d8eb238854d009f5ca",
+          "crc32": "9b06f97c"
+        },
+        {
+          "path": "opencode-v2-posix-exec.json",
+          "bytes": 14566,
+          "blob": "022a2b5d92add95c229dbf770c3772d8fdbdddc1",
+          "sha256": "531eac476be1e4246c01da2ffd31493c3820baebbc3d6f7e4bdb594dd37ba27f",
+          "crc32": "cd8eff7d"
+        }
+      ],
+      "allCRCAndSafeUniqueNamesExact": true
+    }
+  ],
+  "archiveCount": 8,
+  "archiveMembers": 44,
+  "plan": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "prefix": {
+      "bytes": 1945191,
+      "blob": "ec4d2d1e1cf831fd817d4648a4845a8a40d52910",
+      "sha256": "131bbe164d76cb5f8c67086a29538f80f6baac6ff6bec3eec445c7779b608068"
+    },
+    "segments": [
+      {
+        "label": "Exact prospective one-header source R1",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/R1-appendix.md",
+        "bytes": 14109,
+        "blob": "2766f9aa1f592ec37e35f087f8e8244a53b9d84b",
+        "sha256": "91878159be7560edf466ec345c2ec51b521f9616912708d6b2494d493ec8b95a",
+        "separatorOffset": 1945191,
+        "contentOffset": 1945193
+      },
+      {
+        "label": "Root ordered selection governs last",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/R1-root-ordered-selection.md",
+        "bytes": 10354,
+        "blob": "d8274009cde085efb306fbcbef5f0f84c02178a7",
+        "sha256": "337d35fc9835f6e744a7e6ec86670b30a24dc0bfd831c337bfb4ae1ffb395198",
+        "separatorOffset": 1959302,
+        "contentOffset": 1959304
+      }
+    ],
+    "separatorsHex": "0a0a",
+    "result": {
+      "bytes": 1969658,
+      "blob": "a6860c298a8ef6bb3d806d93758ff01624dbee03",
+      "sha256": "c76b7f205110c1dbda54a38c5f3008aa6bd20e8162252b69df37343afed0ff99"
+    },
+    "fullPrefixAndAllExactSegments": true
+  },
+  "publicationIndex": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/publication-index.json",
+    "bytes": 81634,
+    "blob": "68c57f6075a8c4c29a87895f64028727d06205e5",
+    "sha256": "f5960e9c18efd0fec3d76272aa4c79942b31b21f737f040e30c80ba22541db9b"
+  },
+  "allFortyPriorMovesExact": [
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/DESIGN-R1-draft-v2.md",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/DESIGN-R1-draft-v2.md",
+      "mode": "100644",
+      "oldRelativeCharacters": 166,
+      "newRelativeCharacters": 114,
+      "bytes": 22937,
+      "blob": "99c9c114eb6ba6b31d21550f94f617a1e377d1da",
+      "sha256": "df8e2c7e72ce93e4b1eab7a5f0a3c1827a4270e407012583681b80acfee4147f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/DESIGN-R1-draft.md",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/DESIGN-R1-draft.md",
+      "mode": "100644",
+      "oldRelativeCharacters": 163,
+      "newRelativeCharacters": 111,
+      "bytes": 20995,
+      "blob": "0f834435fdaad97c817bfad8ce4598ef176b205a",
+      "sha256": "924aa5c6a12948642106a67b5121c39c8bc6b51201d8556e045f9a42d5b57722"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/R1-v2-wording-only-metadata.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/R1-v2-wording-only-metadata.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 177,
+      "newRelativeCharacters": 125,
+      "bytes": 5746,
+      "blob": "6e8f4cb7adb58d22deb4f82e9f4994699b06b8e8",
+      "sha256": "943e4b4bff70f79112825c0057cb74086fb9e67679b6aa7030156cf4e7448c0e"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/R1-v2-wording-only.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/R1-v2-wording-only.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 169,
+      "newRelativeCharacters": 117,
+      "bytes": 12870,
+      "blob": "1cf30db5a7bc1dd5b9d376005512ab0f3c55c5d8",
+      "sha256": "921178599daf32cfe625517c2dc15ea243c5bf934bcc636080c0d401fed95aba"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 171,
+      "newRelativeCharacters": 119,
+      "bytes": 72151,
+      "blob": "d342940e4f50f95aaf38f8df578698b955bfb4da",
+      "sha256": "ef0e8eabf254c3284ce1ebc7d7c56030414a307e5b47847f677f9df7a22c0b4c"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/.github/workflows/host-emulated-acceptance.yml.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/.github/workflows/host-emulated-acceptance.yml.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 216,
+      "newRelativeCharacters": 164,
+      "bytes": 103848,
+      "blob": "74c5964e1b28e02df2fd5649d9d67931889cd7a8",
+      "sha256": "8fd4f1edd2473382655d1fbb0850b60be890764460bdf4fdfd158637f8594a9f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 220,
+      "newRelativeCharacters": 168,
+      "bytes": 55759,
+      "blob": "4eabaf832901bf3ea82bc9761f1208207343b8a0",
+      "sha256": "1ded076e942640f4306af7ee6d5f1e4c49d7b9095d6aaeba4f59826e794863bd"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 233,
+      "newRelativeCharacters": 181,
+      "bytes": 15874,
+      "blob": "6205acf48ae31051ae3b4dcb4d66c47286022ba4",
+      "sha256": "1663c2db6b7229472ec45529202053023d7cb33cd1affc333547105979e6b6ca"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 231,
+      "newRelativeCharacters": 179,
+      "bytes": 47589,
+      "blob": "de958fcbd9c1aef20ec843904dd89a6fec62568d",
+      "sha256": "e748025e727b8b6f96e4521496907e469058603610ac7024b600d8174300faf8"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 227,
+      "newRelativeCharacters": 175,
+      "bytes": 34186,
+      "blob": "3313bd7ea5f707a930f87322f8ec4fdaed86a527",
+      "sha256": "23e1e8651bdef907a525cb8918986623760444f685938942882571a3f695cbd5"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 234,
+      "newRelativeCharacters": 182,
+      "bytes": 21133,
+      "blob": "868b7c7121cc85925b86fee641064493dc099785",
+      "sha256": "c2feed93785e08604a92db4cacb224164cd926b2b8d2826b502d408d16bdba71"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 225,
+      "newRelativeCharacters": 173,
+      "bytes": 114321,
+      "blob": "f25095fc93559fc8f84d159b946e89d729956f4c",
+      "sha256": "5ed2a20f03ef72fe2ea272bed84c4f38326f2ab0f6a90b2dc65ece615662b34f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 232,
+      "newRelativeCharacters": 180,
+      "bytes": 13985,
+      "blob": "d725e255682b0c092e7b05970622e732c1124580",
+      "sha256": "99f37883c6c0096ac75f7c53ee1f02680dd5a402260b067cdb136fd696287b3a"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-poll-green.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 173,
+      "newRelativeCharacters": 121,
+      "bytes": 727,
+      "blob": "8161a1b342e71ed0c46ea0f40cb70bdfdb01846d",
+      "sha256": "80fb75f384686fcabc2bf076069d3e9864204f86a4ba04f43ae15528eddc7890"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 233,
+      "newRelativeCharacters": 181,
+      "bytes": 45795,
+      "blob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 244,
+      "newRelativeCharacters": 192,
+      "bytes": 47589,
+      "blob": "de958fcbd9c1aef20ec843904dd89a6fec62568d",
+      "sha256": "e748025e727b8b6f96e4521496907e469058603610ac7024b600d8174300faf8"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/current-79-phase-a-compatibility-review.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/current-79-phase-a-compatibility-review.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 189,
+      "newRelativeCharacters": 137,
+      "bytes": 20696,
+      "blob": "ee5e06447f5bd0bed01dcba64443369b64e41e07",
+      "sha256": "06d3da72ab7b9d6311925b4b28860015e59befc95cddc4b59f30ee1c19c5ed6e"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/independent-source-design-review-v1.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/independent-source-design-review-v1.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 185,
+      "newRelativeCharacters": 133,
+      "bytes": 22609,
+      "blob": "71d3072dffafdf4016bef204da9a42d9a0da1ee2",
+      "sha256": "9e8e090834cb1d4f228d1170bddeb13cbfcb7c37d1c48db7312b969ae7783402"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/independent-wording-review-v2.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/independent-wording-review-v2.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 179,
+      "newRelativeCharacters": 127,
+      "bytes": 3550,
+      "blob": "f12678c8cde90693552bef9c805e47be96fa8b41",
+      "sha256": "5b33453c918e6ac9c781a7293a5c011047486afa1e0981e4fea476de7e6aaf47"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/phase-c-after-reviewed-poll-green.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/phase-c-after-reviewed-poll-green.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 184,
+      "newRelativeCharacters": 132,
+      "bytes": 67227,
+      "blob": "205f56d04b6d565cd95dd49f782dfe06dd926eac",
+      "sha256": "6c59741c42728b4883b9d42f277f19a4c2faf30d6e06ee0ca11fc8f107b7323e"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/poll-candidate-metadata.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/poll-candidate-metadata.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 173,
+      "newRelativeCharacters": 121,
+      "bytes": 2250,
+      "blob": "9f16dddff316a2479cc614fd796e22e7a92ed9c9",
+      "sha256": "70b8e86daa5112a7d071ed411d9d4f5bb609e4d7964f0f72bfe41e7726101b18"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/poll-red-test.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/poll-red-test.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 164,
+      "newRelativeCharacters": 112,
+      "bytes": 4670,
+      "blob": "5f2fe94dddd0c378f63502cefdb0f715b0ce0a75",
+      "sha256": "383e11424f6dbbdd58d9ddc03700499d23dcf0a97b083ab6b0a46bf5107d47d2"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/.github/workflows/host-emulated-acceptance.yml.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/.github/workflows/host-emulated-acceptance.yml.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 204,
+      "newRelativeCharacters": 152,
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 208,
+      "newRelativeCharacters": 156,
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 219,
+      "newRelativeCharacters": 167,
+      "bytes": 45707,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 215,
+      "newRelativeCharacters": 163,
+      "bytes": 33161,
+      "blob": "426c45f6236a3aaf8b3f5e14b4cf21e4ce000c8f",
+      "sha256": "1e495ee7b244fa471f2a6a4039d7110db6ff2760260c23f89123703810d0bfad"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 222,
+      "newRelativeCharacters": 170,
+      "bytes": 20996,
+      "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+      "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 213,
+      "newRelativeCharacters": 161,
+      "bytes": 103573,
+      "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+      "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/.github/workflows/host-emulated-acceptance.yml.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/.github/workflows/host-emulated-acceptance.yml.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 203,
+      "newRelativeCharacters": 151,
+      "bytes": 103848,
+      "blob": "74c5964e1b28e02df2fd5649d9d67931889cd7a8",
+      "sha256": "8fd4f1edd2473382655d1fbb0850b60be890764460bdf4fdfd158637f8594a9f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 207,
+      "newRelativeCharacters": 155,
+      "bytes": 55759,
+      "blob": "4eabaf832901bf3ea82bc9761f1208207343b8a0",
+      "sha256": "1ded076e942640f4306af7ee6d5f1e4c49d7b9095d6aaeba4f59826e794863bd"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 220,
+      "newRelativeCharacters": 168,
+      "bytes": 15874,
+      "blob": "6205acf48ae31051ae3b4dcb4d66c47286022ba4",
+      "sha256": "1663c2db6b7229472ec45529202053023d7cb33cd1affc333547105979e6b6ca"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 218,
+      "newRelativeCharacters": 166,
+      "bytes": 47501,
+      "blob": "3fafe379fa85edf20aef44eeb4f544ca691d05d4",
+      "sha256": "0ec44f25649005b961bb7b5b81545de23953e2b055b1ee762cae30bc899cf9d3"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 214,
+      "newRelativeCharacters": 162,
+      "bytes": 34186,
+      "blob": "3313bd7ea5f707a930f87322f8ec4fdaed86a527",
+      "sha256": "23e1e8651bdef907a525cb8918986623760444f685938942882571a3f695cbd5"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 221,
+      "newRelativeCharacters": 169,
+      "bytes": 21133,
+      "blob": "868b7c7121cc85925b86fee641064493dc099785",
+      "sha256": "c2feed93785e08604a92db4cacb224164cd926b2b8d2826b502d408d16bdba71"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 212,
+      "newRelativeCharacters": 160,
+      "bytes": 114321,
+      "blob": "f25095fc93559fc8f84d159b946e89d729956f4c",
+      "sha256": "5ed2a20f03ef72fe2ea272bed84c4f38326f2ab0f6a90b2dc65ece615662b34f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 219,
+      "newRelativeCharacters": 167,
+      "bytes": 13985,
+      "blob": "d725e255682b0c092e7b05970622e732c1124580",
+      "sha256": "99f37883c6c0096ac75f7c53ee1f02680dd5a402260b067cdb136fd696287b3a"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/proposal-metadata.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/proposal-metadata.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 167,
+      "newRelativeCharacters": 115,
+      "bytes": 27500,
+      "blob": "1458fe354a53b6b4929fb7db4dd8f8cf5fed1e41",
+      "sha256": "b9e8fc1a3198bc9c2b45a6059270ff8a330b126e68d9b2248f972575c26d9bbc"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/red/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/red/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 208,
+      "newRelativeCharacters": 156,
+      "bytes": 107837,
+      "blob": "a6c8df59b6fabc013b3570762d6b19a396e32c9e",
+      "sha256": "d8bfcea3677773bb7d9fd800f958728719f292c7e01a9e4a0ead4fd746276cf9"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/route-test-suffix.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/route-test-suffix.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 166,
+      "newRelativeCharacters": 114,
+      "bytes": 6484,
+      "blob": "556be3495f497c3a01326823a242d8d4874fe4d3",
+      "sha256": "c1edda7303a2af84c1ce1a6586693074ab08adc2d41dfd8a779cc533efe56a56"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/workflow-design-metadata.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/workflow-design-metadata.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 174,
+      "newRelativeCharacters": 122,
+      "bytes": 14057,
+      "blob": "cda62462d31540d9c4407083e519909b96917c10",
+      "sha256": "d66117c42c3a45772b6e209d8dac06e98563dd245a25be7edb0150bcc051ef23"
+    }
+  ],
+  "nonDocumentation": {
+    "leafCount": 8798,
+    "mapSha256": "94deeed545664749a234f724e5a59304ba6499760817630cac2fcf2bb618d199",
+    "unchangedFromParent": false,
+    "selectedHeaderPath": "tools/owned-process-broker/debugServiceTest.h",
+    "selectedHeader": {
+      "bytes": 8822,
+      "blob": "952ed2d3436708addf656109dc513270ea33ce22",
+      "sha256": "cb3ed3eaebb0f59aa968a285ddd85522181292a289a9bed7c59a6adf0feabf65"
+    },
+    "allOtherSourceExactE1": true,
+    "sourceAndVenuePins": [
+      {
+        "path": "tools/owned-process-broker/debugServiceTest.h",
+        "bytes": 8822,
+        "blob": "952ed2d3436708addf656109dc513270ea33ce22",
+        "sha256": "cb3ed3eaebb0f59aa968a285ddd85522181292a289a9bed7c59a6adf0feabf65",
+        "equalE1": false
+      },
+      {
+        "path": "tools/owned-process-broker/serviceScopes.h",
+        "bytes": 16379,
+        "blob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+        "sha256": "88aea669b33d0bb1e60cf80ed5b3c11f6c1ce5f9a14499f421be9d563daadcf9",
+        "equalE1": true
+      },
+      {
+        "path": "tools/owned-process-broker/serviceDebugLoop.h",
+        "bytes": 4891,
+        "blob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+        "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3",
+        "equalE1": true
+      },
+      {
+        "path": "tools/owned-process-broker/broker.cpp",
+        "bytes": 25929,
+        "blob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+        "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3",
+        "equalE1": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "bytes": 25009,
+        "blob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+        "sha256": "a11c6fcc322cd240bf396ee7e7bf0fc9d009869fe9e2b94cc9c969a4f7bbb1b1",
+        "equalE1": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeFixture.cpp",
+        "bytes": 19357,
+        "blob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+        "sha256": "a509a625e9e1ab1ccb96040b81d2c2fd1f00c0c23e74677e7002b7c8a4b7b84f",
+        "equalE1": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGate.ts",
+        "bytes": 22330,
+        "blob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+        "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197",
+        "equalE1": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateEvents.ts",
+        "bytes": 1367,
+        "blob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+        "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+        "equalE1": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+        "bytes": 7387,
+        "blob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+        "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a",
+        "equalE1": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateContext.ts",
+        "bytes": 7278,
+        "blob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+        "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+        "equalE1": true
+      },
+      {
+        "path": "tools/owned-process-broker/CMakeLists.txt",
+        "bytes": 2160,
+        "blob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+        "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e",
+        "equalE1": true
+      },
+      {
+        "path": "tools/owned-process-broker/vitest.config.ts",
+        "bytes": 342,
+        "blob": "cd03a73404a7b2548c15234743c24c1093b554af",
+        "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e",
+        "equalE1": true
+      },
+      {
+        "path": "tools/owned-process-broker/tsconfig.json",
+        "bytes": 557,
+        "blob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+        "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+        "equalE1": true
+      },
+      {
+        "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+        "bytes": 393,
+        "blob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+        "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+        "equalE1": true
+      },
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "bytes": 32248,
+        "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+        "equalE1": true
+      },
+      {
+        "path": "scripts/build/buildOwnedProcessBroker.ts",
+        "bytes": 3476,
+        "blob": "90499776e145f9ffaba230b280d5d9da9e15a8e0",
+        "sha256": "4db8137541af5f78d821d55f70b1f3a497b79a3e82bfa700e09d4237b3d97682",
+        "equalE1": true
+      }
+    ]
+  },
+  "ordinaryPublicationRoute": {
+    "preObservedAtUTC": "2026-11-16 07:07:06 UTC",
+    "postObservedAtUTC": "2026-11-16 07:07:48 UTC",
+    "pushReceipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication/ordinary-source-push-response.json",
+      "bytes": 565,
+      "blob": "0b6e43b71b65d7544800212efca71e6bba2d81ba",
+      "sha256": "ee85792b499ed0fc7856d3754eef797f93cca8f50016042855fc5706cfb8a688"
+    },
+    "force": false,
+    "expectedParent": "3d751d52bedf983cbac223ddf25ce08ca7af27b8",
+    "followupPostHead": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+    "primaryAtBothRecordedGuards": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "draftOpenAndBaseExact": true,
+    "scope": "Recorded publication guards only; no new live CI or ref poll by reviewer."
+  },
+  "sourceHeaderAppliedInReviewedCommit": true,
+  "phaseAApplied": false,
+  "darwinExpiryProposalApplied": false,
+  "primaryAdvancedByThisPublication": false,
+  "scopeLimits": [
+    "Exact published Git/API/byte/archive/Plan/route preservation. Existing source semantic approvals are separately attributed; no semantic re-audit of the nine native records is claimed.",
+    "Historical failed and unknown native outcomes remain source-specific. One-header prospective fix has no resulting-source native PASS from this byte readback.",
+    "No local project execution, compiler, tests, install, native/vendor process, CI rerun/dispatch, checkout, fetch, source or ref mutation by reviewer.",
+    "Root separately controls fresh source publication and primary advancement guards. No Phase A or other dormant source proposal is applied."
+  ],
+  "reviewerActions": {
+    "freshImmutableCommitGET": 1,
+    "fullReadOnlyGitLeafAndDirectoryRead": true,
+    "fullGitPayloadAndArchiveReads": true,
+    "projectExecutions": 0,
+    "sourceOrRefMutations": 0,
+    "CIPolls": 0,
+    "originalPacketChanges": 0
+  }
+}

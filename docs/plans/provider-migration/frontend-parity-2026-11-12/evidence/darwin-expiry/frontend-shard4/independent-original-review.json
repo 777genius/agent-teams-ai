@@ -1,0 +1,424 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-original-E1-frontend-shard4-semantic-R2",
+  "reviewer": "/root/native_failures",
+  "createdAtUTC": "2026-11-16T07:12:45.039632+00:00",
+  "verdict": "APPROVE_WITH_EXPLICIT_SCOPE",
+  "requiredCorrections": [],
+  "reviewBoundary": "One original E1 frontend shard 4/4 only. This independently reviews the frozen author checkpoint, audit and appendix against retained original job response/log, official API metadata, ZIP members, every JSON assertion and fresh Git test-file/configuration/guard bytes. It does not qualify the other three shards or any later source.",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "workflowRunId": 43813731227,
+  "jobId": 133120928662,
+  "artifactId": 14203956752,
+  "reviewedAuthorDocuments": [
+    {
+      "path": "ci-e1d14b9/frontend4/checkpoint.json",
+      "bytes": 2777,
+      "blob": "bf2e6620e90e2822250e378fc7492ba47eab144a",
+      "sha256": "2269800df9bcc8a99a9cc0d94dbdadf00a8ff424a35d2a149c55399056025416"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/audit.json",
+      "bytes": 7711,
+      "blob": "ab7105a2ce0a35dfd15c280a573d5f194785048a",
+      "sha256": "83f728902caf58b0030f1c674b7e57f64028dd731ef58dfdcf17a284c905ead2"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/Plan29-appendix.md",
+      "bytes": 2137,
+      "blob": "3b32dc144a4e8ddd7ac572d7ee7af6febd125725",
+      "sha256": "1fa40ebaa73dd64d01a4d72ca08ee95d7161460880f6688774b8374a13d8dbe4"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/source-and-case-proof.json",
+      "bytes": 228982,
+      "blob": "c84353d66250bd53be5473829447447ab0a8ba28",
+      "sha256": "fae0223af31b9235ed7d01cf08dd4c3e882c763ce26358faf83f590b7ce59217"
+    }
+  ],
+  "independentByteAndSourceProof": {
+    "path": "ci-e1d14b9/frontend4/independent-byte-source-proof.json",
+    "bytes": 201524,
+    "blob": "94722bf72ae119002368ac96fd1defdccd3468bf",
+    "sha256": "486ca5a0985aa2c924ec81972df72e2b09c3b797f76fa952e82085f571b96650"
+  },
+  "originalPayloads": [
+    {
+      "path": "ci-e1d14b9/frontend4/job-original-response.json",
+      "bytes": 235805,
+      "blob": "7f5e459479d17ad4c6d8c5425a973cd6c21875ab",
+      "sha256": "44956b1a98d570b39c9455176d68c7f1090d3e71515339f743a46ae797d50a98"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/job.log",
+      "bytes": 191999,
+      "blob": "7a6f49d16a45b1943f3344e2f4b121c1f406887c",
+      "sha256": "15165c8f89c4c7d783435484efad2c328a4d1c2ad91e9dc605c87513eece3fde"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/artifact-14203956752.zip",
+      "bytes": 317740,
+      "blob": "891547517df19ed9562cf6311c329f7989c953f7",
+      "sha256": "58c2f8f667ff43a2ed586932403903856aa2491402ae19be9ab13cb541d3f6b5"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/archive-retention.json",
+      "bytes": 1356,
+      "blob": "2ce796313e71fed484b61702fde7b29c6d693e48",
+      "sha256": "649a6e2c656422b6b25af0dd3ab13b13561e733e18433d41ab073269e5185bba"
+    },
+    {
+      "path": "ci-e1d14b9/official-host-artifacts-0702.json",
+      "bytes": 2959,
+      "blob": "e1f6f9f0ef0cb0e3efc4eda7cb87c0fa2a639387",
+      "sha256": "2894018dbf71df54e0bb8456f7a2c7d8e1a3089377e8ee43e72a276d196c6793"
+    },
+    {
+      "path": "ci-e1d14b9/owned-jobs-0700.json",
+      "bytes": 36811,
+      "blob": "9887db5797c7e4ca901e8f684852204d125d1f02",
+      "sha256": "93fa2619c1e6fa0c2881607ed90029571db3bc43b6e061daada7d160c345574c"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/source-and-case-proof.json",
+      "bytes": 228982,
+      "blob": "c84353d66250bd53be5473829447447ab0a8ba28",
+      "sha256": "fae0223af31b9235ed7d01cf08dd4c3e882c763ce26358faf83f590b7ce59217"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/audit.json",
+      "bytes": 7711,
+      "blob": "ab7105a2ce0a35dfd15c280a573d5f194785048a",
+      "sha256": "83f728902caf58b0030f1c674b7e57f64028dd731ef58dfdcf17a284c905ead2"
+    },
+    {
+      "path": "ci-e1d14b9/frontend4/Plan29-appendix.md",
+      "bytes": 2137,
+      "blob": "3b32dc144a4e8ddd7ac572d7ee7af6febd125725",
+      "sha256": "1fa40ebaa73dd64d01a4d72ca08ee95d7161460880f6688774b8374a13d8dbe4"
+    }
+  ],
+  "payloadCount": 9,
+  "payloadBytes": 1025500,
+  "originalJobAndArtifactJoin": {
+    "jobName": "Offline frontend tests (4/4)",
+    "jobStatus": "completed",
+    "jobConclusion": "success",
+    "jobAndEveryRetainedStepMatchOriginalJobsResponse": true,
+    "artifactName": "host-offline-tests-e1d14b9cd0fa1d7896b58e513f9040639e9e4940-4",
+    "officialSizeInBytes": 317740,
+    "officialSha256": "58c2f8f667ff43a2ed586932403903856aa2491402ae19be9ab13cb541d3f6b5",
+    "artifactRunId": 43813731227,
+    "artifactSourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "fullMcpContentEqualsRawUtf8Bytes": true,
+    "rawLogBytes": 191999,
+    "serializedOriginalResponseBytes": 235805,
+    "freshNetworkReadsForThisReview": 0,
+    "qualificationLimit": "The complete retained terminal job, source checkout guard and official artifact metadata agree. No later job state, current PR head or future source is inferred from this immutable result."
+  },
+  "archive": {
+    "zip": {
+      "path": "ci-e1d14b9/frontend4/artifact-14203956752.zip",
+      "bytes": 317740,
+      "blob": "891547517df19ed9562cf6311c329f7989c953f7",
+      "sha256": "58c2f8f667ff43a2ed586932403903856aa2491402ae19be9ab13cb541d3f6b5"
+    },
+    "memberCount": 2,
+    "allNamesSafeUniqueNonsymlink": true,
+    "allCrcVerified": true,
+    "everyExtractedMemberEqualsOriginalZipBytes": true,
+    "members": [
+      {
+        "path": "host-offline-tests-4.json",
+        "bytes": 2329390,
+        "blob": "7d053971411b3ba00775e0d665336c3eae366ef2",
+        "sha256": "8e9f4628575912f10e3652dff0267b38f0c29faaafd2a65b5613247d70ef44cc",
+        "crc32": "353a7ecd"
+      },
+      {
+        "path": "host-offline-tests-4.log",
+        "bytes": 116994,
+        "blob": "438ad72fd566a59771db2340c550d720ae741c02",
+        "sha256": "92ebda4c7646318bb433062b9f2d41ccf23d63fcc09a97f7c4325b4fe6a4a2f1",
+        "crc32": "3c9870c9"
+      }
+    ],
+    "fullOriginalTeeJoin": {
+      "bytes": 116994,
+      "rawStartLine": 606,
+      "rawEndLine": 1433,
+      "lineCount": 828,
+      "allLinesContiguousAfterOnlyTimestampPrefixRemoval": true,
+      "ansiRetained": true
+    },
+    "teeJoinRule": "Every one of 828 tee lines is contiguous in raw job lines 606 through 1433 after removal of only the GitHub timestamp prefix; ANSI and all remaining bytes are retained. No selection of passing lines or removal of failure text was used."
+  },
+  "assertionAndReporterAccounting": {
+    "everyAssertionRecounted": true,
+    "counts": {
+      "records": 6621,
+      "passed": 6614,
+      "skipped": 7,
+      "failed": 0,
+      "todo": 0
+    },
+    "distinctTestFiles": 539,
+    "testResultObjects": 539,
+    "consoleFiles": {
+      "passed": 537,
+      "skipped": 2
+    },
+    "jsonFileObjectsAllReportedPassed": true,
+    "jsonNestedSuiteFields": {
+      "numTotalTestSuites": 1349,
+      "numPassedTestSuites": 1349,
+      "numFailedTestSuites": 0,
+      "numPendingTestSuites": 0
+    },
+    "allSkippedFiles": [
+      {
+        "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+        "counts": {
+          "skipped": 1
+        },
+        "reportedStatus": "passed",
+        "startTime": 1794811796702,
+        "endTime": 1794811796702
+      },
+      {
+        "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+        "counts": {
+          "skipped": 6
+        },
+        "reportedStatus": "passed",
+        "startTime": 1794811796702,
+        "endTime": 1794811796702
+      }
+    ],
+    "emptyFailureMessagesForAllFileObjectsAndAssertions": true,
+    "durationSeconds": 392.7,
+    "precision": "The two all-skipped test files explain console 537 passed files plus 2 skipped files while JSON reports all 539 file objects passed. The separate 1,349 nested suites are neither 1,349 unique files nor an all-four-shard total."
+  },
+  "originalVenue": {
+    "literalCommand": "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\\n  --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\\n  --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\\n  2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\"",
+    "shellFailureHandling": "The existing original shell block uses set -euo pipefail; the tee pipe does not replace the Vitest exit status.",
+    "HOST_TEST_SHARD": "4",
+    "maxWorkers": 2,
+    "vitestVersion": "3.2.6",
+    "pnpmVersion": "11.22.0",
+    "actualFrontendNode": "26.12.1",
+    "capturedHostPrerequisiteNode": "24.21.0",
+    "capturedHostRuntimePath": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+    "runtimeSelection": "Original setup first captures the Host Node 24.21.0 runtime, then selects tracked .node-version 26.12.1 for the frontend command. They are distinct runtimes in the same job; frontend results are not relabelled Host Node 24.21.0 results.",
+    "originalUnsupportedEngineWarningsRetained": true,
+    "rootVitestDefaultEnvironment": "happy-dom",
+    "rootVitestDefaultTimeoutMs": 15000,
+    "environmentLimit": "The default configuration does not imply every file uses happy-dom; existing per-file environment annotations remain effective.",
+    "exclusions": [
+      "**/*.live.test.*",
+      "**/*.live-e2e.test.*",
+      "**/*.native.test.*"
+    ],
+    "reporters": [
+      "default",
+      "json"
+    ],
+    "freshSourceConfigAndGuardInputs": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      {
+        "path": "vitest.config.ts",
+        "bytes": 1187,
+        "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+      },
+      {
+        "path": ".node-version",
+        "bytes": 8,
+        "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+        "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+      },
+      {
+        "path": "package.json",
+        "bytes": 26839,
+        "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "bytes": 956788,
+        "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+      },
+      {
+        "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+        "bytes": 1460,
+        "blob": "f38bf3ce8d0da096d6f57dd011af71e696345618",
+        "sha256": "5a5cf6bf1538221c02ea907d23a6b11a870ec1e8efc2d4070253e71b18a91325"
+      },
+      {
+        "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+        "bytes": 5057,
+        "blob": "3568c399d93a9a7231899845f373f33ee91c1577",
+        "sha256": "b9c6174fc5135af0162436a8d4ac2190e87826e33000d7a2cb80942914c0b01d"
+      }
+    ]
+  },
+  "sourceJoin": {
+    "freshFullGitReadForEveryReportedTestFile": true,
+    "reportedUniquePaths": 539,
+    "fullTestFileBytes": 8492233,
+    "pathNulGitBytesNulSha256": "38959b82a6102cf3957188fc4336c2a0640971078c4364ab06a08eab5bab4963",
+    "authorPerFileHashesCountsStatusesAndStartEndTimesMatchIndependently": true,
+    "all539PerFileIdentitiesLocation": {
+      "path": "ci-e1d14b9/frontend4/independent-byte-source-proof.json",
+      "bytes": 201524,
+      "blob": "94722bf72ae119002368ac96fd1defdccd3468bf",
+      "sha256": "486ca5a0985aa2c924ec81972df72e2b09c3b797f76fa952e82085f571b96650"
+    },
+    "scope": "All 539 reported test source files and seven additional configuration/guard identities were read from the exact E1 Git source. This is not a reconstructed full import, implementation, build-output or dependency closure, and no independent rebuild was performed."
+  },
+  "skippedCases": [
+    {
+      "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+      "fullName": "preserves wrapper ownership across real Vitest setup",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e resolves the current host as native macOS",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e chooses Homebrew as the macOS install strategy on this machine",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e finds the real tmux binary on this macOS host",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e reports tmux as runtime-ready for the live macOS host path",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e keeps the current platform on the tmux runtime path",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e runs a real isolated tmux session on macOS and executes a shell command in it",
+      "status": "skipped"
+    }
+  ],
+  "skipGuardReview": [
+    {
+      "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+      "guard": "it.skipIf(process.env.OPENCODE_E2E !== '1')",
+      "observedSkippedCases": 1,
+      "sourceMeaning": "The skipped test body checks synthetic wrapper-owned HOME/USERPROFILE, the Sentry mock and its boundary output; it is not proof of a live OpenCode provider execution. Its observed status is skipped. This review does not infer a complete process environment from that status."
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "guard": "describe.runIf(process.platform === 'darwin')",
+      "observedSkippedCases": 6,
+      "sourceMeaning": "On this Linux runner the Darwin guard excludes the six live macOS/tmux bodies. Top-level binary lookup is conditional on isDarwin, and existing brew/tmux subguards remain. No real isolated tmux session, Homebrew result or macOS runtime is qualified by these skipped cases."
+    }
+  ],
+  "finiteCapturedHostClientSubscope": {
+    "actualSource": {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "bytes": 51981,
+      "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+      "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f",
+      "assertions": {
+        "passed": 33
+      },
+      "reportedJsonStatus": "passed"
+    },
+    "actualCaseRecords": {
+      "cases": 33,
+      "pass": 33,
+      "expiryCases": [
+        {
+          "ancestorTitles": [
+            "captured legacy host client over real subprocess stdio"
+          ],
+          "fullName": "captured legacy host client over real subprocess stdio holds Main reply bytes before native effect, expiry=false",
+          "status": "passed",
+          "title": "holds Main reply bytes before native effect, expiry=false",
+          "duration": 560.8604910000013,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "captured legacy host client over real subprocess stdio"
+          ],
+          "fullName": "captured legacy host client over real subprocess stdio holds Main reply bytes before native effect, expiry=true",
+          "status": "passed",
+          "title": "holds Main reply bytes before native effect, expiry=true",
+          "duration": 560.5334829999993,
+          "failureMessages": [],
+          "meta": {}
+        }
+      ]
+    },
+    "interpretation": "The unchanged original file has 33 passed cases in this Linux frontend shard, including the expiry=false and expiry=true held-Main-reply cases. Their approximately 561 ms values are whole case durations. This separate source-bound success does not recover the unretained reply/status/clock operands in the earlier Darwin-x64 Process failure, does not establish a common or resolved cause, and does not execute or qualify the later prospective Main-admission expiry amendment."
+  },
+  "otherShardsAtHistoricalSnapshot": [
+    {
+      "id": 133120928994,
+      "name": "Offline frontend tests (1/4)",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 133120929154,
+      "name": "Offline frontend tests (3/4)",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 133120929457,
+      "name": "Offline frontend tests (2/4)",
+      "status": "queued",
+      "conclusion": null
+    }
+  ],
+  "scopeAndNegativeQualification": {
+    "onlyThisOriginalShardQualified": true,
+    "allFourShardsQualified": false,
+    "otherShardStatesAreHistoricalOnly": "Shards 1/4, 2/4 and 3/4 remain queued in the captured 07:00:43 UTC original Host status. This review made no additional frontend job poll and makes no claim about their later states.",
+    "sevenSkippedCasesQualified": false,
+    "excludedLiveAndNativeFilesQualified": false,
+    "team177OrStderr24Qualification": false,
+    "fullTypedLintOrCompilerQualification": false,
+    "nativeDesktopPackagedOrProviderCustodyQualification": false,
+    "laterI386HeaderSourceQualified": false,
+    "realClaudeCodexExecutionClaim": false,
+    "explicitLimit": "The three original CLI exclusions and the seven source-guarded skips are preserved. Their test bodies did not pass in this result. This is not a whole-repository claim about every imported module or all vendor-call paths; no such claim is needed to approve the retained finite shard evidence."
+  },
+  "appendixReview": {
+    "fullAppendixRead": true,
+    "allCountsRuntimeSourceTeeAndQualificationStatementsSupported": true,
+    "requiredWordingCorrections": [],
+    "publicationDisposition": "The frozen author appendix/checkpoint can be published unchanged with this independent R2. Preserve its one-shard title, other-shard historical queue state, skip/exclusion limits and distinct frontend/Host runtime attribution."
+  },
+  "operations": {
+    "originalDocumentsModified": false,
+    "sourceOrRefsModified": false,
+    "projectTestCompilerLintInstallNativeOrProviderExecuted": false,
+    "ciMutationsOrReplay": false,
+    "networkRefetchOfOriginalLogsOrArtifacts": false,
+    "scratchEvidenceOnly": true
+  }
+}

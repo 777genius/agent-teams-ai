@@ -1,0 +1,63 @@
+{
+  "status": "INERT_SCOPE_ONLY_NO_EXECUTION_AUTHORIZATION",
+  "baseCommit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "futureActualParent": null,
+  "requiresPublishedDocumentationOnlyR1AndFullReadback": true,
+  "requiresExactSourceR2": true,
+  "sourcePaths": [
+    "tools/owned-process-broker/debugServiceTest.h",
+    "tools/owned-process-broker/broker.cpp"
+  ],
+  "actualOriginalRed": {
+    "run": 43813731530,
+    "jobs": [
+      133120929510,
+      133120929619
+    ],
+    "firstFailure": "nativeI386ChildObservation unknown then unchanged Scenario105 assertion",
+    "deterministicRaceAttribution": false
+  },
+  "finitePreservationOnly": {
+    "testPath": "tools/owned-process-broker/nativeGateEvents.test.ts",
+    "testBlob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+    "caseCount": 4,
+    "configPath": "tools/owned-process-broker/vitest.config.ts",
+    "configBlob": "cd03a73404a7b2548c15234743c24c1093b554af",
+    "argvToBindByRoot": [
+      "pnpm",
+      "exec",
+      "vitest",
+      "run",
+      "--config",
+      "tools/owned-process-broker/vitest.config.ts",
+      "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "--maxWorkers=1"
+    ],
+    "syntheticRedExpected": false,
+    "qualifiesNativePersistenceOrCxxMemoryOrder": false
+  },
+  "futureOriginalWindowsCiRequired": {
+    "architectures": [
+      "x64",
+      "arm64"
+    ],
+    "unchangedSameSourceWin32FixtureBuild": true,
+    "hostNodeAndElectronNode": true,
+    "actualJoinedFourRowChildObservation": true,
+    "originalCmdAndNativeArchitectureCases": true,
+    "releaseCleanupAndFinalSourceReceipt": true,
+    "originalProviderSourceABAnd15SecondQualification": true
+  },
+  "notAuthorizedByThisScratchProposal": [
+    "source application",
+    "project command",
+    "local native build or run",
+    "workflow action",
+    "test execution",
+    "production policy adoption",
+    "new wait or retry",
+    "new protocol",
+    "helper or deadline cap increase"
+  ],
+  "incompleteWriteBranch": "New TEST-only refusal of false or short WriteFile before Released; original failure CAS preserved. No new local mirrored fault fixture is selected."
+}

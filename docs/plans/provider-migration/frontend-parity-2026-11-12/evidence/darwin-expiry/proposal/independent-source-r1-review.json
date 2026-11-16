@@ -1,0 +1,493 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-prospective-test-only-main-admission-expiry-r1-review",
+  "reviewer": "/root/native_failures",
+  "author": "/root/migration_scope",
+  "createdAtUTC": "2026-11-16T06:58:42.998879+00:00",
+  "decision": "APPROVE",
+  "scope": "Exact frozen R1, complete two-file preimages/candidates, byte inverses, source order/error cleanup, preserved original assertions and existing conditional CI venues. Source review only; no project execution, source application, ref update or actual GREEN.",
+  "baseHead": "c761567d3a7912ef9255532d1f296d66e8c52b91",
+  "baseTree": "ea02729b2e0a242b784f9db7943a106e50bd2718",
+  "sourceEquivalentIncoming": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "reviewedInputs": {
+    "r1": {
+      "path": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/R1-appendix.md",
+      "bytes": 13583,
+      "blob": "97810fb7cb19b2a34a8c6b83009e869ec4082409",
+      "sha256": "f32af083ac05d666bf86f1bd8e1b1167916060745094dcae93135cdc37238c37",
+      "lines": 61
+    },
+    "metadata": {
+      "path": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate-metadata.json",
+      "bytes": 5822,
+      "blob": "28b5c02baa4551f7d41116c33f7ceb4912f840e4",
+      "sha256": "a6fe9d6500df27cced7ae51ef8669ada1914f97b1ef9ad8a20f3345eedaaa6e8",
+      "lines": 145
+    },
+    "patch": {
+      "path": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate.patch",
+      "bytes": 3674,
+      "blob": "b898bd9032cec5a0d2815c4d4e268d13a088f762",
+      "sha256": "6127e13f8ed30c9edc36e04730cea8c2a42ff26dbe5721c91d1c18dcfe378a58",
+      "lines": 60
+    },
+    "sourceAndVenuePins": {
+      "path": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/source-and-venue-pins.json",
+      "bytes": 12520,
+      "blob": "b900529a659806a0bf5fea1cd61a2b4264d6b875",
+      "sha256": "476ef0e33c55a1a0d5e742567d668213861f5c98157c3d2db74654b2f282af91",
+      "lines": 302
+    },
+    "originalFailureAnalysis": {
+      "path": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/original-failure-and-source-analysis.json",
+      "bytes": 3299,
+      "blob": "d62cac555dfc92e9b3da154cd85e9992d70b884e",
+      "sha256": "7698708ab02126d824b0122c8db02daaa767076cf86c0d1c29b0b61e8ebf5480",
+      "lines": 77
+    },
+    "independentActualFailureReview": {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/independent-process-darwin-x64-failure-review.json",
+      "bytes": 26323,
+      "blob": "46d38413787b525f23600f398076e50e5ee9963e",
+      "sha256": "0c7cc934c3bf40fa830d2db5d7ccdaeec56ab09a68cd36f0f1cbbf0e2c135587",
+      "lines": 615
+    }
+  },
+  "exactSourceChanges": [
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 51981,
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f",
+        "lines": 1040
+      },
+      "candidate": {
+        "bytes": 51989,
+        "blob": "4e8a47af47549d22df0b7199a58a2511d8ecfda0",
+        "sha256": "34106dc02e8d38f0be8dffe3b0c734972ec0e7d8e0833f1bfc5757c430194f62",
+        "lines": 1040
+      },
+      "addedLines": 1,
+      "removedLines": 1,
+      "preimageEqualsC761AndE1": true
+    },
+    {
+      "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 29798,
+        "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+        "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+        "lines": 603
+      },
+      "candidate": {
+        "bytes": 30715,
+        "blob": "2726155997717ed0f22c1d2f71d0adf5a42c190c",
+        "sha256": "1555d38eaecd485f501b366e9a2a27b5f0f0c610d51079a88b8ada506e80794a",
+        "lines": 618
+      },
+      "addedLines": 20,
+      "removedLines": 5,
+      "preimageEqualsC761AndE1": true
+    }
+  ],
+  "fullPatchByteExact": true,
+  "fullTestInverseExact": true,
+  "fullFixtureDeclaredInverseExact": true,
+  "preservation": {
+    "expectBearingSourceLines": 172,
+    "definition": "Exact original lines matching expect( or expect.; includes the existing expect.poll line. This is a lexical preservation count, not a count of runtime assertions.",
+    "registrationSourceLines": 25,
+    "allOriginalAssertionAndRegistrationBytesEqual": true,
+    "changedCaseInverseOnlyGateArgument": true,
+    "wholeTestLengthUnchanged": 1040,
+    "fixtureLineCount": 618,
+    "fixtureBelowExisting800LineLimit": true,
+    "newCases": 0,
+    "removedCases": 0,
+    "totalAddedLines": 21,
+    "totalRemovedLines": 6,
+    "productionWorkflowsConfigsLockRostersUnchanged": true
+  },
+  "sourceAndVenuePins": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "blob": "da94c393b024d3c8a40159edbf9975cd528007a6",
+      "sha256": "1d985c85b89c284ce4745692fa7aafc345337de59cb81a1aa182f0d3f848feba",
+      "lines": 2633,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "lines": 1312,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 32248,
+      "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+      "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+      "lines": 418,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "lines": 580,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+      "lines": 304,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/contracts.ts",
+      "bytes": 5570,
+      "blob": "5d5743e8728ff3f16dcc09ad822804e4952632e1",
+      "sha256": "c9c5686a8f6ccf6abfe2518edf713d34f48641b79ede32f070048c46c0ae4b3d",
+      "lines": 169,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/index.ts",
+      "bytes": 11111,
+      "blob": "755158699496506a62132c540f19b225c5a6222d",
+      "sha256": "5710013cfeac12d61f6f93ba995df696395c583803b2226be79195dff7dff095",
+      "lines": 330,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/output.ts",
+      "bytes": 5071,
+      "blob": "78ba126a830231da8a22bca8601de20f8a51853d",
+      "sha256": "d55a42832b820a075f8e22672cfbe60d4f865573408540c525db8e1e1857bc59",
+      "lines": 153,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+      "bytes": 21129,
+      "blob": "af69d8430ffd473d471a5e663606fcaea640d2e5",
+      "sha256": "ae2bc6fe45b4dded8cff67b13daf01e8a5f5c4fc3e835ce7eb98a8c58adaf435",
+      "lines": 472,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/host-custody-recovery.test.ts",
+      "bytes": 12363,
+      "blob": "1d789db5229276aa98535c76cbe17c9e4ee3cdc2",
+      "sha256": "7d5e7d1eea09f3feb70ad4f767295aebbd7ec714ffa41f456b17431bda7227d2",
+      "lines": 207,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/transport.test.ts",
+      "bytes": 23731,
+      "blob": "24c83547be0ee43bb6f2481618a4356a3855d832",
+      "sha256": "b49279f1685054763969aa51a08c294e0ea9acf5b640c7d94553cbcf59aa412c",
+      "lines": 589,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "bytes": 456,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+      "lines": 19,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "bytes": 174,
+      "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+      "lines": 9,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "lines": 26665,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "bytes": 6946,
+      "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+      "lines": 169,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "bytes": 32767,
+      "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+      "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+      "lines": 800,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "bytes": 51981,
+      "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+      "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f",
+      "lines": 1040,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+      "bytes": 4592,
+      "blob": "4a7801a5260ad0c25a07485003d4e99ac5b4633f",
+      "sha256": "a979a7e7a32e952067237fc3d04f3b4b19a97328dacf55db65c606dae4211287",
+      "lines": 67,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "bytes": 10861,
+      "blob": "e6379e4ace2cc874f660c6bb1377592bba52ebb9",
+      "sha256": "3f972d99f44c514d3f06875a7c8a094b63998aa5daf17abf68db13a7b4cc9025",
+      "lines": 186,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+      "bytes": 12515,
+      "blob": "b6ce74003e2dc27a8e4527bd07298fc2bff2a586",
+      "sha256": "0c411315405fd6a572dddb385e3735ca43b78141d729f932a27087adf48480c7",
+      "lines": 166,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSourcePending.test.ts",
+      "bytes": 6457,
+      "blob": "1ff48096cf52cde91cd82ac55eddf99f4458896e",
+      "sha256": "b18822ad82a51a00100184148043032822fcfa2df80c47e1d38a4dbdc6e71e56",
+      "lines": 86,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+      "bytes": 56748,
+      "blob": "1bd21c24852ebfade85b23b425342e6665f447e7",
+      "sha256": "a6540bd6c68165b7b0d782768cc7303d00cb609083df4baacdaad81d51e3f810",
+      "lines": 1121,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "test/features/agent-backend/fileTeamModelProbeIntents.test.ts",
+      "bytes": 10028,
+      "blob": "a596613b900598a51d446d7c959b1ea7c1c95b64",
+      "sha256": "0fd030d5cdfb4473b32991b6b62befa9ecd888236423419df9a48f9e599cc119",
+      "lines": 194,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+      "bytes": 29798,
+      "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+      "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+      "lines": 603,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+      "bytes": 15667,
+      "blob": "bc0820f51820e4cf66f37404395fee4c536b5311",
+      "sha256": "1f20a7ab1e2f8e35abd2123a962884054f00b0a48deb7bf2617502bc8d960b46",
+      "lines": 294,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "test/features/agent-backend/tsconfig.json",
+      "bytes": 379,
+      "blob": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+      "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79",
+      "lines": 12,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "test/setup.ts",
+      "bytes": 5297,
+      "blob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+      "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+      "lines": 168,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "bytes": 557,
+      "blob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+      "lines": 6,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "bytes": 393,
+      "blob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+      "lines": 6,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 1235,
+      "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+      "lines": 40,
+      "sameAtC761AndE1": true
+    },
+    {
+      "path": "vitest.config.ts",
+      "bytes": 1187,
+      "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "lines": 34,
+      "sameAtC761AndE1": true
+    }
+  ],
+  "orderingReview": [
+    {
+      "source": "CapturedHostClient.ts:490-509",
+      "finding": "Original receiveNative samples receivedAt, validates schema/binding/sequence/capacity, constructs a real NativeRequest with receivedAt+remainingMs and reserved:false, then invokes nativePending.set. No production branch changes."
+    },
+    {
+      "source": "candidate retainedNativeCustody.ts:304-321",
+      "finding": "The existing interception calls the captured original Map.set before inspecting the same inserted object. New checks demand entries.get(key)===value, nonnull object, finite numeric deadline, reserved===false and exact call operation write / capability TEST-original / bytes YQ==. The first wrong entry refuses TEST setup rather than satisfying admission."
+    },
+    {
+      "source": "candidate retainedNativeCustody.ts:318-321; CapturedHostClient.ts:510-515",
+      "finding": "The same entry deadline is shortened with Math.min(existing,performance.now()+20). Only then is the one-shot flag set and original admitted resolver called. The original Map.set result is returned; only after that return does Main install its original timer from the capped deadline and call its original pump."
+    },
+    {
+      "source": "candidate retainedNativeCustody.ts:328-360; capturedHostClient.test.ts:354-371",
+      "finding": "The original child stdin write still occurs once. Only its original completion callback is held after actual write completion; blocked and queued races remain mandatory. The gate does not forge a native frame, insert a synthetic entry, complete a missing admission or replace the real child stream."
+    }
+  ],
+  "deadlineAuthority": {
+    "intentionalAmendment": "Old fixture supplied Host performance.now()+20 before Host request validation/admission; new fixture uses its unchanged default Host2000 and applies a <=20ms cap after the actual Main entry is inserted. These are different acceptance scopes, explicitly authorized prospectively by this R1 if root selects it.",
+    "mainExistingDeadlineNeverExtended": true,
+    "shortCapMs": 20,
+    "unchangedHostDefaultMs": 2000,
+    "unchangedOuterRequestMs": 3000,
+    "unchangedMainWriteTimeoutMs": 500,
+    "deterministicMeansOnly": "Original insertion precedes the cap, which precedes the original Main timer/pump. It does not guarantee that Host transport, the large input write or the outer request succeeds before its unchanged deadline.",
+    "remainingFailurePossibility": "The original Host2000, Main write500 or outer3000 limits may still expire; missing blocked/queued admission must remain FAIL. The candidate neither retries nor bypasses those races.",
+    "addedWork": "One same-map identity read, fixed field checks, one clock read, min and a write to the retained TEST entry, plus one-shot state. This work consumes the same selected budgets; it is not free or a new observation/action.",
+    "noNewTimerQueryRpcNativeActionOrDeadlineExtension": true
+  },
+  "synchronousErrorAndCleanupReview": [
+    "A new guard throw happens after original Map.set, before admitted(), before the original entry timer and before pumpNative. It cannot report a successful queued witness.",
+    "The unchanged receiveFrame catch (CapturedHostClient.ts702-704) catches synchronous receiveNative/intercepted-set failures and normalizes them to HostClientError(protocol-error,unknown). It does not preserve the original custom TEST Error identity, and this review makes no such claim.",
+    "Original fail717-732 calls sealNative603-615: abort, clear any existing native timers, clear the pending map/hints and retain the caller-owned physical port outside transport lifetime. It rejects the pending outer request, clears original timers, closes captured stdin and starts cached shutdown.",
+    "The unchanged Promise.race rejection reaches the test finally371. Original gate.restore releases an already captured callback and restores only the still-owned stream.write/map setter; transport.shutdown() is still awaited. A cleanup failure can still fail the test under the original finally precedence; no new catch swallows it.",
+    "The candidate adds no process cleanup or physical-custody assertion. Existing finally source does not establish measured original-run physical exit; that limit remains in the actual failure R2."
+  ],
+  "effectAndCaseReview": {
+    "expiringCase": "Both original races must succeed; returned reply still matches unknown/refused, zero writes before and after release, exactly one original control observation and preserved zero-effect assertions.",
+    "nonExpiringCase": "Default false adds no cap. The generated Host call without a second argument is equivalent to the old undefined deadline when expire=false. The same large request still includes its expire field and payload, same held original callback, release, exactly one write and incompatible-envelope protocol-error/unknown with no extra effect.",
+    "allOriginalPayloadsRequestsRacesFinallyBytesPreserved": true,
+    "noNewTypeAssertionOrCoercion": "The retained Map<unknown,unknown> value and its call are narrowed by object/in/typeof checks before access/assignment; no new cast or matcher API is added. This is source review, not a compiler result."
+  },
+  "hostBoundaryCoverage": {
+    "preservedTransportSource": "packages/legacy-agent-host/tests/transport.test.ts377-452: 24 held original20ms calls, queued lazy expiration refused with expiredBuilt===0, wire slots retained after caller timeout, original ACK alone admits another request, sealed queued builder remains unbuilt.",
+    "preservedRecoverySource": "packages/legacy-agent-host/tests/host-custody-recovery.test.ts109-207 retains its original queue/deadline/drain and genuine-release cases.",
+    "postBuilderCheck": "hostCustody.ts355-360 remains byte exact. No deliberate existing slow-builder crossing test was found or claimed.",
+    "separateVenue": {
+      "workflow": ".github/workflows/ci.yml",
+      "line": 270,
+      "command": "PATH=\"$(dirname \"$AGENT_BACKEND_TEST_NODE\"):$PATH\" pnpm --filter @agent-teams/legacy-agent-host test",
+      "packageTestScript": "pnpm build && pnpm typecheck:test && node --test --test-concurrency=1 tests/*.test.ts tests/fixtures/native-claude-team/model.test.ts tests/fixtures/native-opencode-team/model.test.ts tests/fixtures/native-codex-team/model.test.ts",
+      "includesTransportAndRecoveryTestsByExistingGlob": true,
+      "notIncludedByProcess18NodeFilesOrRetainedMain8": true,
+      "conditionalCurrentDraftRouteNotPromised": true
+    },
+    "coverageLimit": "These two Host files are not in the Process18 Node operands or the retained8 Main operands. General Host package test is conditional; its script glob is source evidence, not an actual pass or an automatic Draft scheduling promise."
+  },
+  "executionVenue": {
+    "originalWholeEightFileCommand": "node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log",
+    "argv": [
+      "node",
+      "node_modules/vitest/vitest.mjs",
+      "run",
+      "--maxWorkers=1",
+      "test/features/agent-backend/capturedHostClient.test.ts",
+      "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "test/features/agent-backend/desktopBackendFeature.test.ts",
+      "test/features/agent-backend/fileTeamModelProbeIntents.test.ts",
+      "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+      "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+      "test/features/agent-backend/capturedWindowsSourcePending.test.ts",
+      "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts"
+    ],
+    "nodeVersion": "24.21.0",
+    "corepackVersion": "0.36.0",
+    "pnpmVersion": "11.22.0",
+    "originalBuildCommands": [
+      "node node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json",
+      "node agent-teams-controller/scripts/build.mjs",
+      "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json",
+      "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json",
+      "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json",
+      "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json"
+    ],
+    "exactWorkflowCommandMembershipVerified": true,
+    "originalSetEuoPipefailAndTeePreserved": true,
+    "precedingProcess18NodeAnd3ConfiguredVitestCommandsUnchanged": true,
+    "separateBackendTypeVenue": {
+      "workflow": ".github/workflows/host-emulated-acceptance.yml",
+      "line": 209,
+      "command": "node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json",
+      "notReplacedByRetainedHostCompiler": true
+    },
+    "requiredBeforeGreen": "Retain the actual full original resulting-source command output/current checkout/build, both expiry outcomes and other applicable original gates. No isolated mirrored test, manufactured RED or local fallback is selected.",
+    "localProjectExecutionAuthorized": false,
+    "manualDispatchOrRerunAuthorized": false
+  },
+  "historicalEvidenceLimit": {
+    "originalJob": 133120929324,
+    "originalSource": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "actualFailure": "capturedHostClient.test.ts356 mandatory queued witness lost to a fulfilled outer request; preceding blocked race passed. Expiry false passed; expiry true failed.",
+    "actualRetainedMainCases": {
+      "total": 81,
+      "pass": 80,
+      "fail": 1,
+      "skip": 0
+    },
+    "actualFullPrerequisiteCases": {
+      "total": 302,
+      "pass": 299,
+      "fail": 1,
+      "skip": 2
+    },
+    "unknown": "Original fulfilled reply value, Host branch, sampled deadline operands and any particular CPU/I/O/runner-load cause are unretained. A source-reachable pre-Main refusal is not proof of the historical cause; a post-dispatch Host timeout or delayed delivery can also fulfill the handler without observed Main insertion.",
+    "historicalFailureReclassified": false,
+    "futureGreenObserved": false,
+    "nativeOrPrivacyOrP11QualificationTransferred": false
+  },
+  "selectionBoundary": {
+    "docsFirstIndependentR2RootSelectionFreshPreimagesRequired": true,
+    "separateFromI386AndDormantModelsP11": true,
+    "preserveUsefulOriginalCohortBeforePrimaryAdvance": true,
+    "sourceOrRefMutationPerformed": false,
+    "projectOrProviderExecutionPerformed": false,
+    "ciMutationPerformed": false
+  },
+  "findings": [],
+  "requiredCorrections": []
+}

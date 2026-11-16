@@ -1,0 +1,990 @@
+{
+  "schemaVersion": 1,
+  "createdAtUTC": "2026-11-16T06:58:37.618023+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "sourceTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "method": "Pure evidence hash/ZIP/JSON and Git object reads only; no project or provider execution",
+  "payloads": [
+    {
+      "path": "ci-e1d14b9/installer/original-job-133120928959-response.json",
+      "bytes": 187694,
+      "blob": "bb286bb8294fe952f27c2c2384015c23d552583a",
+      "sha256": "aa74feec812d89b68cf1f1e7836f2d6a219de87774f020c412906beb8452c447"
+    },
+    {
+      "path": "ci-e1d14b9/installer/job-133120928959.log",
+      "bytes": 177873,
+      "blob": "565ec78fd2fefcc147dc22082cb2788025252478",
+      "sha256": "1886ac9743d34ea3fce9e8e9d000a1a84b2e2432ec2e2e85fe64ecc40fe210e6"
+    },
+    {
+      "path": "ci-e1d14b9/installer/artifact-14203081582.zip",
+      "bytes": 1146605,
+      "blob": "28d8fe149dd76de01d8c7d1f30e0f9a5a187acf9",
+      "sha256": "54f412ddcedf16276dd055b63a3f7be7c4d3e9f43371422e5082c11ea8118be1"
+    },
+    {
+      "path": "ci-e1d14b9/installer/archive-retention.json",
+      "bytes": 11436,
+      "blob": "77de961fd868496226ec2db33194449081a96601",
+      "sha256": "342facae4b127b0e55b55f258a74de999625d65d7c93a06d6c2f66a0ec727f8a"
+    },
+    {
+      "path": "ci-e1d14b9/installer/source-pin-audit.json",
+      "bytes": 527764,
+      "blob": "d655fee7b64eb88e94c865aa0262aed405bd6b6e",
+      "sha256": "dfd3edbda78177da4df12be841499500e59f10cca53882cac18c1e93dc2dc2bd"
+    },
+    {
+      "path": "ci-e1d14b9/installer/visual-review.json",
+      "bytes": 6391,
+      "blob": "e082ce6852f0477ae61c29487b4336f091d51318",
+      "sha256": "3264546820ac1e7f92e5999514d3a5cbf4913fc52ad019cb63b5cc7f88565696"
+    },
+    {
+      "path": "external-e1d-integration/initial-api-responses.json",
+      "bytes": 2088356,
+      "blob": "0b4a4b435bfa0d1968961c29694ff740871917b4",
+      "sha256": "d9e448811262792814becd020fdde0dbf0622d4750462e5c45a34026c8790bda"
+    },
+    {
+      "path": "ci-e1d14b9/owned-jobs-0643.json",
+      "bytes": 24262,
+      "blob": "b29f9985ca2b699bf5a90c70f4731863499aeccc",
+      "sha256": "5c3bf79b0669ca6580c073c8b4b0e4d9d1f9a934e776cb4066b1ec97acdc8f35"
+    },
+    {
+      "path": "ci-e1d14b9/official-host-artifacts-0638.json",
+      "bytes": 1103,
+      "blob": "c7dedc60b6d0bbefdf192dce529835bd1706ae07",
+      "sha256": "7e0ea15923fcf1f20fac102d89ee3f37e4689fb06b5d56acf37f315d4d7d4fbf"
+    },
+    {
+      "path": "ci-e1d14b9/installer/audit.json",
+      "bytes": 164534,
+      "blob": "7e515b77550733513670ea2ac591c35b3f2ea68f",
+      "sha256": "c5758f8bfa33512c150a0dde4fe41fbd0c5c2b3770c0fa4ad38a5296daa0c011"
+    },
+    {
+      "path": "ci-e1d14b9/installer/Plan29-appendix.md",
+      "bytes": 9548,
+      "blob": "12c17a1f0eef3570114e30e45fdca55627dcac08",
+      "sha256": "148c68d4cce27f800bfefa709aefce655321f7dfec90713b7d217ecc532e81c3"
+    }
+  ],
+  "payloadCount": 11,
+  "payloadBytes": 4345566,
+  "fullRawMcpEquals": true,
+  "rawLines": 1775,
+  "teeRawLines": [
+    957,
+    958
+  ],
+  "archiveMembers": [
+    {
+      "path": "TEST-desktop-backend-F7twGS/TEST-codex-install/registry.ndjson",
+      "bytes": 1652,
+      "blob": "5f50706cd6758c63e2bf6ccab46d56a6d7e59a1e",
+      "sha256": "eac7818f8e2b5e85e77d5f9aa0e22f472f35bc58429be829a3653e12ef207ae4",
+      "crc32": "93a3772d"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/TEST-codex-install/invocations.ndjson",
+      "bytes": 15842,
+      "blob": "f858fe1165ff35a490a1b6065807c1e371b01cb4",
+      "sha256": "f28304642bb9e6865399354c76e11d4704b8e28b7262fbee263c3ff6dcac58dd",
+      "crc32": "14563182"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 16328,
+      "blob": "823b933e374ca00275ac9156ad9bac647f28f1a5",
+      "sha256": "e2c0a509b0532c6e2dccd89aa438e44868c828010c7509689976cf0a08dcc544",
+      "crc32": "5c5c4f9e"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/desktop-app.log",
+      "bytes": 21323,
+      "blob": "e101889a854504f78ba002fd5f7e53cf7bf60a34",
+      "sha256": "ceeed6d4b7e71a07c0727a933e07e083e453d2c03ea969c6afd0425c25571afd",
+      "crc32": "7d3afa32"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/desktop-backend-receipt.json",
+      "bytes": 859227,
+      "blob": "c78f35fe1bee7bc338a7824fbbf0485fe478a4ca",
+      "sha256": "4a89c65c3c9937958723d82ae67675efc0550a7fecd762a459627d65160f5801",
+      "crc32": "df12f210"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/desktop-descriptor.json",
+      "bytes": 2664,
+      "blob": "3e1f6f3228eb8edce81da4919dd5c98da346f4e3",
+      "sha256": "1adf8f5a4bac9d01485cf4b2c1b3f716baf33feb363c12f32d7d8987e37bf638",
+      "crc32": "910a48ca"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/host-profile.json",
+      "bytes": 7471,
+      "blob": "caa7e7af06b557e36bd94863d99c273050842afa",
+      "sha256": "2dd851235b768f5d52b7a238f44c9b94c05c4c3fffc2ee8f31190f2bdad3506e",
+      "crc32": "761b31b7"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/hoststore/management-commands/0ffdd8f79c4612414ce68e2d4916d82d9cd390b61a2d11b29bd9427c22f6eb01.json",
+      "bytes": 904,
+      "blob": "0a529e2aa1ca43565235bceb4fe7f733fe700e81",
+      "sha256": "e2fe7b4daeb4185c2317d5ef0d42bda6aec81cf9c0df481184829b02f413203a",
+      "crc32": "1dfb0ab9"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/hoststore/management-commands/2f84d964ad3cd4715ec8dcf75bd546ae5fdb505e7103d943ce13c2faffa14882.json",
+      "bytes": 929,
+      "blob": "cb8dfaa1fc47146a88dd6b3798f0db5ac82f9a4f",
+      "sha256": "cd1401a959518eb5ff49e54aaf0f103509386447233735c6084be81561d1e57c",
+      "crc32": "b5e9827b"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/hoststore/management-commands/9cd0f552b44bb741a1435c9eaca359c6ad34f5b7e3bbd1e6923592f5c7f6249d.json",
+      "bytes": 923,
+      "blob": "e4e813d1f41ca5431c748ddb1507ac9cbbb6bf82",
+      "sha256": "67eee3aa8c64a1ae38266616733ae63a36e5aa4faab92f99f84b261a0f8e5b8e",
+      "crc32": "e247c95d"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/hoststore/management-commands/b836a4d04c98c09a65fe63a5f4c3051c6d9b5b3e802a941119c596229a1b288d.json",
+      "bytes": 2297,
+      "blob": "16cf5e14a809856ffaf55a03c6c4ec64ae8db82b",
+      "sha256": "44370a090033ba9b7082ac177c5d14e974aede5393f474cabf01ee5bba34c6ce",
+      "crc32": "7e90548a"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/hoststore/runtime-checkpoints/cp1-2999bd8f54b3f159097734fed78d05bf1e4901e03025d493c61cd090d6e67581.json",
+      "bytes": 2319,
+      "blob": "03740b9a9b47cd486a8ea26ebadd8185626062b3",
+      "sha256": "c66efc68a695033a8dc6ef9dd8d87cac6ef3b85f3ca7c8e333c839f298c18507",
+      "crc32": "352362b1"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/hoststore/runtime-checkpoints/cp1-d481ace7c442a794887f32b07d237ce932bf1f56f727ef9c2232d43866c40438.json",
+      "bytes": 1895,
+      "blob": "0a3e014ee688491c875f7fc8e8e3334a42b01e83",
+      "sha256": "4b8830d9ebb828a3007b85883a62d6eaa4eefed2f94d9a43520ff3e2932a0487",
+      "crc32": "76785e29"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/hoststore/runtime-sources/index.json",
+      "bytes": 1687,
+      "blob": "782ce599ce8c16e67da5407d749b787f60c09a9e",
+      "sha256": "07ef1960269fd6922ecc0d4c87980bca30acfae6ccbbba50ce6627d74b5703ed",
+      "crc32": "2fb9de5a"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "bytes": 453,
+      "blob": "4f86262aaa64cd90d37101f4f1f6da7aaf3cb53a",
+      "sha256": "92ba1102b951de2f1d3fcbb93ff4b07b6a75ba37d30badc6f1e2ca4fcec8869c",
+      "crc32": "e7c7c946"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/hoststore/teams/test-selection-next-team/inboxes/team-lead.json",
+      "bytes": 202,
+      "blob": "743695a56a5984ba0dbbf2895b5d74c2254f8985",
+      "sha256": "16026037ec11ea2d6591f67174b87027ccf11354c59fe9d0da524b94771c2f9e",
+      "crc32": "029a042e"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "crc32": "9fc3bdb4"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-a-launch.png",
+      "bytes": 88663,
+      "blob": "57ebaad7e4e49e816053529b735208ccacec7c3f",
+      "sha256": "953e28f0915a8f9fa56f6b5c61528336771699160b69f4f2251bccb2cc883a66",
+      "crc32": "def96747"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-a-survived.png",
+      "bytes": 103824,
+      "blob": "1037dcc16b2d49451bdc70dfc6ac00b24b18f95e",
+      "sha256": "8e853947a7f076750b7fdfb4b5c400a625c76ad99e568962eb08779b4e1ae273",
+      "crc32": "830c2bb7"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-b-launch.png",
+      "bytes": 84983,
+      "blob": "720af42fd38c36916c0b287ee6451ea93a0905d9",
+      "sha256": "f1806aeebd3ad2a21e8e2fd5bb5f2646a880b8ae554df76e24085acafdf5b326",
+      "crc32": "8f9155a6"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-completed.png",
+      "bytes": 108178,
+      "blob": "561ed886081cdee0da7712de7dd34d01a199c9f5",
+      "sha256": "b4bed05f99db30dd30490af8507832db3e3f4998379076f3d703e2771b320664",
+      "crc32": "c9a8911a"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-effects.json",
+      "bytes": 23162,
+      "blob": "6d98193edf4d04f622563afe08169dc33d85f2a7",
+      "sha256": "7e85ad4881cc7be30d4e8b011065b7b251e2d1a4904b2bf4378b8370e9d49642",
+      "crc32": "f04695c5"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-before.png",
+      "bytes": 73405,
+      "blob": "df66d3cd626f7a1217cb70f781262e911d088746",
+      "sha256": "c92677a3662a34dcef430e33fbe0fd04f30217a0a04fa5deec0d1c596622ce8e",
+      "crc32": "3cb43ff9"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-dialog.png",
+      "bytes": 91558,
+      "blob": "5a4326f77fab729a3d0ef3de193d5f51d002e838",
+      "sha256": "343cca845370f5b6682734b71ce0caf72dc698ea81d7eab7050bbc5bc4564f76",
+      "crc32": "5205996f"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-ready.png",
+      "bytes": 67264,
+      "blob": "6ef1e492faebdcc988a7599ca1c92e2bcf87ebfb",
+      "sha256": "815cb3c504e6297188ddacf41465f10a39aaf31518bdaa4711c8ffeeb4b2b4c8",
+      "crc32": "70e46ed5"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-page.png",
+      "bytes": 87018,
+      "blob": "1b5074921c3e9df287cceb587f3d46dfeaeb9219",
+      "sha256": "7b2f8073954fe97283a74567ed4bf2f656b91956bc76d038bea96e837c5b2b8a",
+      "crc32": "f4344cf1"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-reloaded.png",
+      "bytes": 76076,
+      "blob": "057631010378bf8c1a9667c15cc9fc9143dfd749",
+      "sha256": "b274516d12708ac6b3b08d59c81ad370b3a6f3aa8f63e60b0c1c180aef83b53a",
+      "crc32": "676849cf"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-selected.png",
+      "bytes": 70747,
+      "blob": "4f3b61385b747254c3003f96d25a560aaaf28361",
+      "sha256": "f3abb87dcd3ed36df0e2a92630330aee9293bafcd7c2fa41fb933c7a9cb768bd",
+      "crc32": "1463c36c"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-emulated-selection-stopped.png",
+      "bytes": 95285,
+      "blob": "9ad227205c5787f7ff91c3589a75f385d936e613",
+      "sha256": "25421f2566e44a32fe3a870fcb2dd1f028a26ea5163f5928132a074200e92b81",
+      "crc32": "2791f970"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/ui-seed-receipt.json",
+      "bytes": 2335,
+      "blob": "ae9a5985e512600d6a6f18245b719f3514c13b4b",
+      "sha256": "9db1b8eca78de8a30534dc6984d2883c495a753b138c527ea65a4bf937856e16",
+      "crc32": "a575f9fc"
+    },
+    {
+      "path": "TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/current.json",
+      "bytes": 502,
+      "blob": "5130a485ad5a7304871e0f4e027f21e5562e4d9d",
+      "sha256": "b164969685c6134805429c014b832c8a29a3ccba4049ef7430d8bd86e1b8020d",
+      "crc32": "50e92c84"
+    },
+    {
+      "path": "host-emulated-emulated-installer-ui.log",
+      "bytes": 227,
+      "blob": "b27e8a34b42b19a28c6ee282a0244c475e1e0a20",
+      "sha256": "136331accd0612c97edf5c772730957d806d8f066ab1ee066032ed902bee02ad",
+      "crc32": "32e5fe8a"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1055,
+      "blob": "5b436b2ac2ab67c32cdaa3036bb4791acafc129c",
+      "sha256": "07e4630a689cdc3056a1515002bd4d8079fc571434e32483a03e04a2f4e21c43",
+      "crc32": "8f5bab62"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "bytes": 1355,
+      "blob": "030047aa69314c2d62b36fb5b09cbdcd61f2b776",
+      "sha256": "1057542c76eff3cf373e379719a6b24cfe474d037f622d686fe234055ab42098",
+      "crc32": "1e8473ba"
+    }
+  ],
+  "archiveAllCRCAndExtractedBytesExact": true,
+  "selectedSourceCount": 1757,
+  "selectedSourceBytes": 20343408,
+  "orderedOriginalBeforeAfterExact": true,
+  "selectedSourceAuthorRowsExactlyFreshGit": true,
+  "selectedSourceAuthorRowsCanonicalSHA256": "5b7acae10f6b464d7a063396301426d38aeb4182a3dd5b44eb193d08d1ef08ab",
+  "selectedOriginalRowsCanonicalSHA256": "5db5b1251b47fe875bd46b22aa8a6c6899d5b965821fe03cb2020e0e32511581",
+  "selectedHostSourceLeaves": 586,
+  "notEntireHostSourceTree": true,
+  "additionalSourceReads": [
+    {
+      "path": "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+      "bytes": 8676,
+      "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+      "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-resume-records.ts",
+      "bytes": 11685,
+      "blob": "0ca117bd5e84ae6368278a3a0a1cda40b5ec680b",
+      "sha256": "fe69bc8ed0208727811e53fbf7f1c92de27732181db6afb63de96d49f6a174ff",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+      "bytes": 7965,
+      "blob": "d3068dcabf3ea7334a252967b43931f8751f7d58",
+      "sha256": "58bb413b06a3d442f1916cba3d7afcf0e44679f679810459409a53881900f1da",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/identity.ts",
+      "bytes": 709,
+      "blob": "d4e5631330f08ccc4138353f6e2b5f49f7cac01f",
+      "sha256": "a795125fbf639552833eb3730d971b9de16437ed3507be303a5b42d541ba8bb7",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "bytes": 49613,
+      "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "bytes": 26261,
+      "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+      "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 111672,
+      "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+      "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "bytes": 22082,
+      "blob": "a9d725fbe11278dd98611b49d570c19d80684087",
+      "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "bytes": 24968,
+      "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+      "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+      "bytes": 20305,
+      "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+      "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+      "bytes": 3804,
+      "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+      "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "bytes": 2115,
+      "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+      "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-codex-installer-fixture.ts",
+      "bytes": 12137,
+      "blob": "b68eabb08c71dc31d2f9d4205cff265498fefe1f",
+      "sha256": "1818787c244d71ed8c8540ffa9acc6e749eaa8403e32f0a356d23ec99237d9b8",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-codex-installer-ui.ts",
+      "bytes": 16522,
+      "blob": "f049194429d74ab3e3a6808abd7c16d9772d5606",
+      "sha256": "19b78ef8d3dd637d5ae9b71c57d1b4dcd7175be344932afb8e55c53a33f8ba9d",
+      "mode": "100644",
+      "inSelected": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "mode": "100644",
+      "inSelected": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "bytes": 53683,
+      "blob": "e2b96672feefb924a39e20131514e0db5e347311",
+      "sha256": "ba36a5c01c6f670bcba92e6a155683385cd3eb33c871f94b8191b378b226f9d9",
+      "mode": "100644",
+      "inSelected": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "bytes": 20040,
+      "blob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+      "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e",
+      "mode": "100644",
+      "inSelected": false
+    },
+    {
+      "path": "test/scripts/installDependenciesWithRetry.test.mjs",
+      "bytes": 4939,
+      "blob": "c1c0232d09e5cd898d7acabcc48b87bab58f3c82",
+      "sha256": "3aab9d6568157c883993c43b8057193175e69c16c31129ce3867a14e686a8f00",
+      "mode": "100644",
+      "inSelected": false
+    }
+  ],
+  "originalCIIndividualRowsExact": 126,
+  "originalRunSnapshot": {
+    "id": 43813731227,
+    "name": "Host Emulated Acceptance",
+    "node_id": "WFR_kwLORVTEtM8AAAAKM4B7mw",
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "display_title": "fix: complete Host frontend parity with emulated provider checks",
+    "run_number": 90,
+    "event": "pull_request",
+    "status": "queued",
+    "conclusion": null,
+    "workflow_id": 417564953,
+    "check_suite_id": 118610994536,
+    "check_suite_node_id": "CS_kwDORVTEtM8AAAAbncQlaA",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43813731227",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43813731227",
+    "pull_requests": [
+      {
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1192",
+        "id": 5299966773,
+        "number": 1192,
+        "head": {
+          "ref": "fix/frontend-parity-completion-20261113",
+          "sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        },
+        "base": {
+          "ref": "feat/provider-host-frontend-parity-20261112",
+          "sha": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        }
+      }
+    ],
+    "created_at": "2026-11-16T05:59:11Z",
+    "updated_at": "2026-11-16T05:59:13Z",
+    "actor": {
+      "login": "777genius",
+      "id": 13103045,
+      "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/777genius",
+      "html_url": "https://github.com/777genius",
+      "followers_url": "https://api.github.com/users/777genius/followers",
+      "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+      "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+      "organizations_url": "https://api.github.com/users/777genius/orgs",
+      "repos_url": "https://api.github.com/users/777genius/repos",
+      "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/777genius/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "run_attempt": 1,
+    "referenced_workflows": [],
+    "run_started_at": "2026-11-16T05:59:11Z",
+    "triggering_actor": {
+      "login": "777genius",
+      "id": 13103045,
+      "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/777genius",
+      "html_url": "https://github.com/777genius",
+      "followers_url": "https://api.github.com/users/777genius/followers",
+      "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+      "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+      "organizations_url": "https://api.github.com/users/777genius/orgs",
+      "repos_url": "https://api.github.com/users/777genius/repos",
+      "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/777genius/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43813731227/jobs",
+    "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43813731227/logs",
+    "check_suite_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-suites/118610994536",
+    "artifacts_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43813731227/artifacts",
+    "cancel_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43813731227/cancel",
+    "rerun_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43813731227/rerun",
+    "previous_attempt_url": null,
+    "workflow_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/workflows/417564953",
+    "head_commit": {
+      "id": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "tree_id": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+      "message": "Merge reviewed migration continuation and fix Windows checkouts\n\nPreserve both histories, all incoming evidence and the prepared frontend/native test fixes. Enable Windows long paths before checkout in six existing job definitions, keeping all original commands, matrices, deadlines and acceptance gates.",
+      "timestamp": "2026-11-16T05:29:53Z",
+      "author": {
+        "name": "Илия",
+        "email": "iliyazelenkog@gmail.com"
+      },
+      "committer": {
+        "name": "Илия",
+        "email": "iliyazelenkog@gmail.com"
+      }
+    },
+    "repository": {
+      "id": 1163183284,
+      "node_id": "R_kgDORVTEtA",
+      "name": "agent-teams-ai",
+      "full_name": "777genius/agent-teams-ai",
+      "private": false,
+      "owner": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/777genius/agent-teams-ai",
+      "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+      "fork": false,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+      "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+      "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+      "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+      "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+      "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+      "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+      "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+      "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+      "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+      "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+      "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+      "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+      "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+      "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments"
+    },
+    "head_repository": {
+      "id": 1163183284,
+      "node_id": "R_kgDORVTEtA",
+      "name": "agent-teams-ai",
+      "full_name": "777genius/agent-teams-ai",
+      "private": false,
+      "owner": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/777genius/agent-teams-ai",
+      "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+      "fork": false,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+      "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+      "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+      "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+      "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+      "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+      "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+      "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+      "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+      "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+      "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+      "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+      "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+      "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+      "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments"
+    }
+  },
+  "terminalJob": {
+    "id": 133120928959,
+    "name": "Offline Host Desktop (darwin-arm64, installer)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43813731227,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "officialArtifact": {
+    "id": 14203081582,
+    "name": "host-emulated-darwin-arm64-e1d14b9cd0fa1d7896b58e513f9040639e9e4940-installer",
+    "size_in_bytes": 1146605,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14203081582",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14203081582/zip",
+    "expired": false,
+    "created_at": "2026-11-16T06:33:56Z",
+    "expires_at": "2026-11-30T06:33:55Z",
+    "updated_at": "2026-11-16T06:33:56Z",
+    "digest": "sha256:54f412ddcedf16276dd055b63a3f7be7c4d3e9f43371422e5082c11ea8118be1",
+    "workflow_run": {
+      "id": 43813731227,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+    }
+  },
+  "archivedCurrentJson": {
+    "relativePath": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/current.json",
+    "bytes": 502,
+    "blob": "5130a485ad5a7304871e0f4e027f21e5562e4d9d",
+    "sha256": "b164969685c6134805429c014b832c8a29a3ccba4049ef7430d8bd86e1b8020d",
+    "exactOriginalManifestObjectAndHash": true
+  },
+  "qualification": "Byte/source foundation only; independent semantic report follows separately; v1 prose current.json omission identified."
+}

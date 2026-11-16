@@ -1,0 +1,373 @@
+{
+  "schema": "root-Darwin-prepublication-byte-review/v1",
+  "reviewedAtUTC": "2026-11-16T07:19:00.531678+00:00",
+  "result": "APPROVE",
+  "base": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+  "manifest": {
+    "bytes": 113825,
+    "blob": "de9176538dd197596fe581bafc64a30f3caf8404",
+    "sha256": "5bca086d393658f57332e270a78d436b575ce43b2b600da092f913995400b300"
+  },
+  "files": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-docs.json",
+      "bytes": 128271,
+      "blob": "939893c9cca1b1038933a204747ba7eb143e2c20",
+      "sha256": "7929b80ec4fdc56a7d4910524cd08dbd6a5bc110e9cc4dfad828cf3f9c69316c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-docs.json",
+      "bytes": 133692,
+      "blob": "6726acaa92491a73d3d70927bf72b875afaf1ec2",
+      "sha256": "bae0826097ed2390745621cacd999834ca0dcc23b92109a8e5ae2a7cdcc94900"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-source.json",
+      "bytes": 119279,
+      "blob": "bc7e064b679043de90f1c3b19866f88b487ec794",
+      "sha256": "e7594f319c82a63f065a64b2cd7fa7fb7042137b073f3affec19cac3e1da3e0f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-source.json",
+      "bytes": 124558,
+      "blob": "5cc76016f0d792f65493a3463742790329f39fe8",
+      "sha256": "06f760ad3db577d6eee8164637fbefefcc1bf1e655f624d36359145c4ad8bd2b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-prepublication.json",
+      "bytes": 12859,
+      "blob": "35e2995427865771d37fc984e190553b1976cf5a",
+      "sha256": "cefbbd811f39677693f02e49df8319c6bd5ebe2d7183d433079a89c753bd38e8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/independent-byte-tree-proof.json",
+      "bytes": 121082,
+      "blob": "a611b1a35f10603557001f19ab4d0b556f60a739",
+      "sha256": "ca3cd58ae33d32d8e5afb667558c785bfdfe15195fbfe5f18c382bb8f17f3e6a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-prepublication.json",
+      "bytes": 26862,
+      "blob": "6064501cae149e90585db8264f320dc57b881f0e",
+      "sha256": "0c4dcc3bfd5b676f512b8441d85033d1116c9a88fd488d9a5a4a9e856359ff65"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/root-remote-tree.json",
+      "bytes": 600,
+      "blob": "3c82d4778cc7115ef620c4f7ed9e021e05474c87",
+      "sha256": "c7500b4fa806958e3c4a7f8b9204a06899d84208a6aa2788ca94a8301566d88f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-docs-commit-response.json",
+      "bytes": 717,
+      "blob": "28569ad00fcbee6f0471f14fe11ccefd06ee455e",
+      "sha256": "b618c3c16848a26f4a98c09aec64644da0f9abae9dee22cb9587ebb0542a36fc"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-docs-commit-immutable-readback.json",
+      "bytes": 3736,
+      "blob": "b0614f131434102d01e1809820c1d418fb0ba778",
+      "sha256": "07d6b367e2ff5c676e37ce92c2fd967e89520c1df085dff2e8af0a4bcd51bd9b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/ordinary-docs-push-response.json",
+      "bytes": 566,
+      "blob": "8ac20154c1fb15cf85f3a921f2eff3a516a23359",
+      "sha256": "c6519427477fd1dd59730009ef6f16e15dd2b1d6609a79f6f6eabccfedada87a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/post-docs-push-readback.json",
+      "bytes": 175321,
+      "blob": "ef685b4028b8e767bc93b120e65f9fbc9a0bdd5b",
+      "sha256": "16fede68c6a1d9c6adf5c95ca36a4f7488c35b5f5853f700b2e34f563de8a05a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/fresh-docs-precommit-guards.json",
+      "bytes": 176376,
+      "blob": "1129c957a8bcc4cdf5f52339e6122a7724c5ff8a",
+      "sha256": "e876755f0167da08e978cc5abdea3c7329fd6fd0cffbea411032e6045662230d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-source-commit-response.json",
+      "bytes": 695,
+      "blob": "bb64e78eb88b2d9621feb37326c78fbfe19e86bb",
+      "sha256": "ea104bd290ddc3f99e31846b925e63d48321bf16c26442999c93a704bdb953be"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/created-source-commit-immutable-readback.json",
+      "bytes": 3692,
+      "blob": "06191dda55d6ff5e962669f5192925c090c9b617",
+      "sha256": "88b681dc49c41f4c492305554a3c7e0c0dd9dc7e9b161e03ae1f9fb3740ecc95"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/ordinary-source-push-response.json",
+      "bytes": 565,
+      "blob": "0b6e43b71b65d7544800212efca71e6bba2d81ba",
+      "sha256": "ee85792b499ed0fc7856d3754eef797f93cca8f50016042855fc5706cfb8a688"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/post-source-push-readback.json",
+      "bytes": 175321,
+      "blob": "def3756ed3845fc8036677702c4584e06d3150bf",
+      "sha256": "b3e9d44072665165d0f44c347e95002a89fb8cc2bbadf7739f9c906f4f0d73fc"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/i386-readback/fresh-source-precommit-guards.json",
+      "bytes": 175268,
+      "blob": "8525b7e31cdd929cfbcf60773ae094df37edf37a",
+      "sha256": "b627b6457843ad076ca90420bf9ab35189f4f3547e14c6916f44bb98c388fd7d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-appendix.md",
+      "bytes": 13583,
+      "blob": "97810fb7cb19b2a34a8c6b83009e869ec4082409",
+      "sha256": "f32af083ac05d666bf86f1bd8e1b1167916060745094dcae93135cdc37238c37"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate.patch",
+      "bytes": 3674,
+      "blob": "b898bd9032cec5a0d2815c4d4e268d13a088f762",
+      "sha256": "6127e13f8ed30c9edc36e04730cea8c2a42ff26dbe5721c91d1c18dcfe378a58"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-metadata.json",
+      "bytes": 5822,
+      "blob": "28b5c02baa4551f7d41116c33f7ceb4912f840e4",
+      "sha256": "a6fe9d6500df27cced7ae51ef8669ada1914f97b1ef9ad8a20f3345eedaaa6e8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/original-failure-and-source-analysis.json",
+      "bytes": 3299,
+      "blob": "d62cac555dfc92e9b3da154cd85e9992d70b884e",
+      "sha256": "7698708ab02126d824b0122c8db02daaa767076cf86c0d1c29b0b61e8ebf5480"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/source-and-venue-pins.json",
+      "bytes": 12520,
+      "blob": "b900529a659806a0bf5fea1cd61a2b4264d6b875",
+      "sha256": "476ef0e33c55a1a0d5e742567d668213861f5c98157c3d2db74654b2f282af91"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/independent-source-r1-review.json",
+      "bytes": 24849,
+      "blob": "cc5e52d57151a27733620ab9801e900139f2c72b",
+      "sha256": "bc10d2e0b1e6bf6a5b00a9a9f7be75c847499072c44e47d837687bb2abdbef44"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/preimage-capturedHostClient.test.ts.txt",
+      "bytes": 51981,
+      "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+      "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-capturedHostClient.test.ts.txt",
+      "bytes": 51989,
+      "blob": "4e8a47af47549d22df0b7199a58a2511d8ecfda0",
+      "sha256": "34106dc02e8d38f0be8dffe3b0c734972ec0e7d8e0833f1bfc5757c430194f62"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/preimage-retainedNativeCustody.ts.txt",
+      "bytes": 29798,
+      "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+      "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/candidate-retainedNativeCustody.ts.txt",
+      "bytes": 30715,
+      "blob": "2726155997717ed0f22c1d2f71d0adf5a42c190c",
+      "sha256": "1555d38eaecd485f501b366e9a2a27b5f0f0c610d51079a88b8ada506e80794a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/current-preimages.json",
+      "bytes": 10136,
+      "blob": "37172195e343a833e8fd36fc343debb7fe45e1de",
+      "sha256": "d7bb1f31d5e9537fa576d966239376b556736864b85cdde641fa3d4b892a7ea9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-root-ordered-selection.md",
+      "bytes": 11301,
+      "blob": "d0df968462614a31d8ab5cc43ac3b09ebc6aa9fd",
+      "sha256": "c4e74225de6fb9059793f46c93f09583448649492cfffce33693a4edc5bae52d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/darwin-original/independent-process-darwin-x64-failure-review.json",
+      "bytes": 26323,
+      "blob": "46d38413787b525f23600f398076e50e5ee9963e",
+      "sha256": "0c7cc934c3bf40fa830d2db5d7ccdaeec56ab09a68cd36f0f1cbbf0e2c135587"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/job-original-response.json",
+      "bytes": 235805,
+      "blob": "7f5e459479d17ad4c6d8c5425a973cd6c21875ab",
+      "sha256": "44956b1a98d570b39c9455176d68c7f1090d3e71515339f743a46ae797d50a98"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/job.log",
+      "bytes": 191999,
+      "blob": "7a6f49d16a45b1943f3344e2f4b121c1f406887c",
+      "sha256": "15165c8f89c4c7d783435484efad2c328a4d1c2ad91e9dc605c87513eece3fde"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/artifact-14203956752.zip",
+      "bytes": 317740,
+      "blob": "891547517df19ed9562cf6311c329f7989c953f7",
+      "sha256": "58c2f8f667ff43a2ed586932403903856aa2491402ae19be9ab13cb541d3f6b5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/archive-retention.json",
+      "bytes": 1356,
+      "blob": "2ce796313e71fed484b61702fde7b29c6d693e48",
+      "sha256": "649a6e2c656422b6b25af0dd3ab13b13561e733e18433d41ab073269e5185bba"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/official-host-artifacts-0702.json",
+      "bytes": 2959,
+      "blob": "e1f6f9f0ef0cb0e3efc4eda7cb87c0fa2a639387",
+      "sha256": "2894018dbf71df54e0bb8456f7a2c7d8e1a3089377e8ee43e72a276d196c6793"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/owned-jobs-0700.json",
+      "bytes": 36811,
+      "blob": "9887db5797c7e4ca901e8f684852204d125d1f02",
+      "sha256": "93fa2619c1e6fa0c2881607ed90029571db3bc43b6e061daada7d160c345574c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/source-and-case-proof.json",
+      "bytes": 228982,
+      "blob": "c84353d66250bd53be5473829447447ab0a8ba28",
+      "sha256": "fae0223af31b9235ed7d01cf08dd4c3e882c763ce26358faf83f590b7ce59217"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/audit.json",
+      "bytes": 7711,
+      "blob": "ab7105a2ce0a35dfd15c280a573d5f194785048a",
+      "sha256": "83f728902caf58b0030f1c674b7e57f64028dd731ef58dfdcf17a284c905ead2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/Plan29-appendix.md",
+      "bytes": 2137,
+      "blob": "3b32dc144a4e8ddd7ac572d7ee7af6febd125725",
+      "sha256": "1fa40ebaa73dd64d01a4d72ca08ee95d7161460880f6688774b8374a13d8dbe4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/checkpoint.json",
+      "bytes": 2777,
+      "blob": "bf2e6620e90e2822250e378fc7492ba47eab144a",
+      "sha256": "2269800df9bcc8a99a9cc0d94dbdadf00a8ff424a35d2a149c55399056025416"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/independent-original-review.json",
+      "bytes": 18799,
+      "blob": "abbc5d5cf7fc6f7fa5c78f29ab0856e6f3c51794",
+      "sha256": "daf7915fcd8e7e9aaaae8378974dce5f56082d869f29287c8d4518cc2ce5f3bb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/independent-byte-source-proof.json",
+      "bytes": 201524,
+      "blob": "94722bf72ae119002368ac96fd1defdccd3468bf",
+      "sha256": "486ca5a0985aa2c924ec81972df72e2b09c3b797f76fa952e82085f571b96650"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 1994546,
+      "blob": "f4696f07178f3067f61e24c13c0dc2043dc73297",
+      "sha256": "4c7240b04de05e7e5af4ff893a402ea33c86aaa0fc4ecadc35b43d205618614d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/publication-index.json",
+      "bytes": 44991,
+      "blob": "b4db5ddfa90f374f2391fc523d32130fd0aa2c06",
+      "sha256": "170bf11f4b54dffccb88937cc16e2ebb3847db254f7e4f89a981dc698edf4571"
+    }
+  ],
+  "payloadCount": 45,
+  "payloadBytes": 4943587,
+  "fullLeafCount": 11194,
+  "fullDirectoryCountIncludingRoot": 1688,
+  "allPreparedLeafMapsExact": true,
+  "preservedReferenceCount": 50,
+  "allReferenceBytesExact": true,
+  "archives": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/artifact-14203956752.zip",
+      "members": 2
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202660278.zip",
+      "members": 4
+    }
+  ],
+  "archiveCount": 2,
+  "archiveMembers": 6,
+  "planPrefix": {
+    "bytes": 1969658,
+    "blob": "a6860c298a8ef6bb3d806d93758ff01624dbee03",
+    "sha256": "c76b7f205110c1dbda54a38c5f3008aa6bd20e8162252b69df37343afed0ff99"
+  },
+  "planResult": {
+    "bytes": 1994546,
+    "blob": "f4696f07178f3067f61e24c13c0dc2043dc73297",
+    "sha256": "4c7240b04de05e7e5af4ff893a402ea33c86aaa0fc4ecadc35b43d205618614d"
+  },
+  "planSegments": [
+    {
+      "label": "Exact prospective Main admission TEST source R1",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-appendix.md",
+      "bytes": 13583,
+      "blob": "97810fb7cb19b2a34a8c6b83009e869ec4082409",
+      "sha256": "f32af083ac05d666bf86f1bd8e1b1167916060745094dcae93135cdc37238c37",
+      "separatorOffset": 1969658,
+      "contentOffset": 1969660
+    },
+    {
+      "label": "Root ordered selection governs last",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-root-ordered-selection.md",
+      "bytes": 11301,
+      "blob": "d0df968462614a31d8ab5cc43ac3b09ebc6aa9fd",
+      "sha256": "c4e74225de6fb9059793f46c93f09583448649492cfffce33693a4edc5bae52d",
+      "separatorOffset": 1983243,
+      "contentOffset": 1983245
+    }
+  ],
+  "preservedMoves": 40,
+  "prospectiveSourceChanges": [
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 51981,
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+      },
+      "candidate": {
+        "bytes": 51989,
+        "blob": "4e8a47af47549d22df0b7199a58a2511d8ecfda0",
+        "sha256": "34106dc02e8d38f0be8dffe3b0c734972ec0e7d8e0833f1bfc5757c430194f62"
+      },
+      "candidateScratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate/test/features/agent-backend/capturedHostClient.test.ts"
+    },
+    {
+      "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 29798,
+        "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+        "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7"
+      },
+      "candidate": {
+        "bytes": 30715,
+        "blob": "2726155997717ed0f22c1d2f71d0adf5a42c190c",
+        "sha256": "1555d38eaecd485f501b366e9a2a27b5f0f0c610d51079a88b8ada506e80794a"
+      },
+      "candidateScratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate/test/features/agent-backend/fixtures/retainedNativeCustody.ts"
+    }
+  ],
+  "I386HeaderPreserved": true,
+  "documentationTree": "732bfd36a3f6a00029c385effe1f8efb59abc23b",
+  "sourceTree": "991da6020ab4ea2b22bfb80512647516a1c57d91",
+  "sourceApplied": false,
+  "phaseAApplied": false,
+  "geometryApplied": false,
+  "primaryAdvanced": false,
+  "scope": "Complete prepared byte preservation only; independent publication review, actual readbacks and original resulting-source CI remain separate."
+}

@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "createdAtUTC": "2026-11-16T07:03:53.730074+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "sourceTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "runId": 43813731227,
+  "jobId": 133120928959,
+  "artifactId": 14203081582,
+  "originalOutcome": "PASS: original Installer lane only",
+  "payloadCount": 14,
+  "payloadBytes": 4525071,
+  "payloads": [
+    {
+      "path": "ci-e1d14b9/installer/original-job-133120928959-response.json",
+      "bytes": 187694,
+      "blob": "bb286bb8294fe952f27c2c2384015c23d552583a",
+      "sha256": "aa74feec812d89b68cf1f1e7836f2d6a219de87774f020c412906beb8452c447"
+    },
+    {
+      "path": "ci-e1d14b9/installer/job-133120928959.log",
+      "bytes": 177873,
+      "blob": "565ec78fd2fefcc147dc22082cb2788025252478",
+      "sha256": "1886ac9743d34ea3fce9e8e9d000a1a84b2e2432ec2e2e85fe64ecc40fe210e6"
+    },
+    {
+      "path": "ci-e1d14b9/installer/artifact-14203081582.zip",
+      "bytes": 1146605,
+      "blob": "28d8fe149dd76de01d8c7d1f30e0f9a5a187acf9",
+      "sha256": "54f412ddcedf16276dd055b63a3f7be7c4d3e9f43371422e5082c11ea8118be1"
+    },
+    {
+      "path": "ci-e1d14b9/installer/archive-retention.json",
+      "bytes": 11436,
+      "blob": "77de961fd868496226ec2db33194449081a96601",
+      "sha256": "342facae4b127b0e55b55f258a74de999625d65d7c93a06d6c2f66a0ec727f8a"
+    },
+    {
+      "path": "ci-e1d14b9/installer/source-pin-audit.json",
+      "bytes": 527764,
+      "blob": "d655fee7b64eb88e94c865aa0262aed405bd6b6e",
+      "sha256": "dfd3edbda78177da4df12be841499500e59f10cca53882cac18c1e93dc2dc2bd"
+    },
+    {
+      "path": "ci-e1d14b9/installer/visual-review.json",
+      "bytes": 6391,
+      "blob": "e082ce6852f0477ae61c29487b4336f091d51318",
+      "sha256": "3264546820ac1e7f92e5999514d3a5cbf4913fc52ad019cb63b5cc7f88565696"
+    },
+    {
+      "path": "external-e1d-integration/initial-api-responses.json",
+      "bytes": 2088356,
+      "blob": "0b4a4b435bfa0d1968961c29694ff740871917b4",
+      "sha256": "d9e448811262792814becd020fdde0dbf0622d4750462e5c45a34026c8790bda"
+    },
+    {
+      "path": "ci-e1d14b9/owned-jobs-0643.json",
+      "bytes": 24262,
+      "blob": "b29f9985ca2b699bf5a90c70f4731863499aeccc",
+      "sha256": "5c3bf79b0669ca6580c073c8b4b0e4d9d1f9a934e776cb4066b1ec97acdc8f35"
+    },
+    {
+      "path": "ci-e1d14b9/official-host-artifacts-0638.json",
+      "bytes": 1103,
+      "blob": "c7dedc60b6d0bbefdf192dce529835bd1706ae07",
+      "sha256": "7e0ea15923fcf1f20fac102d89ee3f37e4689fb06b5d56acf37f315d4d7d4fbf"
+    },
+    {
+      "path": "ci-e1d14b9/installer/audit-v2.json",
+      "bytes": 165272,
+      "blob": "76667fab95b24ae45ff2273426f025bb5694463f",
+      "sha256": "e7c3c61b4f003c4364b6ff7179d883f27b1eac14148161299158415ee340bc91"
+    },
+    {
+      "path": "ci-e1d14b9/installer/Plan29-appendix-v2.md",
+      "bytes": 9773,
+      "blob": "865f74f3fbfce9b5a0a6d6f7d51844aad587f44d",
+      "sha256": "c21ed910c7678900f4a1091b266aeb84a07ed2450eeb231299fac908e6d32a89"
+    },
+    {
+      "path": "ci-e1d14b9/installer/audit.json",
+      "bytes": 164534,
+      "blob": "7e515b77550733513670ea2ac591c35b3f2ea68f",
+      "sha256": "c5758f8bfa33512c150a0dde4fe41fbd0c5c2b3770c0fa4ad38a5296daa0c011"
+    },
+    {
+      "path": "ci-e1d14b9/installer/Plan29-appendix.md",
+      "bytes": 9548,
+      "blob": "12c17a1f0eef3570114e30e45fdca55627dcac08",
+      "sha256": "148c68d4cce27f800bfefa709aefce655321f7dfec90713b7d217ecc532e81c3"
+    },
+    {
+      "path": "ci-e1d14b9/installer/checkpoint.json",
+      "bytes": 4460,
+      "blob": "dbd2203b9981c3aed135fcdecfc04e11f1e729d8",
+      "sha256": "0961cdce26690a5903005c94ba8c7063f58541c3961a940e4dd7bc48d3c6367d"
+    }
+  ],
+  "archiveMembers": 34,
+  "pngCount": 11,
+  "actuallyViewedPngs": [
+    "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-before.png",
+    "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-ready.png",
+    "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-page.png",
+    "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-installer-settings-dialog.png",
+    "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-selected.png",
+    "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-reloaded.png",
+    "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-a-launch.png",
+    "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-b-launch.png",
+    "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-a-survived.png",
+    "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-completed.png",
+    "extracted/TEST-desktop-backend-F7twGS/ui-emulated-selection-stopped.png"
+  ],
+  "selectedSourceCount": 1757,
+  "selectedSourceBytes": 20343408,
+  "currentHelperTests": {
+    "tests": 119,
+    "pass": 118,
+    "fail": 0,
+    "skipped": 1
+  },
+  "additionalInstallerTests": {
+    "tests": 7,
+    "pass": 7,
+    "fail": 0,
+    "skipped": 0
+  },
+  "teamAndCompleteTypedStaticSteps": "SKIPPED in this lane",
+  "nativeOrReleaseQualified": false,
+  "independentReview": "pending; authored packet only",
+  "originalBytesFrozen": true,
+  "canonicalRevision": 2,
+  "proseCorrection": {
+    "basis": "Independent reviewer /root/migration_scope found that current.json is present in the original ZIP. Author freshly verified exact archive/extracted bytes and original receipt object/hash.",
+    "scope": "Correct only archived-current.json scope; retain every business, cleanup, source, image, binary/package/tarball limit and all original v1 bytes.",
+    "canonicalAudit": "audit-v2.json",
+    "canonicalAppendix": "Plan29-appendix-v2.md",
+    "priorCheckpoint": {
+      "bytes": 4460,
+      "blob": "dbd2203b9981c3aed135fcdecfc04e11f1e729d8",
+      "sha256": "0961cdce26690a5903005c94ba8c7063f58541c3961a940e4dd7bc48d3c6367d"
+    },
+    "v1AuditAndAppendixAndCheckpointIncludedAsHistoricalPayloads": true,
+    "projectExecution": false
+  }
+}

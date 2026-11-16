@@ -1,0 +1,256 @@
+{
+  "schema": "independent-complete-I386-FD5-prepublication-and-immutable-tree-review/v1",
+  "reviewer": "/root/ui_failures",
+  "reviewedAtUTC": "2026-11-16T07:01:38.573424+00:00",
+  "result": "APPROVE",
+  "blockingFindings": [],
+  "manifest": {
+    "bytes": 175909,
+    "blob": "3bb547dfcccd8b36ebdc63620090531a28b2c3d7",
+    "sha256": "3a5106e9130d7c8de483b44500ef1fb53552759ddc0f6db1c9e9c21edf1263cc"
+  },
+  "wholeByteTreeProof": {
+    "path": "/workspace/scratch/82d3f9ba6b85/i386-fd5-publication-independent-byte-tree-proof.json",
+    "bytes": 121082,
+    "blob": "a611b1a35f10603557001f19ab4d0b556f60a739",
+    "sha256": "ca3cd58ae33d32d8e5afb667558c785bfdfe15195fbfe5f18c382bb8f17f3e6a"
+  },
+  "base": "c761567d3a7912ef9255532d1f296d66e8c52b91",
+  "baseTree": "ea02729b2e0a242b784f9db7943a106e50bd2718",
+  "rootR1": {
+    "bytes": 10354,
+    "blob": "d8274009cde085efb306fbcbef5f0f84c02178a7",
+    "sha256": "337d35fc9835f6e744a7e6ec86670b30a24dc0bfd831c337bfb4ae1ffb395198"
+  },
+  "nativeR1": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/R1-appendix.md",
+    "bytes": 14109,
+    "blob": "2766f9aa1f592ec37e35f087f8e8244a53b9d84b",
+    "sha256": "91878159be7560edf466ec345c2ec51b521f9616912708d6b2494d493ec8b95a"
+  },
+  "priorIndependentHeaderR2": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/independent-source-r1-review.json",
+    "bytes": 19474,
+    "blob": "bbbd3ea7374c89a57e8fed2ed75071b9a692db85",
+    "sha256": "e4316ff8fc70d101957c40be52d5117267b5ef22906524b8565f6fa605ffc8e3"
+  },
+  "preparedScope": {
+    "files": 75,
+    "newPaths": 74,
+    "modifiedExistingPaths": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md"
+    ],
+    "bytes": 8092454,
+    "allFilesMatchOriginalsOrExactPlanIndexComposition": true,
+    "fullManifestAndIndexReferencesExact": true,
+    "preservedReferences": 82,
+    "newUniquePayloadReferences": 73,
+    "publishedExactReuses": 7,
+    "newDuplicateReferences": 2,
+    "archiveCount": 8,
+    "archiveMembers": 44,
+    "archiveSafePathsAndAllCRCAndBytes": true,
+    "alreadyDurableArchiveCount": 1,
+    "currentPinCount": 16,
+    "allPinsFreshC761EqualsE1d": true,
+    "preservedPriorPathMoves": 40,
+    "maximumRelativePathCharacters": 216,
+    "signedArtifactTransportURLs": 0
+  },
+  "wholeTree": {
+    "docsTree": "d6a006d339d853621231a4d7a4a2fc5520256cff",
+    "sourceOnlyTree": "763d943372c79c8d82ad2634b04861da81308fee",
+    "leafCount": 11150,
+    "directoriesIncludingRoot": 1683,
+    "unchangedOriginalLeaves": 11075,
+    "nonDocsCount": 8798,
+    "docsNonDocsSha256": "1bd9e1decc71220cd70af3e731e5138629dea1427175060a7e7a530f40e160b0",
+    "sourceNonDocsSha256": "94deeed545664749a234f724e5a59304ba6499760817630cac2fcf2bb618d199",
+    "docsAllSourceExactC761": true,
+    "sourceOnlyChangePath": "tools/owned-process-broker/debugServiceTest.h",
+    "sourceOnlyPreimage": {
+      "bytes": 9009,
+      "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+      "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8"
+    },
+    "sourceOnlyCandidate": {
+      "bytes": 8822,
+      "blob": "952ed2d3436708addf656109dc513270ea33ce22",
+      "sha256": "cb3ed3eaebb0f59aa968a285ddd85522181292a289a9bed7c59a6adf0feabf65"
+    },
+    "everyOtherSourceTreeLeafEqualsDocsTree": true,
+    "sourceApplicationClaimed": false
+  },
+  "remoteTrees": [
+    {
+      "kind": "docs",
+      "originalContentPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-independent-remote-docs-tree.json",
+      "bytes": 3681063,
+      "blob": "c13ced169abc20f7ec73f923e5079c4debd9610e",
+      "sha256": "9eadec3871a53ddaaa53e08bcde78eadaeff23236453b71630193d09d9b2ca6e",
+      "tree": "d6a006d339d853621231a4d7a4a2fc5520256cff",
+      "entryCount": 12832,
+      "leafCount": 11150,
+      "directoryCountIncludingRoot": 1683,
+      "untruncated": true,
+      "wholeLeafAndDirectoryMapsExact": true,
+      "all11150LeafSizesExact": true,
+      "provenance": "Separate reviewer GET of immutable GitHub recursive tree. Exact original structuredContent.content UTF-8 string preserved without reserialization or added newline."
+    },
+    {
+      "kind": "source",
+      "originalContentPath": "/workspace/scratch/82d3f9ba6b85/i386-fd5-independent-remote-source-tree.json",
+      "bytes": 3681063,
+      "blob": "9e41f6e474666f7d8634af4039e5ea7b49ea7f3c",
+      "sha256": "2dfd62a0e69719c883120a9c8621c5e5435fd3d980c9a65d87c641841e932f39",
+      "tree": "763d943372c79c8d82ad2634b04861da81308fee",
+      "entryCount": 12832,
+      "leafCount": 11150,
+      "directoryCountIncludingRoot": 1683,
+      "untruncated": true,
+      "wholeLeafAndDirectoryMapsExact": true,
+      "all11150LeafSizesExact": true,
+      "provenance": "Separate reviewer GET of immutable GitHub recursive tree. Exact original structuredContent.content UTF-8 string preserved without reserialization or added newline."
+    }
+  ],
+  "plan": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "prefix": {
+      "bytes": 1945191,
+      "blob": "ec4d2d1e1cf831fd817d4648a4845a8a40d52910",
+      "sha256": "131bbe164d76cb5f8c67086a29538f80f6baac6ff6bec3eec445c7779b608068"
+    },
+    "segments": [
+      {
+        "label": "Exact prospective one-header source R1",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/R1-appendix.md",
+        "bytes": 14109,
+        "blob": "2766f9aa1f592ec37e35f087f8e8244a53b9d84b",
+        "sha256": "91878159be7560edf466ec345c2ec51b521f9616912708d6b2494d493ec8b95a",
+        "separatorOffset": 1945191,
+        "contentOffset": 1945193
+      },
+      {
+        "label": "Root ordered selection governs last",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/proposal/R1-root-ordered-selection.md",
+        "bytes": 10354,
+        "blob": "d8274009cde085efb306fbcbef5f0f84c02178a7",
+        "sha256": "337d35fc9835f6e744a7e6ec86670b30a24dc0bfd831c337bfb4ae1ffb395198",
+        "separatorOffset": 1959302,
+        "contentOffset": 1959304
+      }
+    ],
+    "result": {
+      "bytes": 1969658,
+      "blob": "a6860c298a8ef6bb3d806d93758ff01624dbee03",
+      "sha256": "c76b7f205110c1dbda54a38c5f3008aa6bd20e8162252b69df37343afed0ff99"
+    },
+    "twoSeparatorsHex": "0a0a"
+  },
+  "actualReconciliationRecordJoins": [
+    {
+      "lane": "docs",
+      "head": "9ff8aa67e3747988b5b7516cf94f709b46af3d68",
+      "tree": "8f33ca564819972beec058e09074d629e159ebe6",
+      "parents": [
+        "b0528bb50e05379030eb72c20d4f8eb998098cbf"
+      ],
+      "originalCommitAndCreateExact": true,
+      "originalPushSuccess": true,
+      "force": false,
+      "expectedParent": "b0528bb50e05379030eb72c20d4f8eb998098cbf",
+      "originalGuards": [
+        {
+          "observedAtUTC": "2026-11-16 06:35:01 UTC",
+          "followupHead": "b0528bb50e05379030eb72c20d4f8eb998098cbf",
+          "source": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/docs-pre-refs.json"
+        },
+        {
+          "observedAtUTC": "2026-11-16 06:35:34 UTC",
+          "followupHead": "9ff8aa67e3747988b5b7516cf94f709b46af3d68",
+          "source": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/docs-post-refs.json"
+        }
+      ],
+      "rootAndIndependentReadbacks": [
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/root-docs.json",
+          "bytes": 76135,
+          "blob": "4e10755962f27afd069ed164db340afd801d6eee",
+          "sha256": "ef128db94f06b7d30e530b8c4ec070e555def5f9303ef5c1a24cf1e376263e8c"
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/independent-docs.json",
+          "bytes": 110793,
+          "blob": "ee774cc1bfb6cdf42d2fb7c29965156aa823a1dc",
+          "sha256": "52ee45d15f8179bac6c45b1781042784c16e8a64959e93b3f2d544693e0005c2"
+        }
+      ]
+    },
+    {
+      "lane": "source",
+      "head": "c761567d3a7912ef9255532d1f296d66e8c52b91",
+      "tree": "ea02729b2e0a242b784f9db7943a106e50bd2718",
+      "parents": [
+        "9ff8aa67e3747988b5b7516cf94f709b46af3d68",
+        "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+      ],
+      "originalCommitAndCreateExact": true,
+      "originalPushSuccess": true,
+      "force": false,
+      "expectedParent": "9ff8aa67e3747988b5b7516cf94f709b46af3d68",
+      "originalGuards": [
+        {
+          "observedAtUTC": "2026-11-16 06:41:23 UTC",
+          "followupHead": "9ff8aa67e3747988b5b7516cf94f709b46af3d68",
+          "source": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/source-pre-refs.json"
+        },
+        {
+          "observedAtUTC": "2026-11-16 06:41:48 UTC",
+          "followupHead": "c761567d3a7912ef9255532d1f296d66e8c52b91",
+          "source": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/source-post-refs.json"
+        }
+      ],
+      "rootAndIndependentReadbacks": [
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/root-source.json",
+          "bytes": 87963,
+          "blob": "7d929b9e87a7251501f263026fdfec61a37bebfa",
+          "sha256": "a34f54564f78bc0977b6d3a5cbaca00cf7b97e52442826bddab13a8df202dbc2"
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/reconciliation/independent-source.json",
+          "bytes": 104720,
+          "blob": "ba880cee7d51cc18a9b1fc766aec2ed427ee8120",
+          "sha256": "a763215ee82e107c43497b730b3fcd9fc11535cf9ca9d6bba5b3ff3c549eeea0"
+        }
+      ]
+    }
+  ],
+  "orderingReview": {
+    "approval": "Exact root order d827 approved; no conflicting source selection found.",
+    "documentationFirst": "Docs-only sole-parent child of c761, full actual source/tree/75-payload/Plan/archive readbacks and independent actual R2 before source.",
+    "sourceSecond": "Only exact header952ed in a separate sole-parent child of actual docs; all other files remain byte-exact, followed by full actual independent source R2.",
+    "primarySeparate": "No primary movement authorized by this review alone; root requires fresh expected-head/PR/base/Draft/ancestry and useful-original-work guards. No blind lease retry.",
+    "phaseA": "No P11/Models/Cross/P08/UI geometry source selected or applied by either prepared tree. Fresh future PhaseA must retain current-source full Team/stderr/type/lint gates and meaningful ordered RED controls.",
+    "venue": "Original automatically triggered CI only. No local project test/compiler/lint/build/install/bootstrap/provider/native/GUI operation.",
+    "nativeQualification": "Four original then-current Windows x64/ARM Node+Electron invocations and full receipts/build/identity/cleanup remain required; no portable synthetic RED or retrospective native PASS."
+  },
+  "preservationLimits": [
+    "Nine terminal e1d native author records are preserved for recoverability; their other semantics are not independently qualified by this assembly review.",
+    "The x64 original failure R2 aa06 is separately included; ARM unknown categories remain unknown, and later Darwin x64 ac18 remains author-only pending independent R2.",
+    "Historical checkpoint pending statements and all failed/unknown outcomes remain unchanged. Five queued Linux leaves and any future source remain unqualified.",
+    "The concrete old FD5 publication ordering gap is source-backed; it is not established as the actual cause of either historical unknown aggregate.",
+    "At most16 synchronous32-byte FD5 attempts bound requested payload to512bytes, not wall-clock latency, durable delivery or complete callback census. Existing decoder/qualifier/image/completion/FD4/cleanup oracles and deadlines remain mandatory.",
+    "This is prepared-tree and immutable-remote-tree approval, not actual documentation/source commit, ref update or project execution qualification."
+  ],
+  "reviewerActions": {
+    "freshImmutableGetCount": 2,
+    "freshReadOnlyGitSourceAndTreeQueries": true,
+    "projectExecutions": 0,
+    "trackedSourceEdits": 0,
+    "refOrCommitChanges": 0,
+    "CIRerunsOrDispatches": 0,
+    "frozenPacketChanges": 0
+  },
+  "readerCorrection": "An initial unpublished evidence-reader lookup treated native checkpoint relative paths as absolute. It stopped before producing the proof; only the scratch reader path resolution was corrected, then the complete evidence-only check passed. This is not a project/compiler/native/test result."
+}

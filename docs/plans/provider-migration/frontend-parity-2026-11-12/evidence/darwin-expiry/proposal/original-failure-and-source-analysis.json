@@ -1,0 +1,77 @@
+{
+  "jobId": 133120929324,
+  "artifactId": 14202660278,
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "fullOriginalLog": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929324.log",
+    "bytes": 99531,
+    "blob": "0a1daaf057b77571deaac25dffdbe70f86475744",
+    "sha256": "27e6fa59194a32898ca1761ccf4358e4f4ef1d1c14b1bc7f4e5806b9e0fc0eb1",
+    "lines": 1013
+  },
+  "fullOriginalMcp": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/job-133120929324-original-response.json",
+    "bytes": 104782,
+    "blob": "655b182d2a0d1ee449ef8184ffbb94ae989e7013",
+    "sha256": "1a632d2cf5e110466c603ed09c335b0dd14a90a90955f4d7c14bc803e8479730",
+    "lines": 12
+  },
+  "rawMcpUtf8Exact": true,
+  "archive": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-E1e1d14b/artifact-14202660278.zip",
+    "bytes": 11052,
+    "blob": "b85149194d6ac77e819ef97ec216b12a4ed9862f",
+    "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039",
+    "lines": 84,
+    "members": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+        "bytes": 20799,
+        "blob": "2a6e7df8e767ea97c7989415e0ec7d43ba68fa02",
+        "sha256": "fb385c2bcee56a31ede4bde2bd0d315deb9e38fb52ad3f4677cfcc70c585a20c",
+        "lines": 181,
+        "crc32": "70f642d3"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+        "bytes": 772,
+        "blob": "9ff3a45e91cb855f0aab059687b0210f174ebcc2",
+        "sha256": "c15f61fc7d9a55696f91eb9129b17eeff7f8fe7cc4a6f870b140b4ffa920c48a",
+        "lines": 12,
+        "crc32": "b248c9c7"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+        "bytes": 12202,
+        "blob": "91c26284ce8066bcff47b789072912e94636c2a0",
+        "sha256": "ee75fec9a697cb348ad7207b23322bf5f5f65562680b2b2bb42b4e34d2ffeb07",
+        "lines": 85,
+        "crc32": "d9e7977c"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "bytes": 41,
+        "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+        "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+        "lines": 1,
+        "crc32": "4b15b81c"
+      }
+    ],
+    "allCRCValid": true
+  },
+  "observed": {
+    "wholeRetainedMainFiles": 8,
+    "wholeRetainedMainTests": 81,
+    "pass": 80,
+    "fail": 1,
+    "failedCase": "holds Main reply bytes before native effect, expiry=true",
+    "failedSourceLine": "capturedHostClient.test.ts:356:67",
+    "failedAssertion": "TEST native call never reached Main admission",
+    "expiryFalsePass": true,
+    "failedCaseReportedDurationMs": 1570,
+    "reportedCaseDurationIsNot20msAdmissionDuration": true,
+    "laterCaseAssertionsNotReached": true,
+    "requestedReplyValueAndHostExpiryBranchNotRetained": true
+  },
+  "interpretation": "The original outer requested promise fulfilled before the required Main map-insertion witness won the race. Current Host admission has valid pre-wire refusal paths; actual original branch, CPU/scheduling/load/IO cause and elapsed20ms boundary are not recorded. No production defect or historical fix is proven."
+}

@@ -1,0 +1,144 @@
+{
+  "status": "APPROVE_EXACT_REVISED_SOURCE_AND_PROSPECTIVE_PROSE_ONLY",
+  "reviewer": "migration_scope",
+  "baseCommit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "baseTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "reviewedFiles": {
+    "manifest.json": {
+      "blob": "8401410907726168624589a6f1b375290b134b0d",
+      "sha256": "39ee6e64dd12831d36d777f3475aa5e7cb3fd07ba8a5b52edfc105cde58f7672",
+      "bytes": 2900
+    },
+    "candidate.patch": {
+      "blob": "dc6042c54626c60580f694b93d301d95abf40f1b",
+      "sha256": "54246aa82e71f194e539b8a4a526adeffecea48bc7cc2e32efa2fa7f8fed6352",
+      "bytes": 3480
+    },
+    "synchronization-review.json": {
+      "blob": "f520e1a948fd7147f57fa6d91ad555779e1ceed0",
+      "sha256": "c4b53cc399ae2035ae1badaa3ed5eacc92ae711fb1bd725f46f2ddd31fbb82df",
+      "bytes": 2590
+    },
+    "plan29-r1-proposal.md": {
+      "blob": "cdb80b09890e3c814d10a13af906a68d3b0cdac9",
+      "sha256": "95c633cbc081e18a9c24eca715e3568eb5765f6562b609e9b479be708cce9fc2",
+      "bytes": 11694
+    },
+    "validation-proposal.json": {
+      "blob": "1dbc0f9169f67cad7e6325695eca14817e030e0b",
+      "sha256": "89ddbce557430a2180cb4d76d2dd2824c962b7dc006fcdc808975cb87390a771",
+      "bytes": 2136
+    }
+  },
+  "sourceImages": [
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "before": {
+        "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+        "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8",
+        "bytes": 9009,
+        "lines": 186
+      },
+      "after": {
+        "blob": "a72b32fa7eda34d473463099f7df151f359a8559",
+        "sha256": "121bcbb444822e6e45b76dbcbf170cda0eecfce60bb5a222a7c6316b23c953f8",
+        "bytes": 9097,
+        "lines": 188
+      },
+      "added": 12,
+      "removed": 10
+    },
+    {
+      "path": "tools/owned-process-broker/broker.cpp",
+      "before": {
+        "blob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+        "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3",
+        "bytes": 25929,
+        "lines": 530
+      },
+      "after": {
+        "blob": "a4912d809aacc1fd4a949267fa0120d324b41be4",
+        "sha256": "54d754c150a9edf5c82107ca6bbe725057b90e28dc4585533a88bc4cb0854814",
+        "bytes": 26160,
+        "lines": 534
+      },
+      "added": 4,
+      "removed": 0
+    }
+  ],
+  "priorDetailedSourceReview": {
+    "path": "../i386-release-observation-inert-proposal/migration-source-r2.json",
+    "blob": "717c813eb5214363df77982217d0f99c81f426ef",
+    "sha256": "90e5c42aa31ecae95217f316b4aba55f9012abb4db95be4ff1a5cc6328923e66",
+    "bytes": 7493
+  },
+  "independentChecks": {
+    "allBeforeAfterImagesAndImmutableE1dPreimages": true,
+    "exactTestBrokerBlockInverseRestoresWholeOriginal": true,
+    "allReferenceScopesLoopProtocolFixtureTestCMakeMatchE1d": true,
+    "singleWriterReleasePublishesImmutableRows": true,
+    "mainAcquireReadsOnlyPublishedPrefix": true,
+    "handleConfigurationUnderOriginalStateLockBeforeUnlock": true,
+    "oneFlushBeforeReleasedEnqueue": true,
+    "bothSuccessfulExitsRequireFullAckAndOriginalTerminalWinner": true,
+    "noPerEventIoNewWaitRetryLoopQueryOrAction": true,
+    "wholeWriteRequiredForAcquiredPrefix": true,
+    "falseOrShortWriteUsesExistingWriteFailureBeforeAck": true,
+    "abandonTakesNoStateOrReplyMutex": true,
+    "previousTerminalFailureCasWinnerPreserved": true,
+    "productNonTestBrokerBytesRecoverExactly": true,
+    "sameFourFiniteCasesAndOriginalBudgets": true
+  },
+  "scopeDisposition": {
+    "canonicalPlan": "4decf2aa39aba619f90103a77dd8467e37c50cfb, TEST-only retained decision observation, lines6078-6100",
+    "amendment": "The prospective R1 explicitly changes the old best-effort post-loop implementation into pre-ACK complete-acquired-prefix TEST qualification. It does not grant process authority or adopt production policy.",
+    "newFirstFailure": "An incomplete observation write may now become the first TEST failure; an already latched failure is never overwritten.",
+    "noOutputOrZeroCount": "Original no-I/O path retained; enabled empty trace still fails unchanged TS qualification.",
+    "attestationLimit": "Successful WriteFile and exact byte count cover only the acquired prefix, not later/unobserved rows, whole-trace completeness or fsync durability.",
+    "oldUnknown": "Original unknown does not prove empty trace or race causation.",
+    "overhead": "Atomic operations and the relocated synchronous write consume time within unchanged external/native budgets."
+  },
+  "originalEvidence": {
+    "x64": {
+      "job-133120929510.log": {
+        "blob": "e8c536e76fd86896858f74a4b471a9057a20f08f",
+        "sha256": "0d6e66f963303d739a75fe2d39110fc04ad7b61bdf78376d4ba77f7f0e7639ee",
+        "bytes": 143153
+      },
+      "artifact-14201916494.zip": {
+        "blob": "adf76542bf8ec1f143f3ddf9c26736490fe28fec",
+        "sha256": "b5d26672269fc6bbf7ab6e13adddf62b65bd5295de28590df44ebdc547d74e86",
+        "bytes": 15043
+      }
+    },
+    "arm64": {
+      "job-133120929619.log": {
+        "blob": "2a599f79761d88b41ef9e21b7269d4ed42c7e004",
+        "sha256": "f411924081a9dfde45ccbf57944a78761fd24fe9bc7d0f7c5f8acb7d7d458814",
+        "bytes": 174851
+      },
+      "artifact-14202148789.zip": {
+        "blob": "d0d30e9eb6849d03b2b091171c3e4f28e8808f27",
+        "sha256": "15e8fae1f1c5e3cbd86de1c54bc4b7c54528b25463cd3b28df00f794545fc82b",
+        "bytes": 15113
+      }
+    }
+  },
+  "qualification": {
+    "futureParentAndWholePlanBinding": null,
+    "documentationPublicationRequiredBeforeSource": true,
+    "resultingSourceNativeAcceptance": false,
+    "requiredOriginalCi": "Same-source Win32 build and original Host Node/Electron Node on both Windows architectures, unchanged four-row oracle, custody, cleanup and final source receipts.",
+    "fourFiniteCases": "Preservation only; not C++/Windows persistence evidence.",
+    "fullPolicyDirectI386RootP08P09M16": "held/unqualified",
+    "p11ABC": "unselected"
+  },
+  "actions": {
+    "projectExecution": false,
+    "nativeExecution": false,
+    "testExecution": false,
+    "sourceApplication": false,
+    "gitIndexRefMutation": false,
+    "manualActions": false
+  }
+}

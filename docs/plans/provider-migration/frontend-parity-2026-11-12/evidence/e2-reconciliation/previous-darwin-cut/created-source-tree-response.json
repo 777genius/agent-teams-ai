@@ -1,0 +1,16 @@
+{
+  "base_tree_sha": "732bfd36a3f6a00029c385effe1f8efb59abc23b",
+  "entryCount": 2,
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "sha": "991da6020ab4ea2b22bfb80512647516a1c57d91"
+    },
+    "isError": false
+  }
+}

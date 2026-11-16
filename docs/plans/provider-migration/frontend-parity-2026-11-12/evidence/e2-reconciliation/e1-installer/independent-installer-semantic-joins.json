@@ -1,0 +1,678 @@
+{
+  "schemaVersion": 1,
+  "createdAtUTC": "2026-11-16T07:01:39.561660+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "semanticStatus": "All original source/receipt checks verified; final prose approval awaits current.json correction v2",
+  "businessStepCount": 122,
+  "businessStepCounts": {
+    "mouseMoved": 55,
+    "mouseClick": 55,
+    "passive-observation": 1,
+    "mouseWheel": 11
+  },
+  "businessClicks": {
+    "launch original selection once": 2,
+    "stop original selected Team once": 2,
+    "install original Codex package exactly once": 1,
+    "save original second selection once": 1,
+    "send original held stream once": 1
+  },
+  "passiveEvents": 7,
+  "observationsExact": [
+    {
+      "phase": "before-create",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "TEST-desktop-team",
+        "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+        "memberId": "alice-id",
+        "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+      },
+      "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-13829",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "before-original-installer-update",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "TEST-desktop-team",
+        "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+        "memberId": "alice-id",
+        "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+      },
+      "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-13829",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-original-installer-ready",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "TEST-desktop-team",
+        "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+        "memberId": "alice-id",
+        "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+      },
+      "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-13829",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-save-only",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "TEST-desktop-team",
+        "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+        "memberId": "alice-id",
+        "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+      },
+      "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-13829",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-reload-before-next-launch",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "TEST-desktop-team",
+        "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+        "memberId": "alice-id",
+        "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+      },
+      "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-13829",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-next-launch",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "TEST-desktop-team",
+        "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+        "memberId": "alice-id",
+        "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+      },
+      "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-13829",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "before-original-installer-settings",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "TEST-desktop-team",
+        "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+        "memberId": "alice-id",
+        "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+      },
+      "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-13829",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "before-original-installer-settings",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+        "runId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+        "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+        "generation": "capture-355c615d-f592-58de-892a-bad3e3cb5ab1"
+      },
+      "sessionRef": "c3188697-18d7-5c60-8b00-a6203643c257",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-16444",
+        "model": "TEST-model-next",
+        "effort": "high",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 16444
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-original-installer-settings",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "TEST-desktop-team",
+        "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+        "memberId": "alice-id",
+        "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+      },
+      "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-13829",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-original-installer-settings",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+        "runId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+        "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+        "generation": "capture-355c615d-f592-58de-892a-bad3e3cb5ab1"
+      },
+      "sessionRef": "c3188697-18d7-5c60-8b00-a6203643c257",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-16444",
+        "model": "TEST-model-next",
+        "effort": "high",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 16444
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-b-stop-during-a-input",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+        "teamId": "TEST-desktop-team",
+        "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+        "memberId": "alice-id",
+        "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+      },
+      "sessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-13829",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 13829
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": false
+    }
+  ],
+  "originalEffectsRows": 151,
+  "effectsFourCopiesExact": true,
+  "effectCounts": {
+    "launch": 61,
+    "exit": 48,
+    "thread-selection": 5,
+    "input": 6,
+    "terminal": 6,
+    "mcp-catalog": 13,
+    "managed-configuration-read": 9,
+    "connected": 2,
+    "partial": 1
+  },
+  "launchPids": [
+    12513,
+    13352,
+    13382,
+    13413,
+    13542,
+    13564,
+    13575,
+    13623,
+    13632,
+    13633,
+    13638,
+    13692,
+    13716,
+    13823,
+    13828,
+    13829,
+    13830,
+    13836,
+    13837,
+    13838,
+    13849,
+    14259,
+    14333,
+    14335,
+    14502,
+    14955,
+    14973,
+    14974,
+    15023,
+    15122,
+    15131,
+    15164,
+    15209,
+    15717,
+    15910,
+    15937,
+    15965,
+    16048,
+    16138,
+    16173,
+    16249,
+    16259,
+    16262,
+    16263,
+    16357,
+    16385,
+    16431,
+    16444,
+    16456,
+    16487,
+    16492,
+    16493,
+    16522,
+    16911,
+    16945,
+    17019,
+    17024,
+    17135,
+    17520,
+    17536,
+    17752
+  ],
+  "explicitExitPids": [
+    12513,
+    13352,
+    13382,
+    13413,
+    13542,
+    13564,
+    13575,
+    13623,
+    13632,
+    13633,
+    13638,
+    13692,
+    13716,
+    13829,
+    13838,
+    14259,
+    14333,
+    14335,
+    14502,
+    14955,
+    14973,
+    14974,
+    15023,
+    15122,
+    15131,
+    15164,
+    15209,
+    15717,
+    15910,
+    15937,
+    15965,
+    16048,
+    16138,
+    16173,
+    16249,
+    16259,
+    16262,
+    16263,
+    16357,
+    16444,
+    16522,
+    16911,
+    16945,
+    17019,
+    17024,
+    17135,
+    17536,
+    17752
+  ],
+  "missingExitRowPids": [
+    13823,
+    13828,
+    13830,
+    13836,
+    13837,
+    13849,
+    16385,
+    16431,
+    16456,
+    16487,
+    16492,
+    16493,
+    17520
+  ],
+  "all61AbsenceOriginal": true,
+  "registryCounts": {
+    "armed": 1,
+    "latest": 8,
+    "platform": 1,
+    "tarball": 1
+  },
+  "registryRawRows": 11,
+  "registryRetainedPrefixRows": 7,
+  "invocationsRawRows": 67,
+  "invocationsRetainedPrefixRows": 34,
+  "sourceIndexOrderedDigestAndPublishedCurrentJoins": true,
+  "managementJournals": [
+    {
+      "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/management-commands/0ffdd8f79c4612414ce68e2d4916d82d9cd390b61a2d11b29bd9427c22f6eb01.json",
+      "bytes": 904,
+      "blob": "0a529e2aa1ca43565235bceb4fe7f733fe700e81",
+      "sha256": "e2fe7b4daeb4185c2317d5ef0d42bda6aec81cf9c0df481184829b02f413203a",
+      "commandId": "team-preflight-29a527e4f0f09ece6a0c0e174a8330320e7d46794d4ca5184f784dcba0d43650",
+      "kind": "model.probe",
+      "phase": "completed",
+      "bodyAndNameDigestsExact": true
+    },
+    {
+      "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/management-commands/2f84d964ad3cd4715ec8dcf75bd546ae5fdb505e7103d943ce13c2faffa14882.json",
+      "bytes": 929,
+      "blob": "cb8dfaa1fc47146a88dd6b3798f0db5ac82f9a4f",
+      "sha256": "cd1401a959518eb5ff49e54aaf0f103509386447233735c6084be81561d1e57c",
+      "commandId": "team-preflight-03540d9c40514f8f71965d84d08450a3f1a0d15c1665b75091911f0bdaf02496",
+      "kind": "model.probe",
+      "phase": "completed",
+      "bodyAndNameDigestsExact": true
+    },
+    {
+      "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/management-commands/9cd0f552b44bb741a1435c9eaca359c6ad34f5b7e3bbd1e6923592f5c7f6249d.json",
+      "bytes": 923,
+      "blob": "e4e813d1f41ca5431c748ddb1507ac9cbbb6bf82",
+      "sha256": "67eee3aa8c64a1ae38266616733ae63a36e5aa4faab92f99f84b261a0f8e5b8e",
+      "commandId": "team-preflight-c728ea2619ec0611a0e3c728e80858dbc01b310f79de60f4ac8b27f97887a574",
+      "kind": "model.probe",
+      "phase": "completed",
+      "bodyAndNameDigestsExact": true
+    },
+    {
+      "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/management-commands/b836a4d04c98c09a65fe63a5f4c3051c6d9b5b3e802a941119c596229a1b288d.json",
+      "bytes": 2297,
+      "blob": "16cf5e14a809856ffaf55a03c6c4ec64ae8db82b",
+      "sha256": "44370a090033ba9b7082ac177c5d14e974aede5393f474cabf01ee5bba34c6ce",
+      "commandId": "5d905ef5-1461-46cb-b003-f60cefe1d4a9",
+      "kind": "runtime.source",
+      "phase": "published",
+      "bodyAndNameDigestsExact": true
+    }
+  ],
+  "checkpoints": [
+    {
+      "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/runtime-checkpoints/cp1-2999bd8f54b3f159097734fed78d05bf1e4901e03025d493c61cd090d6e67581.json",
+      "bytes": 2319,
+      "blob": "03740b9a9b47cd486a8ea26ebadd8185626062b3",
+      "sha256": "c66efc68a695033a8dc6ef9dd8d87cac6ef3b85f3ca7c8e333c839f298c18507",
+      "team": "a",
+      "bodyReferenceHistoryFingerprintAllExact": true,
+      "record": {
+        "schemaVersion": 1,
+        "reference": "cp1-2999bd8f54b3f159097734fed78d05bf1e4901e03025d493c61cd090d6e67581",
+        "checkpointId": "stop-094b16bc55a1f436639031858e10c6e19a2b6d89b612e8d137f6c48a6af27c94",
+        "fingerprint": "31a7b4ae3d7b8d10f1d12ad16281d2c6636a8f4ea178a8613738eeb8031576ba",
+        "sourceBinding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "TEST-desktop-team",
+          "runId": "f9ca61a9-7f0c-5fe2-b301-03a959d1155b",
+          "memberId": "alice-id",
+          "generation": "capture-294e2317-4c8a-5655-ada3-8f65c4f9b54e"
+        },
+        "profileId": "TEST-desktop-profile-TEST-desktop-backend-F7twGS",
+        "sourceConfig": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "projectId": "TEST-project-TEST-desktop-backend-F7twGS",
+          "sessionId": "b97a0828-831c-598a-a1d6-aa6cced38273",
+          "generation": 2,
+          "configRevision": "capture-0e9bb2fe49a67ae7fb8a1017295f23a394aa2e9071f50f1ed86a5330c1c1faa8",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "sourceSessionRef": "b97a0828-831c-598a-a1d6-aa6cced38273",
+        "historyDigest": "c97d4e51c3b7a50557946fab3db1c13d648fc9b4feac2cca9b82dc1379eff36e",
+        "completedOperations": [
+          {
+            "inputId": "7d814d53-8abf-5ca9-95e8-9d1506d98114",
+            "operationRef": "9295cbdd-8f4a-47d7-8c2f-662e8fc2c057",
+            "fingerprint": "92572042abf8812d402cd0e75f1ec3dd36c46a446d595666395b4a8551dcdbcd",
+            "outcome": "succeeded"
+          },
+          {
+            "inputId": "782139da-e03b-525a-81a3-db3b11052f73",
+            "operationRef": "fe0cb5f2-fb10-434d-a9cb-6e649eb6c13a",
+            "fingerprint": "1ca8b248228cd528377aa394dc987c3034ff322ecab9511144f05ccbd1303ece",
+            "outcome": "succeeded"
+          }
+        ],
+        "opaque": {
+          "version": 2,
+          "engine": "codex-app-server",
+          "nativeThreadId": "TEST-thread-13829",
+          "compatibility": "cc02cadc1cd42e4691c9ce07e4ed336287b4029f7e683d60167233e5e122eb3c",
+          "itemOwners": [
+            [
+              "TEST-message-1",
+              "f2e1abbb-e6c0-4719-ac90-db298ad27222"
+            ],
+            [
+              "TEST-message-2",
+              "159fda06-4447-41dc-8afc-4d34f12754f7"
+            ],
+            [
+              "TEST-message-2-final",
+              "159fda06-4447-41dc-8afc-4d34f12754f7"
+            ]
+          ],
+          "legacyItemsExhausted": false
+        },
+        "digest": "ecd0e586a12a3e1f0c9c0de0ccbc1afc6468ed929c51576a2566ec2f32fc1129"
+      }
+    },
+    {
+      "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/hoststore/runtime-checkpoints/cp1-d481ace7c442a794887f32b07d237ce932bf1f56f727ef9c2232d43866c40438.json",
+      "bytes": 1895,
+      "blob": "0a3e014ee688491c875f7fc8e8e3334a42b01e83",
+      "sha256": "4b8830d9ebb828a3007b85883a62d6eaa4eefed2f94d9a43520ff3e2932a0487",
+      "team": "b",
+      "bodyReferenceHistoryFingerprintAllExact": true,
+      "record": {
+        "schemaVersion": 1,
+        "reference": "cp1-d481ace7c442a794887f32b07d237ce932bf1f56f727ef9c2232d43866c40438",
+        "checkpointId": "stop-6f87af07de7d8a67eaeebb6702acf1460ca8475fa5ffa48f901b4a844dec1d20",
+        "fingerprint": "b99836547711e91b5c72565eb7fb865114a105e01db17fcfc3ed1df5bf98bad5",
+        "sourceBinding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "teamId": "a3e2917d-9b88-58fa-a16b-e2cb50044e66",
+          "runId": "58de612c-ae47-5c4a-8a3d-c61894b92d88",
+          "memberId": "b34e1a41-dfa9-54ed-bce4-e8a770205bc2",
+          "generation": "capture-355c615d-f592-58de-892a-bad3e3cb5ab1"
+        },
+        "profileId": "TEST-desktop-profile-TEST-desktop-backend-F7twGS",
+        "sourceConfig": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-F7twGS",
+          "projectId": "local",
+          "sessionId": "c3188697-18d7-5c60-8b00-a6203643c257",
+          "generation": 2,
+          "configRevision": "capture-cbc40755e027e989e155daa11182ccc5f7861eb9ed2abcaa545d7f7b045e913d",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "sourceSessionRef": "c3188697-18d7-5c60-8b00-a6203643c257",
+        "historyDigest": "77658fd4947ad42b7a5bc70b6bc36c558f725d4a82192bc24e3dc32c40d943a8",
+        "completedOperations": [
+          {
+            "inputId": "591bbe55-54dd-594e-87b9-8f4c80620993",
+            "operationRef": "81ca5a4f-a3ec-4234-a009-4748f7bac2a3",
+            "fingerprint": "031af95bc640286c3c3f6b5a70c3ced66fcdbbdc027ed855927024add2885b00",
+            "outcome": "succeeded"
+          }
+        ],
+        "opaque": {
+          "version": 2,
+          "engine": "codex-app-server",
+          "nativeThreadId": "TEST-thread-16444",
+          "compatibility": "143d36ef9ee2b47b69973135cdf9c1861b18095e02c8a1cb97e1b7fb36519be8",
+          "itemOwners": [
+            [
+              "TEST-message-1",
+              "d32009f0-67aa-4972-9f87-373ada2e9dd6"
+            ]
+          ],
+          "legacyItemsExhausted": false
+        },
+        "digest": "f97071792192d249f27377bbd42fa8121b87727e6c3f417f86caac68fab38372"
+      }
+    }
+  ],
+  "archivedCurrentManifest": {
+    "path": "ci-e1d14b9/installer/extracted/TEST-desktop-backend-F7twGS/userData/data/runtimes/codex/current.json",
+    "bytes": 502,
+    "blob": "5130a485ad5a7304871e0f4e027f21e5562e4d9d",
+    "sha256": "b164969685c6134805429c014b832c8a29a3ccba4049ef7430d8bd86e1b8020d",
+    "bodyAndReceiptHashExact": true
+  },
+  "cleanup": {
+    "processGroup": 7965,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+  },
+  "originalRequestedQuitExit": {
+    "initialExitCode": null,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "originalExitedGroup": {
+    "settled": true,
+    "reason": "original-natural-exit-and-fresh-absence",
+    "initialMembers": [
+      {
+        "pid": 8014,
+        "ppid": 1,
+        "pgid": 7965
+      }
+    ],
+    "remaining": [],
+    "capturedHostAbsent": true,
+    "capturedDescendantsAbsent": true,
+    "appExitCode": 0,
+    "appSignalCode": null
+  },
+  "additionalGitInterpretationLeaves": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/profile/FileRuntimeSourceIndex.ts",
+      "bytes": 7202,
+      "blob": "cf01a4b31ad0ac5f74baffb0f265dee8961bfd81",
+      "sha256": "b4e798ba922c921a7efb83eb9eaf592b4dcbb5811848b0000201c923ed949302"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/runtime/FileCheckpointStorage.ts",
+      "bytes": 5029,
+      "blob": "587eb73bd2d2c519b55b33756e87c84806e3b405",
+      "sha256": "67c2285793b0432054c8c302f39d67f12944f3b25e0b9e38d1abfe06730c4a36"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/checkpointIdentity.ts",
+      "bytes": 2102,
+      "blob": "6d0e6a8e95707df6fa960acccb771449080b11e6",
+      "sha256": "b68b40e5fe2d912c71f09bb7e39f9acd6680f227612724ba6629aa129b5da82c"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/identity.ts",
+      "bytes": 1184,
+      "blob": "e2b5fc6216637c1d78ff807bf0e11c63d5ec5f63",
+      "sha256": "e42ca92261537a5882e2bd9ec456e257042f9ad42bbc465fb5bc020c2ac4cc3c"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "bytes": 33173,
+      "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23"
+    }
+  ],
+  "limits": [
+    "No installed executable/tarball/package content bytes in archive; current.json IS independently recoverable.",
+    "Original owner/capture/session files were source-checked and embedded, not all separately archived.",
+    "Checkpoint complete operations/hash do not archive full native history.",
+    "No elapsed duration/cause inference from later PNGs or passive page-clock records.",
+    "No Host exitcode; original wrapper zero/null and fresh group/Host/peer absence remain separate."
+  ]
+}

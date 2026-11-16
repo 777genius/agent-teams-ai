@@ -1,0 +1,172 @@
+{
+  "kind": "E1 UI-owned terminal cohort stop checkpoint",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "observedStartUTC": "2026-11-16 07:24:22 UTC",
+  "observedEndUTC": "2026-11-16 07:24:25 UTC",
+  "originalApi": {
+    "path": "ci-e1d14b9/owned-jobs-0724.json",
+    "bytes": 64602,
+    "blob": "b342c62d6806d2ec685da5b6cc08ed6910829552",
+    "sha256": "a4ff073cfe3cfb0c02f45af0a10480ebfc8b2220674269280f15f47ccc8c86f5"
+  },
+  "lanes": [
+    {
+      "lane": "host",
+      "runId": 43813731227,
+      "jobCount": 23,
+      "outcomes": {
+        "success": 5,
+        "failure": 2,
+        "cancelled": 16
+      },
+      "cancelled": [
+        {
+          "id": 133120928906,
+          "name": "Offline Host Desktop (linux-x64, codex-login)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120928918,
+          "name": "Offline Host Desktop (linux-x64, extensions)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120928934,
+          "name": "Offline Host Desktop (linux-x64, processes)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120928983,
+          "name": "Offline Host Desktop (linux-x64, codex)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120928994,
+          "name": "Offline frontend tests (1/4)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120929022,
+          "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120929032,
+          "name": "Offline Host Desktop (linux-x64, team)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120929111,
+          "name": "Offline Host Desktop (linux-x64, cross-team)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120929116,
+          "name": "Offline Host Desktop (linux-x64, management)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120929154,
+          "name": "Offline frontend tests (3/4)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120929161,
+          "name": "Offline Host Desktop (linux-x64, import)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120929176,
+          "name": "Offline Host Desktop (linux-x64, taskboard)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120929213,
+          "name": "Offline Host Desktop (linux-x64, claude)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120929215,
+          "name": "Offline Host Desktop (linux-x64, collaboration)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133120929457,
+          "name": "Offline frontend tests (2/4)",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133150851019,
+          "name": "Offline Host Desktop",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        }
+      ],
+      "terminalStop": true
+    },
+    {
+      "lane": "packaged",
+      "runId": 43813731334,
+      "jobCount": 3,
+      "outcomes": {
+        "cancelled": 3
+      },
+      "cancelled": [
+        {
+          "id": 133120927633,
+          "name": "classify packaged smoke",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133150848920,
+          "name": "${{ (((github.event.action == 'edited') && !github.event.changes.base && ((github.event.changes.title || github.event.changes.body)) && 'metadata packaged smoke') || 'packaged smoke') }} (${{ matrix.platform }})",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        },
+        {
+          "id": 133150849444,
+          "name": "github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'metadata packaged gate' || 'packaged full gate'",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "steps": null
+        }
+      ],
+      "terminalStop": true
+    }
+  ],
+  "qualification": "Terminal API only. Frontend shard4/4 is the sole completed frontend shard. Team/static and shards1–3 cancelled with no executed steps; no combined gate PASS. No cancellation cause inferred. Prior Teams Creation cohort remains terminal and was not repolled."
+}

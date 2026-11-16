@@ -1,0 +1,1630 @@
+{
+  "started": "2026-11-16 07:24:22 UTC",
+  "completed": "2026-11-16 07:24:25 UTC",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "results": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "key": "host",
+        "response": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Action completed."
+            }
+          ],
+          "structuredContent": {
+            "jobs": [
+              {
+                "id": 133120928662,
+                "name": "Offline frontend tests (4/4)",
+                "status": "completed",
+                "conclusion": "success",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": [
+                  {
+                    "name": "Set up job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 1
+                  },
+                  {
+                    "name": "Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 2
+                  },
+                  {
+                    "name": "Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 3
+                  },
+                  {
+                    "name": "Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 4
+                  },
+                  {
+                    "name": "Verify source and capture the original Host test runtime",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 5
+                  },
+                  {
+                    "name": "Setup the original workspace test runtime",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 6
+                  },
+                  {
+                    "name": "Prepare original test prerequisites",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 7
+                  },
+                  {
+                    "name": "Run the complete safe frontend shard",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 8
+                  },
+                  {
+                    "name": "Preserve original test results, including failures",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 9
+                  },
+                  {
+                    "name": "Post Setup the original workspace test runtime",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 15
+                  },
+                  {
+                    "name": "Post Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 16
+                  },
+                  {
+                    "name": "Post Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 17
+                  },
+                  {
+                    "name": "Post Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 18
+                  },
+                  {
+                    "name": "Complete job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 19
+                  }
+                ]
+              },
+              {
+                "id": 133120928855,
+                "name": "Offline Host Desktop (linux-x64, selection)",
+                "status": "completed",
+                "conclusion": "success",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": [
+                  {
+                    "name": "Set up job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 1
+                  },
+                  {
+                    "name": "Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 2
+                  },
+                  {
+                    "name": "Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 3
+                  },
+                  {
+                    "name": "Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 4
+                  },
+                  {
+                    "name": "Verify original checkout and runner tuple",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 5
+                  },
+                  {
+                    "name": "Prepare private Linux display",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 6
+                  },
+                  {
+                    "name": "Install frozen workspace and Electron",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 7
+                  },
+                  {
+                    "name": "Build existing Desktop prerequisites and verify admission",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 8
+                  },
+                  {
+                    "name": "Verify original Runtime and Team conversation contracts",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 9
+                  },
+                  {
+                    "name": "Verify complete workspace types and original typed lint scopes",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 10
+                  },
+                  {
+                    "name": "Capture package-manager and Host inputs without vendor executables",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 11
+                  },
+                  {
+                    "name": "Capture original controlled Linux process input without a provider",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 12
+                  },
+                  {
+                    "name": "Exercise ordinary Team controls and renderer reload",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 13
+                  },
+                  {
+                    "name": "Exercise ordinary Taskboard controls and persistence",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 14
+                  },
+                  {
+                    "name": "Exercise original Skills and cross-Team controls",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 15
+                  },
+                  {
+                    "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 16
+                  },
+                  {
+                    "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 17
+                  },
+                  {
+                    "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 18
+                  },
+                  {
+                    "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 19
+                  },
+                  {
+                    "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 20
+                  },
+                  {
+                    "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 21
+                  },
+                  {
+                    "name": "Exercise original Review after a cold Host and app restart",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 22
+                  },
+                  {
+                    "name": "Exercise saved next-launch selection while the original Team remains live",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 23
+                  },
+                  {
+                    "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 24
+                  },
+                  {
+                    "name": "Exercise stock Codex Update while the original Team retains its captured source",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 25
+                  },
+                  {
+                    "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 26
+                  },
+                  {
+                    "name": "Prepare exact OpenCode V2 Bun and engine graph",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 27
+                  },
+                  {
+                    "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 28
+                  },
+                  {
+                    "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 29
+                  },
+                  {
+                    "name": "Verify exact source, original screenshots, receipts and cleanup",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 30
+                  },
+                  {
+                    "name": "Preserve original Desktop evidence, including failures",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 31
+                  },
+                  {
+                    "name": "Post Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 60
+                  },
+                  {
+                    "name": "Post Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 61
+                  },
+                  {
+                    "name": "Post Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 62
+                  },
+                  {
+                    "name": "Complete job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 63
+                  }
+                ]
+              },
+              {
+                "id": 133120928869,
+                "name": "Offline Host Desktop (linux-x64, opencode)",
+                "status": "completed",
+                "conclusion": "failure",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": [
+                  {
+                    "name": "Set up job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 1
+                  },
+                  {
+                    "name": "Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 2
+                  },
+                  {
+                    "name": "Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 3
+                  },
+                  {
+                    "name": "Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 4
+                  },
+                  {
+                    "name": "Verify original checkout and runner tuple",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 5
+                  },
+                  {
+                    "name": "Prepare private Linux display",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 6
+                  },
+                  {
+                    "name": "Install frozen workspace and Electron",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 7
+                  },
+                  {
+                    "name": "Build existing Desktop prerequisites and verify admission",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 8
+                  },
+                  {
+                    "name": "Verify original Runtime and Team conversation contracts",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 9
+                  },
+                  {
+                    "name": "Verify complete workspace types and original typed lint scopes",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 10
+                  },
+                  {
+                    "name": "Capture package-manager and Host inputs without vendor executables",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 11
+                  },
+                  {
+                    "name": "Capture original controlled Linux process input without a provider",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 12
+                  },
+                  {
+                    "name": "Exercise ordinary Team controls and renderer reload",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 13
+                  },
+                  {
+                    "name": "Exercise ordinary Taskboard controls and persistence",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 14
+                  },
+                  {
+                    "name": "Exercise original Skills and cross-Team controls",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 15
+                  },
+                  {
+                    "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 16
+                  },
+                  {
+                    "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 17
+                  },
+                  {
+                    "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 18
+                  },
+                  {
+                    "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 19
+                  },
+                  {
+                    "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+                    "status": "completed",
+                    "conclusion": "failure",
+                    "number": 20
+                  },
+                  {
+                    "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 21
+                  },
+                  {
+                    "name": "Exercise original Review after a cold Host and app restart",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 22
+                  },
+                  {
+                    "name": "Exercise saved next-launch selection while the original Team remains live",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 23
+                  },
+                  {
+                    "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 24
+                  },
+                  {
+                    "name": "Exercise stock Codex Update while the original Team retains its captured source",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 25
+                  },
+                  {
+                    "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 26
+                  },
+                  {
+                    "name": "Prepare exact OpenCode V2 Bun and engine graph",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 27
+                  },
+                  {
+                    "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 28
+                  },
+                  {
+                    "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 29
+                  },
+                  {
+                    "name": "Verify exact source, original screenshots, receipts and cleanup",
+                    "status": "completed",
+                    "conclusion": "failure",
+                    "number": 30
+                  },
+                  {
+                    "name": "Preserve original Desktop evidence, including failures",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 31
+                  },
+                  {
+                    "name": "Post Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 60
+                  },
+                  {
+                    "name": "Post Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 61
+                  },
+                  {
+                    "name": "Post Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 62
+                  },
+                  {
+                    "name": "Complete job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 63
+                  }
+                ]
+              },
+              {
+                "id": 133120928883,
+                "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+                "status": "completed",
+                "conclusion": "success",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": [
+                  {
+                    "name": "Set up job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 1
+                  },
+                  {
+                    "name": "Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 2
+                  },
+                  {
+                    "name": "Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 3
+                  },
+                  {
+                    "name": "Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 4
+                  },
+                  {
+                    "name": "Verify original checkout and runner tuple",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 5
+                  },
+                  {
+                    "name": "Prepare private Linux display",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 6
+                  },
+                  {
+                    "name": "Install frozen workspace and Electron",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 7
+                  },
+                  {
+                    "name": "Build existing Desktop prerequisites and verify admission",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 8
+                  },
+                  {
+                    "name": "Verify original Runtime and Team conversation contracts",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 9
+                  },
+                  {
+                    "name": "Verify complete workspace types and original typed lint scopes",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 10
+                  },
+                  {
+                    "name": "Capture package-manager and Host inputs without vendor executables",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 11
+                  },
+                  {
+                    "name": "Capture original controlled Linux process input without a provider",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 12
+                  },
+                  {
+                    "name": "Exercise ordinary Team controls and renderer reload",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 13
+                  },
+                  {
+                    "name": "Exercise ordinary Taskboard controls and persistence",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 14
+                  },
+                  {
+                    "name": "Exercise original Skills and cross-Team controls",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 15
+                  },
+                  {
+                    "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 16
+                  },
+                  {
+                    "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 17
+                  },
+                  {
+                    "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 18
+                  },
+                  {
+                    "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 19
+                  },
+                  {
+                    "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 20
+                  },
+                  {
+                    "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 21
+                  },
+                  {
+                    "name": "Exercise original Review after a cold Host and app restart",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 22
+                  },
+                  {
+                    "name": "Exercise saved next-launch selection while the original Team remains live",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 23
+                  },
+                  {
+                    "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 24
+                  },
+                  {
+                    "name": "Exercise stock Codex Update while the original Team retains its captured source",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 25
+                  },
+                  {
+                    "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 26
+                  },
+                  {
+                    "name": "Prepare exact OpenCode V2 Bun and engine graph",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 27
+                  },
+                  {
+                    "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 28
+                  },
+                  {
+                    "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 29
+                  },
+                  {
+                    "name": "Verify exact source, original screenshots, receipts and cleanup",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 30
+                  },
+                  {
+                    "name": "Preserve original Desktop evidence, including failures",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 31
+                  },
+                  {
+                    "name": "Post Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 60
+                  },
+                  {
+                    "name": "Post Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 61
+                  },
+                  {
+                    "name": "Post Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 62
+                  },
+                  {
+                    "name": "Complete job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 63
+                  }
+                ]
+              },
+              {
+                "id": 133120928890,
+                "name": "Offline Host Desktop (linux-x64, skills)",
+                "status": "completed",
+                "conclusion": "success",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": [
+                  {
+                    "name": "Set up job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 1
+                  },
+                  {
+                    "name": "Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 2
+                  },
+                  {
+                    "name": "Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 3
+                  },
+                  {
+                    "name": "Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 4
+                  },
+                  {
+                    "name": "Verify original checkout and runner tuple",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 5
+                  },
+                  {
+                    "name": "Prepare private Linux display",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 6
+                  },
+                  {
+                    "name": "Install frozen workspace and Electron",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 7
+                  },
+                  {
+                    "name": "Build existing Desktop prerequisites and verify admission",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 8
+                  },
+                  {
+                    "name": "Verify original Runtime and Team conversation contracts",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 9
+                  },
+                  {
+                    "name": "Verify complete workspace types and original typed lint scopes",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 10
+                  },
+                  {
+                    "name": "Capture package-manager and Host inputs without vendor executables",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 11
+                  },
+                  {
+                    "name": "Capture original controlled Linux process input without a provider",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 12
+                  },
+                  {
+                    "name": "Exercise ordinary Team controls and renderer reload",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 13
+                  },
+                  {
+                    "name": "Exercise ordinary Taskboard controls and persistence",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 14
+                  },
+                  {
+                    "name": "Exercise original Skills and cross-Team controls",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 15
+                  },
+                  {
+                    "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 16
+                  },
+                  {
+                    "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 17
+                  },
+                  {
+                    "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 18
+                  },
+                  {
+                    "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 19
+                  },
+                  {
+                    "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 20
+                  },
+                  {
+                    "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 21
+                  },
+                  {
+                    "name": "Exercise original Review after a cold Host and app restart",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 22
+                  },
+                  {
+                    "name": "Exercise saved next-launch selection while the original Team remains live",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 23
+                  },
+                  {
+                    "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 24
+                  },
+                  {
+                    "name": "Exercise stock Codex Update while the original Team retains its captured source",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 25
+                  },
+                  {
+                    "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 26
+                  },
+                  {
+                    "name": "Prepare exact OpenCode V2 Bun and engine graph",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 27
+                  },
+                  {
+                    "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 28
+                  },
+                  {
+                    "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 29
+                  },
+                  {
+                    "name": "Verify exact source, original screenshots, receipts and cleanup",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 30
+                  },
+                  {
+                    "name": "Preserve original Desktop evidence, including failures",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 31
+                  },
+                  {
+                    "name": "Post Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 60
+                  },
+                  {
+                    "name": "Post Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 61
+                  },
+                  {
+                    "name": "Post Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 62
+                  },
+                  {
+                    "name": "Complete job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 63
+                  }
+                ]
+              },
+              {
+                "id": 133120928906,
+                "name": "Offline Host Desktop (linux-x64, codex-login)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120928918,
+                "name": "Offline Host Desktop (linux-x64, extensions)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120928934,
+                "name": "Offline Host Desktop (linux-x64, processes)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120928945,
+                "name": "Offline Host Desktop (linux-x64, review)",
+                "status": "completed",
+                "conclusion": "failure",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": [
+                  {
+                    "name": "Set up job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 1
+                  },
+                  {
+                    "name": "Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 2
+                  },
+                  {
+                    "name": "Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 3
+                  },
+                  {
+                    "name": "Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 4
+                  },
+                  {
+                    "name": "Verify original checkout and runner tuple",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 5
+                  },
+                  {
+                    "name": "Prepare private Linux display",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 6
+                  },
+                  {
+                    "name": "Install frozen workspace and Electron",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 7
+                  },
+                  {
+                    "name": "Build existing Desktop prerequisites and verify admission",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 8
+                  },
+                  {
+                    "name": "Verify original Runtime and Team conversation contracts",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 9
+                  },
+                  {
+                    "name": "Verify complete workspace types and original typed lint scopes",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 10
+                  },
+                  {
+                    "name": "Capture package-manager and Host inputs without vendor executables",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 11
+                  },
+                  {
+                    "name": "Capture original controlled Linux process input without a provider",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 12
+                  },
+                  {
+                    "name": "Exercise ordinary Team controls and renderer reload",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 13
+                  },
+                  {
+                    "name": "Exercise ordinary Taskboard controls and persistence",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 14
+                  },
+                  {
+                    "name": "Exercise original Skills and cross-Team controls",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 15
+                  },
+                  {
+                    "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 16
+                  },
+                  {
+                    "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 17
+                  },
+                  {
+                    "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 18
+                  },
+                  {
+                    "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 19
+                  },
+                  {
+                    "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 20
+                  },
+                  {
+                    "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+                    "status": "completed",
+                    "conclusion": "failure",
+                    "number": 21
+                  },
+                  {
+                    "name": "Exercise original Review after a cold Host and app restart",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 22
+                  },
+                  {
+                    "name": "Exercise saved next-launch selection while the original Team remains live",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 23
+                  },
+                  {
+                    "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 24
+                  },
+                  {
+                    "name": "Exercise stock Codex Update while the original Team retains its captured source",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 25
+                  },
+                  {
+                    "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 26
+                  },
+                  {
+                    "name": "Prepare exact OpenCode V2 Bun and engine graph",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 27
+                  },
+                  {
+                    "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 28
+                  },
+                  {
+                    "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 29
+                  },
+                  {
+                    "name": "Verify exact source, original screenshots, receipts and cleanup",
+                    "status": "completed",
+                    "conclusion": "failure",
+                    "number": 30
+                  },
+                  {
+                    "name": "Preserve original Desktop evidence, including failures",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 31
+                  },
+                  {
+                    "name": "Post Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 60
+                  },
+                  {
+                    "name": "Post Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 61
+                  },
+                  {
+                    "name": "Post Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 62
+                  },
+                  {
+                    "name": "Complete job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 63
+                  }
+                ]
+              },
+              {
+                "id": 133120928959,
+                "name": "Offline Host Desktop (darwin-arm64, installer)",
+                "status": "completed",
+                "conclusion": "success",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": [
+                  {
+                    "name": "Set up job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 1
+                  },
+                  {
+                    "name": "Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 2
+                  },
+                  {
+                    "name": "Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 3
+                  },
+                  {
+                    "name": "Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 4
+                  },
+                  {
+                    "name": "Verify original checkout and runner tuple",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 5
+                  },
+                  {
+                    "name": "Prepare private Linux display",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 6
+                  },
+                  {
+                    "name": "Install frozen workspace and Electron",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 7
+                  },
+                  {
+                    "name": "Build existing Desktop prerequisites and verify admission",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 8
+                  },
+                  {
+                    "name": "Verify original Runtime and Team conversation contracts",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 9
+                  },
+                  {
+                    "name": "Verify complete workspace types and original typed lint scopes",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 10
+                  },
+                  {
+                    "name": "Capture package-manager and Host inputs without vendor executables",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 11
+                  },
+                  {
+                    "name": "Capture original controlled Linux process input without a provider",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 12
+                  },
+                  {
+                    "name": "Exercise ordinary Team controls and renderer reload",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 13
+                  },
+                  {
+                    "name": "Exercise ordinary Taskboard controls and persistence",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 14
+                  },
+                  {
+                    "name": "Exercise original Skills and cross-Team controls",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 15
+                  },
+                  {
+                    "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 16
+                  },
+                  {
+                    "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 17
+                  },
+                  {
+                    "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 18
+                  },
+                  {
+                    "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 19
+                  },
+                  {
+                    "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 20
+                  },
+                  {
+                    "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 21
+                  },
+                  {
+                    "name": "Exercise original Review after a cold Host and app restart",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 22
+                  },
+                  {
+                    "name": "Exercise saved next-launch selection while the original Team remains live",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 23
+                  },
+                  {
+                    "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 24
+                  },
+                  {
+                    "name": "Exercise stock Codex Update while the original Team retains its captured source",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 25
+                  },
+                  {
+                    "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 26
+                  },
+                  {
+                    "name": "Prepare exact OpenCode V2 Bun and engine graph",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 27
+                  },
+                  {
+                    "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 28
+                  },
+                  {
+                    "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 29
+                  },
+                  {
+                    "name": "Verify exact source, original screenshots, receipts and cleanup",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 30
+                  },
+                  {
+                    "name": "Preserve original Desktop evidence, including failures",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 31
+                  },
+                  {
+                    "name": "Post Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 60
+                  },
+                  {
+                    "name": "Post Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 61
+                  },
+                  {
+                    "name": "Post Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 62
+                  },
+                  {
+                    "name": "Complete job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 63
+                  }
+                ]
+              },
+              {
+                "id": 133120928983,
+                "name": "Offline Host Desktop (linux-x64, codex)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120928994,
+                "name": "Offline frontend tests (1/4)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120929022,
+                "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120929032,
+                "name": "Offline Host Desktop (linux-x64, team)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120929111,
+                "name": "Offline Host Desktop (linux-x64, cross-team)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120929116,
+                "name": "Offline Host Desktop (linux-x64, management)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120929154,
+                "name": "Offline frontend tests (3/4)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120929161,
+                "name": "Offline Host Desktop (linux-x64, import)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120929176,
+                "name": "Offline Host Desktop (linux-x64, taskboard)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120929213,
+                "name": "Offline Host Desktop (linux-x64, claude)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120929215,
+                "name": "Offline Host Desktop (linux-x64, collaboration)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133120929457,
+                "name": "Offline frontend tests (2/4)",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133150851019,
+                "name": "Offline Host Desktop",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731227,
+                "logs_url": null,
+                "steps": null
+              }
+            ]
+          },
+          "isError": false
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "key": "packaged",
+        "response": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Action completed."
+            }
+          ],
+          "structuredContent": {
+            "jobs": [
+              {
+                "id": 133120927633,
+                "name": "classify packaged smoke",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731334,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133150848920,
+                "name": "${{ (((github.event.action == 'edited') && !github.event.changes.base && ((github.event.changes.title || github.event.changes.body)) && 'metadata packaged smoke') || 'packaged smoke') }} (${{ matrix.platform }})",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731334,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133150849444,
+                "name": "github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'metadata packaged gate' || 'packaged full gate'",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "run_id": 43813731334,
+                "logs_url": null,
+                "steps": null
+              }
+            ]
+          },
+          "isError": false
+        }
+      }
+    }
+  ]
+}

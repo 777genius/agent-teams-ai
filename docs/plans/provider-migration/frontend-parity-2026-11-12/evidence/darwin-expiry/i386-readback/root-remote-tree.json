@@ -1,0 +1,23 @@
+{
+  "schema": "root-I386-immutable-remote-tree-readback/v1",
+  "observedAtUTC": "2026-11-16T06:57:03.118185+00:00",
+  "result": "APPROVE",
+  "rows": [
+    {
+      "kind": "docs",
+      "sha": "d6a006d339d853621231a4d7a4a2fc5520256cff",
+      "allRemoteLeavesExact": 11150,
+      "allRemoteDirectoriesExact": 1683,
+      "truncated": false
+    },
+    {
+      "kind": "source",
+      "sha": "763d943372c79c8d82ad2634b04861da81308fee",
+      "allRemoteLeavesExact": 11150,
+      "allRemoteDirectoriesExact": 1683,
+      "truncated": false
+    }
+  ],
+  "commitsCreated": false,
+  "refsAdvanced": false
+}

@@ -1,0 +1,211 @@
+{
+  "kind": "E1 original frontend shard 4 of 4 only",
+  "reviewedAtUTC": "2026-11-16T07:06:59.999243+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731227,
+  "jobId": 133120928662,
+  "artifactId": 14203956752,
+  "job": {
+    "id": 133120928662,
+    "name": "Offline frontend tests (4/4)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43813731227,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify source and capture the original Host test runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Setup the original workspace test runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Prepare original test prerequisites",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Run the complete safe frontend shard",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Preserve original test results, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Post Setup the original workspace test runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19
+      }
+    ]
+  },
+  "artifact": {
+    "id": 14203956752,
+    "name": "host-offline-tests-e1d14b9cd0fa1d7896b58e513f9040639e9e4940-4",
+    "size_in_bytes": 317740,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14203956752",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14203956752/zip",
+    "expired": false,
+    "created_at": "2026-11-16T06:56:30Z",
+    "expires_at": "2026-11-30T06:56:29Z",
+    "updated_at": "2026-11-16T06:56:30Z",
+    "digest": "sha256:58c2f8f667ff43a2ed586932403903856aa2491402ae19be9ab13cb541d3f6b5",
+    "workflow_run": {
+      "id": 43813731227,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+    }
+  },
+  "rawMcpContentEqualsJobBytes": true,
+  "completeTeeContiguousInRawAfterOnlyTimestampRemoval": true,
+  "originalCommand": "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\\n  --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\\n  --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\\n  2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\"",
+  "environment": {
+    "HOST_TEST_SHARD": "4",
+    "frontendNode": "26.12.1",
+    "capturedHostPrerequisiteNode": "24.21.0",
+    "vitest": "3.2.6",
+    "pnpm": "11.22.0",
+    "defaultTestTimeoutMs": 15000,
+    "maxWorkers": 2,
+    "environment": "happy-dom"
+  },
+  "counts": {
+    "totalAssertions": 6621,
+    "passedAssertions": 6614,
+    "skippedAssertions": 7,
+    "failedAssertions": 0,
+    "testFiles": 539,
+    "cliPassedFiles": 537,
+    "cliSkippedFiles": 2,
+    "jsonReportedTestResultPassedObjects": 539,
+    "jsonReportedTotalTestSuites": 1349,
+    "jsonReportedPassedTestSuites": 1349
+  },
+  "reporterPrecision": "Vitest JSON marks all539 testResults passed, including two whose assertions all skipped. Original console reports537 passed files/2 skipped. Nested JSON suite counts1349 are retained separately, not called distinct files.",
+  "sourceProof": {
+    "path": "ci-e1d14b9/frontend4/source-and-case-proof.json",
+    "bytes": 228982,
+    "blob": "c84353d66250bd53be5473829447447ab0a8ba28",
+    "sha256": "fae0223af31b9235ed7d01cf08dd4c3e882c763ce26358faf83f590b7ce59217"
+  },
+  "skippedAssertions": [
+    {
+      "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+      "fullName": "preserves wrapper ownership across real Vitest setup",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e resolves the current host as native macOS",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e chooses Homebrew as the macOS install strategy on this machine",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e finds the real tmux binary on this macOS host",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e reports tmux as runtime-ready for the live macOS host path",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e keeps the current platform on the tmux runtime path",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e runs a real isolated tmux session on macOS and executes a shell command in it",
+      "status": "skipped"
+    }
+  ],
+  "skipGuards": [
+    {
+      "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+      "guard": "OPENCODE_E2E !== '1'",
+      "cases": 1
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "guard": "describe.runIf(process.platform === 'darwin'); additional brew/tmux guards remain nested",
+      "cases": 6
+    }
+  ],
+  "originalDurationSeconds": 392.7,
+  "assertionStartEpochMs": 1794811796702,
+  "limits": [
+    "This is one original shard4/4 only. Shards1/4,2/4,3/4 were queued in the retained snapshot; no all-four aggregate PASS.",
+    "Live/live-e2e/native excluded files and seven skipped assertions remain unqualified.",
+    "No current Team177/stderr24/typed or native/Desktop/packaged qualification follows from this frontend result.",
+    "Current test files are Git-joined; this review did not independently rebuild all imported code or execute any project command.",
+    "Host Node24.21 capture/prerequisites and actual frontend Node26.12.1 are separate; retained engine warnings are not removed."
+  ]
+}

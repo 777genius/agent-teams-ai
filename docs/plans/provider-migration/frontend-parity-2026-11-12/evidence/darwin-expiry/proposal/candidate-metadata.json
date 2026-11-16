@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "kind": "prospective-test-only-main-queued-expiry-anchor-amendment",
+  "createdAtUTC": "2026-11-16T06:50:04.289495+00:00",
+  "status": "SCRATCH_PROPOSAL_ONLY_NOT_SELECTED_NOT_APPLIED_NOT_EXECUTED",
+  "baseHead": "c761567d3a7912ef9255532d1f296d66e8c52b91",
+  "baseTree": "ea02729b2e0a242b784f9db7943a106e50bd2718",
+  "sourceEquivalentIncoming": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "files": [
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "mode": "100644",
+      "preimage": {
+        "path": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/preimage/test/features/agent-backend/capturedHostClient.test.ts",
+        "bytes": 51981,
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f",
+        "lines": 1040
+      },
+      "candidate": {
+        "path": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate/test/features/agent-backend/capturedHostClient.test.ts",
+        "bytes": 51989,
+        "blob": "4e8a47af47549d22df0b7199a58a2511d8ecfda0",
+        "sha256": "34106dc02e8d38f0be8dffe3b0c734972ec0e7d8e0833f1bfc5757c430194f62",
+        "lines": 1040
+      },
+      "addedLines": 1,
+      "removedLines": 1,
+      "fullDeclaredInverseExact": true,
+      "samePreimageAtE1AndPublishedC761": true
+    },
+    {
+      "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+      "mode": "100644",
+      "preimage": {
+        "path": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/preimage/test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+        "bytes": 29798,
+        "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+        "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+        "lines": 603
+      },
+      "candidate": {
+        "path": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate/test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+        "bytes": 30715,
+        "blob": "2726155997717ed0f22c1d2f71d0adf5a42c190c",
+        "sha256": "1555d38eaecd485f501b366e9a2a27b5f0f0c610d51079a88b8ada506e80794a",
+        "lines": 618
+      },
+      "addedLines": 20,
+      "removedLines": 5,
+      "fullDeclaredInverseExact": true,
+      "samePreimageAtE1AndPublishedC761": true
+    }
+  ],
+  "fileCount": 2,
+  "addedLines": 21,
+  "removedLines": 6,
+  "patch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate.patch",
+    "bytes": 3674,
+    "blob": "b898bd9032cec5a0d2815c4d4e268d13a088f762",
+    "sha256": "6127e13f8ed30c9edc36e04730cea8c2a42ff26dbe5721c91d1c18dcfe378a58",
+    "lines": 60
+  },
+  "sourceAndVenuePins": {
+    "path": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/source-and-venue-pins.json",
+    "bytes": 12520,
+    "blob": "b900529a659806a0bf5fea1cd61a2b4264d6b875",
+    "sha256": "476ef0e33c55a1a0d5e742567d668213861f5c98157c3d2db74654b2f282af91",
+    "lines": 302
+  },
+  "originalFailureAnalysis": {
+    "path": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/original-failure-and-source-analysis.json",
+    "bytes": 3299,
+    "blob": "d62cac555dfc92e9b3da154cd85e9992d70b884e",
+    "sha256": "7698708ab02126d824b0122c8db02daaa767076cf86c0d1c29b0b61e8ebf5480",
+    "lines": 77
+  },
+  "allOriginalTestAssertionLinesPreserved": 172,
+  "allOriginalTestRegistrationLinesPreserved": 25,
+  "wholeChangedCaseInverseExactApartFromOneGateArgument": true,
+  "fixtureDeclaredFullInverseExact": true,
+  "fixtureUpperLineBudget": 618,
+  "testLineBudgetUnchanged": 1040,
+  "deadlineAmendment": {
+    "oldAnchor": "Host fixture performance.now()+20 before HostCustody.request schema and Host admission",
+    "newAnchor": "After actual original Main nativePending Map.set, before its existing entry timer/pump",
+    "capExpression": "Math.min(value.deadline, performance.now() + 20)",
+    "shortExpiryMs": 20,
+    "hostFixtureDefaultMsUnchanged": 2000,
+    "outerRequestMsUnchanged": 3000,
+    "mainWriteTimeoutMsUnchanged": 500,
+    "onlyFirstOriginalWriteEntry": true,
+    "guardedCapability": "TEST-original",
+    "guardedBytes": "YQ==",
+    "originalEntryIdentityPreserved": true,
+    "productionDeadlineNeverExtended": true,
+    "equivalentToOldPreWireDeadline": false
+  },
+  "preservedBoundaryCoverage": {
+    "transportPath": "packages/legacy-agent-host/tests/transport.test.ts",
+    "lines": [
+      377,
+      452
+    ],
+    "lazyQueuedRefusalLines": [
+      424,
+      432
+    ],
+    "expiredBuiltEqualsZero": true,
+    "wireSlotsRemainUntilOriginalAck": true,
+    "sealedQueuedBuilderNeverInvoked": true,
+    "explicitPostLazyBuilderClockCrossingTestFound": false,
+    "postBuilderProductionRecheckSource": "hostCustody.ts355-360",
+    "hostRecoveryPath": "packages/legacy-agent-host/tests/host-custody-recovery.test.ts",
+    "hostRecoveryLines": [
+      109,
+      207
+    ],
+    "noNewMirroredOrDuplicateTests": true
+  },
+  "unchanged": {
+    "productionSource": true,
+    "workflow": true,
+    "config": true,
+    "testRoster": true,
+    "privacyHelper": true,
+    "phaseA": true,
+    "i386SourceAndPendingEvidence": true,
+    "nonExpiringCaseSemantics": true,
+    "incompatibleEnvelopeCase": true,
+    "mandatoryBlockedAndQueuedRaces": true,
+    "allEffectControlAssertions": true,
+    "heldOriginalChildWriteCallback": true
+  },
+  "qualification": {
+    "historicalActualFailurePreserved": true,
+    "newSemanticRedManufactured": false,
+    "prospectiveExpectedGreenNotExecuted": true,
+    "requiresDocsFirstRootSelectionAndIndependentReview": true,
+    "requiresActualFreshWholeExistingVenueBeforeGreenClaim": true,
+    "noNewRuntimeNativeProviderOrProductQualification": true
+  },
+  "findings": []
+}

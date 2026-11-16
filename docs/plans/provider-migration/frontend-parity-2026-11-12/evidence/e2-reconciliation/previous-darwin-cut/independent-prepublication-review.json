@@ -1,0 +1,419 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-Darwin-expiry-whole-publication-and-root-order-R2",
+  "createdAtUTC": "2026-11-16T07:21:49.968207+00:00",
+  "reviewer": "/root/native_failures",
+  "verdict": "APPROVE_FOR_PROSPECTIVE_DOCUMENTATION_PUBLICATION",
+  "requiredCorrections": [],
+  "scope": "Exact prepared documentation assembly and separately calculated two-TEST-file prospective source tree. This is not an actual publication/readback approval, a source application, a primary promotion approval or any resulting-source execution claim.",
+  "manifest": {
+    "path": "darwin-expiry-publication/upload-manifest.json",
+    "bytes": 113825,
+    "blob": "de9176538dd197596fe581bafc64a30f3caf8404",
+    "sha256": "5bca086d393658f57332e270a78d436b575ce43b2b600da092f913995400b300"
+  },
+  "independentByteTreeProof": {
+    "path": "darwin-expiry-publication/independent-byte-tree-proof.json",
+    "bytes": 79742,
+    "blob": "be2942e5cfc8972db7e5def7700773421c8df833",
+    "sha256": "0e242b7ab7144b727e01eedc1411813ecd8e3d48c04df7ebcf09cdecd629296c"
+  },
+  "rootOrderedSelectionR1": {
+    "path": "darwin-expiry-publication/R1-root-ordered-selection.md",
+    "bytes": 11301,
+    "blob": "d0df968462614a31d8ab5cc43ac3b09ebc6aa9fd",
+    "sha256": "c4e74225de6fb9059793f46c93f09583448649492cfffce33693a4edc5bae52d"
+  },
+  "parent": {
+    "commit": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+    "tree": "763d943372c79c8d82ad2634b04861da81308fee",
+    "soleParent": "3d751d52bedf983cbac223ddf25ce08ca7af27b8",
+    "freshLocalImmutableGitRead": true,
+    "e1AncestorVerified": true,
+    "onlyParentSourceDelta": "tools/owned-process-broker/debugServiceTest.h",
+    "retainedI386Header": "952ed2d3436708addf656109dc513270ea33ce22"
+  },
+  "allPreparedBytesAndReferences": {
+    "newOrModifiedDocumentationPayloads": 45,
+    "newFiles": 44,
+    "modifiedExistingFiles": 1,
+    "payloadBytes": 4943587,
+    "fullEveryPayloadHashAndOriginalByteEqualityVerified": true,
+    "preservedReferenceCount": 50,
+    "identicalAlreadyPublishedReferences": 7,
+    "identicalNewReferences": 0,
+    "groups": [
+      {
+        "name": "Completed actual I386 documentation and one-header publication",
+        "scope": "Exact publication custody and readbacks only; no resulting-source native result.",
+        "referenceCount": 18
+      },
+      {
+        "name": "Exact two-file Main TEST admission expiry selection",
+        "scope": "Complete prospective R1/R2, candidates/inverses and fresh31-pin actual00d749 rebind; no application or execution.",
+        "referenceCount": 12
+      },
+      {
+        "name": "Original E1 Darwin x64 actual failure and later independent R2",
+        "scope": "Complete retained actual failure with source-order counterexample and unknown historical branch; no timing-cause or positive cleanup claim.",
+        "referenceCount": 8
+      },
+      {
+        "name": "Original E1 frontend shard4 only, complete actual R2",
+        "scope": "6614PASS/7SKIP in one original Linux frontend shard; source-bound capturedHostClient33PASS contrast only. Other three shards and proposed-amendment success are not qualified.",
+        "referenceCount": 12
+      }
+    ],
+    "referenceClosure": "Every referenced original scratch file agrees byte-for-byte with either its new documentation payload or its exact existing immutable Git path at the actual parent. The seven prior published payloads include the Darwin original log/response/archive/author and official metadata; they are not duplicated into new binary files.",
+    "publicationIndex": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/publication-index.json",
+      "bytes": 44991,
+      "blob": "b4db5ddfa90f374f2391fc523d32130fd0aa2c06",
+      "sha256": "170bf11f4b54dffccb88937cc16e2ebb3847db254f7e4f89a981dc698edf4571"
+    },
+    "indexMatchesGroupsPlanArchivesAndSourceChanges": true,
+    "originalCheckpointsHistoricalPendingStatesPreserved": true
+  },
+  "twoCompleteTrees": {
+    "documentationTree": "732bfd36a3f6a00029c385effe1f8efb59abc23b",
+    "prospectiveSourceChildTree": "991da6020ab4ea2b22bfb80512647516a1c57d91",
+    "bothRecomputedFromWholeLeafMaps": true,
+    "bothFullMapsAndEveryDirectoryMatchPreparedFiles": true,
+    "leafCount": 11194,
+    "directoryCountIncludingRoot": 1688,
+    "unchangedOtherParentLeaves": 11149,
+    "nonDocumentationLeafCount": 8798,
+    "docsNonDocumentationMapSha256": "94deeed545664749a234f724e5a59304ba6499760817630cac2fcf2bb618d199",
+    "sourceNonDocumentationMapSha256": "040257d58a98bb330b746872e970009cd55ea498d4a4ea04232fc3cc2721263d",
+    "all8798SourceLeavesUnchangedByDocumentation": true,
+    "sourceChildDiffIsExactlyTwoSelectedTestPaths": true,
+    "documentationUnchangedByProspectiveSourceChild": true,
+    "all40PriorPathMovesPreserved": true,
+    "maximumRelativePathCharacters": 216,
+    "noDeletionModeOrWorkflowChange": true,
+    "priorI386HeaderExactInBothTrees": true,
+    "sourceChanges": [
+      {
+        "path": "test/features/agent-backend/capturedHostClient.test.ts",
+        "mode": "100644",
+        "preimage": {
+          "bytes": 51981,
+          "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+          "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+        },
+        "candidate": {
+          "bytes": 51989,
+          "blob": "4e8a47af47549d22df0b7199a58a2511d8ecfda0",
+          "sha256": "34106dc02e8d38f0be8dffe3b0c734972ec0e7d8e0833f1bfc5757c430194f62"
+        },
+        "candidateScratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate/test/features/agent-backend/capturedHostClient.test.ts"
+      },
+      {
+        "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+        "mode": "100644",
+        "preimage": {
+          "bytes": 29798,
+          "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+          "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7"
+        },
+        "candidate": {
+          "bytes": 30715,
+          "blob": "2726155997717ed0f22c1d2f71d0adf5a42c190c",
+          "sha256": "1555d38eaecd485f501b366e9a2a27b5f0f0c610d51079a88b8ada506e80794a"
+        },
+        "candidateScratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/candidate/test/features/agent-backend/fixtures/retainedNativeCustody.ts"
+      }
+    ]
+  },
+  "wholePlanDerivation": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "immutableParentPrefix": {
+      "bytes": 1969658,
+      "blob": "a6860c298a8ef6bb3d806d93758ff01624dbee03",
+      "sha256": "c76b7f205110c1dbda54a38c5f3008aa6bd20e8162252b69df37343afed0ff99"
+    },
+    "entirePrefixByteExact": true,
+    "orderedSegments": [
+      {
+        "label": "Exact prospective Main admission TEST source R1",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-appendix.md",
+        "bytes": 13583,
+        "blob": "97810fb7cb19b2a34a8c6b83009e869ec4082409",
+        "sha256": "f32af083ac05d666bf86f1bd8e1b1167916060745094dcae93135cdc37238c37",
+        "separatorOffset": 1969658,
+        "contentOffset": 1969660
+      },
+      {
+        "label": "Root ordered selection governs last",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-root-ordered-selection.md",
+        "bytes": 11301,
+        "blob": "d0df968462614a31d8ab5cc43ac3b09ebc6aa9fd",
+        "sha256": "c4e74225de6fb9059793f46c93f09583448649492cfffce33693a4edc5bae52d",
+        "separatorOffset": 1983243,
+        "contentOffset": 1983245
+      }
+    ],
+    "separatorBytes": 4,
+    "separatorForm": "Exactly LF LF before each of the two complete segments.",
+    "result": {
+      "bytes": 1994546,
+      "blob": "f4696f07178f3067f61e24c13c0dc2043dc73297",
+      "sha256": "4c7240b04de05e7e5af4ff893a402ea33c86aaa0fc4ecadc35b43d205618614d"
+    },
+    "governingLastSegment": "The exact new root selection d0df968462614a31d8ab5cc43ac3b09ebc6aa9fd follows the unchanged independently reviewed author R1 97810fb7cb19b2a34a8c6b83009e869ec4082409. No historical paragraph or earlier policy is rewritten.",
+    "historicalPrefixSemanticsRequalified": false
+  },
+  "archiveRecoverability": {
+    "archives": [
+      {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/frontend-shard4/artifact-14203956752.zip",
+        "bytes": 317740,
+        "blob": "891547517df19ed9562cf6311c329f7989c953f7",
+        "sha256": "58c2f8f667ff43a2ed586932403903856aa2491402ae19be9ab13cb541d3f6b5",
+        "members": [
+          {
+            "path": "host-offline-tests-4.json",
+            "bytes": 2329390,
+            "blob": "7d053971411b3ba00775e0d665336c3eae366ef2",
+            "sha256": "8e9f4628575912f10e3652dff0267b38f0c29faaafd2a65b5613247d70ef44cc",
+            "crc32": "353a7ecd"
+          },
+          {
+            "path": "host-offline-tests-4.log",
+            "bytes": 116994,
+            "blob": "438ad72fd566a59771db2340c550d720ae741c02",
+            "sha256": "92ebda4c7646318bb433062b9f2d41ccf23d63fcc09a97f7c4325b4fe6a4a2f1",
+            "crc32": "3c9870c9"
+          }
+        ],
+        "memberCount": 2,
+        "uncompressedBytes": 2446384,
+        "alreadyPublished": false,
+        "fullCrcSafeUniqueByteRecoveryVerified": true
+      },
+      {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/i386-fd5/native/artifact-14202660278.zip",
+        "bytes": 11052,
+        "blob": "b85149194d6ac77e819ef97ec216b12a4ed9862f",
+        "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039",
+        "members": [
+          {
+            "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+            "bytes": 20799,
+            "blob": "2a6e7df8e767ea97c7989415e0ec7d43ba68fa02",
+            "sha256": "fb385c2bcee56a31ede4bde2bd0d315deb9e38fb52ad3f4677cfcc70c585a20c",
+            "crc32": "70f642d3"
+          },
+          {
+            "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+            "bytes": 772,
+            "blob": "9ff3a45e91cb855f0aab059687b0210f174ebcc2",
+            "sha256": "c15f61fc7d9a55696f91eb9129b17eeff7f8fe7cc4a6f870b140b4ffa920c48a",
+            "crc32": "b248c9c7"
+          },
+          {
+            "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+            "bytes": 12202,
+            "blob": "91c26284ce8066bcff47b789072912e94636c2a0",
+            "sha256": "ee75fec9a697cb348ad7207b23322bf5f5f65562680b2b2bb42b4e34d2ffeb07",
+            "crc32": "d9e7977c"
+          },
+          {
+            "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+            "bytes": 41,
+            "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+            "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+            "crc32": "4b15b81c"
+          }
+        ],
+        "memberCount": 4,
+        "uncompressedBytes": 33814,
+        "alreadyPublished": true,
+        "fullCrcSafeUniqueByteRecoveryVerified": true
+      }
+    ],
+    "archiveCount": 2,
+    "memberCount": 6,
+    "allSafeUniqueNonsymlinkNamesCrcAndFullMemberBytesVerified": true,
+    "darwinPublishedArchiveReused": true,
+    "frontendShard4OriginalArchiveAdded": true,
+    "noSignedDownloadUrlsNeededForRecovery": true
+  },
+  "prospectiveSourceBinding": {
+    "originalProposalR1": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-appendix.md",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-appendix.md",
+      "mode": "100644",
+      "bytes": 13583,
+      "blob": "97810fb7cb19b2a34a8c6b83009e869ec4082409",
+      "sha256": "f32af083ac05d666bf86f1bd8e1b1167916060745094dcae93135cdc37238c37",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/R1-appendix.md",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    "priorIndependentSourceR2": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/independent-source-r1-review.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/darwin-expiry-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/independent-source-r1-review.json",
+      "mode": "100644",
+      "bytes": 24849,
+      "blob": "cc5e52d57151a27733620ab9801e900139f2c72b",
+      "sha256": "bc10d2e0b1e6bf6a5b00a9a9f7be75c847499072c44e47d837687bb2abdbef44",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/darwin-main-admission-expiry-r1/independent-source-r1-review.json",
+      "reuseIdenticalPublishedPayload": false,
+      "reuseIdenticalNewPayload": false
+    },
+    "fresh31PinRebind": {
+      "path": "darwin-expiry-publication/current-preimages.json",
+      "bytes": 10136,
+      "blob": "37172195e343a833e8fd36fc343debb7fe45e1de",
+      "sha256": "d7bb1f31d5e9537fa576d966239376b556736864b85cdde641fa3d4b892a7ea9"
+    },
+    "all31CurrentAndE1GitBytesIndependentlyRejoined": true,
+    "bothSelectedCandidateBodiesAndCompletePatchMatchAlreadyReviewedVersions": true,
+    "fullOriginalPreimagesEqualActualParent": true,
+    "scope": "The original two-file source review is rebound by unchanged complete preimages, candidate bytes, full patch and all31 source/venue pins at actual00d749. This does not transfer old runtime results to the unapplied afterimages.",
+    "assertionPreservation": "The exact already-reviewed +21/-6 patch retains all172 original assertion-bearing lines and25 registrations. There are no added or removed cases.",
+    "explicitPolicyAmendment": "The old short Host caller deadline before schema preparation is replaced only in this pressure fixture by the short cap of the actual first Main entry after the captured original Map.set and before the original timer/pump. It changes the old end-to-end20ms acceptance scope; the R1 does not describe that scope as unchanged.",
+    "retainedBounds": "The fixture uses its existing Host2000ms timeout, Main existing500ms write timeout and outer3000ms request bound; original queue/timer/pump, mandatory admitted witness, held stdin callback, exact expired zero-effects/control and non-expiring one-write assertions remain. These may still fail within their unchanged bounds.",
+    "determinismQualification": "Only the Map insertion/cap/timer ordering is deterministic. The R1 does not guarantee successful Host transport or admission and does not excuse failure of the mandatory race.",
+    "guardFailureAndCleanup": "Same-object/unreserved/finite-deadline/exact TEST write guards remain required. Throws take the existing protocol-error/seal path and the original awaited finally; they cannot turn a missing admission into success. No universal thrown-value identity or measured physical cleanup is invented.",
+    "hostPrewireCoverage": "Existing queued/pre-wire Host expiry coverage is in the unchanged full Host package test glob and its conditional General CI route. It is not represented as an operand of the18-file Process Host command or the eight-file retained-Main command. No dedicated stalled-schema-builder runtime case is claimed."
+  },
+  "actualEvidenceAttribution": {
+    "darwinFailure": {
+      "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "jobId": 133120929324,
+      "authorAuditBlob": "ac18ebf884a19796712648d81a030d98c696361d",
+      "independentR2Blob": "46d38413787b525f23600f398076e50e5ee9963e",
+      "retainedMainCases": "80PASS/1FAIL across81",
+      "threePrerequisiteCommands": "299PASS/1FAIL/2SKIP across302",
+      "firstBoundary": "capturedHostClient.test.ts356:67 required Main admission race; original requested promise fulfilled before the queued witness after the prior write barrier.",
+      "unknowns": [
+        "actual returned status",
+        "which Host deadline/dispatch branch",
+        "stage clock values",
+        "physical child-cleanup receipt"
+      ],
+      "teeQualification": "First84 retained-Main tee lines have their ordinary raw join; final workflow-error command is separately joined through the retained percent-newline annotation rendering.",
+      "failureStillFailure": true,
+      "historicalCauseOrRepairClaim": false
+    },
+    "linuxFrontendCounterevidence": {
+      "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "jobId": 133120928662,
+      "shard": "4/4 only",
+      "actualAssertions": {
+        "passed": 6614,
+        "skipped": 7,
+        "failed": 0
+      },
+      "capturedHostClientCases": "33PASS including both unchanged expiry branches",
+      "frontendNode": "26.12.1",
+      "capturedHostPrerequisiteNode": "24.21.0",
+      "independentR2Blob": "abbc5d5cf7fc6f7fa5c78f29ab0856e6f3c51794",
+      "independentByteProofBlob": "94722bf72ae119002368ac96fd1defdccd3468bf",
+      "consoleAndJsonReportingDistinctionPreserved": true,
+      "allFourShardsQualified": false,
+      "otherThreeQueuedIsFrozenHistoricalSnapshot": true,
+      "wholeCaseDurationIsNotStageAttribution": true,
+      "unappliedAmendmentPassClaim": false
+    },
+    "i386Publication": "Both actual documentation and one-header publication readbacks/independent reviews and original create/ordinary-push/guard/post-ref responses are preserved. They establish publication custody, not a resulting-source Windows Node/Electron native PASS."
+  },
+  "historicalPublicationRoute": [
+    {
+      "file": {
+        "path": "i386-fd5-publication/fresh-docs-precommit-guards.json",
+        "bytes": 176376,
+        "blob": "1129c957a8bcc4cdf5f52339e6122a7724c5ff8a",
+        "sha256": "e876755f0167da08e978cc5abdea3c7329fd6fd0cffbea411032e6045662230d"
+      },
+      "observedAtUTC": "2026-11-16 07:02:23 UTC",
+      "followup": "c761567d3a7912ef9255532d1f296d66e8c52b91",
+      "primary": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "pr1192Head": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "pr1192Draft": true,
+      "pr1192State": "open",
+      "pr1192Base": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+      "historicalOnly": true
+    },
+    {
+      "file": {
+        "path": "i386-fd5-publication/post-docs-push-readback.json",
+        "bytes": 175321,
+        "blob": "ef685b4028b8e767bc93b120e65f9fbc9a0bdd5b",
+        "sha256": "16fede68c6a1d9c6adf5c95ca36a4f7488c35b5f5853f700b2e34f563de8a05a"
+      },
+      "observedAtUTC": "2026-11-16 07:03:05 UTC",
+      "followup": "3d751d52bedf983cbac223ddf25ce08ca7af27b8",
+      "primary": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "pr1192Head": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "pr1192Draft": true,
+      "pr1192State": "open",
+      "pr1192Base": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+      "historicalOnly": true
+    },
+    {
+      "file": {
+        "path": "i386-fd5-publication/fresh-source-precommit-guards.json",
+        "bytes": 175268,
+        "blob": "8525b7e31cdd929cfbcf60773ae094df37edf37a",
+        "sha256": "b627b6457843ad076ca90420bf9ab35189f4f3547e14c6916f44bb98c388fd7d"
+      },
+      "observedAtUTC": "2026-11-16 07:07:06 UTC",
+      "followup": "3d751d52bedf983cbac223ddf25ce08ca7af27b8",
+      "primary": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "pr1192Head": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "pr1192Draft": true,
+      "pr1192State": "open",
+      "pr1192Base": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+      "historicalOnly": true
+    },
+    {
+      "file": {
+        "path": "i386-fd5-publication/post-source-push-readback.json",
+        "bytes": 175321,
+        "blob": "def3756ed3845fc8036677702c4584e06d3150bf",
+        "sha256": "b3e9d44072665165d0f44c347e95002a89fb8cc2bbadf7739f9c906f4f0d73fc"
+      },
+      "observedAtUTC": "2026-11-16 07:07:48 UTC",
+      "followup": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+      "primary": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "pr1192Head": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "pr1192Draft": true,
+      "pr1192State": "open",
+      "pr1192Base": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+      "historicalOnly": true
+    }
+  ],
+  "rootOrderedGatesReview": {
+    "fullRootR1Read": true,
+    "rootR1NoConflictWithExactAuthorR1AndCurrentComposition": true,
+    "first": "Publish only the45-document sole-parent child of actual00d749 after current expected-head guards; ordinary force:false push, immediate response retention, full actual readback and independent actual R2.",
+    "second": "Only after that actual documentation gate create and ordinary-push a separate sole-parent source child with exactly the two selected TEST bodies; retain full actual source/tree/docs/ref readbacks and independent R2.",
+    "laterPrimary": "Any primary promotion requires a separate fresh root route/useful-work check and ordinary expected-head force:false fast-forward. Changed primary history/preimage requires new bounded preservation/composition review.",
+    "usefulOriginalCI": "Retain useful already executing original results and original records. Queued work alone is not an all-terminal barrier. No rerun, cancel, manual dispatch, concurrency change or replacement helper execution is selected.",
+    "retainedRouteLimit": "The historical07:03/07:07 guards in this packet are independently checked against their original response objects. They do not serve as a fresh lease for a later push; the new root R1 expressly requires a fresh one.",
+    "newActualPublicationNotYetReviewed": true
+  },
+  "excludedChangesAndQualification": {
+    "phaseAOrBOrCSelected": false,
+    "geometrySelected": false,
+    "crossP08InstallerAlternativeSelected": false,
+    "newProductionPathSelected": false,
+    "workflowSelectorOrOperandChanged": false,
+    "localProjectTestCompilerLintBuildInstallBootstrapModuleNativeGuiOrRealProviderCommandAuthorized": false,
+    "futureOriginalProcessVenueRequired": true,
+    "completeCurrentTeamAndTypedBaselineBeforeAnyLaterP11RedRequired": true,
+    "futureNativeDesktopP08P09RealVendorReleaseDefaultModeNotQualified": true,
+    "PRReadyBaseOrMainReleaseChangeSelected": false
+  },
+  "operations": {
+    "readOnlyGitAndByteAnalysis": true,
+    "allFrozenInputsUnchanged": true,
+    "noCIReadNeededForAssembly": true,
+    "noProjectExecution": true,
+    "noGitObjectRefOrSourceMutation": true
+  },
+  "finalDisposition": "The exact de917653 manifest, complete documents, full tree pair and final root-order R1 are approved for the described prospective documentation publication. Actual remote tree/commit/ref readback remains a separate gate. No correction is required."
+}

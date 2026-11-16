@@ -1,0 +1,624 @@
+{
+  "schema": "incoming-578-Main-diagnostic-root-source-review/v1",
+  "status": "APPROVE_EXACT_INCOMING_DIAGNOSTIC_AS_DIAGNOSTIC_ONLY",
+  "reviewedAtUTC": "2026-11-16T07:33:54.813335+00:00",
+  "reviewer": "/root, independent of incoming source author",
+  "followupCommit": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+  "incomingCommit": "57885c055a18b27c180c304762643eac632513ad",
+  "incomingTree": "b1685b4993306f9cd509d832b72f2cd6f0418943",
+  "commonAncestor": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "source": {
+    "path": "test/features/agent-backend/capturedHostClient.test.ts",
+    "before": {
+      "bytes": 51981,
+      "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+      "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f",
+      "physicalLines": 1040
+    },
+    "after": {
+      "bytes": 52301,
+      "blob": "272e7c3f6ca10d890148fa16080464b395535125",
+      "sha256": "a974eadfc088aa488412b34840a138ef4187e5382592b19493af4a4eeb66d86f",
+      "physicalLines": 1046
+    },
+    "addedLines": 7,
+    "deletedLines": 1,
+    "oneExactReplacement": true,
+    "inverseRestoresEntirePreimage": true,
+    "expectContainingLinesPreserved": 171,
+    "literalTestRegistrationLinesPreserved": 25
+  },
+  "reasoning": {
+    "valueBoundary": "Main request returns the existing JsonValue union. Object/null/array narrowing admits only the indexable JSON object branch; its status property is read once. The generated Host handler returns the existing HostCustodyReply closed union.",
+    "privacy": "Only completed, refused, unknown, or the fixed invalid sentinel can enter the existing Error message. No response value, payload, binding, path, vendor error, error code or arbitrary text is emitted.",
+    "promiseBoundary": "The same second Promise.race still throws the same Error class for requested fulfillment before gate.queued. A rejected requested promise has no new rejection handler and still rejects the race. The first blocked-write race is unchanged.",
+    "acceptance": "Every other byte is preserved by exact forward/inverse reconstruction, including all effect/control/status assertions, original cases and finally restoration/shutdown. The fixture remains byte-identical with its original 20ms pre-schema expiry, 2000ms Host bound and 3000ms outer Main request.",
+    "diagnosticLimit": "A returned status does not identify which Host/Main refusal or scheduling branch occurred. The incoming change is not claimed to repair the existing failure or justify a budget/anchor change.",
+    "cleanupLimit": "Presence of finally shutdown in source is not an observed positive child/Host cleanup receipt.",
+    "scope": "Existing TEST file only; no production TypeScript path, workflow, dependency, import, helper, case, retry, timer, effect or exception-policy change."
+  },
+  "sourceAndVenuePins": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "incoming": {
+        "bytes": 175238,
+        "blob": "da94c393b024d3c8a40159edbf9975cd528007a6",
+        "sha256": "1d985c85b89c284ce4745692fa7aafc345337de59cb81a1aa182f0d3f848feba",
+        "physicalLines": 2633
+      },
+      "followup": {
+        "bytes": 175238,
+        "blob": "da94c393b024d3c8a40159edbf9975cd528007a6",
+        "sha256": "1d985c85b89c284ce4745692fa7aafc345337de59cb81a1aa182f0d3f848feba",
+        "physicalLines": 2633
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "incoming": {
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "physicalLines": 1312
+      },
+      "followup": {
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "physicalLines": 1312
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "incoming": {
+        "bytes": 32248,
+        "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+        "physicalLines": 418
+      },
+      "followup": {
+        "bytes": 32248,
+        "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+        "physicalLines": 418
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "package.json",
+      "incoming": {
+        "bytes": 26839,
+        "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "physicalLines": 580
+      },
+      "followup": {
+        "bytes": 26839,
+        "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "physicalLines": 580
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "incoming": {
+        "bytes": 12355,
+        "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+        "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+        "physicalLines": 304
+      },
+      "followup": {
+        "bytes": 12355,
+        "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+        "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+        "physicalLines": 304
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/contracts.ts",
+      "incoming": {
+        "bytes": 5570,
+        "blob": "5d5743e8728ff3f16dcc09ad822804e4952632e1",
+        "sha256": "c9c5686a8f6ccf6abfe2518edf713d34f48641b79ede32f070048c46c0ae4b3d",
+        "physicalLines": 169
+      },
+      "followup": {
+        "bytes": 5570,
+        "blob": "5d5743e8728ff3f16dcc09ad822804e4952632e1",
+        "sha256": "c9c5686a8f6ccf6abfe2518edf713d34f48641b79ede32f070048c46c0ae4b3d",
+        "physicalLines": 169
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/index.ts",
+      "incoming": {
+        "bytes": 11111,
+        "blob": "755158699496506a62132c540f19b225c5a6222d",
+        "sha256": "5710013cfeac12d61f6f93ba995df696395c583803b2226be79195dff7dff095",
+        "physicalLines": 330
+      },
+      "followup": {
+        "bytes": 11111,
+        "blob": "755158699496506a62132c540f19b225c5a6222d",
+        "sha256": "5710013cfeac12d61f6f93ba995df696395c583803b2226be79195dff7dff095",
+        "physicalLines": 330
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/output.ts",
+      "incoming": {
+        "bytes": 5071,
+        "blob": "78ba126a830231da8a22bca8601de20f8a51853d",
+        "sha256": "d55a42832b820a075f8e22672cfbe60d4f865573408540c525db8e1e1857bc59",
+        "physicalLines": 153
+      },
+      "followup": {
+        "bytes": 5071,
+        "blob": "78ba126a830231da8a22bca8601de20f8a51853d",
+        "sha256": "d55a42832b820a075f8e22672cfbe60d4f865573408540c525db8e1e1857bc59",
+        "physicalLines": 153
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+      "incoming": {
+        "bytes": 21129,
+        "blob": "af69d8430ffd473d471a5e663606fcaea640d2e5",
+        "sha256": "ae2bc6fe45b4dded8cff67b13daf01e8a5f5c4fc3e835ce7eb98a8c58adaf435",
+        "physicalLines": 472
+      },
+      "followup": {
+        "bytes": 21129,
+        "blob": "af69d8430ffd473d471a5e663606fcaea640d2e5",
+        "sha256": "ae2bc6fe45b4dded8cff67b13daf01e8a5f5c4fc3e835ce7eb98a8c58adaf435",
+        "physicalLines": 472
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/host-custody-recovery.test.ts",
+      "incoming": {
+        "bytes": 12363,
+        "blob": "1d789db5229276aa98535c76cbe17c9e4ee3cdc2",
+        "sha256": "7d5e7d1eea09f3feb70ad4f767295aebbd7ec714ffa41f456b17431bda7227d2",
+        "physicalLines": 207
+      },
+      "followup": {
+        "bytes": 12363,
+        "blob": "1d789db5229276aa98535c76cbe17c9e4ee3cdc2",
+        "sha256": "7d5e7d1eea09f3feb70ad4f767295aebbd7ec714ffa41f456b17431bda7227d2",
+        "physicalLines": 207
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/transport.test.ts",
+      "incoming": {
+        "bytes": 23731,
+        "blob": "24c83547be0ee43bb6f2481618a4356a3855d832",
+        "sha256": "b49279f1685054763969aa51a08c294e0ea9acf5b640c7d94553cbcf59aa412c",
+        "physicalLines": 589
+      },
+      "followup": {
+        "bytes": 23731,
+        "blob": "24c83547be0ee43bb6f2481618a4356a3855d832",
+        "sha256": "b49279f1685054763969aa51a08c294e0ea9acf5b640c7d94553cbcf59aa412c",
+        "physicalLines": 589
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "incoming": {
+        "bytes": 456,
+        "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+        "physicalLines": 19
+      },
+      "followup": {
+        "bytes": 456,
+        "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+        "physicalLines": 19
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "incoming": {
+        "bytes": 174,
+        "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+        "physicalLines": 9
+      },
+      "followup": {
+        "bytes": 174,
+        "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+        "physicalLines": 9
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "incoming": {
+        "bytes": 956788,
+        "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+        "physicalLines": 26665
+      },
+      "followup": {
+        "bytes": 956788,
+        "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+        "physicalLines": 26665
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "incoming": {
+        "bytes": 6946,
+        "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+        "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+        "physicalLines": 169
+      },
+      "followup": {
+        "bytes": 6946,
+        "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+        "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+        "physicalLines": 169
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "incoming": {
+        "bytes": 32767,
+        "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+        "physicalLines": 800
+      },
+      "followup": {
+        "bytes": 32767,
+        "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+        "physicalLines": 800
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "incoming": {
+        "bytes": 52301,
+        "blob": "272e7c3f6ca10d890148fa16080464b395535125",
+        "sha256": "a974eadfc088aa488412b34840a138ef4187e5382592b19493af4a4eeb66d86f",
+        "physicalLines": 1046
+      },
+      "followup": {
+        "bytes": 51981,
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f",
+        "physicalLines": 1040
+      },
+      "unchangedAtIncoming": false
+    },
+    {
+      "path": "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+      "incoming": {
+        "bytes": 4592,
+        "blob": "4a7801a5260ad0c25a07485003d4e99ac5b4633f",
+        "sha256": "a979a7e7a32e952067237fc3d04f3b4b19a97328dacf55db65c606dae4211287",
+        "physicalLines": 67
+      },
+      "followup": {
+        "bytes": 4592,
+        "blob": "4a7801a5260ad0c25a07485003d4e99ac5b4633f",
+        "sha256": "a979a7e7a32e952067237fc3d04f3b4b19a97328dacf55db65c606dae4211287",
+        "physicalLines": 67
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "incoming": {
+        "bytes": 10861,
+        "blob": "e6379e4ace2cc874f660c6bb1377592bba52ebb9",
+        "sha256": "3f972d99f44c514d3f06875a7c8a094b63998aa5daf17abf68db13a7b4cc9025",
+        "physicalLines": 186
+      },
+      "followup": {
+        "bytes": 10861,
+        "blob": "e6379e4ace2cc874f660c6bb1377592bba52ebb9",
+        "sha256": "3f972d99f44c514d3f06875a7c8a094b63998aa5daf17abf68db13a7b4cc9025",
+        "physicalLines": 186
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+      "incoming": {
+        "bytes": 12515,
+        "blob": "b6ce74003e2dc27a8e4527bd07298fc2bff2a586",
+        "sha256": "0c411315405fd6a572dddb385e3735ca43b78141d729f932a27087adf48480c7",
+        "physicalLines": 166
+      },
+      "followup": {
+        "bytes": 12515,
+        "blob": "b6ce74003e2dc27a8e4527bd07298fc2bff2a586",
+        "sha256": "0c411315405fd6a572dddb385e3735ca43b78141d729f932a27087adf48480c7",
+        "physicalLines": 166
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSourcePending.test.ts",
+      "incoming": {
+        "bytes": 6457,
+        "blob": "1ff48096cf52cde91cd82ac55eddf99f4458896e",
+        "sha256": "b18822ad82a51a00100184148043032822fcfa2df80c47e1d38a4dbdc6e71e56",
+        "physicalLines": 86
+      },
+      "followup": {
+        "bytes": 6457,
+        "blob": "1ff48096cf52cde91cd82ac55eddf99f4458896e",
+        "sha256": "b18822ad82a51a00100184148043032822fcfa2df80c47e1d38a4dbdc6e71e56",
+        "physicalLines": 86
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+      "incoming": {
+        "bytes": 56748,
+        "blob": "1bd21c24852ebfade85b23b425342e6665f447e7",
+        "sha256": "a6540bd6c68165b7b0d782768cc7303d00cb609083df4baacdaad81d51e3f810",
+        "physicalLines": 1121
+      },
+      "followup": {
+        "bytes": 56748,
+        "blob": "1bd21c24852ebfade85b23b425342e6665f447e7",
+        "sha256": "a6540bd6c68165b7b0d782768cc7303d00cb609083df4baacdaad81d51e3f810",
+        "physicalLines": 1121
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "test/features/agent-backend/fileTeamModelProbeIntents.test.ts",
+      "incoming": {
+        "bytes": 10028,
+        "blob": "a596613b900598a51d446d7c959b1ea7c1c95b64",
+        "sha256": "0fd030d5cdfb4473b32991b6b62befa9ecd888236423419df9a48f9e599cc119",
+        "physicalLines": 194
+      },
+      "followup": {
+        "bytes": 10028,
+        "blob": "a596613b900598a51d446d7c959b1ea7c1c95b64",
+        "sha256": "0fd030d5cdfb4473b32991b6b62befa9ecd888236423419df9a48f9e599cc119",
+        "physicalLines": 194
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+      "incoming": {
+        "bytes": 29798,
+        "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+        "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+        "physicalLines": 603
+      },
+      "followup": {
+        "bytes": 29798,
+        "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+        "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+        "physicalLines": 603
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+      "incoming": {
+        "bytes": 15667,
+        "blob": "bc0820f51820e4cf66f37404395fee4c536b5311",
+        "sha256": "1f20a7ab1e2f8e35abd2123a962884054f00b0a48deb7bf2617502bc8d960b46",
+        "physicalLines": 294
+      },
+      "followup": {
+        "bytes": 15667,
+        "blob": "bc0820f51820e4cf66f37404395fee4c536b5311",
+        "sha256": "1f20a7ab1e2f8e35abd2123a962884054f00b0a48deb7bf2617502bc8d960b46",
+        "physicalLines": 294
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "test/features/agent-backend/tsconfig.json",
+      "incoming": {
+        "bytes": 379,
+        "blob": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+        "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79",
+        "physicalLines": 12
+      },
+      "followup": {
+        "bytes": 379,
+        "blob": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+        "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79",
+        "physicalLines": 12
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "test/setup.ts",
+      "incoming": {
+        "bytes": 5297,
+        "blob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+        "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+        "physicalLines": 168
+      },
+      "followup": {
+        "bytes": 5297,
+        "blob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+        "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+        "physicalLines": 168
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "incoming": {
+        "bytes": 557,
+        "blob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+        "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+        "physicalLines": 6
+      },
+      "followup": {
+        "bytes": 557,
+        "blob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+        "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+        "physicalLines": 6
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "incoming": {
+        "bytes": 393,
+        "blob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+        "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+        "physicalLines": 6
+      },
+      "followup": {
+        "bytes": 393,
+        "blob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+        "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+        "physicalLines": 6
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "tsconfig.json",
+      "incoming": {
+        "bytes": 1235,
+        "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+        "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+        "physicalLines": 40
+      },
+      "followup": {
+        "bytes": 1235,
+        "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+        "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+        "physicalLines": 40
+      },
+      "unchangedAtIncoming": true
+    },
+    {
+      "path": "vitest.config.ts",
+      "incoming": {
+        "bytes": 1187,
+        "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "physicalLines": 34
+      },
+      "followup": {
+        "bytes": 1187,
+        "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "physicalLines": 34
+      },
+      "unchangedAtIncoming": true
+    }
+  ],
+  "pinCount": 31,
+  "unchangedPins": 30,
+  "originalExecutionVenue": {
+    "workflow": ".github/workflows/host-process-acceptance.yml",
+    "wholeEightFileCommand": "node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log",
+    "originalPreparationRequired": true,
+    "automaticOriginalCIOnly": true,
+    "localProjectExecution": false,
+    "resultingSourceSuccess": false
+  },
+  "wholeSourceDelta": [
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "before": {
+        "path": "test/features/agent-backend/capturedHostClient.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b"
+      },
+      "after": {
+        "path": "test/features/agent-backend/capturedHostClient.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "272e7c3f6ca10d890148fa16080464b395535125"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/broker.cpp",
+      "before": {
+        "path": "tools/owned-process-broker/broker.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e"
+      },
+      "after": {
+        "path": "tools/owned-process-broker/broker.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a4912d809aacc1fd4a949267fa0120d324b41be4"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "before": {
+        "path": "tools/owned-process-broker/debugServiceTest.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "952ed2d3436708addf656109dc513270ea33ce22"
+      },
+      "after": {
+        "path": "tools/owned-process-broker/debugServiceTest.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a72b32fa7eda34d473463099f7df151f359a8559"
+      }
+    }
+  ],
+  "sourceMapDigests": {
+    "followup": {
+      "leafCount": 8798,
+      "sha256": "94deeed545664749a234f724e5a59304ba6499760817630cac2fcf2bb618d199"
+    },
+    "incoming": {
+      "leafCount": 8798,
+      "sha256": "0aaf4203eeb6a9a0717139f5bfc843a238c26952ccee52572fda1c9c9e8067e2"
+    }
+  },
+  "deferredDarwinAmendment": {
+    "oldCandidate": {
+      "bytes": 51989,
+      "blob": "4e8a47af47549d22df0b7199a58a2511d8ecfda0",
+      "sha256": "34106dc02e8d38f0be8dffe3b0c734972ec0e7d8e0833f1bfc5757c430194f62",
+      "physicalLines": 1040
+    },
+    "wholeFileApplicationNowWouldEraseIncomingDiagnostic": true,
+    "oldProposalAndR2RetainedAsHistoricalProspectiveEvidence": true,
+    "sourceSelectedHere": false,
+    "requiredBeforeAnyLaterSelection": "Fresh complete incoming preimage and lossless composition retaining the diagnostic, updated prospective scope/parent/venue R1 and independent R2 before source. Existing frozen reports/manifests are not rewritten."
+  },
+  "limits": [
+    "Two incoming C++ paths require their own full independent source/synchronization review.",
+    "Whole incoming docs/history and exact publication manifest require independent reconciliation review.",
+    "Old E1 evidence is not resulting-source E2 qualification.",
+    "No P11 A/B/C or geometry source selected; no current Team/static/frontend completion asserted.",
+    "No Git index/worktree/ref mutation, source application, project execution, rerun, dispatch or cancellation was performed by this data reader."
+  ]
+}
