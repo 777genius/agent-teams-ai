@@ -453,14 +453,15 @@ function requestReview(context, taskId, flags = {}) {
       throw error;
     }
 
+    const reviewPolicy = kanban.getReviewFlowPolicy(context);
     return {
       task: tasks.getTask(context, currentTask.id),
       reviewer: nextReviewer,
       from: nextFrom,
       leadSessionId: resolveLeadSessionId(context, flags),
       reviewRequestId: getLatestReviewRequestEvent(tasks.getTask(context, currentTask.id))?.id,
-      humanApproval: kanban.isHumanApprovalFlow(context),
-      reviewFlowPrompt: kanban.getKanbanState(context).reviewFlowPrompt || '',
+      humanApproval: reviewPolicy.reviewFlow === 'human_approval',
+      reviewFlowPrompt: reviewPolicy.reviewFlowPrompt,
     };
   });
 

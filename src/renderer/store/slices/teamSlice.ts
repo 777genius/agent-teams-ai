@@ -245,7 +245,6 @@ import type {
   MemberSpawnStatusesSnapshot,
   NotificationTarget,
   RetryFailedOpenCodeSecondaryLanesResult,
-  ReviewFlowSettings,
   SendMessageRequest,
   SendMessageResult,
   TaskChangePresenceState,
@@ -1531,7 +1530,6 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   sendCrossTeamMessage: (request: CrossTeamSendRequest) => Promise<CrossTeamSendResult | null>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
-  setReviewFlowSettings: (teamName: string, settings: ReviewFlowSettings) => Promise<void>;
   updateKanbanColumnOrder: (
     teamName: string,
     columnId: KanbanColumnId,
@@ -3569,23 +3567,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
   },
 
-  setReviewFlowSettings: async (teamName: string, settings: ReviewFlowSettings) => {
-    try {
-      set({ reviewActionError: null });
-      await unwrapIpc('team:setReviewFlowSettings', () =>
-        api.teams.setReviewFlowSettings(teamName, settings)
-      );
-      await get().refreshTeamData(teamName);
-    } catch (error) {
-      set({ reviewActionError: mapReviewError(error) });
-      try {
-        await get().refreshTeamData(teamName);
-      } catch {
-        // Keep the original policy-write error; a subsequent refresh will retry.
-      }
-      throw error;
-    }
-  },
   updateKanbanColumnOrder: async (
     teamName: string,
     columnId: KanbanColumnId,

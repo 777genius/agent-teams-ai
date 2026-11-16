@@ -1,4 +1,5 @@
 import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
+import { isHumanApprovalFlow, type ReviewFlowSettings } from '@features/review-flow';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
@@ -6,7 +7,6 @@ import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
-import { isHumanApprovalFlow } from '@shared/constants/kanban';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import {
@@ -107,7 +107,6 @@ import type {
   MessagesPage,
   PersistedTeamLaunchSnapshot,
   ReplaceMembersRequest,
-  ReviewFlowSettings,
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
@@ -2389,7 +2388,7 @@ export class TeamDataService {
       // The admission check awaits runtime I/O: task state may change in the meantime.
       const board = this.getTaskBoard(teamName);
       const latestTask = board.getTask(taskId) as TeamTask | null;
-      if (!latestTask || latestTask.status !== 'pending' || latestTask.owner !== admission.expectedOwner) {
+      if (latestTask?.status !== 'pending' || latestTask.owner !== admission.expectedOwner) {
         throw new Error('Scheduled task start superseded');
       }
       if ((board.listTasks() as TeamTask[]).some(
@@ -3993,7 +3992,8 @@ export class TeamDataService {
     return texts.length > MAX_LEAD_TEXTS ? texts.slice(-MAX_LEAD_TEXTS) : texts;
   }
 
-  async setReviewFlowSettings(teamName: string, settings: ReviewFlowSettings): Promise<void> {
+  /** `null` removes the team's override so it follows the default again. */
+  async setReviewFlowSettings(teamName: string, settings: ReviewFlowSettings | null): Promise<void> {
     this.getTaskBoard(teamName).setReviewFlowSettings(settings);
   }
 

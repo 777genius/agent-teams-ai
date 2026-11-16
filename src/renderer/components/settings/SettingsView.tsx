@@ -77,6 +77,7 @@ function isSettingsSection(value: string | undefined): value is SettingsSection 
     value === 'providers' ||
     value === 'externalAgentConnection' ||
     value === 'notifications' ||
+    value === 'reviewFlow' ||
     value === 'advanced'
   );
 }

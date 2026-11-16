@@ -1,3 +1,8 @@
+import {
+  REVIEW_FLOW_GET_OVERVIEW,
+  REVIEW_FLOW_SET_DEFAULTS,
+  REVIEW_FLOW_SET_TEAM_OVERRIDE,
+} from '@features/review-flow/contracts';
 import { TeamReadFailureError } from '@features/team-read-recovery/main';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import {
@@ -254,7 +259,6 @@ import {
   TEAM_SEND_MESSAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
-  TEAM_SET_REVIEW_FLOW_SETTINGS,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_TOOL_ACTIVITY_TRACKING,
@@ -377,7 +381,9 @@ const TEAM_HANDLER_KEYS = [
   TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
-  TEAM_SET_REVIEW_FLOW_SETTINGS,
+  REVIEW_FLOW_GET_OVERVIEW,
+  REVIEW_FLOW_SET_DEFAULTS,
+  REVIEW_FLOW_SET_TEAM_OVERRIDE,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
   TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_FIELDS,
@@ -991,38 +997,6 @@ describe('ipc teams handlers', () => {
     setClaudeBasePathOverride(null);
     setAppDataBasePath(null);
     fs.rmSync(attachmentTestRoot, { recursive: true, force: true });
-  });
-
-  it('routes the review flow only through the validated desktop IPC channel', async () => {
-    const setter = handlers.get(TEAM_SET_REVIEW_FLOW_SETTINGS)!;
-    expect(
-      await setter({} as never, 'my-team', { reviewFlow: 'human_approval', reviewFlowPrompt: 'Run e2e.' })
-    ).toMatchObject({ success: true });
-    expect(service.setReviewFlowSettings).toHaveBeenCalledWith('my-team', {
-      reviewFlow: 'human_approval',
-      reviewFlowPrompt: 'Run e2e.',
-    });
-    expect(await setter({} as never, 'my-team', { reviewFlowPrompt: '' })).toMatchObject({
-      success: true,
-    });
-    expect(service.setReviewFlowSettings).toHaveBeenLastCalledWith('my-team', { reviewFlowPrompt: '' });
-    vi.mocked(service.setReviewFlowSettings).mockClear();
-    const invalid: unknown[] = [
-      true,
-      null,
-      [],
-      {},
-      { reviewFlow: 'everyone' },
-      { reviewFlow: 'human_approval', reviewFlowPrompt: 5 },
-      { reviewFlowPrompt: 'x'.repeat(1001) },
-    ];
-    for (const payload of invalid) {
-      expect(await setter({} as never, 'my-team', payload)).toMatchObject({ success: false });
-    }
-    expect(await setter({} as never, '../outside', { reviewFlow: 'human_approval' })).toMatchObject({
-      success: false,
-    });
-    expect(service.setReviewFlowSettings).not.toHaveBeenCalled();
   });
 
   it('registers all expected handlers', () => {

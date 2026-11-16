@@ -4268,7 +4268,7 @@ describe('TeamDataService', () => {
         ],
       })),
       getKanbanState: vi.fn(() => ({
-        teamName: 'my-team', reviewers: [], tasks: {}, reviewFlow: 'agent_approval',
+        teamName: 'my-team', reviewers: [], tasks: {}, reviewFlow: 'agent_approval', reviewFlowSource: 'default',
       })),
       requestChangesAsHuman,
       requestChanges,

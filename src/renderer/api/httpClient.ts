@@ -68,6 +68,7 @@ import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
+import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
 import type {
   RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
@@ -110,7 +111,6 @@ import type {
   Project,
   QueuedUserMessagesSnapshot,
   RepositoryGroup,
-  ReviewFlowSettings,
   Schedule,
   ScheduleRun,
   SearchSessionsResult,
@@ -232,6 +232,18 @@ function gatewayUnavailable(): never {
 }
 
 export class HttpAPIClient implements ElectronAPI {
+  reviewFlow: ReviewFlowElectronApi = {
+    getOverview: async () => {
+      throw new Error('Review flow settings are only available in the desktop app');
+    },
+    setDefaults: async () => {
+      throw new Error('Review flow settings are only available in the desktop app');
+    },
+    setTeamOverride: async () => {
+      throw new Error('Review flow settings are only available in the desktop app');
+    },
+  };
+
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],
     saveGatewayProfile: async () => gatewayUnavailable(),
@@ -1166,9 +1178,6 @@ export class HttpAPIClient implements ElectronAPI {
       _patch: UpdateKanbanPatch
     ): Promise<void> => {
       throw new Error('Team kanban is not available in browser mode');
-    },
-    setReviewFlowSettings: async (_teamName: string, _settings: ReviewFlowSettings): Promise<void> => {
-      throw new Error('Review flow settings are only available in the desktop app');
     },
     updateKanbanColumnOrder: async (
       _teamName: string,

@@ -3,12 +3,35 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { KanbanApprovedSettingsMenu } from '../../../../../src/renderer/components/team/kanban/KanbanApprovedSettingsMenu';
-
-const popoverMock = vi.hoisted(() => ({
-  current: null as null | { open: boolean; onOpenChange: (open: boolean) => void },
+const hoisted = vi.hoisted(() => ({
+  popover: null as null | { open: boolean; onOpenChange: (open: boolean) => void },
+  openSettingsTab: vi.fn(),
+  panel: vi.fn(),
 }));
 
+vi.mock('@features/localization/renderer', () => ({
+  useAppTranslation: () => ({ t: (key: string) => key }),
+}));
+vi.mock('@renderer/store', () => ({
+  useStore: (selector: (state: unknown) => unknown) =>
+    selector({ openSettingsTab: hoisted.openSettingsTab }),
+}));
+vi.mock('@features/review-flow/renderer', () => ({
+  ReviewFlowTeamPanel: (props: {
+    teamName: string;
+    testIdPrefix: string;
+    onSaved: () => void;
+    onCancel: () => void;
+  }) => {
+    hoisted.panel(props);
+    return (
+      <div data-testid="team-panel">
+        <button data-testid="panel-saved" onClick={props.onSaved} />
+        <button data-testid="panel-cancel" onClick={props.onCancel} />
+      </div>
+    );
+  },
+}));
 vi.mock('@renderer/components/ui/popover', () => ({
   Popover: ({
     children,
@@ -19,42 +42,40 @@ vi.mock('@renderer/components/ui/popover', () => ({
     open: boolean;
     onOpenChange: (open: boolean) => void;
   }) => {
-    popoverMock.current = { open, onOpenChange };
+    hoisted.popover = { open, onOpenChange };
     return <>{children}</>;
   },
   PopoverContent: ({ children }: { children: React.ReactNode }) =>
-    popoverMock.current?.open ? <div>{children}</div> : null,
+    hoisted.popover?.open ? <div>{children}</div> : null,
+  // Radix Popover opens on click, which is what the trigger stand-in reproduces.
   PopoverTrigger: ({ children }: { children: React.ReactNode }) => (
-    <span onClick={() => popoverMock.current?.onOpenChange(true)}>{children}</span>
+    <span onClick={() => hoisted.popover?.onOpenChange(true)}>{children}</span>
   ),
 }));
-
 vi.mock('@renderer/components/ui/tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   TooltipContent: () => null,
 }));
 
+import { KanbanApprovedSettingsMenu } from '../../../../../src/renderer/components/team/kanban/KanbanApprovedSettingsMenu';
+
 const q = <T extends HTMLElement>(testId: string): T | null =>
   document.querySelector<T>(`[data-testid="${testId}"]`);
-
-function setPrompt(value: string): void {
-  const area = q<HTMLTextAreaElement>('kanban-review-flow-prompt')!;
-  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
-  act(() => {
-    setter?.call(area, value);
-    area.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-}
 
 describe('KanbanApprovedSettingsMenu', () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    popoverMock.current = null;
+    hoisted.popover = null;
+    hoisted.openSettingsTab.mockClear();
+    hoisted.panel.mockClear();
     container = document.createElement('div');
     document.body.appendChild(container);
+    act(() => {
+      createRoot(container).render(<KanbanApprovedSettingsMenu teamName="alpha" />);
+    });
   });
 
   afterEach(() => {
@@ -62,59 +83,33 @@ describe('KanbanApprovedSettingsMenu', () => {
     vi.unstubAllGlobals();
   });
 
-  const mount = (onSave: (settings: unknown) => Promise<void>): void => {
-    act(() => {
-      createRoot(container).render(
-        <KanbanApprovedSettingsMenu
-          reviewFlow="agent_approval"
-          reviewFlowPrompt=""
-          onSave={onSave as never}
-        />
-      );
-    });
+  const open = (): void =>
     act(() => q<HTMLButtonElement>('kanban-approved-settings')!.parentElement!.click());
-  };
 
-  it('saves the chosen flow and instructions together, only once something changed', async () => {
-    const onSave = vi.fn(() => Promise.resolve());
-    mount(onSave);
-    const save = q<HTMLButtonElement>('kanban-review-flow-save')!;
-    expect(save.disabled).toBe(true);
-    expect(q<HTMLInputElement>('kanban-review-flow-agent_approval')!.checked).toBe(true);
-
-    act(() => q<HTMLInputElement>('kanban-review-flow-human_approval')!.click());
-    setPrompt('  Run the e2e suite first.  ');
-    expect(save.disabled).toBe(false);
-    await act(async () => save.click());
-
-    expect(onSave).toHaveBeenCalledWith({
-      reviewFlow: 'human_approval',
-      reviewFlowPrompt: '  Run the e2e suite first.  ',
+  it('opens on click with this team\'s review flow, keeping the E2E test id prefix', () => {
+    expect(q('team-panel')).toBeNull();
+    open();
+    expect(q('team-panel')).not.toBeNull();
+    expect(hoisted.panel.mock.calls[0][0]).toMatchObject({
+      teamName: 'alpha',
+      testIdPrefix: 'kanban-review-flow',
     });
-    expect(popoverMock.current?.open).toBe(false);
   });
 
-  it('discards an unsaved draft on Cancel and reopens from the persisted flow', () => {
-    const onSave = vi.fn(() => Promise.resolve());
-    mount(onSave);
-    act(() => q<HTMLInputElement>('kanban-review-flow-human_approval')!.click());
-    setPrompt('temporary');
+  it('closes after a save and after Cancel', () => {
+    open();
+    act(() => q<HTMLButtonElement>('panel-saved')!.click());
+    expect(hoisted.popover?.open).toBe(false);
 
-    act(() => popoverMock.current!.onOpenChange(false));
-    act(() => popoverMock.current!.onOpenChange(true));
-
-    expect(onSave).not.toHaveBeenCalled();
-    expect(q<HTMLInputElement>('kanban-review-flow-agent_approval')!.checked).toBe(true);
-    expect(q<HTMLTextAreaElement>('kanban-review-flow-prompt')!.value).toBe('');
+    open();
+    act(() => q<HTMLButtonElement>('panel-cancel')!.click());
+    expect(hoisted.popover?.open).toBe(false);
   });
 
-  it('keeps the panel open with the draft when saving fails', async () => {
-    const onSave = vi.fn(() => Promise.reject(new Error('write failed')));
-    mount(onSave);
-    act(() => q<HTMLInputElement>('kanban-review-flow-human_approval')!.click());
-    await act(async () => q<HTMLButtonElement>('kanban-review-flow-save')!.click());
-
-    expect(popoverMock.current?.open).toBe(true);
-    expect(q<HTMLInputElement>('kanban-review-flow-human_approval')!.checked).toBe(true);
+  it('jumps to the Review flow settings tab for the default of all teams', () => {
+    open();
+    act(() => q<HTMLButtonElement>('kanban-review-flow-open-settings')!.click());
+    expect(hoisted.openSettingsTab).toHaveBeenCalledWith('reviewFlow');
+    expect(hoisted.popover?.open).toBe(false);
   });
 });

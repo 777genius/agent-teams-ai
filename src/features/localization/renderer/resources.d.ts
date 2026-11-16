@@ -3588,6 +3588,10 @@ export default interface Resources {
       "notifications": {
         "description": "Control when and how you get notified about agent activity, task completions, and errors.",
         "label": "Notifications"
+      },
+      "reviewFlow": {
+        "description": "Choose who gives final approval after AI review, for all teams or for individual ones.",
+        "label": "Review flow"
       }
     },
     "view": {
@@ -4462,25 +4466,6 @@ export default interface Resources {
       "trashAvailable": "Reversible trash for draft/stopped teams is available."
     },
     "kanban": {
-      "approvalSettings": {
-        "cancel": "Cancel",
-        "flowLegend": "Who gives final approval",
-        "flows": {
-          "agent_approval": {
-            "description": "The reviewer approves and the task moves to Approved.",
-            "label": "Agents approve"
-          },
-          "human_approval": {
-            "description": "The reviewer finishes the review and the task stays in Done as reviewed. Only you move it to Approved.",
-            "label": "I give final approval"
-          }
-        },
-        "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
-        "promptLabel": "Instructions for agents (optional)",
-        "promptPlaceholder": "For example: run the e2e tests before deciding.",
-        "save": "Save",
-        "title": "Review flow"
-      },
       "board": {
         "addTask": "Add task",
         "columnsView": "Columns view",
@@ -6413,6 +6398,76 @@ export default interface Resources {
       "saved": "Saved",
       "submit": "Submit",
       "title": "Request Changes"
+    },
+    "reviewFlow": {
+      "badges": {
+        "custom": "Custom",
+        "default": "Default",
+        "repair": "Needs repair"
+      },
+      "broken": {
+        "defaults": "The saved default for all teams can't be read, so review actions are paused in every team until you save a new default.",
+        "defaultsHint": "The form shows the built-in values. Save them, or change them first, to repair the default.",
+        "details": "Details: {{message}}",
+        "fixDefaults": "Fix the default",
+        "teamHint": "This team's saved settings can't be read, so review actions are paused here. Save new settings, or choose the default and save, to repair it."
+      },
+      "cancel": "Cancel",
+      "discard": "Discard changes",
+      "editor": {
+        "defaultHeading": "Default for all teams",
+        "followingTeams": "Teams following the default: {{count}}",
+        "teamHeading": "This team"
+      },
+      "feedback": {
+        "error": "Could not save: {{message}}",
+        "saved": "Saved",
+        "saving": "Saving…"
+      },
+      "flowLegend": "Who gives final approval",
+      "flows": {
+        "agent_approval": {
+          "description": "The reviewer approves and the task moves to Approved.",
+          "label": "Agents approve"
+        },
+        "human_approval": {
+          "description": "The reviewer finishes the review and the task stays in Done as reviewed. Only you move it to Approved.",
+          "label": "I give final approval"
+        }
+      },
+      "humanApprovalNote": "In this mode agents can never move a task to Approved. Only you can.",
+      "intro": "After a reviewer checks a task, it either goes straight to Approved or waits in Done for you. Set the default for all teams here, and give individual teams their own settings when they need them.",
+      "loadError": "Could not load review flow settings. {{message}}",
+      "loading": "Loading review flow settings…",
+      "overrides": {
+        "empty": "All teams follow the default.",
+        "heading": "Teams with custom settings ({{count}})",
+        "reset": "Reset to default",
+        "resetLabel": "Reset {{team}} to the default"
+      },
+      "popover": {
+        "openSettings": "Change the default for all teams…"
+      },
+      "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
+      "promptLabel": "Instructions for agents (optional)",
+      "promptPlaceholder": "For example: run the e2e tests before deciding.",
+      "retry": "Retry",
+      "save": "Save",
+      "scope": {
+        "defaultOption": "All teams (default)",
+        "empty": "No teams found.",
+        "label": "Settings for",
+        "searchPlaceholder": "Search teams"
+      },
+      "title": "Review flow",
+      "unreadable": {
+        "heading": "Teams with unreadable settings ({{count}})"
+      },
+      "useDefault": {
+        "custom": "This team has its own review flow.",
+        "following": "Following the default: {{flow}}",
+        "label": "Use the default settings"
+      }
     },
     "roleSelect": {
       "customRole": "Custom role...",

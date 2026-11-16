@@ -117,6 +117,22 @@ declare module 'agent-teams-controller' {
     unlinkTask(taskId: string, targetId: string, linkType: string): unknown;
   }
 
+  export type ControllerReviewFlow = 'agent_approval' | 'human_approval';
+
+  export interface ControllerReviewFlowSettings {
+    reviewFlow: ControllerReviewFlow;
+    reviewFlowPrompt?: string;
+  }
+
+  /** Global review-flow default shared by teams without their own override. */
+  export interface ReviewFlowDefaultsApi {
+    read(claudeDir: string): { reviewFlow: ControllerReviewFlow; reviewFlowPrompt: string };
+    write(
+      claudeDir: string,
+      settings: ControllerReviewFlowSettings
+    ): { reviewFlow: ControllerReviewFlow; reviewFlowPrompt: string };
+  }
+
   export interface ControllerKanbanReadApi {
     getKanbanState(): unknown;
     listReviewers(): string[];
@@ -128,10 +144,8 @@ declare module 'agent-teams-controller' {
     addReviewer(reviewer: string): string[];
     removeReviewer(reviewer: string): string[];
     updateColumnOrder(columnId: string, orderedTaskIds: string[]): unknown;
-    setReviewFlowSettings(settings: {
-      reviewFlow?: 'agent_approval' | 'human_approval';
-      reviewFlowPrompt?: string;
-    }): unknown;
+    /** A complete override unit, or `null` to follow the global default again. */
+    setReviewFlowSettings(settings: ControllerReviewFlowSettings | null): unknown;
   }
 
   export interface ControllerTaskBoardKanbanApi
@@ -307,6 +321,7 @@ declare module 'agent-teams-controller' {
   export function createController(options: ControllerContextOptions): AgentTeamsController;
 
   export const agentBlocks: AgentBlocksApi;
+  export const reviewFlowDefaults: ReviewFlowDefaultsApi;
 
   export const protocols: ProtocolsApi;
 
